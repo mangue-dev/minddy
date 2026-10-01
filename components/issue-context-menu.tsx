@@ -120,7 +120,7 @@ function ActionNode({
   return <LeafItem action={action} onActionSelect={onActionSelect} />;
 }
 
-/** Corps commun aux deux ancrages : recherche optionnelle + liste d'actions. */
+/** Shared body for both anchors: optional search and the action list. */
 function ActionMenuBody({
   actions,
   open,
@@ -286,12 +286,7 @@ export function IssueContextMenu({
   );
 }
 
-/**
- * The same actions, anchored to a button — the “⋯” in the panel header
- * of outcome. No search field by default: the list is short and is
- * scans with a glance (the native typeahead of Radix is ​​sufficient), where the right click
- * sert de palette.
- */
+/** Button-anchored actions menu; enable search for the full issue action list. */
 export function IssueActionsMenu({
   trigger,
   actions,
@@ -312,6 +307,7 @@ export function IssueActionsMenu({
   onOpenChange?: (open: boolean) => void;
 }) {
   const [open, setOpen] = React.useState(false);
+  const actionSelected = React.useRef(false);
   const change = (next: boolean) => {
     setOpen(next);
     onOpenChange?.(next);
@@ -319,8 +315,28 @@ export function IssueActionsMenu({
   return (
     <DropdownMenu open={open} onOpenChange={change}>
       <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
-      <DropdownMenuContent align={align} side="bottom" className="min-w-56">
-        <ActionMenuBody actions={actions} open={open} searchable={searchable} />
+      <DropdownMenuContent
+        align={align}
+        side="bottom"
+        className={searchable ? "min-w-64" : "min-w-56"}
+        onCloseAutoFocus={(event) => {
+          if (actionSelected.current) {
+            event.preventDefault();
+            actionSelected.current = false;
+          }
+        }}
+      >
+        <ActionMenuBody
+          actions={actions}
+          open={open}
+          searchable={searchable}
+          onActionSelect={(action) => {
+            // Finish closing before a field picker or dialog takes focus.
+            actionSelected.current = true;
+            change(false);
+            requestAnimationFrame(() => action.onSelect?.());
+          }}
+        />
       </DropdownMenuContent>
     </DropdownMenu>
   );

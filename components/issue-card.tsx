@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { AiAutoRotateIcon, ArrowRight01Icon, Calendar01Icon, DateTimeIcon, Delete02Icon, ExternalLinkIcon, GitMergeIcon, GitPullRequestDraftIcon, GitPullRequestIcon, Link02Icon, LinkBackwardIcon, RepeatIcon, Target01Icon, TaskDone01Icon, TriangleIcon, UserIcon } from "@hugeicons/core-free-icons";
+import { AiAutoRotateIcon, ArrowRight01Icon, Calendar01Icon, GitMergeIcon, GitPullRequestDraftIcon, GitPullRequestIcon, RepeatIcon, TaskDone01Icon, TriangleIcon, UserIcon } from "@hugeicons/core-free-icons";
 import {
   memo,
   useCallback,
@@ -16,7 +16,7 @@ import { useTranslations, useFormatter } from "next-intl";
 import { ConfirmDeleteDialog, Spinner, cn, toast } from "mangue-ui";
 import { AppIcon } from "@/components/icon";
 import { AgentBeam } from "@/components/agent-beam";
-import { useUnlinkPullRequestIssue } from "@/lib/use-unlink-pull-request-issue";
+import { useIssueMenuActions } from "@/components/use-issue-menu-actions";
 import { useAgentMenuActions } from "@/components/agent/use-agent-menu-actions";
 import {
   CustomPromptDialog,
@@ -40,7 +40,6 @@ import {
   StatusIndicator,
   PriorityIndicator,
   EffortIndicator,
-  RelationIcon,
 } from "@/components/issue-indicators";
 import { RelationChips, type ChipRelation } from "@/components/relation-chips";
 import { RelationTargetPicker } from "@/components/relation-target-picker";
@@ -57,7 +56,6 @@ import {
   agentLaunchPromptVariant,
   agentPlanPromptVariant,
 } from "@/lib/agent-launch-prompt";
-import { RELATION_TYPES } from "@/lib/relation-constants";
 import type {
   Category,
   Issue,
@@ -98,7 +96,6 @@ import { useAskNumoTarget } from "@/lib/ask-numo-context";
 import { useStableCallback } from "@/lib/use-stable-callback";
 import { useCategoryCreateOption } from "@/lib/use-picker-create";
 import { useAuth } from "@/lib/auth-context";
-import { useOptionalAppTabSession } from "@/lib/app-tabs-context";
 import { useQueryClient } from "@tanstack/react-query";
 import { DropOverlay, useFileDrop } from "@/components/resources";
 import { useAttachmentUploads } from "@/lib/use-attachment-uploads";
@@ -958,14 +955,11 @@ const IssueCardContent = memo(function IssueCardContent({
   onSelect?: (issueId: string) => void;
 }) {
   const t = useTranslations("IssueUI");
-  const tRel = useTranslations("Relations");
   const tAttach = useTranslations("Resources");
-  const tPr = useTranslations("PullRequests");
-  const unlinkPr = useUnlinkPullRequestIssue();
+  const buildIssueMenuActions = useIssueMenuActions();
   const tAgent = useTranslations("Agent");
   const tPlan = useTranslations("Plan");
   const tCommon = useTranslations("Common");
-  const tAction = useTranslations("CommandPaletteActions");
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { openIntent, open: openAssistant } = useAssistantPanelActions();
@@ -977,7 +971,6 @@ const IssueCardContent = memo(function IssueCardContent({
     pr,
   } = useIssueActivity(issue.id);
   const router = useRouter();
-  const appTabs = useOptionalAppTabSession();
 
   // Card bindings are made HERE rather than by the column (MIN-316).
   // The received props take the ticket as an argument and are therefore stable
@@ -1360,153 +1353,29 @@ const IssueCardContent = memo(function IssueCardContent({
     // that it does not disappear. Before the first opening, the list is empty and
     // nothing has ever been returned: that’s where the economy happens.
     if (!menuPosition) return lastMenuActions.current;
-    return [
-      // Prompt and agent: two submenus “Generate a plan” / “Implement the
-      // ticket”, shared with the side panel. The code officer is working on
-      // the Agents PAGE; ⇧P and ⇧A remain on the “implement” branch.
-      ...agentActions,
-      // Open pull request — only offered when a PR exists for the ticket.
-      ...(pr && openPr
-        ? [
-            {
-              id: "open-pr",
-              label: tAgent("viewPullRequest"),
-              keywords: [
-                "pull request",
-                "pr",
-                "review",
-                "github",
-                "gitlab",
-                "merge",
-              ],
-              icon: <HugeiconsIcon icon={GitPullRequestIcon} className="size-4" />,
-              children: [
-                {
-                  id: "open-pr-current-tab",
-                  label: tAction("openInCurrentTab"),
-                  icon: <HugeiconsIcon icon={ArrowRight01Icon} className="size-4" />,
-                  onSelect: openPr,
-                },
-                {
-                  id: "open-pr-new-tab",
-                  label: tAction("openInNewTab"),
-                  icon: <HugeiconsIcon icon={ExternalLinkIcon} className="size-4" />,
-                  onSelect: () => {
-                    const href = `/pull-requests?pr=${pr.prId}`;
-                    if (appTabs) void appTabs.create(href);
-                    else window.open(href, "_blank", "noopener,noreferrer");
-                  },
-                },
-              ],
-            },
-          ]
-        : []),
-      ...(pr ? [{
-        id: "unlink-pr",
-        label: tPr("unlinkIssue"),
-        keywords: ["unlink", "detach", "pull request", "pr"],
-        icon: <HugeiconsIcon icon={LinkBackwardIcon} className="size-4" />,
-        disabled: unlinkPr.isPending,
-        onSelect: () => unlinkPr.mutate({ prId: pr.prId, issueId: issue.id, identifier }),
-      }] : []),
-      // Relations (MIN-25 / MIN-30): grouped under a "Relations" submenu. Each
-      // leaf opens the target-issue picker at the pointer. Shown only when the
-      // board wired the relation handlers.
-      ...(onAddRelation
-        ? [
-            {
-              id: "relations",
-              label: tRel("relations"),
-              keywords: ["relation", "link", "lier", "bloc", "block"],
-              icon: <HugeiconsIcon icon={Link02Icon} className="size-4" />,
-              children: RELATION_TYPES.map((type) => ({
-                id: `relation-${type}`,
-                label: tRel(`action_${type}`),
-                keywords: [tRel(type), "relation", "link", "lier"],
-                icon: <RelationIcon relation={type} className="size-4" />,
-                onSelect: () => setRelationType(type),
-              })),
-            },
-          ]
-        : []),
-      // Goal and deadline are ONLY displayed on the map when they are
-      // placed: without them, the card offers no socket for placing them. The menu
-      // then reopens the picker at the pointer — exactly what O and D do.
-      ...(!issue.objective_id && objectiveMap && objectiveMap.size > 0
-        ? [
-            {
-              id: "set-objective",
-              label: t("actionLinkObjective"),
-              keywords: ["objectif", "objective", "goal", "lier", "link"],
-              icon: <HugeiconsIcon icon={Target01Icon} className="size-4" />,
-              shortcut: KEY_FOR_FIELD.objective,
-              onSelect: () => openFieldAtPointer("objective"),
-            },
-          ]
-        : []),
-      ...(!issue.due_date
-        ? [
-            {
-              id: "set-due-date",
-              label: t("actionSetDueDate"),
-              keywords: [
-                "échéance",
-                "echeance",
-                "date",
-                "due",
-                "deadline",
-                "calendrier",
-                "calendar",
-              ],
-              icon: <HugeiconsIcon icon={DateTimeIcon} className="size-4" />,
-              shortcut: KEY_FOR_FIELD.dueDate,
-              onSelect: () => openFieldAtPointer("dueDate"),
-            },
-          ]
-        : []),
-      ...(buildMenuActions?.(issue) ?? []),
-      ...(onDelete
-        ? [
-            {
-              id: "delete",
-              label: tCommon("moveToTrash"),
-              keywords: [
-                "corbeille",
-                "trash",
-                "supprimer",
-                "delete",
-                "remove",
-                "archiver",
-              ],
-              icon: <HugeiconsIcon icon={Delete02Icon} className="size-4" />,
-              separatorBefore: true,
-              variant: "destructive" as const,
-              onSelect: () => setConfirmDelete(true),
-            },
-          ]
-        : []),
-    ];
+    return buildIssueMenuActions({
+      issue,
+      projectKey,
+      agentActions,
+      pr,
+      hasObjectives: !!objectiveMap?.size,
+      onSelectRelation: onAddRelation ? setRelationType : undefined,
+      onOpenField: openFieldAtPointer,
+      extraActions: buildMenuActions?.(issue),
+      onDelete: onDelete ? () => setConfirmDelete(true) : undefined,
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     menuPosition,
+    buildIssueMenuActions,
     agentActions,
     pr,
-    openPr,
-    unlinkPr.isPending,
-    unlinkPr.mutate,
-    identifier,
-    tPr,
-    appTabs,
     onAddRelation,
     issue,
+    projectKey,
     objectiveMap,
     buildMenuActions,
     onDelete,
-    t,
-    tAgent,
-    tRel,
-    tCommon,
-    tAction,
   ]);
   lastMenuActions.current = menuActions;
 
