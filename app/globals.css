@@ -448,11 +448,11 @@ button[data-variant="ghost"] {
 
 /* ── Shell surfaces ────────────────────────────────────────────────────────────
    A neutral content canvas separates white cards and bright controls from
-   their surroundings. Keep the existing sidebar chrome, and place controls,
-   badges and hover fills above the canvas in lightness. */
+   their surroundings. The sidebar and outer frame sit below the canvas in
+   lightness; controls, badges and hover fills sit above it. */
 :root {
   --background: oklch(0.95 0.003 264);
-  --sidebar: oklch(0.967 0.003 264);
+  --sidebar: oklch(0.93 0.003 264);
   --card: oklch(1 0 0);
   --popover: oklch(1 0 0);
   --muted: oklch(0.988 0.002 264);
