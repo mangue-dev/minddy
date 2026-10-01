@@ -74,6 +74,53 @@ lint, owned-English, encrypted-access, encryption-schema and whitespace checks.
 The encryption consumer inventory includes the reviewed query transport wrapper;
 authorization and encrypted-content readers remain unchanged.
 
-Hosted replacement-preview measurements are recorded separately after the
-signed code commit is deployed. Provider-only timings are not substituted for
-the actual click-to-Stop path.
+## Authenticated replacement-preview proof
+
+Deployment `dpl_CAQYC3ccD9PXg6HPDJMgVotMizdp`, commit `c716e5e16`, was tested in
+the actual Assistant Shell with the repository's authenticated demonstration
+account. GLM 5.3 Flash was selected as Light; the durable rows now store low.
+The generation inspections used the existing production OpenRouter account key.
+Safe browser, durable-turn, Vercel and provider metadata is recorded in
+[min-628-shell-preview-evidence.json](./min-628-shell-preview-evidence.json).
+
+| Actual click case | UI idle | Handler authority revocation | Provider/execution result |
+| --- | ---: | ---: | --- |
+| Reported project/issue prompt, during tools | 8 ms | 773 ms | No tool result or subsequent model generation |
+| First text deltas | 8 ms | 454 ms | StreamLake reports canceled |
+| After visible text begins | 7 ms | 466 ms | Together reports canceled |
+| Before response headers | 4 ms | No execution admitted | Zero attempts and provider generations |
+
+The Stop requests reached Vercel 14–25 ms after the actual DOM click. Revocation
+values above are measured from the handler's clock; Vercel arrival precedes that
+clock and is recorded separately. Both actual text generations report
+`cancelled: true`, with no normal completion. All conversations retained exactly
+one stopped turn, no active claim or worker, and no additional attempt or turn
+in checks 94–429 seconds later.
+
+This is not a claim of zero-time provider cancellation. Live network bytes
+continued for up to 1,421 ms after clicking while cross-instance observation
+and upstream cancellation propagated; the frozen UI did not append these bytes.
+The final HTTP response and SSE done also include cleanup and durable journal
+persistence. A final stopped checkpoint can rewrite `completed_at`, so that
+column alone does not measure the earlier claim revocation. Cancellation before
+headers required 4.2 seconds to return its durable receipt, but started no work.
+
+## Remaining first-response latency
+
+The cold tool probe spent 5,412 ms inside admission plus about 2 seconds before
+the handler clock. Its Parasail generation latency was 1,450 ms. The text probe
+admitted in 2,696 ms, but StreamLake's actual provider latency was 7,364 ms.
+These are separate app and provider contributions; correcting the effort to low
+does not remove them all.
+
+The follow-up overlaps independent billing/quota-reset, usage/BYOK and protected
+message/intent preparation. Deferred-read regressions demonstrate the previous
+serialization and retain quota denial, reset windows, error precedence and
+protected admission. A new admission-protection phase supports hosted comparison.
+Replacement-preview startup verification for this additional change is pending.
+
+OpenRouter's [streaming documentation](https://github.com/OpenRouterTeam/docs/blob/main/api_reference/streaming.mdx)
+requires closing the streaming connection and notes provider-dependent support;
+actual provider inspection above confirms support for the tested endpoints.
+No production deployment or database schema change was performed. Production
+button/cascade validation remains a separate acceptance step.

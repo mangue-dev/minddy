@@ -315,10 +315,11 @@ function workerDelegationResult(workerEvent: {
 }
 
 export async function beginNumoTurn(input: BeginNumoTurnInput): Promise<NumoTurn> {
+  const admissionStartedAt = performance.now();
   const service = getServiceClient();
   const messageId = randomUUID();
-  const protectedMessage = await shouldProtectNumoUserMessages(service)
-    ? await encodeNumoUserMessage(input.userId, messageId, {
+  const prepareUserMessage = async () => await shouldProtectNumoUserMessages(service)
+    ? encodeNumoUserMessage(input.userId, messageId, {
         content: input.content,
         context: input.context as Record<string, unknown> | null,
         metadata: input.metadata,
@@ -326,10 +327,15 @@ export async function beginNumoTurn(input: BeginNumoTurnInput): Promise<NumoTurn
         tool_call_id: null,
         tool_name: null,
       }) : null;
-  const intent = await shouldProtectNumoTurnIntent(service)
-    ? await encodeNumoTurnIntent(input.userId, input.conversationId,
+  const prepareIntent = async () => await shouldProtectNumoTurnIntent(service)
+    ? encodeNumoTurnIntent(input.userId, input.conversationId,
       input.requestId, input.intent as unknown as Record<string, unknown>)
     : input.intent;
+  // The two protected payloads have independent bindings. Prepare both before
+  // the authoritative admission RPC instead of serializing their scope reads.
+  const [protectedMessage, intent] = await Promise.all([prepareUserMessage(), prepareIntent()]);
+  console.info("[numo-chat] timing", { requestId: input.requestId, phase: "admission_protection_prepared",
+    admissionElapsedMs: Math.round(performance.now() - admissionStartedAt) });
   const params = {
     p_conversation_id: input.conversationId,
     p_user_id: input.userId,
