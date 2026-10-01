@@ -86,6 +86,34 @@ afterEach(() => {
 });
 
 describe("forcedToolCall routing suffix fallback", () => {
+  it("does not start auxiliary generation after its owner has stopped", async () => {
+    const controller = new AbortController();
+    controller.abort();
+    const fetch = vi.spyOn(globalThis, "fetch");
+    expect(await forcedToolCall("m", "system", "user", "pick", {}, {
+      signal: controller.signal,
+    })).toBeNull();
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("closes a pending auxiliary request when its owner stops", async () => {
+    const controller = new AbortController();
+    let started!: () => void;
+    const opening = new Promise<void>(resolve => { started = resolve; });
+    const fetch = vi.spyOn(globalThis, "fetch").mockImplementation(async (_url, init) => {
+      started();
+      return new Promise<Response>((_resolve, reject) => {
+        init!.signal!.addEventListener("abort", () => reject(init!.signal!.reason), { once: true });
+      });
+    });
+    const pending = forcedToolCall("m", "system", "user", "pick", {}, { signal: controller.signal });
+    await opening;
+    controller.abort();
+    expect(await pending).toBeNull();
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(console.error).not.toHaveBeenCalled();
+  });
+
   it("does not use the platform key without managed AI opt-in", async () => {
     process.env.MINDDY_MANAGED_AI = "";
     const fetch = vi.spyOn(globalThis, "fetch");

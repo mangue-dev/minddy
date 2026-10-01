@@ -915,6 +915,118 @@ describe("durable Numo execution", () => {
     expect(live.emit).toHaveBeenCalledWith("reasoning_delta", { text: "First, second" });
   });
 
+  it("publishes partial output to reconnecting readers before the generation finishes", async () => {
+    vi.useFakeTimers();
+    const emitter = createDurableNumoEmitter(service, h.turn!.id as string);
+    try {
+      emitter.emit("content_delta", { delta: "First " });
+      emitter.emit("content_delta", { delta: "batch" });
+      await vi.advanceTimersByTimeAsync(249);
+      expect(h.events).toEqual([]);
+      await vi.advanceTimersByTimeAsync(1);
+      expect(h.events.map(event => event.p_payload)).toEqual([{ delta: "First batch" }]);
+
+      // A later batch contains only new text; polling readers concatenate it.
+      emitter.emit("content_delta", { delta: ", next batch" });
+      await vi.advanceTimersByTimeAsync(250);
+      expect(h.events.map(event => event.p_payload)).toEqual([
+        { delta: "First batch" }, { delta: ", next batch" },
+      ]);
+      expect(h.events.some(event => event.p_type === "done")).toBe(false);
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      emitter.close();
+      await emitter.flush();
+      vi.useRealTimers();
+    }
+  });
+
+  it("publishes the latest live reasoning snapshot on each durable batch", async () => {
+    vi.useFakeTimers();
+    const emitter = createDurableNumoEmitter(service, h.turn!.id as string);
+    try {
+      emitter.emit("reasoning_start", { started_at: "2026-09-05T12:00:00.000Z" });
+      emitter.emit("reasoning_delta", { text: "First" });
+      emitter.emit("reasoning_delta", { text: "First, second" });
+      await vi.advanceTimersByTimeAsync(250);
+      expect(h.events.at(-1)).toMatchObject({
+        p_type: "reasoning_delta", p_payload: { text: "First, second" },
+      });
+      emitter.emit("reasoning_delta", { text: "First, second, third" });
+      emitter.emit("reasoning_end", { duration_ms: 300, text: "First, second, third" });
+      emitter.emit("done", { status: "completed" });
+      await emitter.flush();
+      expect(h.events.map(event => event.p_type)).toEqual([
+        "reasoning_start", "reasoning_delta", "reasoning_delta", "reasoning_end", "done",
+      ]);
+      expect(vi.getTimerCount()).toBe(0);
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(h.events).toHaveLength(5);
+    } finally {
+      emitter.close();
+      await emitter.flush();
+      vi.useRealTimers();
+    }
+  });
+
+  it("serializes timed journal writes behind a slow append without duplicating text", async () => {
+    vi.useFakeTimers();
+    let releaseFirst!: () => void;
+    const firstWrite = new Promise<void>(resolve => { releaseFirst = resolve; });
+    const writes: Array<Record<string, unknown>> = [];
+    const slowService = {
+      ...service,
+      rpc: async (name: string, args: Record<string, unknown>) => {
+        if (name !== "append_numo_turn_event") return service.rpc(name, args);
+        writes.push(args);
+        if (writes.length === 1) await firstWrite;
+        return { data: {}, error: null };
+      },
+    } as unknown as SupabaseClient;
+    const emitter = createDurableNumoEmitter(slowService, h.turn!.id as string);
+    try {
+      emitter.emit("content_delta", { delta: "First" });
+      await vi.advanceTimersByTimeAsync(250);
+      expect(writes).toHaveLength(1);
+      emitter.emit("content_delta", { delta: "Second" });
+      await vi.advanceTimersByTimeAsync(250);
+      expect(writes).toHaveLength(1);
+      releaseFirst();
+      await emitter.flush();
+      expect(writes.map(event => event.p_payload)).toEqual([
+        { delta: "First" }, { delta: "Second" },
+      ]);
+    } finally {
+      releaseFirst();
+      emitter.close();
+      await emitter.flush();
+      vi.useRealTimers();
+    }
+  });
+
+  it.each(["done", "error", "close", "flush"] as const)(
+    "flushes pending text and cancels its timer on %s", async (boundary) => {
+      vi.useFakeTimers();
+      const emitter = createDurableNumoEmitter(service, h.turn!.id as string);
+      try {
+        emitter.emit("content_delta", { delta: "Pending" });
+        if (boundary === "close") emitter.close();
+        else if (boundary !== "flush") emitter.emit(boundary, {});
+        await emitter.flush();
+        expect(vi.getTimerCount()).toBe(0);
+        expect(h.events.filter(event => event.p_type === "content_delta"))
+          .toMatchObject([{ p_payload: { delta: "Pending" } }]);
+        const count = h.events.length;
+        await vi.advanceTimersByTimeAsync(1000);
+        expect(h.events).toHaveLength(count);
+      } finally {
+        emitter.close();
+        await emitter.flush();
+        vi.useRealTimers();
+      }
+    },
+  );
+
   it("does not strand turn execution when the activity projection is unavailable", async () => {
     h.failActivity = true;
     const log = vi.spyOn(console, "error").mockImplementation(() => {});

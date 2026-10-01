@@ -7,7 +7,8 @@ import {
   reasoningLevelsFor,
   type ReasoningLevel,
 } from "@/lib/agent-reasoning";
-import { getAssistantModelsForUser, type AgentModelEntry } from "@/lib/server/agent/models-catalog";
+import { getAssistantModelsForUser, getOpenRouterConversationModels, type AgentModelEntry } from "@/lib/server/agent/models-catalog";
+import type { ResolvedBilling } from "@/lib/server/billing-accounts";
 import { ensureModelInPlan } from "@/lib/server/agent/model-plan";
 import {
   resolveAiRuntime,
@@ -87,6 +88,7 @@ export async function resolveNumoTurnConfiguration(input: {
   userId: string;
   model?: unknown;
   reasoningLevel?: unknown;
+  admittedBilling?: ResolvedBilling;
 }): Promise<ResolvedNumoTurnConfiguration> {
   const persistedModel = normalizeModel(input.model);
   const persistedReasoningLevel = normalizeReasoning(input.reasoningLevel);
@@ -102,13 +104,15 @@ export async function resolveNumoTurnConfiguration(input: {
 
   let modelEntry: AgentModelEntry | undefined;
   if (hasExplicitModel || hasExplicitReasoning) {
-    const catalog = await getAssistantModelsForUser(input.userId);
-    modelEntry = findModel(catalog.models, runtime.model);
+    const models = runtime.provider === "openrouter"
+      ? await getOpenRouterConversationModels(runtime.apiKey)
+      : (await getAssistantModelsForUser(input.userId)).models;
+    modelEntry = findModel(models, runtime.model);
 
     // A generic endpoint owns its model namespace and may not expose a model
     // list. Every catalog-backed provider must prove that the selected id is
     // currently available instead of silently falling back to another model.
-    const catalogUnavailable = catalog.models.length === 0 &&
+    const catalogUnavailable = models.length === 0 &&
       runtime.provider !== "generic" && !isLocalAgentProvider(runtime.provider);
     if (hasExplicitModel && catalogUnavailable) {
       throw new NumoConversationConfigError(
@@ -117,7 +121,7 @@ export async function resolveNumoTurnConfiguration(input: {
         503,
       );
     }
-    if (hasExplicitModel && catalog.models.length > 0 && !modelEntry) {
+    if (hasExplicitModel && models.length > 0 && !modelEntry) {
       throw new NumoConversationConfigError(
         "model_unavailable",
         `The model “${runtime.model}” is unavailable for the active provider. Choose another model.`,
@@ -128,6 +132,7 @@ export async function resolveNumoTurnConfiguration(input: {
         userId: input.userId,
         model: runtime.model,
         mode: runtime.mode,
+        ...(input.admittedBilling ? { admittedBilling: input.admittedBilling } : {}),
       });
     }
   }

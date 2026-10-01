@@ -136,6 +136,7 @@ export interface ShortTitleInput {
  */
   locale: string;
   usage: ShortTitleUsage | null;
+  signal?: AbortSignal;
 }
 
 /** What the model examines, depending on what it is asked to name. */
@@ -155,7 +156,9 @@ export async function generateShortTitle({
   kind,
   locale,
   usage,
+  signal,
 }: ShortTitleInput): Promise<string | null> {
+  if (signal?.aborted) return null;
   const trimmed = text.trim();
   if (!trimmed) return null;
 
@@ -212,6 +215,7 @@ Two or three words each. Nothing was lost that a reader needed.`;
       xTitle: "Short title (minddy)",
       logPrefix: "[numo-title]",
       modelKey: SHORT_TITLE_MODEL_KEY,
+      signal,
       record: usage
         ? {
             feature: usage.feature,

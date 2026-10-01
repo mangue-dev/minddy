@@ -714,6 +714,21 @@ export async function createRun(input: CreateRunInput): Promise<AgentRun> {
       throw new ManagedBudgetUnavailableError();
     throw new DatabaseOperationError("create_agent_run", error, result.status);
   }
+  // BYOK insertion does not lock the parent as the budget RPC does. Recheck
+  // after commit so a stop whose cascade ran before this insert cannot miss it.
+  if (!input.managedBudget) {
+    let parentAllowsWorker: boolean;
+    try {
+      parentAllowsWorker = await numoParentAllowsNewWorker(data as AgentRun);
+    } catch (error) {
+      await requestInterrupt(data.id);
+      throw error;
+    }
+    if (!parentAllowsWorker) {
+      await requestInterrupt(data.id);
+      data.interrupt_requested = true;
+    }
+  }
   // Analytics (MIN-78): the launch is also tracked on the client side, but it
   // only does not see runs triggered by mention or restarted by drain.
   // The prompt is never sent.
@@ -748,6 +763,18 @@ async function hydrateRun(row: AgentRun | null): Promise<AgentRun | null> {
   return row ? decodeAgentPrUrl(await decodeRunSummary(await decodeDelegationResult(await decodeAgentWorkBranch(await decodeAgentBaseBranch(await decodeAgentDeploymentUrl(await decodeAgentVerdict(
     await decodeAgentDelegationInput(await decodeAgentCheckpoint(
       await decodeAgentLaunch(row)))))))))) : null;
+}
+
+/** Only gate new workers; an individual stop must leave running siblings alone. */
+async function numoParentAllowsNewWorker(run: AgentRun): Promise<boolean> {
+  if (!run.parent_numo_turn_id) return true;
+  if (!run.created_by || !run.parent_numo_conversation_id) return false;
+  const { data, error } = await getServiceClient().from("numo_assistant_turns")
+    .select("status").eq("id", run.parent_numo_turn_id)
+    .eq("conversation_id", run.parent_numo_conversation_id)
+    .eq("user_id", run.created_by).maybeSingle();
+  if (error) throw new Error("Could not verify the Numo worker parent");
+  return !!data && ["running", "waiting_work", "waiting_input", "reconciling"].includes(data.status);
 }
 
 /** Atomic CAS claim (queued → running). Returns null when another worker won. */

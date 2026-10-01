@@ -1,0 +1,260 @@
+{
+  "verifiedAt": "2026-10-01T19:46:08.075Z",
+  "scope": "Transport and read-only admission dependencies; authenticated hosted browser proof remains pending",
+  "latency": [
+    {
+      "transport": "direct",
+      "withTools": false,
+      "requestBytes": 289,
+      "requestReasoning": {
+        "effort": "low",
+        "exclude": false
+      },
+      "headersMs": 952,
+      "status": 200,
+      "firstBytesMs": 986,
+      "generationId": "gen-1790882564-QHUqWC7qGKcFJeaKIhQ1",
+      "reasoningMs": 986,
+      "reasoningChars": 28,
+      "reasoningDetailsMs": 986,
+      "contentMs": 1178,
+      "contentChars": 11,
+      "usage": {
+        "prompt_tokens": 27,
+        "completion_tokens": 10,
+        "total_tokens": 37,
+        "cost": 0.00000905,
+        "is_byok": false,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "cache_write_tokens": 0,
+          "audio_tokens": 0,
+          "video_tokens": 0
+        },
+        "cost_details": {
+          "upstream_inference_cost": 0.00000905,
+          "upstream_inference_prompt_cost": 0.00000405,
+          "upstream_inference_completions_cost": 0.000005
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 6,
+          "image_tokens": 0,
+          "audio_tokens": 0
+        }
+      },
+      "doneMs": 1187
+    },
+    {
+      "transport": "minddy",
+      "withTools": false,
+      "requestBytes": 289,
+      "requestReasoning": {
+        "effort": "low",
+        "exclude": false
+      },
+      "headersMs": 2866,
+      "status": 200,
+      "firstBytesMs": 3118,
+      "generationId": "gen-1790882565-GP0yZICFUxeSDogKU5SF",
+      "reasoningMs": 3118,
+      "reasoningChars": 75,
+      "reasoningDetailsMs": 3118,
+      "contentMs": 3446,
+      "contentChars": 12,
+      "usage": {
+        "prompt_tokens": 27,
+        "completion_tokens": 22,
+        "total_tokens": 49,
+        "cost": 0.000011945,
+        "is_byok": false,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "cache_write_tokens": 0,
+          "audio_tokens": 0,
+          "video_tokens": 0
+        },
+        "cost_details": {
+          "upstream_inference_cost": 0.000011945,
+          "upstream_inference_prompt_cost": 9.45e-7,
+          "upstream_inference_completions_cost": 0.000011
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 20,
+          "image_tokens": 0,
+          "audio_tokens": 0
+        }
+      },
+      "doneMs": 3460
+    },
+    {
+      "transport": "minddy",
+      "withTools": true,
+      "requestBytes": 129906,
+      "requestReasoning": {
+        "effort": "low",
+        "exclude": false
+      },
+      "headersMs": 1846,
+      "status": 200,
+      "firstBytesMs": 1886,
+      "generationId": "gen-1790882568-3dKUNKYWewJqiUY8pumx",
+      "contentMs": 1886,
+      "contentChars": 11,
+      "usage": {
+        "prompt_tokens": 31577,
+        "completion_tokens": 4,
+        "total_tokens": 31581,
+        "cost": 0.00473855,
+        "is_byok": false,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "cache_write_tokens": 0,
+          "audio_tokens": 0,
+          "video_tokens": 0
+        },
+        "cost_details": {
+          "upstream_inference_cost": 0.00473855,
+          "upstream_inference_prompt_cost": 0.00473655,
+          "upstream_inference_completions_cost": 0.000002
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 0,
+          "image_tokens": 0,
+          "audio_tokens": 0
+        }
+      },
+      "doneMs": 1895
+    }
+  ],
+  "cancellation": {
+    "generationId": "gen-1790882628-NQBjNR0r7MDLT0UOiZSN",
+    "model": "z-ai/glm-5.3-flash",
+    "reasoning": "low",
+    "firstGenerationMs": 1367,
+    "readUnblockedMs": 4,
+    "abortError": "Error",
+    "provider": "Parasail",
+    "cancelled": true,
+    "nativeTokensCompletion": 1,
+    "totalCost": 0.0000032
+  },
+  "admission": {
+    "scope": "Historical MIN-623 owner dependency measurement; not a full browser proof",
+    "model": "z-ai/glm-5.3-flash",
+    "reasoning": "low",
+    "passes": [
+      {
+        "pass": "cold",
+        "usageMs": 572,
+        "configurationMs": 1061,
+        "totalMs": 1633,
+        "resolved": {
+          "model": "z-ai/glm-5.3-flash",
+          "reasoning": "low",
+          "provider": "openrouter",
+          "mode": "platform"
+        },
+        "requests": [
+          {
+            "method": "GET",
+            "path": "/rest/v1/billing_accounts",
+            "ms": 122,
+            "status": 200
+          },
+          {
+            "method": "GET",
+            "path": "/rest/v1/envelope_data_keys",
+            "ms": 130,
+            "status": 200
+          },
+          {
+            "method": "GET",
+            "path": "/rest/v1/agent_quota_resets",
+            "ms": 117,
+            "status": 200
+          },
+          {
+            "method": "POST",
+            "path": "/rest/v1/rpc/get_user_usage_since",
+            "ms": 191,
+            "status": 200
+          },
+          {
+            "method": "GET",
+            "path": "/rest/v1/app_config",
+            "ms": 131,
+            "status": 200
+          },
+          {
+            "method": "GET",
+            "path": "/rest/v1/user_ai_capability_assignments",
+            "ms": 137,
+            "status": 200
+          },
+          {
+            "method": "GET",
+            "path": "/rest/v1/envelope_data_keys",
+            "ms": 120,
+            "status": 200
+          },
+          {
+            "method": "GET",
+            "path": "/rest/v1/app_config",
+            "ms": 125,
+            "status": 200
+          },
+          {
+            "method": "GET",
+            "path": "/rest/v1/app_config",
+            "ms": 125,
+            "status": 200
+          }
+        ]
+      },
+      {
+        "pass": "warm",
+        "usageMs": 272,
+        "configurationMs": 143,
+        "totalMs": 415,
+        "resolved": {
+          "model": "z-ai/glm-5.3-flash",
+          "reasoning": "low",
+          "provider": "openrouter",
+          "mode": "platform"
+        },
+        "requests": [
+          {
+            "method": "GET",
+            "path": "/rest/v1/billing_accounts",
+            "ms": 79,
+            "status": 200
+          },
+          {
+            "method": "GET",
+            "path": "/rest/v1/agent_quota_resets",
+            "ms": 79,
+            "status": 200
+          },
+          {
+            "method": "POST",
+            "path": "/rest/v1/rpc/get_user_usage_since",
+            "ms": 110,
+            "status": 200
+          },
+          {
+            "method": "GET",
+            "path": "/rest/v1/app_config",
+            "ms": 98,
+            "status": 200
+          },
+          {
+            "method": "GET",
+            "path": "/rest/v1/user_ai_capability_assignments",
+            "ms": 143,
+            "status": 200
+          }
+        ]
+      }
+    ]
+  }
+}

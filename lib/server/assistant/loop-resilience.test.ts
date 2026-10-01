@@ -544,6 +544,29 @@ describe("Numo chat loop resilience", () => {
     } finally { vi.useRealTimers(); }
   });
 
+  it("stops during slow preparation without opening a provider request", async () => {
+    vi.useFakeTimers();
+    let stopped = false;
+    let started!: () => void;
+    const preparing = new Promise<void>(resolve => { started = resolve; });
+    try {
+      const result = processChat([{ role: "user", content: "Answer" }], [],
+        { emit: vi.fn() } as never, {
+          model: "model", conversationId: "conversation", projectId: "project", userId: "user",
+          supabase: fakeService(), service: fakeService(), locale: "en",
+          shouldStop: async () => stopped,
+          beforeGeneration: async () => { started(); await new Promise(() => {}); },
+        });
+      await preparing;
+      stopped = true;
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(await result).toMatchObject({ fullContent: "", suspension: null });
+      expect(fetchOpenRouter).not.toHaveBeenCalled();
+      expect(executeTool).not.toHaveBeenCalled();
+      expect(vi.getTimerCount()).toBe(0);
+    } finally { vi.useRealTimers(); }
+  });
+
   it("stops between tool executions instead of running the whole round", async () => {
     // The tool call arrives with the stream, then the stop fires before and
     // after the first tool: the loop must observe the pending stop between

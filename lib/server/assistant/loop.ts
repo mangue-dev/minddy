@@ -357,7 +357,6 @@ export async function processChat(
         });
       }
     } else {
-      await context.beforeGeneration?.(roundCount);
       // One controller per generation round: it carries both the idle watchdog
       // and a mid-stream stop. Aborting the signal destroys the pinned socket,
       // which is what makes a hung stream, or a stop request, observable here.
@@ -406,6 +405,25 @@ export async function processChat(
       stopPollTimer = setTimeout(() => { void pollStop(); }, STOP_POLL_INTERVAL_MS);
       let call;
       try {
+        // Budget and preparation reads can be slow too. A hosted executor
+        // must observe Stop before opening a provider request, not only once
+        // response headers or text arrive.
+        let rejectPreparation!: () => void;
+        const interrupted = new Promise<never>((_resolve, reject) => {
+          rejectPreparation = () => reject(new Error("Generation preparation interrupted"));
+          generationController.signal.addEventListener("abort", rejectPreparation, { once: true });
+        });
+        try {
+          if (generationController.signal.aborted) rejectPreparation();
+          await Promise.race([context.beforeGeneration?.(roundCount), interrupted]);
+        } finally {
+          generationController.signal.removeEventListener("abort", rejectPreparation);
+        }
+        if (stopObserved || await context.shouldStop?.()) {
+          observeStop();
+          closeRound();
+          break;
+        }
         call = await fetchAiChat(
           aiRuntime,
           requestModel,

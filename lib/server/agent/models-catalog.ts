@@ -180,6 +180,13 @@ async function listOpenRouter(
   );
 }
 
+/** Validate a frozen Numo choice without constructing the account's picker. */
+export async function getOpenRouterConversationModels(apiKey: string): Promise<AgentModelEntry[]> {
+  // The shared index retains the picker's capability and variant filters. Plan
+  // enforcement belongs to admission, not to display multipliers or suggestions.
+  return listOpenRouter(apiKey).catch(() => []);
+}
+
 /** OpenAI-compatible `/models` endpoint (OpenAI, Google, generic). */
 async function listOpenAICompat(
   provider: AgentProviderId,

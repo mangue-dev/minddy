@@ -8,6 +8,7 @@ const h = vi.hoisted(() => ({
   executeTurn: vi.fn(),
   decodeNumoEvent: vi.fn(async (...args: unknown[]) => args[0]),
   afterSeq: -1,
+  latestTurns: [] as Array<Record<string, unknown>>,
   activity: [
     { id: "event-1", seq: 0, type: "content_delta", payload: { delta: "First" } },
     { id: "event-2", seq: 1, type: "done", payload: { status: "completed" } },
@@ -22,9 +23,11 @@ const h = vi.hoisted(() => ({
 }));
 
 function queryFor(table: string) {
+  let excludeReceipts = false;
   const query = {
     select: () => query,
     eq: () => query,
+    or: () => { excludeReceipts = true; return query; },
     gt: (_column: string, value: number) => {
       h.afterSeq = value;
       return query;
@@ -39,6 +42,10 @@ function queryFor(table: string) {
         return { data: { id: CONVERSATION_ID, source: "assistant" } };
       }
       if (table === "agent_run_input_requests") return { data: h.pendingInput };
+      if (table === "numo_assistant_turns") return {
+        data: h.latestTurns.find(turn => !excludeReceipts || turn.status !== "stopped"
+          || turn.model != null || Number(turn.attempts) > 0) ?? null,
+      };
       return {
           data: {
             id: TURN_ID,
@@ -80,6 +87,8 @@ const { POST } = await import("@/app/api/assistant/conversations/[id]/turn/route
 beforeEach(() => {
   vi.clearAllMocks();
   h.afterSeq = -1;
+  h.latestTurns = [{ id: TURN_ID, status: "waiting_work", error_message: null,
+    last_event_seq: 1, active_run_id: RUN_ID }];
   h.getAuthedUser.mockResolvedValue({
     ok: true,
     user: { id: "user-1" },
@@ -88,6 +97,16 @@ beforeEach(() => {
 });
 
 describe("durable Numo turn routes", () => {
+  it("keeps a newer admitted execution visible when an older request receives a late Stop receipt", async () => {
+    h.latestTurns = [
+      { id: "receipt", status: "stopped", model: null, attempts: 0 },
+      { id: TURN_ID, status: "running", model: "z-ai/glm-5.3-flash", attempts: 1, last_event_seq: 0 },
+    ];
+    const response = await GET(new NextRequest(`http://localhost/api/assistant/conversations/${CONVERSATION_ID}/status`),
+      { params: Promise.resolve({ id: CONVERSATION_ID }) });
+    expect(await response.json()).toMatchObject({ turn_id: TURN_ID, status: "running" });
+  });
+
   it("replays persisted activity after the caller cursor", async () => {
     const response = await GET(
       new NextRequest(`http://localhost/api/assistant/conversations/${CONVERSATION_ID}/status?after=0`),
