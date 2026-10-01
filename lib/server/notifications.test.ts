@@ -73,7 +73,8 @@ const BOB = "22222222-2222-2222-2222-222222222222";
 /** Minimal Supabase Client: The insert succeeds or fails on command, and each account's
  * preferences come out of the table below. */
 function stubService(opts: {
-  insertError?: string;
+  insertError?: string | { code: string; message: string; details: string };
+  insertThrow?: Error;
   upsertedRows?: unknown[];
   prefs?: Record<string, Record<string, unknown>>;
   projectOwners?: Record<string, string>;
@@ -92,8 +93,9 @@ function stubService(opts: {
         return {
           insert: (rows: unknown[]) => {
             inserted.push(...rows);
+            if (opts.insertThrow) return Promise.reject(opts.insertThrow);
             return Promise.resolve({
-              error: opts.insertError ? { message: opts.insertError } : null,
+              error: typeof opts.insertError === "string" ? { message: opts.insertError } : opts.insertError ?? null,
             });
           },
           upsert: (rows: unknown[], options: unknown) => {
@@ -102,7 +104,7 @@ function stubService(opts: {
               select: () =>
                 Promise.resolve({
                   data: opts.upsertedRows ?? rows,
-                  error: opts.insertError ? { message: opts.insertError } : null,
+                  error: typeof opts.insertError === "string" ? { message: opts.insertError } : opts.insertError ?? null,
                 }),
             };
           },
@@ -412,5 +414,41 @@ describe("insertNotifications — volet push (MIN-183)", () => {
       expect.objectContaining({ actor_id: null, api_key_id: null }),
     ]);
     expect(H.sendPushToUser).toHaveBeenCalledTimes(1);
+  });
+});
+
+
+describe("notification failure diagnostics", () => {
+  it.each([false, true])("logs a constraint refusal once without replay or push (upsert: %s)", async (upsert) => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { service, inserted, upserted } = stubService({ insertError: {
+      code: "23514", message: 'new row violates check constraint "notifications_numo_work_pair_check"',
+      details: "Private notification row",
+    } });
+    await insertNotifications(service, [routineRow(ALICE)], { deduplicatePullRequestOpened: upsert });
+    expect(log).toHaveBeenCalledWith("[notifications] insert_failed", expect.objectContaining({
+      correlation_id: expect.any(String), code: "23514", kind: "database_constraint",
+      constraint: "notifications_numo_work_pair_check", row_count: 1,
+      routine_ids: ["routine-1"], notification_types: ["routine_done"],
+    }));
+    expect(inserted.length + upserted.length).toBe(1);
+    expect(H.after).not.toHaveBeenCalled();
+    expect(H.sendPushToUser).not.toHaveBeenCalled();
+    expect(JSON.stringify(log.mock.calls)).not.toContain("Private notification row");
+    log.mockRestore();
+  });
+
+  it("logs thrown transport failures without replaying an uncertain insert", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { service, inserted } = stubService({ insertThrow:
+      new TypeError("private endpoint", { cause: { code: "ECONNRESET" } }) });
+    await expect(insertNotifications(service, [routineRow(ALICE)])).resolves.toBeUndefined();
+    expect(inserted).toHaveLength(1);
+    expect(log).toHaveBeenCalledWith("[notifications] insert_failed", expect.objectContaining({
+      kind: "transport", code: "ECONNRESET",
+    }));
+    expect(H.after).not.toHaveBeenCalled();
+    expect(JSON.stringify(log.mock.calls)).not.toContain("private endpoint");
+    log.mockRestore();
   });
 });

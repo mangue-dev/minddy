@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { DatabaseOperationError } from "@/lib/server/failure-diagnostics";
 
 const h = vi.hoisted(() => ({
   reservedUsd: 0,
   inserts: 0,
   tail: Promise.resolve(),
+  error: null as null | { code: string; message: string; details?: string },
 }));
 
 vi.mock("server-only", () => ({}));
@@ -15,6 +17,7 @@ vi.mock("@/lib/supabase-service", () => ({
     },
     rpc: async (name: string, args: Record<string, unknown>) => {
       expect(name).toBe("create_agent_run_with_budget");
+      if (h.error) return { data: null, error: h.error, status: 400 };
       let release!: () => void;
       const previous = h.tail;
       h.tail = new Promise<void>((resolve) => {
@@ -80,9 +83,24 @@ beforeEach(() => {
   h.reservedUsd = 0;
   h.inserts = 0;
   h.tail = Promise.resolve();
+  h.error = null;
 });
 
 describe("managed-AI run creation", () => {
+  it("preserves database codes and constraints without retaining failed row details", async () => {
+    h.error = { code: "23514",
+      message: 'new row violates check constraint "agent_runs_delegation_brief_check"',
+      details: "Private row values" };
+    let caught: unknown;
+    try { await createRun(input); } catch (error) { caught = error; }
+    expect(caught).toBeInstanceOf(DatabaseOperationError);
+    expect(caught).toMatchObject({ operation: "create_agent_run", diagnostics: {
+      kind: "database_constraint", code: "23514", status: 400,
+      constraint: "agent_runs_delegation_brief_check",
+    } });
+    expect(JSON.stringify(caught)).not.toContain("Private row values");
+    expect(h.inserts).toBe(0);
+  });
   it("does not let parallel launches reserve more than the account cap", async () => {
     const outcomes = await Promise.allSettled([createRun(input), createRun(input)]);
 

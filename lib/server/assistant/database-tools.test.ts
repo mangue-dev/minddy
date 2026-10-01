@@ -37,6 +37,7 @@ vi.mock("@/lib/server/automations/operation-content", () => ({
     value?.sealed ?? value,
 }));
 import { executeTool } from "./execute-tool";
+import { DatabaseOperationError } from "@/lib/server/failure-diagnostics";
 import { AUTOMATION_ASSISTANT_TOOLS, PROJECT_ASSISTANT_TOOLS } from "./tools";
 const ctx = {
   projectId: "project",
@@ -74,6 +75,52 @@ beforeEach(() => {
     repoFullName: "mangue-dev/minddy",
   });
 });
+describe("code-worker launch diagnostics", () => {
+  it("returns a correlated database rejection without private server details", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    h.launch.mockRejectedValueOnce(new DatabaseOperationError("create_agent_run", {
+      code: "23514",
+      message: 'new row violates check constraint "agent_runs_delegation_brief_check"',
+      details: "Private brief with secret token",
+    }, 400));
+    const result = await executeTool("launch_code_agent", { prompt: "Inspect the repository" }, {
+      ...ctx, conversationId: "conversation", routineId: "routine",
+    });
+    expect(result).toMatchObject({ success: false, result: {
+      error_code: "code_agent_launch_failed", retryable: false,
+      stage: "create_agent_run", correlation_id: expect.any(String),
+      failure: { code: "23514", constraint: "agent_runs_delegation_brief_check", status: 400 },
+    } });
+    const payload = result.result as { correlation_id: string; error: string };
+    expect(payload.error).toContain("database rejected");
+    expect(log).toHaveBeenCalledWith("[assistant] code_agent_launch_failed", expect.objectContaining({
+      correlation_id: payload.correlation_id, routine_id: "routine", conversation_id: "conversation",
+    }));
+    expect(JSON.stringify([result, log.mock.calls])).not.toMatch(/Private|secret token/);
+    expect(h.launch).toHaveBeenCalledTimes(1);
+    log.mockRestore();
+  });
+
+  it("does not suggest replaying a launch whose outcome is unknown", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    h.launch.mockRejectedValueOnce(new Error("private endpoint or prompt"));
+    expect(await executeTool("launch_code_agent", { prompt: "Read" }, ctx)).toMatchObject({
+      success: false, result: { error: expect.stringContaining("check the run state"),
+        error_code: "code_agent_launch_failed", retryable: false, failure: { kind: "internal" } },
+    });
+    expect(JSON.stringify(log.mock.calls)).not.toContain("private endpoint");
+    log.mockRestore();
+  });
+
+  it("keeps known quota refusals distinct from unexpected launch failures", async () => {
+    h.launch.mockResolvedValueOnce({ ok: false, error: "quotaExceeded" });
+    expect(await executeTool("launch_code_agent", { prompt: "Read" }, ctx)).toMatchObject({
+      success: false, result: { error_code: "quotaExceeded", retryable: false,
+        error: expect.stringContaining("usage limit") },
+    });
+  });
+});
+
 describe("Numo database tool dispatch", () => {
   it("exposes a project-scoped database tool and returns schema read results", async () => {
     const tool = PROJECT_ASSISTANT_TOOLS.find(

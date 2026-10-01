@@ -8434,7 +8434,7 @@
       "functionReferences": []
     },
     "create_agent_run_with_budget(uuid,timestamp with time zone,numeric,numeric,jsonb)": {
-      "sha256": "2c7710b463b09f80023df925dc2ee354ee8c3418c7843015e4e7bc3bfda711a3",
+      "sha256": "f09513e04c321beef6a973abf96c4365d1993c19bdf5d8612534068c193d0173",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
