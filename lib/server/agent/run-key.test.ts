@@ -77,6 +77,19 @@ describe("runKeyCapUsd", () => {
       }),
     ).toBe(0.5);
   });
+
+  it.each([0.009, 0.0009, 0.000001, 1.234567])(
+    "preserves the $%s hard ceiling without cent rounding",
+    (ceiling) => {
+      expect(runKeyCapUsd({ reservedBudgetUsd: ceiling })).toBe(ceiling);
+      expect(runKeyCapUsd({
+        runBudgetUsd: 4,
+        accountRemainingUsd: 8,
+        reservedBudgetUsd: ceiling,
+      })).toBe(ceiling);
+      expect(runKeyCapUsd({ accountRemainingUsd: ceiling })).toBe(ceiling);
+    },
+  );
 });
 
 describe("requestedRunReservationUsd", () => {
@@ -94,6 +107,27 @@ afterEach(() => {
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
   delete process.env.OPENROUTER_PROVISIONING_KEY;
+});
+
+describe("run key provisioning precision", () => {
+  it.each([0.009, 0.0009, 0.000001])(
+    "sends the positive $%s reservation as the provider limit",
+    async (reservedBudgetUsd) => {
+      process.env.OPENROUTER_PROVISIONING_KEY = "provisioning-secret";
+      const fetchMock = vi.fn(async (_url: string, _init: RequestInit) => ({
+        ok: true,
+        json: async () => ({ key: "run-secret", data: { hash: "run-hash" } }),
+      }));
+      vi.stubGlobal("fetch", fetchMock);
+
+      const capUsd = runKeyCapUsd({ reservedBudgetUsd });
+      const key = await mintRunKey({ runId: "run-precision", capUsd });
+      expect(key?.capUsd).toBe(reservedBudgetUsd);
+      expect(fetchMock).toHaveBeenCalledOnce();
+      const request = fetchMock.mock.calls[0][1];
+      expect(JSON.parse(request.body as string).limit).toBe(reservedBudgetUsd);
+    },
+  );
 });
 
 describe("run key provider log safety", () => {

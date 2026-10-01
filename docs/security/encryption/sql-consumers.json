@@ -8439,7 +8439,7 @@
       "functionReferences": []
     },
     "create_agent_run_with_budget(uuid,timestamp with time zone,numeric,numeric,jsonb)": {
-      "sha256": "f09513e04c321beef6a973abf96c4365d1993c19bdf5d8612534068c193d0173",
+      "sha256": "854e2a6a667a465c6d13c0eb383f6d68bcbe7b801ac6a98c53f66ee5ef1c8c1b",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -8454,7 +8454,9 @@
         "agent_runs",
         "numo_assistant_turns"
       ],
-      "functionReferences": []
+      "functionReferences": [
+        "concurrent_managed_budget_grant"
+      ]
     },
     "ensure_numo_routine_occurrence(uuid,uuid,text,timestamp with time zone,uuid,text)": {
       "sha256": "9b50d2dedfb1cecb24494f63ad958f79fccf4d6ea03c30768236302b293e1b51",
@@ -8854,7 +8856,7 @@
       "functionReferences": []
     },
     "resume_agent_run_with_budget(uuid,uuid,timestamp with time zone,numeric,numeric,timestamp with time zone)": {
-      "sha256": "e22e79d94aac800f6dd74f8f94ce1266acd30339d9f0b1bce5572f9c9f9e0fc3",
+      "sha256": "082fcd0c8ebc13f2553d11d077682c2c868f6461f52754c7d4f3e6da43a01bef",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -8869,7 +8871,10 @@
         "agent_runs",
         "numo_assistant_turns"
       ],
-      "functionReferences": []
+      "functionReferences": [
+        "get_numo_operation_platform_spend",
+        "concurrent_managed_budget_grant"
+      ]
     },
     "upsert_gitlab_connection_protected_atomic(uuid,text,text,text,text,text,text,integer,timestamp with time zone,text)": {
       "sha256": "2403a7c99946a3dda76976408e68ec8dd51e9e7149417be79e6f80ae42b541d3",
@@ -8902,7 +8907,7 @@
       "functionReferences": []
     },
     "resume_latest_agent_run_with_message(uuid,uuid,uuid,uuid,text,jsonb,timestamp with time zone,timestamp with time zone,numeric,numeric)": {
-      "sha256": "de79f8102a9b972cd6a9b0b70375707389d0e13ea6ac2034fc6d7c525775baa1",
+      "sha256": "bf1a94ff6eb96efc176513da7a1c319250214c89c88e82cf2298ca5318d0cc25",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -8924,7 +8929,8 @@
       "functionReferences": [
         "agent_queue_content_version",
         "lock_live_agent_run_project_access",
-        "agent_run_repository_binding_is_current"
+        "agent_run_repository_binding_is_current",
+        "concurrent_managed_budget_grant"
       ]
     },
     "resume_numo_worker_input(uuid,uuid,uuid,text,uuid,uuid,text,boolean,timestamp with time zone,timestamp with time zone,numeric,numeric)": {
@@ -8955,7 +8961,7 @@
       ]
     },
     "begin_numo_turn_with_budget(uuid,uuid,uuid,uuid,jsonb,text,text,uuid,integer,text,jsonb,jsonb,timestamp with time zone,numeric,numeric)": {
-      "sha256": "d1fa52e61d39187bd0285ec6d87cad1b03784aab1bfa82a4ce27137b8786bb55",
+      "sha256": "ac44ee097e9642aa291dd657e50b51165883f75e9e7a75da8f7307c464be2a4d",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -8974,7 +8980,9 @@
         "assistant_messages",
         "numo_assistant_turns"
       ],
-      "functionReferences": []
+      "functionReferences": [
+        "concurrent_managed_budget_grant"
+      ]
     },
     "migrate_numo_tool_operation(uuid,text,jsonb,jsonb,jsonb,integer,integer,integer,text,jsonb,jsonb,jsonb,integer,integer,integer,text,uuid)": {
       "sha256": "f879b34e40ca051c162a4b7cb0587fe2b9a642ae9fa59536ab9b3f4bc17408cb",
@@ -9275,6 +9283,17 @@
         "numo_assistant_turns",
         "agent_run_input_requests"
       ],
+      "functionReferences": []
+    },
+    "concurrent_managed_budget_grant(numeric,numeric)": {
+      "sha256": "19bf943706fa2ca4aa5ce05395a58bde02211db154546b9b4bd3f4e2b49ac179",
+      "securityDefiner": false,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "relations": [],
+      "protectedRelations": [],
       "functionReferences": []
     }
   },

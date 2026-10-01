@@ -23,7 +23,7 @@ vi.mock("./turn-intent-content", () => ({
   decodeNumoTurnIntent: async () => ({}),
 }));
 
-const { beginNumoTurn } = await import("./turns");
+const { beginNumoTurn, NumoBudgetReservationError } = await import("./turns");
 const input: BeginNumoTurnInput = {
   conversationId: "conversation", userId: "user", requestId: "request", runId: "run",
   content: "List projects", context: null, metadata: {}, model: "z-ai/glm-5.3-flash", reasoningLevel: "low",
@@ -44,6 +44,15 @@ beforeEach(() => {
 });
 
 describe("Numo admission preparation", () => {
+  it("retains authoritative reservation diagnostics from the atomic refusal", async () => {
+    h.rpc.mockResolvedValueOnce({ data: { turn: null, spent_usd: "0.15", reserved_usd: "14.85" }, error: null });
+    const pending = beginNumoTurn({ ...input, managedBudget: {
+      periodStart: "2026-10-01T00:00:00Z", accountCapUsd: 15, requestedUsd: 15,
+    } });
+    await expect(pending).rejects.toBeInstanceOf(NumoBudgetReservationError);
+    await expect(pending).rejects.toMatchObject({ spentUsd: 0.15, reservedUsd: 14.85 });
+  });
+
   it.each([false, true])("prepares both protected payloads concurrently before admission (managed budget: %s)", async (managedBudget) => {
     let releaseUserMessage!: (value: { content: string; user_payload_version: number }) => void;
     h.encodeUserMessage.mockImplementationOnce(() => new Promise((resolve) => { releaseUserMessage = resolve; }));

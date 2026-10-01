@@ -761,10 +761,21 @@ export async function POST(request: NextRequest) {
           console.error("Failed to remove unadmitted Numo conversation:", cleanupError.message);
         }
       }
-      return planLimitResponse(new PlanLimitError("usage_budget_exceeded", {
-        used: admittedUsage.usedUsd,
-        included: admittedUsage.billing.plan.includedUsageUsd,
-      }));
+      const used = error.spentUsd ?? admittedUsage.usedUsd;
+      const included = admittedUsage.billing.plan.includedUsageUsd;
+      console.info("[numo-chat] budget admission refused", {
+        requestId, conversationId: finalConvId,
+        periodStart: admittedUsage.period.start, usedUsd: used,
+        reservedUsd: error.reservedUsd, includedUsd: included,
+        cause: used >= included ? "account" : "reservations",
+      });
+      if (used >= included) {
+        return planLimitResponse(new PlanLimitError("usage_budget_exceeded", { used, included }));
+      }
+      return Response.json({
+        error: tApi("usageBudgetReserved"), code: "usage_budget_reserved",
+        params: { used, included, reserved: error.reservedUsd },
+      }, { status: 409 });
     }
     const message = error instanceof Error ? error.message : "";
     if (message.includes("conversation_busy")) {

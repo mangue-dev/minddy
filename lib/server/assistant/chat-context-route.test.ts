@@ -7,6 +7,8 @@ const h = vi.hoisted(() => ({
   claimError: false,
   steerWorker: vi.fn(),
   answerWorker: vi.fn(),
+  managed: false,
+  reservation: null as null | { spent_usd: number; reserved_usd: number },
 }));
 vi.mock("@/lib/server/api-auth", () => ({ getAuthedUser: async () => ({ ok: true, user: { id: "user", user_metadata: {} }, supabase: h.db }) }));
 vi.mock("@/lib/supabase-service", () => ({ getServiceClient: () => h.db }));
@@ -15,7 +17,7 @@ vi.mock("@/lib/server/session-rate-limit", () => ({ checkSessionRateLimit: () =>
 vi.mock("@/lib/server/usage", () => ({ ensureUsageBudget: async () => ({
   billing: { plan: { includedUsageUsd: 10 } }, period: { start: "2026-10-01", end: "2026-11-01" }, usedUsd: 0,
 }) }));
-vi.mock("@/lib/server/ai-runtime", () => ({ resolveAiRuntime: async () => ({ model: "test", provider: "local", apiKey: "test" }), ManagedAiUnavailableError: class extends Error {} }));
+vi.mock("@/lib/server/ai-runtime", () => ({ resolveAiRuntime: async () => ({ model: "test", provider: "local", apiKey: "test", mode: h.managed ? "platform" : "byok" }), ManagedAiUnavailableError: class extends Error {} }));
 vi.mock("@/lib/server/agent/models-catalog", () => ({
   getAssistantModelsForUser: async () => ({ models: [{ id: "test", reasoning: null }] }),
   getOpenRouterConversationModels: async () => [],
@@ -67,6 +69,7 @@ function database({ owner = "user", status = "idle", visible = new Set(["a", "b"
         return query;
       },
       update: () => { changed = true; return query; },
+      delete: () => { changed = true; return query; },
       single: async () => result(),
       maybeSingle: async () => result(),
       then: (resolve: (result: unknown) => unknown) => Promise.resolve(result()).then(resolve),
@@ -74,6 +77,9 @@ function database({ owner = "user", status = "idle", visible = new Set(["a", "b"
     return query;
   };
   const rpc = async (name: string, args: Record<string, unknown>) => {
+    if (name === "begin_numo_turn_with_budget" && h.reservation) {
+      return { data: { turn: null, ...h.reservation }, error: null };
+    }
     if (name === "begin_numo_turn") {
       if (status === "generating") return { data: null, error: { message: "conversation_busy" } };
       turn = {
@@ -123,6 +129,8 @@ async function send(body: Record<string, unknown>) {
 beforeEach(() => {
   vi.clearAllMocks();
   h.claimError = false;
+  h.managed = false;
+  h.reservation = null;
   h.steerWorker.mockResolvedValue({ action: "none" });
   h.answerWorker.mockResolvedValue({ action: "refused", reason: "ignored" });
   h.process.mockResolvedValue({ generations: [], fullContent: "Done" });
@@ -130,6 +138,21 @@ beforeEach(() => {
 });
 
 describe("conversation identity across project contexts", () => {
+  it.each([
+    { spent: 0.1, reserved: 9.9, status: 409, code: "usage_budget_reserved", copy: "usageBudgetReserved" },
+    { spent: 10, reserved: 0, status: 403, code: "usage_budget_exceeded", copy: "usageBudgetExceeded" },
+  ])("reports the atomic admission cause $code even when the preflight usage is stale", async ({ spent, reserved, status, code, copy }) => {
+    database();
+    h.managed = true;
+    h.reservation = { spent_usd: spent, reserved_usd: reserved };
+    const response = await POST(new Request("http://localhost/api/assistant/chat", {
+      method: "POST", body: JSON.stringify({ message: "Hello", conversationId: "conversation" }),
+    }) as never);
+    expect(response.status).toBe(status);
+    expect(await response.json()).toMatchObject({ code, error: copy, params: { used: spent, included: 10 } });
+    expect(h.process).not.toHaveBeenCalled();
+  });
+
   it("routes a message to the active worker before starting another Numo turn", async () => {
     database({ visible: new Set(["unavailable"]) });
     h.steerWorker.mockResolvedValue({

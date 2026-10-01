@@ -159,7 +159,9 @@ export function runKeyCapUsd(opts: {
   const asked = fromRun ?? ceiling ?? UNKNOWN_REMAINING_CAP_USD;
   const floored = Math.max(asked, MIN_CAP_USD);
   const capped = ceiling === undefined ? floored : Math.min(floored, ceiling);
-  return Math.round(capped * 100) / 100;
+  // The provider accepts a numeric USD limit. Cent rounding could exceed the
+  // hard ceiling or turn a positive sub-cent reservation into a zero-dollar key.
+  return capped;
 }
 
 /**

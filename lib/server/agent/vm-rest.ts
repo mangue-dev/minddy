@@ -3,6 +3,7 @@ import "server-only";
 import { recordSandboxUsage } from "@/lib/server/usage";
 import {
   spentForBudget,
+  spentPlatformForBudget,
   spentFromLedger,
   type AiUsageBillTo,
 } from "@/lib/server/ai-usage";
@@ -483,10 +484,8 @@ async function identifierOf(run: AgentRun): Promise<string | null> {
 }
 
 /**
- * The "exhausted budget" card, word for word that of the old form: two
- * causes behind the same border, and they are not resolved the same - the
- * budget of the ACCOUNT is at zero (wait, go up plan, switch to BYOK), or
- * it is the ceiling placed on THIS run which has bitten, and the account will very good.
+ * Distinguish monthly exhaustion, a routine cap, and the operation allocation.
+ * An allocation can end while the monthly account still has funds.
  */
 async function emitBudgetExhausted(run: AgentRun, emit: EmitAgentEvent): Promise<void> {
   const quota = await checkAgentQuota(run.created_by ?? "").catch(() => null);
@@ -500,17 +499,24 @@ async function emitBudgetExhausted(run: AgentRun, emit: EmitAgentEvent): Promise
     run.budget_usd == null
       ? undefined
       : Math.max(0, Number(run.budget_usd) - (operationSpent ?? run.cost_usd));
+  const platformSpent = run.managed_budget_usd == null ? null
+    : await spentPlatformForBudget(run.run_id ?? run.id, run.parent_numo_turn_id).catch(() => null);
+  const allocationRemainingUsd = run.managed_budget_usd == null ? undefined
+    : Math.max(0, Number(run.managed_budget_usd) - (platformSpent ?? run.cost_usd));
   const cappedByRun =
     runCapRemainingUsd !== undefined &&
-    (accountRemainingUsd === undefined || runCapRemainingUsd < accountRemainingUsd);
+    (accountRemainingUsd === undefined || runCapRemainingUsd < accountRemainingUsd) &&
+    (allocationRemainingUsd === undefined || runCapRemainingUsd <= allocationRemainingUsd);
+  const cappedByAllocation = !cappedByRun && allocationRemainingUsd !== undefined &&
+    (accountRemainingUsd === undefined || allocationRemainingUsd < accountRemainingUsd);
   await emit("quota_exhausted", {
     spent: quota?.spent ?? null,
     cap: quota?.cap ?? null,
-    resetsAt: quota?.resetsAt ?? null,
+    resetsAt: cappedByAllocation ? null : quota?.resetsAt ?? null,
     planId: quota?.planId ?? null,
-    nextPlanId: quota?.nextPlanId ?? null,
+    nextPlanId: cappedByAllocation ? null : quota?.nextPlanId ?? null,
     byok: quota?.mode === "byok",
-    cause: cappedByRun ? "run_cap" : "account",
+    cause: cappedByRun ? "run_cap" : cappedByAllocation ? "operation_allocation" : "account",
     capPercent:
       cappedByRun && quota?.cap && run.budget_usd != null
         ? Math.round((Number(run.budget_usd) / quota.cap) * 100)
