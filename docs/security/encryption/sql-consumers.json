@@ -4393,16 +4393,19 @@
       "functionReferences": []
     },
     "upsert_pull_request_monotonic(jsonb)": {
-      "sha256": "e1ef54475bd13dc498e37936529ab6dcf146814c107e466ea8a19b61f7a331f7",
+      "sha256": "82cac9df09cce9ef58ec0fc13e2f99dba4239bc50f906dfd85b863f7812123e1",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
       ],
       "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
-        "pull_requests"
+        "issues",
+        "pull_requests",
+        "pull_request_issues"
       ],
       "protectedRelations": [
+        "issues",
         "pull_requests"
       ],
       "functionReferences": []
@@ -5873,14 +5876,16 @@
       "functionReferences": []
     },
     "link_pull_request_to_issue_atomic(uuid,uuid)": {
-      "sha256": "ccad22e085963d96b138337380003bf331210639f73fd0e4c9f9c2c2a401db9d",
+      "sha256": "0ab6e6829ff69302bb0fdb670d1af0a170e62c10151bc58bb8ff493ca2a3087b",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
       ],
       "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
-        "pull_requests"
+        "pull_requests",
+        "pull_request_issues",
+        "pull_request_issue_unlinks"
       ],
       "protectedRelations": [
         "pull_requests"
@@ -9182,6 +9187,68 @@
       ],
       "protectedRelations": [],
       "functionReferences": []
+    },
+    "broadcast_pull_request_issue_link()": {
+      "sha256": "a94926421a6785706acb1982449ed0e479a412f6412e095c91ea1d1de52d8835",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres}",
+      "relations": [
+        "pull_requests",
+        "project_git_links"
+      ],
+      "protectedRelations": [
+        "pull_requests",
+        "project_git_links"
+      ],
+      "functionReferences": []
+    },
+    "filter_unlinked_pull_request_issue()": {
+      "sha256": "07aeb379f82696d47558b0794438659fbeac22cbc2c44e083ec312b9986320ac",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres}",
+      "relations": [
+        "pull_request_issue_unlinks"
+      ],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
+    "preserve_primary_pull_request_issue()": {
+      "sha256": "630564eb28bbc97bdee42612680264ca1bd7d155fd6109b03a7caa7d6b3b7c55",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres}",
+      "relations": [
+        "pull_request_issues"
+      ],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
+    "unlink_pull_request_from_issue_atomic(uuid,uuid)": {
+      "sha256": "870a49370ba378ffb4bf0a9da298e0255a11ece1d5411fcdc6a0678e166522f4",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "relations": [
+        "issues",
+        "pull_requests",
+        "pull_request_issues",
+        "pull_request_issue_unlinks"
+      ],
+      "protectedRelations": [
+        "issues",
+        "pull_requests"
+      ],
+      "functionReferences": []
     }
   },
   "triggers": {
@@ -11168,6 +11235,18 @@
     "custom_domains.custom_domain_cleanup_on_delete": {
       "function": "queue_custom_domain_cleanup()",
       "definition": "CREATE TRIGGER custom_domain_cleanup_on_delete AFTER DELETE ON custom_domains FOR EACH ROW EXECUTE FUNCTION queue_custom_domain_cleanup()"
+    },
+    "pull_requests.pull_request_primary_issue_link": {
+      "function": "preserve_primary_pull_request_issue()",
+      "definition": "CREATE TRIGGER pull_request_primary_issue_link AFTER INSERT OR UPDATE OF issue_id ON pull_requests FOR EACH ROW EXECUTE FUNCTION preserve_primary_pull_request_issue()"
+    },
+    "pull_requests.pull_request_skip_unlinked_issue": {
+      "function": "filter_unlinked_pull_request_issue()",
+      "definition": "CREATE TRIGGER pull_request_skip_unlinked_issue BEFORE UPDATE OF issue_id ON pull_requests FOR EACH ROW EXECUTE FUNCTION filter_unlinked_pull_request_issue()"
+    },
+    "pull_request_issues.pull_request_issue_link_broadcast": {
+      "function": "broadcast_pull_request_issue_link()",
+      "definition": "CREATE TRIGGER pull_request_issue_link_broadcast AFTER INSERT OR DELETE ON pull_request_issues FOR EACH ROW EXECUTE FUNCTION broadcast_pull_request_issue_link()"
     }
   }
 }

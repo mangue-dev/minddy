@@ -96,6 +96,9 @@ DECLARE
   v_incoming_updated_at timestamptz;
   v_requested_issue_id uuid;
   v_lock_issue_id uuid;
+  v_existing_pr_id uuid;
+  v_locked_issue_ids uuid[];
+  v_conflicting_issue_ids uuid[];
   v_applied boolean := false;
 BEGIN
   IF p_values IS NULL
@@ -118,22 +121,25 @@ BEGIN
     pg_catalog.clock_timestamp()
   );
   v_requested_issue_id := NULLIF(p_values->>'issue_id', '')::uuid;
-  v_lock_issue_id := v_requested_issue_id;
-  IF v_lock_issue_id IS NULL THEN
-    SELECT issue_id INTO v_lock_issue_id
-    FROM public.pull_requests
-    WHERE provider = p_values->>'provider'
-      AND repo_full_name = p_values->>'repo_full_name'
-      AND number = (p_values->>'number')::integer;
-  END IF;
+  SELECT id, issue_id INTO v_existing_pr_id, v_lock_issue_id
+  FROM public.pull_requests
+  WHERE provider = p_values->>'provider'
+    AND repo_full_name = p_values->>'repo_full_name'
+    AND number = (p_values->>'number')::integer;
 
-  -- Use the same lock order as manual linking. If another live PR already owns
-  -- the issue, keep this observation unlinked instead of creating two winners.
-  IF v_lock_issue_id IS NOT NULL THEN
+  -- Lock every current issue before the PR, including secondary associations.
+  -- Sorted acquisition keeps concurrent multi-issue observations deadlock-free.
+  SELECT COALESCE(array_agg(issue_id ORDER BY issue_id), '{}'::uuid[])
+  INTO v_locked_issue_ids FROM (
+    SELECT issue_id FROM public.pull_request_issues WHERE pull_request_id = v_existing_pr_id
+    UNION SELECT v_requested_issue_id WHERE v_requested_issue_id IS NOT NULL
+    UNION SELECT v_lock_issue_id WHERE v_lock_issue_id IS NOT NULL
+  ) issue_ids;
+  FOREACH v_lock_issue_id IN ARRAY v_locked_issue_ids LOOP
     PERFORM pg_catalog.pg_advisory_xact_lock(
       pg_catalog.hashtextextended('issue:' || v_lock_issue_id::text, 459)
     );
-  END IF;
+  END LOOP;
   IF v_requested_issue_id IS NOT NULL THEN
     IF (p_values->>'state') IN ('draft', 'open')
        AND EXISTS (
@@ -167,6 +173,36 @@ BEGIN
     AND repo_full_name = p_values->>'repo_full_name'
     AND number = (p_values->>'number')::integer
   FOR UPDATE;
+
+  -- A manual append may have committed while we waited for the PR row.
+  -- Retry from a fresh issue set instead of acquiring an issue lock after the PR.
+  IF EXISTS (
+    SELECT 1 FROM public.pull_request_issues
+    WHERE pull_request_id = v_current.id AND NOT (issue_id = ANY(v_locked_issue_ids))
+  ) THEN
+    RAISE EXCEPTION 'pull_request_issue_links_changed' USING ERRCODE = '40001';
+  END IF;
+
+  IF v_current.id IS NOT NULL AND v_incoming_updated_at > v_current.updated_at
+     AND (p_values->>'state') IN ('draft', 'open') THEN
+    SELECT COALESCE(array_agg(l.issue_id), '{}'::uuid[]) INTO v_conflicting_issue_ids
+    FROM public.pull_request_issues l
+    WHERE l.pull_request_id = v_current.id AND EXISTS (
+      SELECT 1 FROM public.pull_request_issues other_link
+      JOIN public.pull_requests other_pr ON other_pr.id = other_link.pull_request_id
+      WHERE other_link.issue_id = l.issue_id AND other_pr.id <> v_current.id
+        AND other_pr.state IN ('draft', 'open')
+    );
+    -- Remove all conflicts before reopening; clearing the legacy primary alone
+    -- would leave secondary issues associated with two active PRs.
+    DELETE FROM public.pull_request_issues
+    WHERE pull_request_id = v_current.id AND issue_id = ANY(v_conflicting_issue_ids);
+    IF v_current.issue_id = ANY(v_conflicting_issue_ids) THEN
+      SELECT l.issue_id INTO v_current.issue_id FROM public.pull_request_issues l
+      JOIN public.issues i ON i.id = l.issue_id AND i.deleted_at IS NULL
+      WHERE l.pull_request_id = v_current.id ORDER BY l.created_at, l.issue_id LIMIT 1;
+    END IF;
+  END IF;
 
   IF v_current.id IS NULL THEN
     INSERT INTO public.pull_requests (
@@ -216,7 +252,7 @@ BEGIN
         head_branch = CASE WHEN p_values ? 'head_branch' THEN p_values->>'head_branch' ELSE v_current.head_branch END,
         base_branch = CASE WHEN p_values ? 'base_branch' THEN p_values->>'base_branch' ELSE v_current.base_branch END,
         head_sha = CASE WHEN p_values ? 'head_sha' THEN p_values->>'head_sha' ELSE v_current.head_sha END,
-        issue_id = CASE WHEN p_values ? 'issue_id' THEN v_requested_issue_id ELSE v_current.issue_id END,
+        issue_id = COALESCE(v_requested_issue_id, v_current.issue_id),
         opened_at = CASE WHEN p_values ? 'opened_at' THEN NULLIF(p_values->>'opened_at', '')::timestamptz ELSE v_current.opened_at END,
         merged_at = CASE WHEN p_values ? 'merged_at' THEN NULLIF(p_values->>'merged_at', '')::timestamptz ELSE v_current.merged_at END,
         updated_at = v_incoming_updated_at,

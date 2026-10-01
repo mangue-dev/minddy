@@ -163,7 +163,9 @@ export async function upsertPullRequestWithOutcome(
   const service = getServiceClient();
   const storedName = await repositoryStorageName(input.provider,
     input.repoFullName,true,service);
-  const storedInput = { ...input,repoFullName:storedName };
+  // Keep the observed timestamp stable across identity and association retries.
+  const storedInput = { ...input, repoFullName: storedName,
+    updatedAt: input.updatedAt ?? new Date().toISOString() };
   const content = { title: input.title, head_branch: input.headBranch,
     base_branch: input.baseBranch };
   const [encryptUrl, encryptContent] = await Promise.all([
@@ -195,7 +197,8 @@ export async function upsertPullRequestWithOutcome(
     const { data, error } = await service.rpc("upsert_pull_request_monotonic", {
       p_values: toRow(storedInput, id, url, protectedFields),
     });
-    if (error?.message.includes("pull_request_id_changed") && attempt === 0) {
+    if (attempt === 0 && (error?.code === "40001" ||
+        error?.message.includes("pull_request_id_changed"))) {
       continue;
     }
     if (error) {

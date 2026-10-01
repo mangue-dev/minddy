@@ -217,7 +217,7 @@ registrations; orphan cleanup then removes the object.
 The current source, copy, writer, reader, migration and proof status is tracked
 in [the closure matrix](closure-matrix.md).
 
-- `schema.json` records 199 application tables and 1,785 columns, their primary
+- `schema.json` records 203 application tables and 1,798 columns, their primary
   keys and foreign keys. It contains schema metadata, not application rows.
 - `../../../lib/server/encryption/data-policy.json` classifies every recorded
   column exactly once. Its 173 encryption targets include the original content,
@@ -228,10 +228,10 @@ in [the closure matrix](closure-matrix.md).
   forge mention and provider-operation resource identities
   now use purpose-separated one-way equality digests. This is a target
   policy, not evidence that those columns are encrypted.
-- `consumers.json` records 1,735 TypeScript/JavaScript table, view, RPC and object-store
+- `consumers.json` records 1,750 TypeScript/JavaScript table, view, RPC and object-store
   access candidates. Dynamic table names remain explicit `null` entries requiring
   caller review. Array and Buffer constructors are excluded.
-- `sql-consumers.json` records 558 functions, ten views and 491 application triggers. Function
+- `sql-consumers.json` records 572 functions, ten views and 499 application triggers. Function
   and view hashes pin the observed definitions without copying their bodies.
   Relation references are conservative text matches, not a SQL data-flow proof.
 - `migrations.json` pins migration inputs. CI rejects added or changed migrations
@@ -2407,3 +2407,29 @@ flags off, MIN-591 in progress and PR #289 in draft. Apply the corrective
 migrations in a controlled staging rollout, repair all unverified rows, retire
 historical Agent copies, and complete the staging controls below before any
 activation decision.
+
+
+## MIN-625 and MIN-626 PR association audit — 1 October 2026
+
+The association and explicit-removal tables contain only PR/issue UUID routing
+identities and, for associations, a creation timestamp. They introduce no content
+or encryption targets. Association reads require access to both the PR and a
+non-deleted issue through RLS; explicit removals and mutation RPCs are restricted
+to the server role. Titles still pass through the issue repository, and PR content
+continues to use the existing encrypted readers and writers. Realtime messages
+carry only PR and issue IDs for cache invalidation.
+
+The new tables, four new SQL functions, two replaced RPCs, and three triggers were
+introspected with `scripts/encryption-schema-audit.sql` after executing the actual
+migrations on isolated PostgreSQL (PGlite). Only their metadata was merged into
+the prior schema/SQL inventories; the prerequisite tables were reduced fixtures,
+not a full Supabase replay. TypeScript access changes were reviewed and the
+consumer inventory refreshed. Migration versions follow the existing latest
+version and do not reuse the forge relay migration numbers.
+
+The reopening regression covers primary and secondary conflicts, preservation of
+competing live PRs and nonconflicting links, primary promotion, an omitted inferred
+issue, and stale observations. Concurrent association changes force a bounded
+retry with a stable observation timestamp. The link and unlink SQL regressions
+also pass after both migrations. These checks do not certify a production rollout
+or a complete Supabase replay.
