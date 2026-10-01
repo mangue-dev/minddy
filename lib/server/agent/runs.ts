@@ -2292,9 +2292,8 @@ async function stopNumoWorkerBeforeMigration(service: SupabaseClient, runId: str
     .select("id").maybeSingle();
   if (retireError) throw new Error("Unable to revoke stopped worker continuation");
   await discardPendingWorkerMessages(runId);
-  const { error: inputError } = await service.from("agent_run_input_requests")
-    .update({ status: "canceled" }).eq("run_id", runId).eq("status", "pending");
-  if (inputError) throw new Error("Unable to cancel stopped worker input");
+  const { cancelStoppedWorkerInput } = await import("@/lib/server/numo/worker-mediation");
+  await cancelStoppedWorkerInput(runId);
   await requestInterrupt(runId);
   if (retired) {
     // A concurrent new turn updates this timestamp; never idle its conversation.

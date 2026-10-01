@@ -3180,85 +3180,78 @@
   {
     "file": "lib/server/agent/runs.ts",
     "operation": "from",
-    "resource": "agent_run_input_requests",
-    "line": 2295,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/runs.ts",
-    "operation": "from",
     "resource": "conversations",
-    "line": 2301,
+    "line": 2300,
     "storage": false
   },
   {
     "file": "lib/server/agent/runs.ts",
     "operation": "from",
     "resource": "agent_run_messages",
-    "line": 2311,
+    "line": 2310,
     "storage": false
   },
   {
     "file": "lib/server/agent/runs.ts",
     "operation": "from",
     "resource": "agent_runs",
-    "line": 2322,
+    "line": 2321,
     "storage": false
   },
   {
     "file": "lib/server/agent/runs.ts",
     "operation": "from",
     "resource": "agent_runs",
-    "line": 2335,
+    "line": 2334,
     "storage": false
   },
   {
     "file": "lib/server/agent/runs.ts",
     "operation": "from",
     "resource": "agent_run_messages",
-    "line": 2349,
+    "line": 2348,
     "storage": false
   },
   {
     "file": "lib/server/agent/runs.ts",
     "operation": "from",
     "resource": "agent_run_events",
-    "line": 2397,
+    "line": 2396,
     "storage": false
   },
   {
     "file": "lib/server/agent/runs.ts",
     "operation": "from",
     "resource": "agent_run_events",
-    "line": 2411,
+    "line": 2410,
     "storage": false
   },
   {
     "file": "lib/server/agent/runs.ts",
     "operation": "from",
     "resource": "agent_run_journal",
-    "line": 2474,
+    "line": 2473,
     "storage": false
   },
   {
     "file": "lib/server/agent/runs.ts",
     "operation": "rpc",
     "resource": "agent_journal_legacy_batch_exists",
-    "line": 2480,
+    "line": 2479,
     "storage": false
   },
   {
     "file": "lib/server/agent/runs.ts",
     "operation": "from",
     "resource": "agent_run_journal",
-    "line": 2490,
+    "line": 2489,
     "storage": false
   },
   {
     "file": "lib/server/agent/runs.ts",
     "operation": "from",
     "resource": "agent_run_journal",
-    "line": 2522,
+    "line": 2521,
     "storage": false
   },
   {
@@ -10132,35 +10125,42 @@
     "file": "lib/server/numo/worker-mediation.ts",
     "operation": "from",
     "resource": "agent_run_input_requests",
-    "line": 82,
+    "line": 39,
+    "storage": false
+  },
+  {
+    "file": "lib/server/numo/worker-mediation.ts",
+    "operation": "from",
+    "resource": "agent_run_input_requests",
+    "line": 89,
     "storage": false
   },
   {
     "file": "lib/server/numo/worker-mediation.ts",
     "operation": "rpc",
     "resource": "resume_numo_worker_input",
-    "line": 100,
+    "line": 107,
     "storage": false
   },
   {
     "file": "lib/server/numo/worker-mediation.ts",
     "operation": "from",
     "resource": "numo_assistant_turns",
-    "line": 151,
+    "line": 158,
     "storage": false
   },
   {
     "file": "lib/server/numo/worker-mediation.ts",
     "operation": "rpc",
     "resource": "steer_numo_worker",
-    "line": 176,
+    "line": 183,
     "storage": false
   },
   {
     "file": "lib/server/numo/worker-mediation.ts",
     "operation": "from",
     "resource": "agent_runs",
-    "line": 308,
+    "line": 315,
     "storage": false
   },
   {
