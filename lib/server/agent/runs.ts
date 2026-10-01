@@ -2256,6 +2256,18 @@ export async function requestInterrupt(runId: string): Promise<void> {
   if (error) throw new Error(`Could not request agent interruption: ${error.message}`);
 }
 
+/** Atomically stop a worker and revoke its parent's continuation authority. */
+export async function requestNumoWorkerStop(runId: string): Promise<void> {
+  const { data, error } = await getServiceClient().rpc("request_numo_worker_stop", {
+    p_run_id: runId,
+  });
+  if (error) throw new Error(`Could not stop Numo worker: ${error.message}`);
+  if (typeof data === "string") {
+    const { signalNumoTurnStopInProcess } = await import("@/lib/server/numo/turns");
+    signalNumoTurnStopInProcess(data);
+  }
+}
+
 /** Discard queued steering after an authorized stop of a Numo-owned worker. */
 export async function discardPendingWorkerMessages(runId: string): Promise<void> {
   const { error } = await getServiceClient()

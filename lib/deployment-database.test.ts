@@ -9,6 +9,7 @@ const env = {
 const paths = {
   "/rpc/auth_authorization_state": { post: {} },
   "/rpc/resolve_realtime_topic": { post: {} },
+  "/rpc/request_numo_worker_stop": { post: {} },
 };
 
 describe("deployment database preflight", () => {

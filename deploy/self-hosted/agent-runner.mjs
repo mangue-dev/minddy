@@ -301,19 +301,29 @@ async function relayLlmCompletion(name, request, response) {
   }
   if (relay.apiKey) headers.authorization = `Bearer ${relay.apiKey}`;
 
-  const upstream = await requestPublicUrl(relay.url, {
-    method: "POST",
-    headers,
-    body: JSON.stringify(body),
-  });
-  const responseHeaders = {};
-  upstream.headers.forEach((value, key) => {
-    if (["content-encoding", "content-length", "transfer-encoding"].includes(key)) return;
-    responseHeaders[key] = value;
-  });
-  response.writeHead(upstream.status, responseHeaders);
-  for await (const chunk of upstream.stream) response.write(chunk);
-  response.end();
+  const controller = new AbortController();
+  const disconnect = () => {
+    if (!response.writableFinished) controller.abort();
+  };
+  response.once("close", disconnect);
+  try {
+    const upstream = await requestPublicUrl(relay.url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+    const responseHeaders = {};
+    upstream.headers.forEach((value, key) => {
+      if (["content-encoding", "content-length", "transfer-encoding"].includes(key)) return;
+      responseHeaders[key] = value;
+    });
+    response.writeHead(upstream.status, responseHeaders);
+    for await (const chunk of upstream.stream) response.write(chunk);
+    response.end();
+  } finally {
+    response.off("close", disconnect);
+  }
 }
 
 async function relayGit(name, action, request, response, url) {

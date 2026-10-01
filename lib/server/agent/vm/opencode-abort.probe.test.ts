@@ -1,32 +1,12 @@
 /**
- * MIN-286 — ROUND probe CUT IN FLIGHT: who charges what when we abort?
- *
- * Does NOT run with `npm test`: `describe.skipIf` skips it as long as
- * `MDY_OPENCODE_ABORT_PROBE=1` is not posed. She spends a real round on a
- * real model (~$0.003) and needs `OPENROUTER_API_KEY`.
+ * Opt-in probe for an aborted real OpenCode generation.
+ * MIN-286 previously kept upstream generation alive to collect the final cost.
+ * MIN-628 cancels upstream instead and preserves an identifiable receipt with
+ * unknown usage when the final accounting frame is unavailable.
  *
  * MDY_OPENCODE_ABORT_PROBE=1 MDY_OPENCODE_BIN=/path/to/opencode \
  * npx vitest run lib/server/agent/vm/opencode-abort.probe.test.ts --testTimeout=600000
- *
- * ─────────────────────── ──────────────────────── ──────────────────────────────
- * WHAT SHE ESTABLISHED on 2026-08-12, and who decides the code of `recordOrphans`
- *
- * 1. **Opencode charges NOTHING for an aborted round.** The assistant message remains
- * at `finish: null`, `cost: 0`, `tokens: {input: 0, output: 0}`, with
- * `error: MessageAbortedError` — and yet 179 characters had already been
- * written. Our translator requires a `finish` to write to the ledger (right:
- * without it he would write an empty line then a real one). The expenditure therefore came out
- * from the counters on a gesture that can be triggered at will.
- * 2. **The proxy sees everything.** It does not pass a signal to its upstream `fetch`:
- * when opencode leaves, the reading loop continues until the last
- * frame — **1221 ms later**, without a socket error — and this frame
- * carries `usage` with the cost charged (read: `cost: 0.002827`, 2032 tokens
- * prompt, 159 completion) and the `generation_id`.
- *
- * Hence the form of the fix: `proxy.settle()` then `proxy.drain()` at the end of
- * turn, and a ledger line at the SUPPLIER amount — not an estimate.
- * This is the fault that MIN-216 had closed on the home loop side, reopened by the
- * motor change and closed here.
+ * Requires OPENROUTER_API_KEY and spends one short real model request.
  */
 import { execFileSync, spawn } from "node:child_process";
 import fs from "node:fs";
@@ -63,9 +43,9 @@ afterAll(async () => {
   if (root) fs.rmSync(root, { recursive: true, force: true });
 });
 
-describe.skipIf(!LIVE)("un round coupé en vol", () => {
+describe.skipIf(!LIVE)("an interrupted real generation", () => {
   it(
-    "n'est facturé par personne sauf par le proxy — et c'est lui qu'on écoute",
+    "cancels upstream and retains the generation identity without inventing usage",
     async () => {
       loadEnv();
       const key = process.env.OPENROUTER_API_KEY;
@@ -165,6 +145,7 @@ describe.skipIf(!LIVE)("un round coupé en vol", () => {
       });
 
       await new Promise((r) => setTimeout(r, ABORT_AFTER_MS));
+      proxy.cancel();
       await fetch(q(`/session/${session.id}/abort`), { method: "POST" });
 
       // ── 1. What opencode says about the round: nothing billable ────────────
@@ -174,26 +155,25 @@ describe.skipIf(!LIVE)("un round coupé en vol", () => {
         parts: Array<{ type: string; text?: string }>;
       }>;
       const assistant = messages.find((m) => m.info.role === "assistant");
-      expect(assistant, "aucun message assistant").toBeTruthy();
+      expect(assistant, "no assistant message").toBeTruthy();
       const written = (assistant!.parts ?? [])
         .filter((p) => p.type === "text")
         .map((p) => p.text ?? "")
         .join("");
       // The model had started: without it the probe would prove nothing.
-      expect(written.length, "le round a été coupé trop tôt pour prouver quoi que ce soit")
+      expect(written.length, "the round was interrupted before generating measurable text")
         .toBeGreaterThan(20);
-      expect(assistant!.info.finish ?? null, "opencode facturerait donc ce round").toBeNull();
+      expect(assistant!.info.finish ?? null, "the engine must not mark the interrupted round as finished").toBeNull();
       expect(assistant!.info.cost ?? 0).toBe(0);
 
-      // ── 2. What the proxy kept: the real cost ───────────────────────
+      // The identity survives even though cancellation removes the usage frame.
       await proxy.settle(10_000);
       const orphans = proxy.drain();
-      expect(orphans.length, "le proxy n'a rien retenu du round coupé").toBeGreaterThan(0);
+      expect(orphans.length, "no receipt captured for the interrupted generation").toBeGreaterThan(0);
       const gen = orphans[0];
-      expect(gen.id, "pas de generation_id").toBeTruthy();
-      expect(gen.costUsd, "le fournisseur n'a pas rendu son coût").toBeGreaterThan(0);
-      expect(gen.usage?.promptTokens ?? 0).toBeGreaterThan(0);
-      expect(gen.usage?.completionTokens ?? 0).toBeGreaterThan(0);
+      expect(gen.id, "missing generation ID").toBeTruthy();
+      expect(gen.costUsd).toBeNull();
+      expect(gen.usage).toBeNull();
     },
     600_000,
   );

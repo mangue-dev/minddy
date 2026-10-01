@@ -1,4 +1,5 @@
 import "server-only";
+import { visibleAssistantContent } from "./visible-content";
 import { randomUUID } from "node:crypto";
 import { encodeNumoToolMessage,
   shouldProtectNumoToolContent } from "@/lib/server/numo/tool-content";
@@ -330,6 +331,7 @@ export async function processChat(
     let fullContent = resumingTools
       ? resumeCheckpoint?.assistantContent ?? ""
       : "";
+    let rawContent = fullContent;
     let generationId: string | null = null;
     let usageInfo: {
       prompt_tokens?: number;
@@ -362,7 +364,31 @@ export async function processChat(
       const generationController = new AbortController();
       let idleTimer: ReturnType<typeof setTimeout> | null = null;
       let idleAborted = false;
-      let lastStopCheckAt = 0;
+      let stopPollTimer: ReturnType<typeof setTimeout> | null = null;
+      let roundClosed = false;
+      const observeStop = () => {
+        stopObserved = true;
+        generationController.abort();
+      };
+      // Poll independently of headers and body reads: serverless stop requests
+      // can land in another process while the provider stays completely silent.
+      const pollStop = async () => {
+        try {
+          if (await context.shouldStop?.()) observeStop();
+        } catch {
+          // A transient database failure is retried on the next poll.
+        } finally {
+          if (!roundClosed && !stopObserved) {
+            stopPollTimer = setTimeout(() => { void pollStop(); }, STOP_POLL_INTERVAL_MS);
+          }
+        }
+      };
+      const closeRound = () => {
+        roundClosed = true;
+        if (stopPollTimer) clearTimeout(stopPollTimer);
+        if (idleTimer) clearTimeout(idleTimer);
+        stopSignalOff?.();
+      };
       const armIdleTimer = () => {
         if (idleTimer) clearTimeout(idleTimer);
         idleTimer = setTimeout(() => {
@@ -376,10 +402,8 @@ export async function processChat(
       // connection attempt itself instead of waiting for the headers (or the
       // idle watchdog) to free it. The listener stays armed for the whole
       // round, and every exit path below disarms it.
-      const stopSignalOff = context.onStopSignal?.(() => {
-        stopObserved = true;
-        generationController.abort();
-      }) ?? null;
+      const stopSignalOff = context.onStopSignal?.(observeStop) ?? null;
+      stopPollTimer = setTimeout(() => { void pollStop(); }, STOP_POLL_INTERVAL_MS);
       let call;
       try {
         call = await fetchAiChat(
@@ -398,8 +422,7 @@ export async function processChat(
           { signal: generationController.signal },
         );
       } catch (error) {
-        stopSignalOff?.();
-        if (idleTimer) clearTimeout(idleTimer);
+        closeRound();
         // The watchdog also covers the connection phase: a provider that
         // accepts the request and never answers must end as a retryable idle
         // failure, not as an opaque abort.
@@ -418,15 +441,13 @@ export async function processChat(
       // keep a 90 s timer armed on an already-abandoned controller. The stop
       // listener is also dropped: nothing below subscribes anymore.
       if (!response.ok) {
-        if (idleTimer) clearTimeout(idleTimer);
-        stopSignalOff?.();
+        closeRound();
         const errorText = await response.text();
         throw new Error(`LLM error (${response.status}): ${errorText.slice(0, 200)}`);
       }
       const reader = response.body?.getReader();
       if (!reader) {
-        if (idleTimer) clearTimeout(idleTimer);
-        stopSignalOff?.();
+        closeRound();
         throw new Error("No response body from LLM");
       }
 
@@ -442,14 +463,7 @@ export async function processChat(
           // A stop that arrives mid-stream aborts the provider request right
           // away: waiting for the round to end would leave a stop pending for
           // minutes on a long or hung stream.
-          if (Date.now() - lastStopCheckAt >= STOP_POLL_INTERVAL_MS) {
-            lastStopCheckAt = Date.now();
-            if (await context.shouldStop?.()) {
-              stopObserved = true;
-              generationController.abort();
-              break;
-            }
-          }
+          if (stopObserved) break;
           let chunk;
           try {
             chunk = await reader.read();
@@ -459,7 +473,7 @@ export async function processChat(
             throw readError;
           }
           const { done, value } = chunk;
-          if (done) break;
+          if (done || stopObserved) break;
           armIdleTimer();
           buffer += decoder.decode(value, { stream: true });
           const lines = buffer.split("\n");
@@ -498,8 +512,11 @@ export async function processChat(
             }
             if (delta.content) {
               roundReasoning = reasoningStream.finish();
-              fullContent += delta.content;
-              emitter.emit("content_delta", { delta: delta.content });
+              rawContent += delta.content;
+              const visible = visibleAssistantContent(rawContent);
+              const visibleDelta = visible.slice(fullContent.length);
+              fullContent = visible;
+              if (visibleDelta) emitter.emit("content_delta", { delta: visibleDelta });
             }
             if (delta.tool_calls) {
               roundReasoning = reasoningStream.finish();
@@ -527,8 +544,7 @@ export async function processChat(
           }
         }
       } finally {
-        if (idleTimer) clearTimeout(idleTimer);
-        stopSignalOff?.();
+        closeRound();
         roundReasoning = reasoningStream.finish();
       }
       const generation = {

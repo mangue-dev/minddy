@@ -848,9 +848,11 @@ export function signalNumoTurnStopInProcess(turnId: string): boolean {
 }
 
 async function stopRequested(service: SupabaseClient, turnId: string, claimToken: string) {
-  const { data } = await service.from("numo_assistant_turns")
+  const { data, error } = await service.from("numo_assistant_turns")
     .select("status").eq("id", turnId).eq("claim_token", claimToken).maybeSingle();
-  return (data as { status?: string } | null)?.status === "stopping";
+  if (error) throw new Error("Unable to read Numo execution authority");
+  // A stolen/cleared claim must stop its old provider request too.
+  return !data || (data as { status?: string }).status !== "running";
 }
 
 /**
@@ -860,6 +862,12 @@ async function stopRequested(service: SupabaseClient, turnId: string, claimToken
  * same cascade as the SQL stop RPC, for the in-process paths.
  */
 async function interruptTurnWorkers(service: SupabaseClient, turnId: string) {
+  const { data: authority, error: authorityError } = await service
+    .from("numo_assistant_turns").select("status").eq("id", turnId).maybeSingle();
+  if (authorityError) throw new Error("Unable to read Numo stop scope");
+  // Individual worker stops retire the parent atomically. Global stops have
+  // already cascaded in SQL; an executor with a revoked claim cannot widen it.
+  if (!authority || authority.status === "stopped") return;
   const { error } = await service.from("agent_runs")
     .update({ interrupt_requested: true })
     .eq("parent_numo_turn_id", turnId)
@@ -979,9 +987,8 @@ async function executeNumoTurnCore(input: {
   // The DB `stopping` status stays the cross-instance authority: the local
   // flag only shortens the path when the stop POST lands in this process.
   let localStopRequested = false;
-  turnStopSignals.set(claimed.id, () => {
-    localStopRequested = true;
-  });
+  const signalLocalStop = () => { localStopRequested = true; };
+  turnStopSignals.set(claimed.id, signalLocalStop);
   try {
     return await executeClaimedNumoTurn({
       turnId: input.turnId,
@@ -992,6 +999,7 @@ async function executeNumoTurnCore(input: {
       aiRuntime: input.aiRuntime,
       allowRetryable: input.allowRetryable === true,
       isStopRequestedLocally: () => localStopRequested,
+      signalLocalStop,
     });
   } finally {
     turnStopSignals.delete(claimed.id);
@@ -1007,6 +1015,7 @@ async function executeClaimedNumoTurn(input: {
   aiRuntime?: ResolvedAiRuntime;
   allowRetryable?: boolean;
   isStopRequestedLocally: () => boolean;
+  signalLocalStop: () => void;
 }): Promise<ExecuteNumoTurnResult> {
   const service = getServiceClient();
   const claimToken = input.claimToken;
@@ -1182,10 +1191,15 @@ async function executeClaimedNumoTurn(input: {
         // contributor above re-registers this exact callback so an event stop
         // also unblocks a pending stream read. The registry value is replaced,
         // not stacked: only the live execution of this turn listens.
-        turnStopSignals.set(claimed.id, notify);
+        const signal = () => {
+          // Keep the turn-level latch set between generation rounds and tools.
+          input.signalLocalStop();
+          notify();
+        };
+        turnStopSignals.set(claimed.id, signal);
         return () => {
-          if (turnStopSignals.get(claimed.id) === notify) {
-            turnStopSignals.delete(claimed.id);
+          if (turnStopSignals.get(claimed.id) === signal) {
+            turnStopSignals.set(claimed.id, input.signalLocalStop);
           }
         };
       },
@@ -1509,6 +1523,7 @@ export async function requestNumoTurnStop(conversationId: string, userId: string
   });
   if (error) throw new Error(error.message);
   const turn = compositeRow<NumoTurn>(data);
+  if (turn) console.info("[numo-stop] recorded", { turnId: turn.id, status: turn.status });
   if (turn && turn.status === "stopping") {
     // The stop was recorded; if the executing turn lives in this process,
     // wake it now instead of on the next 1 s poll.

@@ -505,6 +505,45 @@ describe("Numo chat loop resilience", () => {
     expect(executeTool).not.toHaveBeenCalled();
   });
 
+  it.each(["headers", "body"])("polls a remote stop while waiting for silent %s", async (phase) => {
+    vi.useFakeTimers();
+    let stopped = false;
+    let signal: AbortSignal | undefined;
+    let connected!: () => void;
+    const started = new Promise<void>(resolve => { connected = resolve; });
+    fetchOpenRouter.mockImplementation(async (_url, _model, buildRequest) => {
+      signal = (buildRequest("model") as RequestInit).signal as AbortSignal;
+      connected();
+      if (phase === "headers") {
+        return await new Promise((_resolve, reject) => {
+          signal!.addEventListener("abort", () => reject(new Error("aborted")));
+        });
+      }
+      return { model: "model", response: new Response(new ReadableStream({
+        start(controller) {
+          signal!.addEventListener("abort", () => controller.error(new Error("aborted")));
+        },
+      })) };
+    });
+    try {
+      const result = processChat([{ role: "user", content: "Wait silently" }], [],
+        { emit: vi.fn() } as never, {
+          model: "model", conversationId: "conversation", projectId: "project", userId: "user",
+          supabase: fakeService(), service: fakeService(), locale: "en",
+          shouldStop: async () => stopped,
+          // No local notification: the stop landed in another server process.
+        });
+      await started;
+      await vi.advanceTimersByTimeAsync(0);
+      stopped = true;
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(signal?.aborted).toBe(true);
+      expect(await result).toMatchObject({ fullContent: "", suspension: null });
+      expect(executeTool).not.toHaveBeenCalled();
+      expect(vi.getTimerCount()).toBe(0);
+    } finally { vi.useRealTimers(); }
+  });
+
   it("stops between tool executions instead of running the whole round", async () => {
     // The tool call arrives with the stream, then the stop fires before and
     // after the first tool: the loop must observe the pending stop between

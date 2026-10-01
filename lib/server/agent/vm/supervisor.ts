@@ -1464,6 +1464,7 @@ export async function runOpencodeTurn(
       if (stoppingTurn) return stoppingTurn;
       interrupted = true;
       validationAbort.abort();
+      proxy.cancel();
       stoppingTurn = (async () => {
         const acknowledged = await abortSession();
         if (!acknowledged || !(await client.waitIdle())) {
@@ -3196,36 +3197,30 @@ class TurnLedger {
   }
 
   /**
-   * THE ROUNDS CUT IN FLIGHT — the ones that opencode will never say anything about.
-   *
-   * Measured (file §2.23): an aborted round returns `finish: null`, `cost: 0`,
-   * `tokens: 0` and a `MessageAbortedError`, while the supplier has invoiced.
-   * The proxy has read the last frame of the stream — it does not cut upstream when
-   * the customer leaves. We therefore write the line with ITS numbers.
-   *
-   * `estimated: false` without hesitation: it’s not a calculation, it’s the amount
-   * charged, read in the response. A flow that wouldn't even have returned its `usage`
-   * (supplier cut off, network failure) is not written at all: a line with zero
-   * would read “this call was free”, which exactly fills the gap.
-   *
-   * `seq`: the MOTHER gang, always. Proxy doesn't know which session
-   * came the request — he sees HTTP, not sessions — and a row
-   * under the mother is infinitely better than an expense that does not exist anywhere.
+   * Record generations the engine did not finish. Provider-reported usage is
+   * authoritative; a canceled generation without its final usage keeps an
+   * identifiable ledger receipt with unknown cost, never a fabricated zero.
    */
   async recordOrphans(
     cp: ControlPlaneClient,
     proxy: LlmProxy,
   ): Promise<number> {
-    // The race: the upstream finishes AFTER the customer (1.2 seconds measured). Drain without
-    // waiting would find nothing.
+    // Wait only for local relay cleanup, bounded even on network failure.
     await proxy.settle(ORPHAN_SETTLE_MS);
     let total = 0;
     for (const gen of proxy.drain()) {
       const usage = gen.usage;
       if (!usage || gen.costUsd == null) {
-        // Nothing billable to write, but it SAYS: it's the only sign
-        // that an expense could have gone off the counters.
-        console.error("[supervisor] provider_usage_missing");
+        console.error("[supervisor] provider_usage_missing", gen.id);
+        if (gen.id) await cp.recordUsage({
+          runId: this.job.ledgerRunId, seq: this.parentSeq++,
+          feature: this.job.feature, billTo: { unattributed: "resolved by the control plane" },
+          model: gen.model || this.job.model, generationId: gen.id,
+          promptTokens: usage?.promptTokens ?? null,
+          completionTokens: usage?.completionTokens ?? null,
+          totalTokens: usage?.totalTokens ?? null, cost: null,
+          projectId: this.job.projectId,
+        });
         continue;
       }
       const prompt = usage.promptTokens ?? 0;
