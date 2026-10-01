@@ -33,14 +33,13 @@ const EASE_SMOOTH: [number, number, number, number] = [0.37, 0, 0.63, 1];
 // Where the face locks while thinking (top-right glance, in viewBox units).
 const THINK_LOOK = { x: 3.5, y: -3 };
 
-// Flowing "thinking" gradient — a soft bluish sheen over the primary tint.
-// First and last stops match so the
-// repeated tile translates seamlessly. Set via CSS so `var(--primary)` resolves
-// and follows the theme.
+// Flowing "thinking" gradient — a neutral gray sheen over the foreground.
+// First and last stops match so the repeated tile translates seamlessly.
+// The foreground follows the theme; the gray stays achromatic in both themes.
 const GRADIENT_STOPS = [
-  { offset: "0", color: "var(--primary)" },
-  { offset: "0.5", color: "oklch(0.8 0.1 250)" },
-  { offset: "1", color: "var(--primary)" },
+  { offset: "0", color: "var(--foreground)" },
+  { offset: "0.5", color: "oklch(0.65 0 0)" },
+  { offset: "1", color: "var(--foreground)" },
 ];
 // Tile width === viewBox width, so a translate of this distance loops exactly.
 const GRADIENT_TILE = 48;
@@ -50,7 +49,7 @@ const GRADIENT_TILE = 48;
  * outline + two eyes + smile). The head outline stays still; the eyes and mouth
  * move together as one face (`data-numo-face`). Base color is inherited via
  * `currentColor` (tint with a `text-*` class). While thinking, the face glances
- * to the top-right and a soft bluish gradient flows across it. Honors
+ * to the top-right and a neutral gray gradient flows across it. Honors
  * `prefers-reduced-motion` by rendering a still face.
  *
  * The drawing itself is in `numo-face.tsx`, which doesn't need any JS: this
