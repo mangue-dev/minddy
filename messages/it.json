@@ -4810,7 +4810,7 @@
   },
   "Landing": {
     "encryptionTitle": "Crittografia dei dati archiviati",
-    "encryptionBody": "minddy supporta la crittografia AES-256-GCM per i contenuti degli spazi di lavoro e i file. La chiave radice resta fuori dal database; le chiavi dei dati vi sono archiviate in forma crittografata. Il server decritta i contenuti per gli accessi autorizzati e le funzioni IA; non è crittografia end-to-end.",
+    "encryptionBody": "minddy supporta la crittografia AES-256-GCM per i contenuti degli spazi di lavoro e i file. La chiave radice resta fuori dal database; le chiavi dei dati vi sono archiviate in forma crittografata. Il server decritta i contenuti per gli accessi autorizzati e le funzioni IA.",
     "metaTitle": "minddy: gestione progetti open source per team software",
     "metaDescription": "Organizza attività, documenta decisioni, raccogli idee dagli utenti e lavora con agenti di programmazione IA. Su minddy Cloud o sui tuoi server.",
     "navHowItWorks": "Come funziona",

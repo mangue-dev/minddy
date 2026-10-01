@@ -4810,7 +4810,7 @@
   },
   "Landing": {
     "encryptionTitle": "Criptografia em repouso",
-    "encryptionBody": "O minddy oferece criptografia AES-256-GCM para o conteúdo dos espaços de trabalho e arquivos. A chave raiz fica fora do banco de dados; as chaves de dados são armazenadas nele de forma criptografada. O servidor descriptografa o conteúdo para acessos autorizados e recursos de IA; não é criptografia de ponta a ponta.",
+    "encryptionBody": "O minddy oferece criptografia AES-256-GCM para o conteúdo dos espaços de trabalho e arquivos. A chave raiz fica fora do banco de dados; as chaves de dados são armazenadas nele de forma criptografada. O servidor descriptografa o conteúdo para acessos autorizados e recursos de IA.",
     "metaTitle": "minddy: gestão de projetos de código aberto para equipes de software",
     "metaDescription": "Organize tarefas, documente decisões, reúna ideias dos usuários e trabalhe com agentes de programação com IA. No minddy Cloud ou nos seus servidores.",
     "navHowItWorks": "Como funciona",

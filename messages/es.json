@@ -4810,7 +4810,7 @@
   },
   "Landing": {
     "encryptionTitle": "Cifrado en reposo",
-    "encryptionBody": "minddy admite el cifrado AES-256-GCM del contenido de los espacios de trabajo y los archivos. La clave raíz se guarda fuera de la base de datos; las claves de datos se almacenan en ella de forma cifrada. El servidor descifra el contenido para los accesos autorizados y las funciones de IA; no es cifrado de extremo a extremo.",
+    "encryptionBody": "minddy admite el cifrado AES-256-GCM del contenido de los espacios de trabajo y los archivos. La clave raíz se guarda fuera de la base de datos; las claves de datos se almacenan en ella de forma cifrada. El servidor descifra el contenido para los accesos autorizados y las funciones de IA.",
     "metaTitle": "minddy: gestión de proyectos de código abierto para equipos",
     "metaDescription": "Organiza tareas, documenta decisiones, recoge ideas de tus usuarios y trabaja con agentes de programación con IA. En minddy Cloud o en tus servidores.",
     "navHowItWorks": "Cómo funciona",

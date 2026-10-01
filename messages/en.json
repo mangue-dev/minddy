@@ -4810,7 +4810,7 @@
   },
   "Landing": {
     "encryptionTitle": "Encryption at rest",
-    "encryptionBody": "minddy supports AES-256-GCM encryption for workspace content and files. The root key is kept outside the database; data keys are stored there in encrypted form. The server decrypts content for authorized access and AI features; this is not end-to-end encryption.",
+    "encryptionBody": "minddy supports AES-256-GCM encryption for workspace content and files. The root key is kept outside the database; data keys are stored there in encrypted form. The server decrypts content for authorized access and AI features.",
     "metaTitle": "minddy: open-source project management for software teams",
     "metaDescription": "Organize tasks, document decisions, collect user feedback, and work with Numo or connected AI agents. Use minddy Cloud or host minddy yourself.",
     "navHowItWorks": "How it works",

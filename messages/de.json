@@ -4810,7 +4810,7 @@
   },
   "Landing": {
     "encryptionTitle": "Verschlüsselung gespeicherter Daten",
-    "encryptionBody": "minddy unterstützt AES-256-GCM-Verschlüsselung für Arbeitsbereichsinhalte und Dateien. Der Stammschlüssel bleibt außerhalb der Datenbank; Datenschlüssel werden dort verschlüsselt gespeichert. Der Server entschlüsselt Inhalte für autorisierte Zugriffe und KI-Funktionen; dies ist keine Ende-zu-Ende-Verschlüsselung.",
+    "encryptionBody": "minddy unterstützt AES-256-GCM-Verschlüsselung für Arbeitsbereichsinhalte und Dateien. Der Stammschlüssel bleibt außerhalb der Datenbank; Datenschlüssel werden dort verschlüsselt gespeichert. Der Server entschlüsselt Inhalte für autorisierte Zugriffe und KI-Funktionen.",
     "metaTitle": "minddy: Open-Source-Projektmanagement für Softwareteams",
     "metaDescription": "Organisiere Aufgaben, dokumentiere Entscheidungen, sammle Nutzerfeedback und arbeite mit KI-Coding-Agenten. In minddy Cloud oder auf deinen eigenen Servern.",
     "navHowItWorks": "So funktioniert es",

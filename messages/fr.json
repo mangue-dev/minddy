@@ -4810,7 +4810,7 @@
   },
   "Landing": {
     "encryptionTitle": "Chiffrement au repos",
-    "encryptionBody": "minddy prend en charge le chiffrement AES-256-GCM du contenu des espaces de travail et des fichiers. La clé racine est conservée hors de la base de données ; les clés de données y sont stockées sous forme chiffrée. Le serveur déchiffre le contenu pour les accès autorisés et les fonctions IA ; ce chiffrement n’est pas de bout en bout.",
+    "encryptionBody": "minddy prend en charge le chiffrement AES-256-GCM du contenu des espaces de travail et des fichiers. La clé racine est conservée hors de la base de données ; les clés de données y sont stockées sous forme chiffrée. Le serveur déchiffre le contenu pour les accès autorisés et les fonctions IA.",
     "metaTitle": "minddy : la gestion de projet open source pour les équipes logicielles",
     "metaDescription": "Organisez les tâches, documentez les décisions, recueillez les idées de vos utilisateurs et travaillez avec des agents IA. Sur minddy Cloud ou vos serveurs.",
     "navHowItWorks": "Comment ça marche",
