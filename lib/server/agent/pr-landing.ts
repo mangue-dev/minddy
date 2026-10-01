@@ -14,7 +14,7 @@ import { numoPullRequestFooter } from "@/lib/numo-pr-footer";
 import { DEFAULT_AGENT_BRANCH_PREFIX } from "./branch-name";
 
 import { notifyPullRequestOpened } from "./pr-opened-notify";
-import { prStateFromRef, upsertPullRequest } from "./pull-requests";
+import { prStateFromRef, upsertPullRequest, pullRequestIssueIds } from "./pull-requests";
 import { syncIssueStatusFromPr } from "./issue-status-sync";
 import { getRun, runRepoBindingIsCurrent, stampRun, type AgentRun,
 } from "./runs";
@@ -401,7 +401,8 @@ export async function registerPr(
   if (kind === "opened") await notifyPullRequestOpened(prRow);
   // Run NOTEBOOK: no tickets to synchronize or comment on — PR lives in
   // the session conversation (and on the Pull requests page).
-  if (issue && run.issue_id) {
+  if (issue && run.issue_id && prRow &&
+      (await pullRequestIssueIds(prRow.id)).includes(run.issue_id)) {
     if (run.created_by) {
       await syncIssueStatusFromPr({
         issueId: run.issue_id,

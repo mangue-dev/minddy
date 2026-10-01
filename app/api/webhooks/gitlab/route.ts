@@ -1,3 +1,5 @@
+import { filterLinkedIssueRuns } from "@/lib/server/agent/activity";
+import { pullRequestIssueIds } from "@/lib/server/agent/pull-requests";
 import { type NextRequest, NextResponse } from "next/server";
 import { repositoryStorageName } from "@/lib/server/git/repository-name-content";
 import { afterOrNow } from "@/lib/server/after-safe";
@@ -328,7 +330,7 @@ async function handleMergeRequest(
   if (!prState && !actionType) return;
 
   // Runs affected. merge/close/reopen/open resets pr_state in passing.
-  const runs: SyncedPrRun[] = prState
+  const prRuns: SyncedPrRun[] = prState
     ? await syncPrState({
         repoFullName,
         prNumber: iid,
@@ -337,15 +339,10 @@ async function handleMergeRequest(
         provider: "gitlab",
       })
     : await findRunsForPr({ repoFullName, prNumber: iid, provider: "gitlab" });
+  const linkedPr = await findPullRequestByNumber({ provider: "gitlab", repoFullName, number: iid });
+  const runs = filterLinkedIssueRuns(prRuns, linkedPr ? await pullRequestIssueIds(linkedPr.id) : []);
   const currentPrState =
-    runs[0]?.prState ??
-    (
-      await findPullRequestByNumber({
-        provider: "gitlab",
-        repoFullName,
-        number: iid,
-      })
-    )?.state ??
+    linkedPr?.state ?? prRuns[0]?.prState ??
     ingested?.state ??
     prState;
 

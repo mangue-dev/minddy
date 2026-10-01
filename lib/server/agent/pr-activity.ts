@@ -1,3 +1,4 @@
+import { filterLinkedIssueRuns } from "./activity";
 import { pullRequestIssueIds } from "./pull-requests";
 import { issueStore } from "@/lib/server/issue-store";
 import "server-only";
@@ -521,11 +522,15 @@ export async function recordForgePrGesture(opts: {
   /** Forge instant of the gesture (see `occurredAtOf`) — null keeps capture time. */
   occurredAt?: string | null;
 }): Promise<void> {
-  const runs = await findRunsForPr({
+  const prRuns = await findRunsForPr({
     repoFullName: opts.repoFullName,
     prNumber: opts.prNumber,
     provider: opts.provider,
   });
+  const linkedPr = await findPullRequestByNumber({
+    provider: opts.provider, repoFullName: opts.repoFullName, number: opts.prNumber,
+  });
+  const runs = filterLinkedIssueRuns(prRuns, linkedPr ? await pullRequestIssueIds(linkedPr.id) : []);
   await applyForgePrToIssue({
     ...opts, prState: null, actionType: opts.type,
     excludeIssueIds: runs.map((run) => run.issueId),

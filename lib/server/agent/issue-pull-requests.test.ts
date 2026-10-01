@@ -1,3 +1,4 @@
+import { filterLinkedIssueRuns } from "./activity";
 import { describe, expect, it } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { listIssuePullRequests } from "./issue-pull-requests";
@@ -34,5 +35,16 @@ describe("listIssuePullRequests", () => {
   it("reports failed association reads instead of silently clearing PR chips", async () => {
     const { supabase } = client([], { message: "Read failed" });
     await expect(listIssuePullRequests(supabase)).rejects.toThrow("Read failed");
+  });
+});
+
+// An old worker context must not recreate activity after a manual detachment.
+describe("filterLinkedIssueRuns", () => {
+  it("keeps current associations and notebook runs, omitting detached worker issues", () => {
+    const linked = { issueId: "linked", id: "run-1" };
+    const detached = { issueId: "detached", id: "run-2" };
+    const notebook = { issueId: null, id: "run-3" };
+    expect(filterLinkedIssueRuns([linked, detached, notebook], ["linked"]))
+      .toEqual([linked, notebook]);
   });
 });

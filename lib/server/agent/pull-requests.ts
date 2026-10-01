@@ -1,3 +1,4 @@
+import { filterLinkedIssueRuns } from "./activity";
 import { issueStore } from "@/lib/server/issue-store";
 import "server-only";
 
@@ -542,18 +543,15 @@ async function reconcileDriftedPr(
 ): Promise<void> {
   try {
     const { syncPrState } = await import("./runs");
-    const runs = await syncPrState({
+    const prRuns = await syncPrState({
       repoFullName,
       prNumber: number,
       prState: state,
       provider,
     });
-    const currentState =
-      runs[0]?.prState ??
-      (
-        await findPullRequestByNumber({ provider, repoFullName, number })
-      )?.state ??
-      state;
+    const linkedPr = await findPullRequestByNumber({ provider, repoFullName, number });
+    const runs = filterLinkedIssueRuns(prRuns, linkedPr ? await pullRequestIssueIds(linkedPr.id) : []);
+    const currentState = linkedPr?.state ?? prRuns[0]?.prState ?? state;
     {
       const { applyForgePrToIssue } = await import("./pr-activity");
       await applyForgePrToIssue({

@@ -818,6 +818,17 @@ export async function linkPullRequestIssueApi(
   );
 }
 
+export async function unlinkPullRequestIssueApi(
+  prId: string,
+  issueId: string,
+): Promise<{ ok: true }> {
+  return parseJson(await fetch(prEndpoint(prId), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "unlink_issue", issueId }),
+  }));
+}
+
 /** Verdict of a review submitted from minddy (MIN-138). */
 export type ReviewVerdict = "approve" | "request_changes" | "comment";
 

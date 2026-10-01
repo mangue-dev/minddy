@@ -1,3 +1,5 @@
+import { filterLinkedIssueRuns } from "@/lib/server/agent/activity";
+import { pullRequestIssueIds } from "@/lib/server/agent/pull-requests";
 import { type NextRequest, NextResponse } from "next/server";
 import { repositoryStorageName } from "@/lib/server/git/repository-name-content";
 import { getServiceClient } from "@/lib/supabase-service";
@@ -367,7 +369,7 @@ async function handlePullRequest(payload: PullRequestEvent): Promise<void> {
   // did it `if (!prState) return`, amounted to never tracing it.
   if (!prState && !actionType) return;
 
-  const runs = prState
+  const prRuns = prState
     ? await syncPrState({
         repoFullName,
         prNumber: number,
@@ -380,15 +382,10 @@ async function handlePullRequest(payload: PullRequestEvent): Promise<void> {
         prNumber: number,
         provider: "github",
       });
+  const linkedPr = await findPullRequestByNumber({ provider: "github", repoFullName, number });
+  const runs = filterLinkedIssueRuns(prRuns, linkedPr ? await pullRequestIssueIds(linkedPr.id) : []);
   const currentPrState =
-    runs[0]?.prState ??
-    (
-      await findPullRequestByNumber({
-        provider: "github",
-        repoFullName,
-        number,
-      })
-    )?.state ??
+    linkedPr?.state ?? prRuns[0]?.prState ??
     ingested?.state ??
     prState;
 

@@ -342,8 +342,8 @@ export function buildSharedRules(
   stays unattached, and link_pull_request attaches it after the fact — by number ("#42", "!42" on
   GitLab) or by the URL the user pasted. It also moves the issue's status to match the PR (open →
   in_review, draft → in_progress, merged → done, closed → todo): say which. The link is
-  DEFINITIVE, there is no unlink, so confirm with the user whenever you had to guess either the PR
-  or the issue.
+  removable from the issue card menu or the PR page. Confirm with the user whenever you had to
+  guess either the PR or the issue.
   PR MANAGEMENT is direct — merge_pull_request, update_pull_request, post_pull_request_comment
   and edit_own_pull_request_comment act on the PR WITHOUT the code agent. "Merge this PR" goes
   through merge_pull_request (never delegate a merge to the code agent), and comments on the

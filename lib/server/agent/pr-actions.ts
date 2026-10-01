@@ -109,9 +109,9 @@ import {
  * implementation and forge errors are translated to HTTP in one place.
  *
  * The ticket link moved to the PR. `syncIssueStatusFromPr` and activity tracking
- * read `pull_requests.issue_id` instead of `run.issue_id`: a human PR can now
- * carry a ticket, rather than this being limited to Numo PRs. A PR without a
- * ticket silently synchronizes and records nothing; that is a normal case.
+ * read the current `pull_request_issues` associations. Human and Numo PRs can
+ * carry several tickets. A PR without a ticket silently synchronizes and
+ * records nothing; that is a normal case.
  */
 
 /**
@@ -2086,6 +2086,33 @@ export async function prLinkIssueResponse(
     issue: { id: issue.id, number: issue.number, title: issue.title },
     status: result.status,
   });
+}
+
+/** Remove only the requested association; issue status and forge data stay unchanged. */
+export async function prUnlinkIssueResponse(
+  scope: PrScope,
+  supabase: SupabaseClient,
+  body: PrActionBody,
+): Promise<NextResponse> {
+  const issueId = typeof body.issueId === "string" ? body.issueId.trim() : "";
+  if (!UUID_RE.test(issueId)) {
+    return NextResponse.json({ error: "Invalid issue id" }, { status: 400 });
+  }
+  const { data: issue, error } = await issueStore(supabase).select("id")
+    .eq("id", issueId).is("deleted_at", null).maybeSingle();
+  if (error) return NextResponse.json({ error: "Unable to read issue" }, { status: 500 });
+  if (!issue) return NextResponse.json({ error: "Issue not found" }, { status: 404 });
+  const { data, error: unlinkError } = await getServiceClient()
+    .rpc("unlink_pull_request_from_issue_atomic", { p_pr_id: scope.pr.id, p_issue_id: issueId });
+  if (unlinkError) return NextResponse.json({ error: "Unable to unlink issue" }, { status: 500 });
+  if (data === "pr_not_found") {
+    return NextResponse.json({ error: "Pull request not found" }, { status: 404 });
+  }
+  if (data !== "unlinked" && data !== "already") {
+    return NextResponse.json({ error: "Unable to unlink issue" }, { status: 500 });
+  }
+  broadcastPrChanged(scope.pr.id, ["pr"]);
+  return NextResponse.json({ ok: true });
 }
 
 /** Merge, close, reopen, and draft/review transitions for a pull request. */

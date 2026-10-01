@@ -186,8 +186,7 @@ const MAX_PATCH_CHARS = 4000;
  `code` of the shared core IS the MCP error code: only one vocabulary. */
 const LINK_REFUSALS: Record<PrLinkRefusal, string> = {
   pr_already_linked:
-    "This pull request is already attached to another issue. The link is definitive: " +
-    "it cannot be replaced, and there is no unlink.",
+    "The pull request could not be linked. Refresh it and try again.",
   issue_already_linked:
     "This issue already carries a live (draft or open) pull request. Only ONE live pull " +
     "request per issue — wait for it to be merged or closed.",

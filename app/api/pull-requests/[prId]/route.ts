@@ -6,6 +6,7 @@ import {
   prAiReviewResponse,
   prDetailResponse,
   prLinkIssueResponse,
+  prUnlinkIssueResponse,
   prMaintenanceActionResponse,
   prReviewResponse,
   prStateActionResponse,
@@ -23,7 +24,8 @@ import {
  * | { action: 'convert_to_draft' } → open → draft
  *       | { action: 'review', verdict, message, relaunch? }
  *       | { action: 'ai_review' } → compatibility Numo review intent
- *       | { action: 'link_issue', issueId }                  → attaches a ticket (MIN-163)
+ *       | { action: 'link_issue', issueId } → adds an issue association
+ *       | { action: 'unlink_issue', issueId } → removes an issue association
  *
  * Both Numo actions return a durable common conversation. Existing worker
  * review status remains readable from `./ai-review` for historical runs.
@@ -67,6 +69,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     action !== "ready_for_review" &&
     action !== "convert_to_draft" &&
     action !== "link_issue" &&
+    action !== "unlink_issue" &&
     action !== "update_branch" &&
     action !== "rerun_check" &&
     action !== "update_title" &&
@@ -86,6 +89,9 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   }
   if (action === "review") {
     return prReviewResponse(auth.scope, body, auth.userId, auth.supabase);
+  }
+  if (action === "unlink_issue") {
+    return prUnlinkIssueResponse(auth.scope, auth.supabase, body);
   }
   if (action === "link_issue") {
     return prLinkIssueResponse(auth.scope, auth.supabase, body, auth.userId);
