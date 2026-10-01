@@ -1,6 +1,6 @@
 "use client";
 
-import { toast } from "mangue-ui";
+import { toast } from "sonner";
 import { addIssueRelationApi } from "./issue-relations-api";
 import type { PendingRelationInput, RelationEndpointType } from "./types";
 

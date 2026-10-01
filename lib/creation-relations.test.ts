@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   error: vi.fn(), insert: vi.fn(), merge: vi.fn(), remember: vi.fn(),
 }));
 vi.mock("mangue-ui", () => ({ toast: { error: mocks.error } }));
+vi.mock("sonner", () => ({ toast: { error: mocks.error } }));
 vi.mock("./analytics", () => ({ trackEvent: vi.fn() }));
 vi.mock("./last-create-project", () => ({ rememberCreateProject: mocks.remember }));
 vi.mock("./optimistic/issue-writes", () => ({

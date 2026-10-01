@@ -2,7 +2,7 @@
 
 import { createUuid } from "@/lib/create-uuid";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   Button,
@@ -205,6 +205,11 @@ export function CreateIssueDialog({
   // second dialog on top (draft confirmation, objective creation
   // from the picker) must keep his touches to himself.
   const contentRef = useRef<HTMLDivElement>(null);
+  const [contentElement, setContentElement] = useState<HTMLDivElement | null>(null);
+  const setContentRef = useCallback((node: HTMLDivElement | null) => {
+    contentRef.current = node;
+    setContentElement(node);
+  }, []);
   const createMoreId = useId();
   // ⌘/Ctrl + Enter creates the ticket, from wherever you are in the form — y
   // understood from the description, which the title field does not cover.
@@ -653,7 +658,7 @@ export function CreateIssueDialog({
  width of a phone lost in the margins, hence the `p-0` of this case
  (the vaul attribute, the only reliable benchmark for the switchover). */}
         <DialogContent
-          ref={contentRef}
+          ref={setContentRef}
           className="p-8 max-sm:p-5 data-vaul-drawer:p-0 sm:max-w-2xl"
           onInteractOutside={keepOverlayOpenForPopper}
         >
@@ -807,6 +812,7 @@ export function CreateIssueDialog({
                 />
               )}
               <CreationRelationsCompact
+                container={contentElement}
                 projectId={projectId}
                 projectKey={currentProject?.key ?? ""}
                 active={open}

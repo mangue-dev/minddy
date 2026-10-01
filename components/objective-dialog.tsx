@@ -226,6 +226,7 @@ export function ObjectiveDialog({
   useIdleMarkdownEditorPreload();
   const [form, setForm] = useState(EMPTY);
   const [relations, setRelations] = useState<PendingRelationInput[]>([]);
+  const [contentElement, setContentElement] = useState<HTMLDivElement | null>(null);
   const [submitting, setSubmitting] = useState(false);
   // Id of the draft loaded in the form (MIN-41), so re-closing updates it in
   // place and a successful create removes exactly the draft it came from.
@@ -487,6 +488,7 @@ export function ObjectiveDialog({
  32 px), and nothing under 480 px — mangue-ui then switches to bottom sheet
  (vaul) which already sets its own 16 px on content. */}
         <DialogContent
+          ref={setContentElement}
           className="p-8 max-sm:p-5 data-vaul-drawer:p-0 sm:max-w-2xl"
           onInteractOutside={keepOverlayOpenForPopper}
         >
@@ -600,6 +602,7 @@ export function ObjectiveDialog({
               />
               {composerEnabled && (
                 <CreationRelationsCompact
+                  container={contentElement}
                   projectId={projectId!}
                   projectKey={currentProject?.key ?? projectKey ?? ""}
                   active={open}

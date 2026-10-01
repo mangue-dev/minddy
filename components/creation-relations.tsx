@@ -33,7 +33,8 @@ export function CreationRelationsCompact({
   value,
   onChange,
   disabled,
-}: CreationRelationsProps) {
+  container,
+}: CreationRelationsProps & { container: HTMLElement | null }) {
   const t = useTranslations("Relations");
   const tCommon = useTranslations("Common");
   const [open, setOpen] = useState(false);
@@ -91,6 +92,7 @@ export function CreationRelationsCompact({
       onSearchValueChange={setQuery}
       searchPlaceholder={step ? t("searchTarget") : undefined}
       contentClassName="w-80"
+      container={container}
       hideEmpty={step !== null && loading}
       trigger={
         <button

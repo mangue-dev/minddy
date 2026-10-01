@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { act } from "react";
+import { createPortal } from "react-dom";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import en from "@/messages/en.json";
@@ -18,12 +19,13 @@ vi.mock("next-intl", () => ({ useTranslations: (namespace: keyof typeof en) =>
 }));
 vi.mock("@hugeicons/react", () => ({ HugeiconsIcon: () => null }));
 vi.mock("@/components/ui/app-tooltip", () => ({ AppTooltip: ({ children }: { children: React.ReactNode }) => children }));
-vi.mock("@/components/search-menu", () => ({ SearchMenu: ({ open, onOpenChange, trigger, children, searchValue, onSearchValueChange }: {
+vi.mock("@/components/search-menu", () => ({ SearchMenu: ({ open, onOpenChange, trigger, children, searchValue, onSearchValueChange, container }: {
   open: boolean; onOpenChange: (value: boolean) => void; trigger: React.ReactElement; children: React.ReactNode;
   searchValue: string; onSearchValueChange: (value: string) => void;
+  container?: HTMLElement | null;
 }) => React.createElement("div", { "data-picker": true },
   React.cloneElement(trigger, { onClick: () => onOpenChange(!open) } as React.HTMLAttributes<HTMLElement>),
-  open && React.createElement("div", null, React.createElement("input", { "aria-label": "Search relations", value: searchValue, onChange: (e: React.ChangeEvent<HTMLInputElement>) => onSearchValueChange(e.target.value) }), children)),
+  open && createPortal(React.createElement("div", null, React.createElement("input", { "aria-label": "Search relations", value: searchValue, onChange: (e: React.ChangeEvent<HTMLInputElement>) => onSearchValueChange(e.target.value) }), children), container ?? document.body)),
 }));
 vi.mock("mangue-ui", () => {
   const wrap = ({ children }: { children: React.ReactNode }) => React.createElement("div", null, children);
@@ -34,7 +36,7 @@ vi.mock("mangue-ui", () => {
     toast: { success: vi.fn(), error: vi.fn(), info: vi.fn() },
     Dialog: ({ open, onOpenChange, children }: { open: boolean; onOpenChange: (next: boolean) => void; children: React.ReactNode }) =>
       open ? React.createElement("div", null, React.createElement("button", { type: "button", onClick: () => onOpenChange(false) }, "Close creation"), children) : null,
-    DialogContent: ({ children, ref }: { children: React.ReactNode; ref: React.Ref<HTMLDivElement> }) => React.createElement("div", { ref }, children),
+    DialogContent: ({ children, ref }: { children: React.ReactNode; ref: React.Ref<HTMLDivElement> }) => React.createElement("div", { ref, "data-dialog-content": true }, children),
     DialogTitle: wrap, DropdownMenuLabel: wrap, CommandGroup: wrap,
     CommandItem: item, DropdownMenuItem: item,
     Spinner: () => null,
@@ -148,6 +150,19 @@ async function mountDialog(kind: "issue" | "objective", withProjectMenu = true) 
 }
 
 describe("creation relation controls", () => {
+  it.each(["issue", "objective"] as const)("portals the %s relation menu into the current dialog after reopening", async (kind) => {
+    const dialog = await mountDialog(kind);
+    for (let opening = 0; opening < 2; opening++) {
+      await click(en.Relations.addRelationAria);
+      const input = document.querySelector('[aria-label="Search relations"]')!;
+      expect(input).not.toBeNull();
+      expect(input.closest("[data-dialog-content]")).toBe(host.querySelector("[data-dialog-content]"));
+      await click(en.Relations.addRelationAria);
+      await click("Close creation");
+      await dialog.reopen();
+    }
+  });
+
   it("places relations last on the objective page and uses its project key without a project menu", async () => {
     await mountDialog("objective", false);
     const picker = host.querySelector("[data-picker]")!;
@@ -229,7 +244,7 @@ describe("creation relation controls", () => {
 
   it("filters duplicate selections by direction and does not fetch candidates while closed", async () => {
     const selection: PendingRelationInput = { type: "blocks", target_id: issue.id, target_type: "issue", target_label: "MIN-12 Target issue" };
-    const props = { projectId: project.id, projectKey: project.key, active: true, value: [selection], onChange: vi.fn() };
+    const props = { projectId: project.id, projectKey: project.key, active: true, value: [selection], onChange: vi.fn(), container: host };
     await act(() => root.render(React.createElement(CreationRelationsCompact, props)));
     expect(fixture.queryProjects.every((project) => project === null)).toBe(true);
     await click(en.Relations.addRelationAria);
