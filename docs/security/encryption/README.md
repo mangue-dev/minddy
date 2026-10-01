@@ -2429,7 +2429,9 @@ version and do not reuse the forge relay migration numbers.
 
 The reopening regression covers primary and secondary conflicts, preservation of
 competing live PRs and nonconflicting links, primary promotion, an omitted inferred
-issue, and stale observations. Concurrent association changes force a bounded
+issue, stale observations, and a suppressed inferred issue after conflict cleanup.
+The unlink guard retains only a primary that still has a current association.
+Concurrent association changes force a bounded
 retry with a stable observation timestamp. The link and unlink SQL regressions
 also pass after both migrations. These checks do not certify a production rollout
 or a complete Supabase replay.

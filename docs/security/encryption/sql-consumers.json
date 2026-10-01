@@ -9206,16 +9206,20 @@
       "functionReferences": []
     },
     "filter_unlinked_pull_request_issue()": {
-      "sha256": "07aeb379f82696d47558b0794438659fbeac22cbc2c44e083ec312b9986320ac",
+      "sha256": "2298fd06f80eea1e7e179f4cbfe325f801c3b2f73997adfc6e709a5b4e658007",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
       ],
       "acl": "{postgres=X/postgres}",
       "relations": [
+        "issues",
+        "pull_request_issues",
         "pull_request_issue_unlinks"
       ],
-      "protectedRelations": [],
+      "protectedRelations": [
+        "issues"
+      ],
       "functionReferences": []
     },
     "preserve_primary_pull_request_issue()": {

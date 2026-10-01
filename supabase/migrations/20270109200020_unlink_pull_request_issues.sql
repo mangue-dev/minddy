@@ -15,7 +15,15 @@ BEGIN
     SELECT 1 FROM public.pull_request_issue_unlinks
     WHERE pull_request_id = NEW.id AND issue_id = NEW.issue_id
   ) THEN
-    NEW.issue_id := OLD.issue_id;
+    IF EXISTS (SELECT 1 FROM public.pull_request_issues
+      WHERE pull_request_id = NEW.id AND issue_id = OLD.issue_id) THEN
+      NEW.issue_id := OLD.issue_id;
+    ELSE
+      -- Reopening may already have removed an old primary owned by another live PR.
+      SELECT l.issue_id INTO NEW.issue_id FROM public.pull_request_issues l
+      JOIN public.issues i ON i.id = l.issue_id AND i.deleted_at IS NULL
+      WHERE l.pull_request_id = NEW.id ORDER BY l.created_at, l.issue_id LIMIT 1;
+    END IF;
   END IF;
   RETURN NEW;
 END;
