@@ -299,6 +299,8 @@ export function environmentValues(options, generated = generatedValues(options.c
   const capabilities = options.capabilities ?? new Set();
   return {
     ...generated,
+    // Activation requires completed schema and recovery checks.
+    MINDDY_CONTENT_ENCRYPTION_ENABLED: "false",
     MINDDY_DEPLOY_DIR: options.deployDir,
     MINDDY_ENV_FILE: options.envFile,
     ...(options.image ? { MINDDY_IMAGE: options.image } : {}),

@@ -4809,6 +4809,8 @@
     "dismiss": "Dismiss"
   },
   "Landing": {
+    "encryptionTitle": "Encryption at rest",
+    "encryptionBody": "minddy supports AES-256-GCM encryption for workspace content and files. Keys are kept separately from the database. The server decrypts content for authorized access and AI features; this is not end-to-end encryption.",
     "metaTitle": "minddy: open-source project management for software teams",
     "metaDescription": "Organize tasks, document decisions, collect user feedback, and work with Numo or connected AI agents. Use minddy Cloud or host minddy yourself.",
     "navHowItWorks": "How it works",
@@ -5236,6 +5238,8 @@
     "faq_byok_a": "You choose which features use your key: Numo conversations, delegated code work, automations, dictation, or feedback. Compatible AI calls go to your provider and do not use minddy's included AI budget. Unselected features, calls without a compatible model, and server-sandbox compute still use that budget. Your provider's prices and limits apply."
   },
   "SelfHosting": {
+    "encryptionTitle": "Keep your encryption key safe",
+    "encryptionBody": "The installer creates a dedicated server key. Preserve it across updates and keep a protected recovery copy. Encryption must be enabled after database migrations and recovery checks; generating a key alone does not encrypt existing data.",
     "metaTitle": "Self-host the open-source minddy issue tracker",
     "metaDescription": "Run minddy's GNU AGPL v3.0 issue tracker and project workspace locally or on your server with the guided self-hosting flow.",
     "eyebrow": "Official self-hosting guide",
@@ -5294,6 +5298,7 @@
     "openOperationsGuide": "Open backup and update guide"
   },
   "SelfHostingInstall": {
+    "encryptionSetup": "The installer creates a dedicated server key. Preserve it across updates and keep a protected recovery copy. Encryption must be enabled after database migrations and recovery checks; generating a key alone does not encrypt existing data.",
     "confirmDesktop": "The app is installed",
     "confirmExport": "My export is saved",
     "confirmCapacity": "The machine is ready",

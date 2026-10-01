@@ -4809,6 +4809,8 @@
     "dismiss": "Verwerfen"
   },
   "Landing": {
+    "encryptionTitle": "Verschlüsselung gespeicherter Daten",
+    "encryptionBody": "minddy unterstützt AES-256-GCM-Verschlüsselung für Arbeitsbereichsinhalte und Dateien. Die Schlüssel werden getrennt von der Datenbank aufbewahrt. Der Server entschlüsselt Inhalte für autorisierte Zugriffe und KI-Funktionen; dies ist keine Ende-zu-Ende-Verschlüsselung.",
     "metaTitle": "minddy: Open-Source-Projektmanagement für Softwareteams",
     "metaDescription": "Organisiere Aufgaben, dokumentiere Entscheidungen, sammle Nutzerfeedback und arbeite mit KI-Coding-Agenten. In minddy Cloud oder auf deinen eigenen Servern.",
     "navHowItWorks": "So funktioniert es",
@@ -5236,6 +5238,8 @@
     "faq_byok_a": "Du wählst, welche Funktionen deinen Schlüssel verwenden: Numo-Unterhaltungen, delegierte Codearbeit, Automatisierungen, Diktat oder Feedback. Kompatible Aufrufe gehen an deinen Anbieter und nutzen nicht das enthaltene KI-Budget. Nicht ausgewählte Funktionen, Aufrufe ohne kompatibles Modell und Server-Sandbox-Rechenzeit nutzen es weiterhin."
   },
   "SelfHosting": {
+    "encryptionTitle": "Bewahre deinen Schlüssel sicher auf",
+    "encryptionBody": "Das Installationsprogramm erstellt einen eigenen Serverschlüssel. Behalte ihn bei Updates und bewahre eine geschützte Kopie zur Wiederherstellung auf. Aktiviere die Verschlüsselung nach den Datenbankmigrationen und Wiederherstellungsprüfungen; ein Schlüssel allein verschlüsselt keine vorhandenen Daten.",
     "metaTitle": "Den Open-Source-Issue-Tracker minddy selbst hosten",
     "metaDescription": "Betreibe Minddys Issue-Tracker und Projektarbeitsbereich unter GNU AGPL v3.0 lokal oder auf deinem Server mit der geführten Einrichtung.",
     "eyebrow": "Offizieller Leitfaden zum Selbsthosting",
@@ -5294,6 +5298,7 @@
     "openOperationsGuide": "Sicherungs- und Aktualisierungsanleitung öffnen"
   },
   "SelfHostingInstall": {
+    "encryptionSetup": "Das Installationsprogramm erstellt einen eigenen Serverschlüssel. Behalte ihn bei Updates und bewahre eine geschützte Kopie zur Wiederherstellung auf. Aktiviere die Verschlüsselung nach den Datenbankmigrationen und Wiederherstellungsprüfungen; ein Schlüssel allein verschlüsselt keine vorhandenen Daten.",
     "confirmDesktop": "Die App ist installiert",
     "confirmExport": "Mein Export ist gespeichert",
     "confirmCapacity": "Der Rechner ist bereit",

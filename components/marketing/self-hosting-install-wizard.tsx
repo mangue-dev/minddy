@@ -688,7 +688,7 @@ export function SelfHostingInstallWizard({
       continueLabel: copy.confirmAgent,
       content: (
         <div>
-          <PromptCard prompt={path === "local" ? `${localPrompt}\n\n${copy.localAutostartPrompt}${transferPrompt}` : teamPrompt} body={path === "local" ? copy.agentLocalRun : copy.agentTeamRun} copy={copy} disabled={path === "team" && !serverSetupValid} />
+          <PromptCard prompt={path === "local" ? `${localPrompt}\n\n${copy.localAutostartPrompt}\n\n${copy.encryptionSetup}${transferPrompt}` : `${teamPrompt}\n\n${copy.encryptionSetup}`} body={path === "local" ? copy.agentLocalRun : copy.agentTeamRun} copy={copy} disabled={path === "team" && !serverSetupValid} />
           <CompletionNote copy={copy} criterion={path === "local" ? copy.agentLocalDone : copy.agentTeamDone} />
         </div>
       ),
@@ -723,6 +723,7 @@ export function SelfHostingInstallWizard({
           <div className={HIGHLIGHT_PANEL}>
             <CommandBlock command={localInstall} copy={copy} />
             <p className="mt-4 flex items-start gap-2 text-sm leading-relaxed text-muted-foreground"><AppIcon icon={ShieldCheck} className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />{copy.minimalNote}</p>
+            <p className="mt-4 text-sm leading-relaxed text-muted-foreground">{copy.encryptionSetup}</p>
             <CompletionNote copy={copy} criterion={copy.manualLocalDone} />
           </div>
         ),
@@ -769,7 +770,7 @@ export function SelfHostingInstallWizard({
         canContinue: true,
         continueLabel: copy.confirmInstaller,
         content: (
-          <div className={HIGHLIGHT_PANEL}><CommandBlock command={installServer} copy={copy} /><p className="mt-4 flex items-start gap-2 text-sm leading-relaxed text-muted-foreground"><AppIcon icon={ShieldCheck} className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />{copy.installerSafe}</p>{selectedFeatures.length > 0 && <div className="mt-4 rounded-xl border border-border bg-background p-4"><p className="text-sm font-medium">{copy.selectedServicesPrompt}</p><Checklist items={selectedFeatures.map(({ title, setup }) => `${title}: ${setup}`)} /></div>}<CompletionNote copy={copy} criterion={copy.installerDone} /></div>
+          <div className={HIGHLIGHT_PANEL}><CommandBlock command={installServer} copy={copy} /><p className="mt-4 flex items-start gap-2 text-sm leading-relaxed text-muted-foreground"><AppIcon icon={ShieldCheck} className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />{copy.installerSafe}</p><p className="mt-4 text-sm leading-relaxed text-muted-foreground">{copy.encryptionSetup}</p>{selectedFeatures.length > 0 && <div className="mt-4 rounded-xl border border-border bg-background p-4"><p className="text-sm font-medium">{copy.selectedServicesPrompt}</p><Checklist items={selectedFeatures.map(({ title, setup }) => `${title}: ${setup}`)} /></div>}<CompletionNote copy={copy} criterion={copy.installerDone} /></div>
         ),
       },
     ] : []),

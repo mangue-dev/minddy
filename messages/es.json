@@ -4809,6 +4809,8 @@
     "dismiss": "Despedida"
   },
   "Landing": {
+    "encryptionTitle": "Cifrado en reposo",
+    "encryptionBody": "minddy admite el cifrado AES-256-GCM del contenido de los espacios de trabajo y los archivos. Las claves se guardan por separado de la base de datos. El servidor descifra el contenido para los accesos autorizados y las funciones de IA; no es cifrado de extremo a extremo.",
     "metaTitle": "minddy: gestión de proyectos de código abierto para equipos",
     "metaDescription": "Organiza tareas, documenta decisiones, recoge ideas de tus usuarios y trabaja con agentes de programación con IA. En minddy Cloud o en tus servidores.",
     "navHowItWorks": "Cómo funciona",
@@ -5236,6 +5238,8 @@
     "faq_byok_a": "Elige qué funciones usan tu clave: conversaciones con Numo, trabajo de código delegado, automatizaciones, dictado o comentarios. Las llamadas compatibles van a tu proveedor y no usan el presupuesto de IA incluido. Las funciones no seleccionadas, las llamadas sin un modelo compatible y el cálculo del entorno aislado del servidor siguen usando ese presupuesto."
   },
   "SelfHosting": {
+    "encryptionTitle": "Protege tu clave de cifrado",
+    "encryptionBody": "El instalador crea una clave dedicada al servidor. Consérvala durante las actualizaciones y guarda una copia de recuperación protegida. Activa el cifrado después de las migraciones de la base de datos y las comprobaciones de recuperación; generar una clave no cifra los datos existentes.",
     "metaTitle": "Autoaloja el gestor de incidencias open source minddy",
     "metaDescription": "Ejecuta el gestor de incidencias y espacio de proyectos GNU AGPL v3.0 de minddy en local o en tu servidor con el recorrido guiado.",
     "eyebrow": "Guía oficial de autoalojamiento",
@@ -5294,6 +5298,7 @@
     "openOperationsGuide": "Abrir la guía de copias de seguridad y actualización"
   },
   "SelfHostingInstall": {
+    "encryptionSetup": "El instalador crea una clave dedicada al servidor. Consérvala durante las actualizaciones y guarda una copia de recuperación protegida. Activa el cifrado después de las migraciones de la base de datos y las comprobaciones de recuperación; generar una clave no cifra los datos existentes.",
     "confirmDesktop": "La app está instalada",
     "confirmExport": "Mi exportación está guardada",
     "confirmCapacity": "El equipo está listo",

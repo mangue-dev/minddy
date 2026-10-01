@@ -4809,6 +4809,8 @@
     "dismiss": "Fermer"
   },
   "Landing": {
+    "encryptionTitle": "Chiffrement au repos",
+    "encryptionBody": "minddy prend en charge le chiffrement AES-256-GCM du contenu des espaces de travail et des fichiers. Les clés sont conservées séparément de la base de données. Le serveur déchiffre le contenu pour les accès autorisés et les fonctions IA ; ce chiffrement n’est pas de bout en bout.",
     "metaTitle": "minddy : la gestion de projet open source pour les équipes logicielles",
     "metaDescription": "Organisez les tâches, documentez les décisions, recueillez les idées de vos utilisateurs et travaillez avec des agents IA. Sur minddy Cloud ou vos serveurs.",
     "navHowItWorks": "Comment ça marche",
@@ -5236,6 +5238,8 @@
     "faq_byok_a": "Vous choisissez les fonctionnalités qui utilisent votre clé : conversations Numo, travail de code délégué, automatisations, dictée ou retours. Les appels compatibles vont chez votre fournisseur et ne consomment pas le budget IA inclus. Les autres fonctionnalités, les appels sans modèle compatible et le calcul de la sandbox serveur utilisent toujours ce budget."
   },
   "SelfHosting": {
+    "encryptionTitle": "Conservez votre clé de chiffrement",
+    "encryptionBody": "L’installateur crée une clé dédiée au serveur. Conservez-la lors des mises à jour et gardez une copie de récupération protégée. Activez le chiffrement après les migrations de la base et les vérifications de récupération ; créer une clé ne chiffre pas les données existantes.",
     "metaTitle": "Auto-héberger le tracker de tickets open source minddy",
     "metaDescription": "Exécutez le tracker de tickets et espace projet GNU AGPL v3.0 de minddy en local ou sur votre serveur grâce au parcours guidé.",
     "eyebrow": "Guide officiel d'auto-hébergement",
@@ -5294,6 +5298,7 @@
     "openOperationsGuide": "Ouvrir le guide de sauvegarde et de mise à jour"
   },
   "SelfHostingInstall": {
+    "encryptionSetup": "L’installateur crée une clé dédiée au serveur. Conservez-la lors des mises à jour et gardez une copie de récupération protégée. Activez le chiffrement après les migrations de la base et les vérifications de récupération ; créer une clé ne chiffre pas les données existantes.",
     "confirmDesktop": "L’app est installée",
     "confirmExport": "L’export est sauvegardé",
     "confirmCapacity": "La machine est prête",

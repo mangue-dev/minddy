@@ -4809,6 +4809,8 @@
     "dismiss": "Dispensar"
   },
   "Landing": {
+    "encryptionTitle": "Criptografia em repouso",
+    "encryptionBody": "O minddy oferece criptografia AES-256-GCM para o conteúdo dos espaços de trabalho e arquivos. As chaves ficam separadas do banco de dados. O servidor descriptografa o conteúdo para acessos autorizados e recursos de IA; não é criptografia de ponta a ponta.",
     "metaTitle": "minddy: gestão de projetos de código aberto para equipes de software",
     "metaDescription": "Organize tarefas, documente decisões, reúna ideias dos usuários e trabalhe com agentes de programação com IA. No minddy Cloud ou nos seus servidores.",
     "navHowItWorks": "Como funciona",
@@ -5236,6 +5238,8 @@
     "faq_byok_a": "Você escolhe quais recursos usam sua chave: conversas com o Numo, trabalho de código delegado, automações, ditado ou feedback. Chamadas compatíveis vão para seu provedor e não usam o orçamento de IA incluído. Recursos não selecionados, chamadas sem modelo compatível e processamento da sandbox do servidor continuam usando esse orçamento."
   },
   "SelfHosting": {
+    "encryptionTitle": "Proteja sua chave de criptografia",
+    "encryptionBody": "O instalador cria uma chave dedicada ao servidor. Preserve-a nas atualizações e mantenha uma cópia de recuperação protegida. Ative a criptografia após as migrações do banco e as verificações de recuperação; gerar uma chave não criptografa os dados existentes.",
     "metaTitle": "Auto-hospede o rastreador de problemas open source minddy",
     "metaDescription": "Execute o rastreador de problemas e workspace GNU AGPL v3.0 do minddy localmente ou em seu servidor com o fluxo guiado.",
     "eyebrow": "Guia oficial de auto-hospedagem",
@@ -5294,6 +5298,7 @@
     "openOperationsGuide": "Abrir o guia de backup e atualização"
   },
   "SelfHostingInstall": {
+    "encryptionSetup": "O instalador cria uma chave dedicada ao servidor. Preserve-a nas atualizações e mantenha uma cópia de recuperação protegida. Ative a criptografia após as migrações do banco e as verificações de recuperação; gerar uma chave não criptografa os dados existentes.",
     "confirmDesktop": "O app está instalado",
     "confirmExport": "Minha exportação está salva",
     "confirmCapacity": "A máquina está pronta",

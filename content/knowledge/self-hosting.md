@@ -40,7 +40,7 @@ The deployed application needs these values:
 - `MINDDY_PUBLIC_SUPABASE_URL` and `MINDDY_PUBLIC_SUPABASE_ANON_KEY`: the public API origin and anon key of the selected Supabase service.
 - `SUPABASE_SERVICE_ROLE_KEY`: server-only and required in production; never expose it to a browser.
 
-The installer generates `GIT_STATE_SECRET`, `GIT_TOKEN_ENCRYPTION_SECRET`, `AI_KEY_ENCRYPTION_SECRET`, `FEEDBACK_SSO_ENCRYPTION_SECRET`, `CRON_SECRET`, and `AGENT_RUNNER_SECRET` on every installation; `MINDDY_PUBLIC_VAPID_PUBLIC_KEY` and its private counterpart are generated when the `web-push` capability is selected. Preserve encryption secrets when upgrading. Configure a complete set of external credentials for any optional capability; an incomplete set is disabled rather than guessed. Leave `MINDDY_MANAGED_AI=0` and `MINDDY_MANAGED_BILLING=0` for self-hosting.
+The installer generates `GIT_STATE_SECRET`, `GIT_TOKEN_ENCRYPTION_SECRET`, `AI_KEY_ENCRYPTION_SECRET`, `FEEDBACK_SSO_ENCRYPTION_SECRET`, `MINDDY_DATA_ROOT_KEY`, `CRON_SECRET`, and `AGENT_RUNNER_SECRET` on every installation; `MINDDY_PUBLIC_VAPID_PUBLIC_KEY` and its private counterpart are generated when the `web-push` capability is selected. Preserve encryption secrets when upgrading. Configure a complete set of external credentials for any optional capability; an incomplete set is disabled rather than guessed. Leave `MINDDY_MANAGED_AI=0` and `MINDDY_MANAGED_BILLING=0` for self-hosting.
 
 ## Numo, routines, and server execution
 
@@ -121,3 +121,40 @@ Configure Supabase Auth with the exact app origin, `/auth/callback`, an operator
 ## Moving data from Minddy Cloud
 
 The Data section of account settings can export a JSON transfer file and restore it on another minddy instance. Import is additive: it preserves project, issue, page, and personal-data IDs when safe; conflicts receive new IDs and are reported. It does not transfer passwords, API keys, OAuth tokens, repository credentials, or billing subscriptions. Reconnect those services on the self-hosted destination. Export from Cloud, install and verify the destination, then import and review the reported conflicts.
+
+## Workspace encryption setup
+
+Minddy supports server-side AES-256-GCM encryption for workspace content and
+files. Versioned project, user and system data keys are wrapped by
+`MINDDY_DATA_ROOT_KEY`, a dedicated 32-byte key stored outside PostgreSQL.
+The application decrypts for authorized access and AI processing. This is not
+end-to-end encryption: a compromised application runtime or access to both the
+root key and database can expose content. Auth login emails and routing metadata
+remain readable; exports and content sent to external providers need their own
+protection.
+
+The server installer and local Supabase bootstrap generate the root key.
+For a manual setup, generate it once with `openssl rand -hex 32` and store it in
+the protected server environment. Never reuse an AI or forge secret, put the root
+in SQL or a client bundle, or regenerate it during an update. Losing it makes
+protected content unreadable. Keep a protected recovery copy, including the
+historical roots needed for older backups. Encrypt and restrict access to any
+backup that contains both the environment and database.
+
+New server installations explicitly set `MINDDY_CONTENT_ENCRYPTION_ENABLED=false`.
+A generated key does not establish that data is encrypted. Before setting the
+switch to `true` in the application server environment:
+
+1. Apply all migrations from the selected release and stop obsolete writers.
+2. Confirm the root key is present, backed up and recoverable; rehearse restoring
+   the database, Storage objects and matching keys in an isolated environment.
+3. Complete the encryption readiness and representative search/performance checks
+   described in the repository's `docs/security/encryption/` runbooks.
+4. Set the switch and restart the application. Scheduled maintenance advances
+   bounded migration and key rotation; verify all protected sources and retained
+   copies before treating the rollout as complete.
+
+For an existing installation, preserve the environment and recover its original
+root before enabling encryption. Turning the switch off does not allow plaintext
+writes to already protected data. Replacing a root requires the guarded offline
+rewrap procedure in `docs/security/encryption/root-key-rotation.md`.

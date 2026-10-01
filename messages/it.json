@@ -4809,6 +4809,8 @@
     "dismiss": "Rifiuto"
   },
   "Landing": {
+    "encryptionTitle": "Crittografia dei dati archiviati",
+    "encryptionBody": "minddy supporta la crittografia AES-256-GCM per i contenuti degli spazi di lavoro e i file. Le chiavi sono conservate separatamente dal database. Il server decritta i contenuti per gli accessi autorizzati e le funzioni IA; non è crittografia end-to-end.",
     "metaTitle": "minddy: gestione progetti open source per team software",
     "metaDescription": "Organizza attività, documenta decisioni, raccogli idee dagli utenti e lavora con agenti di programmazione IA. Su minddy Cloud o sui tuoi server.",
     "navHowItWorks": "Come funziona",
@@ -5236,6 +5238,8 @@
     "faq_byok_a": "Scegli quali funzioni usano la tua chiave: conversazioni con Numo, lavoro sul codice delegato, automazioni, dettatura o feedback. Le chiamate compatibili vanno al tuo provider e non usano il budget IA incluso. Le funzioni non selezionate, le chiamate senza modello compatibile e il calcolo della sandbox del server continuano a usarlo."
   },
   "SelfHosting": {
+    "encryptionTitle": "Proteggi la tua chiave di crittografia",
+    "encryptionBody": "Il programma di installazione crea una chiave dedicata al server. Conservala durante gli aggiornamenti e mantieni una copia di ripristino protetta. Attiva la crittografia dopo le migrazioni del database e le verifiche di ripristino; generare una chiave non crittografa i dati esistenti.",
     "metaTitle": "Ospita autonomamente l'issue tracker open source minddy",
     "metaDescription": "Esegui l'issue tracker e spazio di progetto GNU AGPL v3.0 di minddy in locale o sul tuo server con la procedura guidata.",
     "eyebrow": "Guida ufficiale all’hosting autonomo",
@@ -5294,6 +5298,7 @@
     "openOperationsGuide": "Apri la guida a backup e aggiornamenti"
   },
   "SelfHostingInstall": {
+    "encryptionSetup": "Il programma di installazione crea una chiave dedicata al server. Conservala durante gli aggiornamenti e mantieni una copia di ripristino protetta. Attiva la crittografia dopo le migrazioni del database e le verifiche di ripristino; generare una chiave non crittografa i dati esistenti.",
     "confirmDesktop": "L’app è installata",
     "confirmExport": "L’esportazione è salvata",
     "confirmCapacity": "Il computer è pronto",
