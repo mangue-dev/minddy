@@ -487,6 +487,7 @@ function ObjectivesInner() {
       members={members}
       objective={null}
       projectId={projectId}
+      projectKey={project.key}
       onCreate={createObjective}
       onUpdate={updateObjective}
     />

@@ -17,7 +17,7 @@ import type {
 } from "@/lib/issue-constants";
 import type { ObjectiveStatus } from "@/lib/objective-constants";
 import type { RecurrenceCadence } from "@/lib/recurrence";
-import type { AttachmentInput, ResourceInput } from "@/lib/types";
+import type { AttachmentInput, PendingRelationInput, ResourceInput } from "@/lib/types";
 import { localSnapshotGeneration, restoreLocalSnapshot, saveLocalSnapshot } from "./local-snapshots";
 
 export type DraftKind = "issue" | "objective";
@@ -29,6 +29,8 @@ interface DraftBase {
   projectId: string;
   /** Epoch ms of the last save — drives the most-recent-first ordering. */
   updatedAt: number;
+  /** Absent from drafts saved before creation supported relations. */
+  relations?: PendingRelationInput[];
 }
 
 export interface IssueDraft extends DraftBase {

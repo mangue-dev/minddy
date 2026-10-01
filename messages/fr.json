@@ -2255,6 +2255,7 @@
     "pick_blocked_by": "Bloqué par quel ticket ou objectif ?",
     "pick_related": "Lié à quel ticket ou objectif ?",
     "addRelationAria": "Lier un ticket ou un objectif",
+    "crossProjectUnavailable": "Retirez les relations pour créer dans un autre projet.",
     "searchIssue": "Rechercher un ticket…",
     "searchTarget": "Rechercher un ticket ou un objectif…",
     "objectives": "Objectifs",

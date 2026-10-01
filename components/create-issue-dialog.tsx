@@ -10,12 +10,14 @@ import {
   DialogContent,
   DialogTitle,
   DropdownMenuItem,
+  DropdownMenuLabel,
   Spinner,
   SplitButton,
   Switch,
   toast,
 } from "mangue-ui";
 import { AutoTextarea } from "@/components/auto-textarea";
+import { CreationRelationPills, CreationRelationsCompact } from "@/components/creation-relations";
 // Deferred editor: keeps tiptap (~1.5 MB) out of every board route's graph —
 // see markdown-editor-lazy.tsx. The chunk is warmed from idle time by the
 // hook below, so the first open waits on nothing.
@@ -79,6 +81,7 @@ import type {
   IssueDraftPatch,
   Member,
   Objective,
+  PendingRelationInput,
   Project,
 } from "@/lib/types";
 
@@ -162,12 +165,15 @@ export function CreateIssueDialog({
 }) {
   const t = useTranslations("IssueUI");
   const tDrafts = useTranslations("Drafts");
+  const tRelations = useTranslations("Relations");
   const { user } = useAuth();
   const { track } = useAnalytics();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [fields, setFields] = useState(DEFAULTS);
   const [categoryIds, setCategoryIds] = useState<string[]>([]);
+  const [relations, setRelations] = useState<PendingRelationInput[]>([]);
+  useEffect(() => { setRelations([]); }, [projectId]);
   const [createMore, setCreateMore] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   // Which field picker a keyboard shortcut (S/P/E/A/L/D/O) has opened, if any.
@@ -360,6 +366,7 @@ export function CreateIssueDialog({
     setDescription("");
     setEditorKey((k) => k + 1);
     uploads.clear();
+    setRelations([]);
   };
 
   const reset = () => {
@@ -384,7 +391,8 @@ export function CreateIssueDialog({
     title.trim() !== "" ||
     description.trim() !== "" ||
     editorNonEmptyRef.current ||
-    uploads.inputs.length > 0;
+    uploads.inputs.length > 0 ||
+    relations.length > 0;
 
   // Snapshot the form as a draft (MIN-41) — reuses the active id so re-closing a
   // recovered draft updates it in place instead of piling up copies.
@@ -404,6 +412,7 @@ export function CreateIssueDialog({
       recurrence: fields.recurrence,
       category_ids: categoryIds,
       resources: uploads.inputs,
+      relations,
     });
   };
 
@@ -481,14 +490,19 @@ export function CreateIssueDialog({
     });
     setCategoryIds(draft.category_ids);
     uploads.restore(draft.resources);
+    setRelations(draft.relations ?? []);
     setActiveDraftId(draft.id);
   };
 
   // `target` is set only when creating in a different project (dropdown item).
   const submit = async (keepOpen: boolean, target?: Project) => {
     const trimmed = title.trim();
-    if (!trimmed) return;
+    if (!trimmed || submitting) return;
     const other = target && target.id !== projectId ? target : null;
+    if (other && relations.length > 0) {
+      toast.info(tRelations("crossProjectUnavailable"));
+      return;
+    }
     setSubmitting(true);
     try {
       if (other) {
@@ -527,6 +541,7 @@ export function CreateIssueDialog({
           ...fields,
           category_ids: categoryIds,
           resources: uploads.inputs,
+          relations,
           smart_fill: smartFill,
         });
         // Smart-fill: the card is not yet there (the server fills before
@@ -685,6 +700,14 @@ export function CreateIssueDialog({
               onRemovePending={uploads.remove}
               className="mb-3"
             />
+            <CreationRelationPills
+              projectId={projectId}
+              projectKey={currentProject?.key ?? ""}
+              active={open}
+              value={relations}
+              onChange={setRelations}
+              disabled={submitting}
+            />
             <AutoTextarea
               ref={arrowTitle.ref}
               autoFocus
@@ -783,6 +806,14 @@ export function CreateIssueDialog({
                   shortcutHint={KEY_FOR_FIELD.objective}
                 />
               )}
+              <CreationRelationsCompact
+                projectId={projectId}
+                projectKey={currentProject?.key ?? ""}
+                active={open}
+                value={relations}
+                onChange={setRelations}
+                disabled={submitting}
+              />
               {smartFillAvailable && (
                 <SmartFillCompact
                   value={smartFill}
@@ -871,15 +902,18 @@ export function CreateIssueDialog({
                       className="max-sm:w-full"
                       actionClassName="max-sm:flex-1"
                       menuLabel={t("createInOtherProject")}
-                      menu={otherProjects.map((p) => (
+                      menu={<>
+                        {relations.length > 0 && <DropdownMenuLabel className="max-w-60 whitespace-normal">{tRelations("crossProjectUnavailable")}</DropdownMenuLabel>}
+                        {otherProjects.map((p) => (
                         <DropdownMenuItem
                           key={p.id}
+                          disabled={relations.length > 0}
                           onSelect={() => void submit(createMore, p)}
                         >
                           <ProjectOrb seed={projectOrbSeed(p)} iconUrl={p.icon_url} className="size-4" />
                           <span className="truncate">{p.name}</span>
                         </DropdownMenuItem>
-                      ))}
+                      ))}</>}
                     >
                       {submitting && <Spinner />}
                       <span className="max-w-[14rem] truncate">

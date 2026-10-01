@@ -474,6 +474,7 @@ export interface CreateObjectiveInput {
   target_date?: string | null;
   color?: string | null;
   resources?: ResourceInput[];
+  relations?: PendingRelationInput[];
   /** Cross-project creation: files the browser uploaded under the SOURCE
       project's storage prefix. Same rule as issues — a storage object can't be
       referenced across projects, so the server COPIES each into the target.
@@ -1098,6 +1099,15 @@ export interface CreateIssueRelationInput {
   target_type?: RelationEndpointType;
 }
 
+/** A client-side relation selection, saved after the new entity exists. */
+export interface PendingRelationInput {
+  type: IssueRelationType;
+  target_id: string;
+  target_type: RelationEndpointType;
+  /** Display snapshot for drafts whose target was renamed or removed. */
+  target_label: string;
+}
+
 export type IntegrationWebhookEvent =
   "issue.created" | "issue.status_changed" | "issue.updated";
 export type IntegrationWebhookScope = "integration" | "all";
@@ -1157,6 +1167,7 @@ export interface CreateIssueInput {
       project's categories by name and keeps the ones that exist. */
   category_names?: string[];
   resources?: ResourceInput[];
+  relations?: PendingRelationInput[];
   /** Cross-project creation: files the browser uploaded under the SOURCE
       project's storage prefix. A storage object can't be referenced across
       projects, so the server COPIES each into the target project (after

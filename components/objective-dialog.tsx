@@ -12,6 +12,7 @@ import {
   DialogContent,
   DialogTitle,
   DropdownMenuItem,
+  DropdownMenuLabel,
   Popover,
   PopoverContent,
   PopoverTrigger,
@@ -21,6 +22,7 @@ import {
   toast,
 } from "mangue-ui";
 import { AutoTextarea } from "@/components/auto-textarea";
+import { CreationRelationPills, CreationRelationsCompact } from "@/components/creation-relations";
 // Deferred editor: keeps tiptap (~1.5 MB) out of the objectives route —
 // see markdown-editor-lazy.tsx. The dialog mounts with the page, which warms
 // the chunk from idle time (hook below).
@@ -66,6 +68,7 @@ import type {
   Objective,
   ObjectiveDraftPatch,
   ObjectiveUpdateInput,
+  PendingRelationInput,
   Project,
 } from "@/lib/types";
 
@@ -188,6 +191,7 @@ export function ObjectiveDialog({
   onUpdate,
   projects = [],
   projectId,
+  projectKey,
   initialName,
   onCreateInProject,
 }: {
@@ -205,6 +209,8 @@ export function ObjectiveDialog({
   projects?: Project[];
   /** The project `onCreate` targets — labels the split button's primary action. */
   projectId?: string;
+  /** Identifier prefix when this dialog is mounted without a project menu. */
+  projectKey?: string;
   /** Create in an arbitrary project (the split-button dropdown targets). */
   onCreateInProject?: (
     targetProjectId: string,
@@ -214,10 +220,12 @@ export function ObjectiveDialog({
   const t = useTranslations("Objectives");
   const tCommon = useTranslations("Common");
   const tDrafts = useTranslations("Drafts");
+  const tRelations = useTranslations("Relations");
   const { track } = useAnalytics();
   // Mounts with the objectives page: warm the editor chunk once painted.
   useIdleMarkdownEditorPreload();
   const [form, setForm] = useState(EMPTY);
+  const [relations, setRelations] = useState<PendingRelationInput[]>([]);
   const [submitting, setSubmitting] = useState(false);
   // Id of the draft loaded in the form (MIN-41), so re-closing updates it in
   // place and a successful create removes exactly the draft it came from.
@@ -273,12 +281,14 @@ export function ObjectiveDialog({
         : { ...EMPTY, name: initialName ?? "" }
     );
     editorNonEmptyRef.current = false;
+    setRelations([]);
     setActiveDraftId(null);
     setEditorKey((k) => k + 1);
-  }, [open, objective, initialName]);
+  }, [open, objective, initialName, projectId]);
 
   const closeAndReset = () => {
     setForm(EMPTY);
+    setRelations([]);
     editorNonEmptyRef.current = false;
     setActiveDraftId(null);
     uploads.clear();
@@ -292,7 +302,8 @@ export function ObjectiveDialog({
     form.name.trim() !== "" ||
     form.description.trim() !== "" ||
     editorNonEmptyRef.current ||
-    uploads.inputs.length > 0;
+    uploads.inputs.length > 0 ||
+    relations.length > 0;
 
   // Snapshot the form as a local draft (MIN-41), reusing the active id.
   const saveDraft = async () => {
@@ -308,6 +319,7 @@ export function ObjectiveDialog({
       target_date: form.target_date,
       color: form.color,
       resources: uploads.inputs,
+      relations,
     });
   };
 
@@ -373,13 +385,18 @@ export function ObjectiveDialog({
     editorNonEmptyRef.current = draft.description.trim() !== "";
     setEditorKey((k) => k + 1); // remount the editor with the draft's content
     uploads.restore(draft.resources ?? []);
+    setRelations(draft.relations ?? []);
     setActiveDraftId(draft.id);
   };
 
   // `target` is set only when creating in a different project (dropdown item).
   const submit = async (target?: Project) => {
     const name = form.name.trim();
-    if (!name) return;
+    if (!name || submitting) return;
+    if (target && target.id !== projectId && relations.length > 0) {
+      toast.info(tRelations("crossProjectUnavailable"));
+      return;
+    }
     setSubmitting(true);
     const payload = {
       name,
@@ -410,7 +427,7 @@ export function ObjectiveDialog({
         });
         toast.success(t("createdInProjectToast", { project: other.name }));
       } else {
-        await onCreate({ ...payload, resources: uploads.inputs });
+        await onCreate({ ...payload, resources: uploads.inputs, relations });
         toast.success(t("createdToast"));
       }
       // The draft became a real objective — drop it from the local store.
@@ -522,6 +539,16 @@ export function ObjectiveDialog({
                 className="mb-3"
               />
             )}
+            {composerEnabled && (
+              <CreationRelationPills
+                projectId={projectId!}
+                projectKey={currentProject?.key ?? projectKey ?? ""}
+                active={open}
+                value={relations}
+                onChange={setRelations}
+                disabled={submitting}
+              />
+            )}
             <AutoTextarea
               autoFocus
               required
@@ -571,6 +598,16 @@ export function ObjectiveDialog({
                 value={form.color}
                 onChange={(color) => setForm((f) => ({ ...f, color }))}
               />
+              {composerEnabled && (
+                <CreationRelationsCompact
+                  projectId={projectId!}
+                  projectKey={currentProject?.key ?? projectKey ?? ""}
+                  active={open}
+                  value={relations}
+                  onChange={setRelations}
+                  disabled={submitting}
+                />
+              )}
             </div>
 
             {/* Bottom bar — voice dictation at left, create controls at right,
@@ -639,12 +676,15 @@ export function ObjectiveDialog({
                       className="max-sm:w-full"
                       actionClassName="max-sm:flex-1"
                       menuLabel={t("createInOtherProject")}
-                      menu={otherProjects.map((p) => (
-                        <DropdownMenuItem key={p.id} onSelect={() => void submit(p)}>
+                      menu={<>
+                        {relations.length > 0 && <DropdownMenuLabel className="max-w-60 whitespace-normal">{tRelations("crossProjectUnavailable")}</DropdownMenuLabel>}
+                        {otherProjects.map((p) => (
+                        <DropdownMenuItem key={p.id} onSelect={() => void submit(p)}
+                          disabled={relations.length > 0}>
                           <ProjectOrb seed={projectOrbSeed(p)} iconUrl={p.icon_url} className="size-4" />
                           <span className="truncate">{p.name}</span>
                         </DropdownMenuItem>
-                      ))}
+                      ))}</>}
                     >
                       {submitting && <Spinner />}
                       <span className="max-w-[14rem] truncate">

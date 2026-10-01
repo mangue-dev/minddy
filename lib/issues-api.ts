@@ -4,6 +4,7 @@ import type { QueryClient } from "@tanstack/react-query";
 import { trackEvent } from "./analytics";
 import { lengthBucket } from "./analytics-sanitize";
 import { rememberCreateProject } from "./last-create-project";
+import { saveCreationRelations } from "./creation-relations";
 import { applyPendingIssues } from "./optimistic/issue-writes";
 import { reconcileProjectIssuesInGlobalCache } from "./global-issues-api";
 import type {
@@ -91,11 +92,12 @@ export async function createIssueApi(
   projectId: string,
   input: CreateIssueInput
 ): Promise<Issue> {
+  const { relations, ...payload } = input;
   const issue = await parseJson<Issue>(
     await fetch(`/api/projects/${projectId}/issues`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(input),
+      body: JSON.stringify(payload),
     })
   );
   // All client-side creations go through here (project board, board
@@ -104,6 +106,7 @@ export async function createIssueApi(
   // serves as the default project for the dialog when the route does not designate any. After
   // success only — a rejected creation does not move the defect.
   rememberCreateProject(projectId);
+  await saveCreationRelations(projectId, issue.id, "issue", relations);
   return issue;
 }
 

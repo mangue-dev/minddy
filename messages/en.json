@@ -2255,6 +2255,7 @@
     "pick_blocked_by": "Blocked by which issue or objective?",
     "pick_related": "Related to which issue or objective?",
     "addRelationAria": "Link an issue or objective",
+    "crossProjectUnavailable": "Remove relations to create in another project.",
     "searchIssue": "Search an issue…",
     "searchTarget": "Search an issue or an objective…",
     "objectives": "Objectives",
