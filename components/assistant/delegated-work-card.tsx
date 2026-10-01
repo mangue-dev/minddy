@@ -4,17 +4,11 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { AlertCircleIcon, BotIcon, CancelCircleIcon as Ban, CheckIcon, GitBranchIcon, GitCommitIcon, GitPullRequestIcon, HelpCircleIcon, LinkSquare01Icon, LoaderCircleIcon, PackageIcon, SquareIcon } from "@hugeicons/core-free-icons";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useEffect, useId, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useNow, useTranslations } from "next-intl";
 import {
   Button,
-  Popover,
-  PopoverAnchor,
-  PopoverContent,
-  PopoverDescription,
-  PopoverHeader,
-  PopoverTitle,
   SidePanel,
   SidePanelBody,
   SidePanelContent,
@@ -151,14 +145,9 @@ function msOr(iso: string | null, fallback: number): number {
 }
 
 /**
- * INDIVIDUAL stop of a delegated worker (MIN-599). Same gesture as the Numo
- * stop in the composer (one click to reconsider, then interrupt): the flag
- * drops, the worker rests, and Numo resumes on the delegation result. The
- * button disappears with the working state — at rest there is nothing to stop.
- *
- * The STOP STATE lives in the card, not here: both anchors (card and side
- * panel) fold to the same optimistic "stopping" presentation the instant the
- * stop is confirmed, without waiting for the server (PR 304 reference).
+ * Stop the delegated worker on the first click. The card and detail panel
+ * share a stopping state while the server cancels its execution and prevents
+ * Numo from automatically continuing the interrupted work.
  */
 function DelegatedWorkStopButton({
   working,
@@ -170,80 +159,30 @@ function DelegatedWorkStopButton({
   onStop: () => void;
 }) {
   const t = useTranslations("Agent");
-  const tCommon = useTranslations("Common");
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const confirmationId = useId();
-  const titleId = `${confirmationId}-title`;
-  const descriptionId = `${confirmationId}-description`;
 
   if (!working) return null;
 
   return (
-    <Popover open={confirmOpen} onOpenChange={setConfirmOpen}>
-      <PopoverAnchor asChild>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              type="button"
-              size="icon-sm"
-              variant="ghost"
-              className="shrink-0 text-muted-foreground"
-              disabled={stopping}
-              onClick={() => setConfirmOpen(true)}
-              aria-label={t("delegatedWorkStop")}
-              aria-haspopup="dialog"
-              aria-controls={confirmationId}
-              aria-expanded={confirmOpen}
-            >
-              {stopping ? (
-                <Spinner className="size-3.5" aria-hidden />
-              ) : (
-                <HugeiconsIcon icon={SquareIcon} className="size-3.5" aria-hidden />
-              )}
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="top">{t("delegatedWorkStop")}</TooltipContent>
-        </Tooltip>
-      </PopoverAnchor>
-      <PopoverContent
-        id={confirmationId}
-        role="dialog"
-        aria-labelledby={titleId}
-        aria-describedby={descriptionId}
-        side="top"
-        align="end"
-        sideOffset={8}
-        collisionPadding={10}
-        className="w-72 gap-3 rounded-xl p-3"
-      >
-        <PopoverHeader>
-          <PopoverTitle id={titleId}>{t("delegatedWorkStopConfirmTitle")}</PopoverTitle>
-          <PopoverDescription id={descriptionId}>
-            {t("delegatedWorkStopConfirmDescription")}
-          </PopoverDescription>
-        </PopoverHeader>
-        <div className="flex justify-end gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => setConfirmOpen(false)}
-          >
-            {tCommon("cancel")}
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            onClick={() => {
-              setConfirmOpen(false);
-              onStop();
-            }}
-          >
-            {t("delegatedWorkStop")}
-          </Button>
-        </div>
-      </PopoverContent>
-    </Popover>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          type="button"
+          size="icon-sm"
+          variant="ghost"
+          className="shrink-0 text-muted-foreground"
+          disabled={stopping}
+          onClick={onStop}
+          aria-label={t("delegatedWorkStop")}
+        >
+          {stopping ? (
+            <Spinner className="size-3.5" aria-hidden />
+          ) : (
+            <HugeiconsIcon icon={SquareIcon} className="size-3.5" aria-hidden />
+          )}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent side="top">{t("delegatedWorkStop")}</TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -386,7 +325,7 @@ export function DelegatedWorkCard({ call }: { call: DelegatedWorkCall }) {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [diffOpen, setDiffOpen] = useState(false);
   const [diffFocus, setDiffFocus] = useState<string | null>(null);
-  // Optimistic stop (PR 304 reference): the confirmed stop folds the whole
+  // Optimistic stop (PR 304 reference): the first click folds the whole
   // presentation immediately — state line, live feed, chrono — and only the
   // quiet reconciliation of the run query settles the card into its final
   // state when the worker actually rests.

@@ -9,6 +9,7 @@ import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
 export const runtime = "nodejs";
 
 export async function POST(request: NextRequest) {
+  const stopStartedAt = performance.now();
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
   const rate = checkSessionRateLimit(auth.user.id, "assistant-stop", { limit: 60 });
@@ -29,7 +30,17 @@ export async function POST(request: NextRequest) {
   }
   const service = getServiceClient();
   try {
-    if (body.newConversation === true) {
+    let parentRequestId: string | undefined;
+    if (typeof body.turnId === "string") {
+      const { data: parent, error } = await service.from("numo_assistant_turns")
+        .select("request_id").eq("id", body.turnId).eq("conversation_id", body.conversationId)
+        .eq("user_id", auth.user.id).maybeSingle();
+      if (error) throw new Error("Unable to authorize Numo execution stop");
+      if (!parent) return Response.json({ error: "Execution not found" }, { status: 404 });
+      // The authorized parent already binds an existing conversation. Avoid
+      // a prospective insert/conflict round trip on this active execution path.
+      parentRequestId = parent.request_id as string;
+    } else if (body.newConversation === true) {
       await ensureNumoRequestConversation({
         service, conversationId: body.conversationId, userId: auth.user.id,
       });
@@ -39,18 +50,21 @@ export async function POST(request: NextRequest) {
       if (error) throw new Error("Unable to authorize Numo stop");
       if (!data) return Response.json({ error: "Conversation not found" }, { status: 404 });
     }
-    let parentRequestId: string | undefined;
-    if (typeof body.turnId === "string") {
-      const { data: parent, error } = await service.from("numo_assistant_turns")
-        .select("request_id").eq("id", body.turnId).eq("conversation_id", body.conversationId)
-        .eq("user_id", auth.user.id).maybeSingle();
-      if (error) throw new Error("Unable to authorize Numo execution stop");
-      if (!parent) return Response.json({ error: "Execution not found" }, { status: 404 });
-      parentRequestId = parent.request_id as string;
+    console.info("[numo-stop] timing", { requestId: body.requestId, phase: "authorized",
+      elapsedMs: Math.round(performance.now() - stopStartedAt) });
+    const stopIdentity = { conversationId: body.conversationId, userId: auth.user.id, stopStartedAt };
+    let turn;
+    if (parentRequestId && parentRequestId !== body.requestId) {
+      // Revoke the active parent without waiting for the steering receipt's
+      // encryption or insertion, while retaining both durable cancellation scopes.
+      const [, parent] = await Promise.all([
+        requestNumoRequestStop({ ...stopIdentity, requestId: body.requestId }),
+        requestNumoRequestStop({ ...stopIdentity, requestId: parentRequestId }),
+      ]);
+      turn = parent;
+    } else {
+      turn = await requestNumoRequestStop({ ...stopIdentity, requestId: body.requestId });
     }
-    let turn = await requestNumoRequestStop({
-      conversationId: body.conversationId, requestId: body.requestId, userId: auth.user.id,
-    });
     if (!parentRequestId) {
       // Mediation persists the submission UUID as its parent message ID. Read
       // this association after the receipt commits; the chat route checks the
@@ -70,9 +84,9 @@ export async function POST(request: NextRequest) {
     // Steering and worker answers remain part of an existing parent turn.
     // Keep the submission receipt too: if cancellation wins before mediation,
     // the same send must not fall through into a newly admitted turn.
-    if (parentRequestId && parentRequestId !== body.requestId) {
+    if (typeof body.turnId !== "string" && parentRequestId && parentRequestId !== body.requestId) {
       turn = await requestNumoRequestStop({
-        conversationId: body.conversationId, requestId: parentRequestId, userId: auth.user.id,
+        ...stopIdentity, requestId: parentRequestId,
       });
     }
     return Response.json({ turn_id: turn.id, status: turn.status });

@@ -5,6 +5,15 @@ vi.mock("server-only", () => ({}));
 const h = vi.hoisted(() => ({
   rows: new Map<string, Array<Record<string, unknown>>>(),
   failCascade: false,
+  operations: [] as Array<{ table: string; action: string }>,
+  versionReadGate: null as Promise<void> | null,
+  receiptInsertGate: null as Promise<void> | null,
+  beforeReceiptInsert: null as (() => void) | null,
+  protectIntent: vi.fn(async () => false),
+  encodeIntent: vi.fn(async (userId: string, conversationId: string, requestId: string, _value: Record<string, unknown>) => ({
+    encrypted_intent: "test-ciphertext", encryption_version: 1,
+    user_id: userId, conversation_id: conversationId, request_id: requestId,
+  })),
 }));
 function query(table: string) {
   const filters: Array<(row: Record<string, unknown>) => boolean> = [];
@@ -13,9 +22,15 @@ function query(table: string) {
   let insertion: Record<string, unknown> | undefined;
   let patch: Record<string, unknown> | undefined;
   const execute = () => {
+    h.operations.push({ table, action: insertion ? "insert" : patch ? "update" : "read" });
     const rows = h.rows.get(table) ?? [];
     h.rows.set(table, rows);
     if (insertion) {
+      if (table === "numo_assistant_turns" && h.beforeReceiptInsert) {
+        const race = h.beforeReceiptInsert;
+        h.beforeReceiptInsert = null;
+        race();
+      }
       const duplicate = rows.some(row => table === "conversations"
         ? row.id === insertion!.id
         : row.conversation_id === insertion!.conversation_id && row.request_id === insertion!.request_id);
@@ -47,8 +62,14 @@ function query(table: string) {
     or: () => { filters.push(row => row.status !== "stopped" || row.model != null || Number(row.attempts) > 0); return builder; },
     in: (key: string, values: unknown[]) => { filters.push(row => values.includes(row[key])); return builder; },
     is: (key: string, value: unknown) => { filters.push(row => (row[key] ?? null) === value); return builder; },
-    single: async () => { const result = execute(); return { ...result, data: result.data?.[0] ?? null }; },
-    maybeSingle: async () => { const result = execute(); return { ...result, data: result.data?.[0] ?? null }; },
+    single: async () => {
+      if (insertion && table === "numo_assistant_turns" && h.receiptInsertGate) await h.receiptInsertGate;
+      const result = execute(); return { ...result, data: result.data?.[0] ?? null };
+    },
+    maybeSingle: async () => {
+      if (table === "conversations" && !patch && h.versionReadGate) await h.versionReadGate;
+      const result = execute(); return { ...result, data: result.data?.[0] ?? null };
+    },
     then: (resolve: (value: unknown) => unknown) => Promise.resolve(execute()).then(resolve),
   };
   return builder;
@@ -62,16 +83,70 @@ vi.mock("@/lib/server/session-rate-limit", () => ({
   checkSessionRateLimit: () => ({ allowed: true }),
 }));
 vi.mock("@/lib/server/numo/turn-intent-content", () => ({
-  shouldProtectNumoTurnIntent: async () => false,
+  shouldProtectNumoTurnIntent: () => h.protectIntent(),
+  encodeNumoTurnIntent: (...args: Parameters<typeof h.encodeIntent>) => h.encodeIntent(...args),
 }));
 const { requestNumoRequestStop, stopCanceledNumoMediation } = await import("./turns");
 const { ensureNumoRequestConversation } = await import("./request-conversation");
 const { POST } = await import("@/app/api/assistant/turns/stop/route");
 
-beforeEach(() => { h.rows.clear(); h.failCascade = false; });
+beforeEach(() => {
+  h.rows.clear(); h.failCascade = false; h.operations = [];
+  h.versionReadGate = null; h.receiptInsertGate = null; h.beforeReceiptInsert = null;
+  h.protectIntent.mockReset(); h.protectIntent.mockResolvedValue(false); h.encodeIntent.mockClear();
+});
 const identity = { userId: "owner", conversationId: "conversation", requestId: "request" };
 
 describe("Durable Numo request cancellation", () => {
+  it("revokes active execution without entering delayed receipt encryption or insertion", async () => {
+    h.rows.set("numo_assistant_turns", [{ id: "active",
+      conversation_id: "conversation", user_id: "owner", request_id: "request",
+      status: "running", claim_token: "claim",
+    }]);
+    h.protectIntent.mockImplementation(() => new Promise<never>(() => {}));
+    h.receiptInsertGate = new Promise(() => {});
+    const pending = requestNumoRequestStop(identity);
+    await vi.waitFor(() => expect(h.rows.get("numo_assistant_turns")![0])
+      .toMatchObject({ status: "stopped", claim_token: null }), { timeout: 100 });
+    expect(await pending).toMatchObject({ id: "active", status: "stopped" });
+    expect(h.protectIntent).not.toHaveBeenCalled();
+    expect(h.encodeIntent).not.toHaveBeenCalled();
+    expect(h.operations).not.toContainEqual({ table: "numo_assistant_turns", action: "insert" });
+  });
+
+  it("revokes the claim before a delayed conversation projection read completes", async () => {
+    let releaseVersion!: () => void;
+    h.versionReadGate = new Promise((resolve) => { releaseVersion = resolve; });
+    h.rows.set("numo_assistant_turns", [{ id: "active", conversation_id: "conversation",
+      user_id: "owner", request_id: "request", status: "running", claim_token: "claim" }]);
+    const pending = requestNumoRequestStop(identity);
+    try {
+      await vi.waitFor(() => expect(h.rows.get("numo_assistant_turns")![0])
+        .toMatchObject({ status: "stopped", claim_token: null }), { timeout: 100 });
+    } finally {
+      releaseVersion();
+    }
+    expect(await pending).toMatchObject({ status: "stopped" });
+  });
+
+  it("retires admission that wins the race with protected receipt insertion", async () => {
+    h.protectIntent.mockResolvedValue(true);
+    h.beforeReceiptInsert = () => h.rows.get("numo_assistant_turns")!.push({ id: "race-winner",
+      conversation_id: "conversation", user_id: "owner", request_id: "request",
+      status: "running", claim_token: "late-claim" });
+    expect(await requestNumoRequestStop(identity)).toMatchObject({ id: "race-winner", status: "stopped" });
+    expect(h.encodeIntent).toHaveBeenCalledWith("owner", "conversation", "request", {});
+    expect(h.rows.get("numo_assistant_turns")![0].claim_token).toBeNull();
+  });
+
+  it("leaves an already completed exact request unchanged without preparing another receipt", async () => {
+    h.rows.set("numo_assistant_turns", [{ id: "completed", conversation_id: "conversation",
+      user_id: "owner", request_id: "request", status: "completed" }]);
+    expect(await requestNumoRequestStop(identity)).toMatchObject({ status: "completed" });
+    expect(h.protectIntent).not.toHaveBeenCalled();
+    expect(h.operations).not.toContainEqual({ table: "numo_assistant_turns", action: "insert" });
+  });
+
   it("records a terminal request before its first admission", async () => {
     await ensureNumoRequestConversation({ service, conversationId: identity.conversationId, userId: identity.userId });
     expect(await requestNumoRequestStop(identity)).toMatchObject({ status: "stopped" });
@@ -145,6 +220,45 @@ describe("Durable Numo request cancellation", () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({ status: "stopped" });
     expect(h.rows.get("conversations")![0].user_id).toBe("owner");
+  });
+
+  it("uses an authorized turn hint without recreating its prospective conversation", async () => {
+    const conversationId = "61000000-0000-4000-8000-000000000002";
+    const requestId = "61000000-0000-4000-8000-000000000001";
+    const turnId = "61000000-0000-4000-8000-000000000003";
+    h.rows.set("conversations", [{ id: conversationId, user_id: "owner" }]);
+    h.rows.set("numo_assistant_turns", [{ id: turnId, conversation_id: conversationId,
+      user_id: "owner", request_id: requestId, status: "running", claim_token: "claim" }]);
+    const response = await POST(new Request("http://localhost/api/assistant/turns/stop", {
+      method: "POST", body: JSON.stringify({ requestId, conversationId, turnId, newConversation: true }),
+    }) as never);
+    expect(response.status).toBe(200);
+    expect(h.operations).not.toContainEqual({ table: "conversations", action: "insert" });
+    expect(h.protectIntent).not.toHaveBeenCalled();
+  });
+
+  it("revokes the mediated parent while its submission receipt encryption is still pending", async () => {
+    const conversationId = "61000000-0000-4000-8000-000000000002";
+    const turnId = "61000000-0000-4000-8000-000000000003";
+    const requestId = "61000000-0000-4000-8000-000000000004";
+    h.rows.set("conversations", [{ id: conversationId, user_id: "owner" }]);
+    h.rows.set("numo_assistant_turns", [{ id: turnId, conversation_id: conversationId,
+      user_id: "owner", request_id: "parent-request", status: "waiting_work", claim_token: "claim" }]);
+    let releaseReceipt!: (protect: boolean) => void;
+    h.protectIntent.mockImplementation(() => new Promise((resolve) => { releaseReceipt = resolve; }));
+    const pending = POST(new Request("http://localhost/api/assistant/turns/stop", {
+      method: "POST", body: JSON.stringify({ requestId, conversationId, turnId }),
+    }) as never);
+    try {
+      await vi.waitFor(() => {
+        expect(h.rows.get("numo_assistant_turns")![0]).toMatchObject({ status: "stopped", claim_token: null });
+        expect(h.protectIntent).toHaveBeenCalledOnce();
+      }, { timeout: 100 });
+    } finally {
+      releaseReceipt?.(false);
+    }
+    expect((await pending).status).toBe(200);
+    expect(h.rows.get("numo_assistant_turns")!.find(row => row.request_id === requestId)).toMatchObject({ status: "stopped" });
   });
 
   it("refuses a Stop for another user's conversation before recording a receipt", async () => {

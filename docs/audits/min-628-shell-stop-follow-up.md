@@ -19,6 +19,9 @@ therefore missed the confirmation inserted ahead of `onAbort`.
 - `components/assistant/chat-input.tsx` invokes `onAbort` directly on the first
   Stop click. This shared composer serves Numo and code agents. A worker
   steering draft continues to expose Send.
+- `DelegatedWorkStopButton` also invokes the run-specific interruption directly
+  on its first click in both the delegated card and its detail panel. Shared
+  stopping, disabled, spinner and failed-request retry behavior is preserved.
 - `lib/server/assistant/loop.ts` keeps its Stop listener and durable polling
   armed throughout accounting, checkpoints and tool execution. A stopped
   project/issue read aborts its actual Supabase transport, publishes no late
@@ -33,6 +36,19 @@ therefore missed the confirmation inserted ahead of `onAbort`.
   shell displayed GLM Light while null/default requests actually stored medium.
   The exact effect of that unsupported effort at OpenRouter is not established;
   the correction makes the stored request match the displayed supported level.
+- `requestNumoRequestStop` retires the exact owned active claim before preparing
+  a pre-admission receipt. Known owned turn IDs avoid redundant conversation
+  creation checks; a mediated parent stops concurrently with its submission
+  receipt. Cleanup remains awaited and conversation projection retains its
+  version comparison. Request-correlated phase logs measure authorization,
+  authority revocation and cleanup separately.
+
+The first replacement preview delivered the Stop request to Vercel in 17 ms
+and froze the UI in 7 ms, but did not revoke execution until 2,456 ms after the
+click. It sent no later generation, and its stored GLM effort was correctly low.
+That measurement exposed the redundant encryption, duplicate receipt insertion
+and database reads before the authority write. The subsequent retirement-first
+change targets this measured delay; it is not inferred from an optimistic UI.
 
 ## Regression evidence
 
@@ -48,7 +64,12 @@ after its claim is revoked without retry or late publication.
 The default-model configuration regression fails with actual medium instead of
 expected low on the previous configuration resolver and passes with the fix.
 
-Local verification passes: 124 tests in ten focused files, typecheck, relevant
+Three delegated-card/panel DOM tests fail before the correction with zero
+interruption requests; four pass afterward. Three delayed Stop-setup regressions
+fail before the retirement-first change and pass afterward, including a slow
+projection read and a mediated submission awaiting receipt encryption.
+
+Local verification passes: 134 tests in eleven focused files, typecheck, relevant
 lint, owned-English, encrypted-access, encryption-schema and whitespace checks.
 The encryption consumer inventory includes the reviewed query transport wrapper;
 authorization and encrypted-content readers remain unchanged.
