@@ -1,4 +1,4 @@
-import { CalendarDaysIcon, CheckmarkSquare01Icon as CheckSquare, ClockIcon as Clock, FilterHorizontalIcon as ListFilter, HashIcon as Hash, TagsIcon as Tags, TypeIcon as Type, UserGroupIcon as Users } from "@hugeicons/core-free-icons";
+import { CalendarDaysIcon, CheckIcon, ClockIcon as Clock, FilterHorizontalIcon as ListFilter, HashIcon as Hash, TagsIcon as Tags, TypeIcon as Type, UserGroupIcon as Users } from "@hugeicons/core-free-icons";
 
 export const PROPERTY_ICONS = {
   text: Type,
@@ -8,5 +8,5 @@ export const PROPERTY_ICONS = {
   created_at: Clock,
   date: CalendarDaysIcon,
   people: Users,
-  checkbox: CheckSquare,
+  checkbox: CheckIcon,
 };

@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Activity01Icon, AiAutoRotateIcon, ArrowRight01Icon, Book01Icon, Book02Icon, BookOpen01Icon, BotIcon, Calendar01Icon, Cancel01Icon, DashboardSpeedIcon, Delete02Icon, FileAddIcon as FilePlus2, FileEditIcon as FilePen, FileRemoveIcon, FileSearchIcon, FileStackIcon as FileStack, FileSymlinkIcon as FileSymlink, FilterIcon, FolderTreeIcon as FolderTree, GitMergeIcon, GitPullRequestIcon, GlobeIcon, InboxIcon, LayoutGridIcon, Link02Icon, ListIcon, MailRemove01Icon, MailReply01Icon, Message01Icon, MessageCircleQuestionMarkIcon as MessageCircleQuestion, MessageMultiple01Icon, MessageProgrammingIcon, Notebook01Icon, NotebookIcon, Plug01Icon, Search01Icon, Settings02Icon, ShieldCheckIcon as ShieldCheck, SlidersHorizontalIcon, SparklesIcon, Tag01Icon, TagsIcon, Target01Icon, TaskDone01Icon, TerminalIcon as Terminal, TickDouble01Icon, Undo02Icon, UserAdd01Icon, UserGroupIcon, UserIcon, UserMinus01Icon, UserSettings01Icon } from "@hugeicons/core-free-icons";
+import { Activity01Icon, AiAutoRotateIcon, ArrowRight01Icon, Book01Icon, Book02Icon, BookOpen01Icon, BotIcon, Calendar01Icon, Cancel01Icon, DashboardSpeedIcon, Delete02Icon, FileAddIcon as FilePlus2, FileEditIcon as FilePen, FileRemoveIcon, FileSearchIcon, FileStackIcon as FileStack, FileSymlinkIcon as FileSymlink, FilterIcon, FolderTreeIcon as FolderTree, GitMergeIcon, GitPullRequestIcon, GlobeIcon, InboxIcon, LayoutGridIcon, Link02Icon, ListIcon, MailRemove01Icon, MailReply01Icon, Message01Icon, MessageCircleQuestionMarkIcon as MessageCircleQuestion, MessageMultiple01Icon, MessageProgrammingIcon, Notebook01Icon, NotebookIcon, Plug01Icon, Search01Icon, Settings02Icon, ShieldCheckIcon as ShieldCheck, SlidersHorizontalIcon, SparklesIcon, Tag01Icon, TagsIcon, Target01Icon, TaskDone01Icon, TerminalIcon as Terminal, CheckIcon, Undo02Icon, UserAdd01Icon, UserGroupIcon, UserIcon, UserMinus01Icon, UserSettings01Icon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
 import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
@@ -782,7 +782,7 @@ const TOOL_META: Record<string, ToolMeta> = {
     },
   },
   resolve_pull_request_threads: {
-    icon: TickDouble01Icon,
+    icon: CheckIcon,
     getLabel: (_args, result, success, status, t) => {
       if (status === "running") return t("resolvingPrConversations");
       if (!success) return t("resolvePrConversationsFailed");
@@ -806,7 +806,7 @@ const TOOL_META: Record<string, ToolMeta> = {
     },
   },
   resolve_pull_request_thread: {
-    icon: TickDouble01Icon,
+    icon: CheckIcon,
     getLabel: (_args, result, success, status, t) => {
       if (status === "running") return t("resolvingPrConversation");
       if (!success) return t("resolvePrConversationFailed");

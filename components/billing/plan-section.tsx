@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowRight01Icon, GiftIcon, Tick01Icon } from "@hugeicons/core-free-icons";
+import { ArrowRight01Icon, GiftIcon, CheckIcon } from "@hugeicons/core-free-icons";
 import { useCallback, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
@@ -311,7 +311,7 @@ export function PlanSection() {
               <ul className="mb-9 flex-1 space-y-3.5">
                 {planFeatureLabels(plan, t).map((feature) => (
                   <li key={feature} className="flex items-start gap-3 text-sm leading-relaxed">
-                    <HugeiconsIcon icon={Tick01Icon} className="mt-1 size-4 shrink-0" strokeWidth={1.5} aria-hidden />
+                    <HugeiconsIcon icon={CheckIcon} className="mt-1 size-4 shrink-0" strokeWidth={1.5} aria-hidden />
                     <span>{feature}</span>
                   </li>
                 ))}

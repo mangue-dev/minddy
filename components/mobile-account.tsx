@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
-import { BarChartIcon, ComputerIcon, Copy01Icon, CreditCardIcon, Delete02Icon, Logout01Icon, MoonIcon, Settings01Icon, Shield01Icon, Sun01Icon, Tick01Icon } from "@hugeicons/core-free-icons";
+import { BarChartIcon, ComputerIcon, Copy01Icon, CreditCardIcon, Delete02Icon, Logout01Icon, MoonIcon, Settings01Icon, Shield01Icon, Sun01Icon, CheckIcon } from "@hugeicons/core-free-icons";
 import { useEffect, useMemo, useState, type SVGProps } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
@@ -157,7 +157,7 @@ export function useAccountActions(): {
         icon: c.icon,
         keywords: ["theme", "thème", "appearance", "apparence", t(c.key as Parameters<typeof t>[0])],
         meta:
-          theme === c.value ? <HugeiconsIcon icon={Tick01Icon} className="size-3.5 text-muted-foreground" /> : undefined,
+          theme === c.value ? <HugeiconsIcon icon={CheckIcon} className="size-3.5 text-muted-foreground" /> : undefined,
         onSelect: () => setTheme(c.value),
       })),
       {

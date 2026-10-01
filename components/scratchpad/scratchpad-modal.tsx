@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Cancel01Icon, Copy01Icon, Delete02Icon, MoreHorizontalIcon, Tick01Icon } from "@hugeicons/core-free-icons";
+import { Cancel01Icon, Copy01Icon, Delete02Icon, MoreHorizontalIcon, CheckIcon } from "@hugeicons/core-free-icons";
 import { useEffect, useRef, useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import {
@@ -187,7 +187,7 @@ function ScratchpadBody() {
                 {isSaving ? (
                   <Spinner className="size-3.5" />
                 ) : (
-                  <HugeiconsIcon icon={Tick01Icon} className="size-3.5" />
+                  <HugeiconsIcon icon={CheckIcon} className="size-3.5" />
                 )}
               </span>
             </TooltipTrigger>

@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Copy01Icon, Download01Icon, Tick01Icon } from "@hugeicons/core-free-icons";
+import { Copy01Icon, Download01Icon, CheckIcon } from "@hugeicons/core-free-icons";
 import {useState} from "react";
 import {useTranslations} from "next-intl";
 import {useQueryClient} from "@tanstack/react-query";
@@ -250,7 +250,7 @@ export function AccountSecuritySection() {
 
             <div className="flex flex-wrap items-center gap-2">
               <Button variant="outline" size="sm" onClick={() => void copyCodes()}>
-                {copied ? <HugeiconsIcon icon={Tick01Icon} className="size-4" /> : <HugeiconsIcon icon={Copy01Icon} className="size-4" />}
+                {copied ? <HugeiconsIcon icon={CheckIcon} className="size-4" /> : <HugeiconsIcon icon={Copy01Icon} className="size-4" />}
                 {t("copyCodes")}
               </Button>
               <Button variant="outline" size="sm" onClick={downloadCodes}>

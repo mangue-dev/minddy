@@ -1,5 +1,5 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { BotIcon, Calendar01Icon, File02Icon, GitPullRequestIcon, Layers01Icon, StickyNote02Icon, TaskDone01Icon, Tick01Icon } from "@hugeicons/core-free-icons";
+import { BotIcon, Calendar01Icon, File02Icon, GitPullRequestIcon, Layers01Icon, StickyNote02Icon, TaskDone01Icon, CheckIcon } from "@hugeicons/core-free-icons";
 import { getTranslations } from "next-intl/server";
 import { MCP_PRESETS } from "@/lib/mcp-catalog";
 import { McpServiceLogo } from "@/components/mcp-service-logo";
@@ -78,7 +78,7 @@ export async function SectionAgents() {
             </div>
           </FeatureDisclosure>
           <FeatureDisclosure title={t("navMenu_agents_title")} className={`min-h-[440px] ${CARD_TONES.butter}`}
-            details={<><p className="mb-5">{t("agentsMcpRoles")}</p><p className="mb-5">{t("agentsPlanNote")} {t("agentsByokNote")}</p><ul className="space-y-3">{CAPABILITIES.map(key => <li key={key} className="flex gap-3"><HugeiconsIcon icon={Tick01Icon} className="mt-1 size-4 shrink-0" aria-hidden />{t(`agentsCapability_${key}`)}</li>)}</ul></>}>
+            details={<><p className="mb-5">{t("agentsMcpRoles")}</p><p className="mb-5">{t("agentsPlanNote")} {t("agentsByokNote")}</p><ul className="space-y-3">{CAPABILITIES.map(key => <li key={key} className="flex gap-3"><HugeiconsIcon icon={CheckIcon} className="mt-1 size-4 shrink-0" aria-hidden />{t(`agentsCapability_${key}`)}</li>)}</ul></>}>
             <div className="flex h-full flex-col p-6 pb-20 sm:p-8 sm:pb-20">
               <h3 className="text-2xl font-medium tracking-tight">{t("agentsCompatible")}</h3>
               <ul className="mt-8 grid grid-cols-2 gap-x-4 gap-y-5">

@@ -2,7 +2,7 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
-import { CancelCircleIcon as CircleSlash, CircleIcon, MinusSignIcon, MoreHorizontalIcon, PlayIcon, Tick01Icon } from "@hugeicons/core-free-icons";
+import { CancelCircleIcon as CircleSlash, CircleIcon, MinusSignIcon, MoreHorizontalIcon, PlayIcon, CheckIcon } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
 import {
   Button,
@@ -61,7 +61,7 @@ export function TaskRow({
         {task.state === "in_progress" && (
           <span className="size-2 rounded-[2px] bg-primary" />
         )}
-        {task.state === "completed" && <HugeiconsIcon icon={Tick01Icon} className="size-3" />}
+        {task.state === "completed" && <HugeiconsIcon icon={CheckIcon} className="size-3" />}
         {task.state === "cancelled" && <HugeiconsIcon icon={MinusSignIcon} className="size-3" />}
       </button>
 
@@ -100,7 +100,7 @@ export function TaskRow({
           )}
           {task.state !== "completed" && (
             <DropdownMenuItem onSelect={() => onSetState("completed")}>
-              <HugeiconsIcon icon={Tick01Icon} />
+              <HugeiconsIcon icon={CheckIcon} />
               {t("markCompleted")}
             </DropdownMenuItem>
           )}

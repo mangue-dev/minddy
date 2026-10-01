@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowUpDownIcon, Tick01Icon, WorkflowCircle01Icon } from "@hugeicons/core-free-icons";
+import { ArrowUpDownIcon, CheckIcon, WorkflowCircle01Icon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import {
@@ -117,7 +117,7 @@ export function AutomationPresetPicker({
                   <span>{option.label}</span>
                   <span className="text-xs text-muted-foreground">{option.short}</span>
                 </div>
-                <HugeiconsIcon icon={Tick01Icon} className={cn(
+                <HugeiconsIcon icon={CheckIcon} className={cn(
                                         "mt-0.5 size-4 shrink-0",
                                         option.value === value ? "opacity-100" : "opacity-0",
                                       )} />

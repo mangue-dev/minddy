@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowLeft01Icon, Delete02Icon, Mic01Icon, MoreHorizontalIcon, TaskEdit01Icon, Tick01Icon } from "@hugeicons/core-free-icons";
+import { ArrowLeft01Icon, Delete02Icon, Mic01Icon, MoreHorizontalIcon, TaskEdit01Icon, CheckIcon } from "@hugeicons/core-free-icons";
 import { hasVisibleOpenDialog } from "@/lib/visible-overlays";
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -167,7 +167,7 @@ function ObjectiveColorValue({
               )}
               style={{ backgroundColor: c }}
             >
-              {value === c && <HugeiconsIcon icon={Tick01Icon} className="size-3.5 text-white" />}
+              {value === c && <HugeiconsIcon icon={CheckIcon} className="size-3.5 text-white" />}
             </button>
           ))}
         </div>

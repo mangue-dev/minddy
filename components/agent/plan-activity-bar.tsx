@@ -2,7 +2,7 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
-import { ArrowRight01Icon, CancelCircleIcon as CircleSlash, CheckmarkCircle01Icon as CheckCircle2, CircleIcon, TaskDone01Icon } from "@hugeicons/core-free-icons";
+import { ArrowRight01Icon, CancelCircleIcon as CircleSlash, CheckIcon, CircleIcon, TaskDone01Icon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger, Spinner, cn } from "mangue-ui";
@@ -82,7 +82,7 @@ export function PlanActivityBar({ steps }: { steps: PlanStep[] }) {
                   )}
                 >
                   {s.status === "completed" ? (
-                    <AppIcon icon={CheckCircle2} className="mt-px size-3.5 shrink-0 text-brand" />
+                    <AppIcon icon={CheckIcon} className="mt-px size-3.5 shrink-0 text-brand" />
                   ) : s.status === "in_progress" ? (
                     <Spinner className="mt-px size-3.5 shrink-0 text-brand" />
                   ) : s.status === "cancelled" ? (

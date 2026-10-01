@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Activity01Icon, AnalyticsDownIcon, AnalyticsUpIcon, Calendar01Icon, CancelCircleIcon as CircleSlash2, MinusSignIcon, Tick01Icon } from "@hugeicons/core-free-icons";
+import { Activity01Icon, AnalyticsDownIcon, AnalyticsUpIcon, Calendar01Icon, CancelCircleIcon as CircleSlash2, MinusSignIcon, CheckIcon } from "@hugeicons/core-free-icons";
 import { AppIcon } from "@/components/icon";
 import { useMemo } from "react";
 import { useFormatter, useNow, useTranslations } from "next-intl";
@@ -49,7 +49,7 @@ const STATE_META: Record<
   },
   complete: {
     key: "momentumComplete",
-    icon: Tick01Icon,
+    icon: CheckIcon,
     className: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
   },
   canceled: {

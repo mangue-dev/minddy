@@ -1,5 +1,5 @@
 import type { AppIcon } from "@/components/icon";
-import { AlertTriangle, CheckmarkCircle01Icon as CheckCircle2, Circle, CircleDashedIcon, CircleDot, Copy, Eye, Filter, MinusSignIcon as Minus, SignalHigh, SignalLow, SignalMediumIcon, XCircle } from "@hugeicons/core-free-icons";
+import { AlertTriangle, CheckIcon, Circle, CircleDashedIcon, CircleDot, Copy, Eye, Filter, MinusSignIcon as Minus, SignalHigh, SignalLow, SignalMediumIcon, XCircle } from "@hugeicons/core-free-icons";
 
 // All three axes are fixed and not customizable per project.
 
@@ -38,7 +38,7 @@ export const STATUSES: StatusMeta[] = [
   { value: "todo", icon: Circle, color: "text-muted-foreground" },
   { value: "in_progress", icon: CircleDot, color: "text-amber-500" },
   { value: "in_review", icon: Eye, color: "text-violet-500" },
-  { value: "done", icon: CheckCircle2, color: "text-emerald-500" },
+  { value: "done", icon: CheckIcon, color: "text-emerald-500" },
   { value: "canceled", icon: XCircle, color: "text-muted-foreground" },
 ];
 

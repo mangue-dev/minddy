@@ -1,5 +1,5 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowRight01Icon, ArrowUpRight01Icon, CloudIcon, ServerIcon as Server, Tick01Icon } from "@hugeicons/core-free-icons";
+import { ArrowRight01Icon, ArrowUpRight01Icon, CloudIcon, ServerIcon as Server, CheckIcon } from "@hugeicons/core-free-icons";
 import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
 import { Github } from "@/components/git/provider-icons";
@@ -31,7 +31,7 @@ export async function SectionEditions() {
               <h3 className="text-3xl font-medium tracking-tight">{edition.title}</h3>
               <p className="mt-4 max-w-lg leading-relaxed opacity-80">{edition.body}</p>
               <ul className="my-8 space-y-4 text-sm leading-relaxed">
-                {edition.points.map(point => <li key={point} className="flex gap-3"><HugeiconsIcon icon={Tick01Icon} className="mt-0.5 size-4 shrink-0" aria-hidden /><span>{point}</span></li>)}
+                {edition.points.map(point => <li key={point} className="flex gap-3"><HugeiconsIcon icon={CheckIcon} className="mt-0.5 size-4 shrink-0" aria-hidden /><span>{point}</span></li>)}
               </ul>
               <Link href={edition.href} className="mt-auto inline-flex min-h-12 items-center justify-between gap-4 rounded-lg border border-current/20 px-4 py-3 text-sm font-medium transition-colors hover:bg-white/30 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-current dark:hover:bg-black/10">
                 {edition.cta}<HugeiconsIcon icon={ArrowRight01Icon} className="size-4 shrink-0" aria-hidden />

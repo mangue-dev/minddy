@@ -1,5 +1,5 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Shield01Icon, Tick01Icon } from "@hugeicons/core-free-icons";
+import { Shield01Icon, CheckIcon } from "@hugeicons/core-free-icons";
 import { getTranslations } from "next-intl/server";
 import { Button, Card, CardContent } from "mangue-ui";
 import { OAuthLogoPair } from "@/components/oauth/logo-pair";
@@ -56,7 +56,7 @@ export async function OAuthConsentCard({
             t("scopeAgents"),
           ].map((scope) => (
             <li key={scope} className="flex items-start gap-2.5">
-              <HugeiconsIcon icon={Tick01Icon} className="mt-0.5 size-4 shrink-0 text-brand" strokeWidth={2.5} />
+              <HugeiconsIcon icon={CheckIcon} className="mt-0.5 size-4 shrink-0 text-brand" strokeWidth={2.5} />
               <span className="text-foreground/90">{scope}</span>
             </li>
           ))}

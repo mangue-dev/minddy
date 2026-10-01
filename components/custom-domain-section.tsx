@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Copy01Icon, LinkSquare01Icon, Refresh01Icon, Tick01Icon } from "@hugeicons/core-free-icons";
+import { Copy01Icon, LinkSquare01Icon, Refresh01Icon, CheckIcon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -282,7 +282,7 @@ function CopyValueButton({ value }: { value: string }) {
       }}
     >
       {copied ? (
-        <HugeiconsIcon icon={Tick01Icon} className="size-3.5 text-emerald-500" />
+        <HugeiconsIcon icon={CheckIcon} className="size-3.5 text-emerald-500" />
       ) : (
         <HugeiconsIcon icon={Copy01Icon} className="size-3.5" />
       )}

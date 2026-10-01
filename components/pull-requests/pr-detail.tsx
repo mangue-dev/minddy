@@ -2,7 +2,7 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
-import { ArrowDown01Icon, ArrowLeft01Icon, ArrowUp01Icon, Cancel01Icon, Copy01Icon, Edit04Icon, GitPullRequestDraftIcon, GitPullRequestIcon, HistoryIcon, Link02Icon, LinkSquare01Icon, Message01Icon, MessageSquareQuoteIcon, MoreHorizontalIcon, Tick01Icon, Undo02Icon, ViewIcon } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, ArrowLeft01Icon, ArrowUp01Icon, Cancel01Icon, Copy01Icon, Edit04Icon, GitPullRequestDraftIcon, GitPullRequestIcon, HistoryIcon, Link02Icon, LinkSquare01Icon, Message01Icon, MessageSquareQuoteIcon, MoreHorizontalIcon, CheckIcon, Undo02Icon, ViewIcon } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useFormatter, useNow, useTranslations } from "next-intl";
 import {
@@ -185,7 +185,7 @@ function CopyBranchButton({ value }: { value: string }) {
           aria-label={t("copyBranch")}
           onClick={() => void copy()}
         >
-          {copied ? <HugeiconsIcon icon={Tick01Icon} className="size-3.5" /> : <HugeiconsIcon icon={Copy01Icon} className="size-3.5" />}
+          {copied ? <HugeiconsIcon icon={CheckIcon} className="size-3.5" /> : <HugeiconsIcon icon={Copy01Icon} className="size-3.5" />}
         </Button>
       </TooltipTrigger>
       <TooltipContent side="top">{t("copyBranch")}</TooltipContent>
@@ -1840,7 +1840,7 @@ export function PrDetail({
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem onSelect={() => openReview("approve")}>
-                      <HugeiconsIcon icon={Tick01Icon} />
+                      <HugeiconsIcon icon={CheckIcon} />
                       {t("reviewApprove")}
                     </DropdownMenuItem>
                     <DropdownMenuItem onSelect={() => openReview("comment")}>
@@ -2349,7 +2349,7 @@ export function PrDetail({
                             size="sm"
                             onClick={fileReviewActive ? finishFileReview : startFileReview}
                           >
-                            {fileReviewActive ? <HugeiconsIcon icon={Tick01Icon} /> : <HugeiconsIcon icon={ViewIcon} />}
+                            {fileReviewActive ? <HugeiconsIcon icon={CheckIcon} /> : <HugeiconsIcon icon={ViewIcon} />}
                             {t(fileReviewActive ? "reviewFinish" : "reviewStart")}
                           </Button>
                         </div>
@@ -2369,7 +2369,7 @@ export function PrDetail({
                         size="sm"
                         onClick={finishFileReview}
                       >
-                        <HugeiconsIcon icon={Tick01Icon} />
+                        <HugeiconsIcon icon={CheckIcon} />
                         {t("reviewFinish")}
                       </Button>
                     </div>
@@ -2655,7 +2655,7 @@ export function PrDetail({
                   verdict: "approve",
                   label: t("reviewApprove"),
                   hint: t("reviewChoiceApproveHint"),
-                  icon: Tick01Icon,
+                  icon: CheckIcon,
                 },
                 {
                   verdict: "request_changes",

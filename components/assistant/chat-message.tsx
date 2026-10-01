@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Copy01Icon, Tick01Icon } from "@hugeicons/core-free-icons";
+import { Copy01Icon, CheckIcon } from "@hugeicons/core-free-icons";
 import {
   memo,
   useCallback,
@@ -106,7 +106,7 @@ function CopyButton({ text }: { text: string }) {
         className="size-5 rounded-md bg-transparent p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-accent group-hover:opacity-100"
       >
         {copied ? (
-          <HugeiconsIcon icon={Tick01Icon} className="size-3 text-brand" />
+          <HugeiconsIcon icon={CheckIcon} className="size-3 text-brand" />
         ) : (
           <HugeiconsIcon icon={Copy01Icon} className="size-3" />
         )}

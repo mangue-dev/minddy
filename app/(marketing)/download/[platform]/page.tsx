@@ -1,5 +1,5 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowLeft01Icon, ArrowRight01Icon, GlobeIcon, LinkSquare01Icon, SmartPhone01Icon, Tablet01Icon, Tick01Icon } from "@hugeicons/core-free-icons";
+import { ArrowLeft01Icon, ArrowRight01Icon, GlobeIcon, LinkSquare01Icon, SmartPhone01Icon, Tablet01Icon, CheckIcon } from "@hugeicons/core-free-icons";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -66,7 +66,7 @@ export default async function DownloadPlatformPage({ params }: { params: Promise
       <section className="px-4 py-12 sm:px-6 sm:py-16">
         <div className="mx-auto max-w-6xl">
           <div className={`rounded-2xl p-6 sm:p-8 ${CARD_TONES.peach}`}>
-            <HugeiconsIcon icon={Tick01Icon} className="mb-5 size-6" strokeWidth={1.5} aria-hidden />
+            <HugeiconsIcon icon={CheckIcon} className="mb-5 size-6" strokeWidth={1.5} aria-hidden />
             <h2 className="text-3xl font-medium tracking-[-0.035em] sm:text-4xl">{t("finishTitle")}</h2>
             <p className="mt-4 max-w-2xl text-base leading-relaxed opacity-80">{t("finishBody")}</p>
           </div>

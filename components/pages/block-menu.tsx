@@ -19,7 +19,7 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
-import { ColorPickerIcon, Copy01Icon, Delete02Icon, Link02Icon, MessageAdd01Icon, RepeatOne02Icon } from "@hugeicons/core-free-icons";
+import { CheckIcon, ColorPickerIcon, Copy01Icon, Delete02Icon, Link02Icon, MessageAdd01Icon, RepeatOne02Icon } from "@hugeicons/core-free-icons";
 import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import type { Editor } from "@tiptap/core";
@@ -126,7 +126,7 @@ function ColorItems({
       >
         <Swatch kind={kind} color={null} />
         <span className="truncate">{t("colorNone")}</span>
-        {active === null && <span className="ml-auto text-xs">✓</span>}
+        {active === null && <HugeiconsIcon icon={CheckIcon} className="ml-auto size-3" />}
       </DropdownMenuItem>
       {PAGE_COLORS.map((color) => (
         <DropdownMenuItem
@@ -138,7 +138,7 @@ function ColorItems({
         >
           <Swatch kind={kind} color={color} />
           <span className="truncate">{colorName(color)}</span>
-          {active === color && <span className="ml-auto text-xs">✓</span>}
+          {active === color && <HugeiconsIcon icon={CheckIcon} className="ml-auto size-3" />}
         </DropdownMenuItem>
       ))}
     </>
@@ -271,7 +271,7 @@ export function BlockMenu({
                 >
                   <AppIcon icon={Icon} />
                   <span className="truncate">{t(block.labelKey)}</span>
-                  {active && <span className="text-xs">✓</span>}
+                  {active && <HugeiconsIcon icon={CheckIcon} className="size-3" />}
                   {block.shortcut && (
                     <DropdownMenuShortcut>
                       <Kbd size="sm">{block.shortcut.display}</Kbd>

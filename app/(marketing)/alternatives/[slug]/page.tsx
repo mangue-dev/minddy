@@ -1,5 +1,5 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowRight01Icon, BotIcon, CodeSimpleIcon as Code2, Download01Icon, File02Icon, ImportIcon as Import, LinkSquare01Icon, MessageMultiple01Icon, Mic01Icon, RepeatOne02Icon, Target01Icon, Tick01Icon } from "@hugeicons/core-free-icons";
+import { ArrowRight01Icon, BotIcon, CodeSimpleIcon as Code2, Download01Icon, File02Icon, ImportIcon as Import, LinkSquare01Icon, MessageMultiple01Icon, Mic01Icon, RepeatOne02Icon, Target01Icon, CheckIcon } from "@hugeicons/core-free-icons";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -159,7 +159,7 @@ export default async function AlternativePage({ params }: { params: Promise<{ sl
               <article key={point.prefix} className={cn("rounded-2xl p-6 sm:p-8", point.tone)}>
                 <h3 className="text-2xl font-medium tracking-tight">{point.title}</h3>
                 <ul className="mt-6 space-y-5">
-                  {COMPARISON_POINTS.map(index => <li key={index} className="flex gap-3 text-sm leading-relaxed"><HugeiconsIcon icon={Tick01Icon} className="mt-0.5 size-4 shrink-0" aria-hidden />{tc(`${point.prefix}_${index}`)}</li>)}
+                  {COMPARISON_POINTS.map(index => <li key={index} className="flex gap-3 text-sm leading-relaxed"><HugeiconsIcon icon={CheckIcon} className="mt-0.5 size-4 shrink-0" aria-hidden />{tc(`${point.prefix}_${index}`)}</li>)}
                 </ul>
               </article>
             ))}

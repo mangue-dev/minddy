@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Copy01Icon, Tick01Icon } from "@hugeicons/core-free-icons";
+import { Copy01Icon, CheckIcon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "mangue-ui";
@@ -32,7 +32,7 @@ export function ShaButton({ sha }: { sha: string }) {
         >
           {sha.slice(0, 7)}
           {copied ? (
-            <HugeiconsIcon icon={Tick01Icon} className="size-3.5 text-emerald-500" />
+            <HugeiconsIcon icon={CheckIcon} className="size-3.5 text-emerald-500" />
           ) : (
             <HugeiconsIcon icon={Copy01Icon} className="size-3.5 opacity-60" />
           )}

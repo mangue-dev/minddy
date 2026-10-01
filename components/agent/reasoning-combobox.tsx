@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowUpDownIcon, BrainIcon, Tick01Icon } from "@hugeicons/core-free-icons";
+import { ArrowUpDownIcon, BrainIcon, CheckIcon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import {
@@ -149,7 +149,7 @@ export function ReasoningCombobox({
                 }}
               >
                 <span className="flex-1 whitespace-nowrap">{t(LABEL_KEYS[level])}</span>
-                <HugeiconsIcon icon={Tick01Icon} className={cn("size-4 shrink-0", value === level ? "opacity-100" : "opacity-0")} />
+                <HugeiconsIcon icon={CheckIcon} className={cn("size-4 shrink-0", value === level ? "opacity-100" : "opacity-0")} />
               </CommandItem>
             ))}
           </CommandList>

@@ -2,7 +2,7 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
-import { AiAutoRotateIcon as CycleIcon, Calendar01Icon, CheckmarkCircle01Icon as CheckCircle2, Loading02Icon } from "@hugeicons/core-free-icons";
+import { AiAutoRotateIcon as CycleIcon, Calendar01Icon, CheckIcon, Loading02Icon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
@@ -138,7 +138,7 @@ export function CycleCompletedBanner() {
 
   return (
     <div className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3">
-      <AppIcon icon={CheckCircle2} className="size-5 shrink-0 text-emerald-500" aria-hidden />
+      <AppIcon icon={CheckIcon} className="size-5 shrink-0 text-emerald-500" aria-hidden />
       <div className="min-w-0 flex-1">
         <p className="text-sm font-semibold">{t("completedTitle")}</p>
       </div>

@@ -1,5 +1,5 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { MinusSignIcon, Tick01Icon } from "@hugeicons/core-free-icons";
+import { MinusSignIcon, CheckIcon } from "@hugeicons/core-free-icons";
 import { cn } from "mangue-ui/lib/utils";
 import { CARD_TONES } from "./card-tones";
 
@@ -192,7 +192,7 @@ function FeatureCellValue({ cell, includedLabel, notIncludedLabel, pastel = fals
   return (
     <>
       {cell ? (
-        <HugeiconsIcon icon={Tick01Icon} className={cn("size-4", pastel ? "mx-auto" : "text-primary")} strokeWidth={pastel ? 2 : 3} aria-hidden />
+        <HugeiconsIcon icon={CheckIcon} className={cn("size-4", pastel ? "mx-auto" : "text-primary")} strokeWidth={pastel ? 2 : 3} aria-hidden />
       ) : (
         <HugeiconsIcon icon={MinusSignIcon} className={cn("size-4", pastel ? "mx-auto opacity-40" : "text-muted-foreground/50")} aria-hidden />
       )}

@@ -12,7 +12,7 @@
 // `cx` and not `cn`: this view is mounted by the page block register,
 // which must remain importable outside the browser (see lib/cx.ts).
 import { HugeiconsIcon } from "@hugeicons/react";
-import { MinusSignIcon, Tick01Icon } from "@hugeicons/core-free-icons";
+import { MinusSignIcon, CheckIcon } from "@hugeicons/core-free-icons";
 import { cx } from "@/lib/cx";
 import type { PlanTaskState } from "@/lib/plan";
 
@@ -61,7 +61,7 @@ export function TaskCheckbox({
       {state === "in_progress" && (
         <span className="size-2 rounded-[2px] bg-primary" />
       )}
-      {state === "completed" && <HugeiconsIcon icon={Tick01Icon} className="size-3" />}
+      {state === "completed" && <HugeiconsIcon icon={CheckIcon} className="size-3" />}
       {state === "cancelled" && <HugeiconsIcon icon={MinusSignIcon} className="size-3" />}
     </button>
   );

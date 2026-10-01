@@ -2,7 +2,7 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
-import { AlertCircleIcon, ArrowRight01Icon, CheckmarkCircle01Icon as CheckCircle2, Loading02Icon } from "@hugeicons/core-free-icons";
+import { AlertCircleIcon, ArrowRight01Icon, CheckIcon, Loading02Icon } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
@@ -117,7 +117,7 @@ export function RelayGithubConnect() {
   if (status === "connected") {
     return (
       <ClaimCard title={t("title")}>
-        <AppIcon icon={CheckCircle2} className="h-10 w-10 text-primary" aria-hidden />
+        <AppIcon icon={CheckIcon} className="h-10 w-10 text-primary" aria-hidden />
         <p className="text-sm text-muted-foreground">{t("connected")}</p>
       </ClaimCard>
     );

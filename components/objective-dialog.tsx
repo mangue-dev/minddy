@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Tick01Icon } from "@hugeicons/core-free-icons";
+import { CheckIcon } from "@hugeicons/core-free-icons";
 import { createUuid } from "@/lib/create-uuid";
 
 import { useEffect, useRef, useState } from "react";
@@ -164,7 +164,7 @@ function ColorCompact({
               )}
               style={{ backgroundColor: c }}
             >
-              {value === c && <HugeiconsIcon icon={Tick01Icon} className="size-3.5 text-white" />}
+              {value === c && <HugeiconsIcon icon={CheckIcon} className="size-3.5 text-white" />}
             </button>
           ))}
         </div>

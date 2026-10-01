@@ -1,5 +1,5 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { BotIcon, Tick01Icon } from "@hugeicons/core-free-icons";
+import { BotIcon, CheckIcon } from "@hugeicons/core-free-icons";
 import { cn } from "mangue-ui";
 import { MinddyLogo } from "@/components/minddy-logo";
 
@@ -28,7 +28,7 @@ export function OAuthLogoPair({
 
       {state === "success" ? (
         <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-green-500/15 text-green-500">
-          <HugeiconsIcon icon={Tick01Icon} className="size-4" strokeWidth={3} />
+          <HugeiconsIcon icon={CheckIcon} className="size-4" strokeWidth={3} />
         </span>
       ) : (
         <span className="flex shrink-0 items-center gap-1.5" aria-hidden>
