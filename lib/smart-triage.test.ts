@@ -14,6 +14,7 @@ import {
 import type { Issue } from "./types";
 import type { IssueStatus } from "./issue-constants";
 import type { IssueRelation } from "./types";
+import { cycleBlockingRelations } from "./cycle";
 
 /**
  * The static rules of Smart Triage (MIN-566), pinned as a contract: relations
@@ -92,6 +93,29 @@ describe("triageIssueComparator — relations pass above everything", () => {
       "c",
       "a",
     ]);
+  });
+
+  it("keeps an intermediate blocker below actionable work in a dependency chain", () => {
+    const issues = [
+      ticket({ id: "a", priority: "low" }),
+      ticket({ id: "b", priority: "urgent" }),
+      ticket({ id: "c", priority: "medium" }),
+      ticket({ id: "free", priority: "low" }),
+    ];
+    expect(order(issues, {
+      relations: [...relations, { id: "r2", source_id: "b", target_id: "c", type: "blocks" }],
+    })).toEqual(["a", "free", "b", "c"]);
+  });
+
+  it("keeps both ends of a dependency cycle below actionable work", () => {
+    const issues = [
+      ticket({ id: "a", priority: "urgent" }),
+      ticket({ id: "b", priority: "high" }),
+      ticket({ id: "free", priority: "low" }),
+    ];
+    expect(order(issues, {
+      relations: [...relations, { id: "r2", source_id: "b", target_id: "a", type: "blocks" }],
+    })).toEqual(["free", "a", "b"]);
   });
 
   it("reads related edges as information, never as order", () => {
@@ -328,5 +352,53 @@ describe("boardComparatorFactory (MIN-576)", () => {
       boardTicket({ id: "b", position: 10 }),
     ];
     expect(sorted(issues, "manual")).toEqual(["b", "a"]);
+  });
+
+  it.each(["rules", "scored", "partially scored"] as const)(
+    "%s: keeps a member blocked by its own objective below actionable work until the objective closes",
+    (engine) => {
+      const issues = [
+        boardTicket({ id: "member", objective_id: "obj-1", priority: "urgent", effort: "xs", position: 10 }),
+        boardTicket({ id: "target", priority: "high", position: 20 }),
+        boardTicket({ id: "free", priority: "low", position: 30 }),
+      ];
+      const storedRelations: IssueRelation[] = [
+        { id: "objective-block", source_id: "obj-1", source_type: "objective", target_id: "member", type: "blocks" },
+        { id: "member-block", source_id: "member", target_id: "target", type: "blocks" },
+      ];
+      const jevScores = engine === "rules" ? undefined : new Map<string, number | null>([
+        ["member", 5], ["target", 4], ["free", engine === "scored" ? 1 : null],
+      ]);
+      for (const status of ["planned", "in_progress", "done", "canceled"] as const) {
+        const { relations, objectiveStatuses } = cycleBlockingRelations(
+          storedRelations,
+          new Map([["obj-1", ["member"]]]),
+          new Map([["obj-1", status]]),
+        );
+        const statusById = new Map<string, IssueStatus>([
+          ...issues.map((issue) => [issue.id, "todo"] as const),
+          ...objectiveStatuses,
+        ]);
+        const result = sorted(issues, "smart", { relations, statusById, jevScores });
+        if (status === "planned" || status === "in_progress") {
+          expect(result).toEqual(["free", "member", "target"]);
+        } else {
+          expect(result).toEqual(["member", "free", "target"]);
+        }
+      }
+    },
+  );
+
+  it("sinks a self-block created by folding a member's block on its own objective", () => {
+    const issues = [
+      boardTicket({ id: "member", objective_id: "obj-1", priority: "urgent" }),
+      boardTicket({ id: "free", priority: "low" }),
+    ];
+    const { relations } = cycleBlockingRelations(
+      [{ id: "r", source_id: "member", target_id: "obj-1", target_type: "objective", type: "blocks" }],
+      new Map([["obj-1", ["member"]]]),
+      new Map([["obj-1", "planned"]]),
+    );
+    expect(sorted(issues, "smart", { relations })).toEqual(["free", "member"]);
   });
 });

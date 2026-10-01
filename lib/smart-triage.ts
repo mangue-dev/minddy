@@ -18,7 +18,7 @@ import { triageScoreComparator } from "@/lib/triage-score-order";
  *   together, due dates and age as tie-breaks. Free, deterministic, testable.
  * - `jev` — Phase B: one decision-layer scoring pass per column (System One
  *   first, the LLM scoring pass as fallback) replaces the rules RANKING with a
- *   per-ticket urgency score; everything else stays identical. Named "AI" in
+ *   per-ticket urgency score; blocked tickets still sink. Named "AI" in
  *   the interface — the engine's name is an internal detail.
  *
  * Either way the reorder is a gesture: someone clicks "Smart triage", the
@@ -58,7 +58,8 @@ export function parseSmartTriageMode(value: unknown): SmartTriageMode | null {
  *   with AI scores in the context, a presence-based hybrid rides on top:
  *   the tickets a scoring pass ranked compare by score among themselves,
  *   the others (a failed column, the capped tail) keep the rules ranking
- *   among themselves, and a ranked ticket outranks an unranked one.
+ *   among themselves, and a ranked ticket outranks an unranked one. Active
+ *   blockers keep blocked tickets below actionable work in either engine.
  * - any other sort — the view sort's own comparator, column-blind.
  *
  * Per COLUMN because the rules group objectives over the column's own issue
@@ -82,6 +83,7 @@ export function boardComparatorFactory(
   }
   const scores = ctx.jevScores;
   const scored = scores ? triageScoreComparator(scores) : null;
+  const blockedOrder = triageBlockedComparator(ctx);
   return (columnIssues) => {
     const rules = triageIssueComparator({
       issues: columnIssues,
@@ -91,6 +93,8 @@ export function boardComparatorFactory(
     });
     if (!scored) return rules;
     return (a, b) => {
+      const blockedDiff = blockedOrder(a, b);
+      if (blockedDiff !== 0) return blockedDiff;
       const aScore = scores?.get(a.id);
       const bScore = scores?.get(b.id);
       if (aScore != null && bScore != null) return scored(a, b);
@@ -125,7 +129,8 @@ export interface TriageIssue {
  * 1. **Relations pass above everything.** A ticket that blocks at least one
  *    open ticket rises to the top tier; a ticket blocked by at least one open
  *    ticket sinks to the bottom tier (working on it now would stall on the
- *    blocker). A closed end changes nothing: a done blocker no longer blocks,
+ *    blocker), even if it also blocks other work. A closed end changes
+ *    nothing: a done blocker no longer blocks,
  *    and a blocker whose targets all closed stops earning its lift — the same
  *    semantics the "smart" view sort already applies.
  * 2. **Quick wins inside a tier.** Priority minus the effort discount (xs
@@ -214,6 +219,14 @@ function activelyBlocked(
   return ids;
 }
 
+/** Keep blocked work last, preserving the engine's order within each group. */
+export function triageBlockedComparator(
+  ctx: Pick<TriageContext, "relations" | "statusById">
+): (a: { id: string }, b: { id: string }) => number {
+  const blocked = activelyBlocked(ctx.relations, ctx.statusById);
+  return (a, b) => Number(blocked.has(a.id)) - Number(blocked.has(b.id));
+}
+
 /** Sooner due date first, undated last — the tie-break under equal ranks. */
 function dueTiebreak(a: TriageIssue, b: TriageIssue): number {
   if (!a.due_date && !b.due_date) return 0;
@@ -230,7 +243,7 @@ export function triageIssueComparator(
   const blockers = activeBlockers(ctx.relations, ctx.statusById);
   const blocked = activelyBlocked(ctx.relations, ctx.statusById);
   const tierOf = (id: string): 0 | 1 | 2 =>
-    blockers.has(id) ? 0 : blocked.has(id) ? 2 : 1;
+    blocked.has(id) ? 2 : blockers.has(id) ? 0 : 1;
   const rank = new Map<string, number>();
   for (const issue of issues) rank.set(issue.id, quickWinRank(issue, now));
 
