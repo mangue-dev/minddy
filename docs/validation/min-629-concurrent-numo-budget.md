@@ -33,6 +33,14 @@ Existing delegated workers still share their parent's single reservation. Posted
 platform spend plus active unspent reservations cannot exceed the allocation cap.
 Grants truncate to six decimal places instead of rounding above available funds.
 
+Worker key caps preserve the grant precision through the provisioning request.
+The [OpenRouter key API](https://openrouter.ai/docs/api/api-reference/api-keys/create-keys)
+defines `limit` as a numeric USD amount. Removing cent rounding keeps $0.009 from
+becoming $0.01 and $0.0009 from becoming zero, including on continuation and legacy
+account ceilings. Regression tests cover these amounts and the smallest positive
+stored grant ($0.000001), including the serialized provisioning payload. These
+tests mock provisioning; they do not establish a live provider generation result.
+
 Numo checks its platform allocation before each provider generation, separately
 from actual monthly usage and routine caps. A reservation-only refusal returns
 409 `usage_budget_reserved` with authoritative spent/reserved diagnostics. Actual

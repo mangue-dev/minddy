@@ -1523,8 +1523,8 @@ describe("le plan de contrôle vu depuis une machine", () => {
       expect(h.revoked).toEqual(["hash-du-tour-davant"]);
     });
 
-    it("caps a local platform key at the run's unspent reservation", async () => {
-      h.run = { ...h.run!, managed_budget_usd: 1.2, cost_usd: 0.2 };
+    it.each([1.2, 0.409, 0.4009, 0.400001])("caps a local platform key at the unspent part of a $%s reservation", async (managedBudgetUsd) => {
+      h.run = { ...h.run!, managed_budget_usd: managedBudgetUsd, cost_usd: 0.2 };
       h.ledgerSpent = 0.4;
       h.platformLedgerSpent = 0.4;
       h.quota = {
@@ -1535,12 +1535,14 @@ describe("le plan de contrôle vu depuis une machine", () => {
       };
 
       const response = await callLocal("POST", "/llm-key");
+      const unspentReservation = managedBudgetUsd - h.platformLedgerSpent;
 
+      expect(response.status).toBe(200);
       expect(response.body).toEqual({
         key: "sk-or-v1-clef-du-run",
-        capUsd: 0.8,
+        capUsd: unspentReservation,
       });
-      expect(h.minted).toEqual([{ runId: RUN_ID, capUsd: 0.8 }]);
+      expect(h.minted).toEqual([{ runId: RUN_ID, capUsd: unspentReservation }]);
     });
 
     it("n'en sert AUCUNE à une microVM", async () => {
