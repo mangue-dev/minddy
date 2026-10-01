@@ -1,5 +1,8 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { TriangleIcon } from "@hugeicons/core-free-icons";
+
 import { useTranslations } from "next-intl";
 import { DateTimePicker } from "@/components/date-time-picker";
 import {
@@ -141,6 +144,7 @@ export function EffortValue({
   const options: PickerOption[] = EFFORTS.map((e) => ({
     value: e.value,
     label: e.label,
+    icon: <HugeiconsIcon icon={TriangleIcon} className="size-4 text-muted-foreground" />,
   }));
   return (
     <SearchSelect

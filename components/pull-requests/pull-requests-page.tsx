@@ -12,10 +12,10 @@ import {
   CommandGroup,
   CommandItem,
   CommandSeparator,
-  Skeleton,
   Spinner,
   cn,
 } from "mangue-ui";
+import { PrDetailSkeleton, PrListSkeleton } from "@/components/pull-requests/pr-loading-skeleton";
 import { EmptyScene } from "@/components/empty-scene";
 import { GitLogin } from "@/components/git/git-login";
 import { ForgeUserAvatar } from "@/components/git/forge-user-avatar";
@@ -67,12 +67,7 @@ const PrDetail = dynamic(
   () => import("@/components/pull-requests/pr-detail").then((m) => m.PrDetail),
   {
     ssr: false,
-    loading: () => (
-      <div className="flex h-full min-h-0 flex-1 flex-col gap-4 p-4">
-        <Skeleton className="h-9 w-full rounded-lg" />
-        <Skeleton className="min-h-0 flex-1 rounded-xl" />
-      </div>
-    ),
+    loading: () => <PrDetailSkeleton />,
   },
 );
 
@@ -810,11 +805,7 @@ export function PullRequestsPage() {
         }
       >
         {loading ? (
-          <div className="flex flex-col gap-2 p-4">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton key={i} className="h-14 rounded-lg" />
-            ))}
-          </div>
+          <PrListSkeleton />
         ) : visible.length === 0 ? (
           /* PRs necessarily exist here — the completely empty surface is
              processed above, before rendering the column. The list cannot
@@ -925,6 +916,8 @@ export function PullRequestsPage() {
             onStateChange={applyConfirmedState}
             onOpenIssue={(issueId, projectId) => setPanel({ projectId, issueId })}
           />
+        ) : loading ? (
+          <PrDetailSkeleton />
         ) : (
           <div className="flex flex-1 items-center justify-center p-6">
             <p className="text-sm text-muted-foreground">{t("noSelection")}</p>

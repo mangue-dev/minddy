@@ -5,6 +5,7 @@
     "clear": "Svuota"
   },
   "Scratchpad": {
+    "actions": "Azioni del taccuino",
     "title": "Taccuino delle attività",
     "srDescription": "Il tuo taccuino personale delle attività.",
     "open": "Taccuino delle attività",
@@ -1795,6 +1796,7 @@
   "CommandPaletteActions": {
     "copied": "Copiato",
     "linkCopied": "Link copiato",
+    "openInCurrentTab": "Apri in questa scheda",
     "openInNewTab": "Apri in una nuova scheda",
     "copyLink": "Copia link",
     "copyIdentifier": "Copia “{identifier}”",

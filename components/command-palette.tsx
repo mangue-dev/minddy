@@ -97,7 +97,7 @@ import { useAnalytics } from "@/lib/use-analytics";
 import { moveIssueGroupsToEnd } from "@/lib/command-palette/group-order";
 import type { PaletteStrings } from "@/lib/command-palette/i18n";
 import { createMinddyEntityActionsProvider } from "@/lib/command-palette/registry/providers/MinddyEntityActionsProvider";
-import { normalizeAppTabLocation } from "@/lib/app-tab-location";
+import { paletteDestinationHref } from "@/lib/palette-destination";
 import { useOptionalAppTabSession } from "@/lib/app-tabs-context";
 import type {
   Issue,
@@ -190,16 +190,6 @@ type PaletteIssue = Issue | SearchIndexIssue;
  * description and plan. */
 function isFullIssue(issue: PaletteIssue): issue is Issue {
   return "category_ids" in issue;
-}
-
-function paletteDestinationHref(raw: string | undefined): string | null {
-  const normalized = normalizeAppTabLocation(raw);
-  if (!normalized || !raw) return null;
-  const source = new URL(raw, "https://minddy.invalid");
-  const destination = new URL(normalized, "https://minddy.invalid");
-  if (source.pathname.replace(/\/$/, "") !== destination.pathname || source.hash !== destination.hash) return null;
-  if ([...source.searchParams].some(([key, value]) => destination.searchParams.get(key) !== value)) return null;
-  return normalized;
 }
 
 /** Numo's face as a static action icon (no blinking in the popover). */

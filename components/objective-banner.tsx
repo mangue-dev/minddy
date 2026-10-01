@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowDown01Icon, ArrowLeft01Icon, Target01Icon } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, ArrowLeft01Icon, DateTimeIcon } from "@hugeicons/core-free-icons";
 import { startTransition } from "react";
 import Link from "next/link";
 import { useTranslations, useFormatter } from "next-intl";
@@ -194,14 +194,14 @@ export function ObjectiveBoardHeader({
           <div className="flex items-center gap-2">
             <span
               className={cn(
-                "flex size-7 shrink-0 items-center justify-center rounded-full",
+                "flex size-7 shrink-0 items-center justify-center",
                 overdue
-                  ? "bg-destructive/10 text-destructive"
-                  : "bg-muted text-muted-foreground"
+                  ? "text-destructive"
+                  : "text-muted-foreground"
               )}
               aria-hidden
             >
-              <HugeiconsIcon icon={Target01Icon} className="size-3.5" />
+              <HugeiconsIcon icon={DateTimeIcon} className="size-5" />
             </span>
             <div className="flex flex-col leading-tight">
               <span className="text-[11px] text-muted-foreground">

@@ -5,6 +5,7 @@
     "clear": "Löschen"
   },
   "Scratchpad": {
+    "actions": "Notizbuchaktionen",
     "title": "Aufgabennotizbuch",
     "srDescription": "Ihr persönliches Aufgabennotizbuch.",
     "open": "Aufgabennotizbuch",
@@ -1795,6 +1796,7 @@
   "CommandPaletteActions": {
     "copied": "Kopiert",
     "linkCopied": "Link kopiert",
+    "openInCurrentTab": "In diesem Tab öffnen",
     "openInNewTab": "In neuem Tab öffnen",
     "copyLink": "Link kopieren",
     "copyIdentifier": "„{identifier}“ kopieren",

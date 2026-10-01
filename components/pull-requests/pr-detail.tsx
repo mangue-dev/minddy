@@ -17,7 +17,6 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  Skeleton,
   Spinner,
   Tabs,
   TabsContent,
@@ -35,6 +34,7 @@ import { TAB_LIST_DENSE, TAB_TRIGGER_DENSE } from "@/components/tab-bar";
 import { NumoIcon } from "@/components/numo-icon";
 import { ProjectOrb } from "@/components/project-orb";
 import { projectOrbSeed } from "@/lib/project-orb-colors";
+import { PrActivitySkeleton, PrFilesSkeleton, PrHeaderActionsSkeleton, PrMetadataSkeleton, PrStatusSkeleton } from "@/components/pull-requests/pr-loading-skeleton";
 import { PrCommits } from "@/components/pull-requests/pr-commits";
 import { PrCommentComposer } from "@/components/pull-requests/pr-comment-composer";
 import { PrDiff } from "@/components/pull-requests/pr-diff";
@@ -672,6 +672,7 @@ export function PrDetail({
     threads: reviewThreads,
     reactions: reviewReactions,
     refetch: refetchReviewComments,
+    loading: reviewCommentsLoading,
   } = usePrReviewCommentsQuery(prEndpoint(item.prId));
   const unresolvedThreads = useMemo(
     () => unresolvedReviewThreads(reviewComments, reviewThreads),
@@ -1754,7 +1755,7 @@ export function PrDetail({
           </span>
         ) : null}
 
-        {isTerminal ? (
+        {loading ? <PrHeaderActionsSkeleton /> : isTerminal ? (
           // End of line of a completed PR: the only gesture left to it — reopen,
           // without confirmation, it does not destroy anything and the button next to it closes it
           // — then its STATE, last. The badge closes the line in both cases,
@@ -2023,67 +2024,69 @@ export function PrDetail({
               ticket: since MIN-143 they no longer come in pairs, and a PR
               human may have none. (Numo names his
               “MIN-42: <titre du ticket>” — the display does not change for them.) */}
-          <div className="flex flex-col gap-2">
-            <h1 className="min-w-0 flex-1 font-display text-2xl leading-tight font-semibold break-words">
-              {pr?.title ?? item.title ?? item.issue?.title ?? identifier}
-            </h1>
-            <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 text-xs text-muted-foreground">
-              {/* Author first — avatar and name, like a comment header. Only a
-                  PR Numo OPENED takes the Numo seat (the forge login depends
-                  on the installation): a human PR Numo merely corrected — a
-                  fix session bears the number without having opened it —
-                  keeps its real author. */}
-              {author ? (
-                <span className="inline-flex items-center gap-1.5">
-                  {item.numoOpened ? (
-                    <NumoIcon animated={false} className="size-4" />
-                  ) : (
-                    <ForgeUserAvatar user={author} className="size-4" />
-                  )}
-                  <span className="font-medium text-foreground">
-                    {item.numoOpened
-                      ? t("numoAuthor")
-                      : parseForgeLogin(author.login).name}
+          {loading ? <PrMetadataSkeleton /> : (
+            <div className="flex flex-col gap-2">
+              <h1 className="min-w-0 flex-1 font-display text-2xl leading-tight font-semibold break-words">
+                {pr?.title ?? item.title ?? item.issue?.title ?? identifier}
+              </h1>
+              <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 text-xs text-muted-foreground">
+                {/* Author first — avatar and name, like a comment header. Only a
+                    PR Numo OPENED takes the Numo seat (the forge login depends
+                    on the installation): a human PR Numo merely corrected — a
+                    fix session bears the number without having opened it —
+                    keeps its real author. */}
+                {author ? (
+                  <span className="inline-flex items-center gap-1.5">
+                    {item.numoOpened ? (
+                      <NumoIcon animated={false} className="size-4" />
+                    ) : (
+                      <ForgeUserAvatar user={author} className="size-4" />
+                    )}
+                    <span className="font-medium text-foreground">
+                      {item.numoOpened
+                        ? t("numoAuthor")
+                        : parseForgeLogin(author.login).name}
+                    </span>
+                    {!item.numoOpened && parseForgeLogin(author.login).isBot ? (
+                      <BotBadge />
+                    ) : null}
                   </span>
-                  {!item.numoOpened && parseForgeLogin(author.login).isBot ? (
-                    <BotBadge />
-                  ) : null}
-                </span>
-              ) : null}
-              {/* The two branches, in code pills: base — head, the merge
-                  direction carried by the arrow between them. */}
-              {baseBranch ? (
-                <code className="rounded bg-muted px-1 py-0.5 font-mono text-[11px] text-foreground">
-                  {baseBranch}
-                </code>
-              ) : null}
-              {/* The diff in one number, between the two branches — the merge
-                  line reads left to right: from base, +adds −dels, toward head.
-                  Mute until files have answered: “+0 −0” would read as an
-                  empty PR. */}
-              {files.length > 0 ? (
-                <span className="inline-flex items-center gap-1 font-medium tabular-nums">
-                  <span className="text-green-700 dark:text-green-500">
-                    +{format.number(additions)}
-                  </span>
-                  <span className="text-red-700 dark:text-red-500">
-                    −{format.number(deletions)}
-                  </span>
-                </span>
-              ) : null}
-              {baseBranch && headBranch ? (
-                <HugeiconsIcon icon={ArrowLeft01Icon} className="size-3.5" aria-hidden />
-              ) : null}
-              {headBranch ? (
-                <span className="inline-flex items-center gap-0.5">
+                ) : null}
+                {/* The two branches, in code pills: base — head, the merge
+                    direction carried by the arrow between them. */}
+                {baseBranch ? (
                   <code className="rounded bg-muted px-1 py-0.5 font-mono text-[11px] text-foreground">
-                    {headBranch}
+                    {baseBranch}
                   </code>
-                  <CopyBranchButton value={headBranch} />
-                </span>
-              ) : null}
+                ) : null}
+                {/* The diff in one number, between the two branches — the merge
+                    line reads left to right: from base, +adds −dels, toward head.
+                    Mute until files have answered: “+0 −0” would read as an
+                    empty PR. */}
+                {files.length > 0 ? (
+                  <span className="inline-flex items-center gap-1 font-medium tabular-nums">
+                    <span className="text-green-700 dark:text-green-500">
+                      +{format.number(additions)}
+                    </span>
+                    <span className="text-red-700 dark:text-red-500">
+                      −{format.number(deletions)}
+                    </span>
+                  </span>
+                ) : null}
+                {baseBranch && headBranch ? (
+                  <HugeiconsIcon icon={ArrowLeft01Icon} className="size-3.5" aria-hidden />
+                ) : null}
+                {headBranch ? (
+                  <span className="inline-flex items-center gap-0.5">
+                    <code className="rounded bg-muted px-1 py-0.5 font-mono text-[11px] text-foreground">
+                      {headBranch}
+                    </code>
+                    <CopyBranchButton value={headBranch} />
+                  </span>
+                ) : null}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* The only place to say which Git account is in use (MIN-144).
               It stays silent when everything is configured correctly. */}
@@ -2108,26 +2111,28 @@ export function PrDetail({
             showBar={false}
           />
 
-          <PrStatusCards
-            readiness={effectiveReadiness}
-            checks={checks}
-            provider={item.provider}
-            deployment={deploymentStory}
-            unresolvedThreads={unresolvedThreads}
-            canAct={canActOnBlocker}
-            acting={maintenanceAction}
-            onAction={(blocker) => void handleReadinessAction(blocker)}
-            onOpenConversations={() => setUnresolvedSidebarOpen(true)}
-            onOpenReviewApprove={() => openReview("approve")}
-            onStartFileReview={startFileReview}
-            numoReview={numoReviewCard}
-            fixRun={fixRunCard}
-            numoMerge={numoMerging ? { startedAt: numoMergeStartedAt } : null}
-            checksOpen={checksPopoverOpen}
-            onChecksOpenChange={setChecksPopoverOpen}
-            onRequestReview={openAiReviewDialog}
-            fix={fixCard}
-          />
+          {loading ? <PrStatusSkeleton /> : (
+            <PrStatusCards
+              readiness={effectiveReadiness}
+              checks={checks}
+              provider={item.provider}
+              deployment={deploymentStory}
+              unresolvedThreads={unresolvedThreads}
+              canAct={canActOnBlocker}
+              acting={maintenanceAction}
+              onAction={(blocker) => void handleReadinessAction(blocker)}
+              onOpenConversations={() => setUnresolvedSidebarOpen(true)}
+              onOpenReviewApprove={() => openReview("approve")}
+              onStartFileReview={startFileReview}
+              numoReview={numoReviewCard}
+              fixRun={fixRunCard}
+              numoMerge={numoMerging ? { startedAt: numoMergeStartedAt } : null}
+              checksOpen={checksPopoverOpen}
+              onChecksOpenChange={setChecksPopoverOpen}
+              onRequestReview={openAiReviewDialog}
+              fix={fixCard}
+            />
+          )}
 
           {/* GitHub style tabs: the thread on one side, the code on the other. */}
           <Tabs
@@ -2166,8 +2171,8 @@ export function PrDetail({
                 GitHub follow, compose closes. */}
             <TabsContent value="activity" className="mt-4 flex flex-col gap-3">
               {loading || commentsLoading ? (
-                <Skeleton className="h-16 rounded-lg" />
-              ) : !prDescription && feed.length === 0 ? (
+                <PrActivitySkeleton />
+              ) : !prDescription && feed.length === 0 && !reviewCommentsLoading ? (
                 <p className="text-sm text-muted-foreground">{t("noComments")}</p>
               ) : (
                 // MIN-548: the activity is a plain stack of cards and lines —
@@ -2270,6 +2275,8 @@ export function PrDetail({
                  </div>
                )}
 
+              {!loading && !commentsLoading && reviewCommentsLoading ? <PrActivitySkeleton /> : null}
+
               {canComment ? (
                 <div data-testid="pr-comment-composer-region" className="pt-1">
                   <PrCommentComposer
@@ -2299,10 +2306,7 @@ export function PrDetail({
 
             <TabsContent value="files" className="mt-4">
               {loading ? (
-                <div className="flex flex-col gap-2">
-                  <Skeleton className="h-6 w-40" />
-                  <Skeleton className="h-40 rounded-md" />
-                </div>
+                <PrFilesSkeleton />
               ) : pr ? (
                 <div className="flex flex-col gap-3">
                   {/* MIN-548: the review mode lives INSIDE the diff toolbar —

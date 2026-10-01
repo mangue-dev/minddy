@@ -151,6 +151,7 @@ export function EffortPicker({
   const options: PickerOption[] = EFFORTS.map((e) => ({
     value: e.value,
     label: e.label,
+    icon: <HugeiconsIcon icon={TriangleIcon} className="size-4 text-muted-foreground" />,
   }));
   return (
     <SearchSelect

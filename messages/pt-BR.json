@@ -5,6 +5,7 @@
     "clear": "Limpar"
   },
   "Scratchpad": {
+    "actions": "Ações do caderno",
     "title": "Caderno de tarefas",
     "srDescription": "Seu caderno de tarefas pessoal.",
     "open": "Caderno de tarefas",
@@ -1795,6 +1796,7 @@
   "CommandPaletteActions": {
     "copied": "Copiado",
     "linkCopied": "Link copiado",
+    "openInCurrentTab": "Abrir nesta aba",
     "openInNewTab": "Abrir em uma nova aba",
     "copyLink": "Copiar link",
     "copyIdentifier": "Copiar “{identifier}”",

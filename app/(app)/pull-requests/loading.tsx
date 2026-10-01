@@ -1,5 +1,5 @@
-import { ListDetailSkeleton } from "@/components/route-skeletons";
+import { PullRequestsSkeleton } from "@/components/pull-requests/pr-loading-skeleton";
 
 export default function PullRequestsLoading() {
-  return <ListDetailSkeleton />;
+  return <PullRequestsSkeleton />;
 }

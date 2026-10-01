@@ -1231,10 +1231,11 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   );
 
   // Prepare the full model during the palette's idle warmup and retain it
-  // between openings. Opening the menu should not map thousands of rows.
+  // between openings. Narrow windows also need the full model when a keyboard
+  // shortcut opens the palette; MobileNav's separate list stays capped below.
   const desktopDataGroups = useMemo(
     () =>
-      paletteMounted && !mobileLayout
+      paletteMounted && (!mobileLayout || paletteOpen)
         ? buildDataGroups(
             paletteIssues,
             paletteObjectives,
@@ -1245,6 +1246,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     [
       paletteMounted,
       mobileLayout,
+      paletteOpen,
       buildDataGroups,
       paletteIssues,
       paletteObjectives,
