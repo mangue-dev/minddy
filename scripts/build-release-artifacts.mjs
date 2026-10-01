@@ -45,6 +45,7 @@ const sourceTar = git(["archive", "--format=tar", `--prefix=minddy-${tag}/`, "HE
 const migrationsTar = git([
   "archive", "--format=tar", `--prefix=minddy-${tag}-migrations/`, "HEAD",
   "supabase/migrations", "scripts/bootstrap-supabase.mjs", "scripts/verify-supabase-bootstrap.mjs",
+  "scripts/self-hosting-encryption.mjs",
   "docs/self-hosting.md", "docs/self-hosting-operations.md",
 ], { encoding: "buffer" });
 

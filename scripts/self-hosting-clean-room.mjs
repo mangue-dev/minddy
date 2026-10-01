@@ -20,6 +20,7 @@ export const REQUIRED_RELEASE_PATHS = [
   "docs/self-hosting-clean-room.md",
   "scripts/bootstrap-supabase.mjs",
   "scripts/self-hosting-install.mjs",
+  "scripts/self-hosting-encryption.mjs",
   "scripts/prepare-self-hosted-functions.mjs",
   "deploy/self-hosted/functions-bundle.json",
   "deploy/self-hosted/database-proxy.mjs",

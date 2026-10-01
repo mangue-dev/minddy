@@ -174,3 +174,19 @@ paths = ['''(?:^|/)lib/server/git/relayed-token-refresh\.test\.ts$''']
 description = "Synthetic GitLab tokens used by the legacy focused redaction test."
 targetRules = ["gitlab-pat"]
 paths = ['''(?:^|/)lib/server/agent/redact\.test\.ts$''']
+
+[[allowlists]]
+description = "Exact root-key placeholder in the self-hosted encryption environment rendering test."
+targetRules = ["generic-api-key"]
+condition = "AND"
+paths = ['''(?:^|/)scripts/self-hosting-encryption\.test\.mjs$''']
+regexTarget = "secret"
+regexes = ['''^replace-with-64-hex-characters$''']
+
+[[allowlists]]
+description = "Exact private-LAN example used to test the full self-hosted encryption profile."
+targetRules = ["minddy-internal-network-url"]
+condition = "AND"
+paths = ['''(?:^|/)scripts/self-hosting-encryption\.test\.mjs$''']
+regexTarget = "secret"
+regexes = ['''^192\.168\.1\.50$''']

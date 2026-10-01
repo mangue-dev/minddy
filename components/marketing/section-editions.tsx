@@ -39,6 +39,10 @@ export async function SectionEditions() {
             </article>
           ))}
         </div>
+        <article className="mt-6 rounded-2xl bg-background/60 p-6 sm:p-8">
+          <h3 className="text-xl font-medium tracking-tight">{t("encryptionTitle")}</h3>
+          <p className="mt-3 max-w-3xl text-sm leading-relaxed text-muted-foreground">{t("encryptionBody")}</p>
+        </article>
         <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-muted-foreground">{t("openSourceLicense")}</p>
           <a href={MINDDY_REPOSITORY_URL} target="_blank" rel="noreferrer" className="inline-flex min-h-11 items-center gap-2 self-start rounded-sm text-sm font-medium hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring">

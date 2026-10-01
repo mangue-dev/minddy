@@ -114,6 +114,10 @@ export default async function SelfHostingPage() {
             ))}
           </div>
           <p className="mt-5 max-w-3xl text-sm leading-relaxed text-muted-foreground">{t("howBoundary")}</p>
+          <article className={cn("mt-8 rounded-2xl p-6 sm:p-8", CARD_TONES.sage)}>
+            <h3 className="text-2xl font-medium tracking-tight">{t("encryptionTitle")}</h3>
+            <p className="mt-4 max-w-3xl text-sm leading-relaxed opacity-80">{t("encryptionBody")}</p>
+          </article>
           <article className={cn("mt-8 rounded-2xl p-6 sm:p-8", CARD_TONES.peach)}>
             <h3 className="text-2xl font-medium tracking-tight">{t("limitsTitle")}</h3>
             <div className="mt-4 grid gap-5 text-sm leading-relaxed opacity-80 md:grid-cols-2 md:gap-10">

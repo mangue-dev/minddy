@@ -35,6 +35,7 @@ test("the two reference Compose profiles are part of every clean-room candidate"
 
 test("the guided installation tools are part of every clean-room candidate", () => {
   assert.ok(REQUIRED_RELEASE_PATHS.includes("scripts/self-hosting-install.mjs"));
+  assert.ok(REQUIRED_RELEASE_PATHS.includes("scripts/self-hosting-encryption.mjs"));
   assert.ok(REQUIRED_RELEASE_PATHS.includes("scripts/self-hosting-doctor.mjs"));
   assert.ok(REQUIRED_RELEASE_PATHS.includes("scripts/self-hosting-maintenance.mjs"));
 });

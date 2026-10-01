@@ -82,7 +82,7 @@ This table is the short operational classification.
 | Class | Variables | How to obtain them |
 | --- | --- | --- |
 | Required to run a deployed instance | `MINDDY_PUBLIC_APP_URL`, `MINDDY_PUBLIC_SUPABASE_URL`, `MINDDY_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` | Set the selected public HTTPS or private HTTP origin. Copy the Supabase API URL, anon key, and service-role key from Supabase Cloud or the selected stack. Never expose the service-role key to a browser. |
-| Generated bootstrap secrets | `GIT_STATE_SECRET`, `GIT_TOKEN_ENCRYPTION_SECRET`, `AI_KEY_ENCRYPTION_SECRET`, `FEEDBACK_SSO_ENCRYPTION_SECRET`, `CRON_SECRET`, `AGENT_RUNNER_SECRET` | The guided installers write missing values without replacing existing ones. Generate a replacement with `openssl rand -hex 32`; rotate it deliberately and preserve the old value when encrypted existing data requires it. |
+| Generated bootstrap secrets | `GIT_STATE_SECRET`, `GIT_TOKEN_ENCRYPTION_SECRET`, `AI_KEY_ENCRYPTION_SECRET`, `FEEDBACK_SSO_ENCRYPTION_SECRET`, `MINDDY_DATA_ROOT_KEY`, `CRON_SECRET`, `AGENT_RUNNER_SECRET` | The guided installers write missing values without replacing existing ones. Generate a replacement with `openssl rand -hex 32`; rotate it deliberately and preserve the old value when encrypted existing data requires it. |
 | Recommended instance identity | `MINDDY_PUBLIC_SITE_NAME`, `MINDDY_PUBLIC_CONTACT_EMAIL`, `ADMIN_EMAILS`, `OAUTH_ISSUER` | Choose operator-owned public values. `OAUTH_ISSUER` is normally empty and is only needed when OAuth/MCP is intentionally published at an origin different from the app origin. |
 | Optional capability settings | `EMAIL_PROVIDER`, Resend sender/key variables, GitHub/GitLab variables, Vercel domain variables, PostHog pairs, `MINDDY_PUBLIC_ERROR_TRACKING`, VAPID/APNs/WNS variables, `OPENROUTER_API_KEY`, and the matching integration secrets | Configure the complete set for the capability, following the comments in `.env.example`. An incomplete set is reported as disabled or incomplete rather than using an implicit provider. Error tracking additionally requires the explicit `MINDDY_PUBLIC_ERROR_TRACKING=1` opt-in (see [docs/error-tracking.md](error-tracking.md)). |
 | Cloud-reserved settings | `MINDDY_MANAGED_AI`, `MINDDY_MANAGED_BILLING`, `MINDDY_MANAGED_FORGE`, Stripe price/key variables, `MINDDY_DESKTOP_FEED_URL`, `BLOB_READ_WRITE_TOKEN`, `APPLE_KEYCHAIN_PROFILE` | Leave absent or set the managed flags to `0` when self-hosting. They are for Minddy-operated managed services, release distribution, or build infrastructure—not prerequisites for the open-source core. |
@@ -453,3 +453,60 @@ For local verification, run `pnpm verify:supabase --local`. Common failures:
 
 For updates, backups, restores, rollback decisions, and the wider diagnostic
 table, continue with [the operations runbook](self-hosting-operations.md).
+
+## Workspace encryption setup
+
+Minddy supports server-side AES-256-GCM encryption for workspace content and
+files. Versioned project, user and system data keys are wrapped by
+`MINDDY_DATA_ROOT_KEY`, a dedicated 32-byte key stored outside PostgreSQL.
+The application decrypts for authorized access and AI processing. This is not
+end-to-end encryption: a compromised application runtime or access to both the
+root key and database can expose content. Auth login emails and routing metadata
+remain readable; exports and content sent to external providers need their own
+protection.
+
+The server installer and local Supabase bootstrap generate the root key.
+For a manual setup, generate it once with `openssl rand -hex 32` and store it in
+the protected server environment. Never reuse an AI or forge secret, put the root
+in SQL or a client bundle, or regenerate it during an update. Losing it makes
+protected content unreadable. Keep a protected recovery copy, including the
+historical roots needed for older backups. Encrypt and restrict access to any
+backup that contains both the environment and database.
+
+New local and server installations enable encryption by default. The guide offers
+an explicit enabled/disabled choice and includes it in both the manual commands
+and copied assistant prompt. Both modes generate the dedicated root key; the
+opt-out affects workspace content encryption, not saved provider credentials.
+
+For a new server installation, pass `--encryption enabled` (the default) or
+`--encryption disabled` to `pnpm self-host:install`. The installer writes
+`MINDDY_CONTENT_ENCRYPTION_ENABLED=true` or `false` accordingly, plus an
+independent `MINDDY_DATA_ROOT_KEY` in the mode-0600 deployment environment.
+The same choice applies to both managed and full Supabase profiles.
+
+For the local desktop flow, prepare the configuration before opening the clone
+in the desktop app:
+
+```sh
+pnpm bootstrap:supabase -- --minimal --app-url http://localhost:6463 --encryption enabled
+# Use --encryption disabled instead to opt out.
+```
+
+This prepares the schema, Storage and `.env.local`, including the selected flag
+and root key. Later desktop starts reuse those settings. Complete installation
+and its migration/verification checks before importing data or using the instance.
+Scheduled maintenance advances bounded legacy conversion and key rotation; an
+initial flag or generated key alone does not prove historical data and retained
+copies have all been converted. Use `docs/security/encryption/` for rollout,
+readiness and recovery checks on existing data.
+
+Reruns preserve the saved flag and root key. A conflicting explicit CLI choice
+fails with instructions to review the environment instead of silently replacing
+it. An existing configuration without the flag stays disabled until deliberately
+configured; a missing root on an enabled instance blocks installation and must be
+recovered. For a deliberate mode change, preserve the root, update the flag in
+the protected environment and restart the application. Turning encryption off
+never decrypts or permits plaintext writes to already protected data. Replacing
+a root requires the guarded offline rewrap procedure in
+`docs/security/encryption/root-key-rotation.md`. Rehearse database, Storage and
+matching-key recovery in an isolated environment, and protect retained backups.
