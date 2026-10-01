@@ -3929,7 +3929,7 @@
       ]
     },
     "request_numo_turn_stop(uuid,uuid)": {
-      "sha256": "697760d99aa3131158c47288a7e33a0319775f985ea7f95f08239cc356f32919",
+      "sha256": "3a9339d18fc4b19050d10467a99e510c4e0895c94f463d061b2516d3aae7cba4",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -9251,6 +9251,29 @@
       "protectedRelations": [
         "issues",
         "pull_requests"
+      ],
+      "functionReferences": []
+    },
+    "request_numo_worker_stop(uuid)": {
+      "sha256": "8139f65d2853396c05d331e9f48cf7e9f489dac86c0e38f5c943a02d16918f05",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "relations": [
+        "agent_runs",
+        "conversations",
+        "agent_run_messages",
+        "numo_assistant_turns",
+        "agent_run_input_requests"
+      ],
+      "protectedRelations": [
+        "agent_runs",
+        "conversations",
+        "agent_run_messages",
+        "numo_assistant_turns",
+        "agent_run_input_requests"
       ],
       "functionReferences": []
     }

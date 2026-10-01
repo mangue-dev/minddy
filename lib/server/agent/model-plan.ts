@@ -6,7 +6,7 @@ import {
   modelCostMultiplier,
   type ModelPricing,
 } from "@/lib/model-multiplier";
-import { getResolvedBilling } from "@/lib/server/billing-accounts";
+import { getResolvedBilling, type ResolvedBilling } from "@/lib/server/billing-accounts";
 import { PlanLimitError } from "@/lib/server/plan-limit-error";
 import { getRootDefaultModel } from "./model";
 import { getOpenRouterModelInfo } from "./openrouter-index";
@@ -44,9 +44,9 @@ export async function getBaselinePricing(): Promise<ModelPricing | null> {
 }
 
 /** The ceiling applicable to this account, and the baseline to locate the models. */
-export async function getModelPlanLimit(userId: string): Promise<ModelPlanLimit> {
+export async function getModelPlanLimit(userId: string, admittedBilling?: ResolvedBilling): Promise<ModelPlanLimit> {
   const [{ plan }, baseline] = await Promise.all([
-    getResolvedBilling(userId),
+    admittedBilling ?? getResolvedBilling(userId),
     getBaselinePricing(),
   ]);
   return { planId: plan.id, maxMultiplier: plan.maxModelMultiplier, baseline };
@@ -74,9 +74,10 @@ export async function ensureModelInPlan(opts: {
   userId: string;
   model: string;
   mode: "platform" | "byok";
+  admittedBilling?: ResolvedBilling;
 }): Promise<void> {
   if (opts.mode === "byok") return;
-  const limit = await getModelPlanLimit(opts.userId);
+  const limit = await getModelPlanLimit(opts.userId, opts.admittedBilling);
   const multiplier = await getModelMultiplier(opts.model, limit.baseline);
   if (isMultiplierWithinPlan(multiplier, limit.maxMultiplier)) return;
   throw new PlanLimitError("model_above_plan", {

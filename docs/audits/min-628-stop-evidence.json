@@ -1,0 +1,75 @@
+{
+  "issue": "MIN-628",
+  "verifiedAt": "2026-10-01T16:41:05.721Z",
+  "historicalProduction": {
+    "deployment": "dpl_CxfazdpjMdFaxdhGvVngn549uEgo",
+    "commit": "a9bc8296deba40f869d9c552cbcc824ab67f8a4e",
+    "includesPreviousFixes": [
+      304,
+      305
+    ],
+    "runId": "0370812d-032d-48bb-a0ea-3b65bbc9a213",
+    "model": "z-ai/glm-5.3-flash",
+    "startedAt": "2026-10-01T15:18:42.247988Z",
+    "completedAt": "2026-10-01T15:27:09.944344Z",
+    "parentResumedAt": "2026-10-01T15:27:13.326889Z",
+    "secondWorkerFound": false,
+    "clickTimesAvailable": false,
+    "stopCausality": "Unproven: historical Stop clicks were not recorded."
+  },
+  "beforeFix": {
+    "silentStopTests": "Both fail: provider signal remains un-aborted after the stop poll ceiling.",
+    "socketDisconnectTests": "Both fail: provider sockets remain open after client disconnect."
+  },
+  "afterFix": {
+    "openrouter": {
+      "generationId": "gen-1790872467-NZbnzNtaeYXPAU6apIVm",
+      "model": "z-ai/glm-5.3-flash",
+      "disconnectMs": 57,
+      "provider": "Together",
+      "cancelled": true,
+      "finishReason": null,
+      "nativeTokensCompletion": 9,
+      "totalCost": 0.0000072
+    },
+    "engine": {
+      "engineVersion": "1.18.16",
+      "opened": 2,
+      "closed": 2,
+      "idleAfterParentAbort": true,
+      "stopMs": 424,
+      "engineExited": true
+    },
+    "database": "Real PostgreSQL 17, reduced schema derived from repository migrations: scoped Stop, discarded steering, parent claim revocation, ignored worker handoff, global cascade, repeated Stop, and owner isolation all pass."
+  },
+  "limits": [
+    "The candidate has not been deployed to production. Browser Stop validation on the affected deployment remains required.",
+    "OpenRouter cancellation support depends on the selected provider endpoint. The live result covers Together for GLM 5.3 Flash.",
+    "Cancellation can remove the final usage frame; preserve the generation ID and unknown ledger cost for later reconciliation instead of delaying Stop or fabricating a zero."
+  ],
+  "verification": {
+    "vitest": {
+      "files": 14,
+      "passed": 350
+    },
+    "runnerNodeTests": 6,
+    "checks": [
+      "npm run build",
+      "npm run typecheck",
+      "npm run lint",
+      "npm run check:owned-english",
+      "npm run check:encrypted-access",
+      "npm run check:encryption-schema",
+      "git diff --check"
+    ],
+    "reproduce": {
+      "database": [
+        "node test/numo-stop-fixture.mjs | psql -v ON_ERROR_STOP=1 <connection-options>",
+        "psql -v ON_ERROR_STOP=1 <connection-options> -f supabase/migrations/20270109200021_numo_durable_worker_stop.sql",
+        "psql -v ON_ERROR_STOP=1 <connection-options> -f supabase/tests/numo_stop_authority.test.sql"
+      ],
+      "engine": "MDY_OPENCODE_STOP_PROBE=1 npx vitest run lib/server/agent/vm/opencode-stop.probe.test.ts",
+      "provider": "MDY_OPENROUTER_STOP_PROBE=1 npx vitest run lib/server/agent/vm/openrouter-stop.probe.test.ts"
+    }
+  }
+}

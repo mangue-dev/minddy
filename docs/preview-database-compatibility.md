@@ -13,6 +13,17 @@ This check detects missing entry points, not complete migration compatibility.
 Review the migration history and test the target database before promotion.
 Keep the required RPC list current when adding mandatory startup dependencies.
 
+Worker Stop prefers `request_numo_worker_stop`, introduced by
+`20270109200021_numo_durable_worker_stop.sql`. Until that additive migration is
+applied, only a PostgREST missing-function response (`PGRST202`) enables the
+compatibility path: retire the existing Numo parent and clear its claim before
+discarding the selected worker's steering/input and storing its interrupt.
+Storage errors fail the request and leave the revocation durable for a retry;
+unrelated workers are never interrupted. Conversation status uses a timestamp
+compare-and-set to preserve a concurrent new turn. The migration makes these
+writes atomic and remains recommended for production rollout, but is not a
+build dependency. Do not migrate a shared production database to build a preview.
+
 ## Recovering a code/schema mismatch
 
 1. Read the deployment's runtime errors and identify the missing function.

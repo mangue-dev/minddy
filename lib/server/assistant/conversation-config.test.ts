@@ -5,6 +5,7 @@ vi.mock("server-only", () => ({}));
 const h = vi.hoisted(() => ({
   runtime: vi.fn(),
   catalog: vi.fn(),
+  conversationModels: vi.fn(),
   plan: vi.fn(),
   defaultReasoning: vi.fn(),
 }));
@@ -15,6 +16,7 @@ vi.mock("@/lib/server/ai-runtime", () => ({
 }));
 vi.mock("@/lib/server/agent/models-catalog", () => ({
   getAssistantModelsForUser: h.catalog,
+  getOpenRouterConversationModels: h.conversationModels,
 }));
 vi.mock("@/lib/server/agent/model-plan", () => ({ ensureModelInPlan: h.plan }));
 vi.mock("@/lib/server/assistant/reasoning", () => ({
@@ -50,9 +52,21 @@ beforeEach(() => {
     recommended: [],
   });
   h.defaultReasoning.mockResolvedValue("medium");
+  h.conversationModels.mockImplementation(async () => (await h.catalog()).models);
 });
 
 describe("Numo conversation configuration", () => {
+  it("does not wait for picker-only account and recommendation work on OpenRouter admission", async () => {
+    h.catalog.mockImplementation(() => new Promise(() => {}));
+    h.conversationModels.mockResolvedValue([
+      { id: "chosen-model", reasoning: { efforts: ["low", "high"], mandatory: true } },
+    ]);
+    await expect(resolveNumoTurnConfiguration({
+      userId: "user", model: "chosen-model", reasoningLevel: "low",
+    })).resolves.toMatchObject({ model: "chosen-model", reasoningLevel: "low" });
+    expect(h.catalog).not.toHaveBeenCalled();
+    expect(h.plan).toHaveBeenCalledTimes(1);
+  });
   it("keeps an explicit model and validates it against the active provider", async () => {
     const resolved = await resolveNumoTurnConfiguration({
       userId: "user",
@@ -94,6 +108,9 @@ describe("Numo conversation configuration", () => {
   });
 
   it("keeps legacy conversations on the account default when no override is stored", async () => {
+    h.conversationModels.mockResolvedValue([
+      { id: runtime.model, reasoning: { efforts: ["low", "medium"], mandatory: false } },
+    ]);
     const resolved = await resolveNumoTurnConfiguration({ userId: "user" });
 
     expect(resolved).toMatchObject({
@@ -103,5 +120,25 @@ describe("Numo conversation configuration", () => {
       persistedReasoningLevel: null,
     });
     expect(h.catalog).not.toHaveBeenCalled();
+  });
+
+  it("uses the displayed GLM reasoning level when the browser inherits both defaults", async () => {
+    h.runtime.mockResolvedValue({ ...runtime, model: "z-ai/glm-5.3-flash" });
+    h.catalog.mockImplementation(() => new Promise(() => {}));
+    h.conversationModels.mockResolvedValue([
+      { id: "z-ai/glm-5.3-flash", reasoning: { efforts: ["max", "high", "low"], mandatory: true } },
+    ]);
+
+    await expect(resolveNumoTurnConfiguration({
+      userId: "user", model: null, reasoningLevel: null,
+    })).resolves.toMatchObject({
+      model: "z-ai/glm-5.3-flash",
+      reasoningLevel: "low",
+      persistedModel: null,
+      persistedReasoningLevel: null,
+    });
+    expect(h.conversationModels).toHaveBeenCalledWith(runtime.apiKey);
+    expect(h.catalog).not.toHaveBeenCalled();
+    expect(h.plan).not.toHaveBeenCalled();
   });
 });

@@ -1,0 +1,1534 @@
+{
+  "previewCommit": "c716e5e16",
+  "previewUrl": "https://minddy-pxidmyq19-mangue-dev.vercel.app",
+  "deploymentId": "dpl_CAQYC3ccD9PXg6HPDJMgVotMizdp",
+  "account": "authenticated repository demonstration account",
+  "providerInspection": "OpenRouter generation endpoint queried with the existing production account key; no credential is included",
+  "cases": [
+    {
+      "case": "tool",
+      "browser": {
+        "events": [
+          {
+            "kind": "request",
+            "at": 1790888732578,
+            "path": "/api/assistant/chat",
+            "method": "POST",
+            "requestId": "5543c1c2-ee1f-4476-b37a-f30ed7d58e50",
+            "conversationId": "560e185a-5084-45ab-b762-b5d83d97df72"
+          },
+          {
+            "kind": "request",
+            "at": 1790888739982,
+            "path": "/api/assistant/active-conversation",
+            "method": "PUT",
+            "conversationId": "560e185a-5084-45ab-b762-b5d83d97df72"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888739983,
+            "event": "conversation_id"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888741901,
+            "event": "conversation_id"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888744611,
+            "event": "tool_call_start"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888744633,
+            "event": "tool_call_args_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888744764,
+            "event": "tool_call_complete"
+          },
+          {
+            "kind": "request",
+            "at": 1790888744812,
+            "path": "/api/assistant/turns/stop",
+            "method": "POST",
+            "requestId": "5543c1c2-ee1f-4476-b37a-f30ed7d58e50",
+            "conversationId": "560e185a-5084-45ab-b762-b5d83d97df72"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888745193,
+            "event": "message_complete"
+          },
+          {
+            "kind": "request",
+            "at": 1790888747059,
+            "path": "/api/assistant/conversations/560e185a-5084-45ab-b762-b5d83d97df72/status",
+            "method": "GET"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888747491,
+            "event": "done",
+            "status": "stopped"
+          }
+        ],
+        "done": true,
+        "clickedAt": 1790888744812,
+        "uiIdleAt": 1790888744820,
+        "stopResponse": {
+          "at": 1790888747056,
+          "status": 200,
+          "body": {
+            "turn_id": "8a0c94d2-4b8c-4813-b62c-f2f79e16d7e9",
+            "status": "stopped"
+          }
+        }
+      },
+      "serverAndProvider": {
+        "capturedAt": "2026-10-01T21:06:27.060Z",
+        "stopClickedAt": "2026-10-01T21:05:44.812Z",
+        "turn": {
+          "id": "8a0c94d2-4b8c-4813-b62c-f2f79e16d7e9",
+          "conversation_id": "560e185a-5084-45ab-b762-b5d83d97df72",
+          "request_id": "5543c1c2-ee1f-4476-b37a-f30ed7d58e50",
+          "status": "stopped",
+          "model": "z-ai/glm-5.3-flash",
+          "reasoning_level": "low",
+          "created_at": "2026-10-01T21:05:39.731194+00:00",
+          "started_at": "2026-10-01T21:05:41.292885+00:00",
+          "completed_at": "2026-10-01T21:05:46.329+00:00",
+          "updated_at": "2026-10-01T21:05:47.621304+00:00",
+          "attempts": 1,
+          "active_run_id": null,
+          "hasClaim": false
+        },
+        "events": [
+          {
+            "seq": 0,
+            "type": "conversation_id",
+            "created_at": "2026-10-01T21:05:42.050998+00:00"
+          },
+          {
+            "seq": 1,
+            "type": "tool_call_start",
+            "created_at": "2026-10-01T21:05:44.744179+00:00"
+          },
+          {
+            "seq": 2,
+            "type": "tool_call_args_delta",
+            "created_at": "2026-10-01T21:05:45.0059+00:00"
+          },
+          {
+            "seq": 3,
+            "type": "tool_call_complete",
+            "created_at": "2026-10-01T21:05:45.28532+00:00"
+          },
+          {
+            "seq": 4,
+            "type": "message_complete",
+            "created_at": "2026-10-01T21:05:45.748122+00:00"
+          },
+          {
+            "seq": 5,
+            "type": "done",
+            "created_at": "2026-10-01T21:05:47.621304+00:00"
+          }
+        ],
+        "usage": [
+          {
+            "id": "216cebb7-9c89-4c63-a300-20ee96e3bb11",
+            "created_at": "2026-10-01T21:05:42.125397+00:00",
+            "generation_id": "gen-1790888740-aM386ZTO7Qc0iN1mifZU",
+            "model": "deepseek/deepseek-v4-flash",
+            "prompt_tokens": 731,
+            "completion_tokens": 47,
+            "cost": 0.00018
+          },
+          {
+            "id": "c62a6ee4-5ade-4aad-a6f6-b74f06acebf9",
+            "created_at": "2026-10-01T21:05:44.63554+00:00",
+            "generation_id": "gen-1790888742-8VvQ1SkIfw2m3j95oO42",
+            "model": "z-ai/glm-5.3-flash",
+            "prompt_tokens": 38002,
+            "completion_tokens": 6,
+            "cost": 0.005703
+          }
+        ],
+        "generations": [
+          {
+            "id": "gen-1790888742-8VvQ1SkIfw2m3j95oO42",
+            "provider": "Parasail",
+            "cancelled": false,
+            "finishReason": "tool_calls",
+            "generationTime": 1451,
+            "latency": 1450,
+            "nativeTokensCompletion": 6
+          }
+        ],
+        "vercel": [
+          {
+            "id": "d5wr6-1790888744827-48b1fcbaa394",
+            "at": "2026-10-01T21:05:44.827Z",
+            "method": "POST",
+            "path": "/api/assistant/turns/stop",
+            "status": 200,
+            "timings": [
+              "[numo-stop] timing {\n  requestId: '5543c1c2-ee1f-4476-b37a-f30ed7d58e50',\n  phase: 'authorized',\n  elapsedMs: 600\n}",
+              "[numo-stop] timing {\n  requestId: '5543c1c2-ee1f-4476-b37a-f30ed7d58e50',\n  phase: 'execution_revoked',\n  elapsedMs: 773\n}",
+              "[numo-stop] request recorded {\n  turnId: '8a0c94d2-4b8c-4813-b62c-f2f79e16d7e9',\n  requestId: '5543c1c2-ee1f-4476-b37a-f30ed7d58e50',\n  status: 'stopped'\n}",
+              "[numo-stop] timing {\n  requestId: '5543c1c2-ee1f-4476-b37a-f30ed7d58e50',\n  phase: 'cleanup_done',\n  elapsedMs: 1272\n}"
+            ]
+          },
+          {
+            "id": "hq7pp-1790888732596-0687ad872699",
+            "at": "2026-10-01T21:05:32.596Z",
+            "method": "POST",
+            "path": "/api/assistant/chat",
+            "status": 200,
+            "timings": [
+              "[numo-chat] timing {\n  requestId: '5543c1c2-ee1f-4476-b37a-f30ed7d58e50',\n  phase: 'admitted',\n  elapsedMs: 5412\n}",
+              "[numo-chat] timing {\n  requestId: '5543c1c2-ee1f-4476-b37a-f30ed7d58e50',\n  phase: 'first_conversation_id',\n  elapsedMs: 5413\n}",
+              "[numo-chat] timing {\n  requestId: '5543c1c2-ee1f-4476-b37a-f30ed7d58e50',\n  phase: 'first_done',\n  elapsedMs: 12938\n}",
+              "[numo-chat] timing {\n  requestId: '5543c1c2-ee1f-4476-b37a-f30ed7d58e50',\n  phase: 'configured',\n  elapsedMs: 4513\n}",
+              "[numo-chat] timing {\n  requestId: '5543c1c2-ee1f-4476-b37a-f30ed7d58e50',\n  phase: 'budget_checked',\n  elapsedMs: 3343\n}",
+              "[numo-chat] timing {\n  requestId: '5543c1c2-ee1f-4476-b37a-f30ed7d58e50',\n  phase: 'authorized',\n  elapsedMs: 1829\n}",
+              "[numo-chat] timing {\n  requestId: '5543c1c2-ee1f-4476-b37a-f30ed7d58e50',\n  phase: 'execution_prepared',\n  executionElapsedMs: 438\n}",
+              "[numo-chat] timing {\n  requestId: '5543c1c2-ee1f-4476-b37a-f30ed7d58e50',\n  phase: 'generation_ready',\n  roundCount: 1,\n  executionElapsedMs: 989\n}"
+            ]
+          }
+        ],
+        "followup": {
+          "capturedAt": "2026-10-01T21:12:53.912Z",
+          "elapsedSinceClickMs": 429101,
+          "conversationTurns": [
+            {
+              "id": "8a0c94d2-4b8c-4813-b62c-f2f79e16d7e9",
+              "request_id": "5543c1c2-ee1f-4476-b37a-f30ed7d58e50",
+              "status": "stopped",
+              "attempts": 1,
+              "active_run_id": null,
+              "updated_at": "2026-10-01T21:05:47.621304+00:00",
+              "hasClaim": false
+            }
+          ]
+        }
+      }
+    },
+    {
+      "case": "text",
+      "browser": {
+        "events": [
+          {
+            "kind": "request",
+            "at": 1790888782759,
+            "path": "/api/assistant/chat",
+            "method": "POST",
+            "requestId": "49cf1501-e2eb-43cd-85c3-9a5fb59e06b3",
+            "conversationId": "234e5e8d-c664-4e67-921e-d7db58663bb3"
+          },
+          {
+            "kind": "request",
+            "at": 1790888785616,
+            "path": "/api/assistant/active-conversation",
+            "method": "PUT",
+            "conversationId": "234e5e8d-c664-4e67-921e-d7db58663bb3"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888785630,
+            "event": "conversation_id"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888785922,
+            "event": "conversation_id"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888794833,
+            "event": "reasoning_start"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888794833,
+            "event": "reasoning_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888794833,
+            "event": "reasoning_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888794833,
+            "event": "reasoning_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888794833,
+            "event": "reasoning_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888794833,
+            "event": "reasoning_end"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888794833,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888794833,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888794833,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888794833,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888794833,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888794833,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888794833,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888794833,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888794833,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888794833,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888794833,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888794833,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888794833,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888794833,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888794833,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888794833,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888794833,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888794833,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888794833,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888794833,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888794833,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888794833,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888794833,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888794833,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888794833,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888794833,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888794833,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888794833,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888794833,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888794833,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888794833,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888794833,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888794833,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888794833,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888794833,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888794833,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888794833,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888794833,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888794833,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888794833,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888794833,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888794833,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888794833,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888794833,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888794833,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888794833,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888794833,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888794833,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888794833,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888794833,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888794833,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888794833,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888794833,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888794833,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888794833,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888794833,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888794833,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888794833,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888794833,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888794833,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888794833,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888794833,
+            "event": "content_delta"
+          },
+          {
+            "kind": "request",
+            "at": 1790888794893,
+            "path": "/api/assistant/turns/stop",
+            "method": "POST",
+            "requestId": "49cf1501-e2eb-43cd-85c3-9a5fb59e06b3",
+            "conversationId": "234e5e8d-c664-4e67-921e-d7db58663bb3"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888794957,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888794980,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888794980,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888794980,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888795092,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888795092,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888795092,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888795092,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888795213,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888795224,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888795224,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888795224,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888795346,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888795354,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888795354,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888795354,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888795524,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888795541,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888795541,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888795541,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888795656,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888795660,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888795660,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888795660,
+            "event": "content_delta"
+          },
+          {
+            "kind": "request",
+            "at": 1790888796080,
+            "path": "/api/assistant/conversations/234e5e8d-c664-4e67-921e-d7db58663bb3/status",
+            "method": "GET"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888796430,
+            "event": "done",
+            "status": "stopped"
+          }
+        ],
+        "done": true,
+        "clickedAt": 1790888794892,
+        "uiIdleAt": 1790888794900,
+        "stopResponse": {
+          "at": 1790888796079,
+          "status": 200,
+          "body": {
+            "turn_id": "0c3216fa-8242-471d-b044-8192882a1bcc",
+            "status": "stopped"
+          }
+        }
+      },
+      "serverAndProvider": {
+        "capturedAt": "2026-10-01T21:07:34.931Z",
+        "stopClickedAt": "2026-10-01T21:06:34.892Z",
+        "turn": {
+          "id": "0c3216fa-8242-471d-b044-8192882a1bcc",
+          "conversation_id": "234e5e8d-c664-4e67-921e-d7db58663bb3",
+          "request_id": "49cf1501-e2eb-43cd-85c3-9a5fb59e06b3",
+          "status": "stopped",
+          "model": "z-ai/glm-5.3-flash",
+          "reasoning_level": "low",
+          "created_at": "2026-10-01T21:06:25.448726+00:00",
+          "started_at": "2026-10-01T21:06:25.760074+00:00",
+          "completed_at": "2026-10-01T21:06:35.47+00:00",
+          "updated_at": "2026-10-01T21:06:36.736813+00:00",
+          "attempts": 1,
+          "active_run_id": null,
+          "hasClaim": false
+        },
+        "events": [
+          {
+            "seq": 0,
+            "type": "conversation_id",
+            "created_at": "2026-10-01T21:06:26.014938+00:00"
+          },
+          {
+            "seq": 1,
+            "type": "reasoning_start",
+            "created_at": "2026-10-01T21:06:34.936129+00:00"
+          },
+          {
+            "seq": 2,
+            "type": "reasoning_delta",
+            "created_at": "2026-10-01T21:06:35.206192+00:00"
+          },
+          {
+            "seq": 3,
+            "type": "reasoning_end",
+            "created_at": "2026-10-01T21:06:35.447604+00:00"
+          },
+          {
+            "seq": 4,
+            "type": "content_delta",
+            "created_at": "2026-10-01T21:06:35.69769+00:00"
+          },
+          {
+            "seq": 5,
+            "type": "content_delta",
+            "created_at": "2026-10-01T21:06:35.959414+00:00"
+          },
+          {
+            "seq": 6,
+            "type": "content_delta",
+            "created_at": "2026-10-01T21:06:36.215935+00:00"
+          },
+          {
+            "seq": 7,
+            "type": "content_delta",
+            "created_at": "2026-10-01T21:06:36.479145+00:00"
+          },
+          {
+            "seq": 8,
+            "type": "done",
+            "created_at": "2026-10-01T21:06:36.736813+00:00"
+          }
+        ],
+        "usage": [
+          {
+            "id": "f9d638d3-2112-4b4c-a33c-7b84d629a74c",
+            "created_at": "2026-10-01T21:06:27.392631+00:00",
+            "generation_id": "gen-1790888786-Yobv5nNWYrDogQPjkv7R",
+            "model": "deepseek/deepseek-v4-flash",
+            "prompt_tokens": 732,
+            "completion_tokens": 47,
+            "cost": 0.00018
+          },
+          {
+            "id": "545cc5e0-55ae-421b-a4b5-e37c5504a69c",
+            "created_at": "2026-10-01T21:06:35.798455+00:00",
+            "generation_id": "gen-1790888787-QFdMjAsLOZvueceissvK",
+            "model": "z-ai/glm-5.3-flash",
+            "prompt_tokens": null,
+            "completion_tokens": null,
+            "cost": null
+          }
+        ],
+        "generations": [
+          {
+            "id": "gen-1790888787-QFdMjAsLOZvueceissvK",
+            "provider": "StreamLake",
+            "cancelled": true,
+            "finishReason": null,
+            "generationTime": 8338,
+            "latency": 7364,
+            "nativeTokensCompletion": 180
+          }
+        ],
+        "vercel": [
+          {
+            "id": "ww9cp-1790888794907-4015f9dee623",
+            "at": "2026-10-01T21:06:34.907Z",
+            "method": "POST",
+            "path": "/api/assistant/turns/stop",
+            "status": 200,
+            "timings": [
+              "[numo-stop] timing {\n  requestId: '49cf1501-e2eb-43cd-85c3-9a5fb59e06b3',\n  phase: 'authorized',\n  elapsedMs: 330\n}",
+              "[numo-stop] timing {\n  requestId: '49cf1501-e2eb-43cd-85c3-9a5fb59e06b3',\n  phase: 'execution_revoked',\n  elapsedMs: 454\n}",
+              "[numo-stop] request recorded {\n  turnId: '0c3216fa-8242-471d-b044-8192882a1bcc',\n  requestId: '49cf1501-e2eb-43cd-85c3-9a5fb59e06b3',\n  status: 'stopped'\n}",
+              "[numo-stop] timing {\n  requestId: '49cf1501-e2eb-43cd-85c3-9a5fb59e06b3',\n  phase: 'cleanup_done',\n  elapsedMs: 884\n}"
+            ]
+          },
+          {
+            "id": "n6r7p-1790888782775-c72cfe706ca8",
+            "at": "2026-10-01T21:06:22.775Z",
+            "method": "POST",
+            "path": "/api/assistant/chat",
+            "status": 200,
+            "timings": [
+              "[numo-chat] timing {\n  requestId: '49cf1501-e2eb-43cd-85c3-9a5fb59e06b3',\n  phase: 'authorized',\n  elapsedMs: 626\n}",
+              "[numo-chat] timing {\n  requestId: '49cf1501-e2eb-43cd-85c3-9a5fb59e06b3',\n  phase: 'budget_checked',\n  elapsedMs: 1522\n}",
+              "[numo-chat] timing {\n  requestId: '49cf1501-e2eb-43cd-85c3-9a5fb59e06b3',\n  phase: 'configured',\n  elapsedMs: 1651\n}",
+              "[numo-chat] timing {\n  requestId: '49cf1501-e2eb-43cd-85c3-9a5fb59e06b3',\n  phase: 'admitted',\n  elapsedMs: 2696\n}",
+              "[numo-chat] timing {\n  requestId: '49cf1501-e2eb-43cd-85c3-9a5fb59e06b3',\n  phase: 'first_conversation_id',\n  elapsedMs: 2696\n}",
+              "[numo-chat] timing {\n  requestId: '49cf1501-e2eb-43cd-85c3-9a5fb59e06b3',\n  phase: 'execution_prepared',\n  executionElapsedMs: 566\n}",
+              "[numo-chat] timing {\n  requestId: '49cf1501-e2eb-43cd-85c3-9a5fb59e06b3',\n  phase: 'generation_ready',\n  roundCount: 1,\n  executionElapsedMs: 1260\n}",
+              "[numo-chat] timing {\n  requestId: '49cf1501-e2eb-43cd-85c3-9a5fb59e06b3',\n  phase: 'first_reasoning_start',\n  elapsedMs: 11884\n}",
+              "[numo-chat] timing {\n  requestId: '49cf1501-e2eb-43cd-85c3-9a5fb59e06b3',\n  phase: 'first_content_delta',\n  elapsedMs: 11887\n}",
+              "[numo-chat] timing {\n  requestId: '49cf1501-e2eb-43cd-85c3-9a5fb59e06b3',\n  phase: 'first_done',\n  elapsedMs: 13516\n}"
+            ]
+          }
+        ],
+        "followup": {
+          "capturedAt": "2026-10-01T21:12:53.986Z",
+          "elapsedSinceClickMs": 379094,
+          "conversationTurns": [
+            {
+              "id": "0c3216fa-8242-471d-b044-8192882a1bcc",
+              "request_id": "49cf1501-e2eb-43cd-85c3-9a5fb59e06b3",
+              "status": "stopped",
+              "attempts": 1,
+              "active_run_id": null,
+              "updated_at": "2026-10-01T21:06:36.736813+00:00",
+              "hasClaim": false
+            }
+          ]
+        }
+      }
+    },
+    {
+      "case": "visible-text",
+      "browser": {
+        "events": [
+          {
+            "kind": "request",
+            "at": 1790889069429,
+            "path": "/api/assistant/chat",
+            "method": "POST",
+            "requestId": "a66c5454-ed86-4b28-aa72-2cb719e729ec",
+            "conversationId": "a8c23ff5-1200-4a03-a0b6-9f811c18a39f"
+          },
+          {
+            "kind": "request",
+            "at": 1790889075019,
+            "path": "/api/assistant/active-conversation",
+            "method": "PUT",
+            "conversationId": "a8c23ff5-1200-4a03-a0b6-9f811c18a39f"
+          },
+          {
+            "kind": "sse",
+            "at": 1790889075020,
+            "event": "conversation_id"
+          },
+          {
+            "kind": "sse",
+            "at": 1790889075513,
+            "event": "conversation_id"
+          },
+          {
+            "kind": "sse",
+            "at": 1790889079073,
+            "event": "reasoning_start"
+          },
+          {
+            "kind": "sse",
+            "at": 1790889079086,
+            "event": "reasoning_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790889079187,
+            "event": "reasoning_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790889079322,
+            "event": "reasoning_tick"
+          },
+          {
+            "kind": "sse",
+            "at": 1790889079333,
+            "event": "reasoning_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790889079609,
+            "event": "reasoning_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790889079609,
+            "event": "reasoning_tick"
+          },
+          {
+            "kind": "sse",
+            "at": 1790889079636,
+            "event": "reasoning_end"
+          },
+          {
+            "kind": "sse",
+            "at": 1790889079646,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790889079839,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790889079945,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790889080115,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790889080187,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790889080234,
+            "event": "content_delta"
+          },
+          {
+            "kind": "request",
+            "at": 1790889080282,
+            "path": "/api/assistant/turns/stop",
+            "method": "POST",
+            "requestId": "a66c5454-ed86-4b28-aa72-2cb719e729ec",
+            "conversationId": "a8c23ff5-1200-4a03-a0b6-9f811c18a39f"
+          },
+          {
+            "kind": "sse",
+            "at": 1790889080297,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790889080378,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790889080388,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790889080388,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790889080388,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790889080486,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790889080490,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790889080490,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790889080490,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790889080613,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790889080624,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790889080624,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790889080624,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790889080683,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790889080694,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790889080694,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790889080694,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790889080799,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790889080799,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790889080799,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790889080799,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790889080896,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790889080917,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790889080927,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790889080938,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790889080997,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790889081008,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790889081008,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790889081008,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790889081106,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790889081113,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790889081113,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790889081113,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790889081214,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790889081222,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790889081222,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790889081222,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790889081481,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790889081490,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790889081547,
+            "event": "content_delta"
+          },
+          {
+            "kind": "sse",
+            "at": 1790889081703,
+            "event": "content_delta"
+          },
+          {
+            "kind": "request",
+            "at": 1790889082254,
+            "path": "/api/assistant/conversations/a8c23ff5-1200-4a03-a0b6-9f811c18a39f/status",
+            "method": "GET"
+          },
+          {
+            "kind": "sse",
+            "at": 1790889082657,
+            "event": "done",
+            "status": "stopped"
+          }
+        ],
+        "done": true,
+        "clickedAt": 1790889080282,
+        "uiIdleAt": 1790889080289,
+        "stopResponse": {
+          "at": 1790889082253,
+          "status": 200,
+          "body": {
+            "turn_id": "4da5f226-99bc-4f09-acb1-118ab35c6217",
+            "status": "stopped"
+          }
+        }
+      },
+      "serverAndProvider": {
+        "capturedAt": "2026-10-01T21:12:16.378Z",
+        "stopClickedAt": "2026-10-01T21:11:20.282Z",
+        "turn": {
+          "id": "4da5f226-99bc-4f09-acb1-118ab35c6217",
+          "conversation_id": "a8c23ff5-1200-4a03-a0b6-9f811c18a39f",
+          "request_id": "a66c5454-ed86-4b28-aa72-2cb719e729ec",
+          "status": "stopped",
+          "model": "z-ai/glm-5.3-flash",
+          "reasoning_level": "low",
+          "created_at": "2026-10-01T21:11:14.551358+00:00",
+          "started_at": "2026-10-01T21:11:15.273464+00:00",
+          "completed_at": "2026-10-01T21:11:21.538+00:00",
+          "updated_at": "2026-10-01T21:11:22.928491+00:00",
+          "attempts": 1,
+          "active_run_id": null,
+          "hasClaim": false
+        },
+        "events": [
+          {
+            "seq": 0,
+            "type": "conversation_id",
+            "created_at": "2026-10-01T21:11:15.66499+00:00"
+          },
+          {
+            "seq": 1,
+            "type": "reasoning_start",
+            "created_at": "2026-10-01T21:11:19.221421+00:00"
+          },
+          {
+            "seq": 2,
+            "type": "reasoning_delta",
+            "created_at": "2026-10-01T21:11:19.627903+00:00"
+          },
+          {
+            "seq": 3,
+            "type": "reasoning_delta",
+            "created_at": "2026-10-01T21:11:19.910579+00:00"
+          },
+          {
+            "seq": 4,
+            "type": "reasoning_end",
+            "created_at": "2026-10-01T21:11:20.279614+00:00"
+          },
+          {
+            "seq": 5,
+            "type": "content_delta",
+            "created_at": "2026-10-01T21:11:20.589867+00:00"
+          },
+          {
+            "seq": 6,
+            "type": "content_delta",
+            "created_at": "2026-10-01T21:11:20.983893+00:00"
+          },
+          {
+            "seq": 7,
+            "type": "content_delta",
+            "created_at": "2026-10-01T21:11:21.290651+00:00"
+          },
+          {
+            "seq": 8,
+            "type": "content_delta",
+            "created_at": "2026-10-01T21:11:21.659341+00:00"
+          },
+          {
+            "seq": 9,
+            "type": "content_delta",
+            "created_at": "2026-10-01T21:11:22.033044+00:00"
+          },
+          {
+            "seq": 10,
+            "type": "content_delta",
+            "created_at": "2026-10-01T21:11:22.323393+00:00"
+          },
+          {
+            "seq": 11,
+            "type": "content_delta",
+            "created_at": "2026-10-01T21:11:22.681916+00:00"
+          },
+          {
+            "seq": 12,
+            "type": "done",
+            "created_at": "2026-10-01T21:11:22.928491+00:00"
+          }
+        ],
+        "usage": [
+          {
+            "id": "1bedc68d-6941-49f5-bc63-9a522bdcab01",
+            "created_at": "2026-10-01T21:11:16.340617+00:00",
+            "generation_id": "gen-1790889075-eo2URWeSFCOhKxLWuiwk",
+            "model": "deepseek/deepseek-v4-flash",
+            "prompt_tokens": 732,
+            "completion_tokens": 47,
+            "cost": 0.00018
+          },
+          {
+            "id": "769edde1-8f5f-4c44-81e1-995a3cbf1226",
+            "created_at": "2026-10-01T21:11:21.874648+00:00",
+            "generation_id": "gen-1790889076-sfOs3QRK10vBgn3dIwfi",
+            "model": "z-ai/glm-5.3-flash",
+            "prompt_tokens": null,
+            "completion_tokens": null,
+            "cost": null
+          }
+        ],
+        "generations": [
+          {
+            "id": "gen-1790889076-sfOs3QRK10vBgn3dIwfi",
+            "provider": "Together",
+            "cancelled": true,
+            "finishReason": null,
+            "generationTime": 4809,
+            "latency": 2018,
+            "nativeTokensCompletion": 127
+          }
+        ],
+        "vercel": [
+          {
+            "id": "5rhn9-1790889080307-a87b22b7b9a8",
+            "at": "2026-10-01T21:11:20.307Z",
+            "method": "POST",
+            "path": "/api/assistant/turns/stop",
+            "status": 200,
+            "timings": [
+              "[numo-stop] timing {\n  requestId: 'a66c5454-ed86-4b28-aa72-2cb719e729ec',\n  phase: 'authorized',\n  elapsedMs: 294\n}",
+              "[numo-stop] timing {\n  requestId: 'a66c5454-ed86-4b28-aa72-2cb719e729ec',\n  phase: 'execution_revoked',\n  elapsedMs: 466\n}",
+              "[numo-stop] request recorded {\n  turnId: '4da5f226-99bc-4f09-acb1-118ab35c6217',\n  requestId: 'a66c5454-ed86-4b28-aa72-2cb719e729ec',\n  status: 'stopped'\n}",
+              "[numo-stop] timing {\n  requestId: 'a66c5454-ed86-4b28-aa72-2cb719e729ec',\n  phase: 'cleanup_done',\n  elapsedMs: 956\n}"
+            ]
+          },
+          {
+            "id": "5htb9-1790889069443-2e6267bab50a",
+            "at": "2026-10-01T21:11:09.443Z",
+            "method": "POST",
+            "path": "/api/assistant/chat",
+            "status": 200,
+            "timings": [
+              "[numo-chat] timing {\n  requestId: 'a66c5454-ed86-4b28-aa72-2cb719e729ec',\n  phase: 'budget_checked',\n  elapsedMs: 3397\n}",
+              "[numo-chat] timing {\n  requestId: 'a66c5454-ed86-4b28-aa72-2cb719e729ec',\n  phase: 'authorized',\n  elapsedMs: 2493\n}",
+              "[numo-chat] timing {\n  requestId: 'a66c5454-ed86-4b28-aa72-2cb719e729ec',\n  phase: 'admitted',\n  elapsedMs: 5347\n}",
+              "[numo-chat] timing {\n  requestId: 'a66c5454-ed86-4b28-aa72-2cb719e729ec',\n  phase: 'first_conversation_id',\n  elapsedMs: 5348\n}",
+              "[numo-chat] timing {\n  requestId: 'a66c5454-ed86-4b28-aa72-2cb719e729ec',\n  phase: 'first_done',\n  elapsedMs: 12973\n}",
+              "[numo-chat] timing {\n  requestId: 'a66c5454-ed86-4b28-aa72-2cb719e729ec',\n  phase: 'generation_ready',\n  roundCount: 1,\n  executionElapsedMs: 1178\n}",
+              "[numo-chat] timing {\n  requestId: 'a66c5454-ed86-4b28-aa72-2cb719e729ec',\n  phase: 'configured',\n  elapsedMs: 4088\n}",
+              "[numo-chat] timing {\n  requestId: 'a66c5454-ed86-4b28-aa72-2cb719e729ec',\n  phase: 'execution_prepared',\n  executionElapsedMs: 546\n}",
+              "[numo-chat] timing {\n  requestId: 'a66c5454-ed86-4b28-aa72-2cb719e729ec',\n  phase: 'first_reasoning_start',\n  elapsedMs: 9417\n}",
+              "[numo-chat] timing {\n  requestId: 'a66c5454-ed86-4b28-aa72-2cb719e729ec',\n  phase: 'first_content_delta',\n  elapsedMs: 9982\n}"
+            ]
+          }
+        ],
+        "followup": {
+          "capturedAt": "2026-10-01T21:12:54.222Z",
+          "elapsedSinceClickMs": 93940,
+          "conversationTurns": [
+            {
+              "id": "4da5f226-99bc-4f09-acb1-118ab35c6217",
+              "request_id": "a66c5454-ed86-4b28-aa72-2cb719e729ec",
+              "status": "stopped",
+              "attempts": 1,
+              "active_run_id": null,
+              "updated_at": "2026-10-01T21:11:22.928491+00:00",
+              "hasClaim": false
+            }
+          ]
+        }
+      }
+    },
+    {
+      "case": "before-headers",
+      "browser": {
+        "events": [
+          {
+            "kind": "request",
+            "at": 1790888852740,
+            "path": "/api/assistant/chat",
+            "method": "POST",
+            "requestId": "d0edbf60-4650-47d3-920d-dba453c3c5b3",
+            "conversationId": "b6195cce-8fc8-4733-8a89-a6300269202b"
+          },
+          {
+            "kind": "request",
+            "at": 1790888852790,
+            "path": "/api/assistant/turns/stop",
+            "method": "POST",
+            "requestId": "d0edbf60-4650-47d3-920d-dba453c3c5b3",
+            "conversationId": "b6195cce-8fc8-4733-8a89-a6300269202b"
+          },
+          {
+            "kind": "request",
+            "at": 1790888856987,
+            "path": "/api/assistant/conversations/b6195cce-8fc8-4733-8a89-a6300269202b/status",
+            "method": "GET"
+          },
+          {
+            "kind": "request",
+            "at": 1790888856992,
+            "path": "/api/assistant/active-conversation",
+            "method": "PUT",
+            "conversationId": "b6195cce-8fc8-4733-8a89-a6300269202b"
+          },
+          {
+            "kind": "request",
+            "at": 1790888857788,
+            "path": "/api/assistant/conversations/b6195cce-8fc8-4733-8a89-a6300269202b/messages",
+            "method": "GET"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888858262,
+            "event": "conversation_id"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888858631,
+            "event": "conversation_id"
+          },
+          {
+            "kind": "sse",
+            "at": 1790888858631,
+            "event": "done",
+            "status": "stopped"
+          }
+        ],
+        "done": true,
+        "clickedAt": 1790888852790,
+        "uiIdleAt": 1790888852794,
+        "stopResponse": {
+          "at": 1790888856986,
+          "status": 200,
+          "body": {
+            "turn_id": "34d494ef-879f-45e2-82df-5fa429212c01",
+            "status": "stopped"
+          }
+        }
+      },
+      "serverAndProvider": {
+        "capturedAt": "2026-10-01T21:09:20.431Z",
+        "stopClickedAt": "2026-10-01T21:07:32.790Z",
+        "turn": {
+          "id": "34d494ef-879f-45e2-82df-5fa429212c01",
+          "conversation_id": "b6195cce-8fc8-4733-8a89-a6300269202b",
+          "request_id": "d0edbf60-4650-47d3-920d-dba453c3c5b3",
+          "status": "stopped",
+          "model": null,
+          "reasoning_level": null,
+          "created_at": "2026-10-01T21:07:36.443074+00:00",
+          "started_at": null,
+          "completed_at": "2026-10-01T21:07:36.361+00:00",
+          "updated_at": "2026-10-01T21:07:36.443074+00:00",
+          "attempts": 0,
+          "active_run_id": null,
+          "hasClaim": false
+        },
+        "events": [],
+        "usage": [],
+        "generations": [],
+        "vercel": [
+          {
+            "id": "ww9cp-1790888852804-0fb7e6f01428",
+            "at": "2026-10-01T21:07:32.804Z",
+            "method": "POST",
+            "path": "/api/assistant/turns/stop",
+            "status": 200,
+            "timings": [
+              "[numo-stop] timing {\n  requestId: 'd0edbf60-4650-47d3-920d-dba453c3c5b3',\n  phase: 'authorized',\n  elapsedMs: 2870\n}"
+            ]
+          },
+          {
+            "id": "qc7hq-1790888852754-0da4c49d070f",
+            "at": "2026-10-01T21:07:32.754Z",
+            "method": "POST",
+            "path": "/api/assistant/chat",
+            "status": 200,
+            "timings": [
+              "[numo-chat] timing {\n  requestId: 'd0edbf60-4650-47d3-920d-dba453c3c5b3',\n  phase: 'authorized',\n  elapsedMs: 178\n}",
+              "[numo-chat] timing {\n  requestId: 'd0edbf60-4650-47d3-920d-dba453c3c5b3',\n  phase: 'configured',\n  elapsedMs: 4411\n}",
+              "[numo-chat] timing {\n  requestId: 'd0edbf60-4650-47d3-920d-dba453c3c5b3',\n  phase: 'admitted',\n  elapsedMs: 5273\n}",
+              "[numo-chat] timing {\n  requestId: 'd0edbf60-4650-47d3-920d-dba453c3c5b3',\n  phase: 'first_conversation_id',\n  elapsedMs: 5274\n}",
+              "[numo-chat] timing {\n  requestId: 'd0edbf60-4650-47d3-920d-dba453c3c5b3',\n  phase: 'budget_checked',\n  elapsedMs: 3985\n}",
+              "[numo-chat] timing {\n  requestId: 'd0edbf60-4650-47d3-920d-dba453c3c5b3',\n  phase: 'first_done',\n  elapsedMs: 5656\n}"
+            ]
+          }
+        ],
+        "followup": {
+          "capturedAt": "2026-10-01T21:12:54.113Z",
+          "elapsedSinceClickMs": 321323,
+          "conversationTurns": [
+            {
+              "id": "34d494ef-879f-45e2-82df-5fa429212c01",
+              "request_id": "d0edbf60-4650-47d3-920d-dba453c3c5b3",
+              "status": "stopped",
+              "attempts": 0,
+              "active_run_id": null,
+              "updated_at": "2026-10-01T21:07:36.443074+00:00",
+              "hasClaim": false
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "limits": [
+    "DOM Stop freezes display immediately; hosted cancellation requires authenticated network delivery.",
+    "Provider byte delivery trails durable authority revocation; the maximum measured tail is 1421 ms after clicking.",
+    "Final HTTP/SSE acknowledgements include cleanup and durable event persistence.",
+    "Before-header cancellation prevented all execution; receipt preparation itself took several seconds.",
+    "No production deployment or shared database schema change was performed."
+  ]
+}

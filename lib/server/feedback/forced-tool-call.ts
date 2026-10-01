@@ -82,6 +82,8 @@ export async function forcedToolCall(
  * hold the `maxDuration` from the road above.
  */
     timeoutMs?: number;
+    /** Cancel auxiliary work with the execution that requested it. */
+    signal?: AbortSignal;
     /**
  * Reasoning effort to request, when the provider knows how to express one.
  * Absent = nothing is sent, and the model applies its family default — which
@@ -92,6 +94,7 @@ export async function forcedToolCall(
     reasoning?: ReasoningLevel;
   }
 ): Promise<Record<string, unknown> | null> {
+  if (options?.signal?.aborted) return null;
   const logPrefix = options?.logPrefix ?? "[feedback-llm]";
 
   const billedUserId = await (async (): Promise<string | null> => {
@@ -132,6 +135,7 @@ export async function forcedToolCall(
     };
 
   try {
+    if (options?.signal?.aborted) return null;
     const call = await fetchAiChat(
       effectiveRuntime,
       resolvedModel,
@@ -157,7 +161,9 @@ export async function forcedToolCall(
       }),
       options?.xTitle ?? "Feedback (minddy)",
       logPrefix,
-      { signal: AbortSignal.timeout(options?.timeoutMs ?? 45_000) },
+      { signal: options?.signal
+        ? AbortSignal.any([options.signal, AbortSignal.timeout(options?.timeoutMs ?? 45_000)])
+        : AbortSignal.timeout(options?.timeoutMs ?? 45_000) },
     );
     const response = call.response;
     if (!response.ok) {
@@ -177,6 +183,7 @@ export async function forcedToolCall(
     try {
       data = await response.json();
     } catch {
+      if (options?.signal?.aborted) return null;
       console.error(`${logPrefix} LLM call failed: response_json_invalid`);
       return null;
     }
@@ -210,6 +217,7 @@ export async function forcedToolCall(
       return null;
     }
   } catch {
+    if (options?.signal?.aborted) return null;
     console.error(`${logPrefix} LLM call failed: request_failed`);
     return null;
   }

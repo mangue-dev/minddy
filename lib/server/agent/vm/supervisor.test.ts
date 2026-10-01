@@ -633,6 +633,7 @@ function deps(): SupervisorDeps {
       // round not taken — a round cut in flight (MIN-286 lot 3, §2.23).
       drain: () => h.generations.splice(0, h.generations.length),
       settle: async () => {},
+      cancel: () => {},
       close: async () => {
         h.proxyClosed = true;
       },
@@ -1281,9 +1282,9 @@ describe("le tour", () => {
     expect(report.costUsd).toBeCloseTo(0.002827, 10);
   });
 
-  it("n'écrit RIEN d'un round coupé dont le fournisseur n'a rien dit", async () => {
-    // A zero line would read “this call was free” and close the gap
-    // which we have just blocked. We prefer absence, said in the logs.
+  it("keeps an identifiable receipt with unknown cost for a canceled generation", async () => {
+    // The final usage frame may disappear when the provider socket is closed.
+    // Keep its identity without claiming that the generation was free.
     h.generations = [
       {
         id: "gen-muet",
@@ -1294,7 +1295,9 @@ describe("le tour", () => {
       },
     ];
     await run();
-    expect(h.usage.find((l) => l.generationId === "gen-muet")).toBeUndefined();
+    expect(h.usage.find((l) => l.generationId === "gen-muet")).toMatchObject({
+      cost: null, promptTokens: null, completionTokens: null,
+    });
   });
 
   it("dit au tour suivant où en est la numérotation du ledger", async () => {

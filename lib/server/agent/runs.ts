@@ -714,6 +714,21 @@ export async function createRun(input: CreateRunInput): Promise<AgentRun> {
       throw new ManagedBudgetUnavailableError();
     throw new DatabaseOperationError("create_agent_run", error, result.status);
   }
+  // BYOK insertion does not lock the parent as the budget RPC does. Recheck
+  // after commit so a stop whose cascade ran before this insert cannot miss it.
+  if (!input.managedBudget) {
+    let parentAllowsWorker: boolean;
+    try {
+      parentAllowsWorker = await numoParentAllowsNewWorker(data as AgentRun);
+    } catch (error) {
+      await requestInterrupt(data.id);
+      throw error;
+    }
+    if (!parentAllowsWorker) {
+      await requestInterrupt(data.id);
+      data.interrupt_requested = true;
+    }
+  }
   // Analytics (MIN-78): the launch is also tracked on the client side, but it
   // only does not see runs triggered by mention or restarted by drain.
   // The prompt is never sent.
@@ -748,6 +763,18 @@ async function hydrateRun(row: AgentRun | null): Promise<AgentRun | null> {
   return row ? decodeAgentPrUrl(await decodeRunSummary(await decodeDelegationResult(await decodeAgentWorkBranch(await decodeAgentBaseBranch(await decodeAgentDeploymentUrl(await decodeAgentVerdict(
     await decodeAgentDelegationInput(await decodeAgentCheckpoint(
       await decodeAgentLaunch(row)))))))))) : null;
+}
+
+/** Only gate new workers; an individual stop must leave running siblings alone. */
+async function numoParentAllowsNewWorker(run: AgentRun): Promise<boolean> {
+  if (!run.parent_numo_turn_id) return true;
+  if (!run.created_by || !run.parent_numo_conversation_id) return false;
+  const { data, error } = await getServiceClient().from("numo_assistant_turns")
+    .select("status").eq("id", run.parent_numo_turn_id)
+    .eq("conversation_id", run.parent_numo_conversation_id)
+    .eq("user_id", run.created_by).maybeSingle();
+  if (error) throw new Error("Could not verify the Numo worker parent");
+  return !!data && ["running", "waiting_work", "waiting_input", "reconciling"].includes(data.status);
 }
 
 /** Atomic CAS claim (queued → running). Returns null when another worker won. */
@@ -2254,6 +2281,55 @@ export async function requestInterrupt(runId: string): Promise<void> {
     .eq("id", runId)
     .in("status", ["queued", "running"]);
   if (error) throw new Error(`Could not request agent interruption: ${error.message}`);
+}
+
+/** Stop a worker with the atomic RPC, or the preceding schema's safe ordering. */
+export async function requestNumoWorkerStop(runId: string): Promise<void> {
+  const service = getServiceClient();
+  const { data, error } = await service.rpc("request_numo_worker_stop", {
+    p_run_id: runId,
+  });
+  if (error && error.code !== "PGRST202") {
+    throw new Error(`Could not stop Numo worker: ${error.message}`);
+  }
+  const turnId = error ? await stopNumoWorkerBeforeMigration(service, runId) : data;
+  if (typeof turnId === "string") {
+    const { signalNumoTurnStopInProcess } = await import("@/lib/server/numo/turns");
+    signalNumoTurnStopInProcess(turnId);
+  }
+}
+
+async function stopNumoWorkerBeforeMigration(service: SupabaseClient, runId: string) {
+  const { data: run, error: runError } = await service.from("agent_runs")
+    .select("parent_numo_turn_id,parent_numo_conversation_id").eq("id", runId).maybeSingle();
+  if (runError || !run?.parent_numo_turn_id || !run.parent_numo_conversation_id) {
+    throw new Error("Unable to identify stopped Numo worker");
+  }
+  const { data: conversation, error: conversationError } = await service.from("conversations")
+    .select("updated_at").eq("id", run.parent_numo_conversation_id).maybeSingle();
+  if (conversationError || !conversation) throw new Error("Unable to read stopped conversation");
+  const now = new Date().toISOString();
+  // Revoke first: completion, steering and claim RPCs lock this parent row and
+  // cannot resume a stopped turn. Every later operation is scoped and retryable.
+  const { data: retired, error: retireError } = await service.from("numo_assistant_turns")
+    .update({ status: "stopped", claim_token: null, claimed_at: null,
+      completed_at: now, error_message: null, updated_at: now })
+    .eq("id", run.parent_numo_turn_id)
+    .in("status", ["queued", "running", "stopping", "waiting_work", "waiting_input", "retryable", "reconciling"])
+    .select("id").maybeSingle();
+  if (retireError) throw new Error("Unable to revoke stopped worker continuation");
+  await discardPendingWorkerMessages(runId);
+  const { cancelStoppedWorkerInput } = await import("@/lib/server/numo/worker-mediation");
+  await cancelStoppedWorkerInput(runId);
+  await requestInterrupt(runId);
+  if (retired) {
+    // A concurrent new turn updates this timestamp; never idle its conversation.
+    const { error: idleError } = await service.from("conversations")
+      .update({ status: "idle", error_message: null, updated_at: now })
+      .eq("id", run.parent_numo_conversation_id).eq("updated_at", conversation.updated_at);
+    if (idleError) throw new Error("Unable to update stopped conversation");
+  }
+  return run.parent_numo_turn_id as string;
 }
 
 /** Discard queued steering after an authorized stop of a Numo-owned worker. */

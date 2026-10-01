@@ -12,6 +12,10 @@ const paths = {
 };
 
 describe("deployment database preflight", () => {
+  it("accepts the preceding schema while worker Stop uses its compatibility path", async () => {
+    await expect(checkDeploymentDatabase(env, vi.fn().mockResolvedValue(Response.json({ paths }))))
+      .resolves.toBeUndefined();
+  });
   it("checks the role-filtered schema without invoking application RPCs", async () => {
     const fetcher = vi.fn().mockResolvedValue(Response.json({ paths }));
     await checkDeploymentDatabase(env, fetcher);
