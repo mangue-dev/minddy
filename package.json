@@ -63,9 +63,11 @@
     "@tiptap/extension-floating-menu": "3.31.3",
     "postcss": "^8.5.25",
     "sharp": "$sharp",
-    "undici": "^7.29.0",
+    "undici": "^7.29.1",
     "ip-address": "^10.4.0",
-    "hono": "^4.12.34"
+    "hono": "^4.12.34",
+    "dompurify": "^3.4.16",
+    "markdown-it@^14.0.0": "^14.3.1"
   },
   "pnpm": {
     "overrides": {
@@ -73,9 +75,11 @@
       "@tiptap/extension-floating-menu": "3.31.3",
       "postcss": "^8.5.25",
       "sharp": "$sharp",
-      "undici": "^7.29.0",
+      "undici": "^7.29.1",
       "ip-address": "^10.4.0",
-      "hono": "^4.12.34"
+      "hono": "^4.12.34",
+      "dompurify": "^3.4.16",
+      "markdown-it@^14.0.0": "^14.3.1"
     },
     "packageExtensions": {
       "streamdown": {
