@@ -188,7 +188,9 @@ function trackIssueUpdate(updates: IssueUpdateInput, meta?: IssueMutationMeta): 
     });
   }
   if (patch.parent_id !== undefined) {
-    trackEvent("issue_relation_added", { relation: "parent" });
+    trackEvent(patch.parent_id === null ? "issue_relation_removed" : "issue_relation_added", {
+      relation: "parent",
+    });
   }
 }
 
