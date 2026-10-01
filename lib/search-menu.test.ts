@@ -14,15 +14,13 @@ vi.mock("@/components/ui/tooltip", () => ({
   TooltipContent: () => null,
 }));
 vi.mock("mangue-ui", async () => {
-  const { Popover } = await import("radix-ui");
+  const popover = await vi.importActual<Record<string, React.ElementType>>("mangue-ui/components/ui/popover.tsx");
   const { Command } = await import("cmdk");
   return {
     cn: (...values: unknown[]) => values.filter(Boolean).join(" "),
     Command, CommandList: Command.List, CommandEmpty: Command.Empty,
     CommandSeparator: Command.Separator,
-    Popover: Popover.Root, PopoverAnchor: Popover.Anchor, PopoverTrigger: Popover.Trigger,
-    PopoverContent: ({ container, ...props }: React.ComponentProps<typeof Popover.Content> & { container?: HTMLElement | null }) =>
-      React.createElement(Popover.Portal, { container: container ?? undefined }, React.createElement(Popover.Content, props)),
+    ...popover,
   };
 });
 
