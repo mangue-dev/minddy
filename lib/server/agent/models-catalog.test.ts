@@ -153,6 +153,19 @@ afterEach(() => {
 });
 
 describe("getPlatformModelCatalog", () => {
+  it("validates a Numo choice using the same public filters without account picker reads", async () => {
+    const { getOpenRouterConversationModels } = await freshCatalog();
+    const { resolveAgentApiKey, getUserByok } = await import("./model");
+    const { getModelPlanLimit } = await import("./model-plan");
+    const models = await getOpenRouterConversationModels("test-key");
+    expect(models.map(model => model.id)).toEqual([
+      "anthropic/claude-opus-5", "deepseek/deepseek-v4-flash",
+    ]);
+    expect(resolveAgentApiKey).not.toHaveBeenCalled();
+    expect(getUserByok).not.toHaveBeenCalled();
+    expect(getModelPlanLimit).not.toHaveBeenCalled();
+  });
+
   it("does not offer OpenRouter routing aliases", async () => {
     // `openrouter/auto` is not a template, and `~…-latest` changes template
     // under the user's feet — prices and reasoning levels included.

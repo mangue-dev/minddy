@@ -505,6 +505,68 @@ describe("Numo chat loop resilience", () => {
     expect(executeTool).not.toHaveBeenCalled();
   });
 
+  it.each(["headers", "body"])("polls a remote stop while waiting for silent %s", async (phase) => {
+    vi.useFakeTimers();
+    let stopped = false;
+    let signal: AbortSignal | undefined;
+    let connected!: () => void;
+    const started = new Promise<void>(resolve => { connected = resolve; });
+    fetchOpenRouter.mockImplementation(async (_url, _model, buildRequest) => {
+      signal = (buildRequest("model") as RequestInit).signal as AbortSignal;
+      connected();
+      if (phase === "headers") {
+        return await new Promise((_resolve, reject) => {
+          signal!.addEventListener("abort", () => reject(new Error("aborted")));
+        });
+      }
+      return { model: "model", response: new Response(new ReadableStream({
+        start(controller) {
+          signal!.addEventListener("abort", () => controller.error(new Error("aborted")));
+        },
+      })) };
+    });
+    try {
+      const result = processChat([{ role: "user", content: "Wait silently" }], [],
+        { emit: vi.fn() } as never, {
+          model: "model", conversationId: "conversation", projectId: "project", userId: "user",
+          supabase: fakeService(), service: fakeService(), locale: "en",
+          shouldStop: async () => stopped,
+          // No local notification: the stop landed in another server process.
+        });
+      await started;
+      await vi.advanceTimersByTimeAsync(0);
+      stopped = true;
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(signal?.aborted).toBe(true);
+      expect(await result).toMatchObject({ fullContent: "", suspension: null });
+      expect(executeTool).not.toHaveBeenCalled();
+      expect(vi.getTimerCount()).toBe(0);
+    } finally { vi.useRealTimers(); }
+  });
+
+  it("stops during slow preparation without opening a provider request", async () => {
+    vi.useFakeTimers();
+    let stopped = false;
+    let started!: () => void;
+    const preparing = new Promise<void>(resolve => { started = resolve; });
+    try {
+      const result = processChat([{ role: "user", content: "Answer" }], [],
+        { emit: vi.fn() } as never, {
+          model: "model", conversationId: "conversation", projectId: "project", userId: "user",
+          supabase: fakeService(), service: fakeService(), locale: "en",
+          shouldStop: async () => stopped,
+          beforeGeneration: async () => { started(); await new Promise(() => {}); },
+        });
+      await preparing;
+      stopped = true;
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(await result).toMatchObject({ fullContent: "", suspension: null });
+      expect(fetchOpenRouter).not.toHaveBeenCalled();
+      expect(executeTool).not.toHaveBeenCalled();
+      expect(vi.getTimerCount()).toBe(0);
+    } finally { vi.useRealTimers(); }
+  });
+
   it("stops between tool executions instead of running the whole round", async () => {
     // The tool call arrives with the stream, then the stop fires before and
     // after the first tool: the loop must observe the pending stop between
@@ -540,6 +602,81 @@ describe("Numo chat loop resilience", () => {
     expect(executeTool).toHaveBeenCalledTimes(1);
     expect(result.suspension).toBeNull();
     expect(result.fullContent).toBe("");
+  });
+
+  it.each([
+    ["list_projects", "signal"], ["list_projects", "poll"],
+    ["list_issues", "signal"], ["list_issues", "poll"],
+  ])("stops a pending %s read through the %s channel without a late result or follow-up generation", async (name, channel) => {
+    vi.useFakeTimers();
+    let stopped = false;
+    let notifyStop: (() => void) | undefined;
+    let resolveRead!: (value: unknown) => void;
+    let readSignal: AbortSignal | undefined;
+    fetchOpenRouter.mockResolvedValue({ model: "model", response: stream({
+      tool_calls: [{ index: 0, id: "slow-read", function: { name, arguments: "{}" } }],
+    }) });
+    executeTool.mockImplementation((_name, _args, ctx) => {
+      readSignal = ctx.readAbortSignal;
+      return new Promise((resolve) => { resolveRead = resolve; });
+    });
+    const emit = vi.fn();
+    let settled = false;
+    const pending = processChat([{ role: "user", content: "List projects and their issues" }], [],
+      { emit } as never, { model: "model", conversationId: "conversation", projectId: "project",
+        userId: "user", supabase: fakeService(), service: fakeService(), locale: "en",
+        shouldStop: async () => stopped,
+        onStopSignal: (notify) => { notifyStop = notify; return () => { notifyStop = undefined; }; },
+      });
+    void pending.then(() => { settled = true; });
+    try {
+      await vi.advanceTimersByTimeAsync(0);
+      expect(executeTool).toHaveBeenCalledTimes(1);
+      stopped = true;
+      if (channel === "signal") notifyStop?.();
+      await vi.advanceTimersByTimeAsync(channel === "poll" ? 250 : 0);
+      expect(settled).toBe(true);
+      expect(readSignal?.aborted).toBe(true);
+      expect((await pending).fullContent).toBe("");
+      resolveRead({ result: { projects: [] }, success: true });
+      await vi.advanceTimersByTimeAsync(0);
+      expect(fetchOpenRouter).toHaveBeenCalledTimes(1);
+      expect(emit.mock.calls.some(([event]) => event === "tool_result" || event === "content_delta")).toBe(false);
+      expect(notifyStop).toBeUndefined();
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      resolveRead?.({ result: {}, success: true });
+      vi.useRealTimers();
+    }
+  });
+
+  it("awaits an in-flight mutation's ledger boundary after Stop and emits no late result", async () => {
+    let notifyStop: (() => void) | undefined;
+    let resolveWrite!: (value: unknown) => void;
+    fetchOpenRouter.mockResolvedValue({ model: "model", response: stream({ tool_calls: [{
+      index: 0, id: "write-issue", function: { name: "update_issues", arguments: "{}" },
+    }] }) });
+    executeTool.mockImplementation(() => new Promise((resolve) => { resolveWrite = resolve; }));
+    const complete = vi.fn(async () => {});
+    const emit = vi.fn();
+    let settled = false;
+    const pending = processChat([{ role: "user", content: "Update the issue" }], [], { emit } as never,
+      { model: "model", conversationId: "conversation", projectId: "project", userId: "user",
+        supabase: fakeService(), service: fakeService(), locale: "en", shouldStop: async () => false,
+        onStopSignal: (notify) => { notifyStop = notify; return () => { notifyStop = undefined; }; },
+        toolLedger: { claim: async () => ({ action: "execute" }), complete },
+      });
+    void pending.then(() => { settled = true; });
+    await vi.waitFor(() => expect(executeTool).toHaveBeenCalledTimes(1));
+    notifyStop?.();
+    await Promise.resolve();
+    expect(settled).toBe(false);
+    resolveWrite({ result: { updated: true }, success: true });
+    expect((await pending).fullContent).toBe("");
+    expect(complete).toHaveBeenCalledOnce();
+    expect(fetchOpenRouter).toHaveBeenCalledOnce();
+    expect(emit.mock.calls.some(([event]) => event === "tool_result")).toBe(false);
+    expect(notifyStop).toBeUndefined();
   });
 
   it("aborts a stalled connection the instant a stop signal fires", async () => {

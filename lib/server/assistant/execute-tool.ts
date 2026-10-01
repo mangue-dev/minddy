@@ -1,4 +1,5 @@
 import { issueStore } from "@/lib/server/issue-store";
+import { abortableReadClient } from "./abortable-read-client";
 import { randomUUID } from "node:crypto";
 import { DatabaseOperationError, failureDiagnostics } from "@/lib/server/failure-diagnostics";
 import { categoryStore } from "@/lib/server/category-store";
@@ -242,6 +243,8 @@ import { readPlanUsageTool, readUserStatsTool } from "./stats-tools";
 // every event/notification stays attributed to the human who asked.
 
 export interface ToolContext {
+  /** Cancels the database transport of project and issue listing tools. */
+  readAbortSignal?: AbortSignal;
   /** Context project for legacy comment entry points. */
   projectId: string | null;
   /** Conversation tools must name their own target, independent of page navigation. */
@@ -858,6 +861,11 @@ export async function executeTool(
   args: Record<string, unknown>,
   ctx: ToolContext,
 ): Promise<ToolExecution> {
+  if (ctx.readAbortSignal && (toolName === "list_projects" || toolName === "list_issues")) {
+    ctx = { ...ctx,
+      service: abortableReadClient(ctx.service, ctx.readAbortSignal),
+      supabase: abortableReadClient(ctx.supabase, ctx.readAbortSignal) };
+  }
   let launchStage = "prepare_launch";
   try {
     if (MCP_CLIENT_TOOL_NAMES.has(toolName)) {

@@ -32,8 +32,9 @@ vi.mock("@/lib/server/agent/runs", () => ({
   requestInterrupt: async (runId: string) => {
     interruptRequests.push(runId);
   },
-  discardPendingWorkerMessages: async (runId: string) => {
+  requestNumoWorkerStop: async (runId: string) => {
     if (consumptionError) throw consumptionError;
+    interruptRequests.push(runId);
     messageConsumptions.push({ consumed_at: new Date().toISOString(), run_id: runId });
   },
 }));
@@ -112,9 +113,9 @@ describe("POST /api/agent-runs/[runId]/stop", () => {
     run.chain_id = "chain-1";
     consumptionError = new Error("Unable to discard stopped worker messages");
 
-    await expect(POST(request(), params)).rejects.toThrow(consumptionError.message);
-
-    expect(interruptRequests).toEqual(["run-1"]);
+    const response = await POST(request(), params);
+    expect(response.status).toBe(500);
+    expect(interruptRequests).toEqual([]);
     expect(drainKicks).toBe(0);
     expect(chainStops).toEqual([]);
   });

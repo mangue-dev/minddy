@@ -25,6 +25,11 @@ import type { FileResourceInput, ResourceInput } from "./types";
 import { trackEvent } from "./analytics";
 import { durationBucket, errorReason, lengthBucket } from "./analytics-sanitize";
 import type { AssistantReasoning } from "./assistant-reasoning";
+import { createAssistantEventStream } from "./assistant-event-stream";
+
+const ACTIVE_NUMO_TURN_STATUSES = new Set([
+  "queued", "running", "waiting_work", "waiting_input", "stopping", "retryable", "reconciling",
+]);
 
 // ── State ──────────────────────────────────────────────────────────────
 
@@ -180,6 +185,7 @@ type Action =
       workerInput: AssistantChatRequest["workerInput"] | null;
     }
   | { type: "ERROR"; message: string; turnStatus?: NumoTurnStatus }
+  | { type: "STOP_FAILED"; message: string }
   | {
       type: "LOAD_HISTORY";
       messages: AssistantMessage[];
@@ -435,6 +441,9 @@ function reducer(
           : null,
       };
 
+    case "STOP_FAILED":
+      return { ...state, status: "generating_server", error: action.message };
+
     case "LOAD_HISTORY":
       return {
         ...state,
@@ -543,7 +552,17 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
   const tApi = useTranslations("ApiErrors");
   const [state, dispatch] = useReducer(reducer, initialState);
   const abortRef = useRef<AbortController | null>(null);
+  const activeSendRef = useRef<{
+    requestId: string;
+    conversationId: string;
+    newConversation: boolean;
+    projectId: string | null;
+    frozen: boolean;
+    turnId?: string;
+  } | null>(null);
+  const activeTurnRef = useRef<{ conversationId: string; turnId: string } | null>(null);
   const pollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pollGenerationRef = useRef(0);
   // Keep the latest callback in a ref so the SSE loop closure always calls the
   // current one without re-creating sendMessage on every render.
   const onToolResultRef = useRef(options?.onToolResult);
@@ -570,6 +589,9 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
   const configRevisionRef = useRef(0);
 
   const stopPolling = useCallback(() => {
+    // Clearing a timeout cannot cancel a status request already in flight.
+    // Retire that poll before it can replay text or revive a stopped composer.
+    pollGenerationRef.current += 1;
     if (pollRef.current) {
       clearTimeout(pollRef.current);
       pollRef.current = null;
@@ -583,6 +605,8 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
       options?: { quiet?: boolean },
     ) => {
       stopPolling();
+      const pollGeneration = pollGenerationRef.current;
+      const isCurrentPoll = () => pollGenerationRef.current === pollGeneration;
       // A quiet poll (right after a stop) does not present the conversation
       // as busy: the optimistic idle pasted by the stop must not be undone
       // unless the authoritative status says the turn is still working.
@@ -599,6 +623,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
 
       const reloadMessages = async () => {
         const messages = await fetchConversationMessages(conversationId);
+        if (!isCurrentPoll()) return;
         dispatch({
           type: "LOAD_HISTORY",
           messages,
@@ -614,16 +639,21 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
             tApi("statusFetchFailed"),
             after,
           );
+          if (!isCurrentPoll()) return;
           const { status, error_message } = response;
+          activeTurnRef.current = response.turn_id && ACTIVE_NUMO_TURN_STATUSES.has(status)
+            ? { conversationId, turnId: response.turn_id } : null;
           dispatch({
             type: "SET_PENDING_WORKER_INPUT",
             workerInput: pendingWorkerInput(response.pending_input),
           });
           for (const event of response.activity ?? []) {
-            handleSSEEvent(event.type, event.payload, dispatch, {
-              projectId,
-              onToolResult: onToolResultRef.current,
-            });
+            if (!options?.quiet) {
+              handleSSEEvent(event.type, event.payload, dispatch, {
+                projectId,
+                onToolResult: onToolResultRef.current,
+              });
+            }
             after = Math.max(after, event.seq);
           }
 
@@ -638,6 +668,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
             const key = `${response.turn_id}:${response.active_run_id ?? ""}`;
             if (key !== reloadedSuspension) {
               await reloadMessages();
+              if (!isCurrentPoll()) return;
               // Set only after success: a failed reload must be retried by
               // the next poll instead of being skipped forever.
               reloadedSuspension = key;
@@ -674,6 +705,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
             // Generation complete - reload messages
             const messages =
               await fetchConversationMessages(conversationId);
+            if (!isCurrentPoll()) return;
             dispatch({
               type: "LOAD_HISTORY",
               messages,
@@ -692,6 +724,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
             // the same event journal.
             if (!reloadedRetryable) {
               await reloadMessages();
+              if (!isCurrentPoll()) return;
               // Same rule as the suspension reload: a failed reload is
               // retried by the next poll instead of being skipped forever.
               reloadedRetryable = true;
@@ -704,6 +737,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
             // Reload messages to show any partial results
             const messages =
               await fetchConversationMessages(conversationId);
+            if (!isCurrentPoll()) return;
             dispatch({
               type: "LOAD_HISTORY",
               messages,
@@ -727,7 +761,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
           pollRef.current = setTimeout(poll, POLL_INTERVAL_MS);
         } catch {
           // Network error during polling - retry
-          pollRef.current = setTimeout(poll, POLL_INTERVAL_MS);
+          if (isCurrentPoll()) pollRef.current = setTimeout(poll, POLL_INTERVAL_MS);
         }
       };
 
@@ -744,17 +778,24 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
    * stream that closed cleanly but early froze the conversation with no poll
    * and no error until a manual reload.
    */
-  const reconcileAfterConnectionLost = useCallback(async (): Promise<boolean> => {
+  const reconcileAfterConnectionLost = useCallback(async (
+    signal: AbortSignal,
+    isCurrent: () => boolean,
+  ): Promise<boolean> => {
+    if (signal.aborted || !isCurrent()) return true;
     const convId = liveConvRef.current.id ?? state.conversationId;
     const convProjectId = liveConvRef.current.id
       ? liveConvRef.current.projectId
       : state.conversationProjectId;
     if (!convId) return false;
     try {
-      const { status, error_message } = await fetchConversationStatus(
+      const { status, error_message, turn_id } = await fetchConversationStatus(
         convId,
         tApi("statusFetchFailed")
       );
+      if (signal.aborted || !isCurrent()) return true;
+      activeTurnRef.current = turn_id && ACTIVE_NUMO_TURN_STATUSES.has(status)
+        ? { conversationId: convId, turnId: turn_id } : null;
       if (status === "generating" || status === "queued" || status === "running" || status === "waiting_work" || status === "stopping" || status === "retryable") {
         startPolling(convId, convProjectId);
         return true;
@@ -762,6 +803,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
       if (status === "idle" || status === "completed" || status === "waiting_input" || status === "stopped") {
         // Server already finished - reload messages
         const messages = await fetchConversationMessages(convId);
+        if (signal.aborted || !isCurrent()) return true;
         dispatch({
           type: "LOAD_HISTORY",
           messages,
@@ -774,6 +816,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
       if (status === "error" || status === "failed" || status === "reconciling") {
         // Reload messages to show any partial results
         const messages = await fetchConversationMessages(convId);
+        if (signal.aborted || !isCurrent()) return true;
         dispatch({
           type: "LOAD_HISTORY",
           messages,
@@ -790,7 +833,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
     } catch {
       // Can't reach server - the caller shows the connection error
     }
-    return false;
+    return signal.aborted || !isCurrent();
   }, [state.conversationId, state.conversationProjectId, startPolling, tApi]);
 
   const sendMessage = useCallback(
@@ -836,10 +879,22 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
       );
 
       // Abort previous request if still running
-      abortRef.current?.abort();
+      if (!activeSendRef.current?.frozen) abortRef.current?.abort();
       stopPolling();
       const controller = new AbortController();
       abortRef.current = controller;
+      const requestConversationId = liveConvRef.current.id ?? state.conversationId;
+      const sending = {
+        requestId: createUuid(),
+        conversationId: requestConversationId ?? createUuid(),
+        newConversation: !requestConversationId,
+        projectId,
+        frozen: false,
+        turnId: options?.workerInput?.parentTurnId
+          ?? (activeTurnRef.current?.conversationId === requestConversationId
+            ? activeTurnRef.current.turnId : undefined),
+      };
+      activeSendRef.current = sending;
 
       dispatch({
         type: "ADD_USER_MESSAGE",
@@ -852,12 +907,12 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
       dispatch({ type: "START_STREAMING" });
 
       try {
-        const requestConversationId = liveConvRef.current.id ?? state.conversationId;
         const body: AssistantChatRequest = {
-          requestId: createUuid(),
+          requestId: sending.requestId,
           ...(projectId ? { projectId } : {}),
           message,
           conversationId: requestConversationId || undefined,
+          ...(!requestConversationId ? { newConversationId: sending.conversationId } : {}),
           model: configRef.current.model,
           reasoningLevel: configRef.current.reasoningLevel,
           ...(options?.pageContext ? { pageContext: options.pageContext } : {}),
@@ -880,8 +935,10 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
           body: JSON.stringify(body),
           signal: controller.signal,
         });
+        if (controller.signal.aborted) return;
 
         if (!response.ok) {
+          if (sending.frozen || activeSendRef.current !== sending) return;
           const errorData = await response.json().catch(() => ({}));
           dispatch({
             type: "ERROR",
@@ -893,7 +950,10 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
         }
 
         const responseConversationId = response.headers.get("X-Numo-Conversation-Id");
-        if (responseConversationId) {
+        const responseTurnId = response.headers.get("X-Numo-Turn-Id");
+        if (responseTurnId) sending.turnId = responseTurnId;
+        if (responseConversationId && activeSendRef.current === sending) {
+          if (responseTurnId) activeTurnRef.current = { conversationId: responseConversationId, turnId: responseTurnId };
           liveConvRef.current = { id: responseConversationId, projectId };
           if (!requestConversationId) {
             confirmedConfigsRef.current.set(responseConversationId, {
@@ -913,56 +973,53 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
           return;
         }
 
-        const decoder = new TextDecoder();
-        let buffer = "";
         let finalServerStatus: ConversationStatus | NumoTurnStatus | null = null;
+        const eventStream = createAssistantEventStream((eventType, data) => {
+          if (controller.signal.aborted) return;
+          if (eventType === "tool_call_start") toolCalls += 1;
+          if ((eventType === "done" || eventType === "error") && typeof data.status === "string") {
+            finalServerStatus = data.status as ConversationStatus | NumoTurnStatus;
+            if (activeSendRef.current === sending && !ACTIVE_NUMO_TURN_STATUSES.has(data.status)) {
+              activeTurnRef.current = null;
+            }
+          }
+          // Keep the connection alive until the executor acknowledges its stop.
+          // Vercel may freeze a disconnected request before its next stop poll.
+          if (sending.frozen || activeSendRef.current !== sending) return;
+          handleSSEEvent(eventType, data, dispatch, {
+            projectId: state.conversationProjectId,
+            onConversationId: (id, turnId) => {
+              if (turnId) {
+                sending.turnId = turnId;
+                activeTurnRef.current = { conversationId: id, turnId };
+              }
+              liveConvRef.current = {
+                id,
+                projectId: liveConvRef.current.id === id ? liveConvRef.current.projectId : null,
+              };
+            },
+            onToolResult: onToolResultRef.current,
+          });
+        });
 
         while (true) {
           const { done, value } = await reader.read();
+          if (controller.signal.aborted) return;
           if (done) break;
 
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split("\n");
-          buffer = lines.pop() || "";
-
-          let eventType = "";
-          for (const line of lines) {
-            if (line.startsWith("event: ")) {
-              eventType = line.slice(7).trim();
-            } else if (line.startsWith("data: ") && eventType) {
-              try {
-                const data = JSON.parse(line.slice(6));
-                if (eventType === "tool_call_start") toolCalls += 1;
-                if (eventType === "done" && typeof data.status === "string") {
-                  finalServerStatus = data.status as ConversationStatus | NumoTurnStatus;
-                }
-                if (eventType === "error" && typeof data.status === "string") {
-                  finalServerStatus = data.status as ConversationStatus | NumoTurnStatus;
-                }
-                handleSSEEvent(eventType, data, dispatch, {
-                  projectId: state.conversationProjectId,
-                  onConversationId: (id) => {
-                    liveConvRef.current = {
-                      id,
-                      projectId: liveConvRef.current.id === id ? liveConvRef.current.projectId : null,
-                    };
-                  },
-                  onToolResult: onToolResultRef.current,
-                });
-              } catch {
-                // Skip malformed data
-              }
-              eventType = "";
-            }
-          }
+          eventStream.push(value);
         }
+        eventStream.finish();
+        if (sending.frozen || activeSendRef.current !== sending) return;
 
         // A stream that closed WITHOUT its terminal `done`/`error` (clean close
         // on a proxy timeout, function eviction) previously left the reducer on
         // `streaming` forever — the frozen conversation this hook exists to
         // avoid. Reconcile from the authoritative status instead.
         if (finalServerStatus === null) {
-          const reconciled = await reconcileAfterConnectionLost();
+          const reconciled = await reconcileAfterConnectionLost(
+            controller.signal, () => !sending.frozen && activeSendRef.current === sending,
+          );
           if (!reconciled) {
             dispatch({ type: "ERROR", message: "Connection failed" });
           }
@@ -989,12 +1046,15 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
           duration_bucket: durationBucket(performance.now() - startedAt),
         });
       } catch (err) {
+        if (sending.frozen || activeSendRef.current !== sending) return;
         if ((err as Error).name === "AbortError") return;
 
         // Connection lost - check if server is still processing. The ref, not
         // `state`: a conversation born during THIS sending does not yet exist
         // in the closure, and this is precisely the one we would lose.
-        const reconciled = await reconcileAfterConnectionLost();
+        const reconciled = await reconcileAfterConnectionLost(
+          controller.signal, () => !sending.frozen && activeSendRef.current === sending,
+        );
         if (reconciled) return;
 
         trackEvent("assistant_response_failed", { reason: errorReason(err) });
@@ -1015,7 +1075,9 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
       stopPolling();
       // Cancel any in-flight send so its later SSE chunks don't dispatch on
       // top of the conversation we are about to load.
-      abortRef.current?.abort();
+      if (!activeSendRef.current?.frozen) abortRef.current?.abort();
+      activeSendRef.current = null;
+      activeTurnRef.current = null;
       liveConvRef.current = { id: conversationId, projectId };
       trackEvent("assistant_conversation_loaded", {});
       try {
@@ -1062,6 +1124,8 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
         );
         const { status, error_message } = response;
         if (loadGeneration !== loadGenerationRef.current) return;
+        activeTurnRef.current = response.turn_id && ACTIVE_NUMO_TURN_STATUSES.has(status)
+          ? { conversationId, turnId: response.turn_id } : null;
         dispatch({
           type: "SET_PENDING_WORKER_INPUT",
           workerInput: pendingWorkerInput(response.pending_input),
@@ -1151,7 +1215,9 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
   );
 
   const reset = useCallback(() => {
-    abortRef.current?.abort();
+    if (!activeSendRef.current?.frozen) abortRef.current?.abort();
+    activeSendRef.current = null;
+    activeTurnRef.current = null;
     stopPolling();
     loadGenerationRef.current += 1;
     liveConvRef.current = { id: null, projectId: null };
@@ -1170,6 +1236,8 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
       ? liveConvRef.current.projectId
       : state.conversationProjectId;
     stopPolling();
+    activeSendRef.current = null;
+    const retryPollGeneration = pollGenerationRef.current;
     const controller = new AbortController();
     abortRef.current = controller;
     dispatch({ type: "GENERATING_SERVER" });
@@ -1180,6 +1248,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
         body: JSON.stringify({ action: "retry" }),
         signal: controller.signal,
       });
+      if (retryPollGeneration !== pollGenerationRef.current) return;
       if (!response.ok) {
         if (response.status === 409) {
           // Another retry or recovery may already have moved the turn. Read
@@ -1196,6 +1265,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
       }
       startPolling(conversationId, projectId);
     } catch (error) {
+      if (retryPollGeneration !== pollGenerationRef.current) return;
       if ((error as Error).name === "AbortError") return;
       // The request may have reached the durable retry boundary before the
       // connection failed. Polling reconciles the authoritative server state.
@@ -1204,45 +1274,59 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
   }, [state.conversationId, state.conversationProjectId, startPolling, stopPolling]);
 
   const abort = useCallback(() => {
-    abortRef.current?.abort();
+    const sending = activeSendRef.current;
+    if (sending) sending.frozen = true;
     stopPolling();
-    const conversationId = liveConvRef.current.id ?? state.conversationId;
+    const conversationId = sending?.conversationId ?? liveConvRef.current.id ?? state.conversationId;
     if (!conversationId) {
       dispatch({ type: "DONE" });
       return;
     }
-    const projectId = liveConvRef.current.id
+    const projectId = sending ? sending.projectId : liveConvRef.current.id
       ? liveConvRef.current.projectId
       : state.conversationProjectId;
-    // Reference experience (Codex, Claude): pressing stop freezes the thread
-    // instantly. The partial stream is dropped now and polling stays quiet —
-    // it only speaks if the authoritative state disagrees (stop refused,
-    // generation still alive).
+    // Freeze the projection immediately while the same request remains alive
+    // to observe its durable cancellation and close its provider connection.
     dispatch({ type: "DONE" });
+    const stopLoadGeneration = loadGenerationRef.current;
+    const isCurrentStop = () => activeSendRef.current === sending
+      && stopLoadGeneration === loadGenerationRef.current;
     void (async () => {
       try {
-        const response = await fetch(`/api/assistant/conversations/${conversationId}/turn`, {
+        const response = await fetch(sending
+          ? "/api/assistant/turns/stop"
+          : `/api/assistant/conversations/${conversationId}/turn`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action: "stop" }),
+          body: JSON.stringify(sending ? {
+            requestId: sending.requestId,
+            conversationId: sending.conversationId,
+            newConversation: sending.newConversation,
+            ...(sending.turnId ? { turnId: sending.turnId } : {}),
+          } : { action: "stop" }),
         });
-        if (!response.ok && response.status !== 409) {
+        if (!isCurrentStop()) return;
+        if (!response.ok && !(response.status === 409 && !sending)) {
           const payload = await response.json().catch(() => null) as { error?: string } | null;
+          if (!isCurrentStop()) return;
           dispatch({
-            type: "ERROR",
+            type: "STOP_FAILED",
             message: payload?.error || `HTTP ${response.status}`,
           });
           return;
         }
+        if (sending?.newConversation && !liveConvRef.current.id) {
+          liveConvRef.current = { id: conversationId, projectId };
+          dispatch({ type: "SET_CONVERSATION_ID", conversationId, projectId });
+        }
         startPolling(conversationId, projectId, { quiet: true });
       } catch {
-        // A connection failure does not establish whether the durable stop was
-        // recorded. Polling resolves that ambiguity from authoritative state.
-        startPolling(conversationId, projectId, { quiet: true });
+        if (!isCurrentStop()) return;
+        dispatch({ type: "STOP_FAILED", message: tApi("serviceUnavailable") });
       }
     })();
     trackEvent("assistant_stopped", {});
-  }, [state.conversationId, state.conversationProjectId, startPolling, stopPolling]);
+  }, [state.conversationId, state.conversationProjectId, startPolling, stopPolling, tApi]);
 
   return {
     state,
@@ -1260,7 +1344,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
 interface SSEContext {
   /** Legacy project metadata of the resumed conversation. */
   projectId: string | null;
-  onConversationId?: (conversationId: string) => void;
+  onConversationId?: (conversationId: string, turnId?: string) => void;
   onToolResult?: (name: string, success: boolean, result: unknown) => void;
 }
 
@@ -1278,7 +1362,8 @@ function handleSSEEvent(
         conversationId: data.conversationId as string,
         projectId,
       });
-      onConversationId?.(data.conversationId as string);
+      onConversationId?.(data.conversationId as string,
+        typeof data.turnId === "string" ? data.turnId : undefined);
       break;
     case "content_delta":
       dispatch({ type: "CONTENT_DELTA", delta: data.delta as string });

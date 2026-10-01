@@ -42,6 +42,7 @@ import {
   type AssistantToolDef,
 } from "@/lib/server/assistant/tools";
 import type { WorkerInputCorrelation } from "@/lib/server/numo/worker-mediation";
+import { cancelStoppedTurnWorkerInputs } from "@/lib/server/numo/worker-mediation";
 import {
   AmbiguousToolExecutionError,
   getModelInputModalities,
@@ -56,6 +57,7 @@ import type { ToolExecution } from "@/lib/server/assistant/execute-tool";
 import { parseAgentDelegationResult } from "@/lib/server/agent/agent-contract";
 import {
   deliverAgentDelegationResult,
+  discardPendingWorkerMessages,
   getRun,
   notifyDelegatedAgentRun,
 } from "@/lib/server/agent/runs";
@@ -313,10 +315,11 @@ function workerDelegationResult(workerEvent: {
 }
 
 export async function beginNumoTurn(input: BeginNumoTurnInput): Promise<NumoTurn> {
+  const admissionStartedAt = performance.now();
   const service = getServiceClient();
   const messageId = randomUUID();
-  const protectedMessage = await shouldProtectNumoUserMessages(service)
-    ? await encodeNumoUserMessage(input.userId, messageId, {
+  const prepareUserMessage = async () => await shouldProtectNumoUserMessages(service)
+    ? encodeNumoUserMessage(input.userId, messageId, {
         content: input.content,
         context: input.context as Record<string, unknown> | null,
         metadata: input.metadata,
@@ -324,10 +327,15 @@ export async function beginNumoTurn(input: BeginNumoTurnInput): Promise<NumoTurn
         tool_call_id: null,
         tool_name: null,
       }) : null;
-  const intent = await shouldProtectNumoTurnIntent(service)
-    ? await encodeNumoTurnIntent(input.userId, input.conversationId,
+  const prepareIntent = async () => await shouldProtectNumoTurnIntent(service)
+    ? encodeNumoTurnIntent(input.userId, input.conversationId,
       input.requestId, input.intent as unknown as Record<string, unknown>)
     : input.intent;
+  // The two protected payloads have independent bindings. Prepare both before
+  // the authoritative admission RPC instead of serializing their scope reads.
+  const [protectedMessage, intent] = await Promise.all([prepareUserMessage(), prepareIntent()]);
+  console.info("[numo-chat] timing", { requestId: input.requestId, phase: "admission_protection_prepared",
+    admissionElapsedMs: Math.round(performance.now() - admissionStartedAt) });
   const params = {
     p_conversation_id: input.conversationId,
     p_user_id: input.userId,
@@ -377,6 +385,8 @@ interface DurableEmitter extends SafeEmitter {
   flush(): Promise<void>;
 }
 
+const DURABLE_ACTIVITY_FLUSH_MS = 250;
+
 /** Persists replay-safe activity while forwarding the lower-latency live feed. */
 export function createDurableNumoEmitter(
   service: SupabaseClient,
@@ -391,6 +401,8 @@ export function createDurableNumoEmitter(
   let pendingReasoning: string | null = null;
   let chain = Promise.resolve();
   let closed = false;
+  let terminal = false;
+  let activityTimer: ReturnType<typeof setTimeout> | null = null;
   const enqueue = (operation: () => Promise<void>) => {
     chain = chain.then(operation).catch(() => {
       // Activity is a replay projection. The durable turn checkpoint remains the
@@ -443,26 +455,47 @@ export function createDurableNumoEmitter(
     append("reasoning_delta", { text });
   };
 
+  const flushActivity = () => {
+    if (activityTimer) clearTimeout(activityTimer);
+    activityTimer = null;
+    flushContent();
+    flushReasoning();
+  };
+  const scheduleActivity = () => {
+    if (activityTimer || closed || terminal) return;
+    // Reconnected readers follow the durable journal rather than the original
+    // HTTP stream. Publish partial output while the provider is still running.
+    activityTimer = setTimeout(flushActivity, DURABLE_ACTIVITY_FLUSH_MS);
+  };
+
   return {
     emit(event, data) {
+      if (closed || terminal) return;
       live?.emit(event, data);
       if (event === "content_delta") {
         const delta = (data as { delta?: unknown } | null)?.delta;
-        if (typeof delta === "string") pendingContent += delta;
+        if (typeof delta === "string" && delta) {
+          pendingContent += delta;
+          scheduleActivity();
+        }
         return;
       }
       if (event === "reasoning_delta") {
         const text = (data as { text?: unknown } | null)?.text;
-        if (typeof text === "string") pendingReasoning = text;
+        if (typeof text === "string") {
+          pendingReasoning = text;
+          scheduleActivity();
+        }
         return;
       }
       if (event === "reasoning_tick" || event === "tool_result") return;
-      flushContent();
-      flushReasoning();
+      flushActivity();
       append(event, data);
+      if (event === "done" || event === "error") terminal = true;
     },
     close() {
       if (closed) return;
+      flushActivity();
       closed = true;
       live?.close();
     },
@@ -470,8 +503,7 @@ export function createDurableNumoEmitter(
       return closed || live?.isClosed === true;
     },
     async flush() {
-      flushContent();
-      flushReasoning();
+      flushActivity();
       await chain;
     },
   };
@@ -848,9 +880,11 @@ export function signalNumoTurnStopInProcess(turnId: string): boolean {
 }
 
 async function stopRequested(service: SupabaseClient, turnId: string, claimToken: string) {
-  const { data } = await service.from("numo_assistant_turns")
+  const { data, error } = await service.from("numo_assistant_turns")
     .select("status").eq("id", turnId).eq("claim_token", claimToken).maybeSingle();
-  return (data as { status?: string } | null)?.status === "stopping";
+  if (error) throw new Error("Unable to read Numo execution authority");
+  // A stolen/cleared claim must stop its old provider request too.
+  return !data || (data as { status?: string }).status !== "running";
 }
 
 /**
@@ -860,6 +894,12 @@ async function stopRequested(service: SupabaseClient, turnId: string, claimToken
  * same cascade as the SQL stop RPC, for the in-process paths.
  */
 async function interruptTurnWorkers(service: SupabaseClient, turnId: string) {
+  const { data: authority, error: authorityError } = await service
+    .from("numo_assistant_turns").select("status").eq("id", turnId).maybeSingle();
+  if (authorityError) throw new Error("Unable to read Numo stop scope");
+  // Individual worker stops retire the parent atomically. Global stops have
+  // already cascaded in SQL; an executor with a revoked claim cannot widen it.
+  if (!authority || authority.status === "stopped") return;
   const { error } = await service.from("agent_runs")
     .update({ interrupt_requested: true })
     .eq("parent_numo_turn_id", turnId)
@@ -979,9 +1019,8 @@ async function executeNumoTurnCore(input: {
   // The DB `stopping` status stays the cross-instance authority: the local
   // flag only shortens the path when the stop POST lands in this process.
   let localStopRequested = false;
-  turnStopSignals.set(claimed.id, () => {
-    localStopRequested = true;
-  });
+  const signalLocalStop = () => { localStopRequested = true; };
+  turnStopSignals.set(claimed.id, signalLocalStop);
   try {
     return await executeClaimedNumoTurn({
       turnId: input.turnId,
@@ -992,6 +1031,7 @@ async function executeNumoTurnCore(input: {
       aiRuntime: input.aiRuntime,
       allowRetryable: input.allowRetryable === true,
       isStopRequestedLocally: () => localStopRequested,
+      signalLocalStop,
     });
   } finally {
     turnStopSignals.delete(claimed.id);
@@ -1007,10 +1047,12 @@ async function executeClaimedNumoTurn(input: {
   aiRuntime?: ResolvedAiRuntime;
   allowRetryable?: boolean;
   isStopRequestedLocally: () => boolean;
+  signalLocalStop: () => void;
 }): Promise<ExecuteNumoTurnResult> {
   const service = getServiceClient();
   const claimToken = input.claimToken;
   const claimed = input.turn;
+  const executionStartedAt = performance.now();
   let latestCheckpoint = claimed.checkpoint;
   let latestActiveRunId = claimed.active_run_id;
 
@@ -1090,6 +1132,8 @@ async function executeClaimedNumoTurn(input: {
       runtime,
       background,
     });
+    console.info("[numo-chat] timing", { requestId: claimed.request_id,
+      phase: "execution_prepared", executionElapsedMs: Math.round(performance.now() - executionStartedAt) });
     const result = await processChat(execution.messages, execution.tools, emitter, {
       projectId: claimed.intent.projectId,
       requireExplicitProjectTarget: true,
@@ -1182,14 +1226,24 @@ async function executeClaimedNumoTurn(input: {
         // contributor above re-registers this exact callback so an event stop
         // also unblocks a pending stream read. The registry value is replaced,
         // not stacked: only the live execution of this turn listens.
-        turnStopSignals.set(claimed.id, notify);
+        const signal = () => {
+          // Keep the turn-level latch set between generation rounds and tools.
+          input.signalLocalStop();
+          notify();
+        };
+        turnStopSignals.set(claimed.id, signal);
         return () => {
-          if (turnStopSignals.get(claimed.id) === notify) {
-            turnStopSignals.delete(claimed.id);
+          if (turnStopSignals.get(claimed.id) === signal) {
+            turnStopSignals.set(claimed.id, input.signalLocalStop);
           }
         };
       },
-      beforeGeneration: () => ensureNumoOperationBudget(claimed, runtime),
+      beforeGeneration: async (roundCount) => {
+        await ensureNumoOperationBudget(claimed, runtime);
+        console.info("[numo-chat] timing", { requestId: claimed.request_id,
+          phase: "generation_ready", roundCount,
+          executionElapsedMs: Math.round(performance.now() - executionStartedAt) });
+      },
       onGeneration: async (generation, roundCount) => {
         await recordAiUsage({
           runId: claimed.run_id,
@@ -1380,6 +1434,8 @@ async function executeClaimedNumoTurn(input: {
         emitter.close();
         return { status: stopped.status, turn: stopped };
       }
+      emitter.emit("done", { status: current.status });
+      await emitter.flush();
       emitter.close();
       return { status: current.status, turn: current };
     }
@@ -1503,18 +1559,146 @@ export async function resumeNumoTurnFromWorker(input: {
 }
 
 export async function requestNumoTurnStop(conversationId: string, userId: string) {
-  const { data, error } = await getServiceClient().rpc("request_numo_turn_stop", {
-    p_conversation_id: conversationId,
-    p_user_id: userId,
-  });
+  const service = getServiceClient();
+  const { data, error } = await service.from("numo_assistant_turns")
+    .select("request_id").eq("conversation_id", conversationId).eq("user_id", userId)
+    .in("status", ["queued", "running", "stopping", "waiting_work", "waiting_input", "retryable", "reconciling"])
+    .order("created_at", { ascending: false }).order("id", { ascending: false })
+    .limit(1).maybeSingle();
   if (error) throw new Error(error.message);
-  const turn = compositeRow<NumoTurn>(data);
-  if (turn && turn.status === "stopping") {
-    // The stop was recorded; if the executing turn lives in this process,
-    // wake it now instead of on the next 1 s poll.
-    signalLocalTurnStop(turn.id);
+  if (!data) return null;
+  const stopped = await requestNumoRequestStop({
+    conversationId, userId, requestId: data.request_id as string,
+  });
+  const { data: turn, error: readError } = await service.from("numo_assistant_turns")
+    .select("*").eq("id", stopped.id).eq("user_id", userId).single();
+  if (readError || !turn) throw new Error("Unable to read stopped Numo turn");
+  return hydrateNumoTurn(turn as NumoTurn, userId);
+}
+
+/** Stop the exact browser request, including one whose admission has not finished. */
+export async function requestNumoRequestStop(input: {
+  conversationId: string;
+  requestId: string;
+  userId: string;
+  stopStartedAt?: number;
+}): Promise<{ id: string; status: NumoTurnStatus }> {
+  const service = getServiceClient();
+  const stopStartedAt = input.stopStartedAt ?? performance.now();
+  const timing = (phase: string) => console.info("[numo-stop] timing", {
+    requestId: input.requestId, phase, elapsedMs: Math.round(performance.now() - stopStartedAt),
+  });
+  // Projection work must not delay the authority write that aborts execution.
+  const conversationVersionRead = Promise.resolve(service.from("conversations")
+    .select("updated_at").eq("id", input.conversationId).eq("user_id", input.userId).maybeSingle())
+    .catch(() => ({ data: null, error: { message: "Unable to read Numo conversation version" } }));
+  const retire = async () => {
+    const { data, error } = await service
+      .from("numo_assistant_turns").update({
+        status: "stopped", claim_token: null, claimed_at: null,
+        completed_at: new Date().toISOString(), error_message: null,
+        updated_at: new Date().toISOString(),
+      }).eq("conversation_id", input.conversationId).eq("user_id", input.userId)
+      .eq("request_id", input.requestId)
+      .in("status", ["queued", "running", "stopping", "waiting_work", "waiting_input", "retryable", "reconciling"])
+      .select("id,status").maybeSingle();
+    if (error) throw new Error("Unable to retire Numo execution authority");
+    if (data) {
+      signalLocalTurnStop(data.id as string);
+      timing("execution_revoked");
+    }
+    return data as { id: string; status: NumoTurnStatus } | null;
+  };
+  let turn = await retire();
+  if (!turn) {
+    const { data, error } = await service.from("numo_assistant_turns")
+      .select("id,status").eq("conversation_id", input.conversationId)
+      .eq("user_id", input.userId).eq("request_id", input.requestId).maybeSingle();
+    if (error) throw new Error("Numo request is unavailable");
+    turn = data as { id: string; status: NumoTurnStatus } | null;
+    if (!turn) {
+      // Only pre-admission cancellation needs a new, protected intent receipt.
+      // Admission returns this request before reserving budget or saving a message.
+      const intent = await shouldProtectNumoTurnIntent(service)
+        ? await encodeNumoTurnIntent(input.userId, input.conversationId, input.requestId, {}) : {};
+      const { data: receipt, error: insertError } = await service
+        .from("numo_assistant_turns").insert({
+          conversation_id: input.conversationId, user_id: input.userId,
+          request_id: input.requestId, run_id: randomUUID(), status: "stopped",
+          intent, completed_at: new Date().toISOString(),
+        }).select("id,status").single();
+      if (!insertError) return receipt as { id: string; status: NumoTurnStatus };
+      if (insertError.code !== "23505") throw new Error("Unable to record Numo request stop");
+      // Admission may have won between the miss and receipt insertion.
+      turn = await retire();
+      if (!turn) {
+        const { data: existing, error: existingError } = await service.from("numo_assistant_turns")
+          .select("id,status").eq("conversation_id", input.conversationId)
+          .eq("user_id", input.userId).eq("request_id", input.requestId).single();
+        if (existingError || !existing) throw new Error("Numo request is unavailable");
+        turn = existing as { id: string; status: NumoTurnStatus };
+      }
+    }
   }
-  return turn ? hydrateNumoTurn(turn, userId) : null;
+  if (turn.status !== "stopped") return turn;
+  signalLocalTurnStop(turn.id);
+  // Retire authority first: a concurrent worker admission checks its parent's
+  // live status and cannot launch after this boundary. Repeat the cascade on
+  // retries so a failed network write never becomes an acknowledged stop.
+  const [workerRead, workerInterrupt] = await Promise.all([
+    service.from("agent_runs").select("id").eq("parent_numo_turn_id", turn.id),
+    service.from("agent_runs").update({ interrupt_requested: true }).eq("parent_numo_turn_id", turn.id)
+      .in("status", ["queued", "running"]),
+    cancelStoppedTurnWorkerInputs(turn.id),
+  ]);
+  const { data: workers, error: workersError } = workerRead;
+  if (workersError) throw new Error("Unable to read Numo stop scope");
+  if (workerInterrupt.error) throw new Error("Unable to stop Numo workers");
+  const workerIds = (workers ?? []).map(worker => worker.id as string);
+  await Promise.all(workerIds.map(discardPendingWorkerMessages));
+  const { data: conversationVersion, error: versionError } = await conversationVersionRead;
+  if (versionError) throw new Error("Unable to read Numo conversation version");
+  if (conversationVersion?.updated_at) {
+    const { data: newest, error: newestError } = await service.from("numo_assistant_turns")
+      .select("id").eq("conversation_id", input.conversationId).eq("user_id", input.userId)
+      .or("status.neq.stopped,model.not.is.null,attempts.gt.0")
+      .order("created_at", { ascending: false }).order("id", { ascending: false }).limit(1).maybeSingle();
+    if (newestError) throw new Error("Unable to read Numo conversation projection");
+    if (newest?.id === turn.id) {
+      // A new admission updates the conversation in its own transaction. The
+      // version comparison prevents this old Stop from resetting its status.
+      const { error } = await service.from("conversations").update({
+        status: "idle", error_message: null, updated_at: new Date().toISOString(),
+      }).eq("id", input.conversationId).eq("user_id", input.userId)
+        .eq("updated_at", conversationVersion.updated_at);
+      if (error) throw new Error("Unable to project stopped Numo conversation");
+    }
+  }
+  console.info("[numo-stop] request recorded", {
+    turnId: turn.id, requestId: input.requestId, status: turn.status,
+  });
+  timing("cleanup_done");
+  return turn;
+}
+
+/** Finish a Stop that raced with a submission being routed into an existing worker. */
+export async function stopCanceledNumoMediation(input: {
+  conversationId: string;
+  requestId: string;
+  userId: string;
+  parentTurnId: string;
+}): Promise<{ id: string; status: NumoTurnStatus } | null> {
+  const service = getServiceClient();
+  const { data: receipt, error } = await service.from("numo_assistant_turns")
+    .select("id").eq("conversation_id", input.conversationId).eq("user_id", input.userId)
+    .eq("request_id", input.requestId).eq("status", "stopped").maybeSingle();
+  if (error) throw new Error("Unable to read mediated Numo submission authority");
+  if (!receipt) return null;
+  const { data: parent, error: parentError } = await service.from("numo_assistant_turns")
+    .select("request_id").eq("id", input.parentTurnId).eq("conversation_id", input.conversationId)
+    .eq("user_id", input.userId).single();
+  if (parentError || !parent) throw new Error("Unable to authorize canceled Numo mediation");
+  return requestNumoRequestStop({ ...input, requestId: parent.request_id as string });
 }
 
 export async function retryNumoTurn(conversationId: string, userId: string) {

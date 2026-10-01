@@ -36,6 +36,8 @@ export async function GET(
     .from("numo_assistant_turns")
     .select("id, status, error_message, last_event_seq, active_run_id, updated_at")
     .eq("conversation_id", conversationId)
+    // A pre-admission Stop receipt must not mask a newer admitted request.
+    .or("status.neq.stopped,model.not.is.null,attempts.gt.0")
     .order("created_at", { ascending: false })
     .order("id", { ascending: false })
     .limit(1)

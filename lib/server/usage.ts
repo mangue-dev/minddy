@@ -112,6 +112,13 @@ export async function getUsagePeriod(
 ): Promise<UsagePeriod> {
   const { start, end } = getBillingWindow(billing);
   const resetAt = await latestQuotaResetAt(userId);
+  return usagePeriodAfterReset({ start, end }, resetAt);
+}
+
+function usagePeriodAfterReset(
+  { start, end }: UsagePeriod,
+  resetAt: string | null,
+): UsagePeriod {
   return { start: resetAt && resetAt > start ? resetAt : start, end };
 }
 
@@ -128,8 +135,19 @@ function roundUsd(value: number): number {
 
 /** Spent + breakdown by user feature on their current window. */
 export async function getUserUsage(userId: string): Promise<UserUsage> {
-  const billing = await getResolvedBilling(userId);
-  const period = await getUsagePeriod(userId, billing);
+  // Resolve the billing window as soon as billing returns, while the
+  // independent quota-reset query is already in flight.
+  const [billingRead, resetRead] = await Promise.allSettled([
+    getResolvedBilling(userId).then((billing) => ({
+      billing,
+      window: getBillingWindow(billing),
+    })),
+    latestQuotaResetAt(userId),
+  ]);
+  if (billingRead.status === "rejected") throw billingRead.reason;
+  if (resetRead.status === "rejected") throw resetRead.reason;
+  const { billing, window } = billingRead.value;
+  const period = usagePeriodAfterReset(window, resetRead.value);
 
   const service = getServiceClient();
   const { data, error } = await service.rpc("get_user_usage_since", {
@@ -176,9 +194,18 @@ export async function ensureUsageBudget(
   surface?: AiSurface,
   modelKeys?: ByokModelKey | readonly ByokModelKey[],
 ): Promise<UserUsage> {
-  const usage = await getUserUsage(userId);
-  if (!isManagedAiEnabled()) return usage;
-  if (surface && modelKeys && (await usesByokForSurface(userId, surface, modelKeys))) return usage;
+  const managed = isManagedAiEnabled();
+  const [usageRead, byokRead] = await Promise.allSettled([
+    getUserUsage(userId),
+    managed && surface && modelKeys
+      ? usesByokForSurface(userId, surface, modelKeys)
+      : Promise.resolve(false),
+  ]);
+  // Preserve usage-read error precedence while overlapping independent reads.
+  if (usageRead.status === "rejected") throw usageRead.reason;
+  if (byokRead.status === "rejected") throw byokRead.reason;
+  const usage = usageRead.value;
+  if (!managed || byokRead.value) return usage;
   const included = usage.billing.plan.includedUsageUsd;
   if (usage.usedUsd >= included) {
     throw new PlanLimitError("usage_budget_exceeded", {
