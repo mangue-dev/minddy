@@ -37,10 +37,15 @@ export function requestLines(body: string): string[] {
   return body
     .split(/\r?\n/)
     .filter((line) => {
-      const marker = line.trim().match(/^(`{3,}|~{3,})/);
+      const marker = line.trim().match(/^(`{3,}|~{3,})(.*)$/);
       if (marker) {
-        if (!fence) fence = marker[1][0];
-        else if (marker[1][0] === fence) fence = null;
+        if (!fence) fence = marker[1];
+        else if (
+          marker[1][0] === fence[0] &&
+          marker[1].length >= fence.length &&
+          !marker[2].trim()
+        )
+          fence = null;
         return false;
       }
       return !fence && !/^\s*>/.test(line);

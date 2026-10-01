@@ -225,6 +225,44 @@ describe("provider formats", () => {
     expect(codex.isRequest("@codex fix the bug")).toBe(false);
     expect(coderabbit.isRequest("@coderabbitai summary")).toBe(false);
   });
+  it.each(["````", "~~~~"])(
+    "keeps nested examples inside a %s fence from creating review cards",
+    (fence) => {
+      const innerFence = fence.slice(1);
+      const body = [
+        `${fence}markdown`,
+        innerFence,
+        ...AI_REVIEW_PROVIDERS.map((provider) => provider.requestCommand),
+        innerFence,
+        fence,
+      ].join("\n");
+      expect(statuses({ comments: [comment(1, body)] })).toEqual([]);
+    },
+  );
+  it.each(["````", "~~~~"])(
+    "requires a valid closing delimiter for a %s fence",
+    (fence) => {
+      for (const provider of AI_REVIEW_PROVIDERS) {
+        const otherFence = fence[0] === "`" ? "~~~~" : "````";
+        for (const invalidCloser of [fence.slice(1), otherFence, `${fence}text`]) {
+          expect(
+            provider.isRequest(
+              [`${fence}markdown`, invalidCloser, provider.requestCommand].join(
+                "\n",
+              ),
+            ),
+          ).toBe(false);
+        }
+        for (const closer of [fence, `${fence}${fence[0]}  `]) {
+          expect(
+            provider.isRequest(
+              [`${fence}markdown`, closer, provider.requestCommand].join("\n"),
+            ),
+          ).toBe(true);
+        }
+      }
+    },
+  );
   it("recognizes clean Codex output and review quota failures without classifying arbitrary replies", () => {
     expect(
       codex.parseMessage({
