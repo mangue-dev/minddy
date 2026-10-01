@@ -18,6 +18,7 @@ import {
   parseSmartTriageMode,
   DEFAULT_SMART_TRIAGE_MODE,
   triageAgeDays,
+  triageBlockedComparator,
   triageIssueComparator,
   type SmartTriageMove,
   type SmartTriageMode,
@@ -294,7 +295,11 @@ export async function runSmartTriage({
         // `jevTriageOrder` copies its input, so the head rows keep their
         // `category_ids`/`title` for the writes below.
         const orderedHead = jevTriageOrder(decision.head, decision.scores);
-        ordered = [...orderedHead, ...rulesOrder.slice(decision.head.length)] as TriageIssueRow[];
+        // A score cannot make blocked work actionable, including when an
+        // unscored ticket sits beyond the decision cap. Keep the engine's
+        // order within the actionable and blocked groups.
+        ordered = [...orderedHead, ...rulesOrder.slice(decision.head.length)]
+          .sort(triageBlockedComparator(ctx)) as TriageIssueRow[];
         for (const [id, score] of decision.scores) {
           if (score !== null) scores[id] = score;
         }
