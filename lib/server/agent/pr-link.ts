@@ -18,25 +18,10 @@ import {
   type PullRequestRow,
 } from "./pull-requests";
 
-/**
- * HAND attach a pull request to a ticket — the RULE, once, for
- * the three surfaces that carry it (MIN-163): the app dialog (route
- * `pull-requests/[prId]`), the MCP (`minddy_link_pull_request`) and Numo
- * (`link_pull_request`).
- *
- * It lived in the HTTP handler, that is to say nowhere reusable: the
- * rewriting for each agent is giving yourself three versions of a refusal which must
- * be the same. What remains for the caller, and cannot go down, is
- * ACCESS: each surface has its own guard (RLS of the authenticated client for
- * the app, `requireProject` for the MCP, `assertIssueInProject` for Numo). The
- * heart therefore receives a ticket ALREADY authorized, and only judges the attachment.
- *
- * The meaning is UNIQUE, like `setPullRequestIssue`: we bind, we do not unbind. The
- * link is definitive on the product side, and a detachment would in any case be reestablished on the next scan if the branch still carries the reference.
- */
+/** Shared manual linking rules for the app, MCP, and Numo. Callers authorize the issue. */
 
 export type PrLinkRefusal =
-  /** The PR ALREADY has another ticket — a link cannot be replaced. */
+  /** The PR disappeared or the atomic write could not complete. */
   | "pr_already_linked"
   /** The ticket already has a LIVING PR (draft or open). */
   | "issue_already_linked"
@@ -58,14 +43,7 @@ export type PrLinkResult =
     }
   | { ok: false; code: PrLinkRefusal };
 
-/**
- * Sets the link, or says why it is not set.
- *
- * The already-linked splits into TWO cases, because they don't mean the same
- * thing: the same PR on the same ticket, it's the gesture already made (`already`) —
- * an agent who replays his call must find a success, not an error; the
- * same PR on ANOTHER ticket, it's a real conflict.
- */
+/** Append an association; repeating the same link succeeds without changing issue status. */
 export async function linkPullRequestToIssue(opts: {
   pr: PullRequestRow;
   /** Ticket already authorized by the caller (existing, visible, not in the trash). */
@@ -74,9 +52,6 @@ export async function linkPullRequestToIssue(opts: {
 }): Promise<PrLinkResult> {
   const { pr, issue, actorId } = opts;
   const status = issueStatusForPrState(pr.state);
-
-  if (pr.issue_id === issue.id) return { ok: true, already: true, status };
-  if (pr.issue_id) return { ok: false, code: "pr_already_linked" };
 
   // The exact perimeter of the conventional route (`resolveIssueForPr`): a
   // ticket only attaches to a PR of a repository that its project links.

@@ -12253,5 +12253,70 @@
       "domain"
     ],
     "foreignKeys": []
+  },
+  "pull_request_issues": {
+    "columns": {
+      "issue_id": {
+        "type": "uuid",
+        "nullable": false,
+        "generated": false
+      },
+      "created_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      },
+      "pull_request_id": {
+        "type": "uuid",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "pull_request_id",
+      "issue_id"
+    ],
+    "foreignKeys": [
+      {
+        "table": "issues",
+        "column": "issue_id",
+        "targetColumn": "id"
+      },
+      {
+        "table": "pull_requests",
+        "column": "pull_request_id",
+        "targetColumn": "id"
+      }
+    ]
+  },
+  "pull_request_issue_unlinks": {
+    "columns": {
+      "issue_id": {
+        "type": "uuid",
+        "nullable": false,
+        "generated": false
+      },
+      "pull_request_id": {
+        "type": "uuid",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "pull_request_id",
+      "issue_id"
+    ],
+    "foreignKeys": [
+      {
+        "table": "issues",
+        "column": "issue_id",
+        "targetColumn": "id"
+      },
+      {
+        "table": "pull_requests",
+        "column": "pull_request_id",
+        "targetColumn": "id"
+      }
+    ]
   }
 }

@@ -20,6 +20,7 @@ import { EmptyScene } from "@/components/empty-scene";
 import { GitLogin } from "@/components/git/git-login";
 import { ForgeUserAvatar } from "@/components/git/forge-user-avatar";
 import { NumoIcon } from "@/components/numo-icon";
+import { linkedIssues } from "./pr-linked-issues";
 import { PrReadinessIcon } from "@/components/pull-requests/pr-readiness";
 import { PrStateBadge } from "@/components/pull-requests/pr-state-badge";
 import { SearchMenu } from "@/components/search-menu";
@@ -308,6 +309,7 @@ function PrRow({
             <>
               <HugeiconsIcon icon={Link02Icon} data-testid="pr-sidebar-issue-link-icon" className="size-3 shrink-0" aria-hidden />
               <span className="truncate">{linkedIssue}</span>
+              {linkedIssues(pr).length > 1 ? <span className="shrink-0">+{linkedIssues(pr).length - 1}</span> : null}
             </>
           ) : null}
         </span>
@@ -635,7 +637,7 @@ export function PullRequestsPage() {
         p.author?.login,
         `#${p.pr_number}`,
         p.project?.name,
-        p.issue?.title,
+        ...linkedIssues(p).flatMap((issue) => [issue.title, issueIdentifier(issue.project_key, issue.number)]),
         p.project && p.issue
           ? issueIdentifier(p.project.key, p.issue.number)
           : null,

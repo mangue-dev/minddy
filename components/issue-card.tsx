@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { AiAutoRotateIcon, ArrowRight01Icon, Calendar01Icon, DateTimeIcon, Delete02Icon, ExternalLinkIcon, GitMergeIcon, GitPullRequestDraftIcon, GitPullRequestIcon, Link02Icon, RepeatIcon, Target01Icon, TaskDone01Icon, TriangleIcon, UserIcon } from "@hugeicons/core-free-icons";
+import { AiAutoRotateIcon, ArrowRight01Icon, Calendar01Icon, DateTimeIcon, Delete02Icon, ExternalLinkIcon, GitMergeIcon, GitPullRequestDraftIcon, GitPullRequestIcon, Link02Icon, LinkBackwardIcon, RepeatIcon, Target01Icon, TaskDone01Icon, TriangleIcon, UserIcon } from "@hugeicons/core-free-icons";
 import {
   memo,
   useCallback,
@@ -16,6 +16,7 @@ import { useTranslations, useFormatter } from "next-intl";
 import { ConfirmDeleteDialog, Spinner, cn, toast } from "mangue-ui";
 import { AppIcon } from "@/components/icon";
 import { AgentBeam } from "@/components/agent-beam";
+import { useUnlinkPullRequestIssue } from "@/lib/use-unlink-pull-request-issue";
 import { useAgentMenuActions } from "@/components/agent/use-agent-menu-actions";
 import {
   CustomPromptDialog,
@@ -959,6 +960,8 @@ const IssueCardContent = memo(function IssueCardContent({
   const t = useTranslations("IssueUI");
   const tRel = useTranslations("Relations");
   const tAttach = useTranslations("Resources");
+  const tPr = useTranslations("PullRequests");
+  const unlinkPr = useUnlinkPullRequestIssue();
   const tAgent = useTranslations("Agent");
   const tPlan = useTranslations("Plan");
   const tCommon = useTranslations("Common");
@@ -1398,6 +1401,14 @@ const IssueCardContent = memo(function IssueCardContent({
             },
           ]
         : []),
+      ...(pr ? [{
+        id: "unlink-pr",
+        label: tPr("unlinkIssue"),
+        keywords: ["unlink", "detach", "pull request", "pr"],
+        icon: <HugeiconsIcon icon={LinkBackwardIcon} className="size-4" />,
+        disabled: unlinkPr.isPending,
+        onSelect: () => unlinkPr.mutate({ prId: pr.prId, issueId: issue.id, identifier }),
+      }] : []),
       // Relations (MIN-25 / MIN-30): grouped under a "Relations" submenu. Each
       // leaf opens the target-issue picker at the pointer. Shown only when the
       // board wired the relation handlers.
@@ -1481,6 +1492,10 @@ const IssueCardContent = memo(function IssueCardContent({
     agentActions,
     pr,
     openPr,
+    unlinkPr.isPending,
+    unlinkPr.mutate,
+    identifier,
+    tPr,
     appTabs,
     onAddRelation,
     issue,

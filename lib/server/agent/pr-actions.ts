@@ -43,6 +43,7 @@ import {
 } from "./runs";
 import {
   findPullRequest,
+  pullRequestIssueIds,
   prStateFromRef,
   resolvePrForRun,
   rowProvider,
@@ -108,9 +109,9 @@ import {
  * implementation and forge errors are translated to HTTP in one place.
  *
  * The ticket link moved to the PR. `syncIssueStatusFromPr` and activity tracking
- * read `pull_requests.issue_id` instead of `run.issue_id`: a human PR can now
- * carry a ticket, rather than this being limited to Numo PRs. A PR without a
- * ticket silently synchronizes and records nothing; that is a normal case.
+ * read the current `pull_request_issues` associations. Human and Numo PRs can
+ * carry several tickets. A PR without a ticket silently synchronizes and
+ * records nothing; that is a normal case.
  */
 
 /**
@@ -937,9 +938,9 @@ export async function createPrCommentResponse(
     broadcastPrChanged(scope.pr.id, ["conversation"]);
     // Record “commented on the PR” on the linked ticket only after publication;
     // a message rejected by the forge does not exist for anyone.
-    if (scope.pr.issue_id) {
+    for (const issueId of await pullRequestIssueIds(scope.pr.id)) {
       await recordPrActionEvent(
-        scope.pr.issue_id,
+        issueId,
         userId,
         "pr_commented",
         scope.pr.number,
@@ -1458,14 +1459,15 @@ export async function createPrReviewCommentResponse(
       would overwhelm the ticket journal. */
   const trace = async () => {
     broadcastPrChanged(scope.pr.id, ["reviewComments"]);
-    if (!scope.pr.issue_id) return;
-    await recordPrActionEvent(
-      scope.pr.issue_id,
-      userId,
-      "pr_code_commented",
-      scope.pr.number,
-      scope.target.provider,
-    );
+    for (const issueId of await pullRequestIssueIds(scope.pr.id)) {
+      await recordPrActionEvent(
+        issueId,
+        userId,
+        "pr_code_commented",
+        scope.pr.number,
+        scope.target.provider,
+      );
+    }
   };
   try {
     if (payload.inReplyTo != null) {
@@ -1960,9 +1962,9 @@ async function propagatePrState(
     provider: scope.target.provider,
   });
   const currentState = runs[0]?.prState ?? state;
-  if (scope.pr.issue_id) {
+  for (const issueId of await pullRequestIssueIds(scope.pr.id)) {
     await syncIssueStatusFromPr({
-      issueId: scope.pr.issue_id,
+      issueId,
       actorId,
       prState: currentState,
     });
@@ -2040,35 +2042,7 @@ const LINK_REFUSAL_KEYS = {
   issue_outside_repo: "issueOutsideRepo",
 } as const satisfies Record<PrLinkRefusal, string>;
 
-/**
- * `link_issue`—manually attach a ticket to a PR that has none (MIN-163).
- *
- * The normal link is convention-based (project key in the branch or title, or a
- * `Fixes:` line) and is created during ingestion. When that convention was not
- * followed, the PR remained orphaned because neither the UI nor API could add
- * the link later.
- *
- * The link is final, which determines these rules:
- * - reject a PR that is already linked (409); the link cannot be replaced;
- * - make the database write conditional and atomic so two tabs selecting
- *   different tickets cannot silently overwrite each other;
- * - reject a ticket that already has a live PR (409). This preserves “one
- *   ticket, one PR” for active work while allowing several terminal PRs over the
- *   lifetime of a ticket Numo handled more than once.
- *
- * This requires no forge call because the link is a minddy fact, so there is no
- * `requireActor`. The result is still reread with the authenticated client,
- * whose RLS is the gate, and the ticket project must link this repository—the
- * exact scope used by conventional `resolveIssueForPr` linking.
- *
- * The ticket status then follows the PR through the same path used everywhere:
- * open becomes `in_review`, draft becomes `in_progress`, merged becomes `done`,
- * and closed becomes `todo`.
- *
- * The rule itself lives in `linkPullRequestToIssue`, shared by MCP and Numo
- * (MIN-163bis). This function contains only HTTP-specific behavior:
- * access via the RLS, and the translation of refusals into status codes.
- */
+/** Authorize the issue through RLS, then append it using the shared linking rules. */
 export async function prLinkIssueResponse(
   scope: PrScope,
   supabase: SupabaseClient,
@@ -2079,11 +2053,6 @@ export async function prLinkIssueResponse(
   if (!UUID_RE.test(issueId)) {
     return NextResponse.json({ error: "Invalid issue id" }, { status: 400 });
   }
-  // Check before reading the ticket: an already linked PR is rejected regardless
-  // of the requested ticket, and reporting that first avoids a misleading
-  // “ticket not found” response.
-  if (scope.pr.issue_id) return linkRefusal("prAlreadyLinked", 409);
-
   // Use the authenticated client. RLS returns nothing for a ticket the user
   // cannot see, which becomes a 404 without revealing that it exists elsewhere.
   const { data } = await issueStore(supabase).select("id, number, title, project_id, deleted_at")
@@ -2112,16 +2081,38 @@ export async function prLinkIssueResponse(
       ? linkRefusal("issueOutsideRepo", 400)
       : linkRefusal(LINK_REFUSAL_KEYS[result.code], 409);
   }
-  // Repeating the action for the same ticket remains a 409. The app offers this
-  // action only on an unlinked PR, so reaching this case means two tabs raced and
-  // the UI should report it instead of pretending nothing happened.
-  if (result.already) return linkRefusal("prAlreadyLinked", 409);
-
   return NextResponse.json({
     ok: true,
     issue: { id: issue.id, number: issue.number, title: issue.title },
     status: result.status,
   });
+}
+
+/** Remove only the requested association; issue status and forge data stay unchanged. */
+export async function prUnlinkIssueResponse(
+  scope: PrScope,
+  supabase: SupabaseClient,
+  body: PrActionBody,
+): Promise<NextResponse> {
+  const issueId = typeof body.issueId === "string" ? body.issueId.trim() : "";
+  if (!UUID_RE.test(issueId)) {
+    return NextResponse.json({ error: "Invalid issue id" }, { status: 400 });
+  }
+  const { data: issue, error } = await issueStore(supabase).select("id")
+    .eq("id", issueId).is("deleted_at", null).maybeSingle();
+  if (error) return NextResponse.json({ error: "Unable to read issue" }, { status: 500 });
+  if (!issue) return NextResponse.json({ error: "Issue not found" }, { status: 404 });
+  const { data, error: unlinkError } = await getServiceClient()
+    .rpc("unlink_pull_request_from_issue_atomic", { p_pr_id: scope.pr.id, p_issue_id: issueId });
+  if (unlinkError) return NextResponse.json({ error: "Unable to unlink issue" }, { status: 500 });
+  if (data === "pr_not_found") {
+    return NextResponse.json({ error: "Pull request not found" }, { status: 404 });
+  }
+  if (data !== "unlinked" && data !== "already") {
+    return NextResponse.json({ error: "Unable to unlink issue" }, { status: 500 });
+  }
+  broadcastPrChanged(scope.pr.id, ["pr"]);
+  return NextResponse.json({ ok: true });
 }
 
 /** Merge, close, reopen, and draft/review transitions for a pull request. */
@@ -2238,9 +2229,9 @@ export async function prStateActionResponse(
       );
       await propagatePrState(scope, "merged", userId);
       // Record “accepted the PR” in the linked ticket activity.
-      if (scope.pr.issue_id) {
+      for (const issueId of await pullRequestIssueIds(scope.pr.id)) {
         await recordPrActionEvent(
-          scope.pr.issue_id,
+          issueId,
           userId,
           "pr_accepted",
           scope.pr.number,
@@ -2260,9 +2251,9 @@ export async function prStateActionResponse(
       // “in progress”, not “in review”.
       const state = prStateFromRef(reopened);
       await propagatePrState(scope, state, userId);
-      if (scope.pr.issue_id) {
+      for (const issueId of await pullRequestIssueIds(scope.pr.id)) {
         await recordPrActionEvent(
-          scope.pr.issue_id,
+          issueId,
           userId,
           "pr_reopened",
           scope.pr.number,
@@ -2298,9 +2289,9 @@ export async function prStateActionResponse(
     await forge.closePullRequest(myCall);
     // A closed PR returns the ticket to `todo`, never `canceled` (MIN-46).
     await propagatePrState(scope, "closed", userId);
-    if (scope.pr.issue_id) {
+    for (const issueId of await pullRequestIssueIds(scope.pr.id)) {
       await recordPrActionEvent(
-        scope.pr.issue_id,
+        issueId,
         userId,
         "pr_rejected",
         scope.pr.number,
@@ -2456,9 +2447,9 @@ async function runAiMergeJob(
       }),
     );
     await propagatePrState(scope, "merged", userId);
-    if (scope.pr.issue_id) {
+    for (const issueId of await pullRequestIssueIds(scope.pr.id)) {
       await recordPrActionEvent(
-        scope.pr.issue_id,
+        issueId,
         userId,
         "pr_accepted",
         scope.pr.number,
@@ -2740,9 +2731,9 @@ export async function prReviewResponse(
   // comment: this is where the user will read "approved the PR". Nothing to
   // trace when no verdict has been given: the revival is told by
   // the agent launch event.
-  if (scope.pr.issue_id && postVerdict) {
+  for (const issueId of postVerdict ? await pullRequestIssueIds(scope.pr.id) : []) {
     await recordPrActionEvent(
-      scope.pr.issue_id,
+      issueId,
       userId,
       eventForVerdict(verdict),
       scope.pr.number,

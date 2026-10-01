@@ -4004,6 +4004,39 @@
       ]
     }
   },
+  "pull_request_issues": {
+    "scope": {
+      "ancestors": [
+        "pull_requests:pull_request_id",
+        "issues:issue_id"
+      ]
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "pull_request_id",
+        "issue_id"
+      ],
+      "timestamp": [
+        "created_at"
+      ]
+    }
+  },
+  "pull_request_issue_unlinks": {
+    "scope": {
+      "ancestors": [
+        "pull_requests:pull_request_id",
+        "issues:issue_id"
+      ]
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "pull_request_id",
+        "issue_id"
+      ]
+    }
+  },
   "pull_request_syncs": {
     "scope": {
       "lookup": "project_git_links",

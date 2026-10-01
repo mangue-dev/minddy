@@ -151,3 +151,12 @@ export function buildAgentActivity(
     pullRequests: pickIssuePullRequests(prRows),
   };
 }
+
+/** Historical runs retain their issue context, but only current links receive PR updates. */
+export function filterLinkedIssueRuns<T extends { issueId: string | null }>(
+  runs: T[],
+  linkedIssueIds: readonly string[],
+): T[] {
+  const linked = new Set(linkedIssueIds);
+  return runs.filter((run) => run.issueId === null || linked.has(run.issueId));
+}

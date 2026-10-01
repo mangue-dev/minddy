@@ -1,3 +1,4 @@
+import { listIssuePullRequests } from "@/lib/server/agent/issue-pull-requests";
 import { isContentEncryptionEnabled } from "@/lib/server/encryption/content-config";
 import { issueStore } from "@/lib/server/issue-store";
 import { NextResponse, type NextRequest } from "next/server";
@@ -66,11 +67,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
       .order("created_at", { ascending: false });
   const [initialRuns, { data: prs }] = await Promise.all([
     readRuns(`${RUN_COLUMNS}, encrypted_launch_content, launch_encryption_version`),
-    service
-      .from("pull_requests")
-      .select("id, issue_id, number, state, updated_at")
-      .eq("issue_id", id)
-      .order("updated_at", { ascending: false }),
+    listIssuePullRequests(auth.supabase, { issueId: id }).then((data) => ({ data })),
   ]);
   const runsResult = legacyAgentLaunchSchema(initialRuns.error)
     ? await readRuns(RUN_COLUMNS) : initialRuns;

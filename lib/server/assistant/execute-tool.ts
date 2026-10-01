@@ -342,7 +342,7 @@ function libError(r: {
  rather than inventing a reason. */
 const PR_LINK_REFUSALS: Record<PrLinkRefusal, string> = {
   pr_already_linked:
-    "This pull request is already attached to another issue. The link is definitive: it cannot be replaced, and there is no unlink.",
+    "The pull request could not be linked. Refresh it and try again.",
   issue_already_linked:
     "This issue already carries a live (draft or open) pull request. Only ONE live pull request per issue.",
   issue_outside_repo:
