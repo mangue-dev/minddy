@@ -102,6 +102,8 @@ import { usePrLive } from "@/lib/use-pr-live";
 import { pullRequestStateToPropagate } from "@/lib/pr-state";
 import { useScrollFade } from "@/lib/use-scroll-fade";
 import { useForgeUploads } from "@/lib/use-forge-uploads";
+import { buildAiReviewStatuses } from "@/lib/pr-ai-review";
+import type { AiReviewProvider } from "@/lib/pr-ai-review/types";
 import { PR_BODY_COMMENT_ID } from "@/lib/pr-review-reactions";
 import { reviewedFileCount, setFileReviewed } from "@/lib/pr-file-review";
 import {
@@ -675,6 +677,15 @@ export function PrDetail({
     refetch: refetchReviewComments,
     loading: reviewCommentsLoading,
   } = usePrReviewCommentsQuery(prEndpoint(item.prId));
+  const [requestedReviewComments, setRequestedReviewComments] = useState<Awaited<ReturnType<typeof postPullRequestCommentApi>>["comment"][]>([]);
+  const [requestingReviewer, setRequestingReviewer] = useState<string | null>(null);
+  const reviewerRequestPending = useRef(false);
+  const aiReviews = useMemo(() => buildAiReviewStatuses({
+    forge: item.provider,
+    comments: [...comments, ...requestedReviewComments.filter((pending) => !comments.some((comment) => comment.id === pending.id))],
+    timeline, reviewComments, reactions: commentReactions,
+    prUrl: pr?.url ?? item.pr_url,
+  }), [item.provider, item.pr_url, pr?.url, comments, requestedReviewComments, timeline, reviewComments, commentReactions]);
   const unresolvedThreads = useMemo(
     () => unresolvedReviewThreads(reviewComments, reviewThreads),
     [reviewComments, reviewThreads],
@@ -1486,6 +1497,24 @@ export function PrDetail({
     setQuoteFocus((n) => n + 1);
   };
 
+  const canRequestExternalReview = canComment && !isTerminal && pr?.state !== "merged" && pr?.state !== "closed";
+  const requestAiReview = useCallback(async (provider: AiReviewProvider) => {
+    if (!canRequestExternalReview || item.provider !== "github" || reviewerRequestPending.current) return;
+    reviewerRequestPending.current = true;
+    setRequestingReviewer(provider.id);
+    try {
+      const { comment } = await postPullRequestCommentApi(item.prId, provider.requestCommand);
+      setRequestedReviewComments((pending) => [...pending, comment]);
+      toast.success(t("cardAiReviewRequestSent", { provider: provider.name }));
+      void refetchComments();
+    } catch {
+      toast.error(t("cardAiReviewRequestFailed", { provider: provider.name }));
+    } finally {
+      reviewerRequestPending.current = false;
+      setRequestingReviewer(null);
+    }
+  }, [canRequestExternalReview, item.provider, item.prId, refetchComments, t]);
+
   const submitComment = async () => {
     const body = commentBody.trim();
     if (!body || posting) return;
@@ -2101,6 +2130,9 @@ export function PrDetail({
               onOpenConversations={() => setUnresolvedSidebarOpen(true)}
               onOpenReviewApprove={() => openReview("approve")}
               onStartFileReview={startFileReview}
+              aiReviews={aiReviews}
+              requestingReviewer={requestingReviewer}
+              onRequestAiReview={canRequestExternalReview ? (provider) => void requestAiReview(provider) : undefined}
               numoReview={numoReviewCard}
               fixRun={fixRunCard}
               numoMerge={numoMerging ? { startedAt: numoMergeStartedAt } : null}
