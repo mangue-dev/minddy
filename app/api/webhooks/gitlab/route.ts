@@ -349,16 +349,14 @@ async function handleMergeRequest(
     ingested?.state ??
     prState;
 
-  // NO run: it's a human MR (MIN-143). This guard was dismissive — it's
-  // he who made them ineffective on the tickets. However, she can wear it
-  // one, by its branch, its title or a closing line: merge it on
-  // GitLab should produce what the merge from minddy produces.
-  if (runs.length === 0) {
+  // Synchronize manual associations; worker issues keep their existing notification path.
+  {
     const echoed =
       !!actionType &&
       isServiceAccountGesture(actionType) &&
       (await isServiceAccount(repoFullName, payload.user));
     await applyForgePrToIssue({
+      excludeIssueIds: runs.map((run) => run.issueId),
       provider: "gitlab",
       repoFullName,
       prNumber: iid,
@@ -368,7 +366,7 @@ async function handleMergeRequest(
       login: payload.user?.username ?? null,
       occurredAt: prEventAt,
     });
-    return;
+    if (runs.length === 0) return;
   }
 
   // Aligns the status of the exits with the new MR state (MIN-46):

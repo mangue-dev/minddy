@@ -1332,8 +1332,7 @@ export function registerMinddyTools(
         "pasting its forge URL; the repository is the one the project links. " +
         "Attaching also ALIGNS the issue's status on the state of the PR: open → in_review, " +
         "draft → in_progress, merged → done, closed → todo (the response says which). " +
-        "The link is DEFINITIVE and there is no unlink: a PR that already carries another " +
-        "issue is refused, and so is an issue that already carries a live (draft or open) " +
+        "A PR may carry multiple issues. An issue that already carries a live (draft or open) " +
         "pull request — several TERMINAL pull requests on one issue are normal. Re-linking " +
         "the same PR to the same issue is not an error, it just reports 'already: true'.",
       inputSchema: z.object({

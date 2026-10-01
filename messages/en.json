@@ -3971,6 +3971,7 @@
     "mergedCommits": "<author>{login}</author> merged {count, plural, one {# commit} other {# commits}} into <branch>{base}</branch> from <branch>{head}</branch>",
     "numoAuthor": "Numo",
     "noLinkedIssue": "No linked issue",
+    "otherLinkedIssues": "{count, plural, one {# other linked issue} other {# other linked issues}}",
     "linkedIssue": "Open the linked issue",
     "linkIssue": "Link an issue",
     "linkIssueSearchPlaceholder": "Search for an issue…",

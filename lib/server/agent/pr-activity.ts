@@ -1,3 +1,4 @@
+import { pullRequestIssueIds } from "./pull-requests";
 import { issueStore } from "@/lib/server/issue-store";
 import "server-only";
 
@@ -422,6 +423,8 @@ export async function applyForgePrToIssue(opts: {
   login: string | null;
   /** Forge instant of the gesture (see `occurredAtOf`) — null keeps capture time. */
   occurredAt?: string | null;
+  /** Worker-owned issues keep their existing activity and notification path. */
+  excludeIssueIds?: (string | null)[];
 }): Promise<void> {
   if (!opts.prState && !opts.actionType) return;
 
@@ -431,62 +434,64 @@ export async function applyForgePrToIssue(opts: {
     number: opts.prNumber,
   });
   // No linked ticket: this is NORMAL for a human PR, not a failure.
-  if (!pr?.issue_id) return;
-  const issueId = pr.issue_id;
+  if (!pr) return;
+  for (const issueId of await pullRequestIssueIds(pr.id)) {
+    if (opts.excludeIssueIds?.includes(issueId)) continue;
 
-  if (opts.prState) {
-    const actorId = await repoWriteActor({
-      provider: opts.provider,
-      repoFullName: opts.repoFullName,
-      issueId,
-    });
-    if (actorId) {
-      await syncIssueStatusFromPr({
+    if (opts.prState) {
+      const actorId = await repoWriteActor({
+        provider: opts.provider,
+        repoFullName: opts.repoFullName,
         issueId,
-        actorId,
-        prState: opts.prState,
-        forgeSync: opts.provider,
       });
+      if (actorId) {
+        await syncIssueStatusFromPr({
+          issueId,
+          actorId,
+          prState: opts.prState,
+          forgeSync: opts.provider,
+        });
+      }
     }
-  }
 
-  // Activity has never needed a minddy actor: `actor_id` is null and the forge
-  // login travels in `from_value` (see `forgeActorValue`).
-  // Except for echoes: since MIN-144, merging a human PR FROM minddy uses the
-  // person's git account, and the caller can no longer distinguish it from a
-  // merge performed on the forge — the route has already recorded it.
-  if (
-    opts.actionType &&
-    !(await isPrActionEcho({
-      issueIds: [issueId],
-      type: opts.actionType,
-      prNumber: opts.prNumber,
-      provider: opts.provider,
-      accountId: opts.accountId,
-      login: opts.login,
-    }))
-  ) {
-    const fromValue = forgeActorValue(opts.provider, opts.login);
-    const targets = await withoutBurstDuplicates({
-      issueIds: [issueId],
-      type: opts.actionType,
-      prNumber: opts.prNumber,
-      fromValue,
-      at: opts.occurredAt,
-    });
-    if (targets.length === 0) return;
-    const occurredAt = occurredAtOf(opts.occurredAt);
-    await insertEvents(getServiceClient(), [
-      {
-        issue_id: issueId,
-        actor_id: null,
+    // Activity has never needed a minddy actor: `actor_id` is null and the forge
+    // login travels in `from_value` (see `forgeActorValue`).
+    // Except for echoes: since MIN-144, merging a human PR FROM minddy uses the
+    // person's git account, and the caller can no longer distinguish it from a
+    // merge performed on the forge — the route has already recorded it.
+    if (
+      opts.actionType &&
+      !(await isPrActionEcho({
+        issueIds: [issueId],
         type: opts.actionType,
-        from_value: fromValue,
-        to_value: String(opts.prNumber),
-        // THE TIME OF THE GESTURE, when the forge said it (see `occurredAtOf`).
-        ...(occurredAt ? { created_at: occurredAt } : {}),
-      },
-    ]);
+        prNumber: opts.prNumber,
+        provider: opts.provider,
+        accountId: opts.accountId,
+        login: opts.login,
+      }))
+    ) {
+      const fromValue = forgeActorValue(opts.provider, opts.login);
+      const targets = await withoutBurstDuplicates({
+        issueIds: [issueId],
+        type: opts.actionType,
+        prNumber: opts.prNumber,
+        fromValue,
+        at: opts.occurredAt,
+      });
+      if (targets.length === 0) continue;
+      const occurredAt = occurredAtOf(opts.occurredAt);
+      await insertEvents(getServiceClient(), [
+        {
+          issue_id: issueId,
+          actor_id: null,
+          type: opts.actionType,
+          from_value: fromValue,
+          to_value: String(opts.prNumber),
+          // THE TIME OF THE GESTURE, when the forge said it (see `occurredAtOf`).
+          ...(occurredAt ? { created_at: occurredAt } : {}),
+        },
+      ]);
+    }
   }
 }
 
@@ -521,10 +526,11 @@ export async function recordForgePrGesture(opts: {
     prNumber: opts.prNumber,
     provider: opts.provider,
   });
-  if (runs.length === 0) {
-    await applyForgePrToIssue({ ...opts, prState: null, actionType: opts.type });
-    return;
-  }
+  await applyForgePrToIssue({
+    ...opts, prState: null, actionType: opts.type,
+    excludeIssueIds: runs.map((run) => run.issueId),
+  });
+  if (runs.length === 0) return;
   const echo = await isPrActionEcho({
     issueIds: runs.map((r) => r.issueId),
     type: opts.type,

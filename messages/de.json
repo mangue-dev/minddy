@@ -3971,6 +3971,7 @@
     "mergedCommits": "<author>{login}</author> hat {count, plural, one {# Commit} other {# Commits}} aus <branch>{head}</branch> in <branch>{base}</branch> zusammengeführt",
     "numoAuthor": "Numo",
     "noLinkedIssue": "Kein verknüpftes Problem",
+    "otherLinkedIssues": "{count, plural, one {# weiteres verknüpftes Ticket} other {# weitere verknüpfte Tickets}}",
     "linkedIssue": "Das verlinkte Problem öffnen",
     "linkIssue": "Ein Problem verknüpfen",
     "linkIssueSearchPlaceholder": "Nach einem Problem suchen…",

@@ -394,12 +394,10 @@ async function handlePullRequest(payload: PullRequestEvent): Promise<void> {
 
   const byHuman = !isBot(payload.sender);
 
-  // NO run behind this PR: it is a human PR (MIN-143). She can
-  // ticket anyway — by branch name, title or line
-  // closing. Merging it on GitHub should produce what merging it does
-  // since minddy produces, otherwise the same gesture has two effects depending on the location.
-  if (runs.length === 0) {
+  // Synchronize manual associations; worker issues keep their existing notification path.
+  {
     await applyForgePrToIssue({
+      excludeIssueIds: runs.map((run) => run.issueId),
       provider: "github",
       repoFullName,
       prNumber: number,
@@ -409,7 +407,7 @@ async function handlePullRequest(payload: PullRequestEvent): Promise<void> {
       login: payload.sender?.login ?? null,
       occurredAt: prEventAt,
     });
-    return;
+    if (runs.length === 0) return;
   }
 
   // Aligns the status of the issues with the new PR state (MIN-46):

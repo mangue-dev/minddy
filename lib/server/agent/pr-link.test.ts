@@ -35,6 +35,7 @@ const world = {
   /** Projects that link the repository (`project_git_links` + its embedded project). */
   links: [] as Array<{ provider: string; repo_full_name: string; project_id: string }>,
   prs: [] as PrRow[],
+  associations: [] as { prId: string; issueId: string }[],
 };
 
 function makePr(over: Partial<PrRow> = {}): PrRow {
@@ -46,7 +47,7 @@ function makePr(over: Partial<PrRow> = {}): PrRow {
     state: "open",
     issue_id: null,
     url: `https://github.com/${REPO}/pull/42`,
-    title: "Un titre sans référence",
+    title: "A title without an issue reference",
     ...over,
   };
 }
@@ -130,20 +131,18 @@ vi.mock("@/lib/supabase-service", () => {
     }
     const pr = world.prs.find((row) => row.id === args.p_pr_id);
     if (!pr) return { data: "pr_not_found", error: null };
-    if (pr.issue_id === args.p_issue_id) {
+    if (pr.issue_id === args.p_issue_id || world.associations.some((link) => link.prId === pr.id && link.issueId === args.p_issue_id)) {
       return { data: "already", error: null };
-    }
-    if (pr.issue_id !== null) {
-      return { data: "pr_already_linked", error: null };
     }
     const occupied = world.prs.some(
       (row) =>
         row.id !== pr.id &&
-        row.issue_id === args.p_issue_id &&
+        (row.issue_id === args.p_issue_id || world.associations.some((link) => link.prId === row.id && link.issueId === args.p_issue_id)) &&
         (row.state === "draft" || row.state === "open"),
     );
     if (occupied) return { data: "issue_already_linked", error: null };
-    pr.issue_id = args.p_issue_id as string;
+    world.associations.push({ prId: pr.id, issueId: args.p_issue_id as string });
+    pr.issue_id ??= args.p_issue_id as string;
     return { data: "linked", error: null };
   };
   return { getServiceClient: () => ({ from, rpc }) };
@@ -178,6 +177,7 @@ const { linkPullRequestToIssue, resolveProjectPullRequest } = await import("./pr
 beforeEach(() => {
   world.links = [{ provider: "github", repo_full_name: REPO, project_id: PROJECT_ID }];
   world.prs = [makePr()];
+  world.associations = [];
   broadcast.mockClear();
   syncStatus.mockClear();
   cloneTarget.mockClear();
@@ -192,7 +192,7 @@ const link = (over: { pr?: PrRow; issueId?: string; projectId?: string } = {}) =
   });
 
 describe("linkPullRequestToIssue", () => {
-  it("rattache une PR libre et aligne le statut du ticket", async () => {
+  it("links a free PR and synchronizes the issue status", async () => {
     const result = await link();
 
     expect(result).toEqual({ ok: true, already: false, status: "in_review" });
@@ -205,7 +205,7 @@ describe("linkPullRequestToIssue", () => {
     });
   });
 
-  it("donne à chaque état de PR le statut que la table promet", async () => {
+  it("maps each PR state to the expected issue status", async () => {
     for (const [state, status] of [
       ["draft", "in_progress"],
       ["merged", "done"],
@@ -216,7 +216,7 @@ describe("linkPullRequestToIssue", () => {
     }
   });
 
-  it("rejouer le MÊME rattachement est un succès, sans rien réécrire", async () => {
+  it("replaying the same association succeeds without rewriting status", async () => {
     world.prs = [makePr({ issue_id: ISSUE_ID })];
 
     const result = await link();
@@ -227,14 +227,36 @@ describe("linkPullRequestToIssue", () => {
     expect(syncStatus).not.toHaveBeenCalled();
   });
 
-  it("refuse une PR déjà rattachée à un AUTRE ticket", async () => {
+  it("adds an issue to a PR that already has another issue", async () => {
     world.prs = [makePr({ issue_id: OTHER_ISSUE_ID })];
 
-    await expect(link()).resolves.toEqual({ ok: false, code: "pr_already_linked" });
+    await expect(link()).resolves.toMatchObject({ ok: true, already: false });
+    expect(world.associations).toContainEqual({ prId: PR_ID, issueId: ISSUE_ID });
     expect(world.prs[0].issue_id).toBe(OTHER_ISSUE_ID);
   });
 
-  it("refuse un ticket dont le projet ne lie pas ce dépôt", async () => {
+  it("replays a secondary association without changing either issue", async () => {
+    world.prs = [makePr({ issue_id: OTHER_ISSUE_ID })];
+    await link();
+    syncStatus.mockClear();
+    await expect(link()).resolves.toMatchObject({ ok: true, already: true });
+    expect(world.associations).toHaveLength(1);
+    expect(syncStatus).not.toHaveBeenCalled();
+  });
+
+  it("preserves both concurrent associations to the same PR", async () => {
+    const outcomes = await Promise.all([link(), link({ issueId: OTHER_ISSUE_ID })]);
+    expect(outcomes.every((outcome) => outcome.ok)).toBe(true);
+    expect(world.associations).toHaveLength(2);
+  });
+
+  it("detects another live PR through a secondary association", async () => {
+    world.prs.push(makePr({ id: "pr-2", issue_id: OTHER_ISSUE_ID }));
+    world.associations.push({ prId: "pr-2", issueId: ISSUE_ID });
+    await expect(link()).resolves.toEqual({ ok: false, code: "issue_already_linked" });
+  });
+
+  it("rejects issues from projects that do not link the repository", async () => {
     await expect(link({ projectId: FOREIGN_PROJECT_ID })).resolves.toEqual({
       ok: false,
       code: "issue_outside_repo",
@@ -242,7 +264,7 @@ describe("linkPullRequestToIssue", () => {
     expect(world.prs[0].issue_id).toBeNull();
   });
 
-  it("refuse un ticket qui porte déjà une PR VIVANTE", async () => {
+  it("rejects an issue that already has a live PR", async () => {
     world.prs = [makePr(), makePr({ id: "pr-2", number: 7, state: "draft", issue_id: ISSUE_ID })];
 
     await expect(link({ pr: world.prs[0] })).resolves.toEqual({
@@ -251,7 +273,7 @@ describe("linkPullRequestToIssue", () => {
     });
   });
 
-  it("accepte un ticket dont les PR précédentes sont TERMINALES", async () => {
+  it("accepts an issue whose previous PRs are terminal", async () => {
     // A ticket that Numo has taken up several times legitimately has a string of PRs:
     // it’s the uniqueness of “a LIVING PR”, not “a PR”.
     world.prs = [makePr(), makePr({ id: "pr-2", number: 7, state: "merged", issue_id: ISSUE_ID })];
@@ -284,23 +306,23 @@ describe("resolveProjectPullRequest", () => {
   const resolve = (ref: string | number | null | undefined, projectId = PROJECT_ID) =>
     resolveProjectPullRequest({ projectId, ref, userId: "user-1" });
 
-  it("trouve la PR du dépôt lié, par numéro comme par URL", async () => {
+  it("finds the linked repository PR by number or URL", async () => {
     await expect(resolve("#42")).resolves.toEqual({ pr: world.prs[0] });
     await expect(resolve(`https://github.com/${REPO}/pull/42`)).resolves.toEqual({
       pr: world.prs[0],
     });
   });
 
-  it("refuse une référence qui ne désigne pas une pull request", async () => {
+  it("rejects references that do not name a pull request", async () => {
     await expect(resolve("MIN-42")).resolves.toEqual({ error: "invalid_ref" });
   });
 
-  it("dit qu'il n'y a pas de dépôt plutôt que « introuvable »", async () => {
+  it("reports a missing repository before looking up the PR", async () => {
     world.links = [];
     await expect(resolve("#42")).resolves.toEqual({ error: "no_repository" });
   });
 
-  it("balaye le dépôt avant d'abandonner sur un numéro inconnu", async () => {
+  it("scans the repository before giving up on an unknown number", async () => {
     cloneTarget.mockResolvedValue({ token: "t" });
 
     await expect(resolve("#404")).resolves.toEqual({ error: "not_found" });
@@ -310,7 +332,7 @@ describe("resolveProjectPullRequest", () => {
     expect(sweep).toHaveBeenCalled();
   });
 
-  it("ne fait pas tomber la résolution quand la forge est en panne", async () => {
+  it("handles forge failures during resolution", async () => {
     cloneTarget.mockRejectedValue(new Error("forge down"));
     await expect(resolve("#404")).resolves.toEqual({ error: "not_found" });
   });

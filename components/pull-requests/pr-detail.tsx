@@ -1,8 +1,9 @@
 "use client";
+import { PrLinkedIssues, linkedIssues } from "./pr-linked-issues";
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
-import { ArrowDown01Icon, ArrowLeft01Icon, ArrowUp01Icon, Cancel01Icon, Copy01Icon, Edit04Icon, GitPullRequestDraftIcon, GitPullRequestIcon, HistoryIcon, Link02Icon, LinkSquare01Icon, Message01Icon, MessageSquareQuoteIcon, MoreHorizontalIcon, CheckIcon, Undo02Icon, ViewIcon } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, ArrowLeft01Icon, ArrowUp01Icon, Cancel01Icon, Copy01Icon, Edit04Icon, GitPullRequestDraftIcon, GitPullRequestIcon, HistoryIcon, LinkSquare01Icon, Message01Icon, MessageSquareQuoteIcon, MoreHorizontalIcon, CheckIcon, Undo02Icon, ViewIcon } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useFormatter, useNow, useTranslations } from "next-intl";
 import {
@@ -1509,10 +1510,6 @@ export function PrDetail({
   // `pr.url` of the forge: the identifier IS the link to the forge, which
   // replaces the “PR #30 ↗” which was lying under the title.
   const identifier = prIdentifier(item.provider, item.pr_number);
-  const linkedIssue =
-    item.issue && item.project
-      ? issueIdentifier(item.project.key, item.issue.number)
-      : null;
   const forgeUrl = pr?.url ?? item.pr_url;
 
   // The weight of PR, at a glance: GitHub puts it next to the title, and it's
@@ -1705,31 +1702,11 @@ export function PrDetail({
           ) : (
             <span className="shrink-0 text-foreground">{identifier}</span>
           )}
-          {linkedIssue ? (
-            // The link icon makes this a navigable association, not a dependency.
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (item.issue && item.project) onOpenIssue(item.issue.id, item.project.id);
-                  }}
-                  className="flex min-w-0 items-center gap-1 text-muted-foreground outline-none hover:text-foreground"
-                >
-                  <HugeiconsIcon icon={Link02Icon} data-testid="pr-issue-link-icon" className="size-3.5 shrink-0" aria-hidden />
-                  <span className="truncate">{linkedIssue}</span>
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">{t("linkedIssue")}</TooltipContent>
-            </Tooltip>
-          ) : item.project ? (
-            // Unattached: this is a NORMAL STATE since MIN-143 (the link comes
-            // of a `MIN-42` convention in the branch, title or a line
-            // Fixed — not a guess). The fact remains that the convention fails, and
-            // that nothing knew how to place the link afterwards: the selector
-            // takes the exact place of the missing ticket (MIN-163).
+          <PrLinkedIssues item={item} onOpenIssue={onOpenIssue} />
+          {item.project ? (
             <PrLinkIssue
               prId={item.prId}
+              linkedIssueIds={linkedIssues(item).map((issue) => issue.id)}
               prState={item.pr_state}
               projectId={item.project.id}
               projectKey={item.project.key}

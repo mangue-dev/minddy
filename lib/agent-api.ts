@@ -798,13 +798,7 @@ export async function maintainPullRequestApi(
   );
 }
 
-/**
- * Attaches a ticket to a PR that does not have one (MIN-163). DEFINITIVE: the server
- * rejects an already attached PR, like a ticket that already has a living PR —
- * the caller therefore shows its `error` as is (it is translated on the server side).
- *
- * Makes the status that the ticket just took aligned with the status of the PR.
- */
+/** Add an issue to a PR and synchronize its status with the current PR state. */
 export async function linkPullRequestIssueApi(
   prId: string,
   issueId: string,
@@ -925,6 +919,7 @@ export interface PullRequestListItem {
   created_at: string;
   updated_at: string;
   issue: { id: string; number: number; title: string } | null;
+  issues?: Array<{ id: string; number: number; title: string; project_id: string; project_key: string }>;
   project: {
     id: string;
     key: string;
@@ -1300,6 +1295,7 @@ export interface AgentSessionListItem {
   updated_at: string;
   /** Null = conversation CARNET (MIN-84) ou de RELECTURE (MIN-168). */
   issue: { id: string; number: number; title: string } | null;
+  issues?: Array<{ id: string; number: number; title: string; project_id: string; project_key: string }>;
   /** The pull request that this conversation RELITS (MIN-168) — badge “Analysis of
    * PR.” Distinct from `pr_number`, which is the PR that a code run has OPENED. */
   pullRequest: {

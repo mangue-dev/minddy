@@ -1,4 +1,3 @@
-import { issueStore } from "@/lib/server/issue-store";
 import { after, NextResponse, type NextRequest } from "next/server";
 import { decodeRepositoryName } from "@/lib/server/git/repository-name-content";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -7,6 +6,7 @@ import { getAuthedUser } from "@/lib/server/api-auth";
 import { type RepoProviderId } from "@/lib/repo-providers";
 import {
   findPullRequest,
+  loadPullRequestIssues,
   listPullRequestsForUser,
   listVisibleRepos,
   needsRepoSync,
@@ -72,6 +72,7 @@ export interface PullRequestListItem {
   created_at: string;
   updated_at: string;
   issue: { id: string; number: number; title: string } | null;
+  issues: PullRequestWithIssue["issues"];
   project: {
     id: string;
     key: string;
@@ -149,16 +150,10 @@ async function pinnedRow(
   const visible = new Set(repos.map((r) => repoSyncKey(r.provider, r.repoFullName)));
   if (!visible.has(repoSyncKey(rowProvider(found), found.repo_full_name))) return null;
 
-  // The ticket travels with it, read by the AUTHENTIFIED customer: its RLS makes it null
-  // if it is in the trash, exactly as on the lines of the page.
-  let issue: PullRequestWithIssue["issue"] = null;
-  if (found.issue_id) {
-    const { data } = await issueStore(supabase).select("id, number, title, project_id")
-      .eq("id", found.issue_id)
-      .maybeSingle();
-    issue = (data as PullRequestWithIssue["issue"]) ?? null;
-  }
-  return { ...found, issue };
+  const linked = await loadPullRequestIssues(supabase, [found.id]);
+  const issues = linked.get(found.id) ?? [];
+  issues.sort((a, b) => Number(b.id === found.issue_id) - Number(a.id === found.issue_id));
+  return { ...found, issue: issues[0] ?? null, issues };
 }
 
 export async function GET(request: NextRequest) {
@@ -184,7 +179,7 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  // ── Rattrapage ────────────────────────────────────────────────────────────
+  // ── Catch-up ────────────────────────────────────────────────────────────
   // The sync states and the PR rows are independent reads, so they run
   // together. A repository that was NEVER swept forces a blocking forge scan
   // that must precede the row read for its PRs to exist yet — in that case the
@@ -317,6 +312,7 @@ export async function GET(request: NextRequest) {
       created_at: row.opened_at ?? row.updated_at,
       updated_at: row.updated_at,
       issue: issue ? { id: issue.id, number: issue.number, title: issue.title } : null,
+      issues: row.issues,
       project:
         (issue ? projectById.get(issue.project_id) : null) ??
         projectByRepo.get(repoSyncKey(provider, row.repo_full_name)) ??

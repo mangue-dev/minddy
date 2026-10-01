@@ -1,3 +1,4 @@
+import { listIssuePullRequests } from "@/lib/server/agent/issue-pull-requests";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { getAuthedUser } from "@/lib/server/api-auth";
@@ -40,11 +41,7 @@ export async function GET(request: NextRequest) {
   }
   const [{ data }, { data: prs }, { data: links }] = await Promise.all([
     runsQuery,
-    auth.supabase
-      .from("pull_requests")
-      .select("id, issue_id, number, state, updated_at, provider, repo_full_name, issue:issues!inner(project_id)")
-      .not("issue_id", "is", null)
-      .order("updated_at", { ascending: false }),
+    listIssuePullRequests(auth.supabase).then((data) => ({ data })),
     linksQuery,
   ]);
 
