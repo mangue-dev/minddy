@@ -1,6 +1,6 @@
 "use client";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Cancel01Icon, Delete02Icon, GitPullRequestIcon, MoreHorizontalIcon } from "@hugeicons/core-free-icons";
+import { Cancel01Icon, MoreHorizontalIcon } from "@hugeicons/core-free-icons";
 import { useAppTabDeparture } from "@/lib/app-tabs-context";
 import { useIssuePanelTab } from "@/lib/use-issue-panel-tab";
 
@@ -53,10 +53,9 @@ import {
   CustomPromptDialog,
   type CustomPromptTarget,
 } from "@/components/agent/custom-prompt-dialog";
-import {
-  IssueActionsMenu,
-  type ContextMenuAction,
-} from "@/components/issue-context-menu";
+import { IssueActionsMenu } from "@/components/issue-context-menu";
+import { useIssueMenuActions } from "@/components/use-issue-menu-actions";
+import { RelationTargetPicker } from "@/components/relation-target-picker";
 import { useCycleMenuActions } from "@/components/cycle/use-cycle-menu-actions";
 import { useIssueAgentRunsQuery } from "@/lib/use-agent-runs";
 import {
@@ -108,7 +107,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useIssueTimeline } from "@/lib/use-issue-timeline";
 import { useIssueDictation } from "@/lib/use-issue-dictation";
 import { keepOverlayOpenForPopper } from "@/lib/overlay-dismiss";
-import { issueIdentifier } from "@/lib/issue-constants";
+import { isClosedStatus, issueIdentifier } from "@/lib/issue-constants";
 import { DocumentTitle } from "@/components/document-title";
 import { IntegrationIndicator } from "@/components/integration-indicator";
 import { RemoteIssueIndicator } from "@/components/remote-issue-indicator";
@@ -189,6 +188,11 @@ export function IssueSidePanel({
   useIdleMarkdownEditorPreload();
   const [title, setTitle] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const buildIssueMenuActions = useIssueMenuActions();
+  const moreButtonRef = useRef<HTMLButtonElement>(null);
+  const menuPointerRef = useRef<{ x: number; y: number } | null>(null);
+  const [relationType, setRelationType] = useState<IssueRelationType | null>(null);
+  useEffect(() => setRelationType(null), [issue?.id, open]);
   const [tab, setTab] = useIssuePanelTab(issue?.id ?? null, initialTab);
   // Remount the description editor when the description is rewritten under it
   // (dictation, or distant writing) — it only reads `value` during editing and
@@ -601,7 +605,7 @@ export function IssueSidePanel({
   // description, commentaire).
   // The “Custom” dialog suspends them: it covers the panel, and a key
   // hit in there should not open a picker on the ticket below.
-  const { containerProps, menuState, closeMenu } = useIssueFieldShortcuts(
+  const { containerProps, menuState, openField, closeMenu } = useIssueFieldShortcuts(
     open && !customTarget,
     {
       "shift+p": () => void copyPrompt(),
@@ -803,6 +807,25 @@ export function IssueSidePanel({
     return () => window.removeEventListener("blur", commitOnWindowBlur);
   }, []);
 
+  // Match the card's relation targets: exclude self, closed work, and direct
+  // links of the selected type; inherited objective links remain eligible.
+  const relationCandidates = useMemo(() => {
+    if (!issue || !relationType) return [];
+    const linked = new Set(resolvedRelations
+      .filter((r) => !r.inheritedObjectiveId && r.relation === relationType && r.otherType !== "objective")
+      .map((r) => r.otherId));
+    return allIssues.filter((target) => target.project_id === issue.project_id &&
+      target.id !== issue.id && !linked.has(target.id) && !isClosedStatus(target.status));
+  }, [issue, relationType, resolvedRelations, allIssues]);
+  const relationObjectiveCandidates = useMemo(() => {
+    if (!issue || !relationType) return [];
+    const linked = new Set(resolvedRelations
+      .filter((r) => !r.inheritedObjectiveId && r.relation === relationType && r.otherType === "objective")
+      .map((r) => r.otherId));
+    return objectives.filter((target) => target.project_id === issue.project_id &&
+      !linked.has(target.id) && target.status !== "done" && target.status !== "canceled");
+  }, [issue, relationType, resolvedRelations, objectives]);
+
   if (!issue) return null;
 
   const isChild = !!issue.parent_id;
@@ -816,34 +839,19 @@ export function IssueSidePanel({
     onOpenChange(false);
   };
 
-  // Header “⋯” menu: share parity with right-click on a card
-  // (prompt, agent, PR, cycle), plus the suppression that lived here before.
-  const menuActions: ContextMenuAction[] = [
-    ...agentActions,
-    // “See the pull request” as soon as there is one, REGARDLESS OF ITS STATUS: one
-    // Closed PR remains what happened on this ticket, and it's often her
-    // that we are looking for. The header chip is silent about it.
-    ...(pullRequest
-      ? [
-          {
-            id: "open-pr",
-            label: tAgent("viewPullRequest"),
-            keywords: ["pull request", "pr", "review", "github", "gitlab", "merge"],
-            icon: <HugeiconsIcon icon={GitPullRequestIcon} className="size-4" />,
-            onSelect: openPr,
-          },
-        ]
-      : []),
-    ...buildCycleActions(issue),
-    {
-      id: "delete",
-      label: tCommon("moveToTrash"),
-      icon: <HugeiconsIcon icon={Delete02Icon} className="size-4" />,
-      separatorBefore: true,
-      variant: "destructive",
-      onSelect: () => setConfirmDelete(true),
+  const menuActions = buildIssueMenuActions({
+    issue,
+    projectKey,
+    agentActions,
+    pr: pullRequest,
+    hasObjectives: objectives.length > 0,
+    onSelectRelation: setRelationType,
+    onOpenField: (field) => {
+      if (menuPointerRef.current) openField(field, menuPointerRef.current);
     },
-  ];
+    extraActions: buildCycleActions(issue),
+    onDelete: () => setConfirmDelete(true),
+  });
 
   return (
     <>
@@ -915,12 +923,20 @@ export function IssueSidePanel({
             </div>
             <div className="-mr-1.5 flex items-center gap-0.5">
               <IssueActionsMenu
+                key={issue.id}
                 actions={menuActions}
+                searchable
+                onOpenChange={(nextOpen) => {
+                  if (!nextOpen) return;
+                  const rect = moreButtonRef.current?.getBoundingClientRect();
+                  if (rect) menuPointerRef.current = { x: rect.left, y: rect.bottom };
+                }}
                 trigger={
                   <Button
                     variant="ghost"
                     size="icon-sm"
                     aria-label={t("moreActionsAriaLabel")}
+                    ref={moreButtonRef}
                     className="rounded-full text-muted-foreground hover:text-foreground"
                   >
                     <HugeiconsIcon icon={MoreHorizontalIcon} />
@@ -1218,6 +1234,19 @@ export function IssueSidePanel({
               </TabsContent>
             </Tabs>
           </SidePanelBody>
+
+          <RelationTargetPicker
+            position={open && relationType ? menuPointerRef.current : null}
+            relation={relationType}
+            issues={relationCandidates}
+            objectives={relationObjectiveCandidates}
+            projectKey={projectKey}
+            onClose={() => setRelationType(null)}
+            onSelect={(targetId, targetType) => {
+              if (relationType) onAddRelation(issue.id, relationType, targetId, { targetType });
+              setRelationType(null);
+            }}
+          />
 
           <IssueShortcutMenu
             state={menuState}

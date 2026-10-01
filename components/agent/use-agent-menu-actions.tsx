@@ -101,11 +101,12 @@ export function useAgentMenuActions({
       "implementation",
     ];
 
-    const verifyAction = (id: string, onSelect: () => void): ContextMenuAction => ({
+    const verifyAction = (id: string, onSelect: () => void, transfersFocus = false): ContextMenuAction => ({
       id,
       label: t("actionVerifyImplementation"),
       keywords: verifyKeywords,
       icon: <HugeiconsIcon icon={Search01Icon} className="size-4" />,
+      transfersFocus,
       onSelect,
     });
 
@@ -125,6 +126,7 @@ export function useAgentMenuActions({
         "own",
       ],
       icon: <HugeiconsIcon icon={Edit01Icon} className="size-4" />,
+      transfersFocus: true,
       onSelect,
     });
 
@@ -165,6 +167,7 @@ export function useAgentMenuActions({
         label: planLabel,
         keywords: planKeywords,
         icon: <HugeiconsIcon icon={TaskDone01Icon} className="size-4" />,
+        transfersFocus: true,
         onSelect: onWritePlanWithAgent,
       },
       {
@@ -173,9 +176,10 @@ export function useAgentMenuActions({
         keywords: implementKeywords,
         icon: <AppIcon icon={Code2} className="size-4" />,
         shortcut: "⇧A",
+        transfersFocus: true,
         onSelect: onImplementWithAgent,
       },
-      verifyAction("agent-verify", onVerifyWithAgent),
+      verifyAction("agent-verify", onVerifyWithAgent, true),
       customAction("agent-custom", onCustomWithAgent),
     ];
 
@@ -187,6 +191,7 @@ export function useAgentMenuActions({
             label: tAgent("openAgent"),
             keywords: ["agent", "open", "ouvrir", "session", "code", "ai", "numo"],
             icon: <NumoIcon className="size-4" />,
+            transfersFocus: true,
             onSelect: onOpenSession,
           },
           {

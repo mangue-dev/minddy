@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, createElement, useState, type ReactNode } from "react";
 import { createRoot, hydrateRoot } from "react-dom/client";
 import { renderToString } from "react-dom/server";
-import { IssueContextMenu } from "@/components/issue-context-menu";
+import { IssueActionsMenu, IssueContextMenu } from "@/components/issue-context-menu";
 
 vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key }));
 // Exercise the real Radix-backed dropdown without loading unrelated emoji assets.
@@ -124,6 +124,122 @@ describe("pointer menu hydration", () => {
       expect(document.querySelector('[role="menu"]')).toBeNull();
       expect(selected).toHaveBeenCalledTimes(1);
       expect(document.querySelector('[data-slot="dropdown-menu-trigger"]')).toBe(anchor);
+    } finally {
+      await act(() => root.unmount());
+      host.remove();
+    }
+  });
+});
+
+
+describe("button menu picker handoff", () => {
+  it.each([
+    { searchable: false, submenu: false, label: "Favorite" },
+    { searchable: true, submenu: false, label: "Unlink PR" },
+    { searchable: false, submenu: true, label: "Unlink PR" },
+  ])("restores trigger focus after an ordinary action: %j", async ({ searchable, submenu, label }) => {
+    const selected = vi.fn();
+    const host = document.createElement("div");
+    document.body.append(host);
+    const root = createRoot(host);
+    const leaf = { id: "ordinary", label, onSelect: selected };
+    try {
+      await act(() => root.render(createElement(IssueActionsMenu, {
+        trigger: createElement("button", { type: "button" }, "More"),
+        searchable,
+        actions: submenu ? [{ id: "parent", label: "PR", children: [leaf] }] : [leaf],
+      })));
+      const trigger = host.querySelector("button")!;
+      await act(() => {
+        trigger.focus();
+        trigger.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+      });
+      await act(nextFrame);
+      if (searchable) {
+        await act(() => {
+          document.activeElement!.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
+        });
+      }
+      if (submenu) {
+        await act(() => {
+          document.activeElement!.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
+        });
+        await act(nextFrame);
+      }
+      expect(document.activeElement?.textContent).toBe(label);
+      await act(() => {
+        document.activeElement!.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+      });
+      await act(nextFrame);
+      await act(nextFrame);
+      expect(selected).toHaveBeenCalledOnce();
+      expect(document.querySelector('[role="menu"]')).toBeNull();
+      expect(document.activeElement).toBe(trigger);
+    } finally {
+      await act(() => root.unmount());
+      host.remove();
+    }
+  });
+
+  it("searches, closes before selection, and lets the next surface retain focus", async () => {
+    const closed = vi.fn();
+    const selected = vi.fn();
+    function Surface() {
+      const [pickerOpen, setPickerOpen] = useState(false);
+      return createElement("section", null,
+        createElement(IssueActionsMenu, {
+          trigger: createElement("button", { type: "button" }, "More"),
+          searchable: true,
+          onOpenChange: (open) => { if (!open) closed(); },
+          actions: [
+            { id: "other", label: "Unrelated action" },
+            { id: "due", label: "Set due date", transfersFocus: true, onSelect: () => {
+              expect(closed).toHaveBeenCalledOnce();
+              expect(document.querySelector('[role="menu"]')).toBeNull();
+              selected();
+              setPickerOpen(true);
+            } },
+          ],
+        }),
+        pickerOpen ? createElement("input", { "aria-label": "Date picker", autoFocus: true }) : null);
+    }
+    const host = document.createElement("div");
+    document.body.append(host);
+    const root = createRoot(host);
+    const open = async () => {
+      await act(() => {
+        host.querySelector("button")!.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+      });
+      await act(nextFrame);
+    };
+    try {
+      await act(() => root.render(createElement(Surface)));
+      await open();
+      const input = document.querySelector<HTMLInputElement>('[aria-label="search"]')!;
+      expect(document.activeElement).toBe(input);
+      // Use the native setter so React observes the browser input event.
+      await act(() => {
+        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(input, "due");
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+      });
+      expect([...document.querySelectorAll('[role="menuitem"]')].map((item) => item.textContent)).toEqual(["Set due date"]);
+      await act(() => {
+        input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+      });
+      await act(nextFrame);
+      expect(selected).toHaveBeenCalledOnce();
+      expect(document.activeElement).toBe(host.querySelector('[aria-label="Date picker"]'));
+      await act(nextFrame);
+      expect(document.activeElement).toBe(host.querySelector('[aria-label="Date picker"]'));
+
+      await open();
+      expect(document.querySelector<HTMLInputElement>('[aria-label="search"]')?.value).toBe("");
+      await act(() => {
+        document.activeElement!.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+      });
+      expect(document.querySelector('[role="menu"]')).toBeNull();
+      await act(nextFrame);
+      expect(document.activeElement).toBe(host.querySelector("button"));
     } finally {
       await act(() => root.unmount());
       host.remove();

@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import ts from "typescript-api";
 import { describe, expect, it, vi } from "vitest";
+import { isClosedStatus } from "./issue-constants";
 import { resolveDisplayRelationsByIssue } from "./relation-constants";
 import type { ChipRelation } from "@/components/relation-chips";
 
@@ -88,5 +89,46 @@ describe("issue panel relation plumbing", () => {
     const declaration = find(root, (node) => ts.isVariableDeclaration(node) && node.name.getText(root) === "resolvedRelations") as ts.VariableDeclaration;
     const dependencies = (declaration.initializer as ts.CallExpression).arguments[1] as ts.ArrayLiteralExpression;
     expect(dependencies.elements.map((node) => node.getText(root))).toContain("objectives");
+  });
+});
+
+
+describe("sidebar menu relation targets", () => {
+  it("excludes self, closed work, and direct same-type links while retaining inherited links", () => {
+    const issue = { id: "self", project_id: "project" };
+    const candidate = (id: string, status = "todo", project_id = "project") => ({ id, status, project_id });
+    const rows = [
+      { otherId: "linked", relation: "related", otherType: "issue" },
+      { otherId: "inherited", relation: "related", otherType: "issue", inheritedObjectiveId: "parent-objective" },
+      { otherId: "other-type", relation: "blocks", otherType: "issue" },
+      { otherId: "objective-linked", relation: "related", otherType: "objective" },
+    ];
+    const scope = {
+      useMemo: memo, issue, relationType: "related", resolvedRelations: rows, isClosedStatus,
+      allIssues: [candidate("self"), candidate("linked"), candidate("inherited"), candidate("other-type"),
+        candidate("done", "done"), candidate("canceled", "canceled"), candidate("duplicate", "duplicate"),
+        candidate("foreign", "todo", "other-project")],
+      objectives: [candidate("objective-linked", "in_progress"), candidate("available", "planned"),
+        candidate("done", "done"), candidate("canceled", "canceled"), candidate("foreign", "planned", "other-project")],
+    };
+    const candidates = evaluate<Array<{ id: string }>>(initializer("components/issue-side-panel.tsx", "relationCandidates"), scope);
+    expect(candidates.map((target) => target.id)).toEqual(["inherited", "other-type"]);
+    const objectives = evaluate<Array<{ id: string }>>(initializer("components/issue-side-panel.tsx", "relationObjectiveCandidates"), scope);
+    expect(objectives.map((target) => target.id)).toEqual(["available"]);
+  });
+
+  it("forwards the selected relation endpoint kind from the menu picker", () => {
+    const root = source("components/issue-side-panel.tsx");
+    const picker = find(root, (node) => ts.isJsxSelfClosingElement(node) && node.tagName.getText(root) === "RelationTargetPicker") as ts.JsxSelfClosingElement;
+    const attribute = picker.attributes.properties.find((node) => ts.isJsxAttribute(node) && node.name.getText(root) === "onSelect") as ts.JsxAttribute;
+    const expression = (attribute.initializer as ts.JsxExpression).expression!;
+    const onAddRelation = vi.fn();
+    const setRelationType = vi.fn();
+    const handler = evaluate<(id: string, kind: string) => void>(expression.getText(root), {
+      issue: { id: "source" }, relationType: "blocked_by", onAddRelation, setRelationType,
+    });
+    handler("target", "objective");
+    expect(onAddRelation).toHaveBeenCalledWith("source", "blocked_by", "target", { targetType: "objective" });
+    expect(setRelationType).toHaveBeenCalledWith(null);
   });
 });
