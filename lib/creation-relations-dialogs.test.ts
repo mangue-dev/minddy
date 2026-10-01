@@ -19,13 +19,13 @@ vi.mock("next-intl", () => ({ useTranslations: (namespace: keyof typeof en) =>
 }));
 vi.mock("@hugeicons/react", () => ({ HugeiconsIcon: () => null }));
 vi.mock("@/components/ui/app-tooltip", () => ({ AppTooltip: ({ children }: { children: React.ReactNode }) => children }));
-vi.mock("@/components/search-menu", () => ({ SearchMenu: ({ open, onOpenChange, trigger, children, searchValue, onSearchValueChange, container }: {
+vi.mock("@/components/search-menu", () => ({ SearchMenu: ({ open, onOpenChange, trigger, children, searchValue, onSearchValueChange, container, modal }: {
   open: boolean; onOpenChange: (value: boolean) => void; trigger: React.ReactElement; children: React.ReactNode;
   searchValue: string; onSearchValueChange: (value: string) => void;
-  container?: HTMLElement | null;
+  container?: HTMLElement | null; modal?: boolean;
 }) => React.createElement("div", { "data-picker": true },
   React.cloneElement(trigger, { onClick: () => onOpenChange(!open) } as React.HTMLAttributes<HTMLElement>),
-  open && createPortal(React.createElement("div", null, React.createElement("input", { "aria-label": "Search relations", value: searchValue, onChange: (e: React.ChangeEvent<HTMLInputElement>) => onSearchValueChange(e.target.value) }), children), container ?? document.body)),
+  open && createPortal(React.createElement("div", { "data-modal": modal }, React.createElement("input", { "aria-label": "Search relations", value: searchValue, onChange: (e: React.ChangeEvent<HTMLInputElement>) => onSearchValueChange(e.target.value) }), children), container ?? document.body)),
 }));
 vi.mock("mangue-ui", () => {
   const wrap = ({ children }: { children: React.ReactNode }) => React.createElement("div", null, children);
@@ -117,7 +117,7 @@ beforeEach(() => {
 afterEach(async () => { await act(() => root.unmount()); host.remove(); vi.unstubAllGlobals(); });
 
 async function click(label: string) {
-  const button = [...host.querySelectorAll("button")].find((element) => element.textContent?.trim() === label || element.getAttribute("aria-label") === label);
+  const button = [...document.querySelectorAll("button")].find((element) => element.textContent?.trim() === label || element.getAttribute("aria-label") === label);
   expect(button, `Button ${label}`).toBeDefined();
   await act(() => button!.click());
 }
@@ -131,10 +131,10 @@ async function typeTitle(value: string) {
 async function addRelation(type: PendingRelationInput["type"], target: "issue" | "objective") {
   await click(en.Relations.addRelationAria);
   await click(en.Relations[type]);
-  expect(host.textContent).not.toContain("Closed issue");
-  expect(host.textContent).not.toContain("Foreign issue");
-  expect(host.textContent).not.toContain("Closed objective");
-  expect(host.textContent).not.toContain("Foreign objective");
+  expect(document.body.textContent).not.toContain("Closed issue");
+  expect(document.body.textContent).not.toContain("Foreign issue");
+  expect(document.body.textContent).not.toContain("Closed objective");
+  expect(document.body.textContent).not.toContain("Foreign objective");
   await click(target === "issue" ? "MIN-12Target issue" : "Target objective");
 }
 async function mountDialog(kind: "issue" | "objective", withProjectMenu = true) {
@@ -150,13 +150,14 @@ async function mountDialog(kind: "issue" | "objective", withProjectMenu = true) 
 }
 
 describe("creation relation controls", () => {
-  it.each(["issue", "objective"] as const)("portals the %s relation menu inside dialogs without forwarded refs after reopening", async (kind) => {
+  it.each(["issue", "objective"] as const)("portals the modal %s relation menu outside the clipping dialog after reopening", async (kind) => {
     const dialog = await mountDialog(kind);
     for (let opening = 0; opening < 2; opening++) {
       await click(en.Relations.addRelationAria);
       const input = document.querySelector('[aria-label="Search relations"]')!;
       expect(input).not.toBeNull();
-      expect(input.closest("[data-dialog-content]")).toBe(host.querySelector("[data-dialog-content]"));
+      expect(input.closest("[data-dialog-content]")).toBeNull();
+      expect(input.parentElement?.getAttribute("data-modal")).toBe("true");
       await click(en.Relations.addRelationAria);
       await click("Close creation");
       await dialog.reopen();
@@ -244,19 +245,19 @@ describe("creation relation controls", () => {
 
   it("filters duplicate selections by direction and does not fetch candidates while closed", async () => {
     const selection: PendingRelationInput = { type: "blocks", target_id: issue.id, target_type: "issue", target_label: "MIN-12 Target issue" };
-    const props = { projectId: project.id, projectKey: project.key, active: true, value: [selection], onChange: vi.fn(), container: host };
+    const props = { projectId: project.id, projectKey: project.key, active: true, value: [selection], onChange: vi.fn() };
     await act(() => root.render(React.createElement(CreationRelationsCompact, props)));
     expect(fixture.queryProjects.every((project) => project === null)).toBe(true);
     await click(en.Relations.addRelationAria);
     await click(en.Relations.blocks);
-    expect(host.textContent).not.toContain("Target issue");
+    expect(document.body.textContent).not.toContain("Target issue");
     await click(en.Relations.addRelationAria);
     await click(en.Relations.addRelationAria);
     await click(en.Relations.related);
-    expect(host.textContent).toContain("Target issue");
+    expect(document.body.textContent).toContain("Target issue");
     await act(() => root.render(React.createElement(CreationRelationsCompact, { ...props, active: false })));
     await act(() => root.render(React.createElement(CreationRelationsCompact, props)));
     await click(en.Relations.addRelationAria);
-    expect(host.textContent).toContain(en.Relations.blocked_by);
+    expect(document.body.textContent).toContain(en.Relations.blocked_by);
   });
 });

@@ -4,7 +4,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Tick01Icon } from "@hugeicons/core-free-icons";
 import { createUuid } from "@/lib/create-uuid";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   Button,
@@ -226,7 +226,6 @@ export function ObjectiveDialog({
   useIdleMarkdownEditorPreload();
   const [form, setForm] = useState(EMPTY);
   const [relations, setRelations] = useState<PendingRelationInput[]>([]);
-  const [contentElement, setContentElement] = useState<HTMLFormElement | null>(null);
   const [submitting, setSubmitting] = useState(false);
   // Id of the draft loaded in the form (MIN-41), so re-closing updates it in
   // place and a successful create removes exactly the draft it came from.
@@ -249,11 +248,7 @@ export function ObjectiveDialog({
   const [transcribing, setTranscribing] = useState(false);
   // ⌘/Ctrl + Enter validates the objective, wherever you are in the form — y
   // understood from the description, which the name field does not cover.
-  const { ref: submitFormRef, ...submitShortcut } = useSubmitShortcut();
-  const setFormRef = useCallback((node: HTMLFormElement | null) => {
-    submitFormRef.current = node;
-    setContentElement(node);
-  }, [submitFormRef]);
+  const submitShortcut = useSubmitShortcut();
 
   // Drafts, resources and voice dictation share the same two conditions: each
   // is project-scoped (the draft store, the storage prefix, the dictation route)
@@ -502,7 +497,6 @@ export function ObjectiveDialog({
           </DialogTitle>
 
           <form
-            ref={setFormRef}
             {...submitShortcut}
             onSubmit={handleSubmit}
             className="relative flex flex-col rounded-lg"
@@ -606,7 +600,6 @@ export function ObjectiveDialog({
               />
               {composerEnabled && (
                 <CreationRelationsCompact
-                  container={contentElement}
                   projectId={projectId!}
                   projectKey={currentProject?.key ?? projectKey ?? ""}
                   active={open}

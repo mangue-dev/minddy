@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Cancel01Icon, Link02Icon } from "@hugeicons/core-free-icons";
-import { CommandGroup, CommandItem, Spinner } from "mangue-ui";
+import { CommandGroup, CommandItem, Spinner, cn } from "mangue-ui";
 import { SearchMenu } from "@/components/search-menu";
 import { RelationIcon, StatusIndicator } from "@/components/issue-indicators";
 import { RelationObjectiveLabel } from "@/components/relation-objective-label";
@@ -33,8 +33,7 @@ export function CreationRelationsCompact({
   value,
   onChange,
   disabled,
-  container,
-}: CreationRelationsProps & { container: HTMLElement | null }) {
+}: CreationRelationsProps) {
   const t = useTranslations("Relations");
   const tCommon = useTranslations("Common");
   const [open, setOpen] = useState(false);
@@ -80,6 +79,7 @@ export function CreationRelationsCompact({
   };
   const loading = issuesLoading || objectivesLoading;
 
+  // A body portal avoids dialog clipping; the modal popover owns its scroll lock.
   return (
     <SearchMenu
       open={open && active}
@@ -92,14 +92,17 @@ export function CreationRelationsCompact({
       onSearchValueChange={setQuery}
       searchPlaceholder={step ? t("searchTarget") : undefined}
       contentClassName="w-80"
-      container={container}
+      modal
       hideEmpty={step !== null && loading}
       trigger={
         <button
           type="button"
           disabled={disabled}
           aria-label={t("addRelationAria")}
-          className="flex items-center gap-1.5 rounded-md p-1.5 text-sm text-foreground outline-none transition-colors hover:bg-muted focus-visible:bg-muted disabled:opacity-50 max-sm:p-2"
+          className={cn(
+            "flex items-center gap-1.5 rounded-md p-1.5 text-sm outline-none transition-colors hover:bg-muted focus-visible:bg-muted disabled:opacity-50 max-sm:p-2",
+            value.length > 0 ? "text-foreground" : "text-muted-foreground",
+          )}
         >
           <HugeiconsIcon icon={Link02Icon} className="size-[18px]" />
           <span>{t("relations")}</span>

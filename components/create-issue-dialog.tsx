@@ -2,7 +2,7 @@
 
 import { createUuid } from "@/lib/create-uuid";
 
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   Button,
@@ -205,15 +205,10 @@ export function CreateIssueDialog({
   // second dialog on top (draft confirmation, objective creation
   // from the picker) must keep his touches to himself.
   const contentRef = useRef<HTMLDivElement>(null);
-  const [contentElement, setContentElement] = useState<HTMLFormElement | null>(null);
   const createMoreId = useId();
   // ⌘/Ctrl + Enter creates the ticket, from wherever you are in the form — y
   // understood from the description, which the title field does not cover.
-  const { ref: submitFormRef, ...submitShortcut } = useSubmitShortcut();
-  const setFormRef = useCallback((node: HTMLFormElement | null) => {
-    submitFormRef.current = node;
-    setContentElement(node);
-  }, [submitFormRef]);
+  const submitShortcut = useSubmitShortcut();
   const uploads = useAttachmentUploads(() => `projects/${projectId}`);
   const drop = useFileDrop(uploads.addFiles);
   const drafts = useDrafts("issue", projectId, open);
@@ -665,7 +660,6 @@ export function CreateIssueDialog({
           <DialogTitle className="sr-only">{t("newIssueTitle")}</DialogTitle>
 
           <form
-            ref={setFormRef}
             {...submitShortcut}
             onSubmit={(e) => {
               e.preventDefault();
@@ -813,7 +807,6 @@ export function CreateIssueDialog({
                 />
               )}
               <CreationRelationsCompact
-                container={contentElement}
                 projectId={projectId}
                 projectKey={currentProject?.key ?? ""}
                 active={open}
