@@ -39,7 +39,7 @@ const EXPANDED_DESKTOP =
 /** Classes of the panel's SheetContent, depending on the display mode. */
 export function panelSheetClassName(displayMode: PanelDisplayMode): string {
   return cn(
-    "p-0 gap-0 bg-background",
+    "p-0 gap-0",
     // No focus halo on the shell: the Radix FocusScope rests on the
     // focus on the content of the Sheet as soon as it escapes (e.g. the input emptied after
     // sending), which triggered the browser's default white outline
