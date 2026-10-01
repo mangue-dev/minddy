@@ -102,6 +102,7 @@ export function useIssueMenuActions() {
                 label: tRel(`action_${type}`),
                 keywords: [tRel(type), "relation", "link", "lier"],
                 icon: <RelationIcon relation={type} className="size-4" />,
+                transfersFocus: true,
                 onSelect: () => onSelectRelation(type),
               })),
             },
@@ -115,6 +116,7 @@ export function useIssueMenuActions() {
               keywords: ["objectif", "objective", "goal", "lier", "link"],
               icon: <HugeiconsIcon icon={Target01Icon} className="size-4" />,
               shortcut: KEY_FOR_FIELD.objective,
+              transfersFocus: true,
               onSelect: () => onOpenField("objective"),
             },
           ]
@@ -135,6 +137,7 @@ export function useIssueMenuActions() {
               ],
               icon: <HugeiconsIcon icon={DateTimeIcon} className="size-4" />,
               shortcut: KEY_FOR_FIELD.dueDate,
+              transfersFocus: true,
               onSelect: () => onOpenField("dueDate"),
             },
           ]
@@ -156,6 +159,7 @@ export function useIssueMenuActions() {
               icon: <HugeiconsIcon icon={Delete02Icon} className="size-4" />,
               separatorBefore: true,
               variant: "destructive" as const,
+              transfersFocus: true,
               onSelect: () => onDelete(),
             },
           ]

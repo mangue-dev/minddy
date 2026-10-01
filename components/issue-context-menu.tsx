@@ -51,6 +51,8 @@ export interface ContextMenuAction {
   /** Sub-actions: when present, the action becomes a flyout sub-menu
  instead of triggering `onSelect`. */
   children?: ContextMenuAction[];
+  /** Selection opens another surface that takes focus instead of the trigger. */
+  transfersFocus?: boolean;
   onSelect?: () => void;
 }
 
@@ -307,7 +309,7 @@ export function IssueActionsMenu({
   onOpenChange?: (open: boolean) => void;
 }) {
   const [open, setOpen] = React.useState(false);
-  const actionSelected = React.useRef(false);
+  const transferringFocus = React.useRef(false);
   const change = (next: boolean) => {
     setOpen(next);
     onOpenChange?.(next);
@@ -320,9 +322,9 @@ export function IssueActionsMenu({
         side="bottom"
         className={searchable ? "min-w-64" : "min-w-56"}
         onCloseAutoFocus={(event) => {
-          if (actionSelected.current) {
+          if (transferringFocus.current) {
             event.preventDefault();
-            actionSelected.current = false;
+            transferringFocus.current = false;
           }
         }}
       >
@@ -332,7 +334,7 @@ export function IssueActionsMenu({
           searchable={searchable}
           onActionSelect={(action) => {
             // Finish closing before a field picker or dialog takes focus.
-            actionSelected.current = true;
+            transferringFocus.current = action.transfersFocus === true;
             change(false);
             requestAnimationFrame(() => action.onSelect?.());
           }}

@@ -133,6 +133,54 @@ describe("pointer menu hydration", () => {
 
 
 describe("button menu picker handoff", () => {
+  it.each([
+    { searchable: false, submenu: false, label: "Favorite" },
+    { searchable: true, submenu: false, label: "Unlink PR" },
+    { searchable: false, submenu: true, label: "Unlink PR" },
+  ])("restores trigger focus after an ordinary action: %j", async ({ searchable, submenu, label }) => {
+    const selected = vi.fn();
+    const host = document.createElement("div");
+    document.body.append(host);
+    const root = createRoot(host);
+    const leaf = { id: "ordinary", label, onSelect: selected };
+    try {
+      await act(() => root.render(createElement(IssueActionsMenu, {
+        trigger: createElement("button", { type: "button" }, "More"),
+        searchable,
+        actions: submenu ? [{ id: "parent", label: "PR", children: [leaf] }] : [leaf],
+      })));
+      const trigger = host.querySelector("button")!;
+      await act(() => {
+        trigger.focus();
+        trigger.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+      });
+      await act(nextFrame);
+      if (searchable) {
+        await act(() => {
+          document.activeElement!.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
+        });
+      }
+      if (submenu) {
+        await act(() => {
+          document.activeElement!.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
+        });
+        await act(nextFrame);
+      }
+      expect(document.activeElement?.textContent).toBe(label);
+      await act(() => {
+        document.activeElement!.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+      });
+      await act(nextFrame);
+      await act(nextFrame);
+      expect(selected).toHaveBeenCalledOnce();
+      expect(document.querySelector('[role="menu"]')).toBeNull();
+      expect(document.activeElement).toBe(trigger);
+    } finally {
+      await act(() => root.unmount());
+      host.remove();
+    }
+  });
+
   it("searches, closes before selection, and lets the next surface retain focus", async () => {
     const closed = vi.fn();
     const selected = vi.fn();
@@ -145,7 +193,7 @@ describe("button menu picker handoff", () => {
           onOpenChange: (open) => { if (!open) closed(); },
           actions: [
             { id: "other", label: "Unrelated action" },
-            { id: "due", label: "Set due date", onSelect: () => {
+            { id: "due", label: "Set due date", transfersFocus: true, onSelect: () => {
               expect(closed).toHaveBeenCalledOnce();
               expect(document.querySelector('[role="menu"]')).toBeNull();
               selected();

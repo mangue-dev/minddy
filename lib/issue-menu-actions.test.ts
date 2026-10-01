@@ -1,6 +1,7 @@
 import { createElement } from "react";
 import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { useAgentMenuActions } from "@/components/agent/use-agent-menu-actions";
 import { useIssueMenuActions, type IssueMenuOptions } from "@/components/use-issue-menu-actions";
 import type { ContextMenuAction } from "@/components/issue-context-menu";
 import { RELATION_TYPES } from "./relation-constants";
@@ -21,6 +22,7 @@ vi.mock("@/lib/app-tabs-context", () => ({
 vi.mock("@/lib/use-unlink-pull-request-issue", () => ({
   useUnlinkPullRequestIssue: () => ({ isPending: dependencies.isPending, mutate: dependencies.mutate }),
 }));
+vi.mock("@/components/numo-icon", () => ({ NumoIcon: () => null }));
 vi.mock("@/components/issue-indicators", () => ({ RelationIcon: () => null }));
 vi.mock("@/components/issue-field-shortcuts", () => ({ KEY_FOR_FIELD: { objective: "O", dueDate: "D" } }));
 
@@ -80,6 +82,33 @@ describe("shared issue menu actions", () => {
     action("delete").onSelect?.();
     expect(options.onDelete).toHaveBeenCalledOnce();
     expect(action("delete")).toMatchObject({ separatorBefore: true, variant: "destructive" });
+  });
+
+  it("transfers focus only for actions opening another surface", () => {
+    const { action } = build();
+    for (const id of ["set-objective", "set-due-date", "delete", ...RELATION_TYPES.map((type) => `relation-${type}`)]) {
+      expect(action(id).transfersFocus, id).toBe(true);
+    }
+    for (const id of ["unlink-pr", "cycle-add", "open-pr-current-tab", "open-pr-new-tab"]) {
+      expect(action(id).transfersFocus, id).not.toBe(true);
+    }
+
+    let actions: ContextMenuAction[] = [];
+    function AgentSurface() {
+      const handler = vi.fn();
+      actions = useAgentMenuActions({
+        agentsEnabled: true, hasSession: true, hasPlan: false,
+        onCopyPrompt: handler, onCopyPlanPrompt: handler, onCopyVerifyPrompt: handler,
+        onCopyCustomPrompt: handler, onImplementWithAgent: handler, onWritePlanWithAgent: handler,
+        onVerifyWithAgent: handler, onCustomWithAgent: handler, onOpenSession: handler,
+      });
+      return null;
+    }
+    renderToString(createElement(AgentSurface));
+    const leaves = actions.flatMap((item) => item.children ?? [item]);
+    expect(leaves.filter((item) => item.transfersFocus).map((item) => item.id)).toEqual([
+      "copy-prompt-custom", "open-agent", "agent-plan", "agent-implement", "agent-verify", "agent-custom",
+    ]);
   });
 
   it("hides unavailable or already-set actions without changing the supplied actions", () => {
