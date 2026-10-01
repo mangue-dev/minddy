@@ -2255,6 +2255,7 @@
     "pick_blocked_by": "Durch welches Ticket oder Ziel blockiert?",
     "pick_related": "Mit welchem Ticket oder Ziel verknüpft?",
     "addRelationAria": "Ticket oder Ziel verknüpfen",
+    "crossProjectUnavailable": "Entferne die Beziehungen, um in einem anderen Projekt zu erstellen.",
     "searchIssue": "Problem suchen…",
     "searchTarget": "Problem suchen…",
     "objectives": "Objectives",

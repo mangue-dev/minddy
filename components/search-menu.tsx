@@ -49,6 +49,8 @@ export function DropdownSearchRow({ children }: { children: React.ReactNode }) {
 
 export type SearchMenuProps = {
   open: boolean;
+  /** Give body-portaled menus their own scroll lock when opened inside a modal. */
+  modal?: boolean;
   onOpenChange: (open: boolean) => void;
   /** Trigger-anchored mode: the element the menu hangs off. */
   trigger?: React.ReactNode;
@@ -86,6 +88,7 @@ export type SearchMenuProps = {
 
 export function SearchMenu({
   open,
+  modal,
   onOpenChange,
   trigger,
   position,
@@ -141,7 +144,7 @@ export function SearchMenu({
   if (position !== undefined) {
     if (!position) return null;
     return (
-      <Popover open={open} onOpenChange={onOpenChange}>
+      <Popover open={open} onOpenChange={onOpenChange} modal={modal}>
         <PopoverAnchor asChild>
           <span
             aria-hidden
@@ -164,7 +167,7 @@ export function SearchMenu({
   // that we make a `tooltip` conditional, the fault would appear without anything
   // does not link it to this change. What varies here is the OPENING.
   const popover = (
-    <Popover open={open} onOpenChange={onOpenChange}>
+    <Popover open={open} onOpenChange={onOpenChange} modal={modal}>
       <PopoverTrigger asChild>
         <TooltipTrigger asChild>{trigger}</TooltipTrigger>
       </PopoverTrigger>
