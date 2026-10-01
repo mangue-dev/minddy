@@ -71,6 +71,10 @@ apply them to another project.
   pull request description to a bare `Signed-off-by` trailer or a copy of the
   commit message. The DCO trailer belongs in the commits, not as the body of
   the pull request.
+- For UI changes, include screenshots of the work in the pull request
+  description whenever feasible. Keep these images up to date as the pull
+  request evolves. Prefer light mode by default; include both light and dark
+  mode screenshots when relevant, but covering both modes is optional.
 - Every commit must carry the DCO sign-off (see below).
 
 ## DCO sign-offs
