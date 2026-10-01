@@ -1,6 +1,6 @@
 "use client";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowRight01Icon, Cancel01Icon, Delete02Icon, GitPullRequestIcon, MoreHorizontalIcon } from "@hugeicons/core-free-icons";
+import { Cancel01Icon, Delete02Icon, GitPullRequestIcon, MoreHorizontalIcon } from "@hugeicons/core-free-icons";
 import { useAppTabDeparture } from "@/lib/app-tabs-context";
 import { useIssuePanelTab } from "@/lib/use-issue-panel-tab";
 
@@ -37,6 +37,7 @@ import {
 } from "@/components/issue-property-fields";
 import { TAB_LIST_DENSE, TAB_TRIGGER_DENSE } from "@/components/tab-bar";
 import { SubIssuesSection } from "@/components/sub-issues-section";
+import { IssueParentMenu } from "@/components/issue-parent-menu";
 import { RelationsSection } from "@/components/relations-section";
 // Deferred: the agent conversation carries the whole AI streaming stack
 // (streamdown + shiki) — it must not ride along on every board navigation.
@@ -862,9 +863,15 @@ export function IssueSidePanel({
           // Suppress the open-autofocus so nothing is focused on open.
           onOpenAutoFocus={(e) => e.preventDefault()}
         >
-          {/* Header: identifier · agent state · dictate · more · close */}
+          {/* Header: parent → identifier · agent state · dictate · more · close */}
           <div className="flex shrink-0 items-center justify-between gap-4 px-6 pt-5 pb-3">
             <div className="flex min-w-0 items-center gap-1">
+              <IssueParentMenu
+                key={issue.id}
+                parentIdentifier={parent ? issueIdentifier(projectKey, parent.number) : null}
+                onOpenParent={() => parent && onOpenIssue(parent.id)}
+                onUnlink={() => patch({ parent_id: null })}
+              />
               <SidePanelTitle asChild>
                 <span className="flex shrink-0 items-center gap-1.5 whitespace-nowrap text-lg font-semibold tracking-tight">
                   <IntegrationIndicator issue={issue} iconClassName="size-4" />
@@ -933,14 +940,8 @@ export function IssueSidePanel({
             </div>
           </div>
 
-          {(parent || resolvedRelations.some((r) => !r.resolved)) && (
+          {resolvedRelations.some((r) => !r.resolved) && (
             <div className="flex flex-wrap items-center gap-2 px-6 pb-3 text-xs text-muted-foreground">
-              {parent && (
-                <button type="button" onClick={() => onOpenIssue(parent.id)} className="inline-flex items-center gap-1 whitespace-nowrap rounded-md px-1.5 py-0.5 hover:bg-muted">
-                  <HugeiconsIcon icon={ArrowRight01Icon} className="size-3" aria-hidden />
-                  {t("subIssueOf", { id: issueIdentifier(projectKey, parent.number) })}
-                </button>
-              )}
               <RelationChips relations={resolvedRelations} projectKey={projectKey} onOpen={onOpenIssue}
                 onOpenObjective={(id) => router.push(`/projects/${issue.project_id}/objectives?open=${id}`)} />
             </div>
