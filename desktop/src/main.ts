@@ -74,6 +74,7 @@ import { parseWnsHelperChannel } from "@/lib/desktop/wns";
 import { parseWindowsStoreUpdateProbe } from "@/lib/desktop/windows-store-update";
 import {
   desktopWindowFrameOptions,
+  desktopTitleBarOverlay,
   desktopDocumentChrome,
   MACOS_TRAFFIC_LIGHT_POSITION,
 } from "@/lib/desktop/window-frame";
@@ -1088,7 +1089,7 @@ function registerIpc(): void {
   ipcMain.on("minddy:window-chrome", (event, theme: unknown) => {
     if (!mainWindow || event.sender !== mainWindow.webContents || process.platform === "darwin" || !integratedFrames.get(mainWindow)) return;
     if (theme !== "light" && theme !== "dark") return;
-    mainWindow.setTitleBarOverlay({ height: 44, color: theme === "dark" ? "#191a1b" : "#fafafa", symbolColor: theme === "dark" ? "#eeeeee" : "#222222" });
+    mainWindow.setTitleBarOverlay(desktopTitleBarOverlay(process.platform, theme));
   });
 
   // Status replay, TARGETED at the requesting subscriber (MIN-310).

@@ -1,6 +1,18 @@
 /** x mirrors y so the controls sit at the same distance from both window edges. */
 export const MACOS_TRAFFIC_LIGHT_POSITION = { x: 15, y: 15 } as const;
 
+/** Windows controls reveal the CSS surface beneath them, including theme changes. */
+export function desktopTitleBarOverlay(
+  platform: NodeJS.Platform,
+  theme: "light" | "dark" = "dark",
+): { color: string; symbolColor: string; height: number } {
+  return {
+    color: platform === "win32" ? "#00000000" : theme === "dark" ? "#191a1b" : "#fafafa",
+    symbolColor: theme === "dark" ? "#eeeeee" : "#222222",
+    height: 44,
+  };
+}
+
 export type DesktopWindowFrameOptions =
   | { autoHideMenuBar: true }
   | {
@@ -43,7 +55,7 @@ export function desktopWindowFrameOptions(
 
   return {
     titleBarStyle: "hidden",
-    titleBarOverlay: { color: "#191a1b", symbolColor: "#eeeeee", height: 44 },
+    titleBarOverlay: desktopTitleBarOverlay(platform),
     autoHideMenuBar: true,
   };
 }
