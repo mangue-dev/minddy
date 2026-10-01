@@ -64,7 +64,8 @@ export function notifyRoutineOfNumoTurn(turn: NumoTurn): void {
           issue_id: null,
           routine_id: routine.id,
           agent_conversation_id: delegated?.conversation_id ?? null,
-          numo_conversation_id: occurrence.conversation_id,
+          // Without a worker, the routine itself is the notification target.
+          numo_conversation_id: delegated?.id ? occurrence.conversation_id : null,
           numo_work_id: delegated?.id ?? null,
           actor_id: null,
           via_assistant: true,

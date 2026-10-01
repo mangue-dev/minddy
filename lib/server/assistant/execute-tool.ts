@@ -1,4 +1,6 @@
 import { issueStore } from "@/lib/server/issue-store";
+import { randomUUID } from "node:crypto";
+import { DatabaseOperationError, failureDiagnostics } from "@/lib/server/failure-diagnostics";
 import { categoryStore } from "@/lib/server/category-store";
 import { objectiveStore } from "@/lib/server/objective-store";
 import { commentStore } from "@/lib/server/comment-store";
@@ -856,6 +858,7 @@ export async function executeTool(
   args: Record<string, unknown>,
   ctx: ToolContext,
 ): Promise<ToolExecution> {
+  let launchStage = "prepare_launch";
   try {
     if (MCP_CLIENT_TOOL_NAMES.has(toolName)) {
       return executeMcpTool(ctx.userId, toolName, args);
@@ -2142,6 +2145,7 @@ export async function executeTool(
             ? args.continuation_run_id.trim()
             : "";
         if (durableDelegation && continuationRunId && objective) {
+          launchStage = "resume_worker";
           const relaunch = await relaunchNumoWorkerRun({
             conversationId: ctx.conversationId!,
             userId: ctx.userId,
@@ -2167,6 +2171,7 @@ export async function executeTool(
             };
           }
         }
+        launchStage = "launch_worker";
         const result = await launchAgentRun({
           ...(pullRequestMode === "review"
             ? { pullRequestId }
@@ -2208,7 +2213,10 @@ export async function executeTool(
           // Framing does not start the ticket; implement and check, yes.
           ...(mode ? { intent: intentForLaunchMode(mode) } : {}),
         });
-        if (!result.ok) return toolError(launchErrorMessage(result));
+        if (!result.ok) return {
+          result: { error: launchErrorMessage(result), error_code: result.error, retryable: false },
+          success: false,
+        };
         return {
           result: {
             launched: true,
@@ -3186,7 +3194,35 @@ export async function executeTool(
       default:
         return toolError(`Unknown tool: ${toolName}`);
     }
-  } catch {
+  } catch (error) {
+    if (toolName === "launch_code_agent") {
+      const correlationId = randomUUID();
+      const diagnostics = failureDiagnostics(error);
+      const stage = error instanceof DatabaseOperationError ? error.operation : launchStage;
+      console.error("[assistant] code_agent_launch_failed", {
+        correlation_id: correlationId,
+        tool_name: toolName,
+        stage,
+        conversation_id: ctx.conversationId ?? null,
+        turn_id: ctx.turnId ?? null,
+        tool_call_id: ctx.toolCallId ?? null,
+        routine_id: ctx.routineId ?? null,
+        ...diagnostics,
+      });
+      return {
+        result: {
+          error: diagnostics.kind === "database_constraint"
+            ? "The database rejected the code-worker launch. Report the diagnostic reference; repeating the same request will not fix it."
+            : "The code-worker launch could not be confirmed. Report the diagnostic reference and check the run state before trying again.",
+          error_code: "code_agent_launch_failed",
+          correlation_id: correlationId,
+          stage,
+          retryable: false,
+          failure: diagnostics,
+        },
+        success: false,
+      };
+    }
     console.error("[assistant] tool_execution_failed");
     return toolError("Tool execution failed");
   }
