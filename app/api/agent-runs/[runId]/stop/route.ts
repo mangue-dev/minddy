@@ -31,8 +31,8 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: "Run not found" }, { status: 404 });
   }
 
-  // A delegated Stop is durable: interrupt only the selected worker and
-  // retire its Numo continuation authority in the same transaction.
+  // A delegated Stop retires Numo continuation before interrupting the selected
+  // worker. The current schema combines these writes in one transaction.
   const working = WORKING.includes(run.status);
   if (working) {
     try {

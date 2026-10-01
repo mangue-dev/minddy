@@ -5,7 +5,6 @@ import { pathToFileURL } from "node:url";
 const REQUIRED_RPC_PATHS = [
   "/rpc/auth_authorization_state",
   "/rpc/resolve_realtime_topic",
-  "/rpc/request_numo_worker_stop",
 ];
 
 /**
@@ -62,7 +61,7 @@ export async function checkDeploymentDatabase(env = process.env, fetcher = fetch
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   checkDeploymentDatabase().then(
-    () => console.log("Database preflight passed: required auth, Realtime and worker Stop RPCs are available."),
+    () => console.log("Database preflight passed: required auth and Realtime RPCs are available."),
     (error) => {
       console.error(error.message);
       process.exitCode = 1;

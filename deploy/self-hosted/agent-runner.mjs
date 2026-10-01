@@ -321,6 +321,9 @@ async function relayLlmCompletion(name, request, response) {
     response.writeHead(upstream.status, responseHeaders);
     for await (const chunk of upstream.stream) response.write(chunk);
     response.end();
+  } catch (error) {
+    // A sandbox disconnect is an expected Stop, not a second HTTP response.
+    if (!controller.signal.aborted) throw error;
   } finally {
     response.off("close", disconnect);
   }
@@ -458,6 +461,11 @@ const server = createServer(async (request, response) => {
     }
     return json(response, 404, { error: "not found" });
   } catch (error) {
+    if (response.destroyed || response.writableEnded) return;
+    if (response.headersSent) {
+      response.destroy();
+      return;
+    }
     console.error("[agent-runner] request failed", { status: Number(error?.status) || 500 });
     // Upstream errors can contain stack traces, paths, or credentials.
     const status = Number(error?.status);
