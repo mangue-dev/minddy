@@ -447,11 +447,11 @@ button[data-variant="ghost"] {
 }
 
 /* ── Shell surfaces ────────────────────────────────────────────────────────────
-   A pale content canvas holds brighter neutral elements and white cards and
-   popovers. Keep the existing sidebar chrome, and place controls, badges and
-   hover fills above the canvas in lightness. */
+   A neutral content canvas separates white cards and bright controls from
+   their surroundings. Keep the existing sidebar chrome, and place controls,
+   badges and hover fills above the canvas in lightness. */
 :root {
-  --background: oklch(0.975 0.002 264);
+  --background: oklch(0.95 0.003 264);
   --sidebar: oklch(0.967 0.003 264);
   --card: oklch(1 0 0);
   --popover: oklch(1 0 0);
