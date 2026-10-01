@@ -1,5 +1,8 @@
 # MIN-628 and MIN-610 preview follow-up
 
+The later authenticated Assistant Shell reproduction and first-click correction
+are recorded in [the shell Stop follow-up](min-628-shell-stop-follow-up.md).
+
 The first PR verification covered provider transports and worker cancellation,
 but missed the browser's request lifecycle. The reported preview failure remains
 the acceptance case. These changes address additional reproducible application

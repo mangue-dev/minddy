@@ -108,6 +108,9 @@ describe("Numo conversation configuration", () => {
   });
 
   it("keeps legacy conversations on the account default when no override is stored", async () => {
+    h.conversationModels.mockResolvedValue([
+      { id: runtime.model, reasoning: { efforts: ["low", "medium"], mandatory: false } },
+    ]);
     const resolved = await resolveNumoTurnConfiguration({ userId: "user" });
 
     expect(resolved).toMatchObject({
@@ -117,5 +120,25 @@ describe("Numo conversation configuration", () => {
       persistedReasoningLevel: null,
     });
     expect(h.catalog).not.toHaveBeenCalled();
+  });
+
+  it("uses the displayed GLM reasoning level when the browser inherits both defaults", async () => {
+    h.runtime.mockResolvedValue({ ...runtime, model: "z-ai/glm-5.3-flash" });
+    h.catalog.mockImplementation(() => new Promise(() => {}));
+    h.conversationModels.mockResolvedValue([
+      { id: "z-ai/glm-5.3-flash", reasoning: { efforts: ["max", "high", "low"], mandatory: true } },
+    ]);
+
+    await expect(resolveNumoTurnConfiguration({
+      userId: "user", model: null, reasoningLevel: null,
+    })).resolves.toMatchObject({
+      model: "z-ai/glm-5.3-flash",
+      reasoningLevel: "low",
+      persistedModel: null,
+      persistedReasoningLevel: null,
+    });
+    expect(h.conversationModels).toHaveBeenCalledWith(runtime.apiKey);
+    expect(h.catalog).not.toHaveBeenCalled();
+    expect(h.plan).not.toHaveBeenCalled();
   });
 });

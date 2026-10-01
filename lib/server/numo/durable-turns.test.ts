@@ -135,6 +135,10 @@ const service = {
       h.events.push(args);
       return { data: {}, error: null };
     }
+    if (name === "complete_numo_tool_operation") {
+      return { data: h.turn?.claim_token === args.p_claim_token
+        && ["running", "stopping"].includes(String(h.turn?.status)), error: null };
+    }
     if (name === "recover_stale_numo_turns") return { data: 0, error: null };
     return { data: true, error: null };
   },
@@ -759,6 +763,26 @@ describe("durable Numo execution", () => {
       p_status: "stopped",
       p_active_run_id: "51600000-0000-4000-8000-000000000099",
     });
+  });
+
+  it("returns the authoritative stopped state when a mutation finishes after its claim was revoked", async () => {
+    const live = { emit: vi.fn(), close: vi.fn(), isClosed: false };
+    h.processChat.mockImplementation(async (_messages, _tools, _emitter, context) => {
+      h.turn = { ...h.turn, status: "stopped", claim_token: null, claimed_at: null };
+      // The real ledger adapter detects the failed completion CAS and hands
+      // control back through NumoClaimLostError rather than retrying the write.
+      await context.toolLedger.complete({ toolCallId: "write-issue", success: true,
+        result: { updated: true }, modelResult: { updated: true }, pause: false });
+      throw new Error("A revoked mutation must not resume the model");
+    });
+    const result = await executeNumoTurn({ turnId: h.turn!.id as string,
+      readClient: service, aiRuntime: runtime, liveEmitter: live });
+    expect(result.status).toBe("stopped");
+    expect(live.emit).toHaveBeenCalledWith("done", { status: "stopped" });
+    expect(live.emit.mock.calls.some(([event]) => event === "error" || event === "tool_result")).toBe(false);
+    expect(h.checkpoints).toEqual([]);
+    expect(h.messages).toHaveLength(1);
+    expect(h.processChat).toHaveBeenCalledOnce();
   });
 
   it("keeps prior tool rounds while reconstructing only the pending batch", async () => {

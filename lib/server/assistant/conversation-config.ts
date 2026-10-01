@@ -102,13 +102,17 @@ export async function resolveNumoTurnConfiguration(input: {
     modelOverride: persistedModel,
   });
 
-  let modelEntry: AgentModelEntry | undefined;
+  // Inherited settings must use the same model capabilities as the picker.
+  // Otherwise a generic default such as medium can be sent while the UI
+  // correctly displays the nearest supported GLM level, low.
+  const [models, configuredReasoning] = await Promise.all([
+    runtime.provider === "openrouter"
+      ? getOpenRouterConversationModels(runtime.apiKey)
+      : getAssistantModelsForUser(input.userId).then(catalog => catalog.models),
+    getAssistantReasoningLevel(),
+  ]);
+  const modelEntry = findModel(models, runtime.model);
   if (hasExplicitModel || hasExplicitReasoning) {
-    const models = runtime.provider === "openrouter"
-      ? await getOpenRouterConversationModels(runtime.apiKey)
-      : (await getAssistantModelsForUser(input.userId)).models;
-    modelEntry = findModel(models, runtime.model);
-
     // A generic endpoint owns its model namespace and may not expose a model
     // list. Every catalog-backed provider must prove that the selected id is
     // currently available instead of silently falling back to another model.
@@ -140,7 +144,6 @@ export async function resolveNumoTurnConfiguration(input: {
   const allowedReasoning = conversationReasoningLevels(
     reasoningLevelsFor(modelEntry?.reasoning),
   );
-  const configuredReasoning = await getAssistantReasoningLevel();
   if (hasExplicitReasoning && !allowedReasoning.includes(persistedReasoningLevel)) {
     throw new NumoConversationConfigError(
       "reasoning_unsupported",

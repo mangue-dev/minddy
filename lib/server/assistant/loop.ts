@@ -121,11 +121,9 @@ export class AmbiguousToolExecutionError extends Error {
  */
 const STREAM_IDLE_TIMEOUT_MS = 90_000;
 /**
- * Ceiling between two `shouldStop` polls while streaming. A stop requested
- * while a round streams must abort the provider request promptly instead of
- * waiting for the round to finish on its own.
+ * Ceiling between two `shouldStop` polls throughout model and tool execution.
  */
-const STOP_POLL_INTERVAL_MS = 1_000;
+const STOP_POLL_INTERVAL_MS = 250;
 
 /**
  * Raised when the provider stream carried nothing for the idle ceiling. The
@@ -186,9 +184,8 @@ export interface ProcessChatContext extends ToolContext {
   shouldStop?: () => Promise<boolean>;
   /**
    * Registers a synchronous stop listener, called the instant a stop request
-   * lands in this process. The loop uses it to resolve a pending blocked
-   * stream read immediately instead of waiting for the next chunk (or the
-   * next polled `shouldStop` after it) to notice.
+   * lands in this process. It stays armed across generation and tool rounds,
+   * including pending provider reads and cancellable database reads.
    */
   onStopSignal?: (notify: () => void) => () => void;
   /** Budget gate immediately before every provider generation. */
@@ -315,10 +312,33 @@ export async function processChat(
   // between tools): the loop stops handing the turn back with no persisted
   // work beyond the durable checkpoints already written.
   let stopObserved = false;
+  const executionStop = new AbortController();
+  let activeGeneration: AbortController | null = null;
+  let stopPollTimer: ReturnType<typeof setTimeout> | null = null;
+  let executionClosed = false;
+  const observeStop = () => {
+    stopObserved = true;
+    executionStop.abort();
+    activeGeneration?.abort();
+  };
+  const pollStop = async () => {
+    try {
+      if (await context.shouldStop?.()) observeStop();
+    } catch {
+      // Retry transient authority reads while the execution remains live.
+    } finally {
+      if (!executionClosed && !stopObserved) {
+        stopPollTimer = setTimeout(() => { void pollStop(); }, STOP_POLL_INTERVAL_MS);
+      }
+    }
+  };
+  const stopSignalOff = context.onStopSignal?.(observeStop) ?? null;
+  stopPollTimer = setTimeout(() => { void pollStop(); }, STOP_POLL_INTERVAL_MS);
 
+  try {
   while (continueLoop) {
     continueLoop = false;
-    stopObserved = (await context.shouldStop?.()) ?? false;
+    if (await context.shouldStop?.()) observeStop();
     if (stopObserved) break;
     const resumingTools = resumeCheckpoint?.phase === "tools";
     roundCount = resumingTools
@@ -361,32 +381,12 @@ export async function processChat(
       // and a mid-stream stop. Aborting the signal destroys the pinned socket,
       // which is what makes a hung stream, or a stop request, observable here.
       const generationController = new AbortController();
+      activeGeneration = generationController;
       let idleTimer: ReturnType<typeof setTimeout> | null = null;
       let idleAborted = false;
-      let stopPollTimer: ReturnType<typeof setTimeout> | null = null;
-      let roundClosed = false;
-      const observeStop = () => {
-        stopObserved = true;
-        generationController.abort();
-      };
-      // Poll independently of headers and body reads: serverless stop requests
-      // can land in another process while the provider stays completely silent.
-      const pollStop = async () => {
-        try {
-          if (await context.shouldStop?.()) observeStop();
-        } catch {
-          // A transient database failure is retried on the next poll.
-        } finally {
-          if (!roundClosed && !stopObserved) {
-            stopPollTimer = setTimeout(() => { void pollStop(); }, STOP_POLL_INTERVAL_MS);
-          }
-        }
-      };
       const closeRound = () => {
-        roundClosed = true;
-        if (stopPollTimer) clearTimeout(stopPollTimer);
         if (idleTimer) clearTimeout(idleTimer);
-        stopSignalOff?.();
+        if (activeGeneration === generationController) activeGeneration = null;
       };
       const armIdleTimer = () => {
         if (idleTimer) clearTimeout(idleTimer);
@@ -396,13 +396,6 @@ export async function processChat(
         }, STREAM_IDLE_TIMEOUT_MS);
       };
       armIdleTimer();
-      // Event-driven stop must be armed BEFORE the provider request: a stop
-      // submitted while `fetchAiChat` still awaits response headers aborts the
-      // connection attempt itself instead of waiting for the headers (or the
-      // idle watchdog) to free it. The listener stays armed for the whole
-      // round, and every exit path below disarms it.
-      const stopSignalOff = context.onStopSignal?.(observeStop) ?? null;
-      stopPollTimer = setTimeout(() => { void pollStop(); }, STOP_POLL_INTERVAL_MS);
       let call;
       try {
         // Budget and preparation reads can be slow too. A hosted executor
@@ -454,13 +447,18 @@ export async function processChat(
       }
       const response = call.response;
       requestModel = call.model;
-      // These early exits leave before the stream try/finally disarms the
-      // watchdog: without an explicit cleanup every provider refusal would
-      // keep a 90 s timer armed on an already-abandoned controller. The stop
-      // listener is also dropped: nothing below subscribes anymore.
+      // These early exits precede the stream's watchdog cleanup. Keep the
+      // turn's stop observer armed until the entire execution finishes.
       if (!response.ok) {
-        closeRound();
-        const errorText = await response.text();
+        let errorText: string;
+        try {
+          errorText = await response.text();
+        } catch (error) {
+          if (stopObserved) break;
+          throw error;
+        } finally {
+          closeRound();
+        }
         throw new Error(`LLM error (${response.status}): ${errorText.slice(0, 200)}`);
       }
       const reader = response.body?.getReader();
@@ -694,10 +692,11 @@ export async function processChat(
       let pausedByTool = false;
 
       // Execute each tool and save results to DB. A stop requested while a
-      // slow tool runs must not wait for the round to finish executing: the
-      // check between tools shortens the wait to at most one tool.
+      // slow tool runs also reaches the read transport. Mutating tools retain
+      // their durable completion boundary before the stopped turn is returned.
       for (const [, acc] of toolCallAccumulators) {
-        if (await context.shouldStop?.()) break;
+        if (await context.shouldStop?.()) observeStop();
+        if (stopObserved) break;
         const alreadyCompleted = completedToolCallIds.has(acc.id);
         if (acc.name === "ask_user") {
           // ask_user: emit a synthetic result and do NOT continue the loop
@@ -758,6 +757,7 @@ export async function processChat(
         }
 
         let execution: ToolExecution;
+        const cancellableRead = acc.name === "list_projects" || acc.name === "list_issues";
         const ledgerClaim = context.toolLedger
           ? await context.toolLedger.claim({
               toolCallId: acc.id,
@@ -775,21 +775,36 @@ export async function processChat(
         if (ledgerClaim.action === "reuse" && ledgerClaim.execution) {
           execution = ledgerClaim.execution;
         } else {
-          execution = await executeTool(acc.name, args, {
+          if (stopObserved || await context.shouldStop?.()) {
+            observeStop();
+            break;
+          }
+          const pendingExecution = executeTool(acc.name, args, {
             ...context,
             toolCallId: acc.id,
+            ...(cancellableRead ? { readAbortSignal: executionStop.signal } : {}),
           });
+          if (cancellableRead) {
+            let onReadStop!: () => void;
+            const interrupted = new Promise<null>((resolve) => {
+              onReadStop = () => resolve(null);
+              executionStop.signal.addEventListener("abort", onReadStop, { once: true });
+              if (executionStop.signal.aborted) onReadStop();
+            });
+            try {
+              const read = await Promise.race([pendingExecution, interrupted]);
+              if (!read || stopObserved) break;
+              execution = read;
+            } finally {
+              executionStop.signal.removeEventListener("abort", onReadStop);
+            }
+          } else {
+            execution = await pendingExecution;
+          }
         }
+        if (await context.shouldStop?.()) observeStop();
+        if (stopObserved && (cancellableRead || ledgerClaim.action === "reuse")) break;
         const { result, success, modelResult, pause, secrets } = execution;
-        // The complete result goes to the browser with any secret included.
-        // This is the only place where a fresh key appears live, once
-        // (MIN-343). Nothing later can see it again.
-        emitter.emit("tool_result", {
-          id: acc.id,
-          name: acc.name,
-          result,
-          success,
-        });
         if (pause) pausedByTool = true;
 
         // Apply redaction before persistence and before sending data back to
@@ -813,6 +828,15 @@ export async function processChat(
             pause: pause === true,
           });
         }
+        if (stopObserved) break;
+        // Emit only after recording the result and confirming live authority.
+        // Fresh secrets remain visible once and never enter later model input.
+        emitter.emit("tool_result", {
+          id: acc.id,
+          name: acc.name,
+          result,
+          success,
+        });
         if (!alreadyCompleted) {
           await saveToolResultMessage(context, {
             conversation_id: context.conversationId,
@@ -882,4 +906,9 @@ export async function processChat(
     generations,
     suspension,
   };
+  } finally {
+    executionClosed = true;
+    if (stopPollTimer) clearTimeout(stopPollTimer);
+    stopSignalOff?.();
+  }
 }

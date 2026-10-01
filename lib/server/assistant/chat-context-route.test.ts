@@ -16,6 +16,10 @@ vi.mock("@/lib/server/usage", () => ({ ensureUsageBudget: async () => ({
   billing: { plan: { includedUsageUsd: 10 } }, period: { start: "2026-10-01", end: "2026-11-01" }, usedUsd: 0,
 }) }));
 vi.mock("@/lib/server/ai-runtime", () => ({ resolveAiRuntime: async () => ({ model: "test", provider: "local", apiKey: "test" }), ManagedAiUnavailableError: class extends Error {} }));
+vi.mock("@/lib/server/agent/models-catalog", () => ({
+  getAssistantModelsForUser: async () => ({ models: [{ id: "test", reasoning: null }] }),
+  getOpenRouterConversationModels: async () => [],
+}));
 vi.mock("@/lib/server/assistant/prompt-context", () => ({ gatherProjectPromptContext: async ({ project }: { project: object }) => ({ ...project, statusCounts: {}, recentIssues: [], members: [], objectives: [], categories: [] }) }));
 vi.mock("@/lib/server/short-title", () => ({ fallbackShortTitle: () => "Conversation", generateShortTitle: async () => null }));
 vi.mock("@/lib/server/ai-usage", () => ({ newRunId: () => "run", recordAiUsage: async () => {} }));

@@ -3486,6 +3486,20 @@
     "storage": false
   },
   {
+    "file": "lib/server/assistant/abortable-read-client.ts",
+    "operation": "from",
+    "resource": null,
+    "line": 8,
+    "storage": false
+  },
+  {
+    "file": "lib/server/assistant/abortable-read-client.ts",
+    "operation": "rpc",
+    "resource": null,
+    "line": 19,
+    "storage": false
+  },
+  {
     "file": "lib/server/assistant/comment-agent.ts",
     "operation": "from",
     "resource": "issues",
@@ -3531,119 +3545,119 @@
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "assistant_messages",
-    "line": 432,
+    "line": 435,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "views",
-    "line": 680,
+    "line": 683,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "views",
-    "line": 703,
+    "line": 706,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 733,
+    "line": 736,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "project_members",
-    "line": 738,
+    "line": 741,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 751,
+    "line": 754,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "integrations",
-    "line": 789,
+    "line": 792,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "numo_automation_operations",
-    "line": 936,
-    "storage": false
-  },
-  {
-    "file": "lib/server/assistant/execute-tool.ts",
-    "operation": "from",
-    "resource": "agent_chains",
     "line": 944,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
-    "resource": "numo_automation_operations",
-    "line": 956,
+    "resource": "agent_chains",
+    "line": 952,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "numo_automation_operations",
-    "line": 969,
+    "line": 964,
+    "storage": false
+  },
+  {
+    "file": "lib/server/assistant/execute-tool.ts",
+    "operation": "from",
+    "resource": "numo_automation_operations",
+    "line": 977,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 1319,
+    "line": 1327,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "integrations",
-    "line": 1368,
+    "line": 1376,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 1922,
+    "line": 1930,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "numo_routine_occurrences",
-    "line": 2365,
+    "line": 2373,
     "storage": false
   },
   {
     "file": "lib/server/assistant/loop.ts",
     "operation": "from",
     "resource": "assistant_messages",
-    "line": 257,
+    "line": 254,
     "storage": false
   },
   {
     "file": "lib/server/assistant/loop.ts",
     "operation": "from",
     "resource": "assistant_messages",
-    "line": 639,
+    "line": 637,
     "storage": false
   },
   {

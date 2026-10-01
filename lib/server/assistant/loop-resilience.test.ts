@@ -604,6 +604,81 @@ describe("Numo chat loop resilience", () => {
     expect(result.fullContent).toBe("");
   });
 
+  it.each([
+    ["list_projects", "signal"], ["list_projects", "poll"],
+    ["list_issues", "signal"], ["list_issues", "poll"],
+  ])("stops a pending %s read through the %s channel without a late result or follow-up generation", async (name, channel) => {
+    vi.useFakeTimers();
+    let stopped = false;
+    let notifyStop: (() => void) | undefined;
+    let resolveRead!: (value: unknown) => void;
+    let readSignal: AbortSignal | undefined;
+    fetchOpenRouter.mockResolvedValue({ model: "model", response: stream({
+      tool_calls: [{ index: 0, id: "slow-read", function: { name, arguments: "{}" } }],
+    }) });
+    executeTool.mockImplementation((_name, _args, ctx) => {
+      readSignal = ctx.readAbortSignal;
+      return new Promise((resolve) => { resolveRead = resolve; });
+    });
+    const emit = vi.fn();
+    let settled = false;
+    const pending = processChat([{ role: "user", content: "List projects and their issues" }], [],
+      { emit } as never, { model: "model", conversationId: "conversation", projectId: "project",
+        userId: "user", supabase: fakeService(), service: fakeService(), locale: "en",
+        shouldStop: async () => stopped,
+        onStopSignal: (notify) => { notifyStop = notify; return () => { notifyStop = undefined; }; },
+      });
+    void pending.then(() => { settled = true; });
+    try {
+      await vi.advanceTimersByTimeAsync(0);
+      expect(executeTool).toHaveBeenCalledTimes(1);
+      stopped = true;
+      if (channel === "signal") notifyStop?.();
+      await vi.advanceTimersByTimeAsync(channel === "poll" ? 250 : 0);
+      expect(settled).toBe(true);
+      expect(readSignal?.aborted).toBe(true);
+      expect((await pending).fullContent).toBe("");
+      resolveRead({ result: { projects: [] }, success: true });
+      await vi.advanceTimersByTimeAsync(0);
+      expect(fetchOpenRouter).toHaveBeenCalledTimes(1);
+      expect(emit.mock.calls.some(([event]) => event === "tool_result" || event === "content_delta")).toBe(false);
+      expect(notifyStop).toBeUndefined();
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      resolveRead?.({ result: {}, success: true });
+      vi.useRealTimers();
+    }
+  });
+
+  it("awaits an in-flight mutation's ledger boundary after Stop and emits no late result", async () => {
+    let notifyStop: (() => void) | undefined;
+    let resolveWrite!: (value: unknown) => void;
+    fetchOpenRouter.mockResolvedValue({ model: "model", response: stream({ tool_calls: [{
+      index: 0, id: "write-issue", function: { name: "update_issues", arguments: "{}" },
+    }] }) });
+    executeTool.mockImplementation(() => new Promise((resolve) => { resolveWrite = resolve; }));
+    const complete = vi.fn(async () => {});
+    const emit = vi.fn();
+    let settled = false;
+    const pending = processChat([{ role: "user", content: "Update the issue" }], [], { emit } as never,
+      { model: "model", conversationId: "conversation", projectId: "project", userId: "user",
+        supabase: fakeService(), service: fakeService(), locale: "en", shouldStop: async () => false,
+        onStopSignal: (notify) => { notifyStop = notify; return () => { notifyStop = undefined; }; },
+        toolLedger: { claim: async () => ({ action: "execute" }), complete },
+      });
+    void pending.then(() => { settled = true; });
+    await vi.waitFor(() => expect(executeTool).toHaveBeenCalledTimes(1));
+    notifyStop?.();
+    await Promise.resolve();
+    expect(settled).toBe(false);
+    resolveWrite({ result: { updated: true }, success: true });
+    expect((await pending).fullContent).toBe("");
+    expect(complete).toHaveBeenCalledOnce();
+    expect(fetchOpenRouter).toHaveBeenCalledOnce();
+    expect(emit.mock.calls.some(([event]) => event === "tool_result")).toBe(false);
+    expect(notifyStop).toBeUndefined();
+  });
+
   it("aborts a stalled connection the instant a stop signal fires", async () => {
     // The stop can land while `fetchAiChat` still awaits the response
     // headers: the listener must already be armed there, and the abort must
