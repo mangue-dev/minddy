@@ -48,12 +48,21 @@ export function QuotaExhaustedCard({
   /** The user is already running on his own key (so the budget does not concern him). */
   byok: boolean;
   /** Which border has bitten. Absent = the count (the runs before the cap). */
-  cause?: "account" | "run_cap";
+  cause?: "account" | "run_cap" | "operation_allocation";
   /** The ceiling of the passage, as a % of the monthly budget. */
   capPercent?: number | null;
 }) {
   const t = useTranslations("Agent");
   const format = useFormatter();
+
+  if (cause === "operation_allocation") {
+    return (
+      <div className="rounded-xl border border-border bg-muted/30 p-4 text-sm">
+        <p className="font-medium">{t("allocationTitle")}</p>
+        <p className="mt-2 text-muted-foreground">{t("allocationBody")}</p>
+      </div>
+    );
+  }
 
   const resetDate = resetsAt ? new Date(resetsAt) : null;
   const resetLabel =

@@ -117,7 +117,7 @@ export type FeedItem =
       nextPlanId: BillingPlanId | null;
       byok: boolean;
       /** `run_cap` = it was the ceiling of THIS passage that bit, not the count. */
-      cause: "account" | "run_cap";
+      cause: "account" | "run_cap" | "operation_allocation";
       /** This ceiling, as a % of the monthly budget — null when the cause is the account. */
       capPercent: number | null;
       createdAt: string;
@@ -650,7 +650,7 @@ function buildFeed(
           byok: p.byok === true,
           // Events before the ceiling per pass do not have `cause`: they
           // all talk about the account budget, the only boundary that existed.
-          cause: p.cause === "run_cap" ? "run_cap" : "account",
+          cause: p.cause === "run_cap" || p.cause === "operation_allocation" ? p.cause : "account",
           capPercent: typeof p.capPercent === "number" ? p.capPercent : null,
           createdAt: e.created_at,
         });

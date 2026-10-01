@@ -8,7 +8,7 @@ import { Button } from "mangue-ui";
 import { getBillingPlan, type BillingPlanId } from "@/lib/billing-plans";
 
 export interface NumoUsageExhaustedDetails {
-  cause: "account" | "routine_cap";
+  cause: "account" | "routine_cap" | "operation_allocation";
   percent: number;
   resetsAt: string | null;
   nextPlanId: BillingPlanId | null;
@@ -22,7 +22,8 @@ export function parseNumoUsageExhausted(
   const raw = metadata.usage_exhausted;
   if (!raw || typeof raw !== "object") return null;
   const value = raw as Record<string, unknown>;
-  if (value.cause !== "account" && value.cause !== "routine_cap") return null;
+  if (value.cause !== "account" && value.cause !== "routine_cap"
+    && value.cause !== "operation_allocation") return null;
   const percent = Number(value.percent);
   if (!Number.isFinite(percent) || percent < 0) return null;
   return {
@@ -47,6 +48,14 @@ export function NumoUsageExhaustedCard({
 }) {
   const t = useTranslations("Assistant");
   const format = useFormatter();
+  if (details.cause === "operation_allocation") {
+    return (
+      <div className="rounded-xl border border-border bg-muted/30 p-4 text-sm">
+        <p className="font-medium">{t("usageAllocationTitle")}</p>
+        <p className="mt-2 text-muted-foreground">{t("usageAllocationBody")}</p>
+      </div>
+    );
+  }
   const reset = details.resetsAt ? new Date(details.resetsAt) : null;
   const resetLabel =
     reset && !Number.isNaN(reset.getTime())
