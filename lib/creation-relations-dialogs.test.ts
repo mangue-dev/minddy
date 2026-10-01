@@ -36,7 +36,8 @@ vi.mock("mangue-ui", () => {
     toast: { success: vi.fn(), error: vi.fn(), info: vi.fn() },
     Dialog: ({ open, onOpenChange, children }: { open: boolean; onOpenChange: (next: boolean) => void; children: React.ReactNode }) =>
       open ? React.createElement("div", null, React.createElement("button", { type: "button", onClick: () => onOpenChange(false) }, "Close creation"), children) : null,
-    DialogContent: ({ children, ref }: { children: React.ReactNode; ref: React.Ref<HTMLDivElement> }) => React.createElement("div", { ref, "data-dialog-content": true }, children),
+    // The mobile bottom sheet does not forward DialogContent refs.
+    DialogContent: ({ children }: { children: React.ReactNode }) => React.createElement("div", { "data-dialog-content": true }, children),
     DialogTitle: wrap, DropdownMenuLabel: wrap, CommandGroup: wrap,
     CommandItem: item, DropdownMenuItem: item,
     Spinner: () => null,
@@ -58,7 +59,6 @@ vi.mock("@/lib/use-analytics", () => ({ useAnalytics: () => ({ track: vi.fn() })
 vi.mock("@/lib/use-track-view", () => ({ useTrackView: vi.fn() }));
 vi.mock("@/lib/use-mention-sources", () => ({ useDescriptionMentions: () => [] }));
 vi.mock("@/lib/use-arrow-field", () => ({ useArrowField: (ref: React.RefObject<HTMLTextAreaElement>) => ({ ref, read: (e: React.ChangeEvent<HTMLTextAreaElement>) => e.target.value }) }));
-vi.mock("@/lib/keyboard/use-submit-shortcut", () => ({ useSubmitShortcut: () => ({}) }));
 vi.mock("@/lib/use-attachment-uploads", () => ({ useAttachmentUploads: () => ({
   inputs: [], pending: [], uploading: false, clear: vi.fn(), restore: vi.fn(), addFiles: vi.fn(),
 }) }));
@@ -150,7 +150,7 @@ async function mountDialog(kind: "issue" | "objective", withProjectMenu = true) 
 }
 
 describe("creation relation controls", () => {
-  it.each(["issue", "objective"] as const)("portals the %s relation menu into the current dialog after reopening", async (kind) => {
+  it.each(["issue", "objective"] as const)("portals the %s relation menu inside dialogs without forwarded refs after reopening", async (kind) => {
     const dialog = await mountDialog(kind);
     for (let opening = 0; opening < 2; opening++) {
       await click(en.Relations.addRelationAria);
@@ -189,7 +189,7 @@ describe("creation relation controls", () => {
     expect(host.textContent).toContain("Target objective");
   });
 
-  it.each(["issue", "objective"] as const)("submits removable %s pills above the title and protects cross-project creation", async (kind) => {
+  it.each(["issue", "objective"] as const)("submits removable %s pills with the keyboard shortcut and protects cross-project creation", async (kind) => {
     const dialog = await mountDialog(kind);
     await addRelation("blocked_by", "objective");
     const pill = host.querySelector(`[aria-label="${en.Relations.blocked_by}: Target objective"]`)!;
@@ -202,7 +202,7 @@ describe("creation relation controls", () => {
     expect([...host.querySelectorAll("button")].find((button) => button.textContent === "Other project")?.disabled).toBe(false);
     await addRelation("blocks", "issue");
     await typeTitle("New entity");
-    await act(() => { host.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })); });
+    await act(() => { host.querySelector("textarea")!.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", ctrlKey: true, bubbles: true, cancelable: true })); });
     expect(dialog.create).toHaveBeenCalledWith(expect.objectContaining({ relations: [{ type: "blocks", target_id: issue.id, target_type: "issue", target_label: "MIN-12 Target issue" }] }));
     expect(dialog.createOther).not.toHaveBeenCalled();
     await dialog.reopen();
