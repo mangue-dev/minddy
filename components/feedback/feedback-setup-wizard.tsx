@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Copy01Icon, GlobeIcon, Key02Icon, Mail01Icon, Plug01Icon, Tick01Icon } from "@hugeicons/core-free-icons";
+import { Copy01Icon, GlobeIcon, Key02Icon, Mail01Icon, Plug01Icon, CheckIcon } from "@hugeicons/core-free-icons";
 import type { IconSvgElement } from "@hugeicons/react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
@@ -549,7 +549,7 @@ export function FeedbackSetupWizard({
                   }}
                 >
                   {envCopied ? (
-                    <HugeiconsIcon icon={Tick01Icon} className="size-4 text-emerald-500" />
+                    <HugeiconsIcon icon={CheckIcon} className="size-4 text-emerald-500" />
                   ) : (
                     <HugeiconsIcon icon={Copy01Icon} className="size-4" />
                   )}
@@ -572,7 +572,7 @@ export function FeedbackSetupWizard({
             onClick={() => prompt && void copyToClipboard(prompt)}
           >
             {copied ? (
-              <HugeiconsIcon icon={Tick01Icon} className="size-4 text-emerald-500" />
+              <HugeiconsIcon icon={CheckIcon} className="size-4 text-emerald-500" />
             ) : (
               <HugeiconsIcon icon={Copy01Icon} className="size-4" />
             )}

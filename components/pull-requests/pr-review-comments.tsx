@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowDown01Icon, ArrowRight01Icon, ArrowTurnDownIcon, CheckmarkCircle01Icon, Copy01Icon, HappyIcon } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, ArrowRight01Icon, ArrowTurnDownIcon, CheckIcon, Copy01Icon, HappyIcon } from "@hugeicons/core-free-icons";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useFormatter, useNow, useTranslations } from "next-intl";
@@ -686,7 +686,7 @@ export function ReviewThreadCard({
         <div className="flex items-center gap-1.5">
           {resolved ? (
             <span className="mr-auto flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
-              <HugeiconsIcon icon={CheckmarkCircle01Icon} className="size-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+              <HugeiconsIcon icon={CheckIcon} className="size-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
               <span className="truncate">{resolvedLabel}</span>
             </span>
           ) : null}

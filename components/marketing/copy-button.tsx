@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Copy01Icon, Tick01Icon } from "@hugeicons/core-free-icons";
+import { Copy01Icon, CheckIcon } from "@hugeicons/core-free-icons";
 import { useEffect, useRef, useState, type ComponentProps } from "react";
 import { cn } from "mangue-ui/lib/utils";
 
@@ -100,7 +100,7 @@ export function CopyButton({
       )}
     >
       {copied ? (
-        <HugeiconsIcon icon={Tick01Icon} className="h-3.5 w-3.5 text-primary" aria-hidden />
+        <HugeiconsIcon icon={CheckIcon} className="h-3.5 w-3.5 text-primary" aria-hidden />
       ) : (
         <HugeiconsIcon icon={Copy01Icon} className="h-3.5 w-3.5" aria-hidden />
       )}

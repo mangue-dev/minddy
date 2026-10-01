@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Add01Icon, Alert01Icon, MoreHorizontalIcon, Tick01Icon } from "@hugeicons/core-free-icons";
+import { Add01Icon, Alert01Icon, MoreHorizontalIcon, CheckIcon } from "@hugeicons/core-free-icons";
 import {useCallback, useEffect, useId, useState} from "react";
 import {useQueryClient} from "@tanstack/react-query";
 import {useSearchParams} from "next/navigation";
@@ -476,7 +476,7 @@ export function AccountMcpClients() {
                           aria-label={t("configured")}
                           className="text-emerald-600 dark:text-emerald-400"
                         >
-                          <HugeiconsIcon icon={Tick01Icon} className="size-4 shrink-0" aria-hidden />
+                          <HugeiconsIcon icon={CheckIcon} className="size-4 shrink-0" aria-hidden />
                         </span>
                       </TooltipTrigger>
                       <TooltipContent>{t("configured")}</TooltipContent>

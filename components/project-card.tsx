@@ -2,7 +2,7 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
-import { Add01Icon, CheckmarkCircle01Icon as CheckCircle2, CircleDotDashedIcon, CircleIcon, LayoutGridIcon, MessageMultiple01Icon, MoreHorizontalIcon, Settings01Icon, Target01Icon } from "@hugeicons/core-free-icons";
+import { Add01Icon, CheckIcon, CircleDotDashedIcon, CircleIcon, LayoutGridIcon, MessageMultiple01Icon, MoreHorizontalIcon, Settings01Icon, Target01Icon } from "@hugeicons/core-free-icons";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
@@ -170,7 +170,7 @@ export function ProjectCard({ project }: { project: Project }) {
           label={t("openIssues", { entityPlural: tIssue("entityPlural") })}
         />
         <Stat
-          icon={CheckCircle2}
+          icon={CheckIcon}
           value={doneCount}
           label={t("doneIssues", { entityPlural: tIssue("entityPlural") })}
         />

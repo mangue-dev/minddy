@@ -2,7 +2,7 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
-import { ArrowRight01Icon, BotIcon, CheckmarkCircle01Icon as CheckCircle2 } from "@hugeicons/core-free-icons";
+import { ArrowRight01Icon, BotIcon, CheckIcon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
 import { useNow, useTranslations } from "next-intl";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger, Spinner, cn } from "mangue-ui";
@@ -112,7 +112,7 @@ export function SubagentActivityBar({ subagents }: { subagents: TurnSubagent[] }
  minddy's “it turns” (the conversations column,
  the header of a folded project). An immobile mark can only be distinguished from ✓ by its shape, while the difference to read is there: one is still moving. */}
                       {done ? (
-                        <AppIcon icon={CheckCircle2} className="size-3.5 shrink-0 text-brand" />
+                        <AppIcon icon={CheckIcon} className="size-3.5 shrink-0 text-brand" />
                       ) : (
                         <Spinner className="size-3.5 shrink-0 text-brand" />
                       )}

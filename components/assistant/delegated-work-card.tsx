@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { AlertCircleIcon, BotIcon, CancelCircleIcon as Ban, CheckmarkCircle01Icon as CheckCircle2, GitBranchIcon, GitCommitIcon, GitPullRequestIcon, HelpCircleIcon, LinkSquare01Icon, Loading02Icon, PackageIcon, SquareIcon } from "@hugeicons/core-free-icons";
+import { AlertCircleIcon, BotIcon, CancelCircleIcon as Ban, CheckIcon, GitBranchIcon, GitCommitIcon, GitPullRequestIcon, HelpCircleIcon, LinkSquare01Icon, LoaderCircleIcon, PackageIcon, SquareIcon } from "@hugeicons/core-free-icons";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useEffect, useId, useMemo, useState } from "react";
@@ -96,12 +96,12 @@ function titleOf(call: DelegatedWorkCall, fallback: string): string {
 }
 
 const STATE_ICONS = {
-  starting: Loading02Icon,
-  queued: Loading02Icon,
-  running: Loading02Icon,
-  stopping: Loading02Icon,
+  starting: LoaderCircleIcon,
+  queued: LoaderCircleIcon,
+  running: LoaderCircleIcon,
+  stopping: LoaderCircleIcon,
   waiting_input: HelpCircleIcon,
-  completed: CheckCircle2,
+  completed: CheckIcon,
   failed: AlertCircleIcon,
   canceled: Ban,
 } satisfies Record<DelegatedWorkState, AppIcon>;
@@ -358,7 +358,7 @@ function DelegatedSubagents({ subagents }: { subagents: TurnSubagent[] }) {
               {running ? (
                 <Spinner className="size-3 shrink-0 text-blue-500" aria-hidden />
               ) : (
-                <AppIcon icon={CheckCircle2} className="size-3.5 shrink-0 text-brand" aria-hidden />
+                <AppIcon icon={CheckIcon} className="size-3.5 shrink-0 text-brand" aria-hidden />
               )}
               <span className="min-w-0 flex-1 truncate">
                 {t(

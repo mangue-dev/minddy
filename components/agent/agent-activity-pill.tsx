@@ -2,7 +2,7 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
-import { BotIcon, CancelCircleIcon as CircleSlash, CheckmarkCircle01Icon as CheckCircle2, CircleIcon } from "@hugeicons/core-free-icons";
+import { BotIcon, CancelCircleIcon as CircleSlash, CheckIcon, CircleIcon } from "@hugeicons/core-free-icons";
 import { useNow, useTranslations } from "next-intl";
 import { Spinner, cn } from "mangue-ui";
 import type { PlanStep } from "@/lib/agent-plan";
@@ -32,7 +32,7 @@ function durationLabel(
 
 function PlanStatusIcon({ step }: { step: PlanStep }) {
   if (step.status === "completed") {
-    return <AppIcon icon={CheckCircle2} className="mt-0.5 size-3.5 shrink-0 text-brand" />;
+    return <AppIcon icon={CheckIcon} className="mt-0.5 size-3.5 shrink-0 text-brand" />;
   }
   if (step.status === "in_progress") {
     return <Spinner className="mt-0.5 size-3.5 shrink-0 text-blue-500" />;
@@ -92,7 +92,7 @@ function SubagentTooltip({ subagents }: { subagents: TurnSubagent[] }) {
               {running ? (
                 <Spinner className="size-3.5 shrink-0 text-blue-500" />
               ) : (
-                <AppIcon icon={CheckCircle2} className="size-3.5 shrink-0 text-brand" />
+                <AppIcon icon={CheckIcon} className="size-3.5 shrink-0 text-brand" />
               )}
               <span className="min-w-0 flex-1 truncate">
                 {t(

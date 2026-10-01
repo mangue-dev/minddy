@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Alert01Icon, Message01Icon, MoreHorizontalIcon, Tick01Icon } from "@hugeicons/core-free-icons";
+import { Alert01Icon, Message01Icon, MoreHorizontalIcon, CheckIcon } from "@hugeicons/core-free-icons";
 import { hasVisibleOpenDialog } from "@/lib/visible-overlays";
 
 // An open PAGE (MIN-270): its header, its body, and what links them to the
@@ -211,7 +211,7 @@ function PageStatus({
             ) : state === "conflict" ? (
               <HugeiconsIcon icon={Alert01Icon} className="size-3.5" />
             ) : (
-              <HugeiconsIcon icon={Tick01Icon} className="size-3.5" />
+              <HugeiconsIcon icon={CheckIcon} className="size-3.5" />
             )}
           </span>
         </Button>

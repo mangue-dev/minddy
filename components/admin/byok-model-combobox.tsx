@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowUpDownIcon, Tick01Icon } from "@hugeicons/core-free-icons";
+import { ArrowUpDownIcon, CheckIcon } from "@hugeicons/core-free-icons";
 import { useMemo, useState } from "react";
 import {
   Button,
@@ -127,13 +127,13 @@ export function ByokModelCombobox({
             <CommandItem value="__default__" onSelect={() => select("")}>
               <ProviderLogo provider={provider} />
               <span className="flex-1 truncate text-muted-foreground">{defaultLabel}</span>
-              <HugeiconsIcon icon={Tick01Icon} className={cn("size-4 shrink-0", value ? "opacity-0" : "opacity-100")} />
+              <HugeiconsIcon icon={CheckIcon} className={cn("size-4 shrink-0", value ? "opacity-0" : "opacity-100")} />
             </CommandItem>
             {results.map((m) => (
               <CommandItem key={m.id} value={m.id} onSelect={() => select(m.id)}>
                 <ProviderLogo provider={provider} />
                 <span className="flex-1 truncate">{formatModelName(m.id) || m.id}</span>
-                <HugeiconsIcon icon={Tick01Icon} className={cn("size-4 shrink-0", value === m.id ? "opacity-100" : "opacity-0")} />
+                <HugeiconsIcon icon={CheckIcon} className={cn("size-4 shrink-0", value === m.id ? "opacity-100" : "opacity-0")} />
               </CommandItem>
             ))}
             {showFreeText ? (

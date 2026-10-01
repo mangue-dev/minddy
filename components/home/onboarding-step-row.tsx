@@ -1,6 +1,6 @@
 "use client";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Tick01Icon } from "@hugeicons/core-free-icons";
+import { CheckIcon } from "@hugeicons/core-free-icons";
 import { cn } from "mangue-ui";
 
 /**
@@ -60,7 +60,7 @@ export function OnboardingStepRow({
         {title}
       </span>
       {isCompleted && (
-        <HugeiconsIcon icon={Tick01Icon} aria-hidden className="size-4 shrink-0 text-success" strokeWidth={2.5} />
+        <HugeiconsIcon icon={CheckIcon} aria-hidden className="size-4 shrink-0 text-success" strokeWidth={2.5} />
       )}
     </div>
   );

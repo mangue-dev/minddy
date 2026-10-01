@@ -2,7 +2,7 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
-import { ArrowUpDownIcon, GaugeIcon as CircleGauge, Tick01Icon } from "@hugeicons/core-free-icons";
+import { ArrowUpDownIcon, GaugeIcon as CircleGauge, CheckIcon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import {
@@ -101,7 +101,7 @@ export function SpendCapCombobox({
                         : t("spendCapValueDesc", { percent })}
                   </span>
                 </div>
-                <HugeiconsIcon icon={Tick01Icon} className={cn(
+                <HugeiconsIcon icon={CheckIcon} className={cn(
                                         "mt-0.5 size-4 shrink-0",
                                         value === percent ? "opacity-100" : "opacity-0",
                                       )} />

@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowLeft01Icon, Cancel01Icon, CircleDotDashedIcon as CircleDotDashed, Copy01Icon, Tick01Icon } from "@hugeicons/core-free-icons";
+import { ArrowLeft01Icon, Cancel01Icon, CircleDotDashedIcon as CircleDotDashed, Copy01Icon, CheckIcon } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -542,7 +542,7 @@ export default function TriagePage() {
                   {t("decline")}
                 </Button>
                 <Button size="sm" onClick={() => openConfirm("accept", selected)}>
-                  <HugeiconsIcon icon={Tick01Icon} />
+                  <HugeiconsIcon icon={CheckIcon} />
                   {t("accept")}
                 </Button>
               </div>

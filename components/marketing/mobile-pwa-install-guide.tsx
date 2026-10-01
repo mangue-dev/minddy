@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { AddSquareIcon, Menu01Icon, MoreHorizontalIcon, Share01Icon, SmartPhone01Icon, Tick01Icon } from "@hugeicons/core-free-icons";
+import { AddSquareIcon, Menu01Icon, MoreHorizontalIcon, Share01Icon, SmartPhone01Icon, CheckIcon } from "@hugeicons/core-free-icons";
 import Image from "next/image";
 import { useEffect, useState, type ReactNode } from "react";
 import {
@@ -168,7 +168,7 @@ function IosAddVisual({ copy }: { copy: MobileInstallGuideCopy }) {
         </span>
       </div>
       <div className="mt-4 flex items-center gap-2 text-[10px] leading-relaxed text-[#636366]">
-        <HugeiconsIcon icon={Tick01Icon} className="size-4 shrink-0 text-[#34c759]" />
+        <HugeiconsIcon icon={CheckIcon} className="size-4 shrink-0 text-[#34c759]" />
         <span>{copy.uiAdd}</span>
       </div>
     </div>

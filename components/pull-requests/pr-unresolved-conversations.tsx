@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowDown01Icon, Copy01Icon, FilterIcon, TickDouble01Icon } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, Copy01Icon, FilterIcon, CheckIcon } from "@hugeicons/core-free-icons";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
@@ -179,7 +179,7 @@ export function PrUnresolvedConversations({
                   size="sm"
                   onClick={() => setConfirmOutdated(true)}
                 >
-                  <HugeiconsIcon icon={TickDouble01Icon} />
+                  <HugeiconsIcon icon={CheckIcon} />
                   {t("resolveOutdated", { count: outdated.length })}
                 </Button>
               ) : null}
@@ -215,7 +215,7 @@ export function PrUnresolvedConversations({
                       data-testid="pr-fix-all-resolve"
                       onSelect={() => setConfirmResolveAll(true)}
                     >
-                      <HugeiconsIcon icon={TickDouble01Icon} />
+                      <HugeiconsIcon icon={CheckIcon} />
                       {t("resolveAll")}
                     </DropdownMenuItem>
                   ) : null}
@@ -263,7 +263,7 @@ export function PrUnresolvedConversations({
               disabled={resolvingOutdated}
               onClick={() => void resolveOutdated()}
             >
-              {resolvingOutdated ? <Spinner /> : <HugeiconsIcon icon={TickDouble01Icon} />}
+              {resolvingOutdated ? <Spinner /> : <HugeiconsIcon icon={CheckIcon} />}
               {t("resolveOutdatedConfirm", { count: outdated.length })}
             </Button>
           </DialogFooter>
@@ -293,7 +293,7 @@ export function PrUnresolvedConversations({
               disabled={resolvingAll}
               onClick={() => void resolveAll()}
             >
-              {resolvingAll ? <Spinner /> : <HugeiconsIcon icon={TickDouble01Icon} />}
+              {resolvingAll ? <Spinner /> : <HugeiconsIcon icon={CheckIcon} />}
               {t("resolveAllConfirm")}
             </Button>
           </DialogFooter>

@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowDown01Icon, Settings01Icon, Tick01Icon } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, Settings01Icon, CheckIcon } from "@hugeicons/core-free-icons";
 import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
 import {
@@ -77,7 +77,7 @@ export function CycleTitleSelector({
         {label ? `${label} · ` : ""}
         {formatCycleRange(format, cycle)}
       </span>
-      {cycle.id === selected.id && <HugeiconsIcon icon={Tick01Icon} className="ml-2 size-4 shrink-0" />}
+      {cycle.id === selected.id && <HugeiconsIcon icon={CheckIcon} className="ml-2 size-4 shrink-0" />}
     </DropdownMenuItem>
   );
 

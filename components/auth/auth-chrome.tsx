@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Mail01Icon, Tick01Icon } from "@hugeicons/core-free-icons";
+import { Mail01Icon, CheckIcon } from "@hugeicons/core-free-icons";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
@@ -320,7 +320,7 @@ export function PasswordRules({ password }: { password: string }) {
               met ? "border-transparent bg-emerald-600 text-white" : "border-border"
             }`}
           >
-            {met && <HugeiconsIcon icon={Tick01Icon} className="size-3" strokeWidth={3} />}
+            {met && <HugeiconsIcon icon={CheckIcon} className="size-3" strokeWidth={3} />}
           </span>
           {t(id, { min: MIN_PASSWORD_LENGTH })}
         </li>

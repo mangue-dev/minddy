@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { AddToListIcon, Clock01Icon, Copy01Icon, MessageMultiple01Icon, Tick01Icon, WebhookIcon } from "@hugeicons/core-free-icons";
+import { AddToListIcon, Clock01Icon, Copy01Icon, MessageMultiple01Icon, CheckIcon, WebhookIcon } from "@hugeicons/core-free-icons";
 import type { IconSvgElement } from "@hugeicons/react";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
@@ -397,7 +397,7 @@ export function CreateIntegrationWizard({
                 onClick={() => void copyPrompt()}
               >
                 {copied ? (
-                  <HugeiconsIcon icon={Tick01Icon} className="size-4 text-emerald-500" />
+                  <HugeiconsIcon icon={CheckIcon} className="size-4 text-emerald-500" />
                 ) : (
                   <HugeiconsIcon icon={Copy01Icon} className="size-4" />
                 )}

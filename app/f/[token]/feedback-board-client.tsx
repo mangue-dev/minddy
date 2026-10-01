@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowDown01Icon, ArrowUpDownIcon, FilterIcon, Megaphone01Icon, MessageMultiple01Icon, Mic01Icon, Search01Icon, Tick01Icon } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, ArrowUpDownIcon, FilterIcon, Megaphone01Icon, MessageMultiple01Icon, Mic01Icon, Search01Icon, CheckIcon } from "@hugeicons/core-free-icons";
 import { useEffect, useRef, useState, useTransition, type CSSProperties, type Ref } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -456,7 +456,7 @@ function FilterBar({
               onSelect={() => router.push(buildHref(basePath, value, filter))}
             >
               {value === "top" ? t("sortTop") : t("sortRecent")}
-              {sort === value && <HugeiconsIcon icon={Tick01Icon} className="ml-auto size-4" />}
+              {sort === value && <HugeiconsIcon icon={CheckIcon} className="ml-auto size-4" />}
             </DropdownMenuItem>
           ))}
         </DropdownMenuContent>

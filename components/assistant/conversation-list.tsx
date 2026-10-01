@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArchiveArrowUpIcon, ArchiveIcon, Clock01Icon, Delete02Icon, Loading02Icon, MoreHorizontalIcon, PinIcon, PinOffIcon } from "@hugeicons/core-free-icons";
+import { ArchiveArrowUpIcon, ArchiveIcon, Clock01Icon, Delete02Icon, LoaderCircleIcon, MoreHorizontalIcon, PinIcon, PinOffIcon } from "@hugeicons/core-free-icons";
 import { useEffect, useState, useCallback, useMemo, useRef, type CSSProperties, type Ref } from "react";
 import { useTranslations } from "next-intl";
 import {
@@ -296,7 +296,7 @@ export function ConversationList({
             {conversation.title || t("newConversation")}
           </span>
           {conversation.status === "generating" && (
-            <HugeiconsIcon icon={Loading02Icon} className="size-3 shrink-0 animate-spin text-primary" />
+            <HugeiconsIcon icon={LoaderCircleIcon} className="size-3 shrink-0 animate-spin text-primary" />
           )}
           {unread && (
             <span
@@ -404,7 +404,7 @@ export function ConversationList({
             disabled={fetching}
             onClick={() => setLimit((value) => value + CONVERSATIONS_PAGE_SIZE)}
           >
-            {fetching && <HugeiconsIcon icon={Loading02Icon} className="animate-spin" />}
+            {fetching && <HugeiconsIcon icon={LoaderCircleIcon} className="animate-spin" />}
             {t("loadMore")}
           </Button>
         )}

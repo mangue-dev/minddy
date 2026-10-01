@@ -1,6 +1,6 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
-import { GitPullRequestIcon, MessageSquareDashedIcon, TaskDone01Icon, Tick01Icon } from "@hugeicons/core-free-icons";
+import { GitPullRequestIcon, MessageSquareDashedIcon, TaskDone01Icon, CheckIcon } from "@hugeicons/core-free-icons";
 import type { CSSProperties } from "react";
 import { getTranslations } from "next-intl/server";
 import { cn } from "mangue-ui/lib/utils";
@@ -150,7 +150,7 @@ export async function AgentLoopFigure() {
                     className="loop-check mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-[4px] border border-primary bg-primary text-primary-foreground"
                     style={beat(i)}
                   >
-                    <HugeiconsIcon icon={Tick01Icon} className="size-3" />
+                    <HugeiconsIcon icon={CheckIcon} className="size-3" />
                   </span>
                   {/* The bar is a drawn LINE and not a `line-through`:
                       a text decoration does not animate, a line is drawn. */}
@@ -189,12 +189,12 @@ export async function AgentLoopFigure() {
         </Beat>
 
         {/* ④ Verification — the time that cannot be delegated ────────────── */}
-        <Beat index={4} icon={<HugeiconsIcon icon={Tick01Icon} className="size-3.5" />} label={t("heroLoopStepReview")} last>
+        <Beat index={4} icon={<HugeiconsIcon icon={CheckIcon} className="size-3.5" />} label={t("heroLoopStepReview")} last>
           {/* Pellets, not buttons: nothing is clickable here, and a
               full button would invoke the click that the real action deserves. */}
           <div className="flex flex-wrap gap-2">
             <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-medium shadow-sm">
-              <HugeiconsIcon icon={Tick01Icon} className="size-3.5 shrink-0 text-green-700 dark:text-green-400" />
+              <HugeiconsIcon icon={CheckIcon} className="size-3.5 shrink-0 text-green-700 dark:text-green-400" />
               {tPr("reviewApprove")}
             </span>
             <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm">

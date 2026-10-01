@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowRight01Icon, BotIcon, BubbleChatDelayIcon, DashboardSpeedIcon, FlowIcon, InformationCircleIcon, Loading02Icon, MessageMultiple01Icon, Mic01Icon } from "@hugeicons/core-free-icons";
+import { ArrowRight01Icon, BotIcon, BubbleChatDelayIcon, DashboardSpeedIcon, FlowIcon, InformationCircleIcon, LoaderCircleIcon, MessageMultiple01Icon, Mic01Icon } from "@hugeicons/core-free-icons";
 import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
@@ -400,7 +400,7 @@ function UsageFooter({ onNavigate }: { onNavigate?: () => void }) {
           onClick={() => void handleUpgrade()}
           disabled={redirecting}
         >
-          {redirecting && <HugeiconsIcon icon={Loading02Icon} className="size-3.5 animate-spin" />}
+          {redirecting && <HugeiconsIcon icon={LoaderCircleIcon} className="size-3.5 animate-spin" />}
           {t("upgradeTo", { plan: t(PLAN_LABEL_KEYS[nextPlanId]) })}
         </Button>
       )}

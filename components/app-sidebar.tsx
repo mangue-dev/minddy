@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowDown01Icon, ArrowLeft01Icon, ArrowRight01Icon, ArrowUpRight01Icon, BarChartIcon, CreditCardIcon, Delete02Icon, HelpCircleIcon, Home01Icon, Logout01Icon, Megaphone01Icon, Settings01Icon, Shield01Icon, Tick01Icon } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, ArrowLeft01Icon, ArrowRight01Icon, ArrowUpRight01Icon, BarChartIcon, CreditCardIcon, Delete02Icon, HelpCircleIcon, Home01Icon, Logout01Icon, Megaphone01Icon, Settings01Icon, Shield01Icon, CheckIcon } from "@hugeicons/core-free-icons";
 import { AppIcon } from "@/components/icon";
 import {
   useCallback,
@@ -470,7 +470,7 @@ function ProjectContextRow({
                   className="size-[18px] rounded-[5px]"
                 />
                 <span className="min-w-0 flex-1 truncate">{project.name}</span>
-                {current ? <HugeiconsIcon icon={Tick01Icon} className="ml-auto size-4 shrink-0" /> : null}
+                {current ? <HugeiconsIcon icon={CheckIcon} className="ml-auto size-4 shrink-0" /> : null}
               </Link>
             </DropdownMenuItem>
           );

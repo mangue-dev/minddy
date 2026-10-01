@@ -2,7 +2,7 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
-import { AlertCircleIcon, ArrowUpRight01Icon, GitBranchIcon, GitMergeIcon, GitPullRequestDraftIcon, Shield01Icon, Tick01Icon, UserRoundCheckIcon as UserRoundCheck, ViewIcon, Wrench01Icon } from "@hugeicons/core-free-icons";
+import { AlertCircleIcon, ArrowUpRight01Icon, GitBranchIcon, GitMergeIcon, GitPullRequestDraftIcon, Shield01Icon, CheckIcon, UserRoundCheckIcon as UserRoundCheck, ViewIcon, Wrench01Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useNow, useTranslations } from "next-intl";
 import {
@@ -780,7 +780,7 @@ function PrStatusCardView({
         ) : card.avatars ? (
           <AvatarCascade users={card.avatars} />
         ) : card.id === "checks-passed" ? (
-          <HugeiconsIcon icon={Tick01Icon} />
+          <HugeiconsIcon icon={CheckIcon} />
         ) : card.id === "deployment" ? (
           <HugeiconsIcon icon={ArrowUpRight01Icon} />
         ) : card.id === "numo-review" ||

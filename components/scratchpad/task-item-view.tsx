@@ -23,7 +23,7 @@
 // as it already does for the mention pill.
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { CancelCircleIcon as CircleSlash, CircleIcon, Copy01Icon, MoreHorizontalIcon, PlayIcon, Tick01Icon } from "@hugeicons/core-free-icons";
+import { CancelCircleIcon as CircleSlash, CircleIcon, Copy01Icon, MoreHorizontalIcon, PlayIcon, CheckIcon } from "@hugeicons/core-free-icons";
 import { AppIcon } from "@/components/icon";
 import { useRef, useState, type MouseEvent } from "react";
 import {
@@ -83,7 +83,7 @@ const STATE_CHOICES = [
   },
   {
     value: "completed",
-    icon: Tick01Icon,
+    icon: CheckIcon,
     label: "markCompleted",
     keywords: ["completed", "done", "terminé", "termine", "fait"],
   },

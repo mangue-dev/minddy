@@ -1,5 +1,5 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowRight01Icon, CheckListIcon, Key02Icon, MessageAdd01Icon, ShieldCheckIcon as ShieldCheck, SparklesIcon, TaskDone01Icon, TerminalIcon as Terminal, Tick01Icon, UserCheck01Icon } from "@hugeicons/core-free-icons";
+import { ArrowRight01Icon, CheckListIcon, Key02Icon, MessageAdd01Icon, ShieldCheckIcon as ShieldCheck, SparklesIcon, TaskDone01Icon, TerminalIcon as Terminal, CheckIcon, UserCheck01Icon } from "@hugeicons/core-free-icons";
 import type { Metadata } from "next";
 import { getLocale, getTranslations } from "next-intl/server";
 import { Button } from "mangue-ui/components/ui/button";
@@ -130,7 +130,7 @@ export default async function McpPage() {
               <ul className="flex h-full flex-col justify-between gap-5">
                 {CAPABILITY_KEYS.map(key => (
                   <li key={key} className="flex items-start gap-3 text-sm leading-relaxed">
-                    <HugeiconsIcon icon={Tick01Icon} className="mt-0.5 size-4 shrink-0" aria-hidden />
+                    <HugeiconsIcon icon={CheckIcon} className="mt-0.5 size-4 shrink-0" aria-hidden />
                     {tl(`agentsCapability_${key}`)}
                   </li>
                 ))}

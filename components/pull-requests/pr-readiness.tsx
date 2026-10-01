@@ -2,7 +2,7 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
-import { AlertCircleIcon, ArrowDown01Icon, Clock01Icon, Tick01Icon } from "@hugeicons/core-free-icons";
+import { AlertCircleIcon, ArrowDown01Icon, Clock01Icon, CheckIcon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import {
@@ -161,7 +161,7 @@ export function PrReadinessBadge({
       )}
     >
       {ready ? (
-        <HugeiconsIcon icon={Tick01Icon} className="size-3" />
+        <HugeiconsIcon icon={CheckIcon} className="size-3" />
       ) : pending ? (
         <HugeiconsIcon icon={Clock01Icon} className="size-3" />
       ) : (
@@ -194,7 +194,7 @@ export function PrReadinessIcon({
       readiness.state === "review_requested" ||
       readiness.state === "checks_running" ||
       readiness.state === "status_unavailable");
-  const Icon = unavailable ? AlertCircleIcon : ready ? Tick01Icon : pending ? Clock01Icon : AlertCircleIcon;
+  const Icon = unavailable ? AlertCircleIcon : ready ? CheckIcon : pending ? Clock01Icon : AlertCircleIcon;
   return (
     <AppTooltip label={label}>
       <span
@@ -263,7 +263,7 @@ export function PrReadinessControl({
     readiness.state === "checks_running" ||
     readiness.state === "status_unavailable";
   const statusIcon = ready ? (
-    <HugeiconsIcon icon={Tick01Icon} className="size-3.5" />
+    <HugeiconsIcon icon={CheckIcon} className="size-3.5" />
   ) : pending ? (
     <HugeiconsIcon icon={Clock01Icon} className="size-3.5" />
   ) : (
@@ -306,7 +306,7 @@ export function PrReadinessControl({
               data-testid="pr-readiness-condition-passed"
               className="flex items-start gap-2.5 rounded-md bg-emerald-500/10 px-2.5 py-2"
             >
-              <HugeiconsIcon icon={Tick01Icon} className="mt-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+              <HugeiconsIcon icon={CheckIcon} className="mt-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
               <div className="min-w-0 flex-1">
                 <p className="text-sm text-emerald-700 dark:text-emerald-400">
                   {t(PASSED_KEYS[condition.kind], {
@@ -473,7 +473,7 @@ export function PrReadinessControl({
                       onMerge(preferredMethod);
                     }}
                   >
-                    {merging ? <Spinner /> : <HugeiconsIcon icon={Tick01Icon} />}
+                    {merging ? <Spinner /> : <HugeiconsIcon icon={CheckIcon} />}
                     {t(mergeMethodKey(preferredMethod))}
                   </Button>
                   {otherMethods.length > 0 ? (

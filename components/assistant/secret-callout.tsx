@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Copy01Icon, Key02Icon, Tick01Icon, ViewIcon, ViewOffIcon } from "@hugeicons/core-free-icons";
+import { Copy01Icon, Key02Icon, CheckIcon, ViewIcon, ViewOffIcon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button, Input } from "mangue-ui";
@@ -107,7 +107,7 @@ export function SecretCallout({ envLine }: { envLine: string }) {
           }}
         >
           {copied ? (
-            <HugeiconsIcon icon={Tick01Icon} className="size-4 text-emerald-500" />
+            <HugeiconsIcon icon={CheckIcon} className="size-4 text-emerald-500" />
           ) : (
             <HugeiconsIcon icon={Copy01Icon} className="size-4" />
           )}

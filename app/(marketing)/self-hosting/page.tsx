@@ -1,5 +1,5 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowRight01Icon, DatabaseIcon, Download01Icon, Globe02Icon as Globe2, HardDriveIcon, Refresh01Icon, ServerIcon as Server, ShieldCheckIcon as ShieldCheck, Tick01Icon, Upload01Icon, Wrench01Icon } from "@hugeicons/core-free-icons";
+import { ArrowRight01Icon, DatabaseIcon, Download01Icon, Globe02Icon as Globe2, HardDriveIcon, Refresh01Icon, ServerIcon as Server, ShieldCheckIcon as ShieldCheck, CheckIcon, Upload01Icon, Wrench01Icon } from "@hugeicons/core-free-icons";
 import type { Metadata } from "next";
 import { getLocale, getTranslations } from "next-intl/server";
 import { Button } from "mangue-ui/components/ui/button";
@@ -63,7 +63,7 @@ export default async function SelfHostingPage() {
               <p className="mt-3 text-sm leading-relaxed opacity-80">{t("promiseBody")}</p>
               <ul className="mt-7 space-y-4">
                 {(["promiseOne", "promiseTwo", "promiseThree"] as const).map(key => (
-                  <li key={key} className="flex gap-3 text-sm leading-relaxed"><HugeiconsIcon icon={Tick01Icon} className="mt-0.5 size-4 shrink-0" aria-hidden />{t(key)}</li>
+                  <li key={key} className="flex gap-3 text-sm leading-relaxed"><HugeiconsIcon icon={CheckIcon} className="mt-0.5 size-4 shrink-0" aria-hidden />{t(key)}</li>
                 ))}
               </ul>
             </div>
@@ -87,7 +87,7 @@ export default async function SelfHostingPage() {
                 <h3 className="mt-7 text-3xl leading-tight font-medium tracking-[-0.035em]">{route.title}</h3>
                 <p className="mt-4 max-w-xl text-sm leading-relaxed opacity-80">{route.body}</p>
                 <ul className="mt-6 flex flex-wrap gap-x-5 gap-y-3">
-                  {route.facts.map(fact => <li key={fact} className="flex items-center gap-2 text-sm"><HugeiconsIcon icon={Tick01Icon} className="size-4 shrink-0" aria-hidden />{fact}</li>)}
+                  {route.facts.map(fact => <li key={fact} className="flex items-center gap-2 text-sm"><HugeiconsIcon icon={CheckIcon} className="size-4 shrink-0" aria-hidden />{fact}</li>)}
                 </ul>
                 <div className="mt-auto pt-8">
                   <a href={`${installHref}?route=${route.key}`}

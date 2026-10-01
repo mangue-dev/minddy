@@ -92,7 +92,8 @@
       "esbuild"
     ],
     "patchedDependencies": {
-      "web-push@3.6.7": "patches/web-push@3.6.7.patch"
+      "web-push@3.6.7": "patches/web-push@3.6.7.patch",
+      "mangue-ui@0.8.0": "patches/mangue-ui@0.8.0.patch"
     }
   },
   "dependencies": {

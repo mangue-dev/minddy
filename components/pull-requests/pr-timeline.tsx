@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AppIcon } from "@/components/icon";
-import { Cancel01Icon as X, CancelCircleIcon as CircleSlash, Tick01Icon as Check } from "@hugeicons/core-free-icons";
+import { Cancel01Icon as X, CancelCircleIcon as CircleSlash, CheckIcon as Check } from "@hugeicons/core-free-icons";
 import { useFormatter, useNow, useTranslations } from "next-intl";
 import { cn } from "mangue-ui";
 import { AuthorNames, AuthorStack } from "@/components/git/author-stack";

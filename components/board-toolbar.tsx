@@ -2,7 +2,7 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
-import { Add01Icon, ArrangeByLettersAZIcon, AiAutoRotateIcon as CycleIcon, ArrowUpRight01Icon, Delete02Icon, FilterIcon, FloppyDiskIcon, LinkSquare01Icon, Loading02Icon, LockIcon, MoreHorizontalIcon, Edit04Icon, Plug01Icon, Share01Icon, Tick01Icon, TriangleIcon, UserCircleIcon } from "@hugeicons/core-free-icons";
+import { Add01Icon, ArrangeByLettersAZIcon, AiAutoRotateIcon as CycleIcon, ArrowUpRight01Icon, Delete02Icon, FilterIcon, FloppyDiskIcon, LinkSquare01Icon, LoaderCircleIcon, LockIcon, MoreHorizontalIcon, Edit04Icon, Plug01Icon, Share01Icon, CheckIcon, TriangleIcon, UserCircleIcon } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
@@ -204,7 +204,7 @@ function MenuToggleRow({
       }}
     >
       <span className="flex min-w-0 flex-1 items-center gap-2">{children}</span>
-      {active && <HugeiconsIcon icon={Tick01Icon} className="size-4 shrink-0" />}
+      {active && <HugeiconsIcon icon={CheckIcon} className="size-4 shrink-0" />}
     </DropdownMenuItem>
   );
 }
@@ -577,7 +577,7 @@ function FiltersPopover({
               }}
             >
               {tSort(s)}
-              {config.sort === s && <HugeiconsIcon icon={Tick01Icon} className="ml-auto size-4" />}
+              {config.sort === s && <HugeiconsIcon icon={CheckIcon} className="ml-auto size-4" />}
             </DropdownMenuItem>
           ))}
           <DropdownMenuSeparator />
@@ -605,7 +605,7 @@ function FiltersPopover({
               <HugeiconsIcon icon={ArrangeByLettersAZIcon} className="text-muted-foreground" />
             )}
             {t("reverseOrder")}
-            {sortDirection === "desc" && <HugeiconsIcon icon={Tick01Icon} className="ml-auto size-4" />}
+            {sortDirection === "desc" && <HugeiconsIcon icon={CheckIcon} className="ml-auto size-4" />}
           </DropdownMenuItem>
         </FilterSub>
       </DropdownMenuContent>
@@ -985,7 +985,7 @@ export function BoardToolbar({
                   )}
                 >
                   {generatingViewIds.has(activeDragView.id) && (
-                    <HugeiconsIcon icon={Loading02Icon} className="size-3 shrink-0 animate-spin" />
+                    <HugeiconsIcon icon={LoaderCircleIcon} className="size-3 shrink-0 animate-spin" />
                   )}
                   {activeDragView.kind === "my" &&
                     (myAvatarSource ? (
@@ -1258,7 +1258,7 @@ function ViewChip({
       className={cn(PILL_CLASS, pillTone(active), isDragging && "opacity-50")}
     >
       {generating && (
-        <HugeiconsIcon icon={Loading02Icon} className="size-3 shrink-0 animate-spin" aria-label={t("viewGenerating")} />
+        <HugeiconsIcon icon={LoaderCircleIcon} className="size-3 shrink-0 animate-spin" aria-label={t("viewGenerating")} />
       )}
       {isSystem &&
         (avatarSeed ? (

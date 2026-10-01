@@ -2,7 +2,7 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
-import { ArrowDown01Icon, Tick01Icon } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, CheckIcon } from "@hugeicons/core-free-icons";
 import { createUuid } from "@/lib/create-uuid";
 
 import { useState } from "react";
@@ -148,7 +148,7 @@ export function DatabaseOptionsDialog({
                       style={{ backgroundColor: color }}
                     >
                       {color === option.color && (
-                        <HugeiconsIcon icon={Tick01Icon} className="size-3 text-white" />
+                        <HugeiconsIcon icon={CheckIcon} className="size-3 text-white" />
                       )}
                     </span>
                   </button>

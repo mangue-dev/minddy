@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowDown01Icon, CodeSimpleIcon as Code2, Copy01Icon, LinkSquare01Icon, MessageMultiple01Icon, Refresh01Icon, Tick01Icon, ViewIcon, ViewOffIcon } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, CodeSimpleIcon as Code2, Copy01Icon, LinkSquare01Icon, MessageMultiple01Icon, Refresh01Icon, CheckIcon, ViewIcon, ViewOffIcon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
@@ -555,7 +555,7 @@ function CopyButton({ value }: { value: string }) {
         setTimeout(() => setCopied(false), 1500);
       }}
     >
-      {copied ? <HugeiconsIcon icon={Tick01Icon} className="size-4 text-emerald-500" /> : <HugeiconsIcon icon={Copy01Icon} className="size-4" />}
+      {copied ? <HugeiconsIcon icon={CheckIcon} className="size-4 text-emerald-500" /> : <HugeiconsIcon icon={Copy01Icon} className="size-4" />}
     </Button>
   );
 }

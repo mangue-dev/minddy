@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowDown01Icon, ArrowRight01Icon, Loading02Icon } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, ArrowRight01Icon, LoaderCircleIcon } from "@hugeicons/core-free-icons";
 import type { ComponentType } from "react";
 import { Github, Gitlab } from "@/components/git/provider-icons";
 import { useTranslations } from "next-intl";
@@ -82,7 +82,7 @@ export function ProviderConnectButtons({
             onClick={() => onConnect(provider.id)}
           >
             {isConnecting ? (
-              <HugeiconsIcon icon={Loading02Icon} className="h-4 w-4 shrink-0 animate-spin" />
+              <HugeiconsIcon icon={LoaderCircleIcon} className="h-4 w-4 shrink-0 animate-spin" />
             ) : (
               <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
             )}
@@ -143,7 +143,7 @@ export function ProviderConnectMenu({
         disabled={disabled || connecting != null}
         onClick={() => onConnect(provider.id)}
       >
-        {connecting === provider.id ? <HugeiconsIcon icon={Loading02Icon} className="animate-spin" /> : <Icon />}
+        {connecting === provider.id ? <HugeiconsIcon icon={LoaderCircleIcon} className="animate-spin" /> : <Icon />}
         {t("gitConnectWith", { provider: provider.displayName })}
       </Button>
     );
@@ -159,7 +159,7 @@ export function ProviderConnectMenu({
           className="group"
           disabled={disabled || connecting != null}
         >
-          {connecting && <HugeiconsIcon icon={Loading02Icon} className="animate-spin" />}
+          {connecting && <HugeiconsIcon icon={LoaderCircleIcon} className="animate-spin" />}
           {t("gitConnect")}
           <HugeiconsIcon icon={ArrowDown01Icon} className="transition-transform group-data-[state=open]:rotate-180" />
         </Button>

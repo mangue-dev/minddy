@@ -1,6 +1,6 @@
 "use client";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Add01Icon, AlertCircleIcon, Home01Icon, Loading02Icon, MoreHorizontalIcon } from "@hugeicons/core-free-icons";
+import { Add01Icon, AlertCircleIcon, Home01Icon, LoaderCircleIcon, MoreHorizontalIcon } from "@hugeicons/core-free-icons";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   DndContext,
@@ -110,7 +110,7 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
       );
     }
     if (!agentsAllowed || (section !== "numo" && section !== "agents")) return null;
-    if (anyAgentWorking) return <HugeiconsIcon icon={Loading02Icon} className="size-3 shrink-0 animate-spin text-muted-foreground" />;
+    if (anyAgentWorking) return <HugeiconsIcon icon={LoaderCircleIcon} className="size-3 shrink-0 animate-spin text-muted-foreground" />;
     if (anyAgentAwaiting) return <span className="size-2 shrink-0 rounded-full bg-yellow-500" aria-label={nav("agentsAwaiting")} />;
     if (anyAgentUnread) return <span className="size-2 shrink-0 rounded-full bg-blue-500" aria-label={nav("agentsUnread")} />;
     return null;
@@ -319,7 +319,7 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
           })()}
         </DragOverlay>
         </DndContext>
-        {loading && <HugeiconsIcon icon={Loading02Icon} aria-label={t("loading")} className="size-4 shrink-0 animate-spin" />}
+        {loading && <HugeiconsIcon icon={LoaderCircleIcon} aria-label={t("loading")} className="size-4 shrink-0 animate-spin" />}
       </div>
       {hidden.length > 0 ? (
         <DropdownMenu>

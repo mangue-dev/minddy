@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Cancel01Icon, CheckmarkSquare01Icon, SquareIcon } from "@hugeicons/core-free-icons";
+import { Cancel01Icon, CheckIcon, SquareIcon } from "@hugeicons/core-free-icons";
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
@@ -174,7 +174,7 @@ export function AskUserCard({ questions, onAnswer, onSkip }: AskUserCardProps) {
   // Selection indicator: radio = FULL circle when checked; checkbox = checkbox.
   const OptionIcon = ({ selected }: { selected: boolean }) => {
     if (q.multiSelect) {
-      const Icon = selected ? CheckmarkSquare01Icon : SquareIcon;
+      const Icon = selected ? CheckIcon : SquareIcon;
       return (
         <AppIcon
           icon={Icon}

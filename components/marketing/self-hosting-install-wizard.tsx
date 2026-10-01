@@ -2,7 +2,7 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon, type AppIcon as AppIconType } from "@/components/icon";
-import { ArrowDown01Icon, ArrowLeft01Icon, ArrowRight01Icon, BotIcon, CheckmarkCircle01Icon as CheckCircle2, DatabaseIcon, Download01Icon, FolderOpenIcon, Globe02Icon as Globe2, HardDriveIcon, LaptopIcon, LinkSquare01Icon, Mail01Icon, Notification01Icon, ServerIcon as Server, ShieldCheckIcon as ShieldCheck, SquareTerminalIcon as TerminalSquare, Tick01Icon } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, ArrowLeft01Icon, ArrowRight01Icon, BotIcon, CheckIcon, DatabaseIcon, Download01Icon, FolderOpenIcon, Globe02Icon as Globe2, HardDriveIcon, LaptopIcon, LinkSquare01Icon, Mail01Icon, Notification01Icon, ServerIcon as Server, ShieldCheckIcon as ShieldCheck, SquareTerminalIcon as TerminalSquare } from "@hugeicons/core-free-icons";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import type { Messages } from "next-intl";
@@ -108,7 +108,7 @@ function Checklist({ items }: { items: string[] }) {
     <ul className="mt-4 space-y-2">
       {items.map((item) => (
         <li key={item} className="flex items-start gap-2 text-sm leading-relaxed text-muted-foreground">
-          <HugeiconsIcon icon={Tick01Icon} className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
+          <HugeiconsIcon icon={CheckIcon} className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
           {item}
         </li>
       ))}
@@ -163,7 +163,7 @@ function OptionCard({
         <div className="flex min-w-0 items-center gap-3">
           {badge && <span className="text-right text-xs font-medium opacity-75">{badge}</span>}
           <span className={cn("flex size-6 shrink-0 items-center justify-center rounded-full border", selected ? "border-current bg-background/70" : "border-current/25")} aria-hidden>
-            {selected && <HugeiconsIcon icon={Tick01Icon} className="size-4" />}
+            {selected && <HugeiconsIcon icon={CheckIcon} className="size-4" />}
           </span>
         </div>
       </div>
@@ -660,7 +660,7 @@ export function SelfHostingInstallWizard({
                       <div className="flex items-start gap-3">
                         <AppIcon icon={Icon} className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden={true} />
                         <span><span className="font-medium">{title}</span><span className="mt-1.5 block text-sm leading-relaxed text-muted-foreground">{body}</span></span>
-                        {optionalFeatures.includes(id) && <HugeiconsIcon icon={Tick01Icon} className="ml-auto h-4 w-4 shrink-0 text-primary" aria-hidden />}
+                        {optionalFeatures.includes(id) && <HugeiconsIcon icon={CheckIcon} className="ml-auto h-4 w-4 shrink-0 text-primary" aria-hidden />}
                       </div>
                     </button>
                   ))}
@@ -865,7 +865,7 @@ export function SelfHostingInstallWizard({
       canContinue: false,
       content: (
         <div className={cn("space-y-5", HIGHLIGHT_PANEL)}>
-          <div className="flex items-start gap-3"><AppIcon icon={CheckCircle2} className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden /><p className="text-sm leading-relaxed">{path === "local" ? copy.localTeamAnswer : copy.answerUpdates}</p></div>
+          <div className="flex items-start gap-3"><AppIcon icon={CheckIcon} className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden /><p className="text-sm leading-relaxed">{path === "local" ? copy.localTeamAnswer : copy.answerUpdates}</p></div>
           {path === "local" && <Checklist items={[copy.desktopStopInstruction, copy.desktopRestartInstruction]} />}
           {path === "team" && <div className="flex flex-wrap gap-2"><ResourceLink href={links.operations}>{copy.openOperationsGuide}</ResourceLink></div>}
         </div>
@@ -940,7 +940,7 @@ export function SelfHostingInstallWizard({
                 <nav aria-label={copy.progressTitle} className="max-h-[min(24rem,50dvh)] overflow-y-auto overscroll-contain">
                   <ol className="space-y-1">
                     {stages.map((stage, index) => {
-                      const contents = <><span aria-hidden className={cn("flex size-6 shrink-0 items-center justify-center rounded-full text-xs", index === currentIndex ? "bg-foreground text-background" : "bg-foreground/5")}>{index < currentIndex ? <HugeiconsIcon icon={Tick01Icon} className="size-3.5" /> : index + 1}</span><span className="text-sm leading-snug">{stage.title}</span></>;
+                      const contents = <><span aria-hidden className={cn("flex size-6 shrink-0 items-center justify-center rounded-full text-xs", index === currentIndex ? "bg-foreground text-background" : "bg-foreground/5")}>{index < currentIndex ? <HugeiconsIcon icon={CheckIcon} className="size-3.5" /> : index + 1}</span><span className="text-sm leading-snug">{stage.title}</span></>;
                       return <li key={stage.id} ref={index === currentIndex ? progressStepRef : undefined} tabIndex={index === currentIndex ? -1 : undefined} aria-current={index === currentIndex ? "step" : undefined} className="rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring">
                         {index < currentIndex ? <button type="button" onClick={() => jumpBack(index)} className="flex min-h-11 w-full items-center gap-3 rounded-xl p-2 text-left text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-ring">{contents}</button>
                           : <div className={cn("flex min-h-11 items-center gap-3 rounded-xl p-2", index === currentIndex ? "bg-muted font-medium" : "text-muted-foreground")}>{contents}</div>}

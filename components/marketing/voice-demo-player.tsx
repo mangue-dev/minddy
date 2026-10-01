@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowDown01Icon, ArrowRight01Icon, Loading02Icon, Mic01Icon, SquareIcon } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, ArrowRight01Icon, LoaderCircleIcon, Mic01Icon, SquareIcon } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { cn } from "mangue-ui/lib/utils";
@@ -420,7 +420,7 @@ export function VoiceDemoPlayer({ labels, embedded = false }: { labels: VoiceDem
               disabled={status === "processing"}
               aria-label={status === "recording" ? t("voiceDemoStop") : t("voiceDemoStart")}
               className="flex size-24 items-center justify-center rounded-full transition-colors hover:bg-white/30 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-current disabled:opacity-50 dark:hover:bg-white/5">
-              {status === "processing" ? <HugeiconsIcon icon={Loading02Icon} className="size-12 animate-spin motion-reduce:animate-none" strokeWidth={1.25} aria-hidden /> :
+              {status === "processing" ? <HugeiconsIcon icon={LoaderCircleIcon} className="size-12 animate-spin motion-reduce:animate-none" strokeWidth={1.25} aria-hidden /> :
                 status === "recording" ? <HugeiconsIcon icon={SquareIcon} className="size-9" strokeWidth={1.25} aria-hidden /> :
                 <HugeiconsIcon icon={Mic01Icon} className="size-14" strokeWidth={1.25} aria-hidden />}
             </button>
@@ -481,7 +481,7 @@ export function VoiceDemoPlayer({ labels, embedded = false }: { labels: VoiceDem
                 />
               )}
               {status === "processing" ? (
-                <HugeiconsIcon icon={Loading02Icon} className="relative size-6 animate-spin" />
+                <HugeiconsIcon icon={LoaderCircleIcon} className="relative size-6 animate-spin" />
               ) : status === "recording" ? (
                 <HugeiconsIcon icon={SquareIcon} className="relative size-5 fill-current" />
               ) : (
