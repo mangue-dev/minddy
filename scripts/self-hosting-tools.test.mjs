@@ -81,7 +81,7 @@ test("the installer scopes generated configuration to selected useful features",
   assert.ok(values.GIT_TOKEN_ENCRYPTION_SECRET);
   assert.ok(values.CRON_SECRET);
   assert.ok(values.AGENT_RUNNER_SECRET);
-  assert.equal(values.MINDDY_CONTENT_ENCRYPTION_ENABLED, "false");
+  assert.equal(values.MINDDY_CONTENT_ENCRYPTION_ENABLED, "true");
   assert.match(values.MINDDY_DATA_ROOT_KEY, /^[a-f0-9]{64}$/);
   assert.notEqual(values.MINDDY_DATA_ROOT_KEY, values.AI_KEY_ENCRYPTION_SECRET);
   assert.deepEqual([...inferCapabilities(values)].sort(), [...capabilities].sort());

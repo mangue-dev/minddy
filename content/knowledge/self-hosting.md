@@ -141,20 +141,40 @@ protected content unreadable. Keep a protected recovery copy, including the
 historical roots needed for older backups. Encrypt and restrict access to any
 backup that contains both the environment and database.
 
-New server installations explicitly set `MINDDY_CONTENT_ENCRYPTION_ENABLED=false`.
-A generated key does not establish that data is encrypted. Before setting the
-switch to `true` in the application server environment:
+New local and server installations enable encryption by default. The guide offers
+an explicit enabled/disabled choice and includes it in both the manual commands
+and copied assistant prompt. Both modes generate the dedicated root key; the
+opt-out affects workspace content encryption, not saved provider credentials.
 
-1. Apply all migrations from the selected release and stop obsolete writers.
-2. Confirm the root key is present, backed up and recoverable; rehearse restoring
-   the database, Storage objects and matching keys in an isolated environment.
-3. Complete the encryption readiness and representative search/performance checks
-   described in the repository's `docs/security/encryption/` runbooks.
-4. Set the switch and restart the application. Scheduled maintenance advances
-   bounded migration and key rotation; verify all protected sources and retained
-   copies before treating the rollout as complete.
+For a new server installation, pass `--encryption enabled` (the default) or
+`--encryption disabled` to `pnpm self-host:install`. The installer writes
+`MINDDY_CONTENT_ENCRYPTION_ENABLED=true` or `false` accordingly, plus an
+independent `MINDDY_DATA_ROOT_KEY` in the mode-0600 deployment environment.
+The same choice applies to both managed and full Supabase profiles.
 
-For an existing installation, preserve the environment and recover its original
-root before enabling encryption. Turning the switch off does not allow plaintext
-writes to already protected data. Replacing a root requires the guarded offline
-rewrap procedure in `docs/security/encryption/root-key-rotation.md`.
+For the local desktop flow, prepare the configuration before opening the clone
+in the desktop app:
+
+```sh
+pnpm bootstrap:supabase -- --minimal --app-url http://localhost:6463 --encryption enabled
+# Use --encryption disabled instead to opt out.
+```
+
+This prepares the schema, Storage and `.env.local`, including the selected flag
+and root key. Later desktop starts reuse those settings. Complete installation
+and its migration/verification checks before importing data or using the instance.
+Scheduled maintenance advances bounded legacy conversion and key rotation; an
+initial flag or generated key alone does not prove historical data and retained
+copies have all been converted. Use `docs/security/encryption/` for rollout,
+readiness and recovery checks on existing data.
+
+Reruns preserve the saved flag and root key. A conflicting explicit CLI choice
+fails with instructions to review the environment instead of silently replacing
+it. An existing configuration without the flag stays disabled until deliberately
+configured; a missing root on an enabled instance blocks installation and must be
+recovered. For a deliberate mode change, preserve the root, update the flag in
+the protected environment and restart the application. Turning encryption off
+never decrypts or permits plaintext writes to already protected data. Replacing
+a root requires the guarded offline rewrap procedure in
+`docs/security/encryption/root-key-rotation.md`. Rehearse database, Storage and
+matching-key recovery in an isolated environment, and protect retained backups.
