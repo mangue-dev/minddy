@@ -44,7 +44,7 @@ export async function measureIssueJourneys({ page, context, fixture, boardTab, p
   assert.match(issue.title, /^Performance task 1\.1:/);
   assert.equal(comments.length, 2);
   const createdComments = new Set(), createdRelations = new Set(), createdResources = new Set();
-  let filtered = false, originalMutable, originalMutableComments, captureCommentWrite;
+  let filtered = false, originalMutable, originalMutableComments, captureCommentWrite, journeyError;
   const pendingComments = [];
   const checks = [], mutations = [];
   const repetitions = diagnostic ? 1 : 10;
@@ -284,36 +284,51 @@ export async function measureIssueJourneys({ page, context, fixture, boardTab, p
     await panel().getByText('Activity', { exact: true }).scrollIntoViewIfNeeded();
     await page.screenshot({ path: `${output}/${label}-activity-light.png` });
     await close();
+  } catch (error) {
+    journeyError = error.message.split('\n')[0];
+    throw error;
   } finally {
     // Preserve confirmation samples even if a later cleanup verification times out.
-    await writeFile(statePath, JSON.stringify({ checks, mutations, apiErrors, fixture: { events: events.length, comments: comments.length, descriptionBytes: issue.description.length }, cleanup: false }, null, 2));
-    cleanupMode = true;
-    // A timed-out response can still commit. Keep its client UUID and await settlement.
-    let settlementTimer;
-    await Promise.race([
-      Promise.allSettled(pendingComments.map((pending) => pending.promise)),
-      new Promise((resolve) => { settlementTimer = setTimeout(resolve, 30000); }),
-    ]);
-    clearTimeout(settlementTimer);
-    if (captureCommentWrite) page.off('request', captureCommentWrite);
-    const actions = [
-      ...(originalMutable ? [() => api(`/api/issues/${originalMutable.id}`, 'PATCH', { title: originalMutable.title, effort: originalMutable.effort })] : []),
-      ...[...createdComments].map((commentId) => () => api(`/api/comments/${commentId}`, 'DELETE')),
-      ...[...createdRelations].map((relationId) => () => api(`/api/issue-relations/${relationId}`, 'DELETE')),
-      ...[...createdResources].map((resourceId) => () => api(`/api/resources/${resourceId}`, 'DELETE')),
-    ];
-    const cleaned = await Promise.allSettled(actions.map((action) => action()));
-    const failures = cleaned.filter((result) => result.status === 'rejected');
-    assert.equal(failures.length, 0, `Cleanup failed: ${failures.map((result) => result.reason.message).join('; ')}`);
-    if (filtered && await active().count()) { if (await panel().count()) await close(); await toggleFilter(); }
-    assert.equal((await api(`/api/issues/${issue.id}`)).title, issue.title);
-    assert.equal((await api(`/api/issues/${issue.id}/comments`)).length, comments.length);
-    if (originalMutable) {
-      const restored = await api(`/api/issues/${originalMutable.id}`);
-      assert.equal(restored.title, originalMutable.title); assert.equal(restored.effort, originalMutable.effort);
-      if (originalMutableComments) assert.deepEqual((await api(`/api/issues/${originalMutable.id}/comments`)).map((row) => row.id).sort(), originalMutableComments.map((row) => row.id).sort());
-    }
-    assert.ok(pendingComments.every((pending) => pending.settled), 'A synthetic comment write is still pending; cleanup is not confirmed');
-    await writeFile(statePath, JSON.stringify({ checks, mutations, apiErrors, fixture: { events: events.length, comments: comments.length, descriptionBytes: issue.description.length }, cleanup: true }, null, 2));
+    let cleanup = false, cleanupError;
+    const save = () => writeFile(statePath, JSON.stringify({ checks, mutations, apiErrors, journeyError, cleanupError, fixture: { events: events.length, comments: comments.length, descriptionBytes: issue.description.length }, cleanup }, null, 2));
+    await save();
+    const restoreFixture = async () => {
+      try {
+        cleanupMode = true;
+        // A timed-out response can still commit. Keep its client UUID and await settlement.
+        let settlementTimer;
+        await Promise.race([
+          Promise.allSettled(pendingComments.map((pending) => pending.promise)),
+          new Promise((resolve) => { settlementTimer = setTimeout(resolve, 30000); }),
+        ]);
+        clearTimeout(settlementTimer);
+        if (captureCommentWrite) page.off('request', captureCommentWrite);
+        const actions = [
+          ...(originalMutable ? [() => api(`/api/issues/${originalMutable.id}`, 'PATCH', { title: originalMutable.title, effort: originalMutable.effort })] : []),
+          ...[...createdComments].map((commentId) => () => api(`/api/comments/${commentId}`, 'DELETE')),
+          ...[...createdRelations].map((relationId) => () => api(`/api/issue-relations/${relationId}`, 'DELETE')),
+          ...[...createdResources].map((resourceId) => () => api(`/api/resources/${resourceId}`, 'DELETE')),
+        ];
+        const cleaned = await Promise.allSettled(actions.map((action) => action()));
+        const failures = cleaned.filter((result) => result.status === 'rejected');
+        assert.equal(failures.length, 0, `Cleanup failed: ${failures.map((result) => result.reason.message).join('; ')}`);
+        if (filtered && await active().count()) { if (await panel().count()) await close(); await toggleFilter(); }
+        assert.equal((await api(`/api/issues/${issue.id}`)).title, issue.title);
+        assert.equal((await api(`/api/issues/${issue.id}/comments`)).length, comments.length);
+        if (originalMutable) {
+          const restored = await api(`/api/issues/${originalMutable.id}`);
+          assert.equal(restored.title, originalMutable.title); assert.equal(restored.effort, originalMutable.effort);
+          if (originalMutableComments) assert.deepEqual((await api(`/api/issues/${originalMutable.id}/comments`)).map((row) => row.id).sort(), originalMutableComments.map((row) => row.id).sort());
+        }
+        assert.ok(pendingComments.every((pending) => pending.settled), 'A synthetic comment write is still pending; cleanup is not confirmed');
+        cleanup = true;
+      } catch (error) {
+        cleanupError = error.message.split('\n')[0];
+        throw error;
+      } finally {
+        await save();
+      }
+    };
+    await restoreFixture();
   }
 }

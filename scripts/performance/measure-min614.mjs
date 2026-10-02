@@ -254,7 +254,21 @@ try {
   }
   throw new Error(headline);
 } finally {
-  await writeFile(`${output}/${label}.json`, JSON.stringify({ label, native, diagnostic, cpuProfile, pass2, pass3, timestamp: new Date().toISOString(), buildSha, sha: execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(), dirty: Boolean(execFileSync("git", ["status", "--porcelain"], { encoding: "utf8" }).trim()), runtime, buildId: (await readFile(path.join(process.env.MINDDY_PERF_REFERENCE_ROOT ?? process.cwd(), ".next/BUILD_ID"), "utf8")).trim(), measurements, errors, responses, requests }, null, 2));
+  let desktopTrace;
+  if (native && (diagnostic || cpuProfile) && page && !page.isClosed()) {
+    try {
+      // Freeze the existing trace ring outside timings without changing the OS clipboard.
+      desktopTrace = await page.evaluate(() => {
+        let dump;
+        const original = navigator.clipboard.writeText;
+        navigator.clipboard.writeText = async (text) => { dump = text; };
+        try { window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyT', altKey: true, shiftKey: true })); }
+        finally { navigator.clipboard.writeText = original; }
+        return dump;
+      });
+    } catch { desktopTrace = null; }
+  }
+  await writeFile(`${output}/${label}.json`, JSON.stringify({ label, native, diagnostic, cpuProfile, pass2, pass3, timestamp: new Date().toISOString(), buildSha, sha: execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(), dirty: Boolean(execFileSync("git", ["status", "--porcelain"], { encoding: "utf8" }).trim()), runtime, buildId: (await readFile(path.join(process.env.MINDDY_PERF_REFERENCE_ROOT ?? process.cwd(), ".next/BUILD_ID"), "utf8")).trim(), measurements, errors, responses, requests, desktopTrace }, null, 2));
 
   await browser?.close();
   if (launchServices && profile) {

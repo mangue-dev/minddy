@@ -1,10 +1,11 @@
 import assert from "node:assert/strict";
 import { readFile, readdir, stat, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
+import { gzipSync } from "node:zlib";
 
 const root = 'output/playwright/performance';
 const beforeLabels = (process.env.MINDDY_PERF_BEFORE_LABELS ?? 'pass3-before-9,pass3-before-10,pass3-before-12').split(',');
-const afterLabels = (process.env.MINDDY_PERF_AFTER_LABELS ?? 'pass3-after-1,pass3-after-2,pass3-after-3').split(',');
+const afterLabels = (process.env.MINDDY_PERF_AFTER_LABELS ?? 'pass3-after-1,pass3-after-3,pass3-after-7').split(',');
 const read = async (label) => {
   const result = JSON.parse(await readFile(`${root}/${label}.json`, 'utf8'));
   if (result.errors) result.errors = result.errors.map((error) => error.split('\n')[0]);
@@ -38,6 +39,9 @@ async function primary(labels) {
     assert.equal(run.measurements.filter((row) => row.name === 'issue-cold-complete').length, 1);
     for (const name of required) assert.equal(run.measurements.filter((row) => group(row.name) === name).length, 10, `${label}: ${name}`);
     for (const name of ['property-confirmation', 'comment-confirmation']) assert.equal(checks.mutations.filter((row) => row.name === name).length, 10);
+    const opens = run.measurements.filter((row) => /^(issue-cold-complete|issue-warm-complete-|issue-scrolled-|issue-filtered-|retained-issue-open-|hidden-update-issue-)/.test(row.name));
+    for (const row of opens) assert.ok(run.requests.some((request) => request.method === 'GET' && request.path.endsWith('/automation') && request.status === 200 && request.at >= row.startedAt - 3 && request.at <= row.readyAt), `${label}: fresh automation request observed during ${row.name}`);
+    checks.freshStatusRequestsDuringOpens = opens.length;
     runs.push({ ...run, checks });
   }
   const names = [...new Set(runs.flatMap((run) => run.measurements.map((row) => group(row.name))))];
@@ -53,11 +57,12 @@ const before = await primary(beforeLabels), after = await primary(afterLabels);
 const primaryLabels = new Set([...beforeLabels, ...afterLabels]);
 const files = await readdir(root);
 const supplemental = [];
-for (const file of files.filter((name) => /^pass3-.*\.json$/.test(name) && !/-(cpu|trace|checks|inventory)\.json$/.test(name))) {
+for (const file of files.filter((name) => /^pass3-.*\.json$/.test(name) && !/-(cpu|trace|checks)\.json$/.test(name))) {
   const label = file.slice(0, -5);
   if (!primaryLabels.has(label)) {
     const data = await read(label);
     if (Array.isArray(data.measurements)) supplemental.push({ ...data, checks: files.includes(`${label}-checks.json`) ? await read(`${label}-checks`) : null });
+    else if (['production-browser-correctness', 'authenticated-fixture-restoration'].includes(data.kind)) supplemental.push(data);
   }
 }
 const diagnostics = [];
@@ -74,14 +79,32 @@ for (const file of files.filter((name) => /^pass3-.*-(cpu|trace)\.json$/.test(na
     }
     item.selfMs = [...totals].sort((a, b) => b[1] - a[1]).slice(0, 20);
   } else {
-    item.events = data.traceEvents.filter((event) => ['UpdateLayoutTree', 'Layout', 'MinorGC', 'MajorGC'].includes(event.name)).map(({ name, dur, args }) => ({ name, ms: (dur ?? 0) / 1000, ...(args?.beginData?.elementCount ? { elementCount: args.beginData.elementCount } : {}) }));
+    item.events = data.traceEvents.filter((event) => ['UpdateLayoutTree', 'Layout', 'MinorGC', 'MajorGC'].includes(event.name)).map(({ name, dur, args }) => ({ name, ms: (dur ?? 0) / 1000, ...(args?.elementCount || args?.beginData?.elementCount ? { elementCount: args.elementCount ?? args.beginData.elementCount } : {}) }));
   }
   diagnostics.push(item);
 }
 const upstream = {};
-for (const phase of ['before', 'after']) upstream[phase] = (await readFile(`${root}/pass3-upstream-${phase}.jsonl`, 'utf8')).trim().split('\n').filter(Boolean).map((line) => JSON.parse(line));
+for (const phase of ['before', 'after']) {
+  const contents = await readFile(`${root}/pass3-upstream-${phase}.jsonl`);
+  const rows = contents.toString().trim().split('\n').filter(Boolean).map((line) => JSON.parse(line));
+  const compressed = gzipSync(contents), artifact = `docs/audits/assets/min-614-pass-3-upstream-${phase}.jsonl.gz`;
+  await writeFile(artifact, compressed);
+  upstream[phase] = { count: rows.length, artifact, bytes: compressed.length, sha256: createHash('sha256').update(compressed).digest('hex'), uncompressedBytes: contents.length, uncompressedSha256: createHash('sha256').update(contents).digest('hex') };
+}
 const repositories = {};
 for (const phase of ['before', 'after']) repositories[phase] = await read(`min614-repositories-pass3-${phase}`);
-const evidence = { measuredAt: new Date().toISOString(), method: 'Median averages the middle two values; p95 uses nearest rank. Primary warm rows each contain 30 observations: 10 in each of three fresh native launches. Cold rows contain three observations. Readiness excludes the separate input probe and 350 ms observation tail. Counter deltas include both. Failed and heavy diagnostic runs are supplemental.', before, after, supplemental, diagnostics, upstream, repositories };
+const provenance = await read('pass3-provenance');
+const chainControl = await read('pass3-chain-control-after');
+const inventories = [];
+for (const file of files.filter((name) => /^pass3-.*-inventory\.json$/.test(name))) {
+  const contents = await readFile(`${root}/${file}`), data = JSON.parse(contents);
+  inventories.push({ file, bytes: contents.length, sha256: createHash('sha256').update(contents).digest('hex'), fixture: data.fixture, buttons: data.buttons });
+}
+const verificationLogs = [];
+for (const file of files.filter((name) => /^pass3-(tests|typecheck|lint|owned-english|encrypted-access|encryption-schema)(-final(?:-failed)?)?\.log$/.test(name))) {
+  const contents = await readFile(`${root}/${file}`);
+  verificationLogs.push({ file, bytes: contents.length, sha256: createHash('sha256').update(contents).digest('hex'), output: contents.toString() });
+}
+const evidence = { measuredAt: new Date().toISOString(), method: 'Median averages the middle two values; p95 uses nearest rank. Primary warm rows each contain 30 observations: 10 in each of three fresh native launches. Cold rows contain three observations. Readiness excludes the separate input probe and 350 ms observation tail. Counter deltas include both. Failed and heavy diagnostic runs are supplemental. Request status/timing records include verification attempts; upstream logs include calibration, diagnostic and attribution work and are not aggregate ordinary-request counts.', provenance, before, after, supplemental, diagnostics, inventories, upstream, repositories, chainControl, verificationLogs };
 await writeFile('docs/audits/desktop-perf-min-614-pass-3-results.json', JSON.stringify(evidence, null, 2) + '\n');
 console.log(JSON.stringify({ before: before.summary, after: after.summary, confirmations: { before: before.confirmations, after: after.confirmations } }, null, 2));
