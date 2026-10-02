@@ -683,9 +683,9 @@ export function PrDetail({
   const aiReviews = useMemo(() => buildAiReviewStatuses({
     forge: item.provider,
     comments: [...comments, ...requestedReviewComments.filter((pending) => !comments.some((comment) => comment.id === pending.id))],
-    timeline, reviewComments, reactions: commentReactions,
+    timeline, reviewComments, reviewThreads, reactions: commentReactions,
     prUrl: pr?.url ?? item.pr_url,
-  }), [item.provider, item.pr_url, pr?.url, comments, requestedReviewComments, timeline, reviewComments, commentReactions]);
+  }), [item.provider, item.pr_url, pr?.url, comments, requestedReviewComments, timeline, reviewComments, reviewThreads, commentReactions]);
   const unresolvedThreads = useMemo(
     () => unresolvedReviewThreads(reviewComments, reviewThreads),
     [reviewComments, reviewThreads],

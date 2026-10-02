@@ -3,6 +3,7 @@ import type {
   PullRequestReviewComment,
 } from "@/lib/agent-api";
 import type { PrTimelineEvent } from "@/lib/pr-timeline";
+import type { ReviewThreadState } from "@/lib/pr-review-threads";
 import {
   PR_BODY_COMMENT_ID,
   type ReviewCommentReaction,
@@ -27,6 +28,7 @@ interface Signal {
   at: string;
   url: string | null;
   requestAt?: string;
+  findingCommentIds?: number[];
 }
 
 /** Equal timestamps settle conservatively: findings outrank a clean result. */
@@ -46,22 +48,39 @@ export function buildAiReviewStatuses(input: {
   comments: PullRequestComment[];
   timeline: PrTimelineEvent[];
   reviewComments: PullRequestReviewComment[];
+  reviewThreads: ReviewThreadState[];
   reactions: ReviewCommentReaction[];
   prUrl: string | null;
 }): AiReviewStatus[] {
   // GitLab bot usernames are installation-specific and need their own identity contract.
   if (input.forge !== "github") return [];
   const byProvider = new Map<AiReviewProvider, Signal[]>();
+  const resolvedByComment = new Map(
+    input.reviewThreads.map((thread) => [
+      thread.rootCommentId,
+      thread.resolved,
+    ]),
+  );
+  const findingComments = input.reviewComments.filter((comment) => {
+    const provider = aiReviewProviderForLogin(comment.user?.login);
+    return (
+      provider &&
+      !comment.in_reply_to_id &&
+      provider.parseMessage({ body: comment.body, kind: "inline" }) ===
+        "findings"
+    );
+  });
   const add = (
     provider: AiReviewProvider,
     state: AiReviewState | null,
     at: string | null | undefined,
     url: string | null,
     requestAt?: string,
+    findingCommentIds?: number[],
   ) => {
     if (!state || !at || !Number.isFinite(Date.parse(at))) return;
     const signals = byProvider.get(provider) ?? [];
-    signals.push({ state, at, url, requestAt });
+    signals.push({ state, at, url, requestAt, findingCommentIds });
     byProvider.set(provider, signals);
   };
   const requests = new Map<number, AiReviewProvider[]>();
@@ -137,6 +156,15 @@ export function buildAiReviewStatuses(input: {
         }),
         event.createdAt,
         event.url ?? input.prUrl,
+        undefined,
+        findingComments
+          .filter(
+            (comment) =>
+              aiReviewProviderForLogin(comment.user?.login) === provider &&
+              comment.review_id != null &&
+              (event.reviewIds ?? [event.reviewId]).includes(comment.review_id),
+          )
+          .map((comment) => comment.id),
       );
     }
   }
@@ -149,6 +177,8 @@ export function buildAiReviewStatuses(input: {
         provider.parseMessage({ body: comment.body, kind: "inline" }),
         comment.created_at,
         comment.html_url,
+        undefined,
+        [comment.id],
       );
   }
   const result: AiReviewStatus[] = [];
@@ -161,6 +191,7 @@ export function buildAiReviewStatuses(input: {
         SIGNAL_RANK[a.state] - SIGNAL_RANK[b.state],
     );
     let latestRequestAt: string | null = null;
+    let activeFindings: Signal[] = [];
     const status = signals.reduce<AiReviewStatus | null>((status, signal) => {
       if (
         signal.requestAt &&
@@ -175,6 +206,8 @@ export function buildAiReviewStatuses(input: {
         (signal.state === "running" &&
           status?.state !== "requested" &&
           status?.state !== "running");
+      if (newCycle) activeFindings = [];
+      if (signal.state === "findings") activeFindings.push(signal);
       const startedAt =
         signal.state === "requested"
           ? null
@@ -204,7 +237,22 @@ export function buildAiReviewStatuses(input: {
             : signal.url,
       };
     }, null);
-    if (status) result.push(status);
+    if (status) {
+      // Resolution settles existing findings without inventing a new provider verdict or timestamp.
+      const allFindingsResolved =
+        status.state === "findings" &&
+        activeFindings.length > 0 &&
+        activeFindings.every(
+          (signal) =>
+            signal.findingCommentIds?.length &&
+            signal.findingCommentIds.every(
+              (id) => resolvedByComment.get(id) === true,
+            ),
+        );
+      result.push(
+        allFindingsResolved ? { ...status, state: "completed" } : status,
+      );
+    }
   }
   return result;
 }

@@ -7,6 +7,7 @@ import {
 import type { ReviewCommentReaction } from "./pr-review-reactions";
 import type { PullRequestComment, PullRequestReviewComment } from "./agent-api";
 import type { PrTimelineEvent } from "./pr-timeline";
+import type { ReviewThreadState } from "./pr-review-threads";
 
 const bot = "chatgpt-codex-connector[bot]";
 const date = (minutes: number) =>
@@ -78,6 +79,7 @@ const statuses = (
     comments: [],
     timeline: [],
     reviewComments: [],
+    reviewThreads: [],
     reactions: [],
     prUrl: "https://github.com/acme/app/pull/1",
     ...input,
@@ -186,6 +188,172 @@ describe("AI reviewer lifecycle", () => {
   });
 });
 
+const thread = (
+  rootCommentId: number,
+  resolved = true,
+  outdated = false,
+): ReviewThreadState => ({
+  rootCommentId,
+  threadId: `thread:${rootCommentId}`,
+  resolved,
+  resolvedBy: resolved ? "ada" : null,
+  outdated,
+});
+
+describe("resolved AI review findings", () => {
+  it.each(AI_REVIEW_PROVIDERS)(
+    "settles $name only when all its reported threads are resolved",
+    (provider) => {
+      const login = provider.githubLogins[0];
+      const input = {
+        timeline: [
+          {
+            ...review(4, login, "Fix these issues", "changes_requested"),
+            reviewId: 2,
+          },
+        ],
+        reviewComments: [inline(2, login), inline(3, login)],
+      };
+      for (const reviewThreads of [
+        [],
+        [thread(2)],
+        [thread(2), thread(3, false)],
+      ]) {
+        expect(statuses({ ...input, reviewThreads })[0].state).toBe("findings");
+      }
+      expect(
+        statuses({ ...input, reviewThreads: [thread(2), thread(3)] })[0],
+      ).toMatchObject({
+        state: "completed",
+        updatedAt: date(4),
+        url: input.timeline[0].url,
+      });
+      expect(
+        statuses({ ...input, reviewThreads: [thread(2, false), thread(3)] })[0]
+          .state,
+      ).toBe("findings");
+    },
+  );
+  it("does not mistake an outdated thread or a reply for a resolved finding", () => {
+    expect(
+      statuses({
+        reviewComments: [inline(2), inline(3, bot, true)],
+        reviewThreads: [thread(2, false, true), thread(3)],
+      })[0].state,
+    ).toBe("findings");
+  });
+  it("keeps earlier open findings red even when a later finding is resolved", () => {
+    expect(
+      statuses({
+        reviewComments: [inline(2), inline(3)],
+        reviewThreads: [thread(2, false), thread(3)],
+      })[0].state,
+    ).toBe("findings");
+  });
+  it("resolves each provider independently of human and other bot threads", () => {
+    expect(
+      statuses({
+        reviewComments: [
+          inline(2),
+          inline(3, "ada"),
+          inline(4, "coderabbitai[bot]"),
+        ],
+        reviewThreads: [thread(2), thread(3, false), thread(4, false)],
+      }).map((status) => [status.provider.id, status.state]),
+    ).toEqual([
+      ["codex", "completed"],
+      ["coderabbit", "findings"],
+    ]);
+  });
+  it("leaves a new request or running review active after resolving earlier findings", () => {
+    const input = {
+      comments: [comment(1, "@codex review", 5)],
+      reviewComments: [inline(2)],
+      reviewThreads: [thread(2)],
+    };
+    expect(statuses(input)[0].state).toBe("requested");
+    expect(
+      statuses({ ...input, reactions: [reaction("eyes", 6, 1)] })[0].state,
+    ).toBe("running");
+  });
+  it("does not let old resolved findings settle a newer review without matching threads", () => {
+    expect(
+      statuses({
+        reviewComments: [inline(2)],
+        reviewThreads: [thread(2)],
+        timeline: [
+          {
+            ...review(5, bot, "New findings", "changes_requested"),
+            reviewId: 9,
+          },
+        ],
+      })[0].state,
+    ).toBe("findings");
+  });
+  it("does not carry earlier unresolved findings into a new review cycle", () => {
+    expect(
+      statuses({
+        comments: [comment(1, "@codex review", 5)],
+        reviewComments: [inline(2), { ...inline(7), review_id: 9 }],
+        reviewThreads: [thread(2, false), thread(7)],
+        reactions: [reaction("eyes", 6, 1)],
+        timeline: [
+          {
+            ...review(8, bot, "Fix this issue", "changes_requested"),
+            reviewId: 9,
+          },
+        ],
+      })[0].state,
+    ).toBe("completed");
+  });
+  it("matches every finding in a grouped review before settling completion", () => {
+    const input = {
+      timeline: [
+        {
+          ...review(5, bot, "Fix these issues", "changes_requested"),
+          reviewIds: [2, 9],
+        },
+      ],
+      reviewComments: [inline(2), { ...inline(3), review_id: 9 }],
+      reactions: [reaction("eyes", 1)],
+    };
+    expect(
+      statuses({ ...input, reviewThreads: [thread(2), thread(3, false)] })[0]
+        .state,
+    ).toBe("findings");
+    expect(
+      statuses({ ...input, reviewThreads: [thread(2), thread(3)] })[0],
+    ).toMatchObject({
+      state: "completed",
+      startedAt: date(1),
+      updatedAt: date(5),
+      durationMs: 240_000,
+    });
+  });
+  it("keeps summary-only findings red when they have no resolvable thread", () => {
+    expect(
+      statuses({
+        comments: [
+          comment(1, "Codex Review: Here are some suggestions.", 3, bot),
+        ],
+        reviewComments: [inline(2)],
+        reviewThreads: [thread(2)],
+      })[0].state,
+    ).toBe("findings");
+  });
+  it("preserves the review timing when its findings are resolved", () => {
+    const input = {
+      reactions: [reaction("eyes", 1)],
+      reviewComments: [inline(3)],
+    };
+    const before = statuses(input)[0];
+    expect(statuses({ ...input, reviewThreads: [thread(3)] })[0]).toEqual({
+      ...before,
+      state: "completed",
+    });
+  });
+});
+
 describe("provider formats", () => {
   const [codex, coderabbit, greptile] = AI_REVIEW_PROVIDERS;
   it("parses the live Codex summary table and its provider timestamp without reading the help footer", () => {
@@ -244,7 +412,11 @@ describe("provider formats", () => {
     (fence) => {
       for (const provider of AI_REVIEW_PROVIDERS) {
         const otherFence = fence[0] === "`" ? "~~~~" : "````";
-        for (const invalidCloser of [fence.slice(1), otherFence, `${fence}text`]) {
+        for (const invalidCloser of [
+          fence.slice(1),
+          otherFence,
+          `${fence}text`,
+        ]) {
           expect(
             provider.isRequest(
               [`${fence}markdown`, invalidCloser, provider.requestCommand].join(
