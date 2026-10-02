@@ -21,6 +21,7 @@ import {
   type PrEndpoint,
   type PullRequestStateFilter,
 } from "./agent-api";
+import { applyPendingPrReactions, commentReactionsKey } from "./optimistic/pr-reaction-writes";
 import { getDesktopBridge } from "./desktop/bridge";
 import {
   parseAgentLocalDiff,
@@ -484,7 +485,11 @@ export function usePrCommentsQuery(prId: string | null) {
   const enabled = !!prId;
   const { data, isPending, refetch } = useQuery({
     queryKey: ["pr-comments", prId],
-    queryFn: () => fetchPullRequestCommentsApi(prId as string),
+    queryFn: async ({ client }) => {
+      const startedAt = Date.now();
+      const data = await fetchPullRequestCommentsApi(prId as string);
+      return applyPendingPrReactions(client, ["pr-comments", prId as string], data, startedAt);
+    },
     enabled,
     refetchInterval: PULL_REQUEST_SETTLED_POLL_MS,
   });
@@ -548,7 +553,11 @@ export function usePrReviewCommentsQuery(endpoint: PrEndpoint | null) {
   const enabled = !!endpoint;
   const { data, isPending, refetch } = useQuery({
     queryKey: ["pr-review-comments", endpoint],
-    queryFn: () => fetchPrReviewCommentsApi(endpoint as PrEndpoint),
+    queryFn: async ({ client }) => {
+      const startedAt = Date.now();
+      const data = await fetchPrReviewCommentsApi(endpoint as PrEndpoint);
+      return applyPendingPrReactions(client, commentReactionsKey(endpoint as PrEndpoint, "review"), data, startedAt);
+    },
     enabled,
   });
   // `threads` (MIN-139) travels with the comments: it's the same query, so

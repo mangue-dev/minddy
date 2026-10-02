@@ -2,7 +2,7 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowDown01Icon, ArrowRight01Icon, ArrowTurnDownIcon, CheckIcon, Copy01Icon, HappyIcon } from "@hugeicons/core-free-icons";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useFormatter, useNow, useTranslations } from "next-intl";
 import {
@@ -28,8 +28,6 @@ import { ForgeUserAvatar } from "@/components/git/forge-user-avatar";
 import { Markdown } from "@/components/markdown";
 import {
   replyPrReviewCommentApi,
-  setPrCommentReactionApi,
-  setPrReviewCommentReactionApi,
   setPrReviewThreadResolvedApi,
   type PrEndpoint,
   type PullRequestReviewComment,
@@ -46,12 +44,12 @@ import {
   type ReviewThreadState,
 } from "@/lib/pr-review-threads";
 import {
-  groupReactionsByComment,
   REVIEW_REACTIONS,
   REVIEW_REACTION_EMOJI,
   type ReviewCommentReaction,
   type ReviewReactionContent,
 } from "@/lib/pr-review-reactions";
+import type { CommentReactions } from "@/lib/use-comment-reactions";
 import type { MessageKey } from "@/lib/i18n-keys";
 import type { PrReviewThread } from "@/lib/pr-diff-anchors";
 import {
@@ -185,56 +183,8 @@ export function useThreadResolution(endpoint: PrEndpoint, onChanged: () => unkno
 
 export type ThreadResolution = ReturnType<typeof useThreadResolution>;
 
-/**
- * Emoji reactions of PR comments (MIN-139, expanded by MIN-147): the
- * table indexed by comment, the desired state to ask, and the thread in flight.
- *
- * `canReact` separates READ from ASK — a read-only view displays the
- * reactions of others without offering any: hiding them would make one believe that there are none
- * not.
- *
- * The flip-flop sends the DESIRED STATE (`!mine`), not a “reverse what you have”:
- * it is the server which decides, and a referral after a network failure does not undo
- * then not what had resulted.
- *
- * `surface` says on WHICH family of comments we react — both have the
- * same form and the same gestures, but not the same route: at GitHub, the
- * comments anchored to the code and those in the thread do not live in the same place. THE
- * rest (grouping, chips, palette) is strictly common, and this is what
- * makes react behave the same everywhere.
- */
-export function useCommentReactions(
-  endpoint: PrEndpoint,
-  onChanged: () => unknown,
-  reactions: ReviewCommentReaction[],
-  canReact: boolean,
-  surface: "review" | "conversation" = "review",
-) {
-  const [pending, setPending] = useState<string | null>(null);
-  const byComment = useMemo(() => groupReactionsByComment(reactions), [reactions]);
-
-  const toggle = useCallback(
-    async (commentId: number, content: ReviewReactionContent, on: boolean) => {
-      if (pending) return;
-      setPending(`${commentId}:${content}`);
-      try {
-        const post =
-          surface === "review" ? setPrReviewCommentReactionApi : setPrCommentReactionApi;
-        await post(endpoint, { commentId, content, on });
-        await onChanged();
-      } catch (err) {
-        toast.error((err as Error).message);
-      } finally {
-        setPending(null);
-      }
-    },
-    [endpoint, onChanged, pending, surface],
-  );
-
-  return { byComment, pending, canReact, toggle };
-}
-
-export type CommentReactions = ReturnType<typeof useCommentReactions>;
+export { useCommentReactions } from "@/lib/use-comment-reactions";
+export type { CommentReactions };
 
 /** Label key of each reaction — typed, otherwise `t()` no longer checks anything. */
 const REACTION_LABELS: Record<ReviewReactionContent, MessageKey<"PullRequests">> = {
@@ -248,11 +198,7 @@ const REACTION_LABELS: Record<ReviewReactionContent, MessageKey<"PullRequests">>
   eyes: "reactionEyes",
 };
 
-/**
- * The gesture “changes this reaction”, shared by the two places hence the
- * palette opens: the DESIRED state is deduced from what is already placed, never from a
- * « inverse ce que tu as » — cf. `useCommentReactions`.
- */
+/** Toggle the viewer's desired reaction state from either a chip or the picker. */
 export function reactionToggler(
   reactions: CommentReactions,
   commentId: number,
@@ -296,7 +242,7 @@ export function CommentReactionChips({
   return (
     <div className="flex flex-wrap items-center gap-1">
       {list.map((reaction) => {
-        const busy = reactions.pending === `${commentId}:${reaction.content}`;
+        const busy = reactions.isPending(commentId, reaction.content);
         // `aria-disabled` and not `disabled`: a disabled button receives no
         // pointer event, so never displays its tooltip — but this is
         // in read-only that we MOST need to read what the emoji wants
