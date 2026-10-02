@@ -1,8 +1,9 @@
 "use client";
 
+import { OneLine } from "@/components/one-line";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowRight01Icon, Delete02Icon, GlobeIcon, LockIcon, MessageMultiple01Icon, MoreHorizontalIcon, Edit04Icon, Plug01Icon } from "@hugeicons/core-free-icons";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslations, useFormatter } from "next-intl";
 import {
   Button,
@@ -254,36 +255,6 @@ function IntegrationAvatar({ className }: { className?: string }) {
     >
       <HugeiconsIcon icon={Plug01Icon} className="size-3.5" />
     </span>
-  );
-}
-
-/** One-line text that ellipsises and reveals the full text in a tooltip only
-    when it actually overflows. */
-function OneLine({ full, children }: { full: string; children: React.ReactNode }) {
-  const ref = useRef<HTMLParagraphElement>(null);
-  const [truncated, setTruncated] = useState(false);
-
-  useEffect(() => {
-    const measure = () => {
-      const el = ref.current;
-      if (el) setTruncated(el.scrollWidth > el.clientWidth + 1);
-    };
-    measure();
-    window.addEventListener("resize", measure);
-    return () => window.removeEventListener("resize", measure);
-  });
-
-  const p = (
-    <p ref={ref} className="min-w-0 flex-1 truncate text-sm">
-      {children}
-    </p>
-  );
-  if (!truncated) return p;
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>{p}</TooltipTrigger>
-      <TooltipContent className="max-w-xs">{full}</TooltipContent>
-    </Tooltip>
   );
 }
 

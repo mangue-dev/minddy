@@ -63,11 +63,16 @@ export async function repositoryNameToken(provider: string, fullName: string) {
   const keys = getBlindIndexKeys();
   const current = await keys.current(SCOPE);
   current.bytes.fill(0);
-  const stable = await keys.byVersion(SCOPE,1);
+  return stableRepositoryNameToken(provider, name);
+}
+
+/** Verification reads the immutable version-one index key without resolving a writer key. */
+async function stableRepositoryNameToken(provider: string, fullName: string) {
+  const name = normalize(provider, fullName);
+  const stable = await getBlindIndexKeys().byVersion(SCOPE, 1);
   try {
-    return `mdyr1:${blindIndex(`${provider}:${name}`,{ scope:SCOPE,
-      table:"forge_repository_names",column:"full_name_digest" },
-    stable.bytes)}`;
+    return `mdyr1:${blindIndex(`${provider}:${name}`, { scope: SCOPE,
+      table: "forge_repository_names", column: "full_name_digest" }, stable.bytes)}`;
   } finally {
     stable.bytes.fill(0);
   }
@@ -142,7 +147,7 @@ export async function decodeRepositoryName(provider: string,
   }
   const decoded = await store.decrypt(cipher,context);
   if (typeof decoded!=="string" ||
-      await repositoryNameToken(provider,decoded)!==value) {
+      await stableRepositoryNameToken(provider,decoded)!==value) {
     throw new Error("Forge repository identity mismatch");
   }
   auditDecryption(context,{ actorId,reason:"repository_read" });
@@ -151,4 +156,21 @@ export async function decodeRepositoryName(provider: string,
 
 export function isProtectedRepositoryName(value: string|null) {
   return typeof value==="string" && TOKEN.test(value);
+}
+
+/** Coalesce identities within one authorized operation; never retain plaintext across requests. */
+export function createRepositoryNameDecoder(actorId: string | null = null) {
+  const pending = new Map<string, Promise<string | null>>();
+  return (provider: string, value: string | null): Promise<string | null> => {
+    const key = JSON.stringify([provider, value]);
+    let decoded = pending.get(key);
+    if (!decoded) {
+      decoded = decodeRepositoryName(provider, value, actorId).catch((error) => {
+        pending.delete(key);
+        throw error;
+      });
+      pending.set(key, decoded);
+    }
+    return decoded;
+  };
 }
