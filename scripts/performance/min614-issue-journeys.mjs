@@ -4,17 +4,34 @@ import { id } from "./seed.mjs";
 import { verifyIssueJourneys } from "./verify-min614-issue-journeys.mjs";
 
 // The parent validates the encrypted fixture account; all content uses authenticated routes.
-export async function measureIssueJourneys({ page, context, fixture, boardTab, pagesTab, base, measure, frames, diagnostic, output, label }) {
+export async function measureIssueJourneys({ page, context, fixture, boardTab, pagesTab, base, measure, frames, diagnostic, output, label, recordRequest }) {
   const activeSelector = '[data-retained-app-view][data-app-view-active="true"]';
   const active = () => page.locator(activeSelector);
   const panel = () => page.locator('[role="dialog"][data-state="open"]');
   const tab = (spec) => page.locator(`[data-app-tab-id="${spec.id}"]`);
+  const apiErrors = [];
+  let cleanupMode = false;
   const api = async (route, method = "GET", data) => {
-    let response;
-    try { response = await context.request.fetch(`${base}${route}`, { method, ...(data === undefined ? {} : { data }) }); }
-    catch (error) { throw new Error(`${method} ${route}: transport failed (${error.name})`); }
-    assert.ok(response.ok(), `${method} ${route}: ${response.status()}`);
-    return response.status() === 204 ? null : response.json();
+    const attempts = method === 'GET' || cleanupMode ? 3 : 1;
+    for (let attempt = 1; attempt <= attempts; attempt++) {
+      const record = { path: route, method, at: Date.now(), channel: 'verification', attempt };
+      recordRequest(record);
+      let response;
+      try { response = await context.request.fetch(`${base}${route}`, { method, timeout: 15000, ...(data === undefined ? {} : { data }) }); }
+      catch (error) {
+        record.duration = Date.now() - record.at; record.failed = error.name;
+        apiErrors.push({ ...record });
+        if (attempt === attempts) throw new Error(`${method} ${route}: transport failed (${error.name})`);
+        await page.waitForTimeout(500); continue;
+      }
+      record.duration = Date.now() - record.at; record.status = response.status();
+      if (!response.ok()) {
+        apiErrors.push({ ...record });
+        if ([502, 503, 504].includes(response.status()) && attempt < attempts) { await page.waitForTimeout(500); continue; }
+      }
+      assert.ok(response.ok(), `${method} ${route}: ${response.status()}`);
+      return response.status() === 204 ? null : response.json();
+    }
   };
   const issue = await api(`/api/issues/${fixture.firstIssue}`);
   const other = await api(`/api/issues/${id('issue-0-1')}`);
@@ -26,7 +43,7 @@ export async function measureIssueJourneys({ page, context, fixture, boardTab, p
   assert.match(issue.title, /^Performance task 1\.1:/);
   assert.equal(comments.length, 2);
   const createdComments = new Set(), createdRelations = new Set(), createdResources = new Set();
-  let filtered = false, changed = false, originalMutable;
+  let filtered = false, originalMutable;
   const checks = [], mutations = [];
   const repetitions = diagnostic ? 1 : 10;
   const statePath = `${output}/${label}-checks.json`;
@@ -165,6 +182,7 @@ export async function measureIssueJourneys({ page, context, fixture, boardTab, p
     checks.push('Related-issue navigation updates the visible title/description/comments; retained tab activation followed by issue reopen');
     // Mutate a third existing synthetic issue so the loaded activity workload above remains stable.
     const mutable = await api(`/api/issues/${id('issue-0-2')}`);
+    assert.equal(mutable.project_id, issue.project_id);
     originalMutable = mutable;
     const mutableComments = await api(`/api/issues/${mutable.id}/comments`);
     await open(mutable, mutableComments);
@@ -231,13 +249,11 @@ export async function measureIssueJourneys({ page, context, fixture, boardTab, p
     for (let run = 0; run < repetitions; run++) {
       await pages();
       const title = `${mutable.title} [MIN-614 hidden ${run}]`;
-      changed = mutable;
       await api(`/api/issues/${mutable.id}`, 'PATCH', { title });
       await page.waitForTimeout(700);
       await measure(`hidden-update-board-${run}`, () => tab(boardTab).click(), () => boardReady(600, title));
       await measure(`hidden-update-issue-${run}`, () => active().locator(`[data-issue-id="${mutable.id}"]`).click(), () => ready({ ...mutable, title }, mutableComments), input);
       await api(`/api/issues/${mutable.id}`, 'PATCH', { title: mutable.title });
-      changed = false;
       await ready(mutable, mutableComments);
       await close();
     }
@@ -250,18 +266,24 @@ export async function measureIssueJourneys({ page, context, fixture, boardTab, p
     await close();
   } finally {
     // Preserve confirmation samples even if a later cleanup verification times out.
-    await writeFile(statePath, JSON.stringify({ checks, mutations, fixture: { events: events.length, comments: comments.length, descriptionBytes: issue.description.length }, cleanup: false }, null, 2));
-    if (originalMutable) {
-      const current = await api(`/api/issues/${originalMutable.id}`);
-      if (current.effort !== originalMutable.effort || current.title !== originalMutable.title) await api(`/api/issues/${originalMutable.id}`, 'PATCH', { title: originalMutable.title, effort: originalMutable.effort });
-    }
-    if (changed) await api(`/api/issues/${changed.id}`, 'PATCH', { title: changed.title });
-    for (const commentId of createdComments) await api(`/api/comments/${commentId}`, 'DELETE');
-    for (const relationId of createdRelations) await api(`/api/issue-relations/${relationId}`, 'DELETE');
-    for (const resourceId of createdResources) await api(`/api/resources/${resourceId}`, 'DELETE');
+    await writeFile(statePath, JSON.stringify({ checks, mutations, apiErrors, fixture: { events: events.length, comments: comments.length, descriptionBytes: issue.description.length }, cleanup: false }, null, 2));
+    cleanupMode = true;
+    const actions = [
+      ...(originalMutable ? [() => api(`/api/issues/${originalMutable.id}`, 'PATCH', { title: originalMutable.title, effort: originalMutable.effort })] : []),
+      ...[...createdComments].map((commentId) => () => api(`/api/comments/${commentId}`, 'DELETE')),
+      ...[...createdRelations].map((relationId) => () => api(`/api/issue-relations/${relationId}`, 'DELETE')),
+      ...[...createdResources].map((resourceId) => () => api(`/api/resources/${resourceId}`, 'DELETE')),
+    ];
+    const cleaned = await Promise.allSettled(actions.map((action) => action()));
+    const failures = cleaned.filter((result) => result.status === 'rejected');
+    assert.equal(failures.length, 0, `Cleanup failed: ${failures.map((result) => result.reason.message).join('; ')}`);
     if (filtered && await active().count()) { if (await panel().count()) await close(); await toggleFilter(); }
     assert.equal((await api(`/api/issues/${issue.id}`)).title, issue.title);
     assert.equal((await api(`/api/issues/${issue.id}/comments`)).length, comments.length);
-    await writeFile(statePath, JSON.stringify({ checks, mutations, fixture: { events: events.length, comments: comments.length, descriptionBytes: issue.description.length }, cleanup: true }, null, 2));
+    if (originalMutable) {
+      const restored = await api(`/api/issues/${originalMutable.id}`);
+      assert.equal(restored.title, originalMutable.title); assert.equal(restored.effort, originalMutable.effort);
+    }
+    await writeFile(statePath, JSON.stringify({ checks, mutations, apiErrors, fixture: { events: events.length, comments: comments.length, descriptionBytes: issue.description.length }, cleanup: true }, null, 2));
   }
 }
