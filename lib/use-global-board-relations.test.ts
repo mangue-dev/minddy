@@ -63,6 +63,7 @@ afterEach(() => client.clear());
 
 describe("global relation mutations", () => {
   it("shows an addition in both caches before confirmation and rolls back a failed POST", async () => {
+    client.setQueryData(["issue-relations", "project"], []);
     let reject!: (error: Error) => void;
     mocks.add.mockReturnValue(new Promise<IssueRelation>((_resolve, rej) => { reject = rej; }));
     const result = hook.addRelation("project", "other-issue", "related", "objective", { targetType: "objective" });

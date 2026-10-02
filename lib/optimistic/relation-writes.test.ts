@@ -39,6 +39,36 @@ describe("optimistic relation additions", () => {
     expect(boardRows()).toEqual(projectRows());
   });
 
+  it.each(["success", "failure"] as const)("leaves an unfetched project cache absent after %s so opening it reads all relations", async (outcome) => {
+    const key = relationsKey("project");
+    client.removeQueries({ queryKey: key, exact: true });
+    client.setDefaultOptions({ queries: { staleTime: 5 * 60_000 } });
+    const request = deferred<IssueRelation>();
+    const input = { source_id: "x", target_id: "y", type: "blocks" as const };
+    const result = addRelationOptimistically(client, "project", input, () => request.promise);
+    expect(client.getQueryState(key)).toBeUndefined();
+    expect(boardRows()).toEqual([existing, expect.objectContaining({ source_id: "x", target_id: "y", type: "blocks" })]);
+
+    const created = { id: "server", ...input };
+    if (outcome === "success") {
+      request.resolve(created);
+      await result;
+      expect(boardRows()).toEqual([existing, created]);
+    } else {
+      const rejected = expect(result).rejects.toThrow("Failed");
+      request.reject(new Error("Failed"));
+      await rejected;
+      expect(boardRows()).toEqual([existing]);
+    }
+    expect(client.getQueryState(key)).toBeUndefined();
+
+    const serverRows = outcome === "success" ? [existing, created] : [existing];
+    const fetchRelations = vi.fn().mockResolvedValue(serverRows);
+    await expect(client.fetchQuery({ queryKey: key, queryFn: fetchRelations })).resolves.toEqual(serverRows);
+    expect(fetchRelations).toHaveBeenCalledTimes(1);
+    expect(projectRows()).toEqual(serverRows);
+  });
+
   it("rolls back only the failed write while retaining concurrent additions and cache edits", async () => {
     const failed = deferred<IssueRelation>();
     const successful = deferred<IssueRelation>();

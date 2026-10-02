@@ -56,7 +56,7 @@ export function applyPendingRelations(client: QueryClient | undefined, rows: Iss
 }
 
 function updateCaches(client: QueryClient, projectId: string, update: (rows: IssueRelation[]) => IssueRelation[]): void {
-  client.setQueryData<IssueRelation[]>(relationsKey(projectId), (old) => update(old ?? []));
+  client.setQueryData<IssueRelation[]>(relationsKey(projectId), (old) => old === undefined ? old : update(old));
   client.setQueryData<GlobalBoardResponse>(boardKey, (old) => old ? { ...old, relations: update(old.relations) } : old);
 }
 
