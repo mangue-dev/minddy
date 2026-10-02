@@ -9,7 +9,9 @@ export async function measureRetainedReturns({ page, context, fixture, boardTab,
   const project = { id: id("min614-pass2-project-tab"), custom_name: "MIN-614 pass 2 project", href: `/projects/${fixture.projects[0]}` };
   assert.ok(!tabs.some((entry) => entry.id === project.id), "Temporary tab already exists; inspect its owner before cleanup");
   const api = async (route, method = "GET", data) => {
-    const response = await context.request.fetch(`${base}${route}`, { method, ...(data === undefined ? {} : { data }) });
+    let response;
+    try { response = await context.request.fetch(`${base}${route}`, { method, ...(data === undefined ? {} : { data }) }); }
+    catch { throw new Error(`${method} ${route}: transport failed`); }
     assert.ok(response.ok(), `${method} ${route}: ${response.status()}`);
     return response.json();
   };
@@ -48,7 +50,6 @@ export async function measureRetainedReturns({ page, context, fixture, boardTab,
     for (let run = 0; run < repetitions; run++) {
       await setup();
       await measure(`${name}-${run}`, () => tab(spec).click(), () => ready(spec, count), input);
-
     }
   }
   async function toggleFilter() {

@@ -75,7 +75,9 @@ let filteredCount;
 let savedScroll;
 
 async function api(path, method = "GET", data) {
-  const response = await context.request.fetch(`${base}${path}`, { method, ...(data === undefined ? {} : { data }) });
+  let response;
+  try { response = await context.request.fetch(`${base}${path}`, { method, ...(data === undefined ? {} : { data }) }); }
+  catch { throw new Error(`${method} ${path}: transport failed`); }
   const body = await response.json();
   if (!response.ok()) throw new Error(`${method} ${path} failed (${response.status()}): ${body.code ?? body.error ?? "request failed"}`);
   return body;
@@ -122,6 +124,7 @@ async function activate(spec, { expectedCount, title } = {}) {
   }, { tabId: spec.id, pathname: new URL(spec.href, base).pathname, count: expectedCount ?? (spec === globalTab ? filteredCount ?? globalCount ?? 600 : 100), selector: activeSelector });
   if (title) await page.waitForFunction((part) => document.title.includes(part), title);
   await frames();
+  assert.equal(await page.evaluate(() => document.activeElement?.closest('[data-app-view-active="false"]') === null), true, "Focus remained in a hidden board");
   await page.evaluate((name) => window.__retentionEvents.push({ kind: "activated", name, columns: [...document.querySelectorAll('[data-app-view-active="true"] [data-board-column-scroller]')].map((node) => ({ status: node.dataset.boardColumnStatus, top: node.scrollTop })) }), spec.custom_name);
   return retainedInvariant();
 }
@@ -264,13 +267,20 @@ try {
     assert.equal(await card().locator('[class~="bg-primary/10"]').count(), 1, "Selection was lost");
     const scroll = await active().locator(`[data-board-column-scroller][data-board-column-status="${originalIssue.status}"]`).evaluate((node) => node.scrollTop);
     assert.ok(Math.abs(scroll - savedScroll) <= 1, `Scroll changed from ${savedScroll} to ${scroll}`);
+    const dark = await page.evaluate(() => document.documentElement.classList.contains("dark"));
+    await page.evaluate(() => document.documentElement.classList.remove("dark"));
+    await frames();
     await page.screenshot({ path: `${output}/${label}-restored-global.png` });
+    if (dark) await page.evaluate(() => document.documentElement.classList.add("dark"));
     return { scrollTop: scroll, cards: filteredCount, selected: true, identity: true };
   });
   await check("active-project-drag-with-hidden-duplicate-and-reversal", async () => {
     await activate(projectTab, { title: "Performance 1" });
     await active().locator('button[aria-label="Filters"]').click();
+    await page.getByRole("menuitem", { name: "Sort", exact: true }).hover();
     await page.getByRole("menuitem", { name: "Manual", exact: true }).click();
+    await page.keyboard.press("Escape");
+    await page.keyboard.press("Escape");
     issueMayHaveMoved = true;
     await dragTo(originalIssue.status === "backlog" ? "todo" : "backlog");
     await dragTo(originalIssue.status);
@@ -302,7 +312,8 @@ try {
     await activate(globalTab, { title: "All issues" });
     assert.equal(await active().evaluate((node) => node === window.__retentionGlobal), false, "Evicted board unexpectedly kept its DOM");
     assert.equal(await active().locator("[data-issue-id]").count(), filteredCount, "Eviction lost the tab's working filter");
-    await page.getByRole("button", { name: `Close ${thirdTab.custom_name}`, exact: true }).click();
+    await page.locator(`[data-app-tab-id="${thirdTab.id}"]`).click({ button: "right" });
+    await page.getByRole("menuitem", { name: "Close tab", exact: true }).click();
     await page.locator(`[data-app-tab-id="${thirdTab.id}"]`).waitFor({ state: "detached" });
     await page.waitForFunction(() => !window.__retentionThird.isConnected);
     assert.equal(await page.locator("[data-retained-app-view]").count(), 1, "Closing a hidden tab retained its board");

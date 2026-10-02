@@ -46,6 +46,8 @@ const native = process.argv.includes("--electron");
 const diagnostic = process.argv.includes("--trace");
 const cpuProfile = process.argv.includes("--profile");
 const pass2 = process.argv.includes("--retained-returns");
+const buildSha = process.env.MINDDY_PERF_BUILD_SHA;
+if (buildSha) assert.match(buildSha, /^[a-f0-9]{40}$/);
 let runtime, profile, browser, context, page;
 let launchServices = false;
 const measurements = [], errors = [], responses = [], requests = [];
@@ -235,7 +237,7 @@ try {
   }
   throw error;
 } finally {
-  await writeFile(`${output}/${label}.json`, JSON.stringify({ label, native, diagnostic, cpuProfile, pass2, timestamp: new Date().toISOString(), sha: execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(), dirty: Boolean(execFileSync("git", ["status", "--porcelain"], { encoding: "utf8" }).trim()), runtime, buildId: (await readFile(path.join(process.env.MINDDY_PERF_REFERENCE_ROOT ?? process.cwd(), ".next/BUILD_ID"), "utf8")).trim(), measurements, errors, responses, requests }, null, 2));
+  await writeFile(`${output}/${label}.json`, JSON.stringify({ label, native, diagnostic, cpuProfile, pass2, timestamp: new Date().toISOString(), buildSha, sha: execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(), dirty: Boolean(execFileSync("git", ["status", "--porcelain"], { encoding: "utf8" }).trim()), runtime, buildId: (await readFile(path.join(process.env.MINDDY_PERF_REFERENCE_ROOT ?? process.cwd(), ".next/BUILD_ID"), "utf8")).trim(), measurements, errors, responses, requests }, null, 2));
 
   await browser?.close();
   if (launchServices && profile) {
