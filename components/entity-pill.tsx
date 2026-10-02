@@ -72,7 +72,7 @@ export interface PillAction {
 }
 
 /**
- * The envelope: border, background, shadow, radius, and the overprint command.
+ * The envelope: border, background, radius, and the overprint command.
  * The CONTENT (figure, wording, complement) is composed by the caller, who is
  * only you know if it should be a link, a button or inert text.
  *
@@ -106,7 +106,7 @@ export function EntityPill({
       aria-label={ariaLabel}
       data-disabled={dimmed || undefined}
       className={cn(
-        "group/pill relative flex min-w-0 max-w-full items-center gap-1.5 bg-card py-1 pl-1 pr-2.5 text-xs shadow-sm transition-colors",
+        "group/pill relative flex min-w-0 max-w-full items-center gap-1.5 bg-card py-1 pl-1 pr-2.5 text-xs shadow-none transition-colors",
         bordered && "border border-border",
         highlight &&
           "hover:border-foreground/15 hover:bg-accent/70 focus-within:border-foreground/15 focus-within:bg-accent/70",

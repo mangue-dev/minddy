@@ -8,6 +8,7 @@ import rehypeRaw from "rehype-raw";
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import { cn } from "mangue-ui";
 import { ReadOnlyCodeBlock } from "@/components/assistant/shared-code-renderer";
+import { MarkdownImage } from "@/components/markdown-image";
 import { MarkdownLink, PlainMarkdownLink } from "@/components/markdown-link";
 import { extractCodeBlock } from "@/lib/markdown-code";
 import { MentionChip, NUMO_MENTION_ID } from "@/components/mention-chip";
@@ -396,22 +397,11 @@ function MarkdownRenderer({
             "kbd",
             "rounded border border-border bg-muted px-1 font-mono text-[0.85em]",
           ),
-          /* Comment images (CI badges, pasted captures): they are coming
-             especially in raw HTML, and therefore did not render at all before
-             `rehypeRaw`. Bounded to the width of the wire — a retinal capture
-             would push the map off the screen.
-
-             A capture pasted on the forge goes through the PR proxy
-             quand on nous a dit de quelle PR ce texte vient : son URL d'origine
-             responds 404 to who does not have a GitHub session (MIN-162). The gesture is
-             the same for a markdown tag and for a raw `<img>` — both
-             arrive here, after `rehypeRaw`. */
-          img: ({ node, ...props }) => (
-            <img
-              className="inline-block max-w-full rounded-md"
-              loading="lazy"
-              // eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text
+          // Markdown and raw HTML images share the authenticated PR preview source.
+          img: ({ node: _node, ...props }) => (
+            <MarkdownImage
               {...props}
+              previewable={!!imageEndpoint}
               src={
                 imageEndpoint && typeof props.src === "string"
                   ? forgeImageSrc(props.src, imageEndpoint)

@@ -1,6 +1,6 @@
 "use client";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Add01Icon, AiNetworkIcon, FileUploadIcon, LayoutGridIcon, LinkSquare01Icon } from "@hugeicons/core-free-icons";
+import { Add01Icon, Layout3ColumnIcon, FileUploadIcon, LayoutGridIcon } from "@hugeicons/core-free-icons";
 import { useAppTabChange } from "@/lib/use-app-tab-change";
 import { useGeneratingViews } from "@/lib/use-generating-views";
 import { useOptionalAppTabSession } from "@/lib/app-tabs-context";
@@ -193,18 +193,18 @@ function ProjectBoard() {
           id: "issue-family-board",
           label: tFamily("menuLabel"),
           keywords: ["family", "parent", "children", "famille", "sous-ticket"],
-          icon: <HugeiconsIcon icon={AiNetworkIcon} className="size-4" />,
+          icon: <HugeiconsIcon icon={Layout3ColumnIcon} className="size-4" />,
           children: [
             {
               id: "issue-family-board-current",
               label: tFamily("openHere"),
-              icon: <HugeiconsIcon icon={LayoutGridIcon} className="size-4" />,
+              icon: <HugeiconsIcon icon={Layout3ColumnIcon} className="size-4" />,
               onSelect: () => window.history.pushState(null, "", href),
             },
             {
               id: "issue-family-board-new-tab",
               label: tFamily("openNewTab"),
-              icon: <HugeiconsIcon icon={LinkSquare01Icon} className="size-4" />,
+              icon: <HugeiconsIcon icon={Layout3ColumnIcon} className="size-4" />,
               onSelect: () => {
                 if (appTabs) void appTabs.create(href);
                 else window.open(href, "_blank", "noopener,noreferrer");

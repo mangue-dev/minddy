@@ -201,16 +201,21 @@ function ScratchpadBody() {
       <div className="absolute top-3.5 right-3.5 z-30 flex items-center gap-1">
         {!isLoading && (
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                aria-label={t("actions")}
-                className="rounded-full text-muted-foreground hover:text-foreground"
-              >
-                <HugeiconsIcon icon={MoreHorizontalIcon} className="size-4" />
-              </Button>
-            </DropdownMenuTrigger>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={t("actions")}
+                    className="rounded-full text-muted-foreground hover:text-foreground"
+                  >
+                    <HugeiconsIcon icon={MoreHorizontalIcon} className="size-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+              </TooltipTrigger>
+              <TooltipContent>{t("actions")}</TooltipContent>
+            </Tooltip>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onSelect={launchAll}>
                 <NumoIcon animated={false} className="size-4" />

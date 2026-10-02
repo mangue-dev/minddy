@@ -16,6 +16,8 @@
 // state — see MIN-158 for why that distinction is the whole bug.
 
 import * as React from "react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { TriangleIcon } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
 import { CommandGroup, CommandItem } from "mangue-ui";
 import { useChordPrefixForEvents } from "@/lib/keyboard/keyboard-context";
@@ -310,6 +312,7 @@ export function IssueShortcutMenu({
               onSelect={() => apply({ effort: eff.value as IssueEffort })}
               {...checked(issue.effort === eff.value)}
             >
+              <HugeiconsIcon icon={TriangleIcon} className="size-4 text-muted-foreground" />
               <span className="truncate">{eff.label}</span>
             </CommandItem>
           ))}
