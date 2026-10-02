@@ -1,8 +1,19 @@
 "use client";
 
-import { useState, type ComponentType } from "react";
+import { useContext, useState, type ComponentType } from "react";
+import { QueryClientContext } from "@tanstack/react-query";
 import { cn } from "mangue-ui";
 import { projectOrbStyle } from "@/lib/project-orb-colors";
+import { isProtectedProjectIconUrl, useProjectIcon } from "@/lib/use-project-icon";
+
+function CachedProjectOrb({ seed, iconUrl, className }: {
+  seed: string;
+  iconUrl: string;
+  className?: string;
+}) {
+  const { data, isError } = useProjectIcon(iconUrl);
+  return <ProjectOrb seed={seed} iconUrl={isError ? null : data} className={className} />;
+}
 
 /**
  * Safari's accelerated compositing clips a filtered child — here the blurred
@@ -41,6 +52,10 @@ export function ProjectOrb({
   className?: string;
 }) {
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
+  const queryClient = useContext(QueryClientContext);
+  if (queryClient && iconUrl && isProtectedProjectIconUrl(iconUrl)) {
+    return <CachedProjectOrb seed={seed} iconUrl={iconUrl} className={className} />;
+  }
   const { hue, hue2, chroma, lightness, angle, highlightX, highlightY } =
     projectOrbStyle(seed);
   // The three lightnesses of the gradient keep the distance from the original (±0.07 around
