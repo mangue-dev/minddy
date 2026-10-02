@@ -10,13 +10,12 @@ import {
   useState,
   type ComponentProps,
 } from "react";
-import { useRouter } from "next/navigation";
 import { useDraggable } from "@dnd-kit/core";
 import { useTranslations, useFormatter } from "next-intl";
 import { ConfirmDeleteDialog, Spinner, cn, toast } from "mangue-ui";
 import { AppIcon } from "@/components/icon";
 import { AgentBeam } from "@/components/agent-beam";
-import { useIssueMenuActions } from "@/components/use-issue-menu-actions";
+import { useIssueMenuActionsWithNavigation } from "@/components/use-issue-menu-actions";
 import { useAgentMenuActions } from "@/components/agent/use-agent-menu-actions";
 import {
   CustomPromptDialog,
@@ -662,6 +661,7 @@ export const IssueCardBody = memo(function IssueCardBody({
   selected,
   pr,
   onOpenPr,
+  onOpenObjective,
 }: {
   /** The card declares what it reads, not what a ticket contains (MIN-342):
       a complete `Issue` remains assignable, and a public surface can pass only
@@ -683,6 +683,8 @@ export const IssueCardBody = memo(function IssueCardBody({
   relations?: ChipRelation[];
   /** Opens the parent's side panel (clicking the hierarchy icon). */
   onOpenParent?: () => void;
+  /** Opens a related objective through the owning board's navigation action. */
+  onOpenObjective?: (objectiveId: string) => void;
   /** Opens a related issue's side panel (clicking a relation chip). */
   onOpenRelated?: (issueId: string) => void;
   /** Opens this issue's side panel on the plan tab (clicking the plan indicator). */
@@ -705,7 +707,6 @@ export const IssueCardBody = memo(function IssueCardBody({
   selected?: boolean;
   dragging?: boolean;
 }) {
-  const router = useRouter();
   const t = useTranslations("IssueUI");
   const tCycles = useTranslations("Cycles");
   const plan = planProgress(issue.plan);
@@ -815,7 +816,7 @@ export const IssueCardBody = memo(function IssueCardBody({
               relations={relations}
               projectKey={projectKey}
               onOpen={onOpenRelated}
-              onOpenObjective={onOpenRelated ? (id) => router.push(`/projects/${issue.project_id}/objectives?open=${id}`) : undefined}
+              onOpenObjective={onOpenObjective}
               className="shrink-0"
             />
           )}
@@ -893,6 +894,7 @@ const IssueCardContent = memo(function IssueCardContent({
   parent,
   relations,
   getCandidateIssues,
+  onNavigate,
   onOpenIssue,
   onOpenRelated,
   onAddRelation,
@@ -933,6 +935,8 @@ const IssueCardContent = memo(function IssueCardContent({
     kinds?: RelationKinds,
   ) => void;
   onOpenPlan?: (issue: Issue) => void;
+  /** Shared public router action; cards do not subscribe to route context. */
+  onNavigate: (href: string) => void;
   /** Opens the ticket panel. **Takes the ticket as an argument**, as
       `onUpdateIssue` already does: an arrow function bound by the column would
       be new on every render and bypass `memo` (MIN-316). */
@@ -956,7 +960,7 @@ const IssueCardContent = memo(function IssueCardContent({
 }) {
   const t = useTranslations("IssueUI");
   const tAttach = useTranslations("Resources");
-  const buildIssueMenuActions = useIssueMenuActions();
+  const buildIssueMenuActions = useIssueMenuActionsWithNavigation(onNavigate);
   const tAgent = useTranslations("Agent");
   const tPlan = useTranslations("Plan");
   const tCommon = useTranslations("Common");
@@ -970,7 +974,6 @@ const IssueCardContent = memo(function IssueCardContent({
     conversation: issueConversation,
     pr,
   } = useIssueActivity(issue.id);
-  const router = useRouter();
 
   // Card bindings are made HERE rather than by the column (MIN-316).
   // The received props take the ticket as an argument and are therefore stable
@@ -1005,9 +1008,12 @@ const IssueCardContent = memo(function IssueCardContent({
     () => (onOpenPlan ? () => onOpenPlan(issue) : undefined),
     [onOpenPlan, issue],
   );
+  const openObjective = useCallback((id: string) => {
+    onNavigate(`/projects/${issue.project_id}/objectives?open=${id}`);
+  }, [onNavigate, issue.project_id]);
   const openPr = useMemo(
-    () => pr ? () => router.push(`/pull-requests?pr=${pr.prId}`) : undefined,
-    [pr, router],
+    () => pr ? () => onNavigate(`/pull-requests?pr=${pr.prId}`) : undefined,
+    [pr, onNavigate],
   );
 
   // Drop files from the OS directly onto the card (MIN-24) — each file is
@@ -1428,6 +1434,7 @@ const IssueCardContent = memo(function IssueCardContent({
             relations={relations}
             onOpenParent={openParent}
             onOpenRelated={onOpenRelated}
+            onOpenObjective={onOpenRelated ? openObjective : undefined}
             onOpenPlan={openPlan}
             pr={pr}
             onOpenPr={openPr}

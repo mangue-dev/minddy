@@ -39,9 +39,9 @@ const browser = await chromium.launch({ headless: !process.argv.includes("--head
 const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, locale: "en-US", colorScheme: "dark", reducedMotion: "no-preference" });
 await context.addCookies(cookies.map(({ name, value }) => ({ name, value, url: base, sameSite: "Lax" })));
 await context.addCookies([{ name: "NEXT_LOCALE", value: "en", url: base }]);
-await context.addInitScript(({ owner, first }) => {
+await context.addInitScript(({ base }) => {
+  if (location.origin !== base) return;
   localStorage.setItem("cookie_consent", "declined");
-  sessionStorage.setItem(`minddy.app-tabs.${owner}`, JSON.stringify({ id: first.id, href: first.href }));
   window.__retentionEvents = [];
   document.addEventListener("scroll", (event) => {
     const node = event.target;
@@ -53,7 +53,7 @@ await context.addInitScript(({ owner, first }) => {
     const node = event.target;
     if (node instanceof HTMLElement) window.__retentionEvents.push({ kind: "focus", path: location.pathname, tag: node.tagName, label: node.getAttribute("aria-label"), column: node.closest("[data-board-column-scroller]")?.getAttribute("data-board-column-status") });
   }, true);
-}, { owner: fixture.userId, first: globalTab });
+}, { base });
 const page = await context.newPage();
 page.setDefaultTimeout(30000);
 const pageErrors = [];
@@ -185,8 +185,12 @@ try {
     await api("/api/me/app-tabs", "POST", { id: spec.id });
     const created = (await listTabs()).find((tab) => tab.id === spec.id);
     assert.ok(created);
-    await api(`/api/me/app-tabs/${spec.id}`, "PATCH", { revision: created.revision, patch: { href: spec.href, custom_name: spec.custom_name } });
+    await api(`/api/me/app-tabs/${spec.id}`, "PATCH", { revision: created.revision, patch: { href: spec.href, custom_name: spec.custom_name, pinned: true } });
   }
+  const { snapshot } = await api("/api/me/local-snapshots", "POST", { operation: "seal", slot: "window-tabs", value: { id: globalTab.id, href: globalTab.href } });
+  await context.addInitScript(({ owner, snapshot, base }) => {
+    if (location.origin === base) sessionStorage.setItem(`minddy.app-tabs.${owner}`, JSON.stringify(snapshot));
+  }, { owner: fixture.userId, snapshot, base });
   originalIssue = await api(`/api/issues/${fixture.firstIssue}`);
   assertScope("issues", originalIssue, fixture.userId);
   assert.equal(originalIssue.project_id, fixture.projects[0]);
@@ -207,7 +211,7 @@ try {
   });
   await check("global-filter-selection-and-scroll", async () => {
     await active().getByRole("button", { name: "Filters", exact: true }).click();
-    await page.getByRole("button", { name: "Hide done issues", exact: true }).click();
+    await page.getByRole("menuitem", { name: "Hide done issues", exact: true }).click();
     await page.keyboard.press("Escape");
     await page.waitForFunction((selector) => document.querySelector(selector)?.querySelectorAll("[data-issue-id]").length === 480, activeSelector);
     filteredCount = await active().locator("[data-issue-id]").count();
@@ -265,7 +269,7 @@ try {
   });
   await check("active-project-drag-with-hidden-duplicate-and-reversal", async () => {
     await activate(projectTab, { title: "Performance 1" });
-    await active().getByRole("button", { name: "Sort", exact: true }).click();
+    await active().locator('button[aria-label="Filters"]').click();
     await page.getByRole("menuitem", { name: "Manual", exact: true }).click();
     issueMayHaveMoved = true;
     await dragTo(originalIssue.status === "backlog" ? "todo" : "backlog");

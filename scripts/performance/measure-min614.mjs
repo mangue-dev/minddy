@@ -9,6 +9,7 @@ import { chromium } from "playwright";
 import { createServerClient } from "@supabase/ssr";
 import { loadEnv, requireEnv } from "../../captures/lib/env.mjs";
 import { EMAIL, MARKER, id } from "./seed.mjs";
+import { measureRetainedReturns } from "./min614-retained-returns.mjs";
 
 loadEnv();
 const base = process.env.MINDDY_PERF_BASE_URL ?? "http://localhost:3111";
@@ -37,12 +38,18 @@ const boardTab = tabs.find((tab) => tab.custom_name === "Performance board" && t
 assert.ok(boardTab, "Prepare the existing MIN-540 benchmark tabs first");
 const pagesTab = tabs.find((tab) => tab.custom_name === "Performance pages");
 assert.ok(pagesTab);
+const sealedResponse = await fetch(`${base}/api/me/local-snapshots`, { method: "POST", headers: { Cookie: cookies.map(({ name, value }) => `${name}=${value}`).join("; "), "Content-Type": "application/json" }, body: JSON.stringify({ operation: "seal", slot: "window-tabs", value: { id: boardTab.id, href: boardTab.href } }) });
+assert.equal(sealedResponse.status, 200);
+const { snapshot } = await sealedResponse.json();
+assert.equal(snapshot.format, "minddy-local-v1");
 const native = process.argv.includes("--electron");
 const diagnostic = process.argv.includes("--trace");
 const cpuProfile = process.argv.includes("--profile");
+const pass2 = process.argv.includes("--retained-returns");
 let runtime, profile, browser, context, page;
 let launchServices = false;
-const measurements = [], errors = [], responses = [];
+const measurements = [], errors = [], responses = [], requests = [];
+const requestRecords = new WeakMap();
 try {
   if (native) {
     profile = await mkdtemp(path.join(tmpdir(), "minddy-min614-"));
@@ -95,8 +102,9 @@ try {
   }
   await context.addCookies(cookies.map(({ name, value }) => ({ name, value, url: base, sameSite: "Lax" })));
   await context.addCookies([{ name: "NEXT_LOCALE", value: "en", url: base }]);
-  await context.addInitScript(({ owner, boardTab }) => {
-    sessionStorage.setItem(`minddy.app-tabs.${owner}`, JSON.stringify({ id: boardTab.id, href: boardTab.href }));
+  await context.addInitScript(({ owner, snapshot, base }) => {
+    if (location.origin !== base) return;
+    sessionStorage.setItem(`minddy.app-tabs.${owner}`, JSON.stringify(snapshot));
     localStorage.setItem("cookie_consent", "declined");
     localStorage.setItem("minddy.trace", "1");
     window.__min614 = { tasks: [], frames: [] };
@@ -104,14 +112,27 @@ try {
     let last = performance.now();
     const frame = (now) => { window.__min614.frames.push({ start: last, duration: now - last }); last = now; requestAnimationFrame(frame); };
     requestAnimationFrame(frame);
-  }, { owner: fixture.userId, boardTab });
+  }, { owner: fixture.userId, snapshot, base });
+  page.on("request", (request) => {
+    if (!request.url().startsWith(`${base}/api/`)) return;
+    const record = { path: new URL(request.url()).pathname, method: request.method(), at: Date.now() };
+    requestRecords.set(request, record); requests.push(record);
+  });
+  page.on("requestfinished", (request) => {
+    const record = requestRecords.get(request);
+    if (record) record.duration = request.timing().responseEnd;
+  });
+  page.on("requestfailed", (request) => {
+    const record = requestRecords.get(request);
+    if (record) record.failed = request.failure()?.errorText;
+  });
   page.on("pageerror", (error) => errors.push(error.message));
-  page.on("response", (response) => { if (response.url().startsWith(`${base}/api/`)) responses.push({ path: new URL(response.url()).pathname, status: response.status() }); });
+  page.on("response", (response) => { const record = requestRecords.get(response.request()); if (record) record.status = response.status(); if (response.url().startsWith(`${base}/api/`)) responses.push({ path: new URL(response.url()).pathname, status: response.status() }); });
   const cdp = await context.newCDPSession(page);
   await cdp.send("Performance.enable");
   const frames = () => page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   const counters = async () => Object.fromEntries((await cdp.send("Performance.getMetrics")).metrics.map(({ name, value }) => [name, value]));
-  async function measure(name, action, ready) {
+  async function measure(name, action, ready, probe) {
     const before = await counters();
     const started = await page.evaluate(() => performance.timeOrigin + performance.now());
     const responseStart = responses.length;
@@ -124,6 +145,12 @@ try {
     await ready();
     await frames();
     const readyAt = await page.evaluate(() => performance.timeOrigin + performance.now());
+    let inputMs = null;
+    if (probe) {
+      const inputStart = await page.evaluate(() => performance.now());
+      await probe();
+      inputMs = await page.evaluate((start) => performance.now() - start, inputStart);
+    }
     await page.waitForTimeout(350);
     const after = await counters();
     if (cpuProfile) {
@@ -133,7 +160,7 @@ try {
     const rendering = await page.evaluate((since) => {
       const start = since - performance.timeOrigin;
       const tasks = window.__min614.tasks.filter((task) => task.start >= start);
-      return { longTasks: tasks.length, longTaskMs: tasks.reduce((sum, task) => sum + task.duration, 0), maxFrameMs: Math.max(0, ...window.__min614.frames.filter((frame) => frame.start >= start).map((frame) => frame.duration)) };
+      return { longTaskSamples: tasks, frameStalls: window.__min614.frames.filter((frame) => frame.start >= start && frame.duration > 50), longTasks: tasks.length, longTaskMs: tasks.reduce((sum, task) => sum + task.duration, 0), maxFrameMs: Math.max(0, ...window.__min614.frames.filter((frame) => frame.start >= start).map((frame) => frame.duration)) };
     }, started);
     if (diagnostic) {
       const complete = new Promise((resolve) => cdp.once("Tracing.tracingComplete", resolve));
@@ -144,11 +171,13 @@ try {
       await cdp.send("IO.close", { handle: stream });
       await writeFile(`${output}/${label}-${name}-trace.json`, trace);
     }
+    const resources = await page.evaluate((since) => performance.getEntriesByType("resource").filter((entry) => entry.startTime >= since - performance.timeOrigin && new URL(entry.name).pathname.startsWith("/api/")).map((entry) => ({ path: new URL(entry.name).pathname, duration: entry.duration, ttfb: entry.responseStart - entry.requestStart })), started);
     const sameDocument = before.NavigationStart === after.NavigationStart;
-    const result = { name, readyMs: readyAt - started, ...rendering, scriptMs: sameDocument ? Math.max(0, after.ScriptDuration - before.ScriptDuration) * 1000 : null,
-      styleMs: sameDocument ? Math.max(0, after.RecalcStyleDuration - before.RecalcStyleDuration) * 1000 : null, layoutMs: sameDocument ? Math.max(0, after.LayoutDuration - before.LayoutDuration) * 1000 : null, responses: responses.slice(responseStart) };
+    const result = { name, inputMs, readyMs: readyAt - started, ...rendering, scriptMs: sameDocument ? Math.max(0, after.ScriptDuration - before.ScriptDuration) * 1000 : null,
+      styleMs: sameDocument ? Math.max(0, after.RecalcStyleDuration - before.RecalcStyleDuration) * 1000 : null, layoutMs: sameDocument ? Math.max(0, after.LayoutDuration - before.LayoutDuration) * 1000 : null, resources, responses: responses.slice(responseStart) };
     measurements.push(result);
     console.log(JSON.stringify(result));
+    return result;
   }
   const board = () => page.locator('[data-retained-app-view][data-app-view-active="true"] [data-issue-id]').first();
   const start = Date.now();
@@ -160,7 +189,9 @@ try {
     width: innerWidth, height: innerHeight, theme: document.documentElement.classList.contains("dark") ? "dark" : "light" }));
   assert.equal(runtime.renderer.nativeBridge, native);
   const pagesHref = `/projects/${fixture.projects[0]}/pages`;
-  for (let run = 0; run < 3; run++) {
+  if (pass2) {
+    await measureRetainedReturns({ page, context, fixture, boardTab, pagesTab, tabs, base, measure, frames, diagnostic: diagnostic || cpuProfile });
+  } else for (let run = 0; run < 3; run++) {
     await measure(`issue-open-${run}`, () => board().click(), () => page.locator('[role="dialog"]').first().waitFor());
     if (process.argv.includes("--short")) break;
     await page.keyboard.press("Escape");
@@ -204,7 +235,7 @@ try {
   }
   throw error;
 } finally {
-  await writeFile(`${output}/${label}.json`, JSON.stringify({ label, native, diagnostic, runtime, buildId: (await readFile(path.join(process.env.MINDDY_PERF_REFERENCE_ROOT ?? process.cwd(), ".next/BUILD_ID"), "utf8")).trim(), measurements, errors, responses }, null, 2));
+  await writeFile(`${output}/${label}.json`, JSON.stringify({ label, native, diagnostic, cpuProfile, pass2, timestamp: new Date().toISOString(), sha: execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(), dirty: Boolean(execFileSync("git", ["status", "--porcelain"], { encoding: "utf8" }).trim()), runtime, buildId: (await readFile(path.join(process.env.MINDDY_PERF_REFERENCE_ROOT ?? process.cwd(), ".next/BUILD_ID"), "utf8")).trim(), measurements, errors, responses, requests }, null, 2));
 
   await browser?.close();
   if (launchServices && profile) {
