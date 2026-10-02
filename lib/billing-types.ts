@@ -1,7 +1,4 @@
-import type {
-  BillingPlanId,
-  UsageSegmentId,
-} from "@/lib/billing-plans";
+import type { BillingPlanId, UsageSegmentId } from "@/lib/billing-plans";
 import type { UsageHistoryFeature } from "@/lib/usage-features";
 
 /**
@@ -37,10 +34,10 @@ export interface UsageHistoryEntry {
   /** Display segment (agents = LLM + sandbox merged) — icon and color. */
   segmentId: UsageSegmentId;
   /**
- * The exact feature of the run, when we know how to name it: it is SHE that the line
- * displays (“Smart-fill”, not “Automations”). `null` on a feature
- * that the UI does not know — the display then falls back to the name of the segment.
- */
+   * The exact feature of the run, when we know how to name it: it is SHE that the line
+   * displays (“Smart-fill”, not “Automations”). `null` on a feature
+   * that the UI does not know — the display then falls back to the name of the segment.
+   */
   feature: UsageHistoryFeature | null;
   at: string;
   projectName: string | null;
@@ -52,6 +49,22 @@ export interface UsageHistoryEntry {
 export interface UsageHistoryResponse {
   total: number;
   entries: UsageHistoryEntry[];
+}
+
+export interface UsageDay {
+  /** UTC calendar day; partial days are bounded by the effective usage window. */
+  day: string;
+  usd: number;
+  segments: Array<{ id: UsageSegmentId; usd: number }>;
+}
+
+/** Full-window aggregates, independent of history pagination. */
+export interface UsageAnalyticsResponse {
+  periodStart: string;
+  periodEnd: string;
+  observedAt: string;
+  includedUsd: number;
+  days: UsageDay[];
 }
 
 export interface UsageSummaryResponse {

@@ -2435,3 +2435,20 @@ Concurrent association changes force a bounded
 retry with a stable observation timestamp. The link and unlink SQL regressions
 also pass after both migrations. These checks do not certify a production rollout
 or a complete Supabase replay.
+
+## MIN-601 billing usage audit — 2 October 2026
+
+The daily analytics RPC reads only account-attributed usage timestamps, feature
+identifiers, and costs. The authenticated route supplies the account ID and its
+effective quota window; request parameters cannot select another account. Both
+usage RPCs retain service-only execution. History continues to return no project
+name from SQL; the existing authenticated project reader decodes that name.
+No table, view, trigger, column policy, or encryption target changes are required.
+
+The actual migration was applied to an isolated PGlite PostgreSQL instance with a
+reduced usage-table fixture and the preceding history function's service-only
+grants. Introspection with `scripts/encryption-schema-audit.sql` verified unchanged
+table/view/trigger metadata and preserved history permissions. Only the two usage
+RPC records were merged into the SQL inventory. The new server consumer was
+reviewed and added without unrelated line-number changes; the migration hash was
+pinned after this review. This is a focused function audit, not a full schema replay.

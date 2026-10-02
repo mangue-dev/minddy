@@ -12187,6 +12187,13 @@
     "storage": false
   },
   {
+    "file": "lib/server/usage-analytics.ts",
+    "operation": "rpc",
+    "resource": "get_user_usage_daily",
+    "line": 27,
+    "storage": false
+  },
+  {
     "file": "lib/server/usage.ts",
     "operation": "from",
     "resource": "agent_quota_resets",

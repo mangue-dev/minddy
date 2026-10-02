@@ -6,7 +6,10 @@ import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button, toast } from "mangue-ui";
 import { AppContentHeader } from "@/components/app-content-header";
-import { UsageSection } from "@/components/billing/usage-section";
+import {
+  BillingLimits,
+  UsageSection,
+} from "@/components/billing/usage-section";
 import { PlanSection } from "@/components/billing/plan-section";
 import { UsageHistorySection } from "@/components/billing/usage-history-section";
 import { useBillingSummary } from "@/lib/use-billing-query";
@@ -15,6 +18,7 @@ import { useScrollFade } from "@/lib/use-scroll-fade";
 import {
   billingStatusQueryKey,
   billingUsageQueryKey,
+  billingAnalyticsQueryKey,
 } from "@/lib/use-billing-query";
 
 /**
@@ -40,7 +44,7 @@ export default function BillingPage() {
     }
   }, []);
 
-  if (!loading && !hasManagedService) {
+  if (!loading && status && usage && !hasManagedService) {
     return (
       <div className="flex h-full min-h-0 flex-col overflow-hidden">
         <AppContentHeader />
@@ -49,7 +53,7 @@ export default function BillingPage() {
           {...contentFade.scrollProps}
           className="min-h-0 flex-1 overflow-y-auto"
         >
-          <div className="mx-auto w-full max-w-5xl px-6 py-10">
+          <div className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6 sm:py-10">
             <div className="rounded-xl border border-border bg-card px-5 py-4">
               <h2 className="text-sm font-semibold">{t("selfHostedTitle")}</h2>
               <p className="mt-1 text-sm text-muted-foreground">
@@ -86,29 +90,38 @@ export default function BillingPage() {
         {...contentFade.scrollProps}
         className="min-h-0 flex-1 overflow-y-auto"
       >
-        <div className="mx-auto w-full max-w-5xl px-6 py-10">
-          <div className="space-y-10">
-            <section className="space-y-3">
-              <h2 className="text-sm font-semibold">{t("usageTitle")}</h2>
+        <div className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6 sm:py-10">
+          <div className="min-w-0 space-y-6 sm:space-y-8">
+            <div>
+              <h1 className="text-2xl font-semibold tracking-tight">
+                {t("billingUsageTitle")}
+              </h1>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {t("billingUsageSubtitle")}
+              </p>
+            </div>
+            <section aria-label={t("usageTitle")}>
               <UsageSection />
             </section>
 
-            <section className="space-y-3">
-              <div>
-                <h2 className="text-sm font-semibold">{t("plansTitle")}</h2>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {status?.adminOverride
-                    ? t("adminOverrideSectionSubtitle")
-                    : t("plansSubtitle")}
-                </p>
-              </div>
-              <PlanSection />
-            </section>
-
-            {/* The accordion has its own header (title + subtitle). */}
             <section>
               <UsageHistorySection />
             </section>
+
+            {(loading || status?.managedBilling) && (
+              <section className="space-y-4 border-t border-border pt-6">
+                <div>
+                  <h2 className="text-sm font-semibold">{t("plansTitle")}</h2>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {status?.adminOverride
+                      ? t("adminOverrideSectionSubtitle")
+                      : t("plansSubtitle")}
+                  </p>
+                </div>
+                <PlanSection />
+                <BillingLimits />
+              </section>
+            )}
           </div>
         </div>
       </div>
@@ -132,6 +145,9 @@ function CheckoutReturnToast() {
       toast.success(t("checkoutSuccess"));
       void queryClient.invalidateQueries({ queryKey: billingStatusQueryKey });
       void queryClient.invalidateQueries({ queryKey: billingUsageQueryKey });
+      void queryClient.invalidateQueries({
+        queryKey: billingAnalyticsQueryKey,
+      });
     } else if (billingParam === "cancelled") {
       toast(t("checkoutCancelled"));
     }
