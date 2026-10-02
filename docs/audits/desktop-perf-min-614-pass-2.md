@@ -9,11 +9,20 @@ functional checks are in [the evidence file](desktop-perf-min-614-pass-2-results
 
 The baseline includes **all** first-pass changes at
 `66886c54c1b37521f64f98ddc52643fa752fbacf`. [PR #342](https://github.com/mangue-dev/minddy/pull/342)
-was still open during this work. Its branch, commit and PR metadata were preserved.
-The dedicated branch `codex/min-614-retained-board-performance` starts from that
-commit; this delivery depends on #342. Review the incremental changes against
-`codex/min-614-encryption-performance`, then integrate the first pass before this
-pass. The historical 1,108–1,151 ms board-return medians are context, not new
+was still open during measurement. The initial pass-2 branch
+`codex/min-614-retained-board-performance` started from that commit and was
+submitted as dependent PR #343.
+
+After measurement, the user requested one cumulative PR for MIN-614. Both
+original pass-2 commits (`e08051839177e66b69b251c2cc871884367b091c` and
+`1d3fb577cd5e5d338a3a619e0d75f8e8590647b1`) were integrated by fast-forward
+into `codex/min-614-encryption-performance`, preserving the first-pass commit
+and all measured source SHAs. PR #342 is now the cumulative delivery; PR #343
+is superseded. Subsequent passes reuse #342 and its existing branch, while
+retaining separate audits and evidence files. This consolidation changes no
+product code or measurement results.
+
+The historical 1,108–1,151 ms board-return medians are context, not new
 measurements. This audit establishes its own active-view baseline.
 
 The measured candidate is `e08051839177e66b69b251c2cc871884367b091c`. Later commits
