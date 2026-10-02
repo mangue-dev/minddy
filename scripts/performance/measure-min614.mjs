@@ -128,7 +128,9 @@ try {
   }, { owner: fixture.userId, snapshot, base });
   page.on("request", (request) => {
     if (!request.url().startsWith(`${base}/api/`)) return;
-    const record = { path: new URL(request.url()).pathname, method: request.method(), at: Date.now() };
+    const url = new URL(request.url());
+    const record = { path: url.pathname, method: request.method(), at: Date.now(),
+      ...(url.searchParams.get('view') === 'chain' ? { variant: 'chain' } : {}) };
     requestRecords.set(request, record); requests.push(record);
   });
   page.on("requestfinished", (request) => {

@@ -25,6 +25,7 @@ export async function measureIssueJourneys({ page, context, fixture, boardTab, p
         await page.waitForTimeout(500); continue;
       }
       record.duration = Date.now() - record.at; record.status = response.status();
+      if (cleanupMode && method === 'DELETE' && response.status() === 404) return null;
       if (!response.ok()) {
         apiErrors.push({ ...record });
         if ([502, 503, 504].includes(response.status()) && attempt < attempts) { await page.waitForTimeout(500); continue; }
@@ -43,7 +44,8 @@ export async function measureIssueJourneys({ page, context, fixture, boardTab, p
   assert.match(issue.title, /^Performance task 1\.1:/);
   assert.equal(comments.length, 2);
   const createdComments = new Set(), createdRelations = new Set(), createdResources = new Set();
-  let filtered = false, originalMutable;
+  let filtered = false, originalMutable, originalMutableComments, captureCommentWrite;
+  const pendingComments = [];
   const checks = [], mutations = [];
   const repetitions = diagnostic ? 1 : 10;
   const statePath = `${output}/${label}-checks.json`;
@@ -185,10 +187,24 @@ export async function measureIssueJourneys({ page, context, fixture, boardTab, p
     assert.equal(mutable.project_id, issue.project_id);
     originalMutable = mutable;
     const mutableComments = await api(`/api/issues/${mutable.id}/comments`);
+    assert.equal(mutableComments.length, 2, 'Inspect leftover test comments before mutating this fixture');
+    originalMutableComments = mutableComments;
+    captureCommentWrite = (request) => {
+      if (request.method() !== 'POST' || new URL(request.url()).pathname !== `/api/issues/${mutable.id}/comments`) return;
+      const payload = request.postDataJSON();
+      if (typeof payload?.body !== 'string' || !payload.body.startsWith(`MIN-614 pass 3 comment ${label} `) ||
+          typeof payload.id !== 'string' || !/^[a-f0-9-]{36}$/i.test(payload.id)) return;
+      createdComments.add(payload.id);
+      const pending = { settled: false };
+      pending.promise = request.response().then(() => { pending.settled = true; }, () => { pending.settled = true; });
+      pendingComments.push(pending);
+    };
+    page.on('request', captureCommentWrite);
     await open(mutable, mutableComments);
     for (let run = 0; run < repetitions; run++) {
       await panel().getByRole('button', { name: 'Change effort', exact: true }).click();
       const patchResponse = page.waitForResponse((response) => new URL(response.url()).pathname === `/api/issues/${mutable.id}` && response.request().method() === 'PATCH').then(async (response) => ({ response, at: await page.evaluate(() => performance.timeOrigin + performance.now()) }));
+      void patchResponse.catch(() => {});
       const patchStart = await page.evaluate(() => performance.timeOrigin + performance.now());
       await measure(`property-optimistic-${run}`, () => page.getByRole('option', { name: 'L', exact: true }).click(),
         () => panel().getByRole('button', { name: 'Change effort', exact: true }).getByText('L', { exact: true }).waitFor());
@@ -199,6 +215,7 @@ export async function measureIssueJourneys({ page, context, fixture, boardTab, p
       mutations.push({ name: 'property-confirmation', run, persistedMs: patchAck.at - patchStart });
       await panel().getByRole('button', { name: 'Change effort', exact: true }).click();
       const restored = page.waitForResponse((response) => new URL(response.url()).pathname === `/api/issues/${mutable.id}` && response.request().method() === 'PATCH');
+      void restored.catch(() => {});
       await page.getByRole('option', { name: mutable.effort.toUpperCase(), exact: true }).click();
       assert.equal((await restored).status(), 200);
       // Reopen to reconcile a restoration if the fixture's realtime channel is delayed.
@@ -215,6 +232,8 @@ export async function measureIssueJourneys({ page, context, fixture, boardTab, p
         await frames();
         return { response, saved, at: await page.evaluate(() => performance.timeOrigin + performance.now()) };
       });
+      // Observe rejection now; propagate it after the optimistic display measurement.
+      void confirmation.catch(() => {});
       const started = await page.evaluate(() => performance.timeOrigin + performance.now());
       await measure(`comment-optimistic-${run}`, () => composer.press('ControlOrMeta+Enter'), () => panel().locator('[data-comment-id]').filter({ hasText: text }).waitFor());
       const acknowledged = await confirmation;
@@ -230,6 +249,7 @@ export async function measureIssueJourneys({ page, context, fixture, boardTab, p
       await page.getByRole('menuitem', { name: 'Edit', exact: true }).click();
       await row.locator('[role="textbox"][contenteditable="true"]').fill(`${text} edited`);
       const editAck = page.waitForResponse((response) => new URL(response.url()).pathname === `/api/comments/${saved.id}` && response.request().method() === 'PATCH');
+      void editAck.catch(() => {});
       await measure(`comment-edit-${run}`, () => row.getByRole('button', { name: 'Save', exact: true }).click(), async () => {
         const response = await editAck;
         assert.equal(response.status(), 200);
@@ -268,6 +288,14 @@ export async function measureIssueJourneys({ page, context, fixture, boardTab, p
     // Preserve confirmation samples even if a later cleanup verification times out.
     await writeFile(statePath, JSON.stringify({ checks, mutations, apiErrors, fixture: { events: events.length, comments: comments.length, descriptionBytes: issue.description.length }, cleanup: false }, null, 2));
     cleanupMode = true;
+    // A timed-out response can still commit. Keep its client UUID and await settlement.
+    let settlementTimer;
+    await Promise.race([
+      Promise.allSettled(pendingComments.map((pending) => pending.promise)),
+      new Promise((resolve) => { settlementTimer = setTimeout(resolve, 30000); }),
+    ]);
+    clearTimeout(settlementTimer);
+    if (captureCommentWrite) page.off('request', captureCommentWrite);
     const actions = [
       ...(originalMutable ? [() => api(`/api/issues/${originalMutable.id}`, 'PATCH', { title: originalMutable.title, effort: originalMutable.effort })] : []),
       ...[...createdComments].map((commentId) => () => api(`/api/comments/${commentId}`, 'DELETE')),
@@ -283,7 +311,9 @@ export async function measureIssueJourneys({ page, context, fixture, boardTab, p
     if (originalMutable) {
       const restored = await api(`/api/issues/${originalMutable.id}`);
       assert.equal(restored.title, originalMutable.title); assert.equal(restored.effort, originalMutable.effort);
+      if (originalMutableComments) assert.deepEqual((await api(`/api/issues/${originalMutable.id}/comments`)).map((row) => row.id).sort(), originalMutableComments.map((row) => row.id).sort());
     }
+    assert.ok(pendingComments.every((pending) => pending.settled), 'A synthetic comment write is still pending; cleanup is not confirmed');
     await writeFile(statePath, JSON.stringify({ checks, mutations, apiErrors, fixture: { events: events.length, comments: comments.length, descriptionBytes: issue.description.length }, cleanup: true }, null, 2));
   }
 }

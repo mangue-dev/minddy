@@ -3,7 +3,7 @@ import { readFile, readdir, stat, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 
 const root = 'output/playwright/performance';
-const beforeLabels = (process.env.MINDDY_PERF_BEFORE_LABELS ?? 'pass3-before-9,pass3-before-10,pass3-before-11').split(',');
+const beforeLabels = (process.env.MINDDY_PERF_BEFORE_LABELS ?? 'pass3-before-9,pass3-before-10,pass3-before-12').split(',');
 const afterLabels = (process.env.MINDDY_PERF_AFTER_LABELS ?? 'pass3-after-1,pass3-after-2,pass3-after-3').split(',');
 const read = async (label) => {
   const result = JSON.parse(await readFile(`${root}/${label}.json`, 'utf8'));
