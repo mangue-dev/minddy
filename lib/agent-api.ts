@@ -258,6 +258,13 @@ export async function fetchIssueAutomationApi(
   return parseJson(await fetch(`/api/issues/${issueId}/automation`));
 }
 
+/** Fetch the live chain without calculating an unused launch estimate. */
+export async function fetchIssueChainStatusApi(
+  issueId: string,
+): Promise<Pick<IssueAutomationState, "chain">> {
+  return parseJson(await fetch(`/api/issues/${issueId}/automation?view=chain`));
+}
+
 /**
  * “I'll take this ticket in hand” — cancels the chain that was waiting for him IN REPRISED.
  *

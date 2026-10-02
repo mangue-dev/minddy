@@ -82,13 +82,19 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
 
-  // RLS: The caller must be able to see the ticket.
+  const chainOnly = request.nextUrl.searchParams.get("view") === "chain";
+  // RLS: The caller must be able to see the ticket. A status-only reader needs
+  // metadata, while the full simulation still reads its encrypted inputs.
   const { data: issueRow } = await issueStore(auth.supabase).select(
-      "id, project_id, status, priority, effort, plan, assignee_id, automation_override",
+      chainOnly ? "id, project_id" : "id, project_id, status, priority, effort, plan, assignee_id, automation_override",
     )
     .eq("id", id)
     .maybeSingle();
   if (!issueRow) return NextResponse.json({ error: "Issue not found" }, { status: 404 });
+  if (chainOnly) {
+    const chain = await latestChainForIssue(id);
+    return NextResponse.json({ chain: chain ? publicChain(chain) : null });
+  }
   const issue = issueRow as IssueRow;
 
   const service = getServiceClient();

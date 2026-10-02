@@ -9,6 +9,7 @@ import {
   fetchAllPullRequestsApi,
   fetchIssueAgentRunsApi,
   fetchIssueAutomationApi,
+  fetchIssueChainStatusApi,
   fetchOpenPullRequestCountApi,
   fetchPullRequestApi,
   fetchPullRequestReadinessBatchApi,
@@ -72,6 +73,22 @@ export function useIssueAgentRunsQuery(issueId: string | null) {
 /** Ticket automation chain cache key (MIN-147). */
 export function issueChainQueryKey(issueId: string) {
   return ["agent-chain", "issue", issueId] as const;
+}
+
+/** Keep status reads under the same realtime and mutation invalidation prefix. */
+export function issueChainStatusQueryKey(issueId: string) {
+  return [...issueChainQueryKey(issueId), "status"] as const;
+}
+
+export function useIssueChainStatusQuery(issueId: string | null) {
+  const enabled = !!issueId;
+  const { data, isPending } = useQuery({
+    queryKey: issueChainStatusQueryKey(issueId ?? ""),
+    queryFn: () => fetchIssueChainStatusApi(issueId as string),
+    enabled,
+    refetchOnMount: "always",
+  });
+  return { chain: data?.chain ?? null, loading: enabled && isPending };
 }
 
 /**

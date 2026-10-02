@@ -10,6 +10,7 @@ import { createServerClient } from "@supabase/ssr";
 import { loadEnv, requireEnv } from "../../captures/lib/env.mjs";
 import { EMAIL, MARKER, id } from "./seed.mjs";
 import { measureRetainedReturns } from "./min614-retained-returns.mjs";
+import { measureIssueJourneys } from "./min614-issue-journeys.mjs";
 
 loadEnv();
 const base = process.env.MINDDY_PERF_BASE_URL ?? "http://localhost:3111";
@@ -46,6 +47,7 @@ const native = process.argv.includes("--electron");
 const diagnostic = process.argv.includes("--trace");
 const cpuProfile = process.argv.includes("--profile");
 const pass2 = process.argv.includes("--retained-returns");
+const pass3 = process.argv.includes("--issue-journeys");
 const buildSha = process.env.MINDDY_PERF_BUILD_SHA;
 if (buildSha) assert.match(buildSha, /^[a-f0-9]{40}$/);
 let runtime, profile, browser, context, page;
@@ -109,7 +111,16 @@ try {
     sessionStorage.setItem(`minddy.app-tabs.${owner}`, JSON.stringify(snapshot));
     localStorage.setItem("cookie_consent", "declined");
     localStorage.setItem("minddy.trace", "1");
-    window.__min614 = { tasks: [], frames: [] };
+    window.__min614 = { tasks: [], frames: [], apiStates: {} };
+    const originalFetch = window.fetch;
+    window.fetch = async (...args) => {
+      const url = new URL(typeof args[0] === "string" ? args[0] : args[0].url ?? args[0], location.origin);
+      if (url.origin !== location.origin || !url.pathname.startsWith('/api/')) return originalFetch(...args);
+      const state = window.__min614.apiStates[url.pathname] ??= { pending: 0, status: null };
+      state.pending++;
+      try { const response = await originalFetch(...args); state.status = response.status; return response; }
+      finally { state.pending--; }
+    };
     new PerformanceObserver((list) => window.__min614.tasks.push(...list.getEntries().map(({ startTime, duration }) => ({ start: startTime, duration })))).observe({ type: "longtask", buffered: true });
     let last = performance.now();
     const frame = (now) => { window.__min614.frames.push({ start: last, duration: now - last }); last = now; requestAnimationFrame(frame); };
@@ -175,7 +186,7 @@ try {
     }
     const resources = await page.evaluate((since) => performance.getEntriesByType("resource").filter((entry) => entry.startTime >= since - performance.timeOrigin && new URL(entry.name).pathname.startsWith("/api/")).map((entry) => ({ path: new URL(entry.name).pathname, duration: entry.duration, ttfb: entry.responseStart - entry.requestStart })), started);
     const sameDocument = before.NavigationStart === after.NavigationStart;
-    const result = { name, inputMs, readyMs: readyAt - started, ...rendering, scriptMs: sameDocument ? Math.max(0, after.ScriptDuration - before.ScriptDuration) * 1000 : null,
+    const result = { name, startedAt: started, readyAt, inputMs, readyMs: readyAt - started, ...rendering, scriptMs: sameDocument ? Math.max(0, after.ScriptDuration - before.ScriptDuration) * 1000 : null,
       styleMs: sameDocument ? Math.max(0, after.RecalcStyleDuration - before.RecalcStyleDuration) * 1000 : null, layoutMs: sameDocument ? Math.max(0, after.LayoutDuration - before.LayoutDuration) * 1000 : null, resources, responses: responses.slice(responseStart) };
     measurements.push(result);
     console.log(JSON.stringify(result));
@@ -191,7 +202,9 @@ try {
     width: innerWidth, height: innerHeight, theme: document.documentElement.classList.contains("dark") ? "dark" : "light" }));
   assert.equal(runtime.renderer.nativeBridge, native);
   const pagesHref = `/projects/${fixture.projects[0]}/pages`;
-  if (pass2) {
+  if (pass3) {
+    await measureIssueJourneys({ page, context, fixture, boardTab, pagesTab, tabs, base, measure, frames, diagnostic: diagnostic || cpuProfile, output, label });
+  } else if (pass2) {
     await measureRetainedReturns({ page, context, fixture, boardTab, pagesTab, tabs, base, measure, frames, diagnostic: diagnostic || cpuProfile });
   } else for (let run = 0; run < 3; run++) {
     await measure(`issue-open-${run}`, () => board().click(), () => page.locator('[role="dialog"]').first().waitFor());
@@ -210,7 +223,7 @@ try {
     await frames();
     await page.screenshot({ path: `${output}/${label}-issue-light.png` });
   }
-  if (!process.argv.includes("--short")) {
+  if (!process.argv.includes("--short") && !pass3) {
   // Read the stored PR list through its real authenticated route; no diff or forge is fabricated.
   for (let run = 0; run < 3; run++) {
     const started = performance.now();
@@ -230,14 +243,16 @@ try {
   await page.screenshot({ path: `${output}/${label}-pr-light.png` });
   }
 } catch (error) {
-  errors.push(error.message);
+  // Playwright transport logs can contain cookies; retain only the diagnostic headline.
+  const headline = error.message.split('\n')[0];
+  errors.push(headline);
   if (page && !page.isClosed()) {
     await page.screenshot({ path: `${output}/${label}-failure.png` });
     console.error(await page.locator("[data-app-tab-id]").evaluateAll((nodes) => nodes.map((node) => ({ id: node.dataset.appTabId, label: node.getAttribute("aria-label"), selected: node.getAttribute("aria-selected") }))));
   }
-  throw error;
+  throw new Error(headline);
 } finally {
-  await writeFile(`${output}/${label}.json`, JSON.stringify({ label, native, diagnostic, cpuProfile, pass2, timestamp: new Date().toISOString(), buildSha, sha: execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(), dirty: Boolean(execFileSync("git", ["status", "--porcelain"], { encoding: "utf8" }).trim()), runtime, buildId: (await readFile(path.join(process.env.MINDDY_PERF_REFERENCE_ROOT ?? process.cwd(), ".next/BUILD_ID"), "utf8")).trim(), measurements, errors, responses, requests }, null, 2));
+  await writeFile(`${output}/${label}.json`, JSON.stringify({ label, native, diagnostic, cpuProfile, pass2, pass3, timestamp: new Date().toISOString(), buildSha, sha: execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(), dirty: Boolean(execFileSync("git", ["status", "--porcelain"], { encoding: "utf8" }).trim()), runtime, buildId: (await readFile(path.join(process.env.MINDDY_PERF_REFERENCE_ROOT ?? process.cwd(), ".next/BUILD_ID"), "utf8")).trim(), measurements, errors, responses, requests }, null, 2));
 
   await browser?.close();
   if (launchServices && profile) {
