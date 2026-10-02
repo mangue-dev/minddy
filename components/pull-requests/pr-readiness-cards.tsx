@@ -4,7 +4,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
 import { AlertCircleIcon, ArrowUpRight01Icon, GitBranchIcon, GitMergeIcon, GitPullRequestDraftIcon, Shield01Icon, CheckIcon, UserRoundCheckIcon as UserRoundCheck, ViewIcon, Wrench01Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { useNow, useTranslations } from "next-intl";
+import { useFormatter, useNow, useTranslations } from "next-intl";
 import {
   Popover,
   PopoverContent,
@@ -12,6 +12,7 @@ import {
   cn,
 } from "mangue-ui";
 
+import { AppTooltip } from "@/components/ui/app-tooltip";
 import { CheckLogo } from "@/components/pull-requests/pr-check-logo";
 import { NumoIcon } from "@/components/numo-icon";
 import { ForgeUserAvatar } from "@/components/git/forge-user-avatar";
@@ -27,6 +28,8 @@ import type {
   ReadinessAction,
   ReadinessBlocker,
 } from "@/lib/pr-readiness";
+import type { AiReviewStatus } from "@/lib/pr-ai-review";
+import type { AiReviewProvider, AiReviewState } from "@/lib/pr-ai-review/types";
 import type { PrDeploymentStory } from "@/lib/pr-deployment-story";
 
 export type PrStatusCardTone =
@@ -116,6 +119,8 @@ interface PrStatusCard {
   durationMs: number | null;
   /** Live timer — the duration recomputes on every tick until it settles. */
   startedAt: string | null;
+  updatedAt?: string;
+  logo?: string;
   donutParts: CheckState[] | null;
   avatars: { login: string; avatar_url: string | null }[] | null;
   iconKind: ReadinessBlocker["kind"];
@@ -178,6 +183,9 @@ interface PrStatusCardsProps {
   onOpenConversations: () => void;
   onOpenReviewApprove: () => void;
   onStartFileReview: () => void;
+  aiReviews?: AiReviewStatus[];
+  requestingReviewer?: string | null;
+  onRequestAiReview?: (provider: AiReviewProvider) => void;
   numoReview: PrNumoReviewCardSpec | null;
   /** A correction run works on this pull request right now (a Numo fix,
       not a reread): its own card, the whole surface opens the Numo panel. */
@@ -215,6 +223,9 @@ export function PrStatusCards(props: PrStatusCardsProps) {
       props.unresolvedThreads,
       props.acting,
       props.numoReview,
+      props.aiReviews,
+      props.requestingReviewer,
+      props.onRequestAiReview,
       props.fixRun,
       props.numoMerge,
       props.fix,
@@ -403,6 +414,36 @@ function buildStatusCards(
       avatars: null,
       iconKind: "mergeability",
       actions: deploymentActions(deployment.url),
+    });
+  }
+
+  for (const review of props.aiReviews ?? []) {
+    const active = review.state === "running" || review.state === "requested";
+    const tone: PrStatusCardTone = active ? "progress" : review.state === "findings" || review.state === "failed" ? "danger" : (review.state === "clean" || review.state === "completed") ? "success" : "neutral";
+    const labels: Record<AiReviewState, MessageKey<"PullRequests">> = {
+      requested: "cardAiReviewRequested", running: "cardAiReviewRunning",
+      completed: "cardAiReviewCompleted", clean: "cardAiReviewClean",
+      findings: "cardAiReviewFindings", failed: "cardAiReviewFailed", skipped: "cardAiReviewSkipped",
+    };
+    const request = !active && props.onRequestAiReview ? {
+      label: props.requestingReviewer === review.provider.id ? t("cardAiReviewSending") : t("cardAiReviewRequestAgain"),
+      onClick: () => props.onRequestAiReview?.(review.provider),
+      disabled: !!props.requestingReviewer,
+      testId: `pr-card-request-${review.provider.id}`,
+    } : undefined;
+    const open = review.url ? () => window.open(review.url!, "_blank", "noreferrer") : undefined;
+    push({
+      id: `ai-review-${review.provider.id}`, tone, logo: review.provider.logo,
+      title: t(labels[review.state], { provider: review.provider.name }),
+      startedAt: review.state === "running" ? review.startedAt : null,
+      durationMs: review.durationMs, updatedAt: review.updatedAt,
+      donutParts: null, avatars: null, iconKind: "review_requested",
+      actions: open && request ? {
+        top: { label: t("cardAiReviewView"), onClick: open }, bottom: request,
+      } : undefined,
+      action: !open ? request : undefined,
+      onSelect: open && !request ? open : undefined,
+      hoverLabel: open && !request ? t("cardAiReviewView") : undefined,
     });
   }
 
@@ -695,10 +736,10 @@ function HoverWordOverlay({
 }) {
   return (
     <div className="group relative flex h-full min-w-0 flex-col">
-      <div className="pointer-events-none flex h-full min-w-0 flex-col gap-2.5 transition duration-150 group-hover:opacity-0 group-hover:blur-[2px]">
+      <div className="pointer-events-none flex h-full min-w-0 flex-col gap-2.5 transition duration-150 group-hover:opacity-0 group-hover:blur-[2px] group-focus-within:opacity-0 group-focus-within:blur-[2px]">
         {children}
       </div>
-      <div className="absolute inset-0 grid place-items-center px-3 text-center opacity-0 transition duration-150 group-hover:opacity-100">
+      <div className="absolute inset-0 grid place-items-center px-3 text-center opacity-0 transition duration-150 group-hover:opacity-100 group-focus-within:opacity-100">
         <span
           className={cn(
             "text-sm font-medium",
@@ -750,6 +791,7 @@ function PrStatusCardView({
   onChecksOpenChange: (open: boolean) => void;
 }) {
   const t = useTranslations("PullRequests");
+  const format = useFormatter();
   // A clicked split option flashes its feedback word (Copied, Opened,
   // Launched…): the gesture visibly landed. The regular label comes back
   // after a beat.
@@ -775,7 +817,9 @@ function PrStatusCardView({
           TONE_TITLE[card.tone],
         )}
       >
-        {card.donutParts ? (
+        {card.logo ? (
+          <span aria-hidden className="inline-block size-5 shrink-0 bg-current [mask-repeat:no-repeat] [mask-position:center] [mask-size:contain]" style={{ maskImage: `url(${card.logo})`, WebkitMaskImage: `url(${card.logo})` }} />
+        ) : card.donutParts ? (
           <ChecksDonut parts={card.donutParts} />
         ) : card.avatars ? (
           <AvatarCascade users={card.avatars} />
@@ -812,7 +856,11 @@ function PrStatusCardView({
                 t,
                 Math.max(now.getTime() - Date.parse(card.startedAt), 0),
               )
-            : formatRunDuration(t, card.durationMs)}
+            : formatRunDuration(t, card.durationMs) ?? (card.updatedAt ? (
+                <time dateTime={card.updatedAt}>
+                  {format.dateTime(new Date(card.updatedAt), { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+                </time>
+              ) : null)}
         </span>
       </p>
     </>
@@ -824,10 +872,10 @@ function PrStatusCardView({
   const actions = card.actions;
   const inner = actions ? (
     <div className="group relative flex h-24 min-w-0 flex-col">
-      <div className="pointer-events-none flex h-full min-w-0 flex-col gap-2.5 p-3 transition duration-150 group-hover:opacity-0 group-hover:blur-[2px]">
+      <div className="pointer-events-none flex h-full min-w-0 flex-col gap-2.5 p-3 transition duration-150 group-hover:opacity-0 group-hover:blur-[2px] group-focus-within:opacity-0 group-focus-within:blur-[2px]">
         {body}
       </div>
-      <div className="pointer-events-none absolute inset-0 flex flex-col opacity-0 transition duration-150 group-hover:pointer-events-auto group-hover:opacity-100">
+      <div className="pointer-events-none absolute inset-0 flex flex-col opacity-0 transition duration-150 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100">
         <button
           type="button"
           data-testid={actions.top.testId}
@@ -902,7 +950,7 @@ function PrStatusCardView({
   }
 
   const activate = card.onSelect ?? (card.action?.disabled ? undefined : card.action?.onClick);
-  return (
+  const surface = (
     <div
       role={activate ? "button" : undefined}
       tabIndex={activate ? 0 : undefined}
@@ -933,6 +981,9 @@ function PrStatusCardView({
       {inner}
     </div>
   );
+  return card.updatedAt ? (
+    <AppTooltip label={format.dateTime(new Date(card.updatedAt), { dateStyle: "medium", timeStyle: "short" })}>{surface}</AppTooltip>
+  ) : surface;
 }
 
 function ChecksPopoverCard({

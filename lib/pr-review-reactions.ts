@@ -104,6 +104,8 @@ export interface ReviewCommentReaction {
   content: ReviewReactionContent;
   count: number;
   mine: boolean;
+  /** Known AI reviewer reactions, dated by the forge rather than the comment. */
+  reviewerActors?: { login: string; createdAt: string }[];
 }
 
 /**
