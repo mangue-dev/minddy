@@ -138,7 +138,13 @@ export function UsageHistorySection() {
             </Select>
           </div>
 
-          {query.isError ? (
+          {query.isError && query.data && (
+            <p role="status" className="px-4 pb-3 text-xs text-destructive">
+              {t("usageRefreshFailed")}
+            </p>
+          )}
+
+          {query.isError && !query.data ? (
             <UsageLoadError onRetry={() => void query.refetch()} />
           ) : loading ? (
             <div className="flex items-center justify-center gap-2 border-t border-border px-4 py-8 text-sm text-muted-foreground">

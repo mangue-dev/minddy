@@ -8244,7 +8244,7 @@
       ]
     },
     "get_user_usage_history(uuid,timestamp with time zone,text[],integer,integer)": {
-      "sha256": "a0ee9dc035dd6eeb72afa8442288607ace2dc70bc2295d485e9e8dc3e6a7dedc",
+      "sha256": "6b476ea97285cf7031060883c84a53433881d3d22a8018a5e75e7c1b15abd748",
       "securityDefiner": true,
       "configuration": [
         "search_path=public"
@@ -9293,6 +9293,19 @@
       ],
       "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
+    "get_user_usage_daily(uuid,timestamp with time zone,timestamp with time zone)": {
+      "sha256": "7fa309cd80f06d7d35cac8651c13a9c3febde7b4a011e360182acf917cbfb361",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=public"
+      ],
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "relations": [
+        "ai_usage"
+      ],
       "protectedRelations": [],
       "functionReferences": []
     }
