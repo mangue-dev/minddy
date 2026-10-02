@@ -2,6 +2,22 @@ import { describe, expect, it } from "vitest";
 import { hasSerializedToolCall, looksLikePendingAction } from "./ai-completion";
 
 describe("completion announcements", () => {
+  // French fixtures exercise localized conditional offers, not pending work.
+  it.each([
+    "All checks passed. I'll run the full suite if needed.",
+    "All checks passed. I'll run the full suite if desired.",
+    "All checks passed. I'll run the full suite if requested.",
+    "All checks passed. I'll run the full suite if necessary.",
+    "Les tests passent. Je vais lancer la suite complète si besoin.",
+    "Les tests passent. Je vais lancer la suite complète si nécessaire.",
+    "Les tests passent. Je vais lancer la suite complète si souhaité.",
+    "Les tests passent. Je vais lancer la suite complète au besoin.",
+    "Les tests passent. Je vais lancer la suite complète sur demande.",
+    "Les tests passent. Je vais lancer la suite complète en cas de besoin.",
+  ])("keeps conditional follow-up offers final: %s", (text) => {
+    expect(looksLikePendingAction(text)).toBe(false);
+  });
+
   // French fixtures reproduce the recorded Minddy incidents verbatim.
   it.each([
     "La ligne 37 : « Objectives » non traduit en allemand. Je génère les diffs de avec contexte de namespace.",

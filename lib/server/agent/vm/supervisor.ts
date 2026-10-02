@@ -1303,6 +1303,7 @@ export async function runOpencodeTurn(
     let lastParentReply = "";
     let completionRepairs = 0;
     let completionRejected = false;
+    let completionRepairPending = false;
     let repairedPermissionCascade = false;
     let rejectedPermissionThisRound = false;
     /**
@@ -2778,6 +2779,7 @@ export async function runOpencodeTurn(
               break;
             }
             completionRepairs++;
+            completionRepairPending = true;
             if (stranded) await cp.emit("thinking", { text: cap(stranded, 2000) });
             if (interrupted) {
               await stoppingTurn;
@@ -2797,6 +2799,7 @@ export async function runOpencodeTurn(
             await promptParent(OPENCODE_CONTINUATION_REPAIR);
             continue;
           }
+          if (!sessionError) completionRepairPending = false;
           break;
         }
 
@@ -2911,6 +2914,10 @@ export async function runOpencodeTurn(
      * therefore, on a machine, the paths that he had just mentioned, even in a
      * commit message pushed to the forge.
      */
+    // A failed correction must retain partial work until a valid final answer.
+    if (completionRepairPending && (sessionError || timedOut || interrupted || budgetExhausted)) {
+      completionRejected = true;
+    }
     const reply = askedUser || completionRejected ? "" : outward(replyOf(state, sessionId));
     /**
      * THE FINAL WORD, SAID TO THE WIRE — and this is what ENDS the round on the screen.

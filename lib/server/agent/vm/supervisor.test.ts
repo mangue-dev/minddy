@@ -1147,6 +1147,7 @@ describe("le tour", () => {
       { type: "summary", payload: { text: "The review is complete and verification passed." } },
     ]);
     expect(report.status).toBe("completed");
+    expect(report.pushed?.committed).toBe(true);
   });
 
   it.each(["length", "max_tokens", "tool-calls", "unknown", "stop"])(
@@ -1206,6 +1207,29 @@ describe("le tour", () => {
     expect(h.exec.some((command) => /git (?:add|commit|push)\b/.test(command))).toBe(false);
     expect(h.usage).toHaveLength(5);
   });
+
+  it.each(["APIError", "MessageAbortedError"])(
+    "keeps partial clone edits when a corrective round fails with %s",
+    async (name) => {
+      h.extraFrames = [
+        parentText("prt_pending", "msg_pending", "The key is untranslated. I am checking the remaining catalogs."),
+        parentRound("msg_pending", "stop"),
+        idleFrame(),
+        JSON.stringify({ type: "session.error", properties: {
+          sessionID: PARENT, error: { name, data: { message: "Provider unavailable during correction" } },
+        } }),
+      ];
+      const report = await run({ writesToRepo: true, repoMode: "clone" });
+      expect(h.prompts).toHaveLength(2);
+      expect(report.status).toBe("error");
+      expect(report.errorCode).toBe("replyIncomplete");
+      expect(report.reply).toBeUndefined();
+      expect(report.pushed).toBeNull();
+      expect(report.checkpoint?.opencode?.sessionId).toBe(PARENT);
+      expect(h.events.some((event) => event.type === "summary")).toBe(false);
+      expect(h.exec.some((command) => /git (?:add|commit|commit-tree|push)\b/.test(command))).toBe(false);
+    },
+  );
 
   it.each([false, true])("rejects clean EOF before parent idle (finished round: %s)", async (finished) => {
     const frames = [parentText("prt_eof", "msg_eof", "I am checking the remaining catalogs.")];

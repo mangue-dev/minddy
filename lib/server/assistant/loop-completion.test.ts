@@ -167,6 +167,21 @@ describe("Numo completion contract", () => {
     expect(h.fetchModel).toHaveBeenCalledTimes(1);
   });
 
+  // French is an intentional locale fixture for optional follow-up wording.
+  it.each([
+    "All checks passed. I'll run the full suite if needed.",
+    "Les tests passent. Je vais lancer la suite complète si nécessaire.",
+  ])("accepts a conditional follow-up without generating a correction: %s", async (answer) => {
+    h.fetchModel.mockResolvedValueOnce({ model: "model", response: textResponse(answer) });
+    const ctx = context();
+    const result = await run(ctx);
+    expect(result.fullContent).toBe(answer);
+    expect(h.fetchModel).toHaveBeenCalledTimes(1);
+    expect(ctx.onGeneration).toHaveBeenCalledTimes(1);
+    expect(ctx.persistCheckpoint).not.toHaveBeenCalled();
+    expect(h.executeTool).not.toHaveBeenCalled();
+  });
+
   it.each([
     ["DONE", `data: ${JSON.stringify({ choices: [{ delta: { content: "Verified three translations." } }] })}\n\ndata: [DONE]`],
     ["compact DONE", `data:${JSON.stringify({ choices: [{ delta: { content: "Verified three translations." } }] })}\n\ndata:[DONE]`],

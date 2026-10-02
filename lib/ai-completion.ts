@@ -15,7 +15,7 @@ function closingStatement(text: string): string {
 export function looksLikePendingAction(text: string): boolean {
   const closing = closingStatement(text);
   // Optional follow-up offers and recommendations are legitimate final answers.
-  if (/\b(?:if you|when you|on request|si vous|si tu|à votre demande)\b/i.test(closing)) {
+  if (/\b(?:if you|when you|on request|if (?:needed|desired|requested|necessary)|si vous|si tu|à votre demande|si (?:besoin|nécessaire|souhaité|demandé)|au besoin|sur demande|en cas de besoin)(?=\s|[.!?,;:]|$)/i.test(closing)) {
     return false;
   }
   const action =
