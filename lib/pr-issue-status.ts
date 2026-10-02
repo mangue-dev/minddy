@@ -5,7 +5,7 @@ import type { IssueStatus } from "./issue-constants";
  * (MIN-46). Pure and without server dependency: synchronization applies it
  * (`lib/server/agent/issue-status-sync`), and the dialog which links a ticket to a
  * PR by hand (MIN-163) ANNOUNCES it before making the gesture — the consequence is
- * said before, not after, since the link is not canceled not.
+ * explained before the user confirms the status change.
  *
  * Only one copy of the rule: duplicating it on the client side would let it diverge
  * silently, and the user would then read a promise that the server does not keep.

@@ -91,6 +91,12 @@ describe("application content header", () => {
     expect(styles).toMatch(
       /html\[data-desktop-app\] \.sidebar-nav-panel\s*\{\s*-webkit-app-region:\s*no-drag;/,
     );
+    // The floating panel is collected BEFORE the header in layout order, so
+    // its no-drag cannot dig the header's drag rect over the overlap: while
+    // the panel is shown, the header must give up its window handle.
+    expect(styles).toMatch(
+      /html\[data-desktop-platform="darwin"\] body\[data-sidebar-floating="true"\]\s*\.app-content-header\s*\{\s*-webkit-app-region:\s*no-drag;/,
+    );
   });
 
   it("keeps the trash content pane under the shared action header", () => {

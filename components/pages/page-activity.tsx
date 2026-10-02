@@ -32,10 +32,11 @@
 // l'extrait qui dit de quoi il parlait.
 
 import { useMemo } from "react";
+import { AppIcon } from "@/components/icon";
+import { LinkOffIcon as Link2Off } from "@hugeicons/core-free-icons";
 import { useQuery } from "@tanstack/react-query";
 import { Spinner, cn } from "mangue-ui";
 import { useTranslations } from "next-intl";
-import { Link2Off } from "lucide-react";
 
 import { fetchPageApi, fetchPageEventsApi } from "@/lib/pages-api";
 import { pageKey } from "@/lib/use-pages-query";
@@ -251,7 +252,7 @@ function ThreadHeader({ thread }: { thread: PageThread }) {
  the extract, is the only trace of why the block was removed. */}
       {detached && (
         <span className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-600 dark:text-amber-500">
-          <Link2Off className="size-3.5" />
+          <AppIcon icon={Link2Off} className="size-3.5" />
           {t("commentDetached")}
         </span>
       )}

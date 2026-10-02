@@ -75,11 +75,15 @@ export interface PillAction {
  * The envelope: border, background, shadow, radius, and the overprint command.
  * The CONTENT (figure, wording, complement) is composed by the caller, who is
  * only you know if it should be a link, a button or inert text.
+ *
+ * `bordered` (default) draws the card border; pass `false` for pills that read
+ * on their tint alone — Numo's context pills follow the 0.8.0 badge look.
  */
 export function EntityPill({
   radius = "full",
   dimmed = false,
   highlight = false,
+  bordered = true,
   ariaLabel,
   action,
   className,
@@ -90,6 +94,8 @@ export function EntityPill({
   dimmed?: boolean;
   /** Highlight the entire envelope when its content is interactive. */
   highlight?: boolean;
+  /** Card border on the envelope. Off for the borderless tinted pills. */
+  bordered?: boolean;
   ariaLabel?: string;
   action?: PillAction;
   className?: string;
@@ -100,7 +106,8 @@ export function EntityPill({
       aria-label={ariaLabel}
       data-disabled={dimmed || undefined}
       className={cn(
-        "group/pill relative flex min-w-0 max-w-full items-center gap-1.5 border border-border bg-card py-1 pl-1 pr-2.5 text-xs shadow-sm transition-colors",
+        "group/pill relative flex min-w-0 max-w-full items-center gap-1.5 bg-card py-1 pl-1 pr-2.5 text-xs shadow-sm transition-colors",
+        bordered && "border border-border",
         highlight &&
           "hover:border-foreground/15 hover:bg-accent/70 focus-within:border-foreground/15 focus-within:bg-accent/70",
         radius === "full" ? "rounded-full" : "rounded-md",

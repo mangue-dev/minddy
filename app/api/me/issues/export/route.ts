@@ -1,3 +1,6 @@
+import { issueStore } from "@/lib/server/issue-store";
+import { categoryStore } from "@/lib/server/category-store";
+import { objectiveStore } from "@/lib/server/objective-store";
 import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
@@ -5,6 +8,7 @@ import { getServiceClient } from "@/lib/supabase-service";
 import { buildMembersByProject } from "@/lib/server/project-members";
 import { displayName } from "@/lib/display-name";
 import { issueIdentifier } from "@/lib/issue-constants";
+import { decodeProjectName } from "@/lib/server/project-content";
 import { ISSUE_STATUSES, isStatus, type IssueStatusValue } from "@/lib/issue-validation";
 import {
   buildIssuesCsv,
@@ -43,9 +47,11 @@ export async function GET(request: NextRequest) {
   const statuses = parseStatuses(params.get("statuses"));
 
   const [projectsRes, objectivesRes, categoriesRes] = await Promise.all([
-    auth.supabase.from("projects").select("id, key, name, owner_id").is("deleted_at", null),
-    auth.supabase.from("objectives").select("id, name"),
-    auth.supabase.from("categories").select("id, name"),
+    auth.supabase.from("projects")
+      .select("id, key, name, owner_id, encrypted_content, encryption_version")
+      .is("deleted_at", null),
+    objectiveStore(auth.supabase).select("id, name"),
+    categoryStore(auth.supabase, auth.user.id).select("id, name"),
   ]);
 
   const loadError = projectsRes.error || objectivesRes.error || categoriesRes.error;
@@ -54,7 +60,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
 
-  const projects = (projectsRes.data ?? []) as {
+  const projects = await Promise.all((projectsRes.data ?? []).map(async (row) => ({
+    ...row, name: await decodeProjectName(row, auth.user.id),
+  }))) as {
     id: string;
     key: string;
     name: string;
@@ -67,9 +75,7 @@ export async function GET(request: NextRequest) {
   // than an error — the user requested an export, he receives one.
   let issues: IssueRow[] = [];
   if (scoped.length > 0) {
-    let query = auth.supabase
-      .from("issues")
-      .select(ISSUE_COLUMNS)
+    let query = issueStore(auth.supabase).select(ISSUE_COLUMNS)
       .in("status", statuses)
       // STABLE sorting on the base side, so that the ceiling always cuts at the same
       // place ; the legible ordering (by project name) is then done.
@@ -100,9 +106,7 @@ export async function GET(request: NextRequest) {
   ];
   const parentIdentifier = new Map<string, string>();
   if (orphanParents.length > 0) {
-    const { data } = await auth.supabase
-      .from("issues")
-      .select("id, project_id, number")
+    const { data } = await issueStore(auth.supabase).select("id, project_id, number")
       .in("id", orphanParents);
     for (const row of (data ?? []) as { id: string; project_id: string; number: number }[]) {
       const project = projectById.get(row.project_id);

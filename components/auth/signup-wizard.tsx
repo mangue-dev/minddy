@@ -1,5 +1,7 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowLeft01Icon, UserAdd01Icon } from "@hugeicons/core-free-icons";
 import { createUuid } from "@/lib/create-uuid";
 
 import { useEffect, useState } from "react";
@@ -8,7 +10,6 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { AnimatePresence, motion } from "framer-motion";
 import { Button, Input, Spinner } from "mangue-ui";
-import { ArrowLeft, UserPlus } from "lucide-react";
 import { WizardStepper } from "@/components/wizard/wizard-stepper";
 import { UserAvatarPicker } from "@/components/user-avatar-picker";
 import {
@@ -287,7 +288,7 @@ export function SignupWizard({ invite }: { invite: InvitationPreview | null }) {
  session which takes care of it, at /auth/callback. */}
         {invite && step === "account" && (
           <div className="flex gap-3 rounded-lg border border-border bg-card p-3.5">
-            <UserPlus className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+            <HugeiconsIcon icon={UserAdd01Icon} className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
             <div className="space-y-1">
               <p className="text-sm font-medium leading-snug">
                 {t("inviteBannerTitle", {
@@ -347,7 +348,7 @@ export function SignupWizard({ invite }: { invite: InvitationPreview | null }) {
                       <Input
                         id="email"
                         type="email"
-                        className="h-10 bg-card"
+                        className="h-10 bg-control"
                         autoComplete="email"
                         autoFocus
                         required
@@ -391,7 +392,7 @@ export function SignupWizard({ invite }: { invite: InvitationPreview | null }) {
                       <Input
                         id="full-name"
                         type="text"
-                        className="h-10 bg-card"
+                        className="h-10 bg-control"
                         autoComplete="name"
                         autoFocus
                         required
@@ -418,7 +419,7 @@ export function SignupWizard({ invite }: { invite: InvitationPreview | null }) {
                       <Input
                         id="password"
                         type="password"
-                        className="h-10 bg-card"
+                        className="h-10 bg-control"
                         autoComplete="new-password"
                         autoFocus
                         required
@@ -433,7 +434,7 @@ export function SignupWizard({ invite }: { invite: InvitationPreview | null }) {
                     <Input
                       id="confirm-password"
                       type="password"
-                      className="h-10 bg-card"
+                      className="h-10 bg-control"
                       autoComplete="new-password"
                       required
                       minLength={MIN_PASSWORD_LENGTH}
@@ -469,7 +470,7 @@ export function SignupWizard({ invite }: { invite: InvitationPreview | null }) {
                 disabled={busy}
                 className="mx-auto flex items-center gap-1.5 text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline disabled:opacity-60"
               >
-                <ArrowLeft className="size-3.5" />
+                <HugeiconsIcon icon={ArrowLeft01Icon} className="size-3.5" />
                 {tCommon("back")}
               </button>
             )}

@@ -12,18 +12,21 @@ const h = vi.hoisted(() => ({
   queuedTurns: [] as Array<Record<string, unknown>>,
   claims: [] as Array<Record<string, unknown>>,
   terminalWorkers: [] as Array<Record<string, unknown>>,
+  waitingWorkers: [] as Array<Record<string, unknown>>,
   interruptions: [] as string[],
   failActivity: false,
   managedAi: false,
   operationSpent: 0,
+  platformOperationSpent: 0 as number | null,
   userUsage: {
     usedUsd: 0,
     period: { start: "2026-09-01T00:00:00.000Z", end: "2026-10-01T00:00:00.000Z" },
     billing: { plan: { id: "free", includedUsageUsd: 1 } },
   },
   processChat: vi.fn(),
+  fetchModelIndex: vi.fn(),
   recordAiUsage: vi.fn(),
-  finalizeAgentDelegationResult: vi.fn(),
+  deliverAgentDelegationResult: vi.fn(),
 }));
 
 function queryFor(table: string) {
@@ -43,8 +46,12 @@ function queryFor(table: string) {
     },
     eq: (column: string, value: unknown) => {
       filters[column] = value;
-      if (table === "agent_runs" && column === "id"
-          && updated?.interrupt_requested === true && typeof value === "string") {
+      // MIN-599: interrupts target the whole worker set of a turn
+      // (`parent_numo_turn_id`), while legacy single-run interrupts keep
+      // filtering on `id`.
+      if (table === "agent_runs" && updated?.interrupt_requested === true
+          && (column === "id" || column === "parent_numo_turn_id")
+          && typeof value === "string") {
         h.interruptions.push(value);
       }
       return query;
@@ -69,7 +76,7 @@ function queryFor(table: string) {
       data: table === "assistant_messages"
         ? h.messages
         : table === "numo_assistant_turns"
-          ? h.queuedTurns
+          ? filters.status === "waiting_work" ? h.waitingWorkers : h.queuedTurns
           : table === "agent_runs"
             ? h.terminalWorkers
             : [],
@@ -129,16 +136,22 @@ const service = {
       h.events.push(args);
       return { data: {}, error: null };
     }
+    if (name === "complete_numo_tool_operation") {
+      return { data: h.turn?.claim_token === args.p_claim_token
+        && ["running", "stopping"].includes(String(h.turn?.status)), error: null };
+    }
     if (name === "recover_stale_numo_turns") return { data: 0, error: null };
     return { data: true, error: null };
   },
 } as unknown as SupabaseClient;
 
 vi.mock("@/lib/supabase-service", () => ({ getServiceClient: () => service }));
-vi.mock("@/lib/server/assistant/loop", () => ({
+vi.mock("@/lib/server/ai-provider-request", () => ({
+  fetchAiProviderBytes: (...args: unknown[]) => h.fetchModelIndex(...args),
+}));
+vi.mock("@/lib/server/assistant/loop", async (importOriginal) => ({
+  ...await importOriginal<typeof import("@/lib/server/assistant/loop")>(),
   AmbiguousToolExecutionError: class extends Error {},
-  getModelInputModalities: async () => new Set(["text"]),
-  modelSupportsCaching: async () => false,
   processChat: (...args: unknown[]) => h.processChat(...args),
 }));
 vi.mock("@/lib/server/assistant/prompt", () => ({
@@ -176,6 +189,7 @@ vi.mock("@/lib/server/assistant/sanitize", () => ({ sanitizeAssistantMessageCont
 vi.mock("@/lib/server/ai-usage", () => ({
   recordAiUsage: (...args: unknown[]) => h.recordAiUsage(...args),
   spentFromNumoOperation: vi.fn(async () => h.operationSpent),
+  spentFromNumoOperationPlatform: vi.fn(async () => h.platformOperationSpent),
 }));
 vi.mock("@/lib/server/usage", () => ({
   getUserUsage: vi.fn(async () => h.userUsage),
@@ -184,11 +198,15 @@ vi.mock("@/lib/managed-services", () => ({
   isManagedAiEnabled: () => h.managedAi,
 }));
 vi.mock("@/lib/server/project-access", () => ({ getProjectAccess: vi.fn() }));
-vi.mock("@/lib/server/ai-runtime", () => ({ resolveAiRuntime: vi.fn() }));vi.mock("@/lib/server/agent/delegation", () => ({
-  finalizeAgentDelegationResult: (...args: unknown[]) => h.finalizeAgentDelegationResult(...args),
+vi.mock("@/lib/server/ai-runtime", () => ({ resolveAiRuntime: vi.fn() }));
+vi.mock("@/lib/server/agent/runs", async (importOriginal) => ({
+  ...await importOriginal<typeof import("@/lib/server/agent/runs")>(),
+  getRun: async (id: string) => h.terminalWorkers.find((run) => run.id === id) ?? null,
+  deliverAgentDelegationResult: (...args: unknown[]) => h.deliverAgentDelegationResult(...args),
 }));
 
 const { createDurableNumoEmitter, drainNumoTurns, executeNumoTurn } = await import("./turns");
+const { NumoCompletionError } = await import("@/lib/server/assistant/loop");
 
 const runtime = {
   apiKey: "key",
@@ -238,10 +256,12 @@ beforeEach(() => {
   h.queuedTurns.length = 0;
   h.claims.length = 0;
   h.terminalWorkers.length = 0;
+  h.waitingWorkers.length = 0;
   h.interruptions.length = 0;
   h.failActivity = false;
   h.managedAi = false;
   h.operationSpent = 0;
+  h.platformOperationSpent = 0;
   h.userUsage = {
     usedUsd: 0,
     period: { start: "2026-09-01T00:00:00.000Z", end: "2026-10-01T00:00:00.000Z" },
@@ -259,8 +279,10 @@ beforeEach(() => {
     context: null,
   });
   h.processChat.mockReset();
+  h.fetchModelIndex.mockReset();
+  h.fetchModelIndex.mockRejectedValue(new Error("Catalog unavailable"));
   h.recordAiUsage.mockReset();
-  h.finalizeAgentDelegationResult.mockReset();
+  h.deliverAgentDelegationResult.mockReset();
   vi.mocked(resolveAiRuntime).mockResolvedValue(runtime as never);
   h.processChat.mockResolvedValue({
     fullContent: "Done without code.",
@@ -272,6 +294,35 @@ beforeEach(() => {
 });
 
 describe("durable Numo execution", () => {
+  it("streams a text answer before a cold OpenRouter catalog finishes loading", async () => {
+    let releaseCatalog!: () => void;
+    h.fetchModelIndex.mockReturnValue(new Promise((resolve) => {
+      releaseCatalog = () => resolve({ ok: true, bytes: Buffer.from('{"data":[]}') });
+    }));
+    const live = { emit: vi.fn(), close: vi.fn(), isClosed: false };
+    h.processChat.mockImplementationOnce(async (_messages, _tools, emitter) => {
+      emitter.emit("content_delta", { delta: "Immediate answer" });
+      return { fullContent: "Immediate answer", finalReasoning: null,
+        allToolCalls: [], generations: [], suspension: null };
+    });
+    const execution = executeNumoTurn({
+      turnId: h.turn!.id as string,
+      readClient: service,
+      aiRuntime: { ...runtime, provider: "openrouter" },
+      liveEmitter: live,
+    });
+    try {
+      await vi.waitFor(() => {
+        expect(live.emit).toHaveBeenCalledWith("content_delta", { delta: "Immediate answer" });
+      });
+      expect(h.fetchModelIndex).toHaveBeenCalledOnce();
+      expect((await execution).status).toBe("completed");
+    } finally {
+      releaseCatalog();
+      await execution;
+    }
+  });
+
   it("uses the model frozen on the admitted turn after a runtime change", async () => {
     h.turn = { ...h.turn!, model: "selected-model" };
     await executeNumoTurn({
@@ -390,6 +441,41 @@ describe("durable Numo execution", () => {
       },
     }));
     expect(h.checkpoints.at(-1)).toMatchObject({ p_status: "completed" });
+  });
+
+  it.each(["platform", "byok"] as const)("enforces only platform-funded allocation on %s without claiming monthly exhaustion", async (mode) => {
+    h.managedAi = true;
+    h.userUsage.usedUsd = 0.15;
+    h.platformOperationSpent = 0.2;
+    h.turn = { ...h.turn, managed_budget_usd: 0.2 };
+    let generated = false;
+    h.processChat.mockImplementation(async (...args: unknown[]) => {
+      await (args[3] as { beforeGeneration: () => Promise<void> }).beforeGeneration();
+      generated = true;
+      return { generations: [], fullContent: "Done" };
+    });
+    await executeNumoTurn({ turnId: h.turn.id as string, readClient: service, aiRuntime: { ...runtime, mode } });
+    expect(generated).toBe(mode === "byok");
+    if (mode === "platform") {
+      expect(h.messages).toContainEqual(expect.objectContaining({ metadata: {
+        usage_exhausted: expect.objectContaining({ cause: "operation_allocation", nextPlanId: null, resetsAt: null }),
+      } }));
+    }
+  });
+
+  it("does not deduct BYOK charges from a managed operation allocation", async () => {
+    h.managedAi = true;
+    h.operationSpent = 10;
+    h.platformOperationSpent = 0.01;
+    h.turn = { ...h.turn, managed_budget_usd: 0.2 };
+    let generated = false;
+    h.processChat.mockImplementation(async (...args: unknown[]) => {
+      await (args[3] as { beforeGeneration: () => Promise<void> }).beforeGeneration();
+      generated = true;
+      return { generations: [], fullContent: "Done" };
+    });
+    await executeNumoTurn({ turnId: h.turn.id as string, readClient: service, aiRuntime: runtime });
+    expect(generated).toBe(true);
   });
 
   it("reports one routine cap across the parent operation on BYOK", async () => {
@@ -610,20 +696,18 @@ describe("durable Numo execution", () => {
     expect(h.processChat).toHaveBeenCalled();
   });
 
-  it("finalizes terminal worker handoffs before recovering stale parent turns", async () => {
+  it("delivers terminal worker handoffs before recovering stale parent turns", async () => {
     h.terminalWorkers.push({
       id: "51600000-0000-4000-8000-000000000006",
       status: "completed",
       parent_numo_turn_id: h.turn!.id,
       delegation_result: null,
     });
+    h.waitingWorkers.push({ active_run_id: h.terminalWorkers[0].id });
 
     await drainNumoTurns({ limit: 1 });
 
-    expect(h.finalizeAgentDelegationResult).toHaveBeenCalledWith(
-      service,
-      h.terminalWorkers[0],
-    );
+    expect(h.deliverAgentDelegationResult).toHaveBeenCalledWith(h.terminalWorkers[0]);
   });
 
   it("preserves the latest tool checkpoint when execution fails", async () => {
@@ -646,6 +730,29 @@ describe("durable Numo execution", () => {
       p_status: "retryable",
       p_checkpoint: { phase: "tools", completedToolCallIds: ["call-1"] },
     });
+  });
+
+  it("reports exhausted completion repairs as failure while preserving the durable checkpoint", async () => {
+    const checkpoint = { phase: "model", roundCount: 3, completionRepairs: 2,
+      completionRepairPending: false, completionRepairExhausted: true };
+    h.processChat.mockImplementation(async (...args: unknown[]) => {
+      const context = args[3] as {
+        persistCheckpoint: (checkpoint: Record<string, unknown>) => Promise<void>;
+      };
+      await context.persistCheckpoint(checkpoint);
+      throw new NumoCompletionError("a tool call was returned as text");
+    });
+
+    const result = await executeNumoTurn({
+      turnId: h.turn!.id as string, readClient: service, aiRuntime: runtime,
+    });
+
+    expect(result.status).toBe("failed");
+    expect(h.checkpoints.at(-1)).toMatchObject({ p_status: "failed",
+      p_checkpoint: checkpoint,
+      p_error_message: expect.stringContaining("a tool call was returned as text") });
+    expect(h.messages.filter((message) => message.role === "assistant")).toEqual([]);
+    expect(h.events).toContainEqual(expect.objectContaining({ p_type: "error" }));
   });
 
   it("persists the assistant tool round through the atomic checkpoint RPC", async () => {
@@ -713,11 +820,31 @@ describe("durable Numo execution", () => {
     });
 
     expect(result.status).toBe("stopped");
-    expect(h.interruptions).toEqual(["51600000-0000-4000-8000-000000000099"]);
+    expect(h.interruptions).toEqual(["51600000-0000-4000-8000-000000000001"]);
     expect(h.checkpoints.at(-1)).toMatchObject({
       p_status: "stopped",
       p_active_run_id: "51600000-0000-4000-8000-000000000099",
     });
+  });
+
+  it("returns the authoritative stopped state when a mutation finishes after its claim was revoked", async () => {
+    const live = { emit: vi.fn(), close: vi.fn(), isClosed: false };
+    h.processChat.mockImplementation(async (_messages, _tools, _emitter, context) => {
+      h.turn = { ...h.turn, status: "stopped", claim_token: null, claimed_at: null };
+      // The real ledger adapter detects the failed completion CAS and hands
+      // control back through NumoClaimLostError rather than retrying the write.
+      await context.toolLedger.complete({ toolCallId: "write-issue", success: true,
+        result: { updated: true }, modelResult: { updated: true }, pause: false });
+      throw new Error("A revoked mutation must not resume the model");
+    });
+    const result = await executeNumoTurn({ turnId: h.turn!.id as string,
+      readClient: service, aiRuntime: runtime, liveEmitter: live });
+    expect(result.status).toBe("stopped");
+    expect(live.emit).toHaveBeenCalledWith("done", { status: "stopped" });
+    expect(live.emit.mock.calls.some(([event]) => event === "error" || event === "tool_result")).toBe(false);
+    expect(h.checkpoints).toEqual([]);
+    expect(h.messages).toHaveLength(1);
+    expect(h.processChat).toHaveBeenCalledOnce();
   });
 
   it("keeps prior tool rounds while reconstructing only the pending batch", async () => {
@@ -873,6 +1000,118 @@ describe("durable Numo execution", () => {
     expect(live.emit).toHaveBeenCalledWith("reasoning_delta", { text: "First" });
     expect(live.emit).toHaveBeenCalledWith("reasoning_delta", { text: "First, second" });
   });
+
+  it("publishes partial output to reconnecting readers before the generation finishes", async () => {
+    vi.useFakeTimers();
+    const emitter = createDurableNumoEmitter(service, h.turn!.id as string);
+    try {
+      emitter.emit("content_delta", { delta: "First " });
+      emitter.emit("content_delta", { delta: "batch" });
+      await vi.advanceTimersByTimeAsync(249);
+      expect(h.events).toEqual([]);
+      await vi.advanceTimersByTimeAsync(1);
+      expect(h.events.map(event => event.p_payload)).toEqual([{ delta: "First batch" }]);
+
+      // A later batch contains only new text; polling readers concatenate it.
+      emitter.emit("content_delta", { delta: ", next batch" });
+      await vi.advanceTimersByTimeAsync(250);
+      expect(h.events.map(event => event.p_payload)).toEqual([
+        { delta: "First batch" }, { delta: ", next batch" },
+      ]);
+      expect(h.events.some(event => event.p_type === "done")).toBe(false);
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      emitter.close();
+      await emitter.flush();
+      vi.useRealTimers();
+    }
+  });
+
+  it("publishes the latest live reasoning snapshot on each durable batch", async () => {
+    vi.useFakeTimers();
+    const emitter = createDurableNumoEmitter(service, h.turn!.id as string);
+    try {
+      emitter.emit("reasoning_start", { started_at: "2026-09-05T12:00:00.000Z" });
+      emitter.emit("reasoning_delta", { text: "First" });
+      emitter.emit("reasoning_delta", { text: "First, second" });
+      await vi.advanceTimersByTimeAsync(250);
+      expect(h.events.at(-1)).toMatchObject({
+        p_type: "reasoning_delta", p_payload: { text: "First, second" },
+      });
+      emitter.emit("reasoning_delta", { text: "First, second, third" });
+      emitter.emit("reasoning_end", { duration_ms: 300, text: "First, second, third" });
+      emitter.emit("done", { status: "completed" });
+      await emitter.flush();
+      expect(h.events.map(event => event.p_type)).toEqual([
+        "reasoning_start", "reasoning_delta", "reasoning_delta", "reasoning_end", "done",
+      ]);
+      expect(vi.getTimerCount()).toBe(0);
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(h.events).toHaveLength(5);
+    } finally {
+      emitter.close();
+      await emitter.flush();
+      vi.useRealTimers();
+    }
+  });
+
+  it("serializes timed journal writes behind a slow append without duplicating text", async () => {
+    vi.useFakeTimers();
+    let releaseFirst!: () => void;
+    const firstWrite = new Promise<void>(resolve => { releaseFirst = resolve; });
+    const writes: Array<Record<string, unknown>> = [];
+    const slowService = {
+      ...service,
+      rpc: async (name: string, args: Record<string, unknown>) => {
+        if (name !== "append_numo_turn_event") return service.rpc(name, args);
+        writes.push(args);
+        if (writes.length === 1) await firstWrite;
+        return { data: {}, error: null };
+      },
+    } as unknown as SupabaseClient;
+    const emitter = createDurableNumoEmitter(slowService, h.turn!.id as string);
+    try {
+      emitter.emit("content_delta", { delta: "First" });
+      await vi.advanceTimersByTimeAsync(250);
+      expect(writes).toHaveLength(1);
+      emitter.emit("content_delta", { delta: "Second" });
+      await vi.advanceTimersByTimeAsync(250);
+      expect(writes).toHaveLength(1);
+      releaseFirst();
+      await emitter.flush();
+      expect(writes.map(event => event.p_payload)).toEqual([
+        { delta: "First" }, { delta: "Second" },
+      ]);
+    } finally {
+      releaseFirst();
+      emitter.close();
+      await emitter.flush();
+      vi.useRealTimers();
+    }
+  });
+
+  it.each(["done", "error", "close", "flush"] as const)(
+    "flushes pending text and cancels its timer on %s", async (boundary) => {
+      vi.useFakeTimers();
+      const emitter = createDurableNumoEmitter(service, h.turn!.id as string);
+      try {
+        emitter.emit("content_delta", { delta: "Pending" });
+        if (boundary === "close") emitter.close();
+        else if (boundary !== "flush") emitter.emit(boundary, {});
+        await emitter.flush();
+        expect(vi.getTimerCount()).toBe(0);
+        expect(h.events.filter(event => event.p_type === "content_delta"))
+          .toMatchObject([{ p_payload: { delta: "Pending" } }]);
+        const count = h.events.length;
+        await vi.advanceTimersByTimeAsync(1000);
+        expect(h.events).toHaveLength(count);
+      } finally {
+        emitter.close();
+        await emitter.flush();
+        vi.useRealTimers();
+      }
+    },
+  );
 
   it("does not strand turn execution when the activity projection is unavailable", async () => {
     h.failActivity = true;

@@ -1,5 +1,6 @@
 import "server-only";
 
+import { createHash } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { FORGE_ATTACHMENTS_BUCKET } from "@/lib/forge-image-assets";
@@ -8,13 +9,9 @@ import { FORGE_ATTACHMENTS_BUCKET } from "@/lib/forge-image-assets";
  * Objects in a project that do NOT live in the bucket `attachments`
  * (MIN-296).
  *
- * Three buckets carry project data, and two of them are public
- * for reading: `project-icons` (the uploaded icon) and `forge-attachments` (the
- * files attached to the pull request comments). Neither cascaded,
- * and neither was swept — neither when purging a project, nor when deleting an
- * account. A deleted project therefore left its icon and the images of its PR
- * served by their URL, with nothing left in the base to designate them: exactly the
- * "promised file deleted, still in storage" that the audit tracks.
+ * Project icons and forge attachments live outside the normal attachment
+ * bucket. Forge objects are private and project-scoped after conversion;
+ * historical PR paths still need repository ownership checks during deletion.
  *
  * The paths are recovered BEFORE the delete — afterward, the cascade has taken over the
  * lines that say where they are.
@@ -22,10 +19,12 @@ import { FORGE_ATTACHMENTS_BUCKET } from "@/lib/forge-image-assets";
 
 /** What a page of `list()` brings to the maximum (Storage API ceiling). */
 const LIST_PAGE = 1000;
+/** Stay below the default PostgREST row cap when collecting deletion metadata. */
+const QUERY_PAGE = 500;
 
 /**
- * Recursively lists objects of a prefix (Storage API does not descend), en
- * PAGINING: `list()` stops at a thousand entries without saying there are any left.
+ * Recursively lists objects under a prefix. Storage does not descend, and
+ * `list()` stops at a thousand entries without reporting remaining entries.
  */
 export async function listStoragePrefix(
   service: SupabaseClient,
@@ -58,8 +57,7 @@ export async function listStoragePrefix(
   }
 }
 
-/** The uploaded icons of the given projects — one per project, extension
- unknown (hence the listing of the prefix rather than an inferred path). */
+/** Include opaque project folders and legacy root-level project icons. */
 export async function projectIconPaths(
   service: SupabaseClient,
   projectIds: string[]
@@ -68,20 +66,26 @@ export async function projectIconPaths(
   for (const id of projectIds) {
     paths.push(...(await listStoragePrefix(service, "project-icons", id)));
   }
+  const ids = new Set(projectIds);
+  for (let offset = 0; ; offset += LIST_PAGE) {
+    const { data, error } = await service.storage.from("project-icons")
+      .list("", { limit: LIST_PAGE, offset });
+    if (error || !data) break;
+    for (const entry of data) {
+      const id = entry.name.split(".", 1)[0];
+      if (ids.has(id) && entry.id !== null && entry.metadata !== null) {
+        paths.push(entry.name);
+      }
+    }
+    if (data.length < LIST_PAGE) break;
+  }
   return paths;
 }
 
 /**
- * The `forge-attachments` objects of the given projects.
- *
- * The path for a PR comment attachment is `{pr_id}/{uuid}/{nom}`
- * (MIN-162): it doesn't say the project. We therefore go back down the chain which links it to
- * — projects → linked repositories (`project_git_links`) → PR of these repositories.
- *
- * A PR belongs to a DEPOSIT, not to a project, and two projects can link the
- * same: we do not delete only if no surviving project still binds it. Without this
- * filter, purging a project would take away the images of comments from a team
- * which remains.
+ * Include all opaque objects under each deleted project, including unregistered
+ * orphans. Legacy PR paths lack a project prefix, so remove them only when no
+ * surviving project still links the repository.
  */
 export async function forgeAttachmentPathsForProjects(
   service: SupabaseClient,
@@ -89,40 +93,118 @@ export async function forgeAttachmentPathsForProjects(
 ): Promise<string[]> {
   if (projectIds.length === 0) return [];
 
-  const { data: links } = await service
-    .from("project_git_links")
-    .select("project_id, provider, repo_full_name")
-    .not("repo_full_name", "is", null);
-  const rows = (links ?? []) as Array<{
+  const paths = new Set<string>();
+  for (const id of projectIds) {
+    for (const path of await listStoragePrefix(service, FORGE_ATTACHMENTS_BUCKET,
+      `projects/${id}`)) paths.add(path);
+  }
+
+  type Link = {
     project_id: string;
     provider: string;
     repo_full_name: string;
-  }>;
-  if (rows.length === 0) return [];
+  };
+  const rows: Link[] = [];
+  for (let offset = 0; ; offset += QUERY_PAGE) {
+    const { data, error } = await service.from("project_git_links")
+      .select("id, project_id, provider, repo_full_name")
+      .not("repo_full_name", "is", null)
+      .order("id", { ascending: true })
+      .range(offset, offset + QUERY_PAGE - 1);
+    if (error) throw new Error("Unable to scan forge repository links for project deletion");
+    rows.push(...((data ?? []) as Link[]));
+    if ((data ?? []).length < QUERY_PAGE) break;
+  }
+  if (rows.length === 0) return [...paths];
 
+  const deletedProjects = new Set(projectIds);
   const key = (l: { provider: string; repo_full_name: string }) =>
     `${l.provider} ${l.repo_full_name}`;
   const survivors = new Set(
-    rows.filter((l) => !projectIds.includes(l.project_id)).map(key)
+    rows.filter((l) => !deletedProjects.has(l.project_id)).map(key)
   );
-  const doomed = rows.filter(
-    (l) => projectIds.includes(l.project_id) && !survivors.has(key(l))
-  );
+  const doomed = rows.filter((l) => deletedProjects.has(l.project_id));
 
-  const paths: string[] = [];
   for (const link of doomed) {
-    const { data: prs } = await service
-      .from("pull_requests")
-      .select("id")
-      .eq("provider", link.provider)
-      .eq("repo_full_name", link.repo_full_name);
-    for (const pr of (prs ?? []) as Array<{ id: string }>) {
-      paths.push(
-        ...(await listStoragePrefix(service, FORGE_ATTACHMENTS_BUCKET, pr.id))
-      );
+    const prs: Array<{ id: string }> = [];
+    for (let offset = 0; ; offset += QUERY_PAGE) {
+      const { data, error } = await service.from("pull_requests")
+        .select("id")
+        .eq("provider", link.provider)
+        .eq("repo_full_name", link.repo_full_name)
+        .order("id", { ascending: true })
+        .range(offset, offset + QUERY_PAGE - 1);
+      if (error) throw new Error("Unable to scan forge pull requests for project deletion");
+      prs.push(...((data ?? []) as Array<{ id: string }>));
+      if ((data ?? []).length < QUERY_PAGE) break;
+    }
+    for (const pr of prs) {
+      // A repository rename can merge the original PR into another row. The
+      // old object path keeps the original PR id until the backfill removes it.
+      const ids = new Set([pr.id]);
+      for (let offset = 0; ; offset += QUERY_PAGE) {
+        const { data, error } = await service
+          .from("forge_attachment_legacy_pr_aliases")
+          .select("old_pr_id")
+          .eq("current_pr_id", pr.id)
+          .order("old_pr_id", { ascending: true })
+          .range(offset, offset + QUERY_PAGE - 1);
+        if (error) throw new Error("Unable to scan historical forge PR aliases");
+        for (const alias of (data ?? []) as Array<{ old_pr_id: string }>) {
+          ids.add(alias.old_pr_id);
+        }
+        if ((data ?? []).length < QUERY_PAGE) break;
+      }
+      const historical: string[] = [];
+      for (const id of ids) {
+        historical.push(...(await listStoragePrefix(service, FORGE_ATTACHMENTS_BUCKET, id)));
+      }
+      if (!survivors.has(key(link))) {
+        for (const path of historical) paths.add(path);
+        continue;
+      }
+
+      // A shared repository can hold objects for either project. An explicit
+      // old-path owner or migrated registration permits precise deletion;
+      // an ownerless historical object stays with the surviving project.
+      for (let offset = 0; offset < historical.length; offset += 100) {
+        const batch = historical.slice(offset, offset + 100);
+        const digests = batch.map((path) => createHash("sha256")
+          .update(path).digest("hex"));
+        const [{ data: owners, error: ownerError },
+          { data: registered, error: registeredError }] = await Promise.all([
+          service.from("forge_attachment_legacy_owners")
+            .select("old_path_digest, project_id").in("old_path_digest", digests),
+          service.from("forge_attachment_objects")
+            .select("legacy_path_digest, project_id").in("legacy_path_digest", digests),
+        ]);
+        if (ownerError || registeredError) {
+          throw new Error("Unable to resolve historical forge attachment owners");
+        }
+        const attributed = new Map<string, Set<string>>();
+        for (const row of (owners ?? []) as Array<{
+          old_path_digest: string; project_id: string
+        }>) {
+          const projects = attributed.get(row.old_path_digest) ?? new Set<string>();
+          projects.add(row.project_id);
+          attributed.set(row.old_path_digest, projects);
+        }
+        for (const row of (registered ?? []) as Array<{
+          legacy_path_digest: string; project_id: string
+        }>) {
+          const projects = attributed.get(row.legacy_path_digest) ?? new Set<string>();
+          projects.add(row.project_id);
+          attributed.set(row.legacy_path_digest, projects);
+        }
+        for (let index = 0; index < batch.length; index++) {
+          const projects = attributed.get(digests[index]);
+          if (projects?.size === 1 &&
+              deletedProjects.has([...projects][0])) paths.add(batch[index]);
+        }
+      }
     }
   }
-  return paths;
+  return [...paths];
 }
 
 /**
@@ -152,7 +234,7 @@ export async function removeBucketObjects(
 }
 
 /**
- * Cleaning the two public buckets for a batch of disappearing projects:
+ * Clean the project icon and private forge buckets for disappearing projects:
  * notes the paths, deletes, returns the warnings. Called AFTER the delete
  * lines when the paths were cleared before (purging the trash), or
  * end-to-end when the cascade has not yet occurred (deleting

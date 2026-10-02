@@ -104,6 +104,8 @@ export interface ReviewCommentReaction {
   content: ReviewReactionContent;
   count: number;
   mine: boolean;
+  /** Known AI reviewer reactions, dated by the forge rather than the comment. */
+  reviewerActors?: { login: string; createdAt: string }[];
 }
 
 /**
@@ -129,4 +131,19 @@ export function groupReactionsByComment(
     list.sort((a, b) => (rank.get(a.content) ?? 0) - (rank.get(b.content) ?? 0));
   }
   return byComment;
+}
+
+/** Change only the viewer's contribution, preserving other users and reviewer metadata. */
+export function setCommentReactionState(
+  reactions: ReviewCommentReaction[],
+  commentId: number,
+  content: ReviewReactionContent,
+  on: boolean,
+): ReviewCommentReaction[] {
+  const current = reactions.find((r) => r.commentId === commentId && r.content === content);
+  if (!!current?.mine === on) return reactions;
+  const count = Math.max(0, (current?.count ?? 0) + (on ? 1 : -1));
+  if (count === 0) return reactions.filter((r) => r !== current);
+  const next = { ...current, commentId, content, count, mine: on };
+  return current ? reactions.map((r) => r === current ? next : r) : [...reactions, next];
 }

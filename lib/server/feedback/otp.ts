@@ -5,13 +5,17 @@ import type { Locale } from "@/i18n/config";
 import { randomInt, randomUUID, timingSafeEqual } from "node:crypto";
 import { getServiceClient } from "@/lib/supabase-service";
 import { sha256Hex } from "@/lib/server/oauth/crypto";
+import { authenticationProof } from "@/lib/server/encryption/auth-proof";
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
 import { sendOtpEmail } from "@/lib/server/feedback/otp-email";
 import { capability } from "@/lib/server/capabilities";
+import { encodeFeedbackOtpEmail, feedbackOtpEmailLookup,
+  shouldProtectFeedbackIdentity } from "./identity-content";
 
 /**
- * Email verification by OTP code (MIN-37). 6-digit codes, sha256
- hashes * salted by the row id (never stored in plain text), 10 minutes of life, 5
+ * Email verification by OTP code (MIN-37). Six-digit codes are HMAC-protected
+ * with a server-only key and bound to the row ID, preventing offline enumeration
+ * from a database dump. Codes have a ten-minute lifetime and five
  * max attempts (incremented BEFORE comparison), return cooldown 60 s
  * in base. The table is RLS deny-all.
  *
@@ -80,12 +84,16 @@ export async function requestFeedbackOtp(params: {
   const id = randomUUID();
   const code = randomInt(0, 1_000_000).toString().padStart(6, "0");
   const now = new Date();
-  const { data: issued, error } = await service.rpc("issue_feedback_otp_code", {
+  const protect = await shouldProtectFeedbackIdentity(service);
+  const { data: issued, error } = await service.rpc(protect
+    ? "issue_feedback_otp_code_protected" : "issue_feedback_otp_code", {
     p_id: id,
     p_board_id: params.boardId,
-    p_email: email,
+    ...(protect ? { p_email_plain: email,
+      p_email_cipher: await encodeFeedbackOtpEmail(id, email),
+      p_email_lookup: await feedbackOtpEmailLookup(email) } : { p_email: email }),
     p_ip_hash: ipHash,
-    p_code_hash: sha256Hex(`${id}:${code}`),
+    p_code_hash: authenticationProof("feedback_otp", [id, code]),
     p_expires_at: new Date(now.getTime() + OTP_TTL_MS).toISOString(),
     p_now: now.toISOString(),
     p_window_seconds: Math.floor(OTP_COUNTER_WINDOW_MS / 1000),
@@ -94,13 +102,13 @@ export async function requestFeedbackOtp(params: {
     p_ip_limit: OTP_MAX_PER_IP,
   });
   if (error) {
-    console.error("[feedback-otp] atomic issuance failed:", error.message);
+    console.error("[feedback-otp] issuance_failed");
     return { ok: false, error: "sendFailed" };
   }
   if (issued === "rate_limited") return { ok: false, error: "rateLimited" };
   // A cooldown deliberately has the same response as a send so this endpoint
   // cannot reveal whether a recipient requested a code recently.
-  if (issued === "cooldown") return { ok: true };
+  if (issued === "cooldown" || issued === "suppressed") return { ok: true };
   if (issued !== "issued") return { ok: false, error: "sendFailed" };
 
   const sent = await sendOtpEmail({ to: email, code, locale: params.locale });
@@ -119,15 +127,18 @@ export async function verifyFeedbackOtp(params: {
   const service = getServiceClient();
   const email = params.email.trim().toLowerCase();
   const code = params.code.trim();
+  const protect = await shouldProtectFeedbackIdentity(service);
 
-  const { data, error } = await service.rpc("claim_feedback_otp_attempt", {
+  const { data, error } = await service.rpc(protect
+    ? "claim_feedback_otp_attempt_protected" : "claim_feedback_otp_attempt", {
     p_board_id: params.boardId,
-    p_email: email,
+    ...(protect ? { p_email_plain: email,
+      p_email_lookup: await feedbackOtpEmailLookup(email) } : { p_email: email }),
     p_now: new Date().toISOString(),
     p_max_attempts: OTP_MAX_ATTEMPTS,
   });
   if (error) {
-    console.error("[feedback-otp] atomic attempt claim failed:", error.message);
+    console.error("[feedback-otp] attempt_claim_failed");
     return { ok: false, error: "invalidCode" };
   }
   const row = (
@@ -142,7 +153,7 @@ export async function verifyFeedbackOtp(params: {
     return { ok: false, error: "invalidCode" };
   }
 
-  const expected = Buffer.from(sha256Hex(`${row.id}:${code}`), "hex");
+  const expected = Buffer.from(authenticationProof("feedback_otp", [row.id, code]), "hex");
   const stored = Buffer.from(row.code_hash, "hex");
   const match = expected.length === stored.length && timingSafeEqual(expected, stored);
   if (!match) return { ok: false, error: "invalidCode" };
@@ -152,7 +163,7 @@ export async function verifyFeedbackOtp(params: {
     { p_id: row.id, p_now: new Date().toISOString() }
   );
   if (consumeError) {
-    console.error("[feedback-otp] atomic consumption failed:", consumeError.message);
+    console.error("[feedback-otp] consumption_failed");
   }
   // Competing correct submissions may both claim an attempt, but only one can
   // transition the code from unconsumed to consumed.

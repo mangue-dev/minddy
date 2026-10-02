@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowDown01Icon, ArrowUpDownIcon, FilterIcon, Megaphone01Icon, MessageMultiple01Icon, Mic01Icon, Search01Icon, CheckIcon } from "@hugeicons/core-free-icons";
+import { useEffect, useRef, useState, useTransition, type CSSProperties, type Ref } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -20,7 +22,6 @@ import {
   Switch,
   toast,
 } from "mangue-ui";
-import { ArrowUpDown, Check, ChevronDown, ListFilter, Mic, MessagesSquare, Megaphone, Search } from "lucide-react";
 import { AutoTextarea } from "@/components/auto-textarea";
 import { AgentBeamOverlay } from "@/components/agent-beam";
 import { DictateButton } from "@/components/ai-elements/dictate-button";
@@ -36,6 +37,8 @@ import { SendShortcutTooltip, isSendShortcut } from "@/components/send-shortcut"
 import { HelpHint } from "@/components/settings/help-hint";
 import { SidebarFilterField, matchesFilter } from "@/components/sidebar-filter-field";
 import { useFeedbackDictation } from "@/lib/use-feedback-dictation";
+import { FeedbackDraftStorage, LegacyFeedbackDraft } from "@/lib/feedback-draft-storage";
+import type { FeedbackDraft } from "@/lib/feedback-draft";
 import {
   FEEDBACK_PUBLIC_STATUSES,
   FEEDBACK_TO_ISSUE_STATUS,
@@ -69,6 +72,40 @@ import {
 
 const SIMILAR_DEBOUNCE_MS = 1000;
 const SIMILAR_MIN_CHARS = 15;
+
+function SearchSceneIcon({ className, style, strokeWidth, ref }: {
+  className?: string;
+  style?: CSSProperties;
+  strokeWidth?: number | string;
+  ref?: Ref<SVGSVGElement>;
+}) {
+  return (
+    <HugeiconsIcon
+      ref={ref}
+      icon={Search01Icon}
+      className={className}
+      style={style}
+      strokeWidth={typeof strokeWidth === "number" ? strokeWidth : undefined}
+    />
+  );
+}
+
+function MessageSceneIcon({ className, style, strokeWidth, ref }: {
+  className?: string;
+  style?: CSSProperties;
+  strokeWidth?: number | string;
+  ref?: Ref<SVGSVGElement>;
+}) {
+  return (
+    <HugeiconsIcon
+      ref={ref}
+      icon={MessageMultiple01Icon}
+      className={className}
+      style={style}
+      strokeWidth={typeof strokeWidth === "number" ? strokeWidth : undefined}
+    />
+  );
+}
 
 export function FeedbackBoardClient({
   token,
@@ -128,7 +165,7 @@ export function FeedbackBoardClient({
         )}
 
         <Button className="desktop:hidden" onClick={() => setComposerOpen(true)}>
-          <Megaphone />
+          <HugeiconsIcon icon={Megaphone01Icon} />
           {t("composerTitle")}
         </Button>
 
@@ -149,7 +186,7 @@ export function FeedbackBoardClient({
                typed, and the output it suggests is to erase them — not
                to widen the filter, which is not what has just emptied the
                liste. */
-            <EmptyScene icon={Search} title={t("emptySearch", { query })}>
+            <EmptyScene icon={SearchSceneIcon} title={t("emptySearch", { query })}>
               <Button variant="outline" onClick={() => setSearch("")}>
                 {t("emptySearchClear")}
               </Button>
@@ -161,7 +198,7 @@ export function FeedbackBoardClient({
                living returns: empty here does not mean empty quite simply, it is
                the server that decides (`boardEmpty`), not the filter. */
             <EmptyScene
-              icon={MessagesSquare}
+              icon={MessageSceneIcon}
               title={
                 boardEmpty || filter === "all"
                   ? t("empty")
@@ -171,7 +208,7 @@ export function FeedbackBoardClient({
             >
               {boardEmpty || filter === "all" ? (
                 <Button onClick={() => setComposerOpen(true)}>
-                  <Megaphone />
+                  <HugeiconsIcon icon={Megaphone01Icon} />
                   {t("composerTitle")}
                 </Button>
               ) : (
@@ -215,7 +252,7 @@ export function FeedbackBoardClient({
             button and “center” no longer means anything (MIN-255). */}
         <div className="flex h-6 items-center">
           <Button className="w-full" onClick={() => setComposerOpen(true)}>
-            <Megaphone />
+            <HugeiconsIcon icon={Megaphone01Icon} />
             {t("composerTitle")}
           </Button>
         </div>
@@ -305,9 +342,9 @@ function StatusFilterMenu({
           type="button"
           className="flex w-fit shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
         >
-          <ListFilter className="size-3" />
+          <HugeiconsIcon icon={FilterIcon} className="size-3" />
           {label}
-          <ChevronDown className="size-3" />
+          <HugeiconsIcon icon={ArrowDown01Icon} className="size-3" />
         </button>
       }
     >
@@ -407,9 +444,9 @@ function FilterBar({
             type="button"
             className="flex w-fit shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
           >
-            <ArrowUpDown className="size-3" />
+            <HugeiconsIcon icon={ArrowUpDownIcon} className="size-3" />
             {sort === "top" ? t("sortTop") : t("sortRecent")}
-            <ChevronDown className="size-3" />
+            <HugeiconsIcon icon={ArrowDown01Icon} className="size-3" />
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
@@ -419,7 +456,7 @@ function FilterBar({
               onSelect={() => router.push(buildHref(basePath, value, filter))}
             >
               {value === "top" ? t("sortTop") : t("sortRecent")}
-              {sort === value && <Check className="ml-auto size-4" />}
+              {sort === value && <HugeiconsIcon icon={CheckIcon} className="ml-auto size-4" />}
             </DropdownMenuItem>
           ))}
         </DropdownMenuContent>
@@ -471,6 +508,8 @@ function ComposerDialog({
 }) {
   const t = useTranslations("PublicFeedback");
   const tDictate = useTranslations("Dictate");
+  const tDrafts = useTranslations("Drafts");
+  const tRecovery = useTranslations("ServerUnavailable");
   const router = useRouter();
   const [title, setTitle] = useState("");
   // Checked by default: publish on the board. Unchecked = private return to the team.
@@ -486,39 +525,73 @@ function ComposerDialog({
   const [initialBody, setInitialBody] = useState("");
   const [editorKey, setEditorKey] = useState(0);
 
-  // Draft in localStorage: if the modal closes (email verification which
-  // goes wrong, wrong manipulation), the return being written is retrieved at the
-  // reopening. Deleted only after publication.
-  const draftKey = `mdy-feedback-draft:${token}`;
-  const persistDraft = (nextTitle: string, nextBody: string) => {
+  // Local recovery stores only server-authenticated envelopes, never editor text.
+  const draftStore = useRef<FeedbackDraftStorage | null>(null);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const latestDraft = useRef<FeedbackDraft>({ title: "", body: "" });
+  const [draftError, setDraftError] = useState<string | null>(null);
+  const [draftLoading, setDraftLoading] = useState(false);
+  const [draftRestoreFailed, setDraftRestoreFailed] = useState(false);
+  const [draftReload, setDraftReload] = useState(0);
+  const [legacyDraft, setLegacyDraft] = useState<FeedbackDraft | null>(null);
+  const store = () => draftStore.current ??= new FeedbackDraftStorage(token, localStorage);
+  const saveDraft = async () => {
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = null;
+    const value = latestDraft.current;
     try {
-      if (!nextTitle.trim() && !nextBody.trim()) {
-        localStorage.removeItem(draftKey);
-      } else {
-        localStorage.setItem(draftKey, JSON.stringify({ title: nextTitle, body: nextBody }));
-      }
+      await store().save(value);
+      if (latestDraft.current !== value) return false;
+      setDraftError(null);
+      return true;
     } catch {
-      // localStorage unavailable — too bad for the draft
+      if (latestDraft.current !== value) return false;
+      setDraftError(tDrafts("saveFailed"));
+      return false;
     }
   };
+  const persistDraft = (nextTitle: string, nextBody: string) => {
+    latestDraft.current = { title: nextTitle, body: nextBody };
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => { void saveDraft(); }, 800);
+  };
+  const restoreDraft = (draft: FeedbackDraft) => {
+    latestDraft.current = draft;
+    setTitle(draft.title);
+    bodyRef.current = draft.body;
+    setInitialBody(draft.body);
+    setEditorKey((k) => k + 1);
+  };
+  useEffect(() => {
+    const flush = () => { if (saveTimer.current) void saveDraft(); };
+    window.addEventListener("pagehide", flush);
+    const hidden = () => { if (document.visibilityState === "hidden") flush(); };
+    document.addEventListener("visibilitychange", hidden);
+    return () => {
+      window.removeEventListener("pagehide", flush);
+      document.removeEventListener("visibilitychange", hidden);
+    };
+    // The refs always carry the latest text and the keepalive request survives navigation.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (!open) return;
-    try {
-      const raw = localStorage.getItem(draftKey);
-      if (!raw) return;
-      const draft = JSON.parse(raw) as { title?: string; body?: string };
-      if (typeof draft.title === "string") setTitle(draft.title);
-      if (typeof draft.body === "string" && draft.body) {
-        bodyRef.current = draft.body;
-        setInitialBody(draft.body);
-        setEditorKey((k) => k + 1);
-      }
-    } catch {
-      // illegible draft — we start from scratch
-    }
+    let active = true;
+    setDraftLoading(true);
+    setLegacyDraft(null);
+    setDraftRestoreFailed(false);
+    setDraftError(null);
+    void Promise.resolve().then(() => store().load()).then((draft) => {
+      if (active && draft) restoreDraft(draft);
+    }).catch((failure: unknown) => {
+      if (!active) return;
+      if (failure instanceof LegacyFeedbackDraft) setLegacyDraft(failure.value);
+      else { setDraftError(tDrafts("restoreFailed")); setDraftRestoreFailed(true); }
+    }).finally(() => { if (active) setDraftLoading(false); });
+    return () => { active = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  }, [open, draftReload]);
 
   // Live suggestion “this post may already exist” — title only, debounce.
   // Reserved for identified visitors: embedding is billed to the owner
@@ -629,6 +702,7 @@ function ComposerDialog({
   };
 
   const reset = () => {
+    latestDraft.current = { title: "", body: "" };
     setTitle("");
     setIsPublic(true);
     setSimilar([]);
@@ -641,6 +715,7 @@ function ComposerDialog({
   };
 
   const submit = () => {
+    if (legacyDraft || draftLoading || draftRestoreFailed) return;
     setError(null);
     startTransition(async () => {
       try {
@@ -660,11 +735,9 @@ function ComposerDialog({
           setError(result ? result.error : "failed");
           return;
         }
-        try {
-          localStorage.removeItem(draftKey);
-        } catch {
-          // ignore
-        }
+        if (saveTimer.current) clearTimeout(saveTimer.current);
+        saveTimer.current = null;
+        try { store().clear(); } catch { toast.error(tDrafts("deleteFailed")); }
         reset();
         onOpenChange(false);
         // Review before publication (MIN-54): public feedback first goes through
@@ -688,8 +761,14 @@ function ComposerDialog({
           toast.info(tDictate("inFlight"), { id: "dictation-in-flight" });
           return;
         }
-        if (!next) reset();
-        onOpenChange(next);
+        if (next) { onOpenChange(true); return; }
+        if (legacyDraft || draftLoading || draftRestoreFailed) { onOpenChange(false); return; }
+        (document.activeElement as HTMLElement | null)?.blur();
+        void new Promise((resolve) => setTimeout(resolve, 0)).then(async () => {
+          if (!await saveDraft()) return;
+          reset();
+          onOpenChange(false);
+        });
       }}
     >
       {/* ⌘/Ctrl+Enter sends from ANY field in the modal — the title
@@ -708,6 +787,29 @@ function ComposerDialog({
         {/* “Issue creation modal” style: title and description are
             free writing surfaces, without containers. */}
         <DialogTitle className="sr-only">{t("composerTitle")}</DialogTitle>
+        {draftError && <p role="alert" className="mb-3 text-sm text-destructive">{draftError}</p>}
+        {draftRestoreFailed && <div className="mb-3 flex gap-2">
+          <Button size="sm" onClick={() => setDraftReload((k) => k + 1)}>{tRecovery("retry")}</Button>
+          <Button size="sm" variant="ghost" onClick={() => {
+            try { store().clear(); setDraftRestoreFailed(false); setDraftError(null); }
+            catch { setDraftError(tDrafts("deleteFailed")); }
+          }}>{tDrafts("closeDiscard")}</Button>
+        </div>}
+        {draftLoading && <Spinner className="size-4" />}
+        {legacyDraft && <div className="mb-3 space-y-2">
+          <p className="text-sm text-muted-foreground">{tDrafts("legacyWarning")}</p>
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" onClick={() => {
+              restoreDraft(legacyDraft);
+              void saveDraft().then((saved) => { if (saved) setLegacyDraft(null); });
+            }}>{tDrafts("recoverLegacy")}</Button>
+            <Button size="sm" variant="ghost" onClick={() => {
+              try { store().clear(); reset(); setLegacyDraft(null); setDraftError(null); }
+              catch { setDraftError(tDrafts("deleteFailed")); }
+            }}>{tDrafts("closeDiscard")}</Button>
+          </div>
+        </div>}
+        <div hidden={draftLoading || draftRestoreFailed || Boolean(legacyDraft)}>
         <AutoTextarea
           autoFocus
           value={title}
@@ -734,6 +836,7 @@ function ComposerDialog({
           placeholder={t("postBodyPlaceholder")}
           className="mt-3 min-h-24"
         />
+        </div>
         {checking && similar.length === 0 && (
           <p className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
             <Spinner className="size-3" />
@@ -818,7 +921,7 @@ function ComposerDialog({
               uploadAudio={uploadAudio}
               onProcessingChange={setTranscribing}
               tooltipLabel={t("voiceTooltip")}
-              disabled={pending}
+              disabled={pending || draftLoading || draftRestoreFailed || Boolean(legacyDraft)}
               className="-ml-2"
             />
           ) : (
@@ -836,7 +939,7 @@ function ComposerDialog({
                     aria-label={t("voiceTooltip")}
                     className="-ml-2 inline-flex size-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
                   >
-                    <Mic className="size-4" />
+                    <HugeiconsIcon icon={Mic01Icon} className="size-4" />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent side="top">{t("voiceTooltip")}</TooltipContent>
@@ -851,7 +954,7 @@ function ComposerDialog({
           <SendShortcutTooltip scope="form" label={t("submitPost")}>
             <Button
               onClick={() => title.trim() && submit()}
-              disabled={pending || numoBusy || !title.trim()}
+              disabled={pending || numoBusy || draftLoading || draftRestoreFailed || Boolean(legacyDraft) || !title.trim()}
             >
               {pending && <Spinner />}
               {t("submitPost")}

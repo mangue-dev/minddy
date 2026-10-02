@@ -1,9 +1,10 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Cancel01Icon, Search01Icon } from "@hugeicons/core-free-icons";
 import { hasVisibleOpenDialog } from "@/lib/visible-overlays";
 
 import { useEffect, useRef } from "react";
-import { Search, X } from "lucide-react";
 import { cn } from "mangue-ui";
 import { isTypingTarget } from "@/lib/keyboard/keyboard-context";
 import { eventKey } from "@/lib/keyboard/event-key";
@@ -83,7 +84,7 @@ export function SidebarFilterField({
 
   return (
     <div className="flex min-w-0 flex-1 items-center gap-2">
-      <Search className="size-4 shrink-0 text-muted-foreground" strokeWidth={2} />
+      <HugeiconsIcon icon={Search01Icon} className="size-4 shrink-0 text-muted-foreground" strokeWidth={2} />
       <input
         ref={ref}
         type="text"
@@ -116,7 +117,7 @@ export function SidebarFilterField({
           aria-label={clearLabel}
           className="-mr-1 flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
         >
-          <X className="size-3.5" />
+          <HugeiconsIcon icon={Cancel01Icon} className="size-3.5" />
         </button>
       ) : null}
     </div>

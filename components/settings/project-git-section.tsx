@@ -1,11 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { AppIcon } from "@/components/icon";
+import { GitBranchIcon, LinkOffIcon as Link2Off } from "@hugeicons/core-free-icons";
+import { useCallback, useEffect, useRef, useState, type ReactNode, type SVGProps } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button, ConfirmDeleteDialog, Spinner, Switch, toast } from "mangue-ui";
-import { GitBranch, Link2Off } from "lucide-react";
 import { Github, Gitlab } from "@/components/git/provider-icons";
 import { ProviderConnectButtons } from "@/components/git/provider-connect-buttons";
 import { GitBranchCleanup } from "@/components/settings/git-branch-cleanup";
@@ -32,6 +34,21 @@ import {
 import { EmptyScene } from "@/components/empty-scene";
 import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
 import type { CandidateRepo } from "@/lib/types";
+
+const GitBranchSceneIcon = ({
+  className,
+  style,
+  strokeWidth,
+  ref,
+}: SVGProps<SVGSVGElement>) => (
+  <HugeiconsIcon
+    icon={GitBranchIcon}
+    ref={ref}
+    className={className}
+    style={style}
+    strokeWidth={strokeWidth as number | undefined}
+  />
+);
 
 const PROVIDER_ICON = { github: Github, gitlab: Gitlab } as const;
 
@@ -322,7 +339,7 @@ export function ProjectGitSection({ projectId }: { projectId: string }) {
                     size="sm"
                     onClick={() => setConfirmUnlink(true)}
                   >
-                    <Link2Off className="size-4" />
+                    <AppIcon icon={Link2Off} className="size-4" />
                     {t("gitUnlink")}
                   </Button>
                 )
@@ -412,7 +429,7 @@ export function ProjectGitSection({ projectId }: { projectId: string }) {
 
   return group(
     "block",
-    <EmptyScene size="compact" icon={GitBranch} title={t("gitEmptyOwner")}>
+    <EmptyScene size="compact" icon={GitBranchSceneIcon} title={t("gitEmptyOwner")}>
       <ProviderConnectButtons
         inline
         onConnect={handleConnect}

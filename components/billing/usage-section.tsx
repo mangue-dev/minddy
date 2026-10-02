@@ -1,80 +1,102 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Bot, FolderKanban, Ticket, Users } from "lucide-react";
-import { UsageBreakdownBody } from "@/components/usage-indicator";
+import { Card, CardContent, CardDescription, CardHeader } from "mangue-ui";
+import { AppIcon } from "@/components/icon";
+import {
+  BotIcon,
+  FolderKanbanIcon,
+  TicketIcon,
+  UserGroupIcon,
+} from "@hugeicons/core-free-icons";
+import {
+  UsageBudgetSummary,
+  UsageSegmentBreakdown,
+} from "@/components/billing/usage-budget";
+import { UsageTrendChart } from "@/components/billing/usage-trend-chart";
 import { useBillingSummary } from "@/lib/use-billing-query";
 
-/**
- * Card usage of the billing page (MIN-72): the body shared with the popover of the
- * header (segmented bar + hover by type) followed by the structural limits of the
- * plan. Everything is said in percentages/quantities — never in amounts.
- */
 export function UsageSection() {
   const t = useTranslations("Billing");
-  const { usage } = useBillingSummary();
-
+  const { usage, usageError } = useBillingSummary();
   if (usage && !usage.managedAi) return null;
-
   return (
-    <div className="rounded-xl border border-border bg-card">
-      <UsageBreakdownBody bordered />
-      {usage && (
-        <div className="space-y-1.5 border-t border-border px-4 py-3 text-sm">
-          <LimitRow
-            icon={FolderKanban}
-            label={t("limitProjects")}
-            value={
-              usage.limits.maxProjects == null
-                ? t("unlimited")
-                : `${usage.limits.projectsUsed} / ${usage.limits.maxProjects}`
-            }
-          />
-          <LimitRow
-            icon={Ticket}
-            label={t("limitIssuesPerProject")}
-            value={
-              usage.limits.maxIssuesPerProject == null
-                ? t("unlimited")
-                : String(usage.limits.maxIssuesPerProject)
-            }
-          />
-          <LimitRow
-            icon={Bot}
-            label={t("limitAgents")}
-            value={usage.limits.allowAgents ? t("included") : t("notIncluded")}
-          />
-          <LimitRow
-            icon={Users}
-            label={t("limitMembers")}
-            value={
-              usage.limits.maxMembersPerProject == null
-                ? t("unlimited")
-                : String(usage.limits.maxMembersPerProject)
-            }
-          />
+    <div className="min-w-0 space-y-5">
+      <Card className="gap-0 py-0">
+        <UsageBudgetSummary />
+      </Card>
+      {!(usageError && !usage) && (
+        <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+          <UsageTrendChart />
+          <Card size="sm" className="min-w-0">
+            <CardHeader>
+              <h2 className="text-sm font-semibold">{t("segmentTitle")}</h2>
+              <CardDescription className="text-xs">
+                {t("segmentBudgetHint")}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <UsageSegmentBreakdown />
+            </CardContent>
+          </Card>
         </div>
       )}
     </div>
   );
 }
 
-function LimitRow({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: typeof FolderKanban;
-  label: string;
-  value: string;
-}) {
+/** Structural limits are kept near the subscription, outside AI consumption charts. */
+export function BillingLimits() {
+  const t = useTranslations("Billing");
+  const { usage } = useBillingSummary();
+  if (!usage || !usage.managedBilling) return null;
+  const limits = usage.limits;
+  const rows = [
+    {
+      icon: FolderKanbanIcon,
+      label: t("limitProjects"),
+      value:
+        limits.maxProjects == null
+          ? t("unlimited")
+          : `${limits.projectsUsed} / ${limits.maxProjects}`,
+    },
+    {
+      icon: TicketIcon,
+      label: t("limitIssuesPerProject"),
+      value:
+        limits.maxIssuesPerProject == null
+          ? t("unlimited")
+          : String(limits.maxIssuesPerProject),
+    },
+    {
+      icon: BotIcon,
+      label: t("limitAgents"),
+      value: limits.allowAgents ? t("included") : t("notIncluded"),
+    },
+    {
+      icon: UserGroupIcon,
+      label: t("limitMembers"),
+      value:
+        limits.maxMembersPerProject == null
+          ? t("unlimited")
+          : String(limits.maxMembersPerProject),
+    },
+  ];
   return (
-    <div className="flex items-center justify-between gap-3">
-      <span className="flex items-center gap-2.5 text-foreground/80">
-        <Icon className="size-4 text-foreground/70" strokeWidth={2} />
-        {label}
-      </span>
-      <span className="font-medium tabular-nums">{value}</span>
-    </div>
+    <ul className="grid gap-3 text-sm sm:grid-cols-2">
+      {rows.map((row) => (
+        <li key={row.label} className="flex items-start justify-between gap-3">
+          <span className="flex min-w-0 items-start gap-2 text-muted-foreground">
+            <AppIcon
+              icon={row.icon}
+              className="mt-0.5 size-4 shrink-0"
+              strokeWidth={2}
+            />
+            {row.label}
+          </span>
+          <span className="shrink-0 font-medium tabular-nums">{row.value}</span>
+        </li>
+      ))}
+    </ul>
   );
 }

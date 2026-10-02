@@ -26,6 +26,8 @@
 // Open state is owned by AppShellChrome (so the header pill and the shortcuts
 // share it); this component is controlled via `open` / `onOpenChange`.
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { AiAutoRotateIcon as CycleIcon, Bookmark01Icon, BookmarkAdd01Icon, CircleIcon, ComputerIcon, Copy01Icon, Delete02Icon, Link02Icon, MoonIcon, Edit04Icon, SignalFull01Icon, Sun01Icon, Target01Icon, TriangleIcon, UserCircleIcon } from "@hugeicons/core-free-icons";
 import {
   useCallback,
   useEffect,
@@ -34,32 +36,12 @@ import {
   useState,
   type ComponentType,
   type ReactNode,
-  type SVGProps,
 } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { usePathname, useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "mangue-ui";
 import { useAccountTheme } from "@/lib/use-account-theme";
-import {
-  Bookmark,
-  BookmarkPlus,
-  CircleDashed,
-  ClipboardCopy,
-  Copy,
-  IterationCw,
-  Link2,
-  Monitor,
-  Moon,
-  Pencil,
-  SignalHigh,
-  Sun,
-  SunMoon,
-  Target,
-  Trash2,
-  Triangle,
-  UserRound,
-} from "lucide-react";
 import {
   CommandPalette as CommandPaletteShell,
   type ActionProvider,
@@ -71,6 +53,7 @@ import {
   type PaletteItem,
 } from "@/lib/command-palette";
 import { NumoIcon } from "@/components/numo-icon";
+import { AppIcon } from "@/components/icon";
 import { projectOrbIcon } from "@/components/project-orb";
 import { projectOrbSeed } from "@/lib/project-orb-colors";
 import { StatusIndicator, PriorityIndicator } from "@/components/issue-indicators";
@@ -114,7 +97,7 @@ import { useAnalytics } from "@/lib/use-analytics";
 import { moveIssueGroupsToEnd } from "@/lib/command-palette/group-order";
 import type { PaletteStrings } from "@/lib/command-palette/i18n";
 import { createMinddyEntityActionsProvider } from "@/lib/command-palette/registry/providers/MinddyEntityActionsProvider";
-import { normalizeAppTabLocation } from "@/lib/app-tab-location";
+import { paletteDestinationHref } from "@/lib/palette-destination";
 import { useOptionalAppTabSession } from "@/lib/app-tabs-context";
 import type {
   Issue,
@@ -209,18 +192,8 @@ function isFullIssue(issue: PaletteIssue): issue is Issue {
   return "category_ids" in issue;
 }
 
-function paletteDestinationHref(raw: string | undefined): string | null {
-  const normalized = normalizeAppTabLocation(raw);
-  if (!normalized || !raw) return null;
-  const source = new URL(raw, "https://minddy.invalid");
-  const destination = new URL(normalized, "https://minddy.invalid");
-  if (source.pathname.replace(/\/$/, "") !== destination.pathname || source.hash !== destination.hash) return null;
-  if ([...source.searchParams].some(([key, value]) => destination.searchParams.get(key) !== value)) return null;
-  return normalized;
-}
-
 /** Numo's face as a static action icon (no blinking in the popover). */
-const NumoActionIcon = (props: SVGProps<SVGSVGElement>) => (
+const NumoActionIcon = (props: Omit<React.ComponentProps<typeof HugeiconsIcon>, "icon">) => (
   <NumoIcon animated={false} {...props} />
 );
 NumoActionIcon.displayName = "NumoActionIcon";
@@ -437,13 +410,13 @@ export function CommandPalette({
             icon: issue
               ? statusIcon(issue.status)
               : Icon
-                ? <Icon className="size-4" />
+                ? <AppIcon icon={Icon} className="size-4" />
                 : undefined,
             contextLabel: it.metaText,
             contextIcon: (() => {
               if (!it.contextId) return undefined;
               const ProjectIcon = projectIconById.get(it.contextId);
-              return ProjectIcon ? <ProjectIcon className="size-3.5" /> : undefined;
+              return ProjectIcon ? <AppIcon icon={ProjectIcon} className="size-3.5" /> : undefined;
             })(),
             filterCategory: cat,
             entityType: it.entityType ?? (it.href ? "navigation" : undefined),
@@ -469,7 +442,7 @@ export function CommandPalette({
       id: "cmd-theme",
       title: themeLabel,
       keywords: ["theme", "thème", "apparence", "appearance", "dark", "light", "sombre", "clair"],
-      icon: <SunMoon className="size-4" />,
+      icon: <HugeiconsIcon icon={Sun01Icon} className="size-4" />,
       filterCategory: "account",
       entityType: "theme",
     });
@@ -482,7 +455,7 @@ export function CommandPalette({
       mapped.push({
         id: `saved-view-${view.id}`,
         title: view.name,
-        icon: <Bookmark className="size-4" />,
+        icon: <HugeiconsIcon icon={Bookmark01Icon} className="size-4" />,
         filterCategory: "views",
         entityType: "saved-view",
         // No stars: a saved view IS already a shortcut that we have
@@ -519,7 +492,7 @@ export function CommandPalette({
         "raccourci",
         "shortcut",
       ],
-      icon: <BookmarkPlus className="size-4" />,
+      icon: <HugeiconsIcon icon={BookmarkAdd01Icon} className="size-4" />,
       filterCategory: "views",
       entityType: "save-view",
       favoritable: false,
@@ -646,7 +619,7 @@ export function CommandPalette({
         actions.push({
           id: "issue.effort",
           label: tIssueUI("changeEffortAria"),
-          icon: Triangle,
+          icon: TriangleIcon,
           category: "secondary",
           priority: 20,
           requiresForm: {
@@ -672,7 +645,7 @@ export function CommandPalette({
         actions.push({
           id: "issue.assignee",
           label: tIssueUI("changeAssigneeAria"),
-          icon: UserRound,
+          icon: UserCircleIcon,
           category: "secondary",
           priority: 10,
           requiresForm: {
@@ -704,7 +677,7 @@ export function CommandPalette({
         actions.push({
           id: "issue.objective",
           label: tIssueUI("changeObjectiveAria"),
-          icon: Target,
+          icon: Target01Icon,
           category: "secondary",
           priority: 9,
           requiresForm: {
@@ -738,7 +711,7 @@ export function CommandPalette({
         actions.push({
           id: "issue.copy-prompt",
           label: tIssueUI("copyAsPrompt"),
-          icon: ClipboardCopy,
+          icon: Copy01Icon,
           category: "secondary",
           priority: 5,
           execute: async (): Promise<ActionResult> => {
@@ -809,7 +782,7 @@ export function CommandPalette({
           actions.push({
             id: "issue.copy-id",
             label: tAction("copyIdentifier", { identifier: item.contextLabel }),
-            icon: Copy,
+            icon: Copy01Icon,
             category: "secondary",
             priority: 0,
             execute: async (): Promise<ActionResult> => {
@@ -868,10 +841,10 @@ export function CommandPalette({
 
   // === “Change the theme”: a single item, the inline select makes the submenu ===
   const themeProvider = useMemo<ActionProvider>(() => {
-    const THEME_OPTIONS: { value: string; label: string; icon: typeof Sun }[] = [
-      { value: "light", label: tNav("themeLight"), icon: Sun },
-      { value: "dark", label: tNav("themeDark"), icon: Moon },
-      { value: "system", label: tNav("themeSystem"), icon: Monitor },
+    const THEME_OPTIONS: { value: string; label: string; icon: typeof Sun01Icon }[] = [
+      { value: "light", label: tNav("themeLight"), icon: Sun01Icon },
+      { value: "dark", label: tNav("themeDark"), icon: MoonIcon },
+      { value: "system", label: tNav("themeSystem"), icon: ComputerIcon },
     ];
 
     return {
@@ -882,7 +855,7 @@ export function CommandPalette({
         {
           id: "theme.change",
           label: themeLabel,
-          icon: SunMoon,
+          icon: Sun01Icon,
           category: "primary",
           // Enter already opens the select: not a reason for a submenu
           basic: true,
@@ -895,7 +868,7 @@ export function CommandPalette({
                 options: THEME_OPTIONS.map((o) => ({
                   value: o.value,
                   label: o.label,
-                  icon: <o.icon className="size-4" />,
+                  icon: <HugeiconsIcon icon={o.icon} className="size-4" />,
                   description: o.value === theme ? "•" : undefined,
                 })),
               },
@@ -944,7 +917,7 @@ export function CommandPalette({
               // LINE that we have just chosen. Once inside, the screen does not
               // doesn't repeat the gesture, he asks the remaining question.
               label: tNav("nameThisView"),
-              icon: BookmarkPlus,
+              icon: BookmarkAdd01Icon,
               category: "primary",
               requiresForm: {
                 // `getActions` is executed when the menu is opened: the proposed name
@@ -979,7 +952,7 @@ export function CommandPalette({
           {
             id: "saved-view.rename",
             label: tNav("renameSavedView"),
-            icon: Pencil,
+            icon: Edit04Icon,
             category: "secondary",
             priority: 10,
             requiresForm: {
@@ -1004,7 +977,7 @@ export function CommandPalette({
           {
             id: "saved-view.delete",
             label: tNav("deleteSavedView"),
-            icon: Trash2,
+            icon: Delete02Icon,
             category: "danger",
             priority: 0,
             execute: async (): Promise<ActionResult> => {
@@ -1067,7 +1040,7 @@ export function CommandPalette({
             {
               id: "bulk-copy-prompt",
               title: tBulk("copyPrompt"),
-              icon: <ClipboardCopy className="size-4" />,
+              icon: <HugeiconsIcon icon={Copy01Icon} className="size-4" />,
               keywords: ["prompt", "copy", "copier", "agent", "code"],
               shortcut: ["⇧", "P"],
               filterCategory: "bulk",
@@ -1099,28 +1072,28 @@ export function CommandPalette({
       {
         id: "bulk-status",
         title: tIssueUI("changeStatusAria"),
-        icon: <CircleDashed className="size-4" />,
+        icon: <HugeiconsIcon icon={CircleIcon} className="size-4" />,
         keywords: ["statut", "status"],
         ...field("status"),
       } as CpPaletteItem,
       {
         id: "bulk-priority",
         title: tIssueUI("changePriorityAria"),
-        icon: <SignalHigh className="size-4" />,
+        icon: <HugeiconsIcon icon={SignalFull01Icon} className="size-4" />,
         keywords: ["priorité", "priority"],
         ...field("priority"),
       } as CpPaletteItem,
       {
         id: "bulk-effort",
         title: tIssueUI("changeEffortAria"),
-        icon: <Triangle className="size-4" />,
+        icon: <HugeiconsIcon icon={TriangleIcon} className="size-4" />,
         keywords: ["effort", "estimation"],
         ...field("effort"),
       } as CpPaletteItem,
       {
         id: "bulk-assignee",
         title: tIssueUI("changeAssigneeAria"),
-        icon: <UserRound className="size-4" />,
+        icon: <HugeiconsIcon icon={UserCircleIcon} className="size-4" />,
         keywords: ["assigné", "assignee", "responsable"],
         ...field("assignee"),
       } as CpPaletteItem,
@@ -1132,7 +1105,7 @@ export function CommandPalette({
       list.push({
         id: "bulk-objective",
         title: tIssueUI("changeObjectiveAria"),
-        icon: <Target className="size-4" />,
+        icon: <HugeiconsIcon icon={Target01Icon} className="size-4" />,
         keywords: ["objectif", "objective", "goal"],
         ...field("objective"),
       } as CpPaletteItem);
@@ -1144,7 +1117,7 @@ export function CommandPalette({
       list.push({
         id: "bulk-cycle-add",
         title: tCycles("addToCycle"),
-        icon: <IterationCw className="size-4" />,
+        icon: <AppIcon icon={CycleIcon} className="size-4" />,
         keywords: ["cycle", "semaine", "week", "sprint", "ajouter"],
         filterCategory: "bulk",
         favoritable: false,
@@ -1158,7 +1131,7 @@ export function CommandPalette({
       list.push({
         id: "bulk-cycle-remove",
         title: tCycles("removeFromCycle"),
-        icon: <IterationCw className="size-4" />,
+        icon: <AppIcon icon={CycleIcon} className="size-4" />,
         keywords: ["cycle", "semaine", "week", "sprint", "retirer"],
         filterCategory: "bulk",
         favoritable: false,
@@ -1175,7 +1148,7 @@ export function CommandPalette({
       list.push({
         id: "bulk-link",
         title: tBulk("link"),
-        icon: <Link2 className="size-4" />,
+        icon: <HugeiconsIcon icon={Link02Icon} className="size-4" />,
         keywords: ["lier", "link", "relation", "related", "liés"],
         filterCategory: "bulk",
         favoritable: false,
@@ -1190,7 +1163,7 @@ export function CommandPalette({
       list.push({
         id: "bulk-delete",
         title: tBulk("delete", { count }),
-        icon: <Trash2 className="size-4" />,
+        icon: <HugeiconsIcon icon={Delete02Icon} className="size-4" />,
         keywords: ["supprimer", "delete", "remove"],
         filterCategory: "bulk",
         favoritable: false,
@@ -1255,7 +1228,7 @@ export function CommandPalette({
             {
               id: "bulk.status",
               label: tIssueUI("changeStatusAria"),
-              icon: CircleDashed,
+              icon: CircleIcon,
               category: "primary",
               requiresForm: {
                 ...selectField(
@@ -1281,7 +1254,7 @@ export function CommandPalette({
             {
               id: "bulk.priority",
               label: tIssueUI("changePriorityAria"),
-              icon: SignalHigh,
+              icon: SignalFull01Icon,
               category: "primary",
               requiresForm: {
                 ...selectField(
@@ -1307,7 +1280,7 @@ export function CommandPalette({
             {
               id: "bulk.effort",
               label: tIssueUI("changeEffortAria"),
-              icon: Triangle,
+              icon: TriangleIcon,
               category: "primary",
               requiresForm: {
                 ...selectField(
@@ -1329,7 +1302,7 @@ export function CommandPalette({
             {
               id: "bulk.objective",
               label: tIssueUI("changeObjectiveAria"),
-              icon: Target,
+              icon: Target01Icon,
               category: "primary",
               requiresForm: {
                 ...selectField(
@@ -1362,7 +1335,7 @@ export function CommandPalette({
             {
               id: "bulk.assignee",
               label: tIssueUI("changeAssigneeAria"),
-              icon: UserRound,
+              icon: UserCircleIcon,
               category: "primary",
               requiresForm: {
                 ...selectField("assignee", tIssueUI("changeAssigneeAria"), [

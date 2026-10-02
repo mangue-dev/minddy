@@ -27,22 +27,13 @@ describe("Numo comment notification recipients", () => {
 });
 
 describe("Numo page comment continuation", () => {
-  const serviceWithLastComment = (data: Record<string, unknown> | null) =>
-    ({
-      from: () => ({
-        select: () => ({
-          eq: () => ({
-            or: () => ({
-              neq: () => ({
-                order: () => ({
-                  limit: () => ({ maybeSingle: async () => ({ data }) }),
-                }),
-              }),
-            }),
-          }),
-        }),
-      }),
-    }) as never;
+  const serviceWithLastComment = (data: Record<string, unknown> | null) => {
+    const query = {
+      select: () => query, eq: () => query, or: () => query, neq: () => query,
+      order: () => query, limit: () => query, maybeSingle: async () => ({ data, error: null }),
+    };
+    return { from: () => query } as never;
+  };
 
   it("continues a page thread after Numo's completed reply", async () => {
     await expect(

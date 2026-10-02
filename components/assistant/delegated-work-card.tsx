@@ -1,23 +1,12 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { AlertCircleIcon, BotIcon, CancelCircleIcon as Ban, CheckIcon, GitBranchIcon, GitCommitIcon, GitPullRequestIcon, HelpCircleIcon, LinkSquare01Icon, LoaderCircleIcon, PackageIcon, SquareIcon } from "@hugeicons/core-free-icons";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useNow, useTranslations } from "next-intl";
-import {
-  Ban,
-  Bot,
-  CheckCircle2,
-  CircleAlert,
-  CircleHelp,
-  ExternalLink,
-  GitBranch,
-  GitCommitHorizontal,
-  GitPullRequest,
-  Loader2,
-  Package,
-} from "lucide-react";
 import {
   Button,
   SidePanel,
@@ -27,12 +16,16 @@ import {
   SidePanelHeader,
   SidePanelTitle,
   Spinner,
+  toast,
   cn,
 } from "mangue-ui";
 import { AgentDiffSheet } from "@/components/agent/agent-diff-sheet";
+import { AppIcon } from "@/components/icon";
 import { ModelLogo } from "@/components/model-logo";
 import { NumoIcon } from "@/components/numo-icon";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
+  interruptAgentRunApi,
   isAgentRunWorking,
   type AgentRunSummary,
 } from "@/lib/agent-api";
@@ -97,14 +90,15 @@ function titleOf(call: DelegatedWorkCall, fallback: string): string {
 }
 
 const STATE_ICONS = {
-  starting: Loader2,
-  queued: Loader2,
-  running: Loader2,
-  waiting_input: CircleHelp,
-  completed: CheckCircle2,
-  failed: CircleAlert,
+  starting: LoaderCircleIcon,
+  queued: LoaderCircleIcon,
+  running: LoaderCircleIcon,
+  stopping: LoaderCircleIcon,
+  waiting_input: HelpCircleIcon,
+  completed: CheckIcon,
+  failed: AlertCircleIcon,
   canceled: Ban,
-} satisfies Record<DelegatedWorkState, React.ComponentType<{ className?: string }>>;
+} satisfies Record<DelegatedWorkState, AppIcon>;
 
 const REASONING_LABEL_KEYS = {
   off: "reasoningOff",
@@ -150,6 +144,48 @@ function msOr(iso: string | null, fallback: number): number {
   return Number.isNaN(ms) ? fallback : ms;
 }
 
+/**
+ * Stop the delegated worker on the first click. The card and detail panel
+ * share a stopping state while the server cancels its execution and prevents
+ * Numo from automatically continuing the interrupted work.
+ */
+function DelegatedWorkStopButton({
+  working,
+  stopping,
+  onStop,
+}: {
+  working: boolean;
+  stopping: boolean;
+  onStop: () => void;
+}) {
+  const t = useTranslations("Agent");
+
+  if (!working) return null;
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          type="button"
+          size="icon-sm"
+          variant="ghost"
+          className="shrink-0 text-muted-foreground"
+          disabled={stopping}
+          onClick={onStop}
+          aria-label={t("delegatedWorkStop")}
+        >
+          {stopping ? (
+            <Spinner className="size-3.5" aria-hidden />
+          ) : (
+            <HugeiconsIcon icon={SquareIcon} className="size-3.5" aria-hidden />
+          )}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent side="top">{t("delegatedWorkStop")}</TooltipContent>
+    </Tooltip>
+  );
+}
+
 /** Compact ticking chrono, same format as the agent pill ("2 min 3s"). */
 function elapsedLabel(
   t: ReturnType<typeof useTranslations<"Agent">>,
@@ -193,10 +229,14 @@ function DelegatedWorkMeta({
         )}
         aria-live="polite"
       >
-        <StateIcon
+        <AppIcon
+          icon={StateIcon}
           className={cn(
             "size-3.5",
-            (state === "starting" || state === "queued" || state === "running") &&
+            (state === "starting" ||
+              state === "queued" ||
+              state === "running" ||
+              state === "stopping") &&
               "animate-spin",
           )}
           aria-hidden
@@ -237,7 +277,7 @@ function DelegatedSubagents({ subagents }: { subagents: TurnSubagent[] }) {
         {runningCount > 0 ? (
           <Spinner className="size-3" aria-hidden />
         ) : (
-          <Bot className="size-3.5 shrink-0" aria-hidden />
+          <HugeiconsIcon icon={BotIcon} className="size-3.5 shrink-0" aria-hidden />
         )}
         {runningCount > 0
           ? t("subagentsWorking", { count: runningCount })
@@ -257,7 +297,7 @@ function DelegatedSubagents({ subagents }: { subagents: TurnSubagent[] }) {
               {running ? (
                 <Spinner className="size-3 shrink-0 text-blue-500" aria-hidden />
               ) : (
-                <CheckCircle2 className="size-3.5 shrink-0 text-brand" aria-hidden />
+                <AppIcon icon={CheckIcon} className="size-3.5 shrink-0 text-brand" aria-hidden />
               )}
               <span className="min-w-0 flex-1 truncate">
                 {t(
@@ -285,7 +325,32 @@ export function DelegatedWorkCard({ call }: { call: DelegatedWorkCall }) {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [diffOpen, setDiffOpen] = useState(false);
   const [diffFocus, setDiffFocus] = useState<string | null>(null);
-  const state = delegatedWorkState(call, run);
+  // Optimistic stop (PR 304 reference): the first click folds the whole
+  // presentation immediately — state line, live feed, chrono — and only the
+  // quiet reconciliation of the run query settles the card into its final
+  // state when the worker actually rests.
+  const [stopping, setStopping] = useState(false);
+  const rawState = delegatedWorkState(call, run);
+  const state: DelegatedWorkState =
+    stopping && working ? "stopping" : rawState;
+
+  useEffect(() => {
+    if (!working) setStopping(false);
+  }, [working]);
+
+  const stopWorker = async () => {
+    if (!runId) return;
+    setStopping(true);
+    try {
+      await interruptAgentRunApi(runId);
+    } catch (error) {
+      // The stop did not land (network, run already at rest): hand control
+      // back instead of leaving a dead presentation.
+      setStopping(false);
+      toast.error((error as Error).message);
+    }
+  };
+
   // The titler stamps a short `agent_runs.title` on the run at launch: prefer
   // it over the raw launch prompt, which can run for paragraphs. Until it lands
   // (or for old runs without one) the delegation arguments remain the fallback.
@@ -341,6 +406,13 @@ export function DelegatedWorkCard({ call }: { call: DelegatedWorkCall }) {
               />
             </div>
           </div>
+          {runId ? (
+            <DelegatedWorkStopButton
+              working={working}
+              stopping={stopping}
+              onStop={() => void stopWorker()}
+            />
+          ) : null}
           <Button
             type="button"
             variant="outline"
@@ -360,7 +432,7 @@ export function DelegatedWorkCard({ call }: { call: DelegatedWorkCall }) {
           <div className="flex flex-wrap items-center gap-3 border-t pt-2 text-xs text-muted-foreground">
             {run?.branch_name ? (
               <span className="inline-flex min-w-0 items-center gap-1">
-                <GitBranch className="size-3.5 shrink-0" aria-hidden />
+                <HugeiconsIcon icon={GitBranchIcon} className="size-3.5 shrink-0" aria-hidden />
                 <span className="truncate font-mono">{run.branch_name}</span>
               </span>
             ) : null}
@@ -371,9 +443,9 @@ export function DelegatedWorkCard({ call }: { call: DelegatedWorkCall }) {
                 rel="noreferrer"
                 className="inline-flex items-center gap-1 text-foreground hover:underline"
               >
-                <GitPullRequest className="size-3.5" aria-hidden />
+                <HugeiconsIcon icon={GitPullRequestIcon} className="size-3.5" aria-hidden />
                 {run.pr_number ? `#${run.pr_number}` : t("viewPullRequest")}
-                <ExternalLink className="size-3" aria-hidden />
+                <HugeiconsIcon icon={LinkSquare01Icon} className="size-3" aria-hidden />
               </Link>
             ) : null}
             {artifacts.map((artifact) => {
@@ -382,15 +454,15 @@ export function DelegatedWorkCard({ call }: { call: DelegatedWorkCall }) {
                 artifact.url === run?.pr_url
               ) return null;
               const ArtifactIcon = artifact.kind === "commit"
-                ? GitCommitHorizontal
+                ? GitCommitIcon
                 : artifact.kind === "pull_request"
-                  ? GitPullRequest
-                  : Package;
+                  ? GitPullRequestIcon
+                  : PackageIcon;
               const content = (
                 <>
-                  <ArtifactIcon className="size-3.5 shrink-0" aria-hidden />
+                  <AppIcon icon={ArtifactIcon} className="size-3.5 shrink-0" aria-hidden />
                   <span className="max-w-64 truncate font-mono">{artifact.ref}</span>
-                  {artifact.url ? <ExternalLink className="size-3 shrink-0" aria-hidden /> : null}
+                  {artifact.url ? <HugeiconsIcon icon={LinkSquare01Icon} className="size-3 shrink-0" aria-hidden /> : null}
                 </>
               );
               return artifact.url ? (
@@ -427,17 +499,24 @@ export function DelegatedWorkCard({ call }: { call: DelegatedWorkCall }) {
             className="flex w-[min(760px,calc(100vw-1rem))] flex-col"
           >
             <SidePanelHeader className="border-b-0">
-              <div className="flex min-w-0 flex-1 flex-col gap-1">
-                <SidePanelTitle className="line-clamp-2 text-sm font-medium leading-5">
-                  {title}
-                </SidePanelTitle>
-                <SidePanelDescription>
-                  <DelegatedWorkMeta
-                    state={state}
-                    run={run}
-                    changedFileCount={changedFileCount}
-                  />
-                </SidePanelDescription>
+              <div className="flex min-w-0 flex-1 items-start gap-2">
+                <div className="flex min-w-0 flex-1 flex-col gap-1">
+                  <SidePanelTitle className="line-clamp-2 text-sm font-medium leading-5">
+                    {title}
+                  </SidePanelTitle>
+                  <SidePanelDescription>
+                    <DelegatedWorkMeta
+                      state={state}
+                      run={run}
+                      changedFileCount={changedFileCount}
+                    />
+                  </SidePanelDescription>
+                </div>
+                <DelegatedWorkStopButton
+                  working={working}
+                  stopping={stopping}
+                  onStop={() => void stopWorker()}
+                />
               </div>
             </SidePanelHeader>
             <SidePanelBody className="flex min-h-0 flex-1 flex-col p-0">
@@ -448,6 +527,7 @@ export function DelegatedWorkCard({ call }: { call: DelegatedWorkCall }) {
                 status={run?.status ?? "queued"}
                 prompt={run?.prompt}
                 promptMentions={run?.prompt_mentions}
+                stopping={stopping}
                 onOpenFile={(path) => openDiff(path)}
                 onOpenDiff={() => openDiff()}
                 hiddenQuestionEventId={hiddenQuestionEventId}

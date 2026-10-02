@@ -1,12 +1,13 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Upload01Icon } from "@hugeicons/core-free-icons";
 import { createUuid } from "@/lib/create-uuid";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button, Input, toast } from "mangue-ui";
-import { Upload } from "lucide-react";
 import {
   WizardDialog,
   type WizardStep,
@@ -232,7 +233,7 @@ export function DatabaseImportDialog({
                 void loadFile(event.dataTransfer.files[0]);
             }}
           >
-            <Upload className="size-6 text-muted-foreground" />
+            <HugeiconsIcon icon={Upload01Icon} className="size-6 text-muted-foreground" />
             <span>{busy ? t("importAnalyzing") : t("importChooseFile")}</span>
             <span className="text-sm text-muted-foreground">
               {t("importFormats")}

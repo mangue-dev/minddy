@@ -1,4 +1,7 @@
+import { filterLinkedIssueRuns } from "@/lib/server/agent/activity";
+import { pullRequestIssueIds } from "@/lib/server/agent/pull-requests";
 import { type NextRequest, NextResponse } from "next/server";
+import { repositoryStorageName } from "@/lib/server/git/repository-name-content";
 import { getServiceClient } from "@/lib/supabase-service";
 import { verifyGithubSignature } from "@/lib/server/git/github-app";
 import { isManagedForgeEnabled } from "@/lib/managed-services";
@@ -366,7 +369,7 @@ async function handlePullRequest(payload: PullRequestEvent): Promise<void> {
   // did it `if (!prState) return`, amounted to never tracing it.
   if (!prState && !actionType) return;
 
-  const runs = prState
+  const prRuns = prState
     ? await syncPrState({
         repoFullName,
         prNumber: number,
@@ -379,26 +382,19 @@ async function handlePullRequest(payload: PullRequestEvent): Promise<void> {
         prNumber: number,
         provider: "github",
       });
+  const linkedPr = await findPullRequestByNumber({ provider: "github", repoFullName, number });
+  const runs = filterLinkedIssueRuns(prRuns, linkedPr ? await pullRequestIssueIds(linkedPr.id) : []);
   const currentPrState =
-    runs[0]?.prState ??
-    (
-      await findPullRequestByNumber({
-        provider: "github",
-        repoFullName,
-        number,
-      })
-    )?.state ??
+    linkedPr?.state ?? prRuns[0]?.prState ??
     ingested?.state ??
     prState;
 
   const byHuman = !isBot(payload.sender);
 
-  // NO run behind this PR: it is a human PR (MIN-143). She can
-  // ticket anyway — by branch name, title or line
-  // closing. Merging it on GitHub should produce what merging it does
-  // since minddy produces, otherwise the same gesture has two effects depending on the location.
-  if (runs.length === 0) {
+  // Synchronize manual associations; worker issues keep their existing notification path.
+  {
     await applyForgePrToIssue({
+      excludeIssueIds: runs.map((run) => run.issueId),
       provider: "github",
       repoFullName,
       prNumber: number,
@@ -408,7 +404,7 @@ async function handlePullRequest(payload: PullRequestEvent): Promise<void> {
       login: payload.sender?.login ?? null,
       occurredAt: prEventAt,
     });
-    return;
+    if (runs.length === 0) return;
   }
 
   // Aligns the status of the issues with the new PR state (MIN-46):
@@ -943,7 +939,8 @@ export async function POST(request: NextRequest) {
         .from("project_git_links")
         .select("id, external_repo_id")
         .eq("provider", "github")
-        .eq("repo_full_name", repositoryIdentity.fullName);
+        .eq("repo_full_name", await repositoryStorageName("github",
+          repositoryIdentity.fullName,false));
     if (repositoryError) {
       return NextResponse.json(
         { error: "repository identity unavailable" },

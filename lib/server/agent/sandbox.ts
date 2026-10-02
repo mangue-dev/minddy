@@ -31,17 +31,11 @@ import { AGENT_SANDBOX_RUNTIME_ENV } from "./sandbox-resources";
  * microVM. What remains here is what only makes sense from the function — we don't
  * not create the machine from the machine.
  *
- * IDENTITY & RECOVERY: a Sandbox is identified by a DETERMINIST `name`
- * (`agent-<run.id>`, persisted in agent_runs.sandbox_id). `getOrCreateAgentSandbox`
- * is idempotent: if the microVM (or its persistent SNAPSHOT) still exists, it
- * is AWAKENED with its filesystem restored (quick recovery, no re-clone);
- * otherwise `onCreate` clones the working branch on a new VM. `persistent: true`
- * (automatic restoration of FS between sessions via snapshots) is the DEFAULT of the SDK
- * since its v2 - we still ask it, explicitly: it is on him that all depends
- * recovery, it does not have to disappear in a default. `snapshotExpiration` and
- * `keepLastSnapshots`, they do not repeat a defect: they TIGHTEN two which
- * cost (see below). The git (WIP branch pushed on each break) remains the
- * durable net beyond snapshot expiration. AUTH: reuses
+ * A server run uses a versioned name so it cannot resume a legacy snapshot.
+ * Running sessions may be reused. Stopped sessions are recreated from the
+ * pushed work branch and encrypted Agent journal. Automatic filesystem
+ * snapshots are disabled because they preserve decrypted job and tool data.
+ * AUTH: reuses
  * VERCEL_TOKEN/TEAM_ID/PROJECT_ID (like custom domains, MIN-36); on Vercel
  * l'OIDC suffit.
  */
@@ -63,10 +57,6 @@ import { AGENT_SANDBOX_RUNTIME_ENV } from "./sandbox-resources";
  * that the turn.
  */
 const SANDBOX_TIMEOUT_MS = 24 * 60 * 60_000;
-/** Retention of persistent snapshots (fast recovery): tightens the SDK default,
- * which is 30 DAYS. Beyond that, we fall back on the re-clone of the git branch
- * (lasts forever). */
-const SANDBOX_SNAPSHOT_EXPIRATION_MS = 7 * 24 * 60 * 60_000;
 
 export interface AgentSandboxCommand {
   readonly cmdId: string;
@@ -152,11 +142,9 @@ function sandboxCredentials(): { token: string; teamId: string; projectId: strin
 }
 
 /**
- * Recovers the microVM named `name` by WAKE UP its session (filesystem restored
- * from the persistent snapshot → fast recovery, `onCreate` NOT called), otherwise in
- * creates a new one and calls `onCreate` (which clones the working branch). A snapshot
- * expired is treated as "not found" → recreates + `onCreate`. Optional boot
- * from AGENT_SANDBOX_SNAPSHOT_ID (pre-heated image) for fresh creation.
+ * Reuses a running microVM named `name` or creates a new one and calls
+ * `onCreate` to clone the work branch. Fresh sessions use the runtime image;
+ * configured snapshots may contain historical plaintext and are ignored.
  *
  * NETWORK POLICY (MIN-223) — `networkPolicy` is set at creation and refreshed
  * every time a persistent sandbox resumes.
@@ -190,10 +178,6 @@ export async function getOrCreateAgentSandbox(opts: {
   const preferences = resolveSandboxPreferences(opts.preferences);
   const region = SANDBOX_REGION_CODES[preferences.sandbox_region];
   const resources = SANDBOX_RESOURCES[preferences.sandbox_size];
-  // Warm images are regional. The legacy image belongs to the US deployment.
-  const snapshotId = (preferences.sandbox_region === "eu"
-    ? process.env.AGENT_SANDBOX_SNAPSHOT_ID_EU
-    : process.env.AGENT_SANDBOX_SNAPSHOT_ID_US ?? process.env.AGENT_SANDBOX_SNAPSHOT_ID)?.trim();
   let created = false;
   const base = {
     ...creds,
@@ -203,24 +187,22 @@ export async function getOrCreateAgentSandbox(opts: {
     failoverRegions: [],
     resources: { vcpus: resources.vcpus },
     env: AGENT_SANDBOX_RUNTIME_ENV,
-    persistent: true,
-    snapshotExpiration: SANDBOX_SNAPSHOT_EXPIRATION_MS,
-    // Each session shutdown creates an ADDITIONAL snapshot, all alive for 7 days, so
-    // that only one is ever used for recovery: the storage billed followed the number of
-    // breaks in the run, not its size. We only keep the last one - the ousted leave
-    // right away (`deleteEvicted` is true by default), and nothing here returns
-    // never on a previous snapshot (no `currentSnapshotId` in the repository).
-    keepLastSnapshots: { count: 1 },
+    persistent: false,
     resume: true,
     ...(opts.networkPolicy ? { networkPolicy: opts.networkPolicy } : {}),
     onCreate: async (fresh: VercelSandbox) => {
       created = true;
       await opts.onCreate(fresh as unknown as AgentSandbox);
     },
+    // A nonpersistent named sandbox can still exist after its session stops.
+    // Its next session has an empty filesystem, so rebuild the checkout.
+    onResume: async (fresh: VercelSandbox) => {
+      created = true;
+      if (opts.networkPolicy) await fresh.update({ networkPolicy: opts.networkPolicy });
+      await opts.onCreate(fresh as unknown as AgentSandbox);
+    },
   };
-  const sandbox = snapshotId
-    ? await VercelSandbox.getOrCreate({ ...base, source: { type: "snapshot", snapshotId } })
-    : await VercelSandbox.getOrCreate({ ...base, runtime: SANDBOX_RUNTIME });
+  const sandbox = await VercelSandbox.getOrCreate({ ...base, runtime: SANDBOX_RUNTIME });
 
   if (opts.networkPolicy && !created) {
     await sandbox.update({ networkPolicy: opts.networkPolicy });
@@ -242,24 +224,39 @@ export function sandboxName(sandbox: AgentSandbox): string {
 }
 
 /**
- * Stops a microVM by its NAME without waking it up (`resume: false`), to reap it
- * of inactivity: we cut the VM to rest while keeping its persistent snapshot,
- * so that the session remains resumable (quick wake-up to the next message).
+ * Stops a microVM by its name without waking it up. Its filesystem is
+ * discarded; the next turn resumes from the branch and encrypted journal.
  * Best-effort — never raises (already stopped/expired/not found).
  */
 export async function stopSandboxByName(name: string): Promise<void> {
   if (resolveAgentExecutionBackend(process.env) === "self-hosted") {
-    const sandbox = await SelfHostedSandbox.get(name).catch(() => null);
-    await sandbox?.stop().catch(() => {});
+    await SelfHostedSandbox.delete(name).catch(() => {});
     return;
   }
   if (!requireSandboxCapability()) return;
   try {
     const creds = sandboxCredentials();
     const sandbox = await VercelSandbox.get({ ...creds, name, resume: false });
-    await sandbox.stop();
+    await sandbox.stop().catch(() => {});
+    await sandbox.delete({ deleteOrphanSnapshots: true });
   } catch {
     // best-effort.
+  }
+}
+
+/** Remove the sandbox and orphaned snapshots during account erasure. */
+export async function deleteSandboxByName(name: string): Promise<void> {
+  if (resolveAgentExecutionBackend(process.env) === "self-hosted") {
+    await SelfHostedSandbox.delete(name);
+    return;
+  }
+  if (!requireSandboxCapability()) throw new Error("Agent sandbox deletion is unavailable");
+  const creds = sandboxCredentials();
+  try {
+    const sandbox = await VercelSandbox.get({ ...creds, name, resume: false });
+    await sandbox.delete({ deleteOrphanSnapshots: true });
+  } catch (error) {
+    if ((error as { response?: { status?: number } }).response?.status !== 404) throw error;
   }
 }
 

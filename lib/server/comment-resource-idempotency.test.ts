@@ -6,7 +6,9 @@ it("replays a committed attachment batch without duplicates or overwriting the o
   const rows = new Map<string, Record<string, unknown>>();
   const service = {
     rpc: async () => ({ data: [], error: null }),
-    from: () => ({
+    from: (table: string) => table === "attachment_metadata_encryption_scope"
+      ? ({ select: () => ({ eq: () => ({ maybeSingle: async () =>
+        ({ data: null, error: null }) }) }) }) : ({
       upsert(batch: Array<Record<string, unknown>>, options: { ignoreDuplicates: boolean }) {
         expect(options.ignoreDuplicates).toBe(true);
         const inserted = batch.filter((row) => !rows.has(row.id as string));

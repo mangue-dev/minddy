@@ -1,3 +1,5 @@
+import { issueStore } from "@/lib/server/issue-store";
+import { readIssueEvents } from "@/lib/server/issue-event-store";
 import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
@@ -18,9 +20,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   // relationship. Resolve the ticket and project membership explicitly before
   // using the service client, matching the internal feedback activity routes.
   const service = getServiceClient();
-  const { data: issue, error: issueError } = await service
-    .from("issues")
-    .select("project_id")
+  const { data: issue, error: issueError } = await issueStore(service).select("project_id")
     .eq("id", id)
     .maybeSingle();
 
@@ -32,11 +32,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: t("issueNotFound") }, { status: 404 });
   }
 
-  const { data, error } = await service
-    .from("issue_events")
-    .select("*, integration:integrations(name)")
-    .eq("issue_id", id)
-    .order("created_at", { ascending: true });
+  const { data, error } = await readIssueEvents(service, { issue_id: id }, { actorId: auth.user.id, projectId: issue.project_id, integrations: true });
 
   if (error) {
     console.error("[api/events] list failed:", error.message);

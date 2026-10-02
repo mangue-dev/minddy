@@ -6,9 +6,10 @@
 // avatar). Same value/onChange contracts as the side-panel fields in
 // issue-property-fields.tsx.
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Tag01Icon, Target01Icon, TriangleIcon, UserCircleIcon } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
 import { cn } from "mangue-ui";
-import { Tag, Target, Triangle, UserCircle2 } from "lucide-react";
 import { DateTimePicker } from "@/components/date-time-picker";
 import { SmartFillIcon } from "@/components/smart-icons";
 import {
@@ -49,7 +50,7 @@ import {
 const BARE =
   "flex items-center gap-1.5 rounded-md p-1.5 text-sm text-foreground outline-none transition-colors hover:bg-muted focus-visible:bg-muted max-sm:p-2";
 const SMART_FILL_PILL =
-  "flex h-8 items-center gap-1.5 rounded-full border border-input bg-transparent px-3 text-sm text-foreground outline-none transition-colors hover:bg-muted/40 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 aria-expanded:border-ring max-sm:h-9";
+  "flex h-8 items-center gap-1.5 rounded-full bg-transparent px-3 text-sm text-foreground outline-none transition-colors hover:bg-muted/40 focus-visible:bg-muted/40 aria-expanded:bg-muted/40 max-sm:h-9";
 
 // Lets the create-issue dialog drive each picker's open state from a keyboard
 // shortcut and surface the key in the trigger's tooltip. All optional — the
@@ -148,6 +149,7 @@ export function EffortCompact({
   const options: PickerOption[] = EFFORTS.map((e) => ({
     value: e.value,
     label: e.label,
+    icon: <HugeiconsIcon icon={TriangleIcon} className="size-4 text-muted-foreground" />,
   }));
   return (
     <SearchSelect
@@ -164,7 +166,7 @@ export function EffortCompact({
           {value ? (
             <EffortIndicator effort={value} className="text-foreground" />
           ) : (
-            <Triangle className="size-[18px] shrink-0 text-muted-foreground" />
+            <HugeiconsIcon icon={TriangleIcon} className="size-[18px] shrink-0 text-muted-foreground" />
           )}
         </button>
       }
@@ -224,7 +226,7 @@ export function CategoriesCompact({
               )}
             </>
           ) : (
-            <Tag className="size-[17px] shrink-0 text-muted-foreground" />
+            <HugeiconsIcon icon={Tag01Icon} className="size-[17px] shrink-0 text-muted-foreground" />
           )}
         </button>
       }
@@ -279,10 +281,7 @@ export function AssigneeCompact({
               className="size-5"
             />
           ) : (
-            <UserCircle2
-              strokeWidth={1.75}
-              className="size-[18px] shrink-0 text-muted-foreground"
-            />
+            <HugeiconsIcon icon={UserCircleIcon} strokeWidth={1.75} className="size-[18px] shrink-0 text-muted-foreground" />
           )}
         </button>
       }
@@ -375,7 +374,7 @@ export function ObjectiveCompact({
             </>
           ) : (
             <>
-              <Target className="size-4 shrink-0 text-muted-foreground" />
+              <HugeiconsIcon icon={Target01Icon} className="size-4 shrink-0 text-muted-foreground" />
               <span className="text-muted-foreground">{tField("objective")}</span>
             </>
           )}

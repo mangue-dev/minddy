@@ -1,279 +1,205 @@
-# Conventions minddy
+# Minddy development conventions
+
+Read [AGENTS.md](AGENTS.md) for repository policy. This guide adds the architecture
+and implementation conventions used by the current source and CI configuration.
+
+## Architecture and entry points
+
+Minddy is a Next.js App Router application with React, Tailwind CSS, and
+`mangue-ui`. Supabase provides Postgres, Auth, Storage, and Realtime. The optional
+Electron shell has a separate package and build under `desktop/`.
+
+| Area | Source of truth |
+| --- | --- |
+| Authenticated product routes | `app/(app)/` |
+| Marketing and legal routes | `app/(marketing)/`, `app/(legal)/`, `lib/public-routes.ts` |
+| HTTP APIs and public capabilities | `app/api/`, `app/f/`, `app/p/` |
+| Reusable UI and client behavior | `components/`, `lib/` |
+| Server business logic | `lib/server/` |
+| Browser, session, and privileged database clients | `lib/supabase.ts`, `lib/supabase-server.ts`, `lib/supabase-service.ts` |
+| Numo conversations and tools | `lib/server/numo/`, `lib/server/assistant/` |
+| Code workers and sandbox lifecycle | `lib/server/agent/`, `lib/server/agent/vm/` |
+| External MCP tools and authentication | `lib/server/mcp/` |
+| Database schema and policies | `supabase/migrations/` |
+| Locale catalogs and configuration | `messages/`, `i18n/config.ts` |
+| Release and maintenance tooling | `scripts/`, `.github/workflows/` |
+
+Server-only modules use the `server-only` import guard. Keep authorization at
+server boundaries; a privileged database client does not replace membership or
+capability validation. Follow the existing domain repository and codec when
+reading or writing protected content rather than accessing its raw columns.
+
+`npm run dev` and `npm run build` first generate the Agent VM and page-Markdown
+bundles through their lifecycle hooks. Vitest also builds the page projection
+through `test/build-pages-md-setup.ts`. The root TypeScript configuration excludes
+`desktop/`; CI checks the Electron bundle separately with
+`node scripts/build-desktop.mjs`.
+
+See [README.md](README.md), [CONTRIBUTING.md](CONTRIBUTING.md), and
+[the edition guide](docs/editions.md) for setup and supported deployment modes.
 
 ## Language policy: English-owned prose
 
-All comments, docstrings, test descriptions, Markdown documentation, scripts,
-configuration prose, and developer-facing CLI messages must be written in
-idiomatic English. Do not add French prose to application code, tests, docs,
-scripts, or configuration. The normal exception is the French runtime catalog
-in `messages/fr.json`, together with intentional locale branches, language
-fixtures, proper names, legal credits, identifiers, URLs, and API values.
+Comments, docstrings, test descriptions, documentation, configuration prose, and
+developer-facing CLI messages use idiomatic English. Preserve runtime
+translations in every supported catalog, intentional locale fixtures and
+branches, proper names, legal credits, identifiers, URLs, and API values.
 
-When editing existing French comments or documentation, translate them as part
-of the same change. Keep runtime translations and localization fixtures intact;
-do not replace French product copy with English merely to satisfy this policy.
-Before handing off a change that touches owned prose, run
-`npm run check:owned-english`, the smallest relevant test or lint command, and
-`git diff --check`.
+Translate existing French owned prose when editing it. Do not change runtime
+translations or test semantics to satisfy the language policy. Run
+`npm run check:owned-english` and `git diff --check` after changing owned prose.
 
-## i18n: the placeholder is a contract between two files
+## Internationalization: catalog and call-site contract
 
-Any visible string goes through next-intl, and lives as a double: `messages/en.json`
-and `messages/fr.json`. Both catalogs have **exactly the same keys**
-and **exactly the same placeholders**.
+Visible interface copy uses `next-intl`. The supported locales are `en`, `fr`,
+`de`, `pt-BR`, `it`, and `es`, defined in `i18n/config.ts`. Keep all catalogs aligned
+on keys and placeholders when changing a message.
 
-The rule that counts: **a placeholder message is called with its values.**
+A placeholder message must receive its values:
 
 ```tsx
-// messages/en.json → "deleteViewTitle": "Delete “{name}”?"
-t("deleteViewTitle", { name: view.name })   // ✅
-t("deleteViewTitle")                        // ❌ affiche « Board.deleteViewTitle »
+// messages/en.json: "deleteViewTitle": "Delete “{name}”?"
+t("deleteViewTitle", { name: view.name });
 ```
 
-Forgetting doesn't lift anything or log anything: next-intl drops silently
-on the path of the key, and it is this path that the user reads on the screen.
-This happened twice (the view deletion dialog, the signature help
-webhooks), and in both cases the code was correct in each file taken
-separately — the fault existed only between the two.
-
-Writing a string **and** its call in the same gesture is writing both
-halves of a contract. Reading them separately doesn't verify this. What verifies it:
+The key types in `global.d.ts` do not prove placeholder correctness: imported
+JSON values widen to `string`. Run the actual formatter contract whenever you
+change `messages/*.json` or add a translation call:
 
 ```bash
-npx vitest run lib/i18n-contract.test.ts   # < 1 s
+npx vitest run lib/i18n-contract.test.ts
 ```
 
-It calls the real formatter on the 2,600 keys and reports, in `fichier:ligne`,
-any message to placeholder called without its values, plus any fr/en discrepancies.
-**Launch it as soon as you touch `messages/*.json` or add a `t(...)`.**
+The test checks catalog parity and missing values at statically identifiable
+call sites. Runtime-assembled keys still need explicit review. Use
+`MessageKey<"Namespace">` from `lib/i18n-keys.ts` for key tables, and preserve the
+namespace when typing a translator prop:
+`ReturnType<typeof useTranslations<"Namespace">>`.
 
-Two more traps:
+Angle-bracket syntax such as `<word>` is a rich-text tag in ICU messages. Use
+plain notation such as `HMAC-SHA256(body)` for technical text unless a rich-text
+formatter is intended.
 
-- `tsc` checks **key names** (via [global.d.ts](global.d.ts)) but **not**
-placeholders — string values ​​in a JSON import are expanded by
-`string`. A green type-check says nothing about this contract; only the test above says so.
-- `<mot>` in a message is read as a **rich tag**, not as text.
-For technical documentation, write `HMAC-SHA256(body)`, never `<HMAC body>`.
+## Public routes and sitemap dates
 
-A key assembled at runtime (`t(\`errors.${code}\`)`) escapes typing: the
-cast to `MessageKey<"Namespace">` ([lib/i18n-keys.ts](lib/i18n-keys.ts)), and
-type key **tables** with `MessageKey` rather than `string`. Finally, a
-translator passed in prop se type `ReturnType<typeof useTranslations<"Namespace">>`:
-without the namespace, TypeScript gives up (TS2589) and no longer checks anything at all.
+`lib/public-routes.ts` defines public route metadata and explicit localized URLs.
+The proxy rewrites localized URLs to their canonical English implementation and
+sets the locale header; internal authenticated routes use the locale preference
+cookie. The table is shared by the sitemap, metadata, proxy, and navigation.
 
-## Sitemap: hold `lastModified` in hand
+When public content materially changes, update only the corresponding
+`lastModified` date (`YYYY-MM-DD`). Avoid changing dates on every build or for
+refactors that preserve content. Changelog freshness comes from
+`CHANGELOG_LAST_MODIFIED` in `lib/changelog.ts`.
 
-When the **content of a public page really changes**, update it
-`lastModified` of its route in [lib/public-routes.ts](lib/public-routes.ts),
-on the date of the change (short ISO, `YYYY-MM-DD`).
+Adding a public page requires its route implementation, catalogs, and a matching
+`PUBLIC_ROUTES` entry with every supported locale path. Review neighboring route
+and metadata tests as well.
 
-`lastModified` is the only one of the three sitemap fields that Google still reads
-(`priority` and `changeFrequency` have been ignored for a long time; Bing them
-look a little longer): it is he who triggers a new passage of the crawler.
-Hence the hand holding. A build date, updated with each deployment,
-would say “everything has changed” every time — and Google quickly learns not to
-believe, on the whole domain.
+## Toolchain and lockfiles
 
-**What counts as a real change**: the text read by a visitor. THE
-i18n namespaces of public pages in `messages/en.json` and `messages/fr.json`
-(`Landing`, `Pricing`, `Legal`, `Terms`, `Privacy`, `Cookies`), and
-the components those pages render.
-
-**What is not one**: a refactor, a style or animation adjustment,
-a typo correction — nothing that leaves the page saying the same thing.
-
-Only one page changes → only one date moves. Never put sixes together
-hit: this is exactly the signal that hand holding is used to avoid.
-
-| Key | Pages | Content |
-| --- | --- | --- |
-| `home` | `/`, `/fr` | [app/(marketing)/page.tsx](<app/(marketing)/page.tsx>) + namespace `Landing` |
-| `pricing` | `/pricing`, `/fr/tarifs` | [app/(marketing)/pricing/page.tsx](<app/(marketing)/pricing/page.tsx>) + namespace `Pricing` |
-| `legal` | `/legal`, `/fr/mentions-legales` | [app/(legal)/legal/page.tsx](<app/(legal)/legal/page.tsx>) + namespace `Legal` |
-| `terms` | `/terms`, `/fr/cgu` | [app/(legal)/terms/page.tsx](<app/(legal)/terms/page.tsx>) + namespace `Terms` |
-| `privacy` | `/privacy`, `/fr/confidentialite` | [app/(legal)/privacy/page.tsx](<app/(legal)/privacy/page.tsx>) + namespace `Privacy` |
-| `cookies` | `/cookies`, `/fr/cookies` | [app/(legal)/cookies/page.tsx](<app/(legal)/cookies/page.tsx>) + namespace `Cookies` |
-
-The sitemap ([app/sitemap.ts](app/sitemap.ts)) reads this table, like the proxy,
-page metadata and nav and footer links. Add a
-public page = one more entry in `PUBLIC_ROUTES`, nothing else to wire.
-
-## TypeScript: editor and repository do not compile with the same binary
-
-Since MIN-180, `typescript` is in **7.0.2**, the native compiler. It's him
-what `npm run typecheck` and `next build` type-check run: on the Mac
-(12 cores), 14.8 s → 2.1 s cold for the first, 15.4 s → 2.4 s for the
-second, and the complete build goes from 26.6 s to 13.2 s.
-
-**The gain is more modest on Vercel, and it is a question of hearts.** The
-build machine is in `standard` (4 cores): measured under equal conditions — same
-machine, same cache, two consecutive deployments differing only in version
-of the compiler — the type-check goes from **38.9 s to 14.5 s** (×2.7, step ×6), and
-build job from 59.7s to 43.3s. The native compiler is massively
-parallel ; on 4 cores it cannot render what it renders on 12. Do not
-transpose the numbers from the position to the CI, in one direction or the other.
-
-**The counterpart**, to know rather than to discover: `typescript@7` does not deliver
-of `tsserver.js`. `typescript.tsdk` therefore cannot point to it, and the editor
-continues to use its embedded TypeScript — in JS, in 5.x. **The publisher and the CI
-no longer run the same compiler.** On this code both render
-identical diagnostics, measured in MIN-174: clean deposit with 0 errors for both
-sides, and on 6 probes carrying 11 deliberate faults, same codes, same
-`ligne:colonne`, same messages — i18n safeguard included (a translator passed
-prop without its namespace remains refused). It is therefore livable. But if one day
-diagnosis differs, **it is `npm run typecheck` which is authentic**, not the
-Editor's red underline.
-
-`typescript@7` does not provide the compiler API either: its root export
-points to `lib/version.cjs`, the package only contains `bin/tsc` and the native
-binary. Hence the alias `typescript-api` (→ `typescript@5.9.3`) in `package.json`:
-structural tests such as [pages-search-paths.test.ts](lib/server/pages-search-paths.test.ts)
-and [vm-bundle-secrets.test.ts](lib/server/agent/vm-bundle-secrets.test.ts) need
-`createSourceFile` to inspect source trees.
-This is not a typo: a `import ts from "typescript"` elsewhere in the
-repository would not compile.
-
-Two reflexes that go with it:
-
-- `incremental` is at `true`: **purge `tsconfig.tsbuildinfo`** first
-error counting or any duration measure, otherwise both lie.
-- The repository holds **two lockfiles**. Add by `pnpm add`, then resynchronize
-with `npm install --package-lock-only --legacy-peer-deps` (the deposit carries a
-pre-existing tiptap peer conflict which blocks npm without this flag).
-- **Install with the CI pnpm version — `10.28.0`**, the one pinned
-[ci.yml](.github/workflows/ci.yml), never `pnpm@latest`. pnpm 11 rewrites the
-lockfile by losing the `packageExtensions` injections: on pnpm 11, the
-`shiki: ^3.19.0` that `package.json` pushes into `streamdown` disappears, the
-two copies of shiki diverge and `npm run typecheck` encounters an error
-in `components/ai-elements/message.tsx` — a file that no one has
-touch. The symptom does not indicate its cause: check
-`git diff pnpm-lock.yaml` before going to debug the code.
-
-## Lint: an extinct rule is a decision, not an oversight
+Use Node.js 24 and pnpm **10.28.0**, as pinned by
+[the CI workflow](.github/workflows/ci.yml):
 
 ```bash
-npm run lint # oxlint --deny-warnings — entire repository, 2 sec
+corepack prepare pnpm@10.28.0 --activate
+pnpm install --frozen-lockfile
 ```
 
-**Run it before responding.** It also runs in CI, before typecheck, and
-it catches a class of errors that `tsc` does not see: optional chaining which
-dereference `undefined`, dead variable, `fetch` with a body on a GET.
+The repository maintains `pnpm-lock.yaml` for actual installation and
+`package-lock.json` for npm compatibility. After an intentional dependency
+change, synchronize both lockfiles using the pinned pnpm version and
+`npm install --package-lock-only --legacy-peer-deps`. Review the lockfile diff;
+preserve `pnpm.packageExtensions`, overrides, and patched dependencies.
 
-Two sets of rules run there: the oxlint `correctness` rules, and
-**anti-slop** ([github.com/dmmulroy/anti-slop](https://github.com/dmmulroy/anti-slop)),
-fifteen rules that reject low-proof TypeScript patterns. The plugin is
-**sold** in `tools/oxlint/anti-slop/` — this is the principle of its author:
-the files are ours, therefore modifiable. `tsconfig.json` excludes them, they are
-loaded by oxlint, not by `tsc`.
+`npm run typecheck` uses the repository's TypeScript 7 compiler. The editor may
+use a different TypeScript version; use repository diagnostics for validation.
+Source-inspection tests import the `typescript-api` alias for the TypeScript 5
+compiler API. Do not substitute an import from `typescript` in these tests.
+`tsconfig.json` enables incremental compilation; remove `tsconfig.tsbuildinfo`
+only when a clean diagnostic or timing comparison is required.
 
-**Selection is the heart of [oxlint.config.ts](oxlint.config.ts).** The fifteen
-anti-slop rules at `error` on this repository give **7,926 errors**; a linter
-Never throw and catch nothing. What is lit is therefore what the deposit
-holds at **zero** — so what a PR can no longer regress. What is extinct
-is **with his account on the day of the audit**, in comments on the line:
+## Lint and tests
 
-```ts
-"anti-slop/no-unknown-returns": "off", // 77 — closest to tenable
-"anti-slop/require-safety-comment-for-type-assertion": "off", // 3653
-```
-
-This number is what makes a ratchet possible: **we relight a rule when its
-account has fallen back to zero, not before.** Without it, “off” is no longer distinguishable
-from an oversight, and no one knows what it would cost to relight.
-
-Certain lines are not a count to be lowered but a **disagreement of
-background**, and the comment says it: `no-module-mocking` refuses `vi.mock`, so
-that the test doctrine below is already finer than the rule;
-`no-shape-in-symbol-names` refuses the word “shape”, which here is almost always
-of the domain (the shape of a mention bullet, the shapes of the grain canvas).
-
-**A local exception is written with its reason.** `oxlint-disable-next-line` alone
-don't say anything to the one who comes next:
-
-```ts
-// The spread is NOT superfluous: `headers.delete()` mutates the collection we
-// iterate. Without the copy, the iterator skips headers — and which ones it skips
-// are precisely the ones we wanted to remove.
-// oxlint-disable-next-line unicorn/no-useless-spread
-for (const name of [...headers.keys()]) {
-```
-
-This is the case that matters most, because the rule is **wrong** and the
-"fix" would introduce the bug. The current exceptions are documented inline in
-[proxy.ts](proxy.ts) and [lib/analytics.ts](lib/analytics.ts), where spreading
-the keys prevents mutation from skipping entries during iteration.
-
-A separate deliberate lint exception lives in
-[captures/shots/issue-plan/shot.mjs](captures/shots/issue-plan/shot.mjs): its
-unreferenced `RETIRED` constant is read by `publish.mjs` through a source-text
-pattern. Removing it would silently make the historical capture publishable.
-
-## Tests: new behavior comes with its own
+Run the smallest relevant behavioral tests after a code change, along with the
+repository lint and type check where applicable:
 
 ```bash
-npx vitest run                       # 362 fichiers, 4 559 cas, 18 s
-npx vitest run lib/server/agent # a folder, when we iterate
+npm run lint
+npm run typecheck
+npx vitest run lib/server/agent
+npm test
 ```
 
-**Toss it before responding, on anything related to behavior.**
-`npm run typecheck` does not replace it: it says that the types agree, not
-that the code does what we believe. The PR 48 feature compiled — it
-subscribed to a real-time channel and never switched back. A green type-check
-says nothing about a life cycle, and the rest says nothing about a behavior that
-no one wrote: **what we add comes with its test, in the same gesture.**
+`npm run lint` runs `oxlint --deny-warnings`. The vendored anti-slop plugin lives
+in `tools/oxlint/anti-slop/`; `oxlint.config.ts` documents intentionally disabled
+rules and their historical audit counts. Re-enable a count-based rule only after
+its violations reach zero. Explain each local suppression with the concrete
+reason that makes it necessary. For example, copying `headers.keys()` before
+mutating the collection prevents iteration from skipping entries.
 
-These 362 files are the best documentation in the repository, and the most invisible:
-you don't come across them, you have to go and open them. **Before writing a test,
-read one that looks like** — it gives the shape, the mocks and the border, and it
-avoid inventing a decor that the neighbor has already built:
+A successful type check does not prove lifecycle or runtime behavior. Add a
+focused regression for a behavior change and read a neighboring test before
+inventing a new fixture or mocking approach. Avoid tests that merely duplicate
+the implementation. The root Vitest configuration uses Node, not a browser DOM.
 
-| What we test | The example to open |
+| Test concern | Existing example |
 | --- | --- |
-| Pure logic (no IO) | [prune.test.ts](lib/server/agent/prune.test.ts) — we call, we assert, nothing to mount |
-| A loop that talks to an API | [supervisor.test.ts](lib/server/agent/vm/supervisor.test.ts) — fake opencode server, replayed SSE flow, and what is NOT called |
-| An agent tool | [opencode-tools.test.ts](lib/server/agent/vm/opencode-tools.test.ts) — the real tools generator, faced with the job |
-| A server surface | [control-plane.test.ts](lib/server/agent/control-plane.test.ts) — we only mock what OUT of the process (base, direct, ledger) |
+| Pure logic | `lib/server/agent/prune.test.ts` |
+| API/SSE worker loop | `lib/server/agent/vm/supervisor.test.ts` |
+| Generated Agent tools | `lib/server/agent/vm/opencode-tools.test.ts` |
+| Server boundary with external dependencies mocked | `lib/server/agent/control-plane.test.ts` |
 
-Special case already covered above: the i18n contract, of which
-`lib/i18n-contract.test.ts` is the safeguard — to be launched as soon as you touch
-`messages/*.json` or add a `t(...)`.
+CI additionally runs release tooling, self-hosted contracts, edition-specific
+build/start checks, dependency auditing, and publication/secret guards. Consult
+the workflow for the current commands; historical test counts and local timings
+are not acceptance criteria. Opt-in database tests need an isolated fixture and
+must be reported separately from the default suite's skipped cases.
 
-## Groundwork: a detached promise dies with the response
+## Encryption boundaries and operational gates
 
-In a query, any work outside the critical path — usage timestamp, purge
-opportunistic purge, session sliding, analytics flush — goes through
-**`afterOrNow`** ([lib/server/after-safe.ts](lib/server/after-safe.ts)).
+Scoped managed keys, row/object codecs, and bounded backfill workers live in
+`lib/server/encryption/`. Domain `*-content.ts` modules connect those codecs to
+application readers and writers. Project, user, and system scopes are distinct;
+keep decrypted keys and content out of client persistence and diagnostic logs.
+
+Changes to encrypted surfaces require both access and schema validation:
+
+```bash
+npm run check:encrypted-access
+npm run check:encryption-schema
+```
+
+Read [the encryption inventory](docs/security/encryption/README.md) and
+[the latest corrective review](docs/security/encryption/review-2026-09-29.md)
+for source/copy coverage, writer fences, authenticated backfill proofs,
+historical-key requirements, sandbox cleanup, and local-client copies.
+
+Keep code CI readiness separate from production data closure. The readiness
+endpoint explicitly reports `globalReadiness: "not_assessed"`; critical-family
+and forge-object scans cannot certify the whole application or retained copies.
+Staging performance, actual Storage-service restore, historical-copy retirement,
+and provider cleanup remain operational gates. Do not infer completed production
+encryption from isolated fixtures, and do not enable flags or run a migration or
+deployment without the applicable authorization.
+
+## Background work and response lifetime
+
+Use `afterOrNow` from `lib/server/after-safe.ts` for best-effort work outside a
+request's critical path, including usage timestamps, session refresh, and
+opportunistic maintenance:
 
 ```ts
-// ❌ the response leaves, Vercel freezes the summon, the fetch dies in flight
-void service.from("api_keys").update({ last_used_at: now }).eq("id", id)
-  .then(({ error }) => { if (error) console.error(…) });
-
-// ✅ after the response, but the invocation remains alive for as long as it takes
 afterOrNow(async () => {
-  const { error } = await service.from("api_keys").update({ last_used_at: now }).eq("id", id);
-  if (error) console.error(…);
+  await performMaintenance();
 });
 ```
 
-A detached promise is known to no one: as soon as the answer is given,
-the function is frozen and the outgoing connection is cut. `after()` is the only
-channel that says the opposite to the platform — Next switches to `waitUntil` which
-**returns** its callback ([after-context.js](node_modules/next/dist/server/after/after-context.js),
-`await callback()`). Hence the shape of the hook: you have to **give back** the
-promise, not untie it inside. `afterOrNow` takes care of it, and falls back
-on immediate execution outside of query (automation cascades, MIN-147).
-
-**What it looks like in the logs**: `TypeError: fetch failed` — the message
-network error that `postgrest-js` copies as is into `error.message`. THE
-the sign that stands out is the asymmetry: *only* detached calls fail,
-`await` of the same handler passes. A Supabase failure would cause the
-two. Do not go looking for a breakdown.
-
-And above all, it doesn't always show. The request succeeds, the user has no
-nothing, the test passes — at best an isolated error line, at worst nothing at all:
-the public board session slide was detached from the start, without
-never say anything, and sessions expired at a fixed 90 days instead of sliding.
+Return or await the work inside the callback. Detaching a promise from a request
+can allow its invocation to finish before the work completes. `afterOrNow`
+schedules with Next.js `after()` and catches errors; outside a request context it
+starts the callback immediately. Required writes must still complete in the
+critical path so a successful response reflects their outcome.
 
 ## Git workflow (this repository only)
 
@@ -317,6 +243,10 @@ apply them to another project.
   pull request description to a bare `Signed-off-by` trailer or a copy of the
   commit message. The DCO trailer belongs in the commits, not as the body of
   the pull request.
+- For UI changes, include screenshots of the work in the pull request
+  description whenever feasible. Keep these images up to date as the pull
+  request evolves. Prefer light mode by default; include both light and dark
+  mode screenshots when relevant, but covering both modes is optional.
 - Every commit must carry the DCO sign-off (see below).
 
 ## DCO sign-offs

@@ -1,9 +1,10 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Add01Icon } from "@hugeicons/core-free-icons";
 import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button, Input, Progress, Spinner, cn, toast } from "mangue-ui";
-import { Plus } from "lucide-react";
 import { isClosedStatus, issueIdentifier } from "@/lib/issue-constants";
 import { StatusIndicator } from "@/components/issue-indicators";
 import type { CreateIssueInput, Issue } from "@/lib/types";
@@ -83,7 +84,7 @@ export function SubIssuesSection({
                 className="flex items-center gap-2 rounded-md px-1.5 py-1.5 text-left hover:bg-muted/60"
               >
                 <StatusIndicator status={child.status} className="size-4 shrink-0" />
-                <span className="w-14 shrink-0 font-mono text-xs text-muted-foreground">
+                <span className="min-w-14 shrink-0 whitespace-nowrap font-mono text-xs text-muted-foreground">
                   {issueIdentifier(projectKey, child.number)}
                 </span>
                 <span
@@ -109,7 +110,7 @@ export function SubIssuesSection({
           className="h-8"
         />
         <Button type="submit" size="icon-sm" disabled={adding || !title.trim()} aria-label={tCommon("add")}>
-          {adding ? <Spinner /> : <Plus />}
+          {adding ? <Spinner /> : <HugeiconsIcon icon={Add01Icon} />}
         </Button>
       </form>
     </div>

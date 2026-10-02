@@ -1,5 +1,6 @@
 "use client";
 
+import { applyPendingRelations } from "./optimistic/relation-writes";
 import { applyPendingBoard } from "./optimistic/issue-writes";
 import { fresherGlobalIssueSnapshot, mergeIssueSnapshot } from "./global-issues-api";
 import type { QueryClient } from "@tanstack/react-query";
@@ -52,7 +53,8 @@ export async function globalBoardQueryFn({
   client,
 }: { signal?: AbortSignal; client?: QueryClient } = {}): Promise<GlobalBoardResponse> {
   const startedAt = Date.now();
-  const board = await fetchGlobalBoardApi(signal);
+  const fetched = await fetchGlobalBoardApi(signal);
+  const board = { ...fetched, relations: applyPendingRelations(client, fetched.relations, startedAt) };
   const snapshot = fresherGlobalIssueSnapshot(client, startedAt);
   return applyPendingBoard(
     snapshot

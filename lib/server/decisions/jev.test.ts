@@ -63,27 +63,38 @@ describe("expandJevQuestions", () => {
     expect(questions.priority).toEqual({
       type: "choice",
       criteria: { high: "high", low: "low" },
+      instructions: "priority",
     });
   });
 
   it("spreads a multi choice into one noul per option, prefixed by the key", () => {
     const questions = expandJevQuestions(SPEC);
-    expect(questions["category_ids:cat-a"]).toEqual({ type: "noul" });
-    expect(questions["category_ids:cat-b"]).toEqual({ type: "noul" });
-    expect(questions["category_ids:cat-c"]).toEqual({ type: "noul" });
+    expect(questions["category_ids:cat-a"]).toEqual({
+      type: "noul",
+      instructions: "A",
+    });
+    expect(questions["category_ids:cat-b"]).toEqual({
+      type: "noul",
+      instructions: "B",
+    });
+    expect(questions["category_ids:cat-c"]).toEqual({
+      type: "noul",
+      instructions: "C",
+    });
     expect(questions.category_ids).toBeUndefined();
   });
 
-  it("maps a boolean to noul and a score to its ordered levels", () => {
+  it("maps a boolean to noul and a score to its ordered criteria", () => {
     const questions = expandJevQuestions(SPEC);
-    expect(questions.is_junk).toEqual({ type: "noul" });
+    expect(questions.is_junk).toEqual({ type: "noul", instructions: "junk?" });
     expect(questions.effort).toEqual({
       type: "score",
-      levels: [
+      criteria: [
         { value: 1, label: "xs" },
         { value: 2, label: "s" },
         { value: 3, label: "m" },
       ],
+      instructions: "effort",
     });
   });
 });
@@ -184,6 +195,59 @@ describe("parseJevAnswers", () => {
         "category_ids:cat-c": 0.1,
         is_junk: 0.1,
         effort: 99,
+      },
+    });
+    expect(parsed).toMatchObject({ error: expect.stringContaining("effort") });
+  });
+
+  it("resolves the current score shape through its legend and distribution", () => {
+    // The drifted decisions API answers a 0–1 grade, not the level value:
+    // the chosen level is the argmax index, mapped back by the legend.
+    const parsed = parseJevAnswers(SPEC, {
+      answers: {
+        priority: { choice: "low" },
+        "category_ids:cat-a": 0.9,
+        "category_ids:cat-b": 0.1,
+        "category_ids:cat-c": 0.1,
+        is_junk: 0.1,
+        effort: {
+          type: "score",
+          score: 0.86,
+          legend: {
+            0: { value: 1, label: "xs" },
+            1: { value: 2, label: "s" },
+            2: { value: 3, label: "m" },
+          },
+          probabilities: { 0: 0.04, 1: 0.1, 2: 0.86 },
+          confidence: 0.71,
+        },
+      },
+    });
+    expect("error" in parsed).toBe(false);
+    if ("answers" in parsed) {
+      expect(parsed.answers.effort).toEqual({
+        value: 3,
+        probability: 0.86,
+        confidence: 0.71,
+      });
+    }
+  });
+
+  it("refuses a current-shape score whose legend carries an unknown value", () => {
+    const parsed = parseJevAnswers(SPEC, {
+      answers: {
+        priority: { choice: "low" },
+        "category_ids:cat-a": 0.9,
+        "category_ids:cat-b": 0.1,
+        "category_ids:cat-c": 0.1,
+        is_junk: 0.1,
+        effort: {
+          type: "score",
+          score: 0.9,
+          legend: { 0: { value: 1, label: "xs" }, 1: { value: 99, label: "xxl" } },
+          probabilities: { 0: 0.1, 1: 0.9 },
+          confidence: 0.9,
+        },
       },
     });
     expect(parsed).toMatchObject({ error: expect.stringContaining("effort") });

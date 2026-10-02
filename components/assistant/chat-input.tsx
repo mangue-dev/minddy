@@ -1,5 +1,7 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Add01Icon, ArrowUp01Icon, AttachmentIcon, Layers01Icon, SquareIcon } from "@hugeicons/core-free-icons";
 import {
   type ReactNode,
   useRef,
@@ -9,7 +11,6 @@ import {
   useEffect,
   useImperativeHandle,
   forwardRef,
-  useId,
 } from "react";
 import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
@@ -19,16 +20,9 @@ import {
   CommandItem,
   CommandSeparator,
   CommandShortcut,
-  Popover,
-  PopoverAnchor,
-  PopoverContent,
-  PopoverDescription,
-  PopoverHeader,
-  PopoverTitle,
   SendButtonWithCost,
   cn,
 } from "mangue-ui";
-import { ArrowUp, Layers, Paperclip, Plus, Square } from "lucide-react";
 import { AgentBeam } from "@/components/agent-beam";
 import { DictateButton } from "@/components/ai-elements/dictate-button";
 import { MentionChip } from "@/components/mention-chip";
@@ -369,14 +363,9 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     ref
   ) {
     const t = useTranslations("Assistant");
-    const tCommon = useTranslations("Common");
     const isSend = useIsSendShortcut();
     const modKey = useModKey();
     const tAttach = useTranslations("Resources");
-    const stopConfirmationId = useId();
-    const stopConfirmationTitleId = `${stopConfirmationId}-title`;
-    const stopConfirmationDescriptionId = `${stopConfirmationId}-description`;
-    const [stopConfirmOpen, setStopConfirmOpen] = useState(false);
     const effectivePlaceholder = placeholder ?? t("inputPlaceholder");
     const editorRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -1413,13 +1402,11 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         <AgentBeam active={!!beam} keepMounted className="relative z-10 rounded-2xl">
         <div
           className={cn(
-            // No blue focus ring, no drop shadow: the surface stays quiet on
-            // focus (the editor caret is the signal), brand colors are kept
-            // for drag feedback only.
-            "chat-input-surface relative flex flex-col overflow-hidden rounded-2xl border bg-card transition-all",
-            drop.dragging
-              ? "border-brand ring-2 ring-brand/20"
-              : "border-border"
+            // No focus ring, no border: since mango-ui 0.8.0 the Numo composer
+            // is a borderless `bg-control` surface (the editor caret is the
+            // signal), brand colors are kept for drag feedback only.
+            "chat-input-surface relative flex flex-col overflow-hidden rounded-2xl bg-control transition-all",
+            drop.dragging && "ring-2 ring-brand/20"
           )}
           {...(canAttach ? drop.handlers : {})}
         >
@@ -1516,7 +1503,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
                                 : t("addFilesOrContext")
                             }
                           >
-                            <Plus className="size-4" />
+                            <HugeiconsIcon icon={Add01Icon} className="size-4" />
                           </Button>
                         }
                       >
@@ -1534,7 +1521,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
                               }}
                               className="gap-2"
                             >
-                              <Paperclip className="size-4 text-muted-foreground" />
+                              <HugeiconsIcon icon={AttachmentIcon} className="size-4 text-muted-foreground" />
                               {tAttach("addFiles")}
                               <CommandShortcut className="inline-flex items-center gap-0.5 tracking-normal">
                                 <Kbd size="sm">{modKey}</Kbd>
@@ -1561,7 +1548,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
                                 onSelect={() => placeSkill(option.skill)}
                                 className="gap-2"
                               >
-                                <Layers className="size-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                                <HugeiconsIcon icon={Layers01Icon} className="size-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
                                 <span className="min-w-0">
                                   <span className="block truncate">{option.label}</span>
                                   <span className="block truncate text-xs text-muted-foreground">
@@ -1626,7 +1613,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
                             aria-label={tAttach("addFiles")}
                             aria-keyshortcuts="Meta+Shift+A Control+Shift+A"
                           >
-                            <Plus className="size-4" />
+                            <HugeiconsIcon icon={Add01Icon} className="size-4" />
                           </Button>
                         </span>
                       </TooltipTrigger>
@@ -1639,73 +1626,21 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
             </div>
             <div className="flex shrink-0 items-center gap-1.5">
               {isStreaming && (isEmpty || !sendWhileStreaming) ? (
-                <Popover
-                  open={stopConfirmOpen}
-                  onOpenChange={setStopConfirmOpen}
-                >
-                  <PopoverAnchor asChild>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          size="icon-sm"
-                          variant="default"
-                          onClick={() => setStopConfirmOpen(true)}
-                          aria-label={t("stop")}
-                          aria-haspopup="dialog"
-                          aria-controls={stopConfirmationId}
-                          aria-expanded={stopConfirmOpen}
-                          className="h-8 w-8 shrink-0 rounded-full bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
-                        >
-                          <Square className="h-3 w-3 fill-white text-white dark:fill-black dark:text-black" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent side="top">{t("stop")}</TooltipContent>
-                    </Tooltip>
-                  </PopoverAnchor>
-                  {/* Same confirmation gesture as the update action: a
-                      destructive stop deserves one click to reconsider, not
-                      an immediate abort. */}
-                  <PopoverContent
-                    id={stopConfirmationId}
-                    role="dialog"
-                    aria-labelledby={stopConfirmationTitleId}
-                    aria-describedby={stopConfirmationDescriptionId}
-                    side="top"
-                    align="end"
-                    sideOffset={8}
-                    collisionPadding={10}
-                    className="w-72 gap-3 rounded-xl p-3"
-                  >
-                    <PopoverHeader>
-                      <PopoverTitle id={stopConfirmationTitleId}>
-                        {t("stopConfirmTitle")}
-                      </PopoverTitle>
-                      <PopoverDescription id={stopConfirmationDescriptionId}>
-                        {t("stopConfirmDescription")}
-                      </PopoverDescription>
-                    </PopoverHeader>
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setStopConfirmOpen(false)}
-                      >
-                        {tCommon("cancel")}
-                      </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        onClick={() => {
-                          setStopConfirmOpen(false);
-                          onAbort?.();
-                        }}
-                      >
-                        {t("stop")}
-                      </Button>
-                    </div>
-                  </PopoverContent>
-                </Popover>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      size="icon-sm"
+                      variant="default"
+                      onClick={onAbort}
+                      aria-label={t("stop")}
+                      className="h-8 w-8 shrink-0 rounded-full bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
+                    >
+                      <HugeiconsIcon icon={SquareIcon} className="h-3 w-3 fill-white text-white dark:fill-black dark:text-black" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top">{t("stop")}</TooltipContent>
+                </Tooltip>
               ) : (
                 <>
                   {!isStreaming && (
@@ -1730,7 +1665,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
                               aria-disabled="true"
                               className="pointer-events-none inline-flex h-8 w-8 items-center justify-center rounded-full bg-muted text-muted-foreground"
                             >
-                              <ArrowUp className="h-3.5 w-3.5" />
+                              <HugeiconsIcon icon={ArrowUp01Icon} className="h-3.5 w-3.5" />
                             </span>
                           </span>
                         </TooltipTrigger>

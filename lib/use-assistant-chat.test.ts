@@ -122,6 +122,402 @@ afterEach(() => {
 });
 
 describe("Numo conversation settings", () => {
+  it("stops the known parent while a worker steering submission still awaits headers", async () => {
+    const parentTurnId = "51700000-0000-4000-8000-000000000002";
+    let finishSteering!: (response: Response) => void;
+    let stopBody!: Record<string, unknown>;
+    let requestId!: string;
+    let stopped = false;
+    h.webFetch.mockImplementation(async (url: string, init?: RequestInit) => {
+      if (url === "/api/assistant/chat") {
+        requestId = JSON.parse(String(init?.body)).requestId;
+        return new Promise<Response>((resolve) => { finishSteering = resolve; });
+      }
+      if (url === "/api/assistant/turns/stop") {
+        stopBody = JSON.parse(String(init?.body));
+        stopped = true;
+        return Response.json({ turn_id: parentTurnId, status: "stopped" });
+      }
+      if (url.includes("/status")) return Response.json({
+        status: stopped ? "stopped" : "waiting_work", turn_id: parentTurnId, activity: [],
+      });
+      if (url.includes("/messages")) return Response.json([]);
+      throw new Error(`Unexpected request: ${url}`);
+    });
+    await act(async () => root.render(createElement(Probe)));
+    await act(async () => value.loadConversation(conversationId, null));
+    let sending!: Promise<void>;
+    await act(async () => { sending = value.sendMessage(null, "Steer the worker"); });
+    await act(async () => { value.abort(); });
+    expect(stopBody).toEqual({ requestId, conversationId, newConversation: false, turnId: parentTurnId });
+    await act(async () => {
+      finishSteering(new Response('event: done\ndata: {"status":"waiting_work"}\n\n', {
+        headers: { "X-Numo-Conversation-Id": conversationId, "X-Numo-Turn-Id": parentTurnId },
+      }));
+      await sending;
+    });
+    expect(value.state.status).toBe("idle");
+  });
+
+  it("uses the exact parent turn returned by a mediated worker submission", async () => {
+    const parentTurnId = "51700000-0000-4000-8000-000000000002";
+    let stopBody!: Record<string, unknown>;
+    let stopped = false;
+    h.webFetch.mockImplementation(async (url: string, init?: RequestInit) => {
+      if (url === "/api/assistant/chat") return new Response(
+        'event: done\ndata: {"status":"waiting_work"}\n\n',
+        { headers: { "X-Numo-Conversation-Id": conversationId, "X-Numo-Turn-Id": parentTurnId } },
+      );
+      if (url === "/api/assistant/turns/stop") {
+        stopBody = JSON.parse(String(init?.body));
+        stopped = true;
+        return Response.json({ turn_id: parentTurnId, status: "stopped" });
+      }
+      if (url.includes("/status")) return Response.json({
+        status: stopped ? "stopped" : "idle", activity: [],
+      });
+      if (url.includes("/messages")) return Response.json([]);
+      throw new Error(`Unexpected request: ${url}`);
+    });
+    await act(async () => root.render(createElement(Probe)));
+    await act(async () => value.loadConversation(conversationId, null));
+    await act(async () => value.sendMessage(null, "Steer the worker"));
+    await act(async () => { value.abort(); });
+    expect(stopBody).toMatchObject({ conversationId, newConversation: false, turnId: parentTurnId });
+    expect(value.state.status).toBe("idle");
+  });
+
+  it("records Stop by request identity before the first response headers without disconnecting its executor", async () => {
+    let finishChat!: (response: Response) => void;
+    let chatSignal!: AbortSignal;
+    let chatBody!: { requestId: string; newConversationId: string };
+    let stopBody!: { requestId: string; conversationId: string; newConversation: boolean };
+    h.webFetch.mockImplementation(async (url: string, init?: RequestInit) => {
+      if (url === "/api/assistant/chat") {
+        chatBody = JSON.parse(String(init?.body));
+        chatSignal = init?.signal as AbortSignal;
+        return new Promise<Response>((resolve) => { finishChat = resolve; });
+      }
+      if (url === "/api/assistant/turns/stop") {
+        stopBody = JSON.parse(String(init?.body));
+        return Response.json({ status: "stopped" });
+      }
+      if (url.includes("/status")) return Response.json({ status: "stopped", activity: [] });
+      if (url.includes("/messages")) return Response.json([]);
+      throw new Error(`Unexpected request: ${url}`);
+    });
+    await act(async () => root.render(createElement(Probe)));
+    let sending!: Promise<void>;
+    await act(async () => { sending = value.sendMessage(null, "Hello"); });
+    expect(value.state.conversationId).toBeNull();
+    await act(async () => { value.abort(); });
+    expect(stopBody).toEqual({
+      requestId: chatBody.requestId,
+      conversationId: chatBody.newConversationId,
+      newConversation: true,
+    });
+    expect(chatSignal.aborted).toBe(false);
+    expect(value.state.status).toBe("idle");
+    await act(async () => {
+      finishChat(new Response('event: done\ndata: {"status":"stopped"}\n\n', {
+        headers: { "X-Numo-Conversation-Id": chatBody.newConversationId },
+      }));
+      await sending;
+    });
+    expect(value.state.status).toBe("idle");
+  });
+
+  it("freezes queued stream deltas while waiting for the durable Stop receipt", async () => {
+    let streamController!: ReadableStreamDefaultController<Uint8Array>;
+    let finishStop!: (response: Response) => void;
+    let chatSignal!: AbortSignal;
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) { streamController = controller; },
+    });
+    h.webFetch.mockImplementation(async (url: string, init?: RequestInit) => {
+      if (url === "/api/assistant/chat") {
+        chatSignal = init?.signal as AbortSignal;
+        return new Response(body, { headers: { "X-Numo-Conversation-Id": conversationId } });
+      }
+      if (url === "/api/assistant/turns/stop") {
+        return new Promise<Response>((resolve) => { finishStop = resolve; });
+      }
+      if (url.includes("/status")) return Response.json({ status: "stopped", activity: [] });
+      if (url.includes("/messages")) return Response.json([]);
+      throw new Error(`Unexpected request: ${url}`);
+    });
+    await act(async () => root.render(createElement(Probe)));
+    let sending!: Promise<void>;
+    await act(async () => { sending = value.sendMessage(null, "Hello"); });
+    await act(async () => { value.abort(); });
+    await act(async () => {
+      streamController.enqueue(new TextEncoder().encode('event: content_delta\ndata: {"delta":"late text"}\n\n'));
+    });
+    expect(chatSignal.aborted).toBe(false);
+    expect(value.state.status).toBe("idle");
+    expect(value.state.streamingContent).toBe("");
+    await act(async () => { finishStop(Response.json({ status: "stopped" })); });
+    await act(async () => {
+      streamController.enqueue(new TextEncoder().encode('event: done\ndata: {"status":"stopped"}\n\n'));
+      streamController.close();
+      await sending;
+    });
+    expect(value.state.status).toBe("idle");
+  });
+
+  it("keeps Stop available when the server rejects cancellation", async () => {
+    let finishChat!: (response: Response) => void;
+    h.webFetch.mockImplementation(async (url: string) => {
+      if (url === "/api/assistant/chat") {
+        return new Promise<Response>((resolve) => { finishChat = resolve; });
+      }
+      if (url === "/api/assistant/turns/stop") {
+        return Response.json({ error: "Stop request failed" }, { status: 409 });
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    });
+    await act(async () => root.render(createElement(Probe)));
+    let sending!: Promise<void>;
+    await act(async () => { sending = value.sendMessage(null, "Hello"); });
+    await act(async () => { value.abort(); });
+    expect(value.state.status).toBe("generating_server");
+    expect(value.state.error).toBe("Stop request failed");
+    await act(async () => { value.abort(); });
+    expect(h.webFetch.mock.calls.filter(([url]) => url === "/api/assistant/turns/stop")).toHaveLength(2);
+    await act(async () => {
+      finishChat(new Response('event: done\ndata: {"status":"stopped"}\n\n'));
+      await sending;
+    });
+  });
+
+  it("reconciles a loaded turn that completed just before the conversation-wide Stop", async () => {
+    let stopped = false;
+    h.webFetch.mockImplementation(async (url: string) => {
+      if (url.endsWith("/turn")) {
+        stopped = true;
+        return Response.json({ error: "No active turn" }, { status: 409 });
+      }
+      if (url.includes("/status")) return Response.json({
+        status: stopped ? "completed" : "running", activity: [],
+      });
+      if (url.includes("/messages")) return Response.json([]);
+      throw new Error(`Unexpected request: ${url}`);
+    });
+    await act(async () => root.render(createElement(Probe)));
+    await act(async () => value.loadConversation(conversationId, null));
+    await act(async () => { value.abort(); });
+    expect(value.state.status).toBe("idle");
+    expect(value.state.error).toBeNull();
+  });
+
+  it("keeps a stopped executor connected after Reset and ignores its late headers", async () => {
+    let finishChat!: (response: Response) => void;
+    let chatSignal!: AbortSignal;
+    let prospectiveConversationId!: string;
+    h.webFetch.mockImplementation(async (url: string, init?: RequestInit) => {
+      if (url === "/api/assistant/chat") {
+        chatSignal = init?.signal as AbortSignal;
+        prospectiveConversationId = JSON.parse(String(init?.body)).newConversationId;
+        return new Promise<Response>((resolve) => { finishChat = resolve; });
+      }
+      if (url === "/api/assistant/turns/stop") return Response.json({ status: "stopped" });
+      if (url.includes("/status")) return Response.json({ status: "stopped", activity: [] });
+      if (url.includes("/messages")) return Response.json([]);
+      throw new Error(`Unexpected request: ${url}`);
+    });
+    await act(async () => root.render(createElement(Probe)));
+    let sending!: Promise<void>;
+    await act(async () => { sending = value.sendMessage(null, "Hello"); });
+    await act(async () => { value.abort(); });
+    await act(async () => { value.reset(); });
+    expect(chatSignal.aborted).toBe(false);
+    await act(async () => {
+      finishChat(new Response('event: done\ndata: {"status":"stopped"}\n\n', {
+        headers: { "X-Numo-Conversation-Id": prospectiveConversationId },
+      }));
+      await sending;
+    });
+    expect(value.state.conversationId).toBeNull();
+    expect(value.state.messages).toEqual([]);
+    expect(value.state.status).toBe("idle");
+  });
+
+  it("does not let a delayed Stop response or old headers overwrite a newer request", async () => {
+    let finishOldChat!: (response: Response) => void;
+    let finishOldStop!: (response: Response) => void;
+    let streamController!: ReadableStreamDefaultController<Uint8Array>;
+    const newStream = new ReadableStream<Uint8Array>({
+      start(controller) { streamController = controller; },
+    });
+    const chats: Array<{ requestId: string; newConversationId: string }> = [];
+    h.webFetch.mockImplementation(async (url: string, init?: RequestInit) => {
+      if (url === "/api/assistant/chat") {
+        const body = JSON.parse(String(init?.body));
+        chats.push(body);
+        if (chats.length === 1) return new Promise<Response>((resolve) => { finishOldChat = resolve; });
+        return new Response(newStream, { headers: { "X-Numo-Conversation-Id": body.newConversationId } });
+      }
+      if (url === "/api/assistant/turns/stop") {
+        return new Promise<Response>((resolve) => { finishOldStop = resolve; });
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    });
+    await act(async () => root.render(createElement(Probe)));
+    let oldSending!: Promise<void>;
+    let newSending!: Promise<void>;
+    await act(async () => { oldSending = value.sendMessage(null, "Old request"); });
+    await act(async () => { value.abort(); });
+    await act(async () => { newSending = value.sendMessage(null, "New request"); });
+    await act(async () => {
+      streamController.enqueue(new TextEncoder().encode('event: content_delta\ndata: {"delta":"new text"}\n\n'));
+    });
+    await act(async () => {
+      finishOldStop(Response.json({ status: "stopped" }));
+      finishOldChat(new Response('event: done\ndata: {"status":"stopped"}\n\n', {
+        headers: { "X-Numo-Conversation-Id": chats[0].newConversationId },
+      }));
+      await oldSending;
+    });
+    expect(value.state.conversationId).toBe(chats[1].newConversationId);
+    expect(value.state.streamingContent).toBe("new text");
+    expect(value.state.status).toBe("streaming");
+    await act(async () => {
+      streamController.enqueue(new TextEncoder().encode(
+        'event: message_complete\ndata: {"message_id":"new-final"}\n\n'
+        + 'event: done\ndata: {"status":"completed"}\n\n',
+      ));
+      streamController.close();
+      await newSending;
+    });
+    expect(value.state.messages.at(-1)?.content).toBe("new text");
+  });
+
+  it("renders fragmented SSE text before the response finishes", async () => {
+    let streamController!: ReadableStreamDefaultController<Uint8Array>;
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) { streamController = controller; },
+    });
+    h.webFetch.mockResolvedValue(new Response(body, {
+      headers: { "X-Numo-Conversation-Id": conversationId },
+    }));
+    await act(async () => root.render(createElement(Probe)));
+    let sending!: Promise<void>;
+    await act(async () => { sending = value.sendMessage(null, "Hello"); });
+    await act(async () => {
+      streamController.enqueue(new TextEncoder().encode("event: content_delta\n"));
+    });
+    await act(async () => {
+      streamController.enqueue(new TextEncoder().encode('data: {"delta":"first token"}\n\n'));
+    });
+    expect(value.state.status).toBe("streaming");
+    expect(value.state.streamingContent).toBe("first token");
+    await act(async () => {
+      streamController.enqueue(new TextEncoder().encode(
+        'event: message_complete\ndata: {"message_id":"final"}\n\n'
+        + 'event: done\ndata: {"status":"completed"}\n\n',
+      ));
+      streamController.close();
+      await sending;
+    });
+    expect(value.state.messages.at(-1)?.content).toBe("first token");
+    expect(value.state.status).toBe("idle");
+  });
+
+  it("ignores a status request from before Stop instead of replaying late text", async () => {
+    let finishOldPoll!: (response: Response) => void;
+    const oldPoll = new Promise<Response>((resolve) => { finishOldPoll = resolve; });
+    let statusCalls = 0;
+    h.webFetch.mockImplementation(async (url: string) => {
+      if (url.endsWith("/turn")) return Response.json({ turn_id: "turn-1", status: "stopped" });
+      if (url.includes("/status")) {
+        statusCalls += 1;
+        if (statusCalls === 1) return Response.json({ status: "running", activity: [] });
+        if (statusCalls === 2) return oldPoll;
+        return Response.json({ status: "stopped", activity: [] });
+      }
+      if (url.includes("/messages")) return Response.json([]);
+      throw new Error(`Unexpected request: ${url}`);
+    });
+    await act(async () => root.render(createElement(Probe)));
+    await act(async () => value.loadConversation(conversationId, null));
+    await act(async () => { value.abort(); });
+    await act(async () => {
+      finishOldPoll(Response.json({
+        status: "running",
+        activity: [{ seq: 1, type: "content_delta", payload: { delta: "late text" } }],
+      }));
+    });
+    expect(value.state.status).toBe("idle");
+    expect(value.state.streamingContent).toBe("");
+  });
+
+  it("does not restart polling from a connection-loss reconciliation that Stop superseded", async () => {
+    let finishReconciliation!: (response: Response) => void;
+    let statusCalls = 0;
+    h.webFetch.mockImplementation(async (url: string) => {
+      if (url === "/api/assistant/chat") return new Response("", {
+        headers: { "X-Numo-Conversation-Id": conversationId },
+      });
+      if (url === "/api/assistant/turns/stop") return Response.json({ status: "stopped" });
+      if (url.includes("/status")) {
+        statusCalls += 1;
+        if (statusCalls === 1) return new Promise<Response>((resolve) => { finishReconciliation = resolve; });
+        return Response.json({ status: "stopped", activity: [] });
+      }
+      if (url.includes("/messages")) return Response.json([]);
+      throw new Error(`Unexpected request: ${url}`);
+    });
+    await act(async () => root.render(createElement(Probe)));
+    let sending!: Promise<void>;
+    await act(async () => { sending = value.sendMessage(null, "Hello"); });
+    await act(async () => { value.abort(); });
+    const callsAfterStop = statusCalls;
+    await act(async () => {
+      finishReconciliation(Response.json({ status: "running", activity: [] }));
+      await sending;
+    });
+    expect(statusCalls).toBe(callsAfterStop);
+    expect(value.state.status).toBe("idle");
+  });
+
+  it("does not project journal text during post-Stop reconciliation while history is still loading", async () => {
+    let streamController!: ReadableStreamDefaultController<Uint8Array>;
+    let finishMessages!: (response: Response) => void;
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) { streamController = controller; },
+    });
+    h.webFetch.mockImplementation(async (url: string) => {
+      if (url === "/api/assistant/chat") return new Response(stream, {
+        headers: { "X-Numo-Conversation-Id": conversationId },
+      });
+      if (url === "/api/assistant/turns/stop") return Response.json({ status: "stopped" });
+      if (url.includes("/status")) return Response.json({
+        status: "stopped",
+        activity: [
+          { seq: 1, type: "content_delta", payload: { delta: "post-Stop text" } },
+          { seq: 2, type: "reasoning_start", payload: {} },
+          { seq: 3, type: "reasoning_delta", payload: { text: "post-Stop reasoning" } },
+        ],
+      });
+      if (url.includes("/messages")) return new Promise<Response>((resolve) => { finishMessages = resolve; });
+      throw new Error(`Unexpected request: ${url}`);
+    });
+    await act(async () => root.render(createElement(Probe)));
+    let sending!: Promise<void>;
+    await act(async () => { sending = value.sendMessage(null, "Hello"); });
+    await act(async () => { value.abort(); });
+    expect(value.state.status).toBe("idle");
+    expect(value.state.streamingContent).toBe("");
+    expect(value.state.streamingReasoning).toBeNull();
+    await act(async () => {
+      finishMessages(Response.json([]));
+      streamController.enqueue(new TextEncoder().encode('event: done\ndata: {"status":"stopped"}\n\n'));
+      streamController.close();
+      await sending;
+    });
+    expect(value.state.status).toBe("idle");
+  });
+
   it("restores the authoritative pending worker decision on reload", async () => {
     h.webFetch.mockResolvedValue(Response.json({
       status: "waiting_input",
@@ -366,5 +762,68 @@ describe("Numo conversation settings", () => {
     expect(value.state.status).toBe("idle");
     expect(value.state.error).toBeNull();
     expect(value.state.messages.at(-1)?.id).toBe("final");
+  });
+
+  it("idles the thread instantly on stop and still records the durable stop", async () => {
+    // Reference experience: pressing stop must freeze the thread at once,
+    // not keep a busy presentation until polling confirms. The durable stop
+    // must still be sent, quietly reconciled afterwards.
+    const fetches: string[] = [];
+    let stopPosted = false;
+    h.webFetch.mockImplementation(async (url: string, init?: { body?: string }) => {
+      fetches.push(String(url));
+      if (String(url).endsWith("/turns/stop")) {
+        stopPosted = true;
+        expect(JSON.parse(String(init?.body))).toMatchObject({ conversationId, newConversation: false });
+        return Response.json({ turn_id: "turn-1", status: "stopping" });
+      }
+      if (String(url).includes("/status")) {
+        return Response.json({ status: stopPosted ? "stopped" : "running", error_message: null, activity: [] });
+      }
+      if (String(url).includes("/messages")) {
+        return Response.json([message("final", "assistant", "2026-09-12T10:00:03.000Z")]);
+      }
+      return Response.json({ status: "idle", error_message: null });
+    });
+
+    await act(async () => root.render(createElement(Probe)));
+    await act(async () => value.loadConversation(conversationId, null));
+    await act(async () => value.sendMessage(null, "Hang the stream, then answer"));
+    // The stream closed without a terminal event: reconciliation rode in.
+
+    await act(async () => { value.abort(); });
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 50)); });
+
+    expect(value.state.status).toBe("idle");
+    expect(stopPosted).toBe(true);
+  });
+
+  it("restores the busy presentation when the authoritative turn keeps running", async () => {
+    // The optimistic idle must not stick if the stop did not win: a turn
+    // that is still running means the composer freezes misleadingly.
+    h.webFetch.mockImplementation(async (url: string) => {
+      if (String(url).endsWith("/turns/stop")) {
+        return Response.json({ turn_id: "turn-1", status: "stopping" });
+      }
+      if (String(url).includes("/api/assistant/chat")) {
+        return new Response(
+          'event: content_delta\ndata: {"delta":"partial"}\n\n',
+          { headers: { "X-Numo-Conversation-Id": conversationId } },
+        );
+      }
+      if (String(url).includes("/status")) {
+        return Response.json({ status: "running", error_message: null, activity: [] });
+      }
+      if (String(url).includes("/messages")) {
+        return Response.json([message("final", "assistant", "2026-09-12T10:00:03.000Z")]);
+      }
+      return Response.json({ status: "idle", error_message: null });
+    });
+    await act(async () => root.render(createElement(Probe)));
+    await act(async () => value.loadConversation(conversationId, null));
+    await act(async () => value.sendMessage(null, "Hello"));
+    await act(async () => { value.abort(); });
+    // Quiet poll observed the still-running turn: back to the busy card.
+    expect(value.state.status).toBe("generating_server");
   });
 });

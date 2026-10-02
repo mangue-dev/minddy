@@ -59,8 +59,10 @@ import {
 } from "./opencode-events";
 import {
   looksLikeUnexecutedPreamble,
+  MAX_COMPLETION_REPAIRS,
   OPENCODE_CONTINUATION_REPAIR,
 } from "./opencode-continuation";
+import { hasSerializedToolCall } from "../../../ai-completion";
 import {
   opencodeAnchorFile,
   opencodeDbPath,
@@ -1208,11 +1210,8 @@ export async function runOpencodeTurn(
     const warmToolsPromise = client
       .warmTools(job.model)
       .then(() => timing("opencode-tools-ready"))
-      .catch((err) => {
-        console.warn(
-          "[supervisor] opencode tool warm-up failed:",
-          (err as Error).message,
-        );
+      .catch(() => {
+        console.warn("[supervisor] opencode_tool_warmup_failed");
       });
 
     // ── The session: resumed by the journal, or new ────────────────────────
@@ -1227,8 +1226,8 @@ export async function runOpencodeTurn(
         // before checkpointing its cursor. Rebase on what was successfully
         // replayed so the next export cannot wrap that prefix in a new batch.
         journalSeq = lastSeqByAggregate(journalSeq, previous.events);
-      } catch (err) {
-        console.error("[supervisor] replay failed:", (err as Error).message);
+      } catch {
+        console.error("[supervisor] replay_failed");
         sessionId = "";
         journalSeq = {};
       }
@@ -1301,8 +1300,10 @@ export async function runOpencodeTurn(
     let toolsSeen = 0;
     /** The end of the mother's last round — `idle` does not carry this information. */
     let lastParentFinish: string | null = null;
-    /** A text action announcement only repairs once: never loops. */
-    let repairedPreamble = false;
+    let lastParentReply = "";
+    let completionRepairs = 0;
+    let completionRejected = false;
+    let completionRepairPending = false;
     let repairedPermissionCascade = false;
     let rejectedPermissionThisRound = false;
     /**
@@ -1467,6 +1468,7 @@ export async function runOpencodeTurn(
       if (stoppingTurn) return stoppingTurn;
       interrupted = true;
       validationAbort.abort();
+      proxy.cancel();
       stoppingTurn = (async () => {
         const acknowledged = await abortSession();
         if (!acknowledged || !(await client.waitIdle())) {
@@ -1620,14 +1622,11 @@ export async function runOpencodeTurn(
         ) {
           runClosed = true;
         }
-      } catch (err) {
+      } catch {
         // A failed save does not break the round: it costs the restart, and
         // the next pass will try again. What she should not do is
         // pushing back the deadline in silence — hence the trace.
-        console.error(
-          "[supervisor] periodic checkpoint failed:",
-          (err as Error).message,
-        );
+        console.error("[supervisor] periodic_checkpoint_failed");
       }
     };
 
@@ -1733,14 +1732,11 @@ export async function runOpencodeTurn(
       const answers = matched.some((entry) => entry.answer)
         ? matched.map((entry) => (entry.answer ? [entry.answer] : []))
         : asked.questions.map((_, i) => (i === 0 ? [text] : []));
-      await client.replyQuestion(asked.id, answers).catch((err) => {
+      await client.replyQuestion(asked.id, answers).catch(() => {
         // A response that does not arrive leaves the tool hanging until the
         // deadline. To say - but not to bring down the trick, as for the
         // permissions: the model will see its tool never render.
-        console.error(
-          "[supervisor] question reply failed:",
-          (err as Error).message,
-        );
+        console.error("[supervisor] question_reply_failed");
       });
       // A human may answer after hours. Give the resumed model a fresh silence
       // window instead of measuring from when the question was first asked.
@@ -1768,6 +1764,12 @@ export async function runOpencodeTurn(
      * by composing it), while a steering message has no other trace.
      * Emitting both would cause the user to read the same sentence twice.
      */
+    const promptParent = async (prompt: string): Promise<void> => {
+      // A new prompt cannot inherit completion evidence from the previous one.
+      lastParentFinish = null;
+      lastParentReply = "";
+      await client.promptAsync(sessionId, prompt);
+    };
     const postPending = async (): Promise<void> => {
       if (interrupted) return;
       const parts = pendingPrompt.splice(0);
@@ -1812,8 +1814,7 @@ export async function runOpencodeTurn(
         pendingPrompt.unshift(...parts.filter((part) => part.steered));
         return;
       }
-      await client.promptAsync(
-        sessionId,
+      await promptParent(
         parts
           .map((part) =>
             promptWithMentions(part.message.text, part.message.mentions),
@@ -2090,8 +2091,8 @@ export async function runOpencodeTurn(
         const pending = await cp.hasPendingMessages();
         if (pending || pendingPrompt.length > 0 || monitorClosed) return;
         await stopTurn();
-      } catch (err) {
-        console.error("[supervisor] stop monitor failed:", (err as Error).message);
+      } catch {
+        console.error("[supervisor] stop_monitor_failed");
       } finally {
         controlBusy = false;
       }
@@ -2132,8 +2133,29 @@ export async function runOpencodeTurn(
           await stoppingTurn;
           break;
         }
-        if (winner.done) break;
+        if (winner.done) {
+          // EOF is a transport boundary, never evidence of a completed task.
+          if (!budgetExhausted && !interrupted && !sessionError && !timedOut && !askedUser) {
+            completionRejected = true;
+            sessionError = "The event stream closed before the parent session confirmed completion. Its checkpoint was kept.";
+            // The event connection can close while the engine still executes.
+            // Stabilize tools and the journal before exporting a resume cursor.
+            validationAbort.abort();
+            proxy.cancel();
+            const acknowledged = await abortSession();
+            if (!acknowledged || !(await client.waitIdle())) {
+              forcedStop = true;
+              await server?.stop();
+            }
+            await Promise.allSettled(validationCommands);
+            await cp.emit("error", { code: "replyIncomplete", message: sessionError });
+          }
+          break;
+        }
         const raw = winner.value;
+        // The translator clears the round's parts on finish. Keep the actual
+        // terminal text, including an empty reply, instead of an earlier result.
+        const roundTextBeforeEvent = liveTextOf(state, sessionId);
         const out = translateEvent(raw, state);
         // `/event` is server-wide. Activity from an unrelated session must not
         // keep this turn alive, while registered child sessions legitimately do.
@@ -2324,14 +2346,11 @@ export async function runOpencodeTurn(
           }
           await client
             .replyPermission(out.permission.id, verdict.reply, verdict.message)
-            .catch((err) => {
+            .catch(() => {
               // A verdict that does not arrive leaves the tool hanging until the
               // deadline of the round. To say, therefore – but not to bring down the trick:
               // the model will see its tool never render, and that is already a signal.
-              console.error(
-                "[supervisor] permission reply failed:",
-                (err as Error).message,
-              );
+              console.error("[supervisor] permission_reply_failed");
             });
         }
 
@@ -2553,7 +2572,10 @@ export async function runOpencodeTurn(
               ...liveEdits.payload(),
             });
           }
-          if (!child) lastParentFinish = out.usage.finish;
+          if (!child) {
+            lastParentFinish = out.usage.finish;
+            lastParentReply = roundTextBeforeEvent.trim();
+          }
           // The round is closed, whatever its end: the tool counter
           // start from scratch for the next one.
           if (!child) toolsSeen = 0;
@@ -2707,7 +2729,7 @@ export async function runOpencodeTurn(
             abortsRequested = 0;
             awaitingFirstModelSignal = true;
             timing("shell-timeout-recovery");
-            await client.promptAsync(sessionId, recovery.prompt);
+            await promptParent(recovery.prompt);
             lastEventAt = now();
             continue;
           }
@@ -2737,34 +2759,28 @@ export async function runOpencodeTurn(
             rejectedPermissionThisRound = false;
             awaitingFirstModelSignal = true;
             timing("permission-cascade-retry");
-            await client.promptAsync(
-              sessionId,
+            await promptParent(
               "One or more tool permissions were refused and OpenCode cancelled the other parallel tool calls. Read the tool errors, continue with a safe alternative, and do not repeat the refused action.",
             );
             continue;
           }
-          /**
-           * GPT-5.6 Luna has been observed ending a `stop` round with "I'm going
-           * inventory… then check…”, without any call to tool. One layer
-           * OpenAI-compatible had flattened what was semantically a
-           * commentary in wizard text: for opencode, `stop` + `idle` is
-           * a perfectly valid conclusion, while the sentence promises
-           * still all the work.
-           *
-           * We repair the contradiction ONCE, in the same session: the text
-           * becomes the intermediate narration that it should have been, then a
-           * internal instruction requires action without announcing again. Detection is
-           * deliberately narrow (`opencode-continuation.ts`) so as never to
-           * relaunch a real answer that would simply speak to the future.
-           */
-          const stranded = outward(replyOf(state, sessionId));
+          // A normal stop can still contain an action announcement. Conversely,
+          // idle after a truncated, empty or malformed round is not completion.
+          const stranded = outward(lastParentReply);
           if (
-            !repairedPreamble &&
-            lastParentFinish === "stop" &&
-            looksLikeUnexecutedPreamble(stranded)
+            !sessionError &&
+            (lastParentFinish !== "stop" || !stranded.trim() ||
+              hasSerializedToolCall(stranded) || looksLikeUnexecutedPreamble(stranded))
           ) {
-            repairedPreamble = true;
-            await cp.emit("thinking", { text: cap(stranded, 2000) });
+            if (completionRepairs >= MAX_COMPLETION_REPAIRS) {
+              completionRejected = true;
+              sessionError = "The model repeatedly ended before completing its work. Its checkpoint was kept and nothing was committed.";
+              await cp.emit("error", { code: "replyIncomplete", message: sessionError });
+              break;
+            }
+            completionRepairs++;
+            completionRepairPending = true;
+            if (stranded) await cp.emit("thinking", { text: cap(stranded, 2000) });
             if (interrupted) {
               await stoppingTurn;
               break;
@@ -2772,6 +2788,7 @@ export async function runOpencodeTurn(
             reasoningSince = null;
             lastLiveAt = 0;
             toolsSeen = 0;
+            awaitingFirstModelSignal = true;
             publishLive({
               text: "",
               tools: 0,
@@ -2779,9 +2796,10 @@ export async function runOpencodeTurn(
               reasoningMs: 0,
               ...liveEdits.payload(),
             });
-            await client.promptAsync(sessionId, OPENCODE_CONTINUATION_REPAIR);
+            await promptParent(OPENCODE_CONTINUATION_REPAIR);
             continue;
           }
+          if (!sessionError) completionRepairPending = false;
           break;
         }
 
@@ -2874,14 +2892,11 @@ export async function runOpencodeTurn(
       opencodeState = forcedStop
         ? { sessionId, seq: journalSeq }
         : await syncJournal();
-    } catch (err) {
+    } catch {
       // A newspaper that we have not been able to export does not lose the trick: it loses the
       // RESUME, and the next round will start with a new session. To say, therefore,
       // and not to swallow in silence.
-      console.error(
-        "[supervisor] history export failed:",
-        (err as Error).message,
-      );
+      console.error("[supervisor] history_export_failed");
     }
 
     // ── The push, the diff, the report ──────────────────── ─────────────────────
@@ -2899,7 +2914,11 @@ export async function runOpencodeTurn(
      * therefore, on a machine, the paths that he had just mentioned, even in a
      * commit message pushed to the forge.
      */
-    const reply = askedUser ? "" : outward(replyOf(state, sessionId));
+    // A failed correction must retain partial work until a valid final answer.
+    if (completionRepairPending && (sessionError || timedOut || interrupted || budgetExhausted)) {
+      completionRejected = true;
+    }
+    const reply = askedUser || completionRejected ? "" : outward(replyOf(state, sessionId));
     /**
      * THE FINAL WORD, SAID TO THE WIRE — and this is what ENDS the round on the screen.
      *
@@ -2977,12 +2996,12 @@ export async function runOpencodeTurn(
         stat.untracked > 0
       );
     };
-    if (job.writesToRepo && !current && (await pendingCloneWork())) {
+    if (job.writesToRepo && !current && !completionRejected && (await pendingCloneWork())) {
       try {
         pushed = await pushWork(commitMessageFromReply(reply, job.commitRef));
       } catch (err) {
         pushError = outward((err as Error).message);
-        console.error("[supervisor] turn-end push failed:", pushError);
+        console.error("[supervisor] turn_end_push_failed");
       }
     }
 
@@ -3058,6 +3077,7 @@ export async function runOpencodeTurn(
       // `agent_question` rather than `agent_done` ([vm-rest.ts](../vm-rest.ts)).
       ...(askedUser ? { askedUser: true } : {}),
       ...(timedOut ? { errorCode: "turnTooLong" as const } : {}),
+      ...(completionRejected ? { errorCode: "replyIncomplete" as const } : {}),
       ...(sessionError
         ? { errorMessage: cap(outward(sessionError), 1000) }
         : {}),
@@ -3211,38 +3231,30 @@ class TurnLedger {
   }
 
   /**
-   * THE ROUNDS CUT IN FLIGHT — the ones that opencode will never say anything about.
-   *
-   * Measured (file §2.23): an aborted round returns `finish: null`, `cost: 0`,
-   * `tokens: 0` and a `MessageAbortedError`, while the supplier has invoiced.
-   * The proxy has read the last frame of the stream — it does not cut upstream when
-   * the customer leaves. We therefore write the line with ITS numbers.
-   *
-   * `estimated: false` without hesitation: it’s not a calculation, it’s the amount
-   * charged, read in the response. A flow that wouldn't even have returned its `usage`
-   * (supplier cut off, network failure) is not written at all: a line with zero
-   * would read “this call was free”, which exactly fills the gap.
-   *
-   * `seq`: the MOTHER gang, always. Proxy doesn't know which session
-   * came the request — he sees HTTP, not sessions — and a row
-   * under the mother is infinitely better than an expense that does not exist anywhere.
+   * Record generations the engine did not finish. Provider-reported usage is
+   * authoritative; a canceled generation without its final usage keeps an
+   * identifiable ledger receipt with unknown cost, never a fabricated zero.
    */
   async recordOrphans(
     cp: ControlPlaneClient,
     proxy: LlmProxy,
   ): Promise<number> {
-    // The race: the upstream finishes AFTER the customer (1.2 seconds measured). Drain without
-    // waiting would find nothing.
+    // Wait only for local relay cleanup, bounded even on network failure.
     await proxy.settle(ORPHAN_SETTLE_MS);
     let total = 0;
     for (const gen of proxy.drain()) {
       const usage = gen.usage;
       if (!usage || gen.costUsd == null) {
-        // Nothing billable to write, but it SAYS: it's the only sign
-        // that an expense could have gone off the counters.
-        console.error(
-          `[supervisor] round coupé sans usage du fournisseur (gen ${gen.id ?? "?"}) — non facturé`,
-        );
+        console.error("[supervisor] provider_usage_missing", gen.id);
+        if (gen.id) await cp.recordUsage({
+          runId: this.job.ledgerRunId, seq: this.parentSeq++,
+          feature: this.job.feature, billTo: { unattributed: "resolved by the control plane" },
+          model: gen.model || this.job.model, generationId: gen.id,
+          promptTokens: usage?.promptTokens ?? null,
+          completionTokens: usage?.completionTokens ?? null,
+          totalTokens: usage?.totalTokens ?? null, cost: null,
+          projectId: this.job.projectId,
+        });
         continue;
       }
       const prompt = usage.promptTokens ?? 0;

@@ -1,5 +1,5 @@
 import { ListItem, OrderedList } from "@tiptap/extension-list";
-import { ListOrdered } from "lucide-react";
+import { ListOrderedIcon as ListOrdered } from "@hugeicons/core-free-icons";
 import type { PageBlock } from "@/components/pages/blocks/types";
 
 export const orderedListBlock: PageBlock = {

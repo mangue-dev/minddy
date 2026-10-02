@@ -1,9 +1,17 @@
+import { issueStore } from "@/lib/server/issue-store";
+import { categoryStore } from "@/lib/server/category-store";
+import { objectiveStore } from "@/lib/server/objective-store";
+import { commentStore } from "@/lib/server/comment-store";
+import { readIssueEvents } from "@/lib/server/issue-event-store";
 import "server-only";
+import { decodeAttachmentRow } from "@/lib/server/attachment-content";
+import { decodePageProjection } from "@/lib/server/page-content";
 
 import { z } from "zod";
 
 import type { McpServer } from "@modelcontextprotocol/server";
 import { getServiceClient } from "@/lib/supabase-service";
+import { decodeProjectName } from "@/lib/server/project-content";
 import {
   getIssue,
   listIssues,
@@ -82,6 +90,7 @@ import {
   revokeIntegration,
   updateIntegrationWebhook,
 } from "@/lib/server/integrations";
+import { decodeIntegrationField } from "@/lib/server/integration-content";
 import { WEBHOOK_EVENTS, WEBHOOK_SCOPES } from "@/lib/server/webhooks";
 import { SITE_URL } from "@/lib/site";
 import {
@@ -177,8 +186,7 @@ const MAX_PATCH_CHARS = 4000;
  `code` of the shared core IS the MCP error code: only one vocabulary. */
 const LINK_REFUSALS: Record<PrLinkRefusal, string> = {
   pr_already_linked:
-    "This pull request is already attached to another issue. The link is definitive: " +
-    "it cannot be replaced, and there is no unlink.",
+    "The pull request could not be linked. Refresh it and try again.",
   issue_already_linked:
     "This issue already carries a live (draft or open) pull request. Only ONE live pull " +
     "request per issue — wait for it to be merged or closed.",
@@ -273,15 +281,17 @@ function coreFail(r: CoreFailure): ToolResult {
  */
 async function readIssueText(
   issueId: string,
+  projectId: string,
+  actorId: string,
 ): Promise<
   | { plan: string; description: string; updatedAt: string }
   | { error: ToolResult }
 > {
-  const { data, error } = await getServiceClient()
-    .from("issues")
+  const { data, error } = await issueStore(getServiceClient(), actorId)
     .select("plan, description, updated_at")
     .is("deleted_at", null)
     .eq("id", issueId)
+    .eq("project_id", projectId)
     .maybeSingle();
   if (error) return { error: fail("database_error", error.message) };
   if (!data) return { error: fail("not_found", "Issue not found.") };
@@ -453,11 +463,12 @@ const RECURRENCE_FIELD = z
       "(null, via minddy_update_issues) to stop the series.",
   );
 
-function mcpReadCtx(access: ProjectAccess): ReadContext {
+function mcpReadCtx(access: ProjectAccess, actorId?: string): ReadContext {
   const service = getServiceClient();
   return {
     db: service,
     service,
+    actorId,
     projectId: access.project.id,
     projectKey: access.project.key,
   };
@@ -500,19 +511,11 @@ async function resolveFeedbackPost(
 , never from both. */
 async function recentActivity(
   parent: { issue_id: string } | { objective_id: string },
+  actorId: string, projectId: string,
 ): Promise<Array<Record<string, unknown>>> {
   const service = getServiceClient();
-  const query = service
-    .from("issue_events")
-    .select(
-      "type, field, from_value, to_value, actor_id, via_assistant, via_mcp, api_key_id, integration_id, created_at",
-    )
-    .order("created_at", { ascending: false })
-    .limit(20);
-  const { data } =
-    "issue_id" in parent
-      ? await query.eq("issue_id", parent.issue_id)
-      : await query.eq("objective_id", parent.objective_id);
+  const { data, error } = await readIssueEvents(service, parent, { descending: true, limit: 20, actorId, projectId });
+  if (error) throw new Error("Unable to read activity");
   const events = (data ?? []).reverse();
   if (events.length === 0) return [];
 
@@ -526,7 +529,7 @@ async function recentActivity(
     resolveApiKeyActors(events.map((e) => e.api_key_id as string | null)),
     service
       .from("integrations")
-      .select("id, name")
+      .select("id, project_id, name")
       .in("id", [
         ...new Set(
           events
@@ -535,9 +538,9 @@ async function recentActivity(
         ),
       ]),
   ]);
-  const integrationNames = new Map(
-    (integrations ?? []).map((i) => [i.id, i.name]),
-  );
+  const integrationNames = new Map(await Promise.all(
+    (integrations ?? []).map(async (row) => [row.id,
+      await decodeIntegrationField(row,"name",row.name)] as const)));
 
   return events.map((e) => {
     // PR/MR action from a webhook provider: no minddy actor — the login
@@ -572,7 +575,7 @@ async function withNames(
   access: ProjectAccess,
 ): Promise<Array<Record<string, unknown>>> {
   const service = getServiceClient();
-  const [users, { data: objectives }, { data: categories }] = await Promise.all(
+  const [users, { data: objectives, error: objectiveError }, { data: categories, error: categoryError }] = await Promise.all(
     [
       fetchAuthUsersById(
         service,
@@ -580,17 +583,16 @@ async function withNames(
           .map((r) => r.assignee_id)
           .filter((v): v is string => typeof v === "string"),
       ),
-      service
-        .from("objectives")
+      objectiveStore(service)
         .select("id, name")
         .eq("project_id", access.project.id)
         .is("deleted_at", null),
-      service
-        .from("categories")
+      categoryStore(service)
         .select("id, name")
         .eq("project_id", access.project.id),
     ],
   );
+  if (objectiveError || categoryError) throw new Error("Unable to read issue labels");
   const objectiveNames = new Map((objectives ?? []).map((o) => [o.id, o.name]));
   const categoryNames = new Map((categories ?? []).map((c) => [c.id, c.name]));
 
@@ -629,8 +631,7 @@ async function resolveCategoryRefs(
   names: string[] | undefined,
 ): Promise<{ ids: string[]; unmatched: string[] } | { error: ToolResult }> {
   if (!ids?.length && !names?.length) return { ids: [], unmatched: [] };
-  const { data, error } = await getServiceClient()
-    .from("categories")
+  const { data, error } = await categoryStore(getServiceClient())
     .select("id, name")
     .eq("project_id", projectId);
   if (error) return { error: fail("database_error", error.message) };
@@ -915,7 +916,7 @@ export function registerMinddyTools(
       const memberIds = (memberships ?? []).map((m) => m.project_id as string);
       let query = service
         .from("projects")
-        .select("id, name, key, owner_id")
+        .select("id, name, key, owner_id, encrypted_content, encryption_version")
         .is("deleted_at", null)
         .order("created_at", { ascending: true });
       query = memberIds.length
@@ -926,12 +927,12 @@ export function registerMinddyTools(
       if (error) return fail("database_error", error.message);
 
       return ok({
-        projects: (data ?? []).map((p) => ({
+        projects: await Promise.all((data ?? []).map(async (p) => ({
           id: p.id,
-          name: p.name,
+          name: await decodeProjectName(p, auth.userId),
           key: p.key,
           role: p.owner_id === auth.userId ? "owner" : "member",
-        })),
+        }))),
       });
     },
   );
@@ -983,9 +984,7 @@ export function registerMinddyTools(
       const { project } = scope.access;
 
       const service = getServiceClient();
-      const { count, error } = await service
-        .from("issues")
-        .select("id", { count: "exact", head: true })
+      const { count, error } = await issueStore(service).select("id", { count: "exact", head: true })
         .is("deleted_at", null)
         .eq("project_id", project.id)
         .not("status", "in", "(done,canceled,duplicate)");
@@ -1053,7 +1052,7 @@ export function registerMinddyTools(
     async (args, extra) => {
       const scope = await requireProject(extra, args.project_id);
       if ("error" in scope) return scope.error;
-      const ctx = mcpReadCtx(scope.access);
+      const ctx = mcpReadCtx(scope.access, scope.userId);
       const detailed = args.response_format === "detailed";
 
       if (typeof args.query === "string" && args.query.trim()) {
@@ -1113,12 +1112,12 @@ export function registerMinddyTools(
       const ref = await resolveIssueRef(scope.access, args.issue);
       if ("error" in ref) return ref.error;
 
-      const r = await getIssue(mcpReadCtx(scope.access), {
+      const r = await getIssue(mcpReadCtx(scope.access, scope.userId), {
         issue_id: ref.issue.id,
       });
       if ("error" in r) return fail("issue_not_found", r.error);
 
-      const activity = await recentActivity({ issue_id: ref.issue.id });
+      const activity = await recentActivity({ issue_id: ref.issue.id }, scope.userId, scope.access.project.id);
 
       const plan = r.issue.plan;
       const parsed = typeof plan === "string" && plan ? parsePlan(plan) : null;
@@ -1332,8 +1331,7 @@ export function registerMinddyTools(
         "pasting its forge URL; the repository is the one the project links. " +
         "Attaching also ALIGNS the issue's status on the state of the PR: open → in_review, " +
         "draft → in_progress, merged → done, closed → todo (the response says which). " +
-        "The link is DEFINITIVE and there is no unlink: a PR that already carries another " +
-        "issue is refused, and so is an issue that already carries a live (draft or open) " +
+        "A PR may carry multiple issues. An issue that already carries a live (draft or open) " +
         "pull request — several TERMINAL pull requests on one issue are normal. Re-linking " +
         "the same PR to the same issue is not an error, it just reports 'already: true'.",
       inputSchema: z.object({
@@ -1415,7 +1413,7 @@ export function registerMinddyTools(
       const scope = await requireProject(extra, args.project_id);
       if ("error" in scope) return scope.error;
       const r = await listMembers(
-        mcpReadCtx(scope.access),
+        mcpReadCtx(scope.access, scope.userId),
         scope.access.project.owner_id,
       );
       if ("error" in r) return fail("database_error", r.error);
@@ -1436,8 +1434,7 @@ export function registerMinddyTools(
     async (args, extra) => {
       const scope = await requireProject(extra, args.project_id);
       if ("error" in scope) return scope.error;
-      const { data, error } = await getServiceClient()
-        .from("categories")
+      const { data, error } = await categoryStore(getServiceClient())
         .select("id, name, color")
         .eq("project_id", scope.access.project.id)
         .order("name", { ascending: true });
@@ -1473,17 +1470,14 @@ export function registerMinddyTools(
         { data: linkedIssues, error: issuesError },
         { data: attachmentRows },
       ] = await Promise.all([
-        service
-          .from("objectives")
+        objectiveStore(service)
           .select(
             "id, name, description, status, lead_user_id, target_date, color",
           )
           .is("deleted_at", null)
           .eq("project_id", scope.access.project.id)
           .order("created_at", { ascending: true }),
-        service
-          .from("issues")
-          .select("objective_id, status, effort")
+        issueStore(service).select("objective_id, status, effort")
           .is("deleted_at", null)
           .eq("project_id", scope.access.project.id)
           .not("objective_id", "is", null),
@@ -1492,7 +1486,7 @@ export function registerMinddyTools(
         service
           .from("attachments")
           .select(
-            "id, objective_id, kind, url, page_id, file_name, mime_type, size_bytes, page:pages(id, title)",
+            "id, objective_id, kind, url, page_id, file_name, mime_type, size_bytes, page:pages(id, project_id, title, encrypted_content, encryption_version)",
           )
           .eq("project_id", scope.access.project.id)
           .not("objective_id", "is", null)
@@ -1503,7 +1497,9 @@ export function registerMinddyTools(
       if (issuesError) return fail("database_error", issuesError.message);
 
       const resourcesByObjective = new Map<string, Record<string, unknown>[]>();
-      for (const row of attachmentRows ?? []) {
+      for (const stored of attachmentRows ?? []) {
+        const row = await decodeAttachmentRow("attachments", stored,
+          scope.userId, scope.access.project.id);
         const id = row.objective_id as string;
         const list = resourcesByObjective.get(id) ?? [];
         list.push(resourceMeta(row));
@@ -1615,8 +1611,7 @@ export function registerMinddyTools(
       if ("error" in scope) return scope.error;
       const service = getServiceClient();
 
-      const { data: objective, error } = await service
-        .from("objectives")
+      const { data: objective, error } = await objectiveStore(service)
         .select("*")
         .is("deleted_at", null)
         .eq("id", args.objective_id)
@@ -1629,19 +1624,16 @@ export function registerMinddyTools(
 
       const [
         { data: issues },
-        { data: comments },
+        { data: comments, error: commentsError },
         { data: attachmentRows },
         relationRows,
         activity,
       ] = await Promise.all([
-        service
-          .from("issues")
-          .select("id, number, title, status, priority, effort, assignee_id")
+        issueStore(service).select("id, number, title, status, priority, effort, assignee_id")
           .is("deleted_at", null)
           .eq("objective_id", objective.id)
           .order("number", { ascending: true }),
-        service
-          .from("comments")
+        commentStore(service, "comments", scope.userId)
           .select(
             "id, author_id, body, parent_id, via_assistant, via_mcp, api_key_id, created_at",
           )
@@ -1650,7 +1642,7 @@ export function registerMinddyTools(
         service
           .from("attachments")
           .select(
-            "id, comment_id, kind, url, page_id, file_name, mime_type, size_bytes, page:pages(id, title)",
+            "id, comment_id, kind, url, page_id, file_name, mime_type, size_bytes, page:pages(id, project_id, title, encrypted_content, encryption_version)",
           )
           .eq("objective_id", objective.id)
           .order("created_at", { ascending: true }),
@@ -1662,16 +1654,19 @@ export function registerMinddyTools(
           },
           objective.id as string,
         ),
-        recentActivity({ objective_id: objective.id as string }),
+        recentActivity({ objective_id: objective.id as string }, scope.userId, scope.access.project.id),
       ]);
 
+      if (commentsError) return fail("database_error", "Unable to read objective comments.");
       // Resources: `comment_id` null = carried by the objective itself, otherwise
       // by one of his comments — same cut as minddy_get_issue.
       const resourcesByComment = new Map<
         string | null,
         Record<string, unknown>[]
       >();
-      for (const row of attachmentRows ?? []) {
+      for (const stored of attachmentRows ?? []) {
+        const row = await decodeAttachmentRow("attachments", stored,
+          scope.userId, scope.access.project.id);
         const key = (row.comment_id as string | null) ?? null;
         const list = resourcesByComment.get(key) ?? [];
         list.push(resourceMeta(row));
@@ -2253,7 +2248,7 @@ export function registerMinddyTools(
       const ref = await resolveIssueRef(scope.access, args.issue);
       if ("error" in ref) return ref.error;
 
-      const current = await readIssueText(ref.issue.id);
+      const current = await readIssueText(ref.issue.id, scope.access.project.id, scope.userId);
       if ("error" in current) return current.error;
       const plan = current.plan;
       const parsed = parsePlan(plan);
@@ -2347,7 +2342,7 @@ export function registerMinddyTools(
       }
       const section = args.section?.trim() ? args.section.trim() : null;
 
-      const current = await readIssueText(ref.issue.id);
+      const current = await readIssueText(ref.issue.id, scope.access.project.id, scope.userId);
       if ("error" in current) return current.error;
 
       const next = appendToPlan(current.plan, args.markdown, section);
@@ -2431,7 +2426,7 @@ export function registerMinddyTools(
       if ("error" in ref) return ref.error;
 
       const field: IssueTextField = args.field;
-      const current = await readIssueText(ref.issue.id);
+      const current = await readIssueText(ref.issue.id, scope.access.project.id, scope.userId);
       if ("error" in current) return current.error;
 
       const edit = editIssueText({
@@ -2624,8 +2619,7 @@ export function registerMinddyTools(
       }
 
       if (args.comment_id) {
-        const { data: comment } = await getServiceClient()
-          .from("comments")
+        const { data: comment } = await commentStore(getServiceClient(), "comments")
           .select("id, issue_id")
           .eq("id", args.comment_id)
           .maybeSingle();
@@ -2641,7 +2635,7 @@ export function registerMinddyTools(
         // ligne ne sert qu'aux lecteurs sans jointure.
         const { data: page } = await getServiceClient()
           .from("pages")
-          .select("id, title")
+          .select("id, project_id, title, encrypted_content, encryption_version")
           .eq("id", pageId)
           .eq("project_id", scope.access.project.id)
           .is("deleted_at", null)
@@ -2649,6 +2643,7 @@ export function registerMinddyTools(
         if (!page) {
           return fail("not_found", "Page not found in this project.");
         }
+        const clearPage = await decodePageProjection(page, scope.userId);
         try {
           const [row] = await insertAttachments(getServiceClient(), {
             projectId: scope.access.project.id,
@@ -2659,7 +2654,7 @@ export function registerMinddyTools(
               {
                 kind: "page",
                 page_id: pageId,
-                file_name: (page.title as string)?.trim() || "Page",
+                file_name: (clearPage.title as string)?.trim() || "Page",
               },
             ],
           });
@@ -2800,13 +2795,15 @@ export function registerMinddyTools(
       const { data: row, error } = await service
         .from("attachments")
         .select(
-          "id, kind, url, page_id, storage_path, file_name, mime_type, size_bytes, issue_id, objective_id, comment_id, page:pages(id, title, deleted_at)",
+          "id, kind, url, page_id, storage_path, file_name, mime_type, size_bytes, issue_id, objective_id, comment_id, page:pages(id, project_id, title, deleted_at, encrypted_content, encryption_version)",
         )
         .eq("id", args.resource_id)
         .eq("project_id", scope.access.project.id)
         .maybeSingle();
       if (error) return fail("database_error", error.message);
       if (!row) return fail("not_found", "Resource not found in this project.");
+      Object.assign(row, await decodeAttachmentRow("attachments", row,
+        scope.userId, scope.access.project.id));
 
       // A page either: its body is read by minddy_get_page, which renders
       // markdown — copying it here would make it a second door to hold.
@@ -3176,8 +3173,7 @@ export function registerMinddyTools(
       if ("error" in scope) return scope.error;
 
       // Scope check: the objective must belong to the project in question.
-      const { data: obj } = await getServiceClient()
-        .from("objectives")
+      const { data: obj } = await objectiveStore(getServiceClient())
         .select("id")
         .is("deleted_at", null)
         .eq("id", args.objective_id)
@@ -3240,8 +3236,7 @@ export function registerMinddyTools(
       // Scope check: the objective must belong to the project in question. The heart
       // checks access to the PROJECT of the objective, not that it is THIS project —
       // without that, an objective of another accessible project would pass.
-      const { data: obj } = await getServiceClient()
-        .from("objectives")
+      const { data: obj } = await objectiveStore(getServiceClient())
         .select("id")
         .is("deleted_at", null)
         .eq("id", args.objective_id)
@@ -3930,9 +3925,7 @@ export function registerMinddyTools(
         }
         // Only pull issues out of the owner's OWN current cycle — project
         // access alone must not allow draining someone else's cycle.
-        const { data: row } = await service
-          .from("issues")
-          .select("cycle_id")
+        const { data: row } = await issueStore(service).select("cycle_id")
           .is("deleted_at", null)
           .eq("id", resolved.issue.id)
           .maybeSingle();
@@ -4056,13 +4049,13 @@ export function registerMinddyTools(
         );
 
       const service = getServiceClient();
-      const { data: comments } = await service
-        .from("comments")
+      const { data: comments, error: commentsError } = await commentStore(service, "comments", scope.userId)
         .select(
-          "author_id, via_assistant, body, created_at, visibility, feedback_users!feedback_user_id (name, email, pseudonym)",
+          "author_id, via_assistant, body, created_at, visibility, feedback_users!feedback_user_id (id, name, email, pseudonym)",
         )
         .eq("feedback_post_id", args.feedback_post_id)
         .order("created_at", { ascending: true });
+      if (commentsError) return fail("database_error", "Unable to read feedback comments.");
       const users = await fetchAuthUsersById(
         service,
         (comments ?? [])

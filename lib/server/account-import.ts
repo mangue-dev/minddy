@@ -1,8 +1,28 @@
+import { importComment } from "./comment-store";
+import { encodeObjective } from "./objective-store";
+import { encodeCategory } from "./category-store";
 import "server-only";
+import { selectImportedAccountMetadata } from "./account-metadata-import";
+import { encodeIssue } from "@/lib/server/issue-store";
+import { encodeImportedAgentMessage, shouldEncryptAgentLaunch } from "@/lib/server/agent/run-launch-content";
+import { encodeAgentContextSnapshot, shouldEncryptAgentContext } from
+  "@/lib/server/agent/context-snapshot-content";
 
 import { randomUUID } from "node:crypto";
 import type { AccountTransferDocument, TransferRow } from "@/lib/account-transfer";
 import { getServiceClient } from "@/lib/supabase-service";
+import { getScratchpad, setScratchpad } from "@/lib/server/scratchpad";
+import { MAX_SCRATCHPAD_LENGTH } from "@/lib/scratchpad";
+import { appendStatEvents, type StatEventRow } from "@/lib/server/stat-events";
+import { uploadPrivateAttachmentObject } from "@/lib/server/attachments";
+import { storeProjectIcon } from "@/lib/server/project-icon";
+import { encodeView } from "@/lib/server/view-content";
+import { createSavedView } from "@/lib/server/saved-views";
+import { encodeRoutine } from "@/lib/server/routine-content";
+import { decodeProject, encodeProject } from "@/lib/server/project-content";
+import { encodeAttachmentValue, shouldEncryptAttachmentMetadata } from
+  "@/lib/server/attachment-content";
+import { saveAgentPreferences } from "@/lib/server/agent/branch-prefix-content";
 
 type Service = ReturnType<typeof getServiceClient>;
 
@@ -134,6 +154,8 @@ async function validateAccountImportScope(
   const objectiveIds = uniqueIds(document.objectives);
   const categoryIds = uniqueIds(document.categories ?? []);
   uniqueIds(document.views);
+  uniqueIds(document.saved_views ?? []);
+  uniqueIds(document.agent_routines ?? []);
   const cycleIds = uniqueIds(document.cycles);
   uniqueIds(document.assistant_conversations);
   const codeConversationIds = uniqueIds(document.code_agent_conversations);
@@ -185,6 +207,7 @@ async function validateAccountImportScope(
     ...document.objectives,
     ...(document.categories ?? []),
     ...document.views,
+    ...(document.agent_routines ?? []),
     ...document.assistant_conversations,
     ...document.code_agent_conversations,
     ...document.notifications,
@@ -353,6 +376,10 @@ async function validateAccountImportScope(
     validateExistingIds(service, "views", document.views, "id, user_id", (row) =>
       stringValue(row, "user_id") === userId,
     ),
+    validateExistingIds(service, "agent_routines", document.agent_routines ?? [],
+      "id, project_id, owner_id", (row, source) =>
+        sameProject(row, source) && stringValue(row, "owner_id") === userId,
+    ),
     validateExistingIds(service, "conversations", document.assistant_conversations, "id, user_id", (row) =>
       stringValue(row, "user_id") === userId,
     ),
@@ -388,11 +415,6 @@ function pick(row: TransferRow, keys: string[]): TransferRow {
   return Object.fromEntries(
     keys.filter((key) => row[key] !== undefined).map((key) => [key, row[key]]),
   );
-}
-
-function safeStorageName(value: unknown): string {
-  const name = typeof value === "string" ? value.trim() : "file";
-  return name.replace(/[^a-zA-Z0-9._-]+/g, "_").slice(0, 200) || "file";
 }
 
 async function freeProjectKey(
@@ -442,7 +464,7 @@ async function importProjects(
   const sourceIds = document.owned_projects
     .map((row) => uuidValue(row, "id"))
     .filter((id): id is string => id !== null);
-  const existing = await existingById(service, "projects", sourceIds, "id, owner_id, key");
+  const existing = await existingById(service, "projects", sourceIds, "*");
   const usedKeys = new Set<string>();
   const { data: owned } = await service.from("projects").select("key").eq("owner_id", userId);
   for (const row of (owned ?? []) as TransferRow[]) {
@@ -466,7 +488,10 @@ async function importProjects(
       warnings.push(`Project ${sourceKey ?? sourceId} received a new ID because the original is already in use.`);
     }
     if (sourceId) projectIds.set(sourceId, targetId);
-    rows.push({
+    const old = existingRow && existingRow.owner_id === userId
+      ? await decodeProject(existingRow) : null;
+    const candidate = {
+      ...old,
       ...pick(source, [
         "name",
         "color",
@@ -475,7 +500,6 @@ async function importProjects(
         "deleted_at",
         "smart_assign_enabled",
         "smart_assign_rules",
-        "icon_url",
         "auto_assign_enabled",
         "feedback_review_enabled",
         "feedback_review_skip_over_budget",
@@ -486,10 +510,16 @@ async function importProjects(
         "feedback_no_translate_languages",
         "orb_seed",
       ]),
+      icon_url: null,
       id: targetId,
       owner_id: userId,
       key: await freeProjectKey(service, sourceKey ?? `IMP${rows.length + 1}`, userId, usedKeys),
-    });
+      name: source.name ?? old?.name,
+      automations: source.automations ?? old?.automations ?? [],
+      smart_assign_rules: source.smart_assign_rules ?? old?.smart_assign_rules ?? {},
+      encryption_version: existingRow?.encryption_version ?? 0,
+    };
+    rows.push(await encodeProject(candidate, { service }));
   }
   await upsertRows(service, "projects", rows);
   for (const source of document.owned_projects) {
@@ -500,14 +530,8 @@ async function importProjects(
     const mime = typeof source.project_icon_mime_type === "string"
       ? source.project_icon_mime_type
       : "image/webp";
-    const extension = mime.includes("png") ? "png" : mime.includes("jpeg") ? "jpg" : "webp";
-    const path = `${targetId}.${extension}`;
-    const { error } = await service.storage
-      .from("project-icons")
-      .upload(path, Buffer.from(bytes, "base64"), { contentType: mime, upsert: true });
-    if (error) throw new Error(`project-icons/${targetId}: ${error.message}`);
-    const { data } = service.storage.from("project-icons").getPublicUrl(path);
-    await service.from("projects").update({ icon_url: `${data.publicUrl}?v=${Date.now()}` }).eq("id", targetId);
+    await storeProjectIcon(targetId, Buffer.from(bytes, "base64"), mime,
+      mime.includes("png") ? "png" : mime.includes("jpeg") ? "jpg" : "webp");
   }
   return { projectIds, remapped };
 }
@@ -549,7 +573,38 @@ async function importSimpleEntity(
     }
     out.push(row);
   }
-  await upsertRows(service, table, out);
+  if (table === "objectives") {
+    for (const input of out) {
+      const { data: previous, error: readError } = await service.from("objectives").select("*")
+        .eq("id", input.id).maybeSingle();
+      if (readError || previous && previous.project_id !== input.project_id) {
+        throw new Error("Unable to inspect imported objective");
+      }
+      const stored = await encodeObjective({ ...input, description: input.description ?? null },
+        Number(previous?.encryption_version ?? 0));
+      const write = previous
+        ? service.from("objectives").update(stored).eq("id", input.id)
+          .eq("project_id", input.project_id).eq("encryption_revision", previous.encryption_revision)
+        : service.from("objectives").insert(stored);
+      const { data, error } = await write.select("id");
+      if (error || data?.length !== 1) throw new Error("Unable to import objective");
+    }
+  } else if (table === "categories") {
+    for (const input of out) {
+      const { data: previous, error: readError } = await service.from("categories").select("*")
+        .eq("id", input.id).maybeSingle();
+      if (readError || previous && previous.project_id !== input.project_id) {
+        throw new Error("Unable to inspect imported category");
+      }
+      const stored = await encodeCategory(input, Number(previous?.encryption_version ?? 0));
+      const write = previous
+        ? service.from("categories").update(stored).eq("id", input.id)
+          .eq("project_id", input.project_id).eq("encryption_revision", previous.encryption_revision)
+        : service.from("categories").insert(stored);
+      const { data, error } = await write.select("id");
+      if (error || data?.length !== 1) throw new Error("Unable to import category");
+    }
+  } else await upsertRows(service, table, out);
   return out.length;
 }
 
@@ -655,7 +710,7 @@ export async function importAccountTransfer(
       cycle_id: mapId(source.cycle_id, cycleIds),
     });
   }
-  await upsertRows(service, "issues", issueRows);
+  await upsertRows(service, "issues", await Promise.all(issueRows.map((row) => encodeIssue(row))));
   result.issues = issueRows.length;
 
   const issueCategoryRows = (document.issue_categories ?? []).flatMap((row) => {
@@ -715,12 +770,18 @@ export async function importAccountTransfer(
   for (const row of pageFiles) {
     const source = document.page_files.find((item) => item.id === row.id);
     if (!source || typeof source.storage_base64 !== "string") continue;
-    const path = `projects/${row.project_id}/pages/${row.page_id}/${row.id}/${safeStorageName(row.file_name)}`;
-    const { error } = await service.storage
-      .from("attachments")
-      .upload(path, Buffer.from(source.storage_base64, "base64"), { contentType: String(row.mime_type ?? "application/octet-stream"), upsert: true });
-    if (error) throw new Error(`page_files/${row.id}: ${error.message}`);
+    const path = `projects/${row.project_id}/pages/${row.page_id}/${row.id}`;
+    await uploadPrivateAttachmentObject(service, path,
+      Buffer.from(source.storage_base64, "base64"),
+      String(row.mime_type ?? "application/octet-stream"), true);
     row.storage_path = path;
+  }
+  const protectAttachmentMetadata = await shouldEncryptAttachmentMetadata(service);
+  if (protectAttachmentMetadata) {
+    for (const row of pageFiles) {
+      row.file_name = await encodeAttachmentValue("page_files",
+        String(row.project_id), String(row.id), "file_name", String(row.file_name));
+    }
   }
   await upsertRows(service, "page_files", pageFiles);
   result.attachments += pageFiles.length;
@@ -742,7 +803,7 @@ export async function importAccountTransfer(
       parent_id: mapId(source.parent_id, commentIds),
     }];
   });
-  await upsertRows(service, "comments", comments);
+  for (const comment of comments) await importComment(service, comment);
   result.comments = comments.length;
 
   const attachments: TransferRow[] = document.attachments.flatMap((source) => {
@@ -770,118 +831,253 @@ export async function importAccountTransfer(
   for (const row of attachments) {
     const source = document.attachments.find((item) => item.id === row.id);
     if (source?.kind === "file" && typeof source.storage_base64 === "string") {
-      const path = `projects/${row.project_id}/${row.issue_id ?? row.objective_id ?? row.id}/${row.id}/${safeStorageName(row.file_name)}`;
-      const { error } = await service.storage
-        .from("attachments")
-        .upload(path, Buffer.from(source.storage_base64, "base64"), { contentType: String(row.mime_type ?? "application/octet-stream"), upsert: true });
-      if (error) throw new Error(`attachments/${row.id}: ${error.message}`);
+      const path = `projects/${row.project_id}/${row.id}`;
+      await uploadPrivateAttachmentObject(service, path,
+        Buffer.from(source.storage_base64, "base64"),
+        String(row.mime_type ?? "application/octet-stream"), true);
       row.storage_path = path;
+    }
+    if (protectAttachmentMetadata) {
+      for (const column of ["file_name", "url", "icon_data_url"] as const) {
+        if (typeof row[column] === "string") {
+          row[column] = await encodeAttachmentValue("attachments",
+            String(row.project_id), String(row.id), column, row[column]);
+        }
+      }
     }
   }
   await upsertRows(service, "attachments", attachments);
   result.attachments = attachments.length;
 
   if (document.preferences) {
-    await upsertRows(service, "user_agent_preferences", [{ ...document.preferences, user_id: userId }], "user_id");
+    const fields = Object.fromEntries(Object.entries(document.preferences)
+      .filter(([key]) => ["branch_prefix", "default_model",
+        "default_model_provider", "default_reasoning_level",
+        "sandbox_region", "sandbox_size"].includes(key)));
+    await saveAgentPreferences(userId, fields, service);
     result.personalData += 1;
   }
   if (document.scratchpad) {
-    await upsertRows(service, "user_scratchpad", [{ ...document.scratchpad, user_id: userId }], "user_id");
+    if (typeof document.scratchpad.content !== "string") throw new Error("Invalid imported scratchpad content");
+    if (document.scratchpad.content.length > MAX_SCRATCHPAD_LENGTH) throw new Error("Imported scratchpad exceeds the content limit");
+    const previous = await getScratchpad(service, userId);
+    const saved = await setScratchpad(service, userId, document.scratchpad.content, previous.rev, { recordCompletions: false });
+    if (saved.conflicted) throw new Error("Scratchpad changed during import; retry after reviewing the current note");
     result.personalData += 1;
   }
   await upsertRows(
     service,
     "views",
-    document.views.flatMap((source) => {
+    (await Promise.all(document.views.map(async (source) => {
       const id = uuidValue(source, "id");
-      if (!id) return [];
+      if (!id) return null;
       const projectId = mapId(source.project_id, projects.projectIds);
-      if (source.project_id !== undefined && !projectId) return [];
-      return [{ ...pick(source, ["id", "name", "filters", "sort", "display", "position", "created_at", "updated_at", "kind"]), id, project_id: projectId, user_id: userId }];
-    }),
+      if (source.project_id !== undefined && !projectId) return null;
+      return encodeView({ ...pick(source, ["id", "name", "filters", "sort", "display", "position", "created_at", "updated_at", "kind"]),
+        id, project_id: projectId, user_id: userId }, { service });
+    }))).filter((row): row is Record<string, unknown> => row !== null),
   );
 
+  for (const bookmark of document.saved_views ?? []) {
+    const saved = await createSavedView(service, userId,
+      { name: bookmark.name, href: bookmark.href });
+    if (!saved.ok) throw new Error("Unable to import saved view");
+    result.personalData += 1;
+  }
+  await upsertRows(service, "agent_routines",
+    (await Promise.all((document.agent_routines ?? []).map(async (source) => {
+      const id = uuidValue(source, "id");
+      const projectId = mapId(source.project_id, projects.projectIds);
+      if (!id || !projectId) return null;
+      return encodeRoutine({ ...pick(source, ["title", "prompt",
+        "prompt_mentions", "base_branch", "max_spend_percent",
+        "frequency", "hour", "minute", "weekdays", "days_of_month",
+        "timezone", "enabled", "next_run_at", "last_run_at",
+        "last_error", "created_at", "updated_at", "deleted_at"]),
+        deleted_by: remapUser(source.deleted_by, sourceUserId, userId),
+        id, project_id: projectId, owner_id: userId },
+        { service });
+    }))).filter((row): row is Record<string, unknown> => row !== null));
+
   const conversationIds = new Map<string, string>();
-  const conversations = document.assistant_conversations.flatMap((source) => {
+  const { encodeConversationTitle, shouldProtectConversationTitle } = await import(
+    "@/lib/server/numo/conversation-title-content"
+  );
+  const { encodeNumoUserMessage, shouldProtectNumoUserMessages } = await import(
+    "@/lib/server/numo/user-message-content"
+  );
+  const { encodeNumoFinalMessage, shouldProtectNumoFinalContent } = await import(
+    "@/lib/server/numo/final-content"
+  );
+  const { encodeNumoToolMessage, shouldProtectNumoToolContent } = await import(
+    "@/lib/server/numo/tool-content"
+  );
+  const protectConversationTitles = await shouldProtectConversationTitle(service);
+  const protectUserMessages = await shouldProtectNumoUserMessages(service);
+  const protectFinalMessages = await shouldProtectNumoFinalContent(service);
+  const protectToolMessages = await shouldProtectNumoToolContent(service);
+  const conversations = (await Promise.all(document.assistant_conversations.map(async (source) => {
     const id = uuidValue(source, "id");
-    if (!id) return [];
+    if (!id) return null;
     conversationIds.set(id, id);
-    return [{
+    const title = typeof source.title === "string" ? source.title : null;
+    return {
       id,
       project_id: mapId(source.project_id, projects.projectIds),
       user_id: userId,
-      title: source.title ?? null,
+      title: protectConversationTitles
+        ? await encodeConversationTitle(userId, id, title) : title,
       created_at: source.created_at,
       updated_at: source.updated_at,
-    }];
-  });
+    };
+  }))).filter((row): row is NonNullable<typeof row> => row !== null);
   await upsertRows(service, "conversations", conversations);
   for (const conversation of document.assistant_conversations) {
     const conversationId = uuidValue(conversation, "id");
     const messages = Array.isArray(conversation.messages)
-      ? (conversation.messages as unknown[]).flatMap((message) => {
+      ? await Promise.all((conversation.messages as unknown[]).flatMap((message) => {
           if (!message || typeof message !== "object") return [];
           const row = message as TransferRow;
           return conversationId
-            ? [{ ...pick(row, ["role", "content", "tool_name", "created_at"]), conversation_id: conversationId }]
+            ? [{ ...pick(row, ["role", "content", "context", "metadata",
+              "tool_calls", "tool_call_id", "tool_name", "created_at"]),
+              conversation_id: conversationId }]
             : [];
-        })
+        }).map(async (row: TransferRow & { conversation_id: string }) => {
+          if (row.role === "assistant" &&
+              Array.isArray(row.tool_calls) && row.tool_calls.length &&
+              protectToolMessages) {
+            const id = randomUUID();
+            const stored = await encodeNumoToolMessage(userId, id, {
+              role: "assistant", content: typeof row.content === "string"
+                ? row.content : null,
+              tool_calls: row.tool_calls,
+              context: row.context ?? null, metadata: row.metadata ?? {},
+            });
+            return { ...row, ...stored };
+          }
+          if (row.role === "assistant" && protectFinalMessages) {
+            const id = randomUUID();
+            const stored = await encodeNumoFinalMessage(userId, id, {
+              content: typeof row.content === "string" ? row.content : null,
+              context: row.context ?? null, metadata: row.metadata ?? {},
+              tool_call_id: typeof row.tool_call_id === "string"
+                ? row.tool_call_id : null,
+              tool_name: typeof row.tool_name === "string" ? row.tool_name : null,
+            });
+            return { ...row, ...stored };
+          }
+          if (row.role === "tool" && protectToolMessages) {
+            const id = randomUUID();
+            const stored = await encodeNumoToolMessage(userId, id, {
+              role: "tool", content: typeof row.content === "string"
+                ? row.content : null,
+              tool_calls: null, context: row.context ?? null,
+              metadata: row.metadata ?? {},
+            });
+            return { ...row, ...stored };
+          }
+          if (row.role !== "user" || !protectUserMessages) return row;
+          const id = randomUUID();
+          const stored = await encodeNumoUserMessage(userId, id, {
+            content: typeof row.content === "string" ? row.content : null,
+            context: row.context ?? null, metadata: row.metadata ?? {},
+            tool_calls: row.tool_calls ?? null,
+            tool_call_id: typeof row.tool_call_id === "string"
+              ? row.tool_call_id : null,
+            tool_name: typeof row.tool_name === "string" ? row.tool_name : null,
+          });
+          return { ...row, ...stored };
+        }))
       : [];
     await upsertRows(service, "assistant_messages", messages);
   }
   result.personalData += conversations.length;
 
   const codeConversationIds = new Map<string, string>();
-  const codeConversations = document.code_agent_conversations.flatMap((source) => {
+  const { encodeAgentTitle, shouldEncryptAgentTitle } = await import(
+    "@/lib/server/agent/run-title-content"
+  );
+  const codeConversations = (await Promise.all(document.code_agent_conversations.map(async (source) => {
     const id = uuidValue(source, "id");
     const projectId = mapId(source.project_id, projects.projectIds);
     if (!id || !projectId) return [];
     codeConversationIds.set(id, id);
+    const storedTitle = await shouldEncryptAgentTitle(service, projectId)
+      ? await encodeAgentTitle(projectId, id, source.title as string | null ?? null)
+      : { title: source.title ?? null };
     return [{
       id,
       project_id: projectId,
       owner_id: userId,
-      title: source.title ?? null,
+      ...storedTitle,
       visibility: source.visibility ?? "private",
       archived_at: source.archived_at ?? null,
       created_at: source.created_at,
       updated_at: source.updated_at,
     }];
-  });
+  }))).flat();
   await upsertRows(service, "agent_conversations", codeConversations);
   const codeTurnIds = new Map<string, string>();
-  const codeTurns = document.code_agent_conversations.flatMap((conversation) => {
+  const { encodeTurnSummary, shouldEncryptAgentSummary } = await import(
+    "@/lib/server/agent/run-summary-content"
+  );
+  const codeTurns = (await Promise.all(document.code_agent_conversations.map(async (conversation) => {
     const conversationId = uuidValue(conversation, "id");
-    if (!conversationId || !codeConversationIds.has(conversationId)) return [];
+    const projectId = codeConversations.find((row) => row.id === conversationId)
+      ?.project_id as string | undefined;
+    if (!conversationId || !codeConversationIds.has(conversationId) || !projectId) return [];
     return Array.isArray(conversation.turns)
-      ? (conversation.turns as unknown[]).flatMap((turn) => {
+      ? (await Promise.all((conversation.turns as unknown[]).map(async (turn) => {
           if (!turn || typeof turn !== "object") return [];
           const row = turn as TransferRow;
           const id = uuidValue(row, "id");
           if (!id) return [];
           codeTurnIds.set(id, id);
-          return [{ ...pick(row, ["id", "status", "model", "reasoning_level", "cost_usd", "outcome", "error_message", "started_at", "completed_at", "created_at"]), id, conversation_id: conversationId }];
-        })
+          const protectedSummary = await shouldEncryptAgentSummary(service, projectId);
+          const content = protectedSummary ? {
+            outcome: await encodeTurnSummary(projectId, id, null, "outcome",
+              row.outcome as string | null ?? null),
+            error_message: await encodeTurnSummary(projectId, id, null,
+              "error_message", row.error_message as string | null ?? null),
+          } : { outcome: row.outcome ?? null, error_message: row.error_message ?? null };
+          return [{ ...pick(row, ["id", "status", "model", "reasoning_level", "cost_usd", "started_at", "completed_at", "created_at"]),
+            ...content, id, conversation_id: conversationId }];
+        }))).flat()
       : [];
-  });
+  }))).flat();
   await upsertRows(service, "agent_turns", codeTurns);
-  const codeMessages = document.code_agent_conversations.flatMap((conversation) => {
+  const codeMessages = await Promise.all(document.code_agent_conversations.flatMap((conversation) => {
     const conversationId = uuidValue(conversation, "id");
     if (!conversationId || !codeConversationIds.has(conversationId)) return [];
     return Array.isArray(conversation.messages)
       ? (conversation.messages as unknown[]).flatMap((message) => {
           if (!message || typeof message !== "object") return [];
           const row = message as TransferRow;
-          return [{ ...pick(row, ["role", "content", "source", "created_at"]), conversation_id: conversationId, turn_id: mapId(row.turn_id, codeTurnIds), created_by: remapUser(row.created_by, sourceUserId, userId) }];
+          return [{ row, conversationId }];
         })
       : [];
-  });
+  }).map(async ({ row, conversationId }) => {
+    const id = randomUUID();
+    const projectId = codeConversations.find((item) => item.id === conversationId)?.project_id;
+    if (typeof projectId !== "string" || typeof row.content !== "string") {
+      throw new Error("Invalid imported agent message");
+    }
+    const content = await shouldEncryptAgentLaunch(service, projectId)
+      ? await encodeImportedAgentMessage(projectId, id, row.content)
+      : { content: row.content };
+    return { ...pick(row, ["role", "source", "created_at"]), id, ...content,
+      conversation_id: conversationId, turn_id: mapId(row.turn_id, codeTurnIds),
+      created_by: remapUser(row.created_by, sourceUserId, userId) };
+  }));
   await upsertRows(service, "agent_messages", codeMessages);
-  const codeContexts = document.code_agent_conversations.flatMap((conversation) => {
+  const codeContexts = (await Promise.all(document.code_agent_conversations.map(async (conversation) => {
     const conversationId = uuidValue(conversation, "id");
     if (!conversationId || !codeConversationIds.has(conversationId)) return [];
+    const projectId = codeConversations.find((item) => item.id === conversationId)?.project_id;
+    if (typeof projectId !== "string") throw new Error("Invalid imported agent context scope");
     return Array.isArray(conversation.contexts)
-      ? (conversation.contexts as unknown[]).flatMap((context) => {
+      ? (await Promise.all((conversation.contexts as unknown[]).map(async (context) => {
           if (!context || typeof context !== "object") return [];
           const row = context as TransferRow;
           const resourceId = row.kind === "issue"
@@ -889,12 +1085,17 @@ export async function importAccountTransfer(
             : row.kind === "page"
               ? mapId(row.resource_id, pageIds)
               : null;
-          return resourceId
-            ? [{ ...pick(row, ["kind", "role", "snapshot", "created_at"]), conversation_id: conversationId, resource_id: resourceId }]
-            : [];
-        })
+          if (!resourceId) return [];
+          const stored = { conversation_id: conversationId, kind: row.kind as string,
+            resource_id: resourceId, snapshot: row.snapshot as Record<string, unknown> ?? {} };
+          const content = await shouldEncryptAgentContext(service, projectId)
+            ? await encodeAgentContextSnapshot(projectId, stored)
+            : { snapshot: stored.snapshot };
+          return [{ ...pick(row, ["kind", "role", "created_at"]),
+            conversation_id: conversationId, resource_id: resourceId, ...content }];
+        }))).flat()
       : [];
-  });
+  }))).flat();
   await upsertRows(service, "agent_conversation_contexts", codeContexts, "conversation_id,kind,resource_id");
   result.personalData += codeConversations.length;
 
@@ -913,16 +1114,28 @@ export async function importAccountTransfer(
     }];
   });
   await upsertRows(service, "notifications", notifications);
-  await upsertRows(
-    service,
-    "stat_events",
-    document.statistics.flatMap((source) => [{
-      ...pick(source, ["kind", "occurred_at", "project_name", "issue_number", "issue_title", "task_text"]),
+  await appendStatEvents(service, document.statistics.map((source): StatEventRow => {
+    if (source.kind !== "issue_created" && source.kind !== "issue_completed" && source.kind !== "scratchpad_task_completed") {
+      throw new Error("Invalid statistics event kind");
+    }
+    if (typeof source.occurred_at !== "string" || !Number.isFinite(Date.parse(source.occurred_at))) {
+      throw new Error("Invalid statistics event date");
+    }
+    for (const column of ["project_name", "issue_title", "task_text"]) {
+      if (source[column] != null && typeof source[column] !== "string") throw new Error("Invalid statistics snapshot");
+    }
+    return {
+      kind: source.kind,
+      occurred_at: source.occurred_at,
+      project_name: typeof source.project_name === "string" ? source.project_name : null,
+      issue_title: typeof source.issue_title === "string" ? source.issue_title : null,
+      task_text: typeof source.task_text === "string" ? source.task_text : null,
+      issue_number: typeof source.issue_number === "number" ? source.issue_number : null,
       user_id: userId,
       project_id: mapId(source.project_id, projects.projectIds),
       issue_id: mapId(source.issue_id, issueIds),
-    }]),
-  );
+    };
+  }));
   await upsertRows(
     service,
     "ai_usage",
@@ -946,7 +1159,7 @@ export async function importAccountTransfer(
     const { data: current } = await service.auth.admin.getUserById(userId);
     const currentMetadata = current?.user?.user_metadata ?? {};
     await service.auth.admin.updateUserById(userId, {
-      user_metadata: { ...currentMetadata, ...document.account.user_metadata },
+      user_metadata: { ...currentMetadata, ...selectImportedAccountMetadata(document.account.user_metadata) },
     });
     result.personalData += 1;
   }

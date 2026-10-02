@@ -1,27 +1,10 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { AppIcon, type AppIcon as AppIconType } from "@/components/icon";
+import { ArrowDown01Icon, ArrowLeft01Icon, ArrowRight01Icon, BotIcon, CheckIcon, DatabaseIcon, Download01Icon, FolderOpenIcon, Globe02Icon as Globe2, HardDriveIcon, LaptopIcon, LinkSquare01Icon, Mail01Icon, Notification01Icon, ServerIcon as Server, ShieldCheckIcon as ShieldCheck, SquareTerminalIcon as TerminalSquare } from "@hugeicons/core-free-icons";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
-import {
-  ArrowLeft,
-  ArrowRight,
-  Bell,
-  Bot,
-  Check,
-  CheckCircle2,
-  ChevronDown,
-  Database,
-  Download,
-  ExternalLink,
-  FolderOpen,
-  Globe2,
-  HardDrive,
-  Laptop,
-  Mail,
-  Server,
-  ShieldCheck,
-  TerminalSquare,
-} from "lucide-react";
 import type { Messages } from "next-intl";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "mangue-ui/components/ui/accordion";
 import { Popover, PopoverContent, PopoverTrigger } from "mangue-ui/components/ui/popover";
@@ -125,7 +108,7 @@ function Checklist({ items }: { items: string[] }) {
     <ul className="mt-4 space-y-2">
       {items.map((item) => (
         <li key={item} className="flex items-start gap-2 text-sm leading-relaxed text-muted-foreground">
-          <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
+          <HugeiconsIcon icon={CheckIcon} className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
           {item}
         </li>
       ))}
@@ -142,7 +125,7 @@ function ResourceLink({ href, children }: { href: string; children: ReactNode })
       className="inline-flex min-h-11 items-center gap-2 rounded-full bg-background/75 px-4 py-2 text-sm font-medium transition-colors hover:bg-background focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
     >
       {children}
-      <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
+      <HugeiconsIcon icon={LinkSquare01Icon} className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
     </a>
   );
 }
@@ -158,7 +141,7 @@ function OptionCard({
 }: {
   selected: boolean;
   onSelect: () => void;
-  icon: typeof Laptop;
+  icon: AppIconType;
   title: string;
   body: string;
   badge?: string;
@@ -176,11 +159,11 @@ function OptionCard({
       )}
     >
       <div className="flex items-start justify-between gap-4">
-        <Icon className="size-6 shrink-0" strokeWidth={1.5} aria-hidden />
+        <AppIcon icon={Icon} className="size-6 shrink-0" strokeWidth={1.5} />
         <div className="flex min-w-0 items-center gap-3">
           {badge && <span className="text-right text-xs font-medium opacity-75">{badge}</span>}
           <span className={cn("flex size-6 shrink-0 items-center justify-center rounded-full border", selected ? "border-current bg-background/70" : "border-current/25")} aria-hidden>
-            {selected && <Check className="size-4" />}
+            {selected && <HugeiconsIcon icon={CheckIcon} className="size-4" />}
           </span>
         </div>
       </div>
@@ -345,13 +328,13 @@ function ClientAccess({
   copy: SelfHostingInstallCopy;
 }) {
   const destinationTitle = local ? copy.desktopLocalPathTitle : copy.desktopServerPathTitle;
-  const DestinationIcon = local ? FolderOpen : Server;
+  const DestinationIcon: AppIconType = local ? FolderOpenIcon : Server;
 
   return (
     <section className="space-y-4" aria-labelledby="desktop-source-title">
       <div className={HIGHLIGHT_PANEL}>
         <div className="flex items-start gap-3">
-          <Laptop className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden />
+          <HugeiconsIcon icon={LaptopIcon} className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden />
           <div>
             <h2 id="desktop-source-title" className="font-medium">{copy.desktopAppTitle}</h2>
             <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{copy.desktopAppBody}</p>
@@ -379,7 +362,7 @@ function ClientAccess({
                 <div className="px-3 py-1.5 text-muted-foreground">Server: minddy Cloud</div>
                 <div className="flex items-center justify-between bg-primary px-3 py-2 font-medium text-primary-foreground">
                   <span>Connect to a Server…</span>
-                  <ArrowRight className="h-3.5 w-3.5" />
+                  <HugeiconsIcon icon={ArrowRight01Icon} className="h-3.5 w-3.5" />
                 </div>
               </div>
             </div>
@@ -401,11 +384,11 @@ function ClientAccess({
               {local ? (
                 <div className="mt-4 space-y-3">
                   <div className="flex items-center gap-2 rounded-lg border border-primary bg-primary px-3 py-2.5 text-sm font-medium text-primary-foreground">
-                    <HardDrive className="h-4 w-4 shrink-0" aria-hidden />
+                    <HugeiconsIcon icon={HardDriveIcon} className="h-4 w-4 shrink-0" aria-hidden />
                     <span>{copy.desktopLocalAction}</span>
                   </div>
                   <div className="flex items-center gap-2 rounded-lg border border-dashed border-border bg-muted/40 px-3 py-2.5 text-xs text-muted-foreground">
-                    <FolderOpen className="h-4 w-4 shrink-0 text-foreground" aria-hidden />
+                    <HugeiconsIcon icon={FolderOpenIcon} className="h-4 w-4 shrink-0 text-foreground" aria-hidden />
                     <span>{copy.desktopFolderExample}</span>
                   </div>
                 </div>
@@ -423,7 +406,7 @@ function ClientAccess({
             </div>
 
             <div className="mt-4 flex items-start gap-2 rounded-lg bg-muted/50 px-3 py-2.5 text-xs leading-relaxed text-muted-foreground">
-              <DestinationIcon className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
+              <AppIcon icon={DestinationIcon} className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden={true} />
               <span>{local ? copy.desktopLocalChoiceNote : copy.desktopServerChoiceNote}</span>
             </div>
           </li>
@@ -451,6 +434,7 @@ export function SelfHostingInstallWizard({
   const [serverIp, setServerIp] = useState("");
   const [domain, setDomain] = useState("");
   const [email, setEmail] = useState("");
+  const [encryptionEnabled, setEncryptionEnabled] = useState(true);
   const [optionalFeatures, setOptionalFeatures] = useState<OptionalFeature[]>([]);
   const [stepIndex, setStepIndex] = useState(0);
   const [progressOpen, setProgressOpen] = useState(false);
@@ -470,12 +454,17 @@ export function SelfHostingInstallWizard({
   const serverSetupValid = addressValid && emailValid;
   const localOrigin = "http://localhost:6463";
 
-  const localInstall = `git clone --branch ${releaseTag} --depth 1 ${repositoryUrl}.git minddy\ncd minddy\ncorepack enable\ncorepack prepare pnpm@${pnpmVersion} --activate\npnpm install --frozen-lockfile`;
+  const encryptionMode = encryptionEnabled ? "enabled" : "disabled";
+  const encryptionFlag = `--encryption ${encryptionMode}`;
+  const localEncryptionSetup = `pnpm bootstrap:supabase -- --minimal --app-url ${localOrigin} ${encryptionFlag}`;
+  const encryptionPrompt = `${copy.encryptionSetup}\nMINDDY_CONTENT_ENCRYPTION_ENABLED=${encryptionEnabled}\n${copy.encryptionKeyNote}`;
+
+  const localInstall = `git clone --branch ${releaseTag} --depth 1 ${repositoryUrl}.git minddy\ncd minddy\ncorepack enable\ncorepack prepare pnpm@${pnpmVersion} --activate\npnpm install --frozen-lockfile\n${localEncryptionSetup}`;
   const serverClone = `git clone --branch ${releaseTag} --depth 1 ${repositoryUrl}.git minddy\ncd minddy`;
   const verificationUrl = `${repositoryUrl}/blob/${releaseTag}/docs/container-image.md#verify-a-published-image`;
   const serverDependencies = `test "$(pnpm --version)" = ${pnpmVersion}\npnpm install --frozen-lockfile`;
   const fetchSupabase = "node scripts/fetch-official-supabase.mjs --destination /srv/minddy/supabase";
-  const featureFlags = optionalFeatures.map((feature) => ` \\\n  --enable ${feature}`).join("");
+  const featureFlags = ` \\\n  ${encryptionFlag}` + optionalFeatures.map((feature) => ` \\\n  --enable ${feature}`).join("");
   const installServer = supabaseMode === "managed"
     ? `pnpm self-host:install -- --image "$IMAGE" --mode managed \\\n  --app-url ${serverOrigin} \\\n  --admin-email ${adminEmail}${featureFlags}`
     : `${serverAccess === "public" ? `pnpm self-host:install -- --image "$IMAGE" --mode full \\\n  --app-url ${serverOrigin} \\\n  --admin-email ${adminEmail} \\\n  --supabase-host supabase.${host} \\\n  --supabase-dir /srv/minddy/supabase` : `pnpm self-host:install -- --image "$IMAGE" --mode full \\\n  --app-url ${serverOrigin} \\\n  --admin-email ${adminEmail} \\\n  --supabase-dir /srv/minddy/supabase`}${featureFlags}`;
@@ -490,8 +479,8 @@ export function SelfHostingInstallWizard({
     ? `\n\n${copy.transferPromptTitle}\n- ${copy.transferPromptBefore}: ${copy.exportOne} ${copy.exportTwo}\n- ${copy.transferPromptAfter}: ${copy.importOne} ${copy.importTwo}`
     : "";
   const featureCatalog = [
-    { id: "application-email" as const, title: copy.serviceEmailTitle, body: copy.serviceEmailBody, setup: copy.serviceEmailSetup, icon: Mail },
-    { id: "web-push" as const, title: copy.servicePushTitle, body: copy.servicePushBody, setup: copy.servicePushSetup, icon: Bell },
+    { id: "application-email" as const, title: copy.serviceEmailTitle, body: copy.serviceEmailBody, setup: copy.serviceEmailSetup, icon: Mail01Icon },
+    { id: "web-push" as const, title: copy.servicePushTitle, body: copy.servicePushBody, setup: copy.servicePushSetup, icon: Notification01Icon },
   ];
   const selectedFeatures = featureCatalog.filter(({ id }) => optionalFeatures.includes(id));
   const selectedFeaturePrompt = selectedFeatures.length > 0
@@ -507,6 +496,7 @@ export function SelfHostingInstallWizard({
     MINDDY_RELEASE_TAG: releaseTag,
     MINDDY_PNPM_VERSION: pnpmVersion,
     MINDDY_LOCAL_ORIGIN: localOrigin,
+    MINDDY_ENCRYPTION_SETUP: `${encryptionPrompt}\n${localEncryptionSetup}`,
     MINDDY_DOWNLOAD_URL: links.download,
   });
 
@@ -525,7 +515,7 @@ export function SelfHostingInstallWizard({
     MINDDY_VERIFY_RELEASE: `${copy.releaseVerificationBody}\n${verificationUrl}\n${serverDependencies}`,
     MINDDY_INSTALL_COMMAND: installServer,
     MINDDY_DOCTOR_COMMAND: doctor,
-  }) + emailSetupPrompt + selectedFeaturePrompt + `\n\n${copy.serverRoutinesPrompt}` + transferPrompt;
+  }) + `\n\n${encryptionPrompt}` + emailSetupPrompt + selectedFeaturePrompt + `\n\n${copy.serverRoutinesPrompt}` + transferPrompt;
   const toggleFeature = (feature: OptionalFeature) => {
     setOptionalFeatures((current) => current.includes(feature) ? current.filter((item) => item !== feature) : [...current, feature]);
   };
@@ -551,7 +541,7 @@ export function SelfHostingInstallWizard({
       content: (
         <div className={HIGHLIGHT_PANEL}>
           <div className="flex items-start gap-3">
-            <Laptop className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden />
+            <HugeiconsIcon icon={LaptopIcon} className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden />
             <div>
               <p className="font-medium">{copy.desktopSetupPlatformTitle}</p>
               <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{copy.desktopSetupPlatformBody}</p>
@@ -569,8 +559,23 @@ export function SelfHostingInstallWizard({
       canContinue: path !== null,
       content: (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <OptionCard selected={path === "local"} onSelect={() => selectPath("local")} icon={HardDrive} title={copy.localTitle} body={copy.localBody} badge={copy.recommended} />
+          <OptionCard selected={path === "local"} onSelect={() => selectPath("local")} icon={HardDriveIcon} title={copy.localTitle} body={copy.localBody} badge={copy.recommended} />
           <OptionCard tone={CARD_TONES.sky} selected={path === "team"} onSelect={() => selectPath("team")} icon={Server} title={copy.teamTitle} body={copy.teamBody} />
+        </div>
+      ),
+    },
+    {
+      id: "encryption-choice",
+      title: copy.encryptionChoiceTitle,
+      body: copy.encryptionChoiceBody,
+      canContinue: true,
+      content: (
+        <div className={PANEL}>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <OptionCard selected={encryptionEnabled} onSelect={() => setEncryptionEnabled(true)} icon={ShieldCheck} title={copy.encryptionEnabled} body={copy.encryptionEnabledBody} badge={copy.recommended} />
+            <OptionCard tone={CARD_TONES.sky} selected={!encryptionEnabled} onSelect={() => setEncryptionEnabled(false)} icon={DatabaseIcon} title={copy.encryptionDisabled} body={copy.encryptionDisabledBody} />
+          </div>
+          <p className="mt-4 text-sm leading-relaxed text-muted-foreground">{copy.encryptionKeyNote}</p>
         </div>
       ),
     },
@@ -581,8 +586,8 @@ export function SelfHostingInstallWizard({
       canContinue: migrate !== null,
       content: (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <OptionCard tone={CARD_TONES.lavender} selected={migrate === true} onSelect={() => setMigrate(true)} icon={Download} title={copy.migrateYes} body={copy.migrateYesHint} />
-          <OptionCard tone={CARD_TONES.sky} selected={migrate === false} onSelect={() => setMigrate(false)} icon={ArrowRight} title={copy.migrateNo} body={copy.migrateNoHint} />
+          <OptionCard tone={CARD_TONES.lavender} selected={migrate === true} onSelect={() => setMigrate(true)} icon={Download01Icon} title={copy.migrateYes} body={copy.migrateYesHint} />
+          <OptionCard tone={CARD_TONES.sky} selected={migrate === false} onSelect={() => setMigrate(false)} icon={ArrowRight01Icon} title={copy.migrateNo} body={copy.migrateNoHint} />
         </div>
       ),
     },
@@ -597,7 +602,7 @@ export function SelfHostingInstallWizard({
           <p className="text-sm font-medium">{copy.exportHeading}</p>
           <Checklist items={[copy.exportOne, copy.exportTwo]} />
           <p className="mt-4 flex items-start gap-2 text-sm leading-relaxed text-muted-foreground">
-            <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
+            <AppIcon icon={ShieldCheck} className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
             {copy.exportNote}
           </p>
           <CompletionNote copy={copy} criterion={copy.exportDone} />
@@ -642,7 +647,7 @@ export function SelfHostingInstallWizard({
         content: (
           <div className={cn("space-y-5", PANEL)}>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <OptionCard selected={supabaseMode === "managed"} onSelect={() => setSupabaseMode("managed")} icon={Database} title={copy.managedTitle} body={copy.managedBody} badge={copy.managedBadge} />
+              <OptionCard selected={supabaseMode === "managed"} onSelect={() => setSupabaseMode("managed")} icon={DatabaseIcon} title={copy.managedTitle} body={copy.managedBody} badge={copy.managedBadge} />
               <OptionCard tone={CARD_TONES.lavender} selected={supabaseMode === "full"} onSelect={() => setSupabaseMode("full")} icon={Server} title={copy.fullTitle} body={copy.fullBody} badge={copy.fullBadge} />
             </div>
             <p className="rounded-xl bg-muted/50 p-3 text-sm leading-relaxed text-muted-foreground">{supabaseMode === "managed" && serverAccess === "private" ? copy.privateSupabaseManagedNotice : supabaseMode === "full" && serverAccess === "private" ? copy.privateSupabaseFullNotice : supabaseMode === "managed" ? copy.managedNeed : copy.fullNeed}</p>
@@ -650,15 +655,15 @@ export function SelfHostingInstallWizard({
               <h3 className="font-medium">{copy.featuresTitle}</h3>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{copy.featuresBody}</p>
               <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                {featureCatalog.map(({ id, title, body, icon: Icon }) => (
-                  <button key={id} type="button" aria-pressed={optionalFeatures.includes(id)} onClick={() => toggleFeature(id)} className={cn("min-h-11 rounded-xl border-2 p-5 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring", optionalFeatures.includes(id) ? "border-current/60 bg-background/75" : "border-transparent bg-background/40 hover:bg-background/60")}>
-                    <div className="flex items-start gap-3">
-                      <Icon className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden />
-                      <span><span className="font-medium">{title}</span><span className="mt-1.5 block text-sm leading-relaxed text-muted-foreground">{body}</span></span>
-                      {optionalFeatures.includes(id) && <Check className="ml-auto h-4 w-4 shrink-0 text-primary" aria-hidden />}
-                    </div>
-                  </button>
-                ))}
+                  {featureCatalog.map(({ id, title, body, icon: Icon }) => (
+                    <button key={id} type="button" aria-pressed={optionalFeatures.includes(id)} onClick={() => toggleFeature(id)} className={cn("min-h-11 rounded-xl border-2 p-5 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring", optionalFeatures.includes(id) ? "border-current/60 bg-background/75" : "border-transparent bg-background/40 hover:bg-background/60")}>
+                      <div className="flex items-start gap-3">
+                        <AppIcon icon={Icon} className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden={true} />
+                        <span><span className="font-medium">{title}</span><span className="mt-1.5 block text-sm leading-relaxed text-muted-foreground">{body}</span></span>
+                        {optionalFeatures.includes(id) && <HugeiconsIcon icon={CheckIcon} className="ml-auto h-4 w-4 shrink-0 text-primary" aria-hidden />}
+                      </div>
+                    </button>
+                  ))}
               </div>
               <p className="mt-3 text-xs leading-relaxed text-muted-foreground">{copy.servicesExcluded}</p>
             </div>
@@ -692,7 +697,7 @@ export function SelfHostingInstallWizard({
       canContinue: method !== null,
       content: (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <OptionCard tone={CARD_TONES.lavender} selected={method === "agent"} onSelect={() => setMethod("agent")} icon={Bot} title={copy.methodAgentTitle} body={copy.methodAgentBody} badge={copy.methodAgentBadge} />
+          <OptionCard tone={CARD_TONES.lavender} selected={method === "agent"} onSelect={() => setMethod("agent")} icon={BotIcon} title={copy.methodAgentTitle} body={copy.methodAgentBody} badge={copy.methodAgentBadge} />
           <OptionCard tone={CARD_TONES.peach} selected={method === "manual"} onSelect={() => setMethod("manual")} icon={TerminalSquare} title={copy.methodManualTitle} body={copy.methodManualBody} badge={copy.methodManualBadge} />
         </div>
       ),
@@ -739,7 +744,8 @@ export function SelfHostingInstallWizard({
         content: (
           <div className={HIGHLIGHT_PANEL}>
             <CommandBlock command={localInstall} copy={copy} />
-            <p className="mt-4 flex items-start gap-2 text-sm leading-relaxed text-muted-foreground"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />{copy.minimalNote}</p>
+            <p className="mt-4 flex items-start gap-2 text-sm leading-relaxed text-muted-foreground"><AppIcon icon={ShieldCheck} className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />{copy.minimalNote}</p>
+            <p className="mt-4 text-sm leading-relaxed text-muted-foreground">{copy.encryptionKeyNote}</p>
             <CompletionNote copy={copy} criterion={copy.manualLocalDone} />
           </div>
         ),
@@ -754,9 +760,9 @@ export function SelfHostingInstallWizard({
         continueLabel: copy.confirmPrepare,
         content: (
           <div className={cn("space-y-5", PANEL)}>
-            <p className="flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/[0.07] p-4 text-sm leading-relaxed text-muted-foreground"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-amber-700 dark:text-amber-400" aria-hidden />{networkSetup}</p>
+            <p className="flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/[0.07] p-4 text-sm leading-relaxed text-muted-foreground"><AppIcon icon={ShieldCheck} className="mt-0.5 h-4 w-4 shrink-0 text-amber-700 dark:text-amber-400" aria-hidden />{networkSetup}</p>
             <Checklist items={serverAccess === "private" ? [copy.serverChecklistDocker, networkSetup, copy.serverChecklistSmtp] : [copy.serverChecklistDocker, copy.serverChecklistDns, copy.serverChecklistPorts, copy.serverChecklistSmtp]} />
-            {serverAccess === "public" && <div className="rounded-xl border border-border bg-background p-4"><div className="flex items-center gap-2 text-sm font-medium"><Globe2 className="h-4 w-4 text-primary" aria-hidden />{copy.dnsTitle}</div><dl className="mt-3 space-y-2 font-mono text-xs"><div className="flex flex-wrap justify-between gap-3"><dt>{copy.dnsApp}</dt><dd className="[overflow-wrap:anywhere]">{host} → {copy.dnsTarget}</dd></div>{supabaseMode === "full" && <div className="flex flex-wrap justify-between gap-3"><dt>{copy.dnsSupabase}</dt><dd className="[overflow-wrap:anywhere]">supabase.{host} → {copy.dnsTarget}</dd></div>}</dl></div>}
+            {serverAccess === "public" && <div className="rounded-xl border border-border bg-background p-4"><div className="flex items-center gap-2 text-sm font-medium"><AppIcon icon={Globe2} className="h-4 w-4 text-primary" aria-hidden />{copy.dnsTitle}</div><dl className="mt-3 space-y-2 font-mono text-xs"><div className="flex flex-wrap justify-between gap-3"><dt>{copy.dnsApp}</dt><dd className="[overflow-wrap:anywhere]">{host} → {copy.dnsTarget}</dd></div>{supabaseMode === "full" && <div className="flex flex-wrap justify-between gap-3"><dt>{copy.dnsSupabase}</dt><dd className="[overflow-wrap:anywhere]">supabase.{host} → {copy.dnsTarget}</dd></div>}</dl></div>}
             <CompletionNote copy={copy} criterion={copy.prepareDone} />
           </div>
         ),
@@ -786,7 +792,7 @@ export function SelfHostingInstallWizard({
         canContinue: true,
         continueLabel: copy.confirmInstaller,
         content: (
-          <div className={HIGHLIGHT_PANEL}><CommandBlock command={installServer} copy={copy} /><p className="mt-4 flex items-start gap-2 text-sm leading-relaxed text-muted-foreground"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />{copy.installerSafe}</p>{selectedFeatures.length > 0 && <div className="mt-4 rounded-xl border border-border bg-background p-4"><p className="text-sm font-medium">{copy.selectedServicesPrompt}</p><Checklist items={selectedFeatures.map(({ title, setup }) => `${title}: ${setup}`)} /></div>}<CompletionNote copy={copy} criterion={copy.installerDone} /></div>
+          <div className={HIGHLIGHT_PANEL}><CommandBlock command={installServer} copy={copy} /><p className="mt-4 flex items-start gap-2 text-sm leading-relaxed text-muted-foreground"><AppIcon icon={ShieldCheck} className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />{copy.installerSafe}</p><p className="mt-4 text-sm leading-relaxed text-muted-foreground">{copy.encryptionKeyNote}</p>{selectedFeatures.length > 0 && <div className="mt-4 rounded-xl border border-border bg-background p-4"><p className="text-sm font-medium">{copy.selectedServicesPrompt}</p><Checklist items={selectedFeatures.map(({ title, setup }) => `${title}: ${setup}`)} /></div>}<CompletionNote copy={copy} criterion={copy.installerDone} /></div>
         ),
       },
     ] : []),
@@ -847,7 +853,7 @@ export function SelfHostingInstallWizard({
           <div className={HIGHLIGHT_PANEL}>
             <p className="text-sm font-medium">{copy.importHeading}</p>
             <Checklist items={[copy.importOne, copy.importTwo]} />
-            <p className="mt-4 flex items-start gap-2 text-sm leading-relaxed text-muted-foreground"><Database className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />{copy.importNote}</p>
+            <p className="mt-4 flex items-start gap-2 text-sm leading-relaxed text-muted-foreground"><HugeiconsIcon icon={DatabaseIcon} className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />{copy.importNote}</p>
             <CompletionNote copy={copy} criterion={copy.importDone} />
           </div>
         </div>
@@ -859,7 +865,7 @@ export function SelfHostingInstallWizard({
       canContinue: false,
       content: (
         <div className={cn("space-y-5", HIGHLIGHT_PANEL)}>
-          <div className="flex items-start gap-3"><CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden /><p className="text-sm leading-relaxed">{path === "local" ? copy.localTeamAnswer : copy.answerUpdates}</p></div>
+          <div className="flex items-start gap-3"><AppIcon icon={CheckIcon} className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden /><p className="text-sm leading-relaxed">{path === "local" ? copy.localTeamAnswer : copy.answerUpdates}</p></div>
           {path === "local" && <Checklist items={[copy.desktopStopInstruction, copy.desktopRestartInstruction]} />}
           {path === "team" && <div className="flex flex-wrap gap-2"><ResourceLink href={links.operations}>{copy.openOperationsGuide}</ResourceLink></div>}
         </div>
@@ -903,13 +909,13 @@ export function SelfHostingInstallWizard({
       <div className="mx-auto w-full max-w-4xl">
         <header className="flex items-center justify-between gap-2">
           <Link href={guidePath} aria-label={copy.backToGuide} className="inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-full text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring sm:justify-start">
-            <ArrowLeft className="size-4 shrink-0" aria-hidden /><span className="hidden sm:inline">{copy.backToGuide}</span>
+            <HugeiconsIcon icon={ArrowLeft01Icon} className="size-4 shrink-0" aria-hidden /><span className="hidden sm:inline">{copy.backToGuide}</span>
           </Link>
           <div className="flex items-center gap-2">
             <Popover open={progressOpen} onOpenChange={setProgressOpen}>
               <PopoverTrigger asChild>
                 <button type="button" aria-label={`${copy.progressTitle}: ${progressLabel}`} className="inline-flex min-h-11 items-center gap-3 rounded-full bg-[#f3f5ef] px-4 text-sm transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring dark:bg-[#202821]">
-                  {progressLabel}<ChevronDown className="size-4 shrink-0" aria-hidden />
+                  {progressLabel}<HugeiconsIcon icon={ArrowDown01Icon} className="size-4 shrink-0" aria-hidden />
                 </button>
               </PopoverTrigger>
               <PopoverContent align="end" sideOffset={8} collisionPadding={16}
@@ -934,7 +940,7 @@ export function SelfHostingInstallWizard({
                 <nav aria-label={copy.progressTitle} className="max-h-[min(24rem,50dvh)] overflow-y-auto overscroll-contain">
                   <ol className="space-y-1">
                     {stages.map((stage, index) => {
-                      const contents = <><span aria-hidden className={cn("flex size-6 shrink-0 items-center justify-center rounded-full text-xs", index === currentIndex ? "bg-foreground text-background" : "bg-foreground/5")}>{index < currentIndex ? <Check className="size-3.5" /> : index + 1}</span><span className="text-sm leading-snug">{stage.title}</span></>;
+                      const contents = <><span aria-hidden className={cn("flex size-6 shrink-0 items-center justify-center rounded-full text-xs", index === currentIndex ? "bg-foreground text-background" : "bg-foreground/5")}>{index < currentIndex ? <HugeiconsIcon icon={CheckIcon} className="size-3.5" /> : index + 1}</span><span className="text-sm leading-snug">{stage.title}</span></>;
                       return <li key={stage.id} ref={index === currentIndex ? progressStepRef : undefined} tabIndex={index === currentIndex ? -1 : undefined} aria-current={index === currentIndex ? "step" : undefined} className="rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring">
                         {index < currentIndex ? <button type="button" onClick={() => jumpBack(index)} className="flex min-h-11 w-full items-center gap-3 rounded-xl p-2 text-left text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-ring">{contents}</button>
                           : <div className={cn("flex min-h-11 items-center gap-3 rounded-xl p-2", index === currentIndex ? "bg-muted font-medium" : "text-muted-foreground")}>{contents}</div>}
@@ -956,9 +962,9 @@ export function SelfHostingInstallWizard({
             </div>
             <div className="mt-8 flex flex-wrap items-center justify-between gap-3">
               <button type="button" onClick={goBack} disabled={currentIndex === 0} className="inline-flex min-h-11 items-center gap-2 rounded-full px-3 text-sm text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-0">
-                <ArrowLeft className="size-4" aria-hidden />{copy.backLabel}
+                <HugeiconsIcon icon={ArrowLeft01Icon} className="size-4" aria-hidden />{copy.backLabel}
               </button>
-              {currentIndex < stages.length - 1 && <button type="button" onClick={continueWizard} disabled={!currentStage.canContinue} className="inline-flex min-h-11 max-w-full items-center justify-center gap-2 rounded-full bg-primary px-5 py-2.5 text-center text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-35">{currentStage.continueLabel ?? copy.continueLabel}<ArrowRight className="size-4 shrink-0" aria-hidden /></button>}
+              {currentIndex < stages.length - 1 && <button type="button" onClick={continueWizard} disabled={!currentStage.canContinue} className="inline-flex min-h-11 max-w-full items-center justify-center gap-2 rounded-full bg-primary px-5 py-2.5 text-center text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-35">{currentStage.continueLabel ?? copy.continueLabel}<HugeiconsIcon icon={ArrowRight01Icon} className="size-4 shrink-0" aria-hidden /></button>}
             </div>
           </div>
         </div>

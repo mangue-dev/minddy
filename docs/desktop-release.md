@@ -302,7 +302,25 @@ npm --prefix desktop run dist:win:store
 
 ---
 
-## The three refusals of publication
+## Fresh macOS installations and provisioning profiles
+
+Minddy's APNs entitlement requires an Apple-signed Developer ID provisioning
+profile. `desktop/build/minddy-developer-id.provisionprofile` contains the public
+authorization and certificate, not a private signing key. Electron Builder embeds
+it in `Contents/embedded.provisionprofile` before signing. When replacing the
+signing certificate or enabling another restricted capability, regenerate this
+profile through Apple Developer and update the application entitlements together.
+
+A profile installed on the build Mac can authorize launch locally even when it
+is absent from the distributed app. Signing verification and notarization alone
+therefore cannot prove that a fresh Mac will launch the app. The publisher also
+checks the embedded profile's expiration, all-device distribution grant, app and
+team identifiers, APNs environment, and authorization of the actual signing
+certificate. It repeats this check inside every DMG and ZIP before publication.
+
+See Apple's [provisioning profile documentation](https://developer.apple.com/documentation/technotes/tn3125-inside-code-signing-provisioning-profiles).
+
+## The publication checks
 
 [`publish-desktop.mjs`](../scripts/publish-desktop.mjs) checks before sending
 a byte, and he does not do it out of an abundance of caution: **the three failures

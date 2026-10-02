@@ -90,9 +90,9 @@ describe("cibles de toucher", () => {
       /default:\s*\n?\s*"h-9 /, // 36
       /sm: "h-8 /, // 32
       /lg: "h-10 /, // 40
-      /icon: "size-9"/, // 36
-      /"icon-sm": "size-8"/, // 32
-      /"icon-lg": "size-10"/, // 40
+      /icon: "size-9 p-0"/, // 36
+      /"icon-sm": "size-8 p-0"/, // 32
+      /"icon-lg": "size-10 p-0"/, // 40
     ];
     for (const height of heights) expect(button).toMatch(height);
   });
@@ -129,14 +129,17 @@ describe("cibles de toucher", () => {
 
     const slider = read(UI("slider"));
     expect(slider).toContain('data-slot="slider-thumb"');
-    expect(slider).toMatch(/size-3 .*after:absolute after:-inset-2/);
-    expect(read(GLOBALS)).toContain("inset: -16px; /* 12 + 2×16 = 44 */");
+    // Since 0.8.0 the thumb carries no `::after` of its own (the handle is
+    // centered in a full-height track), so our extension stays conflict-free.
+    expect(slider).not.toMatch(/data-slot="slider-thumb"[\s\S]*?after:/);
+    expect(read(GLOBALS)).toContain('[data-slot="slider-thumb"]::after,');
+    expect(read(GLOBALS)).toContain("width: max(100%, 44px);");
 
     // The switch has no `::after` to reuse, so we add one. If mangue-ui ever adds
     // one too, the two would conflict.
     const switchUi = read(UI("switch"));
     expect(switchUi).toContain('data-slot="switch"');
-    expect(switchUi).toMatch(/h-5 w-9 /);
+    expect(switchUi).toMatch(/h-5 w-\[34px\]/);
     expect(switchUi).not.toContain("after:");
   });
 
@@ -183,7 +186,7 @@ describe("cibles de toucher", () => {
     expect(css).toContain("padding-block: 0.375rem !important;");
     // The dependency keeps its touch setting until 1200 px, so the override
     // above is necessary for the application's actual breakpoint.
-    expect(read(UI("dropdown-menu"))).toContain("max-[1199px]:py-2.5");
+    expect(read(UI("dropdown-menu"))).toContain("max-[1199px]:min-h-10");
   });
 });
 

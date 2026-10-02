@@ -1,3 +1,4 @@
+import { commentStore } from "@/lib/server/comment-store";
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
@@ -13,7 +14,7 @@ import { numoPullRequestFooter } from "@/lib/numo-pr-footer";
 import { DEFAULT_AGENT_BRANCH_PREFIX } from "./branch-name";
 
 import { notifyPullRequestOpened } from "./pr-opened-notify";
-import { prStateFromRef, upsertPullRequest } from "./pull-requests";
+import { prStateFromRef, upsertPullRequest, pullRequestIssueIds } from "./pull-requests";
 import { syncIssueStatusFromPr } from "./issue-status-sync";
 import { getRun, runRepoBindingIsCurrent, stampRun, type AgentRun,
 } from "./runs";
@@ -52,8 +53,7 @@ export interface PrLandingContext {
   run: AgentRun;
   target: RepoCloneTarget;
   forge: Forge;
-  /** ANCHOR ticket of the run, when there is one. Null = run notebook or reread:
-   * no tickets to synchronize, comment or trace. */
+  /** Anchor issue for run comments and activity. PR status sync uses current associations. */
   issue: { identifier: string } | null;
   workBranch: string;
   baseBranch: string;
@@ -86,7 +86,7 @@ export async function assertPrLandingAuthority(
   ctx: PrLandingContext,
   target: RepoCloneTarget = ctx.target,
 ): Promise<AgentRun> {
-  const current = await getRun(ctx.run.id).catch(() => null);
+  const current = await getRun(ctx.run.id, { decode: false }).catch(() => null);
   if (!current || current.status !== "running" || !current.created_by) {
     throw new PrLandingAuthorityError("run is no longer authorized to land");
   }
@@ -294,14 +294,14 @@ export async function postPrComment(
     const term = prTerm(provider);
     const label = kind === "reopened" ? s.reopened(term) : s.opened(term);
     const body = `**${s.header(identifier)}**\n\n${label}\n\n🔗 [${s.viewPr(term)}](${prUrl})`;
-    await service.from("comments").insert({
+    await commentStore(service, "comments").insert({
       issue_id: run.issue_id,
       author_id: run.created_by,
       body,
       via_assistant: true,
     });
-  } catch (err) {
-    console.error("[agent-execute] PR comment failed:", (err as Error).message);
+  } catch {
+    console.error("[agent-execute] pr_comment_failed");
   }
 }
 /**
@@ -398,16 +398,18 @@ export async function registerPr(
   // by Numo carries the account of the App, which the receivers dismiss as
   // echo. The reopening is not announced: the PR was already known.
   if (kind === "opened") await notifyPullRequestOpened(prRow);
-  // Run NOTEBOOK: no tickets to synchronize or comment on — PR lives in
-  // the session conversation (and on the Pull requests page).
-  if (issue && run.issue_id) {
-    if (run.created_by) {
+  // A notebook run can also reopen a PR with manually linked issues.
+  const issueIds = prRow ? await pullRequestIssueIds(prRow.id) : [];
+  if (run.created_by) {
+    for (const issueId of issueIds) {
       await syncIssueStatusFromPr({
-        issueId: run.issue_id,
+        issueId,
         actorId: run.created_by,
         prState: prState.state,
       });
     }
+  }
+  if (issue && run.issue_id && issueIds.includes(run.issue_id)) {
     // “Numo opened pull request #12” in the activity log. Issued
     // HERE and not through the webhook: the PR starts from the App token (GitHub) or from the
     // account that linked the repository (GitLab), so the echo carries an identity of
@@ -440,7 +442,7 @@ export async function registerPr(
 export async function refreshPrStateFromDb(
   ctx: PrLandingContext,
 ): Promise<void> {
-  const db = await getRun(ctx.run.id).catch(() => null);
+  const db = await getRun(ctx.run.id, { decode: false }).catch(() => null);
   if (!db) return;
   ctx.prState.number = db.pr_number;
   ctx.prState.url = db.pr_url;
@@ -470,11 +472,8 @@ export async function reopenIfRejectedWorkPushed(
       repoFullName: ctx.target.repoFullName,
       number: ctx.prState.number,
     })
-    .catch((err) => {
-      console.error(
-        "[pr-landing] PR reopen on push failed:",
-        (err as Error).message,
-      );
+    .catch(() => {
+      console.error("[pr-landing] pr_reopen_on_push_failed");
       return null;
     });
   if (reopened && !reopened.merged) await registerPr(ctx, reopened, "reopened");
@@ -570,9 +569,8 @@ export async function openPullRequestAfterPush(
           repoFullName: fresh.repoFullName,
           number: prState.number,
         })
-        .catch((err) => {
-          console.error("[agent-execute] PR reopen failed:", (err as Error).message,
-          );
+        .catch(() => {
+          console.error("[agent-execute] pr_reopen_failed");
           return null;
         });
       if (reopened) {

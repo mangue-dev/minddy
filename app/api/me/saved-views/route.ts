@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { createSavedView } from "@/lib/server/saved-views";
+import { decodeSavedView } from "@/lib/server/saved-view-bookmark";
 
 /** GET /api/me/saved-views — my saved views, most recent first. */
 export async function GET(request: NextRequest) {
@@ -18,7 +19,8 @@ export async function GET(request: NextRequest) {
     console.error("[api/me/saved-views] list failed:", error.message);
     return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
-  return NextResponse.json(data);
+  return NextResponse.json(await Promise.all((data ?? []).map((row) =>
+    decodeSavedView(row, auth.user.id))));
 }
 
 /** POST /api/me/saved-views — save the current screen under a name. */

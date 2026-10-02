@@ -230,8 +230,8 @@ export function createControlPlaneClient(
   async function postQuiet(surface: string, body: unknown): Promise<void> {
     try {
       await request("POST", surface, body);
-    } catch (err) {
-      console.error(`[agent-vm] ${surface} failed:`, (err as Error).message);
+    } catch {
+      console.error("[agent-vm] control_plane_write_failed");
     }
   }
 
@@ -297,7 +297,7 @@ export function createControlPlaneClient(
           console.error("[agent-vm] run is no longer running — stopping");
           return false;
         }
-        console.error("[agent-vm] periodic checkpoint failed:", (err as Error).message);
+        console.error("[agent-vm] periodic_checkpoint_failed");
         return true;
       }
     },
@@ -311,7 +311,7 @@ export function createControlPlaneClient(
           console.error("[agent-vm] run is no longer running — stopping");
           return false;
         }
-        console.error("[agent-vm] heartbeat failed:", (err as Error).message);
+        console.error("[agent-vm] heartbeat_failed");
         return true;
       }
     },
@@ -327,8 +327,8 @@ export function createControlPlaneClient(
       try {
         const body = (await request("GET", "/messages")) as { messages?: unknown };
         return Array.isArray(body.messages) ? (body.messages as AgentUserMessage[]) : [];
-      } catch (err) {
-        console.error("[agent-vm] steering read failed:", (err as Error).message);
+      } catch {
+        console.error("[agent-vm] steering_read_failed");
         return [];
       }
     },
@@ -337,10 +337,10 @@ export function createControlPlaneClient(
       if (texts.length === 0) return;
       try {
         await request("POST", "/messages", { messages: texts });
-      } catch (err) {
+      } catch {
         // The trick ends anyway: what is lost here is the message,
         // and that is precisely what needs to be said.
-        console.error("[agent-vm] steering requeue failed:", (err as Error).message);
+        console.error("[agent-vm] steering_requeue_failed");
       }
     },
 
@@ -348,10 +348,10 @@ export function createControlPlaneClient(
       try {
         const body = (await request("GET", "/messages/pending")) as { pending?: unknown };
         return body.pending === true;
-      } catch (err) {
+      } catch {
         // Same rule as the two neighbors: a temporary breakdown must not
         // break an expectation, only let it come to an end.
-        console.error("[agent-vm] pending steering read failed:", (err as Error).message);
+        console.error("[agent-vm] pending_steering_read_failed");
         return false;
       }
     },
@@ -360,8 +360,8 @@ export function createControlPlaneClient(
       try {
         const body = (await request("GET", "/interrupt")) as { interrupted?: unknown };
         return body.interrupted === true;
-      } catch (err) {
-        console.error("[agent-vm] interrupt read failed:", (err as Error).message);
+      } catch {
+        console.error("[agent-vm] interrupt_read_failed");
         return false;
       }
     },
@@ -383,11 +383,11 @@ export function createControlPlaneClient(
         return typeof body.remainingUsd === "number" && Number.isFinite(body.remainingUsd)
           ? body.remainingUsd
           : null;
-      } catch (err) {
+      } catch {
         // `null` and not 0: unreachable billing should not stop a
         // round in progress. This is the worst case assumed — we keep the entry ceiling,
         // which is that of the old form.
-        console.error("[agent-vm] budget read failed:", (err as Error).message);
+        console.error("[agent-vm] budget_read_failed");
         return null;
       }
     },
@@ -403,10 +403,10 @@ export function createControlPlaneClient(
       try {
         const body = (await request("POST", "/repo-auth")) as { authUrl?: unknown };
         return typeof body.authUrl === "string" && body.authUrl ? body.authUrl : null;
-      } catch (err) {
+      } catch {
         // The job already has a safe remote. A failed infrastructure refresh is
         // reported by the eventual Git push, while the credential stays hidden.
-        console.error("[agent-vm] repo auth refresh failed:", (err as Error).message);
+        console.error("[agent-vm] repo_auth_refresh_failed");
         return null;
       }
     },

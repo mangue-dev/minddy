@@ -1,5 +1,7 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { AtIcon, Delete02Icon, GitMergeIcon, GitPullRequestIcon, InboxIcon, Mail01Icon, MailOpen01Icon, Megaphone01Icon, Message01Icon, Settings01Icon, UserAdd01Icon } from "@hugeicons/core-free-icons";
 import { useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -19,19 +21,6 @@ import {
   cn,
   toast,
 } from "mangue-ui";
-import {
-  AtSign,
-  GitMerge,
-  GitPullRequest,
-  Inbox,
-  Mail,
-  MailOpen,
-  Megaphone,
-  MessageSquare,
-  Settings,
-  Trash2,
-  UserPlus,
-} from "lucide-react";
 import { EmptyScene } from "@/components/empty-scene";
 import {
   AutomationAvatar,
@@ -131,17 +120,17 @@ function RowAvatar({
 
   const Icon =
     notification.type === "assigned"
-      ? UserPlus
+      ? UserAdd01Icon
       : notification.type === "mention" || notification.type === "page_mention"
-        ? AtSign
+        ? AtIcon
         : notification.type === "feedback_new"
-          ? Megaphone
+          ? Megaphone01Icon
           : notification.type === "pr_merged"
-            ? GitMerge
+            ? GitMergeIcon
             : notification.type === "pr_reviewed" ||
                 notification.type === "pr_opened"
-              ? GitPullRequest
-              : MessageSquare;
+              ? GitPullRequestIcon
+              : Message01Icon;
   return (
     <span
       className={cn(
@@ -151,7 +140,7 @@ function RowAvatar({
           : "bg-muted/60 text-muted-foreground",
       )}
     >
-      <Icon className="size-4" />
+      <HugeiconsIcon icon={Icon} className="size-4" />
     </span>
   );
 }
@@ -327,7 +316,7 @@ export default function InboxContent({ onNavigate }: { onNavigate: () => void })
             disabled={readCount === 0}
             onClick={() => setClearReadOpen(true)}
           >
-            <Trash2 className="size-4" />
+            <HugeiconsIcon icon={Delete02Icon} className="size-4" />
           </IconButton>
         </ActionTooltip>
         <ActionTooltip label={t("markAllRead")}>
@@ -337,13 +326,13 @@ export default function InboxContent({ onNavigate }: { onNavigate: () => void })
             disabled={unreadCount === 0}
             onClick={() => act(markAllRead())}
           >
-            <MailOpen className="size-4" />
+            <HugeiconsIcon icon={MailOpen01Icon} className="size-4" />
           </IconButton>
         </ActionTooltip>
         <ActionTooltip label={t("settings")}>
           <IconButton size="sm" aria-label={t("settings")} asChild>
             <Link href="/settings?tab=inbox" onClick={onNavigate}>
-              <Settings className="size-4" />
+              <HugeiconsIcon icon={Settings01Icon} className="size-4" />
             </Link>
           </IconButton>
         </ActionTooltip>
@@ -426,7 +415,7 @@ export default function InboxContent({ onNavigate }: { onNavigate: () => void })
             ) : visible.length === 0 ? (
               showInvitations ? null : (
                 <EmptyScene
-                  icon={Inbox}
+                  icon={InboxIcon}
                   title={emptyTitle}
                 />
               )
@@ -539,7 +528,7 @@ export default function InboxContent({ onNavigate }: { onNavigate: () => void })
                                     act(markRead([notification.id]))
                                   }
                                 >
-                                  <MailOpen className="size-4" />
+                                  <HugeiconsIcon icon={MailOpen01Icon} className="size-4" />
                                 </IconButton>
                               </ActionTooltip>
                             ) : (
@@ -551,7 +540,7 @@ export default function InboxContent({ onNavigate }: { onNavigate: () => void })
                                     act(markUnread([notification.id]))
                                   }
                                 >
-                                  <Mail className="size-4" />
+                                  <HugeiconsIcon icon={Mail01Icon} className="size-4" />
                                 </IconButton>
                               </ActionTooltip>
                             )}
@@ -561,7 +550,7 @@ export default function InboxContent({ onNavigate }: { onNavigate: () => void })
                                 aria-label={t("delete")}
                                 onClick={() => act(remove([notification.id]))}
                               >
-                                <Trash2 className="size-4" />
+                                <HugeiconsIcon icon={Delete02Icon} className="size-4" />
                               </IconButton>
                             </ActionTooltip>
                           </span>

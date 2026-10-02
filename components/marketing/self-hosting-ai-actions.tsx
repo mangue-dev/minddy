@@ -1,6 +1,6 @@
 "use client";
-
-import { ExternalLink, Sparkles } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { LinkSquare01Icon, SparklesIcon } from "@hugeicons/core-free-icons";
 import { CopyButton } from "@/components/marketing/copy-button";
 import { McpAgentLogo } from "@/components/mcp-agent-logo";
 import type { McpAgentId } from "@/lib/mcp-agents";
@@ -45,7 +45,7 @@ export function SelfHostingAiActions({
       <div className="mx-auto w-full max-w-6xl px-4 sm:px-6">
         <div className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
           <div className="flex gap-3">
-            <Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden />
+            <HugeiconsIcon icon={SparklesIcon} className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden />
             <div>
               <h2 className="text-xl font-semibold tracking-tight">{title}</h2>
               <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">{body}</p>
@@ -60,7 +60,7 @@ export function SelfHostingAiActions({
               >
                 <McpAgentLogo agent={agent} className="size-4" />
                 {label}
-                <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
+                <HugeiconsIcon icon={LinkSquare01Icon} className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
               </a>
             ))}
             <CopyButton

@@ -395,7 +395,7 @@ export async function findSimilarPostsAction(
     limit: 5,
     // A visitor should never be suggested private feedback from another.
     publicOnly: true,
-  });
+  }).catch(() => []);
   return matches
     .filter((m) => m.similarity >= MIN_SUGGESTION_SIMILARITY)
     .map((m) => ({

@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { isRepoProviderId } from "@/lib/repo-providers";
+import { decodeRepositoryName } from "@/lib/server/git/repository-name-content";
 import type { BranchCleanupTarget } from "@/lib/types";
 
 /**
@@ -71,13 +72,13 @@ export async function GET(request: NextRequest) {
     }),
   );
 
-  const targets: BranchCleanupTarget[] = withBranches
+  const targets: BranchCleanupTarget[] = await Promise.all(withBranches
     .filter((l): l is NonNullable<typeof l> => !!l)
-    .map((l) => ({
+    .map(async (l) => ({
       project_id: l.project_id,
       provider: l.provider as BranchCleanupTarget["provider"],
-      repo_full_name: l.repo_full_name,
-    }));
+      repo_full_name: await decodeRepositoryName(l.provider,l.repo_full_name),
+    })));
 
   return NextResponse.json({ targets });
 }

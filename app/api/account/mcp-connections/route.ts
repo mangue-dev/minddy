@@ -7,6 +7,7 @@ import { getServiceClient } from "@/lib/supabase-service";
 import { mcpConnectionInput } from "@/lib/mcp-client";
 import { listMcpConnections } from "@/lib/server/mcp-client";
 import { assertPublicHttpUrl } from "@/lib/server/safe-fetch";
+import { mcpConnectionWrite, mcpContentEnabled } from "@/lib/server/mcp-content";
 
 export async function GET(request: NextRequest) {
   const auth = await getAuthedUser(request);
@@ -41,13 +42,16 @@ export async function POST(request: NextRequest) {
   }
   let values;
   try {
-    values = mcpSettingsUpdate(parsed.data);
+    const protectedWrite = await mcpContentEnabled();
+    values = await mcpConnectionWrite(auth.user.id,
+      mcpSettingsUpdate(parsed.data, undefined, protectedWrite),
+      undefined, protectedWrite);
   } catch {
     return NextResponse.json({ error: "encryption" }, { status: 503 });
   }
   const { data, error } = await getServiceClient()
     .from("user_mcp_connections")
-    .insert({ ...values, user_id: auth.user.id })
+    .insert(values)
     .select("id")
     .single();
   if (error) return NextResponse.json({ error: "save" }, { status: 500 });

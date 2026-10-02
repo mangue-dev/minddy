@@ -1,5 +1,7 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Cancel01Icon, Copy01Icon, Delete02Icon, MoreHorizontalIcon, CheckIcon } from "@hugeicons/core-free-icons";
 import { useEffect, useRef, useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import {
@@ -8,10 +10,14 @@ import {
   DialogContent,
   DialogDescription,
   DialogTitle,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
   Spinner,
   toast,
 } from "mangue-ui";
-import { Check, Copy, ListX, X } from "lucide-react";
 import { NumoIcon } from "@/components/numo-icon";
 import { buildScratchpadPrompt } from "@/lib/scratchpad-prompt";
 import { resolvePromptCopyAutoStart } from "@/lib/prompt-copy-auto-start";
@@ -181,7 +187,7 @@ function ScratchpadBody() {
                 {isSaving ? (
                   <Spinner className="size-3.5" />
                 ) : (
-                  <Check className="size-3.5" />
+                  <HugeiconsIcon icon={CheckIcon} className="size-3.5" />
                 )}
               </span>
             </TooltipTrigger>
@@ -194,52 +200,33 @@ function ScratchpadBody() {
 
       <div className="absolute top-3.5 right-3.5 z-30 flex items-center gap-1">
         {!isLoading && (
-          <>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label={t("removeSettled")}
-                  onClick={removeSettled}
-                  className="rounded-full text-muted-foreground hover:text-foreground"
-                >
-                  <ListX className="size-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>{t("removeSettled")}</TooltipContent>
-            </Tooltip>
-            {/* Run + copy side by side, in this order: parity with the
- section buttons (Numo to the left of the copy). */}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label={t("launchAgentAllAria")}
-                  onClick={launchAll}
-                  className="rounded-full text-muted-foreground hover:text-foreground"
-                >
-                  <NumoIcon animated={false} className="size-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>{t("launchAgentAll")}</TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label={t("copyAllAria")}
-                  onClick={copyAll}
-                  className="rounded-full text-muted-foreground hover:text-foreground"
-                >
-                  <Copy className="size-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>{t("copyAll")}</TooltipContent>
-            </Tooltip>
-          </>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label={t("actions")}
+                className="rounded-full text-muted-foreground hover:text-foreground"
+              >
+                <HugeiconsIcon icon={MoreHorizontalIcon} className="size-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onSelect={launchAll}>
+                <NumoIcon animated={false} className="size-4" />
+                {t("launchAgentAll")}
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => void copyAll()}>
+                <HugeiconsIcon icon={Copy01Icon} className="size-4" />
+                {t("copyAll")}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem variant="destructive" onSelect={removeSettled}>
+                <HugeiconsIcon icon={Delete02Icon} className="size-4" />
+                {t("removeSettled")}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         )}
         <Tooltip>
           <TooltipTrigger asChild>
@@ -250,7 +237,7 @@ function ScratchpadBody() {
               onClick={() => setOpen(false)}
               className="rounded-full text-muted-foreground hover:text-foreground"
             >
-              <X className="size-4" />
+              <HugeiconsIcon icon={Cancel01Icon} className="size-4" />
             </Button>
           </TooltipTrigger>
           <TooltipContent>{t("close")}</TooltipContent>

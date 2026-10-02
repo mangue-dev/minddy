@@ -474,6 +474,7 @@ export interface CreateObjectiveInput {
   target_date?: string | null;
   color?: string | null;
   resources?: ResourceInput[];
+  relations?: PendingRelationInput[];
   /** Cross-project creation: files the browser uploaded under the SOURCE
       project's storage prefix. Same rule as issues — a storage object can't be
       referenced across projects, so the server COPIES each into the target.
@@ -1098,6 +1099,15 @@ export interface CreateIssueRelationInput {
   target_type?: RelationEndpointType;
 }
 
+/** A client-side relation selection, saved after the new entity exists. */
+export interface PendingRelationInput {
+  type: IssueRelationType;
+  target_id: string;
+  target_type: RelationEndpointType;
+  /** Display snapshot for drafts whose target was renamed or removed. */
+  target_label: string;
+}
+
 export type IntegrationWebhookEvent =
   "issue.created" | "issue.status_changed" | "issue.updated";
 export type IntegrationWebhookScope = "integration" | "all";
@@ -1157,6 +1167,7 @@ export interface CreateIssueInput {
       project's categories by name and keeps the ones that exist. */
   category_names?: string[];
   resources?: ResourceInput[];
+  relations?: PendingRelationInput[];
   /** Cross-project creation: files the browser uploaded under the SOURCE
       project's storage prefix. A storage object can't be referenced across
       projects, so the server COPIES each into the target project (after
@@ -1220,11 +1231,18 @@ export interface ViewFilters {
   project?: string[]; // global (cross-project) views only — a project board is single-project
 }
 
+/** Direction of a non-smart, non-manual view sort (MIN-592): "asc" is the
+    historical order (urgent first, newest first…), "desc" reverses it. */
+export type SortDirection = "asc" | "desc";
+
 export interface ViewDisplay {
   hideDone?: boolean;
   /** Remove recurring tickets from the table (MIN-136): the maintenance which
  comes back every week is not what we read there. */
   hideRecurring?: boolean;
+  /** Direction of the view sort (MIN-592) — meaningless for "smart" and
+      "manual", which carry their own order. Default "asc". */
+  sortDirection?: SortDirection;
 }
 
 /** The filter/sort/display triple a view applies (also the live "working" state). */

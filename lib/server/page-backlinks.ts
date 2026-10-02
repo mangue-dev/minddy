@@ -2,43 +2,25 @@ import "server-only";
 
 import { issueIdentifier } from "@/lib/issue-constants";
 import type { PageBacklink } from "@/lib/types";
+import { decodeIssue } from "@/lib/server/issue-store";
+import { decodeObjective } from "@/lib/server/objective-store";
+import { decodePageProjection } from "@/lib/server/page-content";
 
 export type { PageBacklink };
 
 /**
- * WHO cites this page — reading, by its two paths (MIN-279).
- *
- * Two origins, and they have nothing in common except the result:
- *
- * • the RESOURCE of genre `page` (MIN-275) — a real foreign key,
- * `attachments.page_id`, whose index had been set for this day;
- * • the MENTION — text, therefore nothing to query, hence the derived table
- * `page_links` than `lib/server/page-links.ts` rewritten on each write.
- *
- * The two merge: a source that cites the page both ways is one
- * line, not two. The sign responds to “who relies on this page?” " ;
- * how the quote is written is not the question.
- *
- * Written once because two surfaces read it, and they must
- * respond the same: the road sign, and `minddy_get_page` — the agent
- * who opens a spec must see the tickets that depend on it without searching for them.
- *
- * The CLIENT is that of the caller, and this is what carries access control.
- * At the session client, the four readings are filtered by the RLS; to the client
- * service (the MCP), they are not — and the guard was done before, in
- * TypeScript, by the core of the pages.
+ * Find sources that cite a page through either an attachment resource
+ * (`attachments.page_id`) or a text mention indexed in `page_links`.
+ * Merge duplicate sources so both the page UI and `minddy_get_page` show
+ * the same dependency list. The caller's client enforces RLS; service-client
+ * callers must authorize page access before invoking this helper.
  */
 
 type Rows = { data: unknown; error: { message: string } | null };
 
 /**
- * The bare minimum of PostgREST this module needs — four `select` with
- * a filter each.
- *
- * Hand-described, and callers pass their client through a `as unknown as` :
- * without types generated schema, letting TypeScript infer `from()` to a real
- * `SupabaseClient` across this boundary blows up the instantiation
- * (TS2589), and the rendered typing is just a `any` in disguise anyway.
+ * Minimal PostgREST surface used by this module. Callers adapt their client
+ * to avoid excessive type instantiation without generated schema types.
  */
 export interface BacklinkQueryable {
   from: (table: string) => {
@@ -49,14 +31,14 @@ export interface BacklinkQueryable {
   };
 }
 
-/** A source, before we knew how to name it. */
+/** A source reference before its protected title is resolved. */
 interface RawSource {
   kind: PageBacklink["kind"];
   id: string;
   at: string;
 }
 
-/** L'ordre des genres, du plus concret au plus large. */
+/** Display concrete resources before page mentions. */
 const KIND_ORDER: Record<PageBacklink["kind"], number> = {
   issue: 0,
   objective: 1,
@@ -75,9 +57,9 @@ export async function pageBacklinks(
       .eq("page_id", pageId),
   ])) as [Rows, Rows];
 
-  if (links.error) console.error("[page-backlinks] links failed:", links.error.message);
+  if (links.error) console.error("[page-backlinks] links query failed");
   if (resources.error) {
-    console.error("[page-backlinks] resources failed:", resources.error.message);
+    console.error("[page-backlinks] resources query failed");
   }
 
   const raw: RawSource[] = [];
@@ -93,19 +75,15 @@ export async function pageBacklinks(
     objective_id: string | null;
     created_at: string;
   }[]) {
-    // A resource depends on a ticket OR an objective, never both
-    // (`attachments_parent_ck`). A page does not yet bear one — the day when
-    // she will carry some, it will be one more branch here and nothing else.
+    // The attachments_parent_ck constraint permits an issue or objective,
+    // but not both, as the resource parent.
     if (row.issue_id) raw.push({ kind: "issue", id: row.issue_id, at: row.created_at });
     else if (row.objective_id) {
       raw.push({ kind: "objective", id: row.objective_id, at: row.created_at });
     }
   }
 
-  // The FUSION of the two origins. The OLDEST of the two dates wins: it is
-  // when this source started to rely on the page, and add the
-  // resource of a ticket which already mentioned it must not bring it up
-  // at the top as a novelty.
+  // Preserve the oldest citation time when both sources refer to the page.
   const merged = new Map<string, RawSource>();
   for (const source of raw) {
     const key = `${source.kind}:${source.id}`;
@@ -118,65 +96,68 @@ export async function pageBacklinks(
     [...merged.values()].filter((s) => s.kind === kind).map((s) => s.id);
 
   const [issues, objectives, pages] = (await Promise.all([
-    fetchIn(client, "issues", "id, number, title, deleted_at", idsOf("issue")),
-    fetchIn(client, "objectives", "id, name, color, deleted_at", idsOf("objective")),
-    fetchIn(client, "pages", "id, title, icon, deleted_at", idsOf("page")),
+    fetchIn(client, "issues", "id, project_id, number, title, description, plan, remote_url, automation_override, deleted_at, encrypted_content, encryption_version", idsOf("issue")),
+    fetchIn(client, "objectives", "id, project_id, name, description, color, deleted_at, encrypted_content, encryption_version", idsOf("objective")),
+    fetchIn(client, "pages", "id, project_id, title, icon, deleted_at, encrypted_content, encryption_version", idsOf("page")),
   ])) as [Rows, Rows, Rows];
 
   const named = new Map<string, Omit<PageBacklink, "at">>();
-  for (const row of (issues.data ?? []) as {
+  for (const stored of (issues.data ?? []) as {
     id: string;
+    project_id: string;
     number: number;
-    title: string;
+    title: string | null;
     deleted_at: string | null;
   }[]) {
-    if (row.deleted_at) continue;
+    if (stored.deleted_at) continue;
+    const row = await decodeIssue(stored as unknown as Record<string, unknown>);
     named.set(`issue:${row.id}`, {
       kind: "issue",
-      id: row.id,
-      identifier: issueIdentifier(projectKey, row.number),
-      title: row.title,
+      id: row.id as string,
+      identifier: issueIdentifier(projectKey, row.number as number),
+      title: row.title as string,
       icon: null,
       color: null,
     });
   }
-  for (const row of (objectives.data ?? []) as {
+  for (const stored of (objectives.data ?? []) as {
     id: string;
-    name: string;
+    project_id: string;
+    name: string | null;
     color: string | null;
     deleted_at: string | null;
   }[]) {
-    if (row.deleted_at) continue;
+    if (stored.deleted_at) continue;
+    const row = await decodeObjective(stored as unknown as Record<string, unknown>);
     named.set(`objective:${row.id}`, {
       kind: "objective",
-      id: row.id,
+      id: row.id as string,
       identifier: null,
-      title: row.name,
+      title: row.name as string,
       icon: null,
-      color: row.color,
+      color: row.color as string | null,
     });
   }
-  for (const row of (pages.data ?? []) as {
+  for (const stored of (pages.data ?? []) as {
     id: string;
-    title: string;
+    project_id: string;
+    title: string | null;
     icon: string | null;
     deleted_at: string | null;
   }[]) {
-    if (row.deleted_at) continue;
+    if (stored.deleted_at) continue;
+    const row = await decodePageProjection(stored as unknown as Record<string, unknown>);
     named.set(`page:${row.id}`, {
       kind: "page",
-      id: row.id,
+      id: row.id as string,
       identifier: null,
-      title: row.title,
-      icon: row.icon,
+      title: row.title as string,
+      icon: row.icon as string | null,
       color: null,
     });
   }
 
-  // What is no longer resolved is SILENTLY abandoned: a source
-  // trashed (the ticket went in the trash, we don't talk about it anymore), or
-  // purged — `page_links.source_id` does not carry a foreign key, the line
-  // survives at its source, and it is here that it ceases to exist.
+  // Omit deleted or purged sources; page_links.source_id has no foreign key.
   return [...merged.values()]
     .flatMap((source) => {
       const entry = named.get(`${source.kind}:${source.id}`);
@@ -188,7 +169,7 @@ export async function pageBacklinks(
     );
 }
 
-/** `.in(…)` on an empty list queries for nothing — we short-circuit. */
+/** Avoid a PostgREST query when there are no source IDs. */
 function fetchIn(
   client: BacklinkQueryable,
   table: string,

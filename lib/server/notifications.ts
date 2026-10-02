@@ -1,7 +1,10 @@
+import { commentStore } from "@/lib/server/comment-store";
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { NotificationType } from "@/lib/types";
+import { randomUUID } from "node:crypto";
+import { failureDiagnostics } from "@/lib/server/failure-diagnostics";
 import {
   categoryOfNotification,
   resolveNotificationPrefs,
@@ -115,8 +118,7 @@ async function currentlyPushableRows(
       ? service.from("projects").select("id, owner_id").in("id", projectIds)
       : Promise.resolve({ data: [] as ScopeRow[], error: null }),
     commentIds.length
-      ? service
-          .from("comments")
+      ? commentStore(service, "comments")
           .select("id, issue_id, objective_id, feedback_post_id")
           .in("id", commentIds)
       : Promise.resolve({ data: [] as ScopeRow[], error: null }),
@@ -235,8 +237,7 @@ async function currentlyPushableRows(
   ].flatMap((error) => (error ? [error.message] : []));
   if (failures.length > 0) {
     console.error(
-      "[notifications] push scope recheck failed:",
-      failures.join("; "),
+      "[notifications] push_scope_recheck_failed",
     );
   }
 
@@ -437,8 +438,8 @@ export async function insertNotifications(
             typeof metadata?.locale === "string" ? metadata.locale : null,
           ),
         );
-      } catch (e) {
-        console.error("[notifications] prefs read failed:", (e as Error).message);
+      } catch {
+        console.error("[notifications] preferences_read_failed");
       }
     })
   );
@@ -490,28 +491,47 @@ export async function insertNotifications(
   }
 
   let inserted = kept;
-  let error: { message: string } | null = null;
-  if (opts.deduplicatePullRequestOpened) {
-    // `ignoreDuplicates` relies on the matching database unique index. Unlike a
-    // read-then-insert guard, it remains correct when the agent and a forge
-    // webhook announce the same opening at the same time. PostgREST returns
-    // only rows inserted by `ON CONFLICT DO NOTHING`, so duplicate attempts do
-    // not also trigger a second system push.
-    const result = await service
-      .from("notifications")
-      .upsert(kept, {
-        onConflict: "user_id,type,pull_request_id",
-        ignoreDuplicates: true,
-      })
-      .select();
-    error = result.error;
-    inserted = (result.data ?? []) as NotificationRow[];
-  } else {
-    const result = await service.from("notifications").insert(kept);
-    error = result.error;
+  let error: unknown = null;
+  let threw = false;
+  let status: number | undefined;
+  try {
+    if (opts.deduplicatePullRequestOpened) {
+      // `ignoreDuplicates` relies on the matching database unique index. Unlike a
+      // read-then-insert guard, it remains correct when the agent and a forge
+      // webhook announce the same opening at the same time. PostgREST returns
+      // only rows inserted by `ON CONFLICT DO NOTHING`, so duplicate attempts do
+      // not also trigger a second system push.
+      const result = await service
+        .from("notifications")
+        .upsert(kept, {
+          onConflict: "user_id,type,pull_request_id",
+          ignoreDuplicates: true,
+        })
+        .select();
+      error = result.error;
+      status = result.status;
+      inserted = (result.data ?? []) as NotificationRow[];
+    } else {
+      const result = await service.from("notifications").insert(kept);
+      error = result.error;
+      status = result.status;
+    }
+  } catch (failure) {
+    threw = true;
+    error = failure;
   }
-  if (error) {
-    console.error("[notifications] insert failed:", error.message);
+  if (error || threw) {
+    console.error("[notifications] insert_failed", {
+      correlation_id: randomUUID(),
+      operation: opts.deduplicatePullRequestOpened ? "upsert_notifications" : "insert_notifications",
+      row_count: kept.length,
+      notification_types: [...new Set(kept.map((row) => row.type))],
+      routine_ids: idsOf(kept, (row) => row.routine_id),
+      numo_conversation_ids: idsOf(kept, (row) => row.numo_conversation_id),
+      numo_work_ids: idsOf(kept, (row) => row.numo_work_id),
+      ...failureDiagnostics(error),
+      ...(status && status >= 400 && status <= 599 ? { status } : {}),
+    });
     return;
   }
 

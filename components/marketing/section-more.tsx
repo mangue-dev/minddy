@@ -1,5 +1,6 @@
 import { getTranslations } from "next-intl/server";
-import { Share2, FileInput, Plug } from "lucide-react";
+import { AppIcon } from "@/components/icon";
+import { FileImportIcon as FileInput, PlugIcon as Plug, Share08Icon as Share2 } from "@hugeicons/core-free-icons";
 import { CARD_TONES } from "./card-tones";
 import { SectionHeading } from "./section-heading";
 
@@ -18,7 +19,7 @@ export async function SectionMore() {
         <div className="grid gap-4 md:grid-cols-3">
           {ITEMS.map(item => (
             <article key={item.key} className={`rounded-2xl p-6 sm:p-8 ${item.tone}`}>
-              <item.icon className="mb-12 size-8" strokeWidth={1.5} aria-hidden />
+              <AppIcon icon={item.icon} className="mb-12 size-8" strokeWidth={1.5} aria-hidden />
               <h3 className="mb-4 text-2xl font-medium tracking-tight">{t(`more_${item.key}_title`)}</h3>
               <p className="text-base leading-relaxed text-pretty opacity-80">{t(`more_${item.key}_body`)}</p>
             </article>

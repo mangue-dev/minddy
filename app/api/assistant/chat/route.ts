@@ -21,6 +21,8 @@ import { parseCommand } from "@/lib/server/assistant/commands";
 import { parseSelectedSkills } from "@/lib/server/assistant/skills";
 import { sanitizeAssistantMessageContent } from "@/lib/server/assistant/sanitize";
 import { fallbackShortTitle, generateShortTitle } from "@/lib/server/short-title";
+import { encodeConversationTitle, shouldProtectConversationTitle } from
+  "@/lib/server/numo/conversation-title-content";
 import { newRunId } from "@/lib/server/ai-usage";
 import { isWebSearchEnabled } from "@/lib/server/web-search";
 import { parseResourcesInput } from "@/lib/server/attachments";
@@ -45,6 +47,7 @@ import {
   beginNumoTurn,
   executeNumoTurn,
   NumoBudgetReservationError,
+  stopCanceledNumoMediation,
 } from "@/lib/server/numo/turns";
 import {
   answerNumoWorkerInput,
@@ -52,16 +55,17 @@ import {
   type WorkerInputCorrelation,
 } from "@/lib/server/numo/worker-mediation";
 import { routineContinuationForConversation } from "@/lib/server/routine-occurrences";
+import { ensureNumoRequestConversation } from "@/lib/server/numo/request-conversation";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
 
 const ASSISTANT_CHAT_RATE_LIMIT = { limit: 20 };
 
-function mediatedWorkerResponse(conversationId: string, turnId: string) {
+function mediatedWorkerResponse(conversationId: string, turnId: string, status = "waiting_work") {
   const body = [
     `event: conversation_id\ndata: ${JSON.stringify({ conversationId, turnId })}\n`,
-    `event: done\ndata: ${JSON.stringify({ status: "waiting_work" })}\n`,
+    `event: done\ndata: ${JSON.stringify({ status })}\n`,
     "",
   ].join("\n");
   return new Response(body, {
@@ -276,6 +280,7 @@ function parseMentions(raw: unknown): AssistantMention[] {
 }
 
 export async function POST(request: NextRequest) {
+  const requestStartedAt = performance.now();
   // getAuthedUser rather than a direct getUser(): it is he who carries the gate
   // Global MFA (aal2) and 503 “instance unreachable” — a protected account
   // by TOTP should not be able to talk to the assistant in aal1 (MIN-118).
@@ -317,6 +322,11 @@ export async function POST(request: NextRequest) {
     typeof body.conversationId === "string" && body.conversationId
       ? body.conversationId
       : undefined;
+  const newConversationId = body.newConversationId;
+  if (newConversationId !== undefined &&
+      (typeof newConversationId !== "string" || !NUMO_UUID.test(newConversationId) || conversationId)) {
+    return Response.json({ error: "Invalid new conversation identity" }, { status: 400 });
+  }
   const workerInput = parseWorkerInput(body.workerInput);
   if (workerInput === null) {
     return Response.json({ error: "Invalid worker input correlation" }, { status: 400 });
@@ -350,6 +360,19 @@ export async function POST(request: NextRequest) {
   const requestId = typeof rawRequestId === "string" && NUMO_UUID.test(rawRequestId)
     ? rawRequestId
     : randomUUID();
+  const timing = (phase: string) => console.info("[numo-chat] timing", {
+    requestId, phase, elapsedMs: Math.round(performance.now() - requestStartedAt),
+  });
+  timing("authorized");
+  const requestConversationId = conversationId ?? newConversationId;
+  if (requestConversationId) {
+    const { data: stopped, error } = await getServiceClient().from("numo_assistant_turns")
+      .select("id").eq("conversation_id", requestConversationId)
+      .eq("user_id", user.id).eq("request_id", requestId)
+      .eq("status", "stopped").maybeSingle();
+    if (error) return Response.json({ error: "Unable to read Numo request authority" }, { status: 503 });
+    if (stopped) return mediatedWorkerResponse(requestConversationId, stopped.id as string, "stopped");
+  }
   if (workerInput && !conversationId) {
     return Response.json({ error: "Worker input requires a conversation" }, { status: 400 });
   }
@@ -497,6 +520,10 @@ export async function POST(request: NextRequest) {
       || mediated.action === "already"
       || mediated.action === "steered"
     ) {
+      const stopped = await stopCanceledNumoMediation({
+        conversationId: convId, requestId, userId: user.id, parentTurnId: mediated.turnId,
+      });
+      if (stopped) return mediatedWorkerResponse(convId, stopped.id, stopped.status);
       return mediatedWorkerResponse(convId, mediated.turnId);
     }
     if (workerInput) {
@@ -527,6 +554,7 @@ export async function POST(request: NextRequest) {
   let admittedUsage: UserUsage;
   try {
     admittedUsage = await ensureUsageBudget(user.id, "assistant", "assistant_model");
+    timing("budget_checked");
   } catch (err) {
     if (isPlanLimitError(err)) return planLimitResponse(err);
     throw err;
@@ -570,7 +598,7 @@ export async function POST(request: NextRequest) {
   if (projectId) {
     const { data } = await supabase
       .from("projects")
-      .select("id, name, key, owner_id")
+      .select("id")
       .eq("id", projectId)
       .is("deleted_at", null)
       .single();
@@ -613,11 +641,13 @@ export async function POST(request: NextRequest) {
   try {
     configuration = await resolveNumoTurnConfiguration({
       userId: user.id,
+      admittedBilling: admittedUsage.billing,
       model: body.model !== undefined ? body.model : existingConversation?.model,
       reasoningLevel: body.reasoningLevel !== undefined
         ? body.reasoningLevel
         : existingConversation?.reasoning_level,
     });
+    timing("configured");
   } catch (error) {
     if (isPlanLimitError(error)) return planLimitResponse(error);
     if (error instanceof ManagedAiUnavailableError) {
@@ -636,34 +666,31 @@ export async function POST(request: NextRequest) {
   // already the truncated fallback), then waited before closing the flow — that's what
   // guarantees that it succeeds without delaying the first token of the response.
   let titleDone: Promise<void> | null = null;
+  const titleController = new AbortController();
   let pendingTitle: { conversationId: string; fallback: string } | null = null;
   let createdConversationId: string | null = null;
   if (!convId) {
+    const reservedConversationId = newConversationId ?? randomUUID();
     const title = fallbackShortTitle(sanitizedUserMessage);
-    const { data: conv, error: convError } = await supabase
-      .from("conversations")
-      .insert({
-        project_id: null,
-        user_id: user.id,
-        title,
-        ...(configuration.persistedModel !== null ? { model: configuration.persistedModel } : {}),
-        ...(configuration.persistedReasoningLevel !== null
-          ? { reasoning_level: configuration.persistedReasoningLevel }
-          : {}),
-      })
-      .select("id")
-      .single();
-
-    if (convError || !conv) {
+    const storedTitle = await shouldProtectConversationTitle(service)
+      ? await encodeConversationTitle(user.id, reservedConversationId, title)
+      : title;
+    let created;
+    try {
+      ({ created } = await ensureNumoRequestConversation({
+        service, conversationId: reservedConversationId, userId: user.id,
+        title: storedTitle, model: configuration.persistedModel,
+        reasoningLevel: configuration.persistedReasoningLevel,
+      }));
+    } catch {
       return Response.json(
         { error: tApi("conversationCreateFailed") },
         { status: 500 }
       );
     }
-    convId = conv.id;
-    createdConversationId = conv.id;
-
-    pendingTitle = { conversationId: conv.id as string, fallback: title };
+    convId = reservedConversationId;
+    createdConversationId = created ? reservedConversationId : null;
+    if (created) pendingTitle = { conversationId: reservedConversationId, fallback: title };
   }
   const webSearchEnabled = await isWebSearchEnabled();
   const timezone =
@@ -719,6 +746,7 @@ export async function POST(request: NextRequest) {
           }
         : {}),
     });
+    timing("admitted");
   } catch (error) {
     if (error instanceof NumoBudgetReservationError) {
       // The turn was not admitted, so a conversation created for this request
@@ -733,10 +761,21 @@ export async function POST(request: NextRequest) {
           console.error("Failed to remove unadmitted Numo conversation:", cleanupError.message);
         }
       }
-      return planLimitResponse(new PlanLimitError("usage_budget_exceeded", {
-        used: admittedUsage.usedUsd,
-        included: admittedUsage.billing.plan.includedUsageUsd,
-      }));
+      const used = error.spentUsd ?? admittedUsage.usedUsd;
+      const included = admittedUsage.billing.plan.includedUsageUsd;
+      console.info("[numo-chat] budget admission refused", {
+        requestId, conversationId: finalConvId,
+        periodStart: admittedUsage.period.start, usedUsd: used,
+        reservedUsd: error.reservedUsd, includedUsd: included,
+        cause: used >= included ? "account" : "reservations",
+      });
+      if (used >= included) {
+        return planLimitResponse(new PlanLimitError("usage_budget_exceeded", { used, included }));
+      }
+      return Response.json({
+        error: tApi("usageBudgetReserved"), code: "usage_budget_reserved",
+        params: { used, included, reserved: error.reservedUsd },
+      }, { status: 409 });
     }
     const message = error instanceof Error ? error.message : "";
     if (message.includes("conversation_busy")) {
@@ -749,9 +788,10 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: tApi("messageSaveFailed") }, { status: 500 });
   }
 
-  if (pendingTitle) {
+  if (pendingTitle && turn.status !== "stopped") {
     const { conversationId: titleConversationId, fallback } = pendingTitle;
     titleDone = generateShortTitle({
+      signal: titleController.signal,
       text: sanitizedUserMessage,
       kind: "conversation",
       locale,
@@ -765,10 +805,13 @@ export async function POST(request: NextRequest) {
       },
     })
       .then(async (generated) => {
-        if (!generated || generated === fallback) return;
+        if (titleController.signal.aborted || !generated || generated === fallback) return;
+        const title = await shouldProtectConversationTitle(service)
+          ? await encodeConversationTitle(user.id, titleConversationId, generated)
+          : generated;
         await service
           .from("conversations")
-          .update({ title: generated })
+          .update({ title })
           .eq("id", titleConversationId)
           .eq("user_id", user.id);
       })
@@ -783,6 +826,19 @@ export async function POST(request: NextRequest) {
   const stream = new ReadableStream({
     async start(controller) {
       const emitter = createSafeEmitter(controller, encoder);
+      const forwardedMilestones = new Set<string>();
+      const emit = emitter.emit.bind(emitter);
+      emitter.emit = (event, data) => {
+        if (["conversation_id", "reasoning_start", "content_delta", "done"].includes(event)
+            && !forwardedMilestones.has(event)) {
+          forwardedMilestones.add(event);
+          timing(`first_${event}`);
+        }
+        emit(event, data);
+      };
+      // Identity is available at admission, before surface lookup, claiming,
+      // history hydration or prompt preparation can delay the live response.
+      emitter.emit("conversation_id", { conversationId: finalConvId, turnId: turn.id });
       try {
         const result = await executeNumoTurn({
           turnId: turn.id,
@@ -790,13 +846,21 @@ export async function POST(request: NextRequest) {
           liveEmitter: emitter,
           aiRuntime: configuration.runtime,
         });
+        let finalStatus = result.status === "not_claimed" ? turn.status : result.status;
+        if (result.status === "not_claimed") {
+          const { data: current } = await service.from("numo_assistant_turns")
+            .select("status").eq("id", turn.id).maybeSingle();
+          if (current?.status) finalStatus = current.status;
+        }
+        if (finalStatus === "stopped" || result.status === "not_claimed") titleController.abort();
         await titleDone;
         if (result.status === "not_claimed") {
           emitter.emit("conversation_id", { conversationId: finalConvId, turnId: turn.id });
-          emitter.emit("done", { status: turn.status });
+          emitter.emit("done", { status: finalStatus });
           emitter.close();
         }
       } catch (err) {
+        titleController.abort();
         const errorMessage = err instanceof Error ? err.message : tApi("unexpected");
         await titleDone;
         const { data: currentTurn } = await service

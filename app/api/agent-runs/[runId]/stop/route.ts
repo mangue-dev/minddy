@@ -1,8 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { getAuthedUser } from "@/lib/server/api-auth";
+import { kickAgentDrain } from "@/lib/server/agent/launch";
 import { canReadAgentRun } from "@/lib/server/agent/run-access";
-import { getRun, requestInterrupt } from "@/lib/server/agent/runs";
+import { getRun, requestInterrupt, requestNumoWorkerStop } from "@/lib/server/agent/runs";
+import { getServiceClient } from "@/lib/supabase-service";
 import { stopChainOnInterrupt } from "@/lib/server/automations/hooks";
 
 /**
@@ -22,24 +24,27 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
 
-  const run = await getRun(runId);
+  const run = await getRun(runId, { decode: false });
   if (!run) return NextResponse.json({ error: "Run not found" }, { status: 404 });
 
   if (!(await canReadAgentRun(auth.user.id, run))) {
     return NextResponse.json({ error: "Run not found" }, { status: 404 });
   }
 
-  if (run.parent_numo_turn_id) {
-    return NextResponse.json(
-      { error: "workerOwnedByNumo", code: "workerOwnedByNumo" },
-      { status: 409 },
-    );
-  }
-
-  // We only interrupt a run that WORKS; at rest there is nothing to interrupt.
+  // A delegated Stop retires Numo continuation before interrupting the selected
+  // worker. The current schema combines these writes in one transaction.
   const working = WORKING.includes(run.status);
   if (working) {
-    await requestInterrupt(runId);
+    try {
+      if (run.parent_numo_turn_id) await requestNumoWorkerStop(runId);
+      else await requestInterrupt(runId);
+    } catch {
+      return NextResponse.json({ error: "Stop request failed" }, { status: 500 });
+    }
+    console.info("[agent-stop] recorded", {
+      runId, parentTurnId: run.parent_numo_turn_id ?? null,
+    });
+    kickAgentDrain(getServiceClient());
   }
 
   // A human “stop” STOPS the chain (MIN-147), it does not move it forward:

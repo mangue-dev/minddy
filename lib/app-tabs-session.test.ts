@@ -211,6 +211,24 @@ describe("application tab sessions", () => {
     expect(rows().find((row) => row.id === first.id)?.href).toBe("/home");
     session.dispose();
   });
+  it("claims a fresh row for a load no row displays, keeping the first row intact", async () => {
+    // A reconnect or a hard navigation lands on an address the previous
+    // document never observed (the server died mid-navigation, the memory was
+    // lost): that load must claim a row of its own instead of grinding the
+    // first pinned one under the load URL.
+    const home = { ...createHomeTab("owner"), pinned: true, href: "/home" };
+    const board = { ...createHomeTab("owner", undefined, 1), href: "/all?view=x" };
+    const { session, navigate } = setup([home, board]);
+    await session.initialize("/pull-requests", { id: board.id, href: "/all?view=x" });
+    const snapshot = session.getSnapshot();
+    expect(snapshot.tabs).toHaveLength(3);
+    expect(snapshot.activeId).not.toBe(home.id);
+    expect(snapshot.tabs.find((row) => row.id === home.id)?.href).toBe("/home");
+    expect(snapshot.tabs.find((row) => row.id === board.id)?.href).toBe("/all?view=x");
+    expect(snapshot.tabs.find((row) => row.id === snapshot.activeId)?.href).toBe("/pull-requests");
+    expect(navigate).not.toHaveBeenCalled();
+    session.dispose();
+  });
   it("restores a reload of a page whose selection lives outside the address", async () => {
     // /pull-requests keeps the open PR out of the URL and publishes
     // `/pull-requests?pr=` instead, so a reload lands on the bare path. That
@@ -227,12 +245,18 @@ describe("application tab sessions", () => {
     session.dispose();
   });
   it("keeps a URL that brings its own selection from being swallowed by restoration", async () => {
+    // The address is the freshest intent, but a URL no row displays claims its
+    // OWN row instead of grinding the first one under the load URL: the admin
+    // row keeps /admin, the remembered PR row keeps its own selection.
     const admin = { ...createHomeTab("owner"), href: "/admin" };
     const pr = { ...createHomeTab("owner", undefined, 1), href: "/pull-requests?pr=x" };
-    const { session, rows } = setup([admin, pr]);
+    const { session } = setup([admin, pr]);
     await session.initialize("/pull-requests?pr=y", { id: pr.id, href: "/pull-requests?pr=x" });
-    expect(session.getSnapshot().activeId).toBe(admin.id);
-    expect(rows().find((row) => row.id === admin.id)?.href).toBe("/pull-requests?pr=y");
+    const snapshot = session.getSnapshot();
+    expect(snapshot.tabs).toHaveLength(3);
+    expect(snapshot.tabs.find((row) => row.id === admin.id)?.href).toBe("/admin");
+    expect(snapshot.tabs.find((row) => row.id === pr.id)?.href).toBe("/pull-requests?pr=x");
+    expect(snapshot.tabs.find((row) => row.id === snapshot.activeId)?.href).toBe("/pull-requests?pr=y");
     session.dispose();
   });
   it("restores a reload whose URL carries an anchor the memory lacks", async () => {

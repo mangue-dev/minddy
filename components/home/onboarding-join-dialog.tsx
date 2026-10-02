@@ -1,5 +1,7 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Copy01Icon, Share01Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
@@ -11,7 +13,6 @@ import {
   DialogTitle,
   toast,
 } from "mangue-ui";
-import { Copy, Share2 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { AppTooltip } from "@/components/ui/app-tooltip";
 
@@ -86,7 +87,7 @@ export function OnboardingJoinDialog({
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Button type="button" size="sm" onClick={() => void copy()} disabled={!email}>
-              <Copy />
+              <HugeiconsIcon icon={Copy01Icon} />
               {tc("copy")}
             </Button>
             {canShare && (
@@ -97,7 +98,7 @@ export function OnboardingJoinDialog({
                 onClick={() => void share()}
                 disabled={!email}
               >
-                <Share2 />
+                <HugeiconsIcon icon={Share01Icon} />
                 {t("joinShareCta")}
               </Button>
             )}

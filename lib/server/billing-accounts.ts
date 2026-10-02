@@ -21,6 +21,8 @@ import {
   type StripeSubscription,
 } from "@/lib/server/stripe";
 import { isGiftExpired } from "@/lib/billing-gift";
+import { decodeBillingAccount, encodeBillingField,
+  shouldProtectBillingIdentity } from "./billing-content";
 
 /**
  * Billing accounts (MIN-72) — one `billing_accounts` line per user, written
@@ -153,7 +155,7 @@ export async function getBillingAccountForUser(
     .eq("user_id", userId)
     .maybeSingle();
   if (error) throw new Error(error.message);
-  return (data as BillingAccount | null) ?? null;
+  return data ? decodeBillingAccount(userId, data as BillingAccount) : null;
 }
 
 export async function upsertBillingAccount(
@@ -161,16 +163,35 @@ export async function upsertBillingAccount(
   updates: Partial<BillingAccount>
 ): Promise<BillingAccount> {
   const service = getServiceClient();
-  const { data, error } = await service
-    .from("billing_accounts")
-    .upsert(
-      { user_id: userId, ...updates, updated_at: new Date().toISOString() },
-      { onConflict: "user_id" }
-    )
-    .select("*")
-    .single();
+  const patch = { ...updates };
+  const hasEmail = Object.hasOwn(patch, "email") && patch.email !== null;
+  const hasNote = Object.hasOwn(patch, "admin_override_note") &&
+    patch.admin_override_note !== null;
+  const protectedByScope = (hasEmail || hasNote) &&
+    await shouldProtectBillingIdentity(service);
+  let protectedRow: { email_protected: boolean;
+    admin_override_note_protected: boolean } | null = null;
+  if (!protectedByScope && (hasEmail || hasNote)) {
+    const { data, error } = await service.from("billing_accounts")
+      .select("email_protected, admin_override_note_protected")
+      .eq("user_id", userId).maybeSingle();
+    if (error) throw new Error(error.message);
+    protectedRow = data;
+  }
+  if (protectedByScope || protectedRow) {
+    if (hasEmail && (protectedByScope || protectedRow?.email_protected))
+      patch.email = await encodeBillingField(userId, "email", patch.email ?? null);
+    if (hasNote && (protectedByScope ||
+      protectedRow?.admin_override_note_protected))
+      patch.admin_override_note = await encodeBillingField(userId,
+        "admin_override_note", patch.admin_override_note ?? null);
+  }
+  const { data, error } = await service.rpc("upsert_billing_account_patch", {
+    p_user_id: userId,
+    p_patch: patch,
+  });
   if (error) throw new Error(error.message);
-  return data as BillingAccount;
+  return decodeBillingAccount(userId, data as BillingAccount);
 }
 
 type StripeBillingUpdate = Pick<
@@ -207,7 +228,7 @@ export async function applyStripeBillingEvent(
   if (error || !data) {
     throw new Error(error?.message ?? "Stripe billing event returned no account");
   }
-  return data as BillingAccount;
+  return decodeBillingAccount(userId, data as BillingAccount);
 }
 
 const ADMIN_BILLING_SCAN_PAGE_SIZE = 500;

@@ -1,6 +1,7 @@
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Shield01Icon, CheckIcon } from "@hugeicons/core-free-icons";
 import { getTranslations } from "next-intl/server";
 import { Button, Card, CardContent } from "mangue-ui";
-import { Check, ShieldAlert } from "lucide-react";
 import { OAuthLogoPair } from "@/components/oauth/logo-pair";
 
 /**
@@ -55,7 +56,7 @@ export async function OAuthConsentCard({
             t("scopeAgents"),
           ].map((scope) => (
             <li key={scope} className="flex items-start gap-2.5">
-              <Check className="mt-0.5 size-4 shrink-0 text-brand" strokeWidth={2.5} />
+              <HugeiconsIcon icon={CheckIcon} className="mt-0.5 size-4 shrink-0 text-brand" strokeWidth={2.5} />
               <span className="text-foreground/90">{scope}</span>
             </li>
           ))}
@@ -63,10 +64,7 @@ export async function OAuthConsentCard({
 
         <div className="flex flex-col gap-2 rounded-xl border border-amber-500/25 bg-amber-500/[0.06] px-4 py-3.5">
           <p className="flex items-start gap-2.5 text-sm text-foreground/90">
-            <ShieldAlert
-              className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-500"
-              strokeWidth={2.25}
-            />
+            <HugeiconsIcon icon={Shield01Icon} className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-500" strokeWidth={2.25} />
             <span>
               {redirectHost
                 ? t("redirectTo", { host: redirectHost })

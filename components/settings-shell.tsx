@@ -1,5 +1,7 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowLeft01Icon } from "@hugeicons/core-free-icons";
 import {
   Suspense,
   useCallback,
@@ -13,7 +15,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useReducedMotion } from "framer-motion";
 import { Button, cn } from "mangue-ui";
-import { ChevronLeft, type LucideIcon } from "lucide-react";
+import { AppIcon } from "@/components/icon";
 import { trackEvent } from "@/lib/analytics";
 import { AppContentHeader } from "@/components/app-content-header";
 import { SecondarySidebar } from "@/components/secondary-sidebar";
@@ -33,7 +35,7 @@ import {
 export type SettingsTab = {
   value: string;
   label: string;
-  icon?: LucideIcon;
+  icon?: AppIcon;
   hidden?: boolean;
   /** Caution mark on the tab — a setting is incomplete. The chain
       is what the hover says and what a screen reader reads: the point alone
@@ -330,7 +332,7 @@ function SettingsTabs({
                       onClick={() => openSection(section)}
                       className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left outline-none transition-colors hover:bg-muted/60 focus-visible:bg-muted/60"
                     >
-                      <Icon className="size-4 shrink-0 text-muted-foreground" />
+                      <AppIcon icon={Icon} className="size-4 shrink-0 text-muted-foreground" />
                       <span className="min-w-0 flex-1 truncate text-sm">
                         {section.title}
                       </span>
@@ -382,7 +384,7 @@ function SettingsTabs({
             aria-label={title}
             onClick={() => setMobileDetail(false)}
           >
-            <ChevronLeft />
+            <HugeiconsIcon icon={ArrowLeft01Icon} />
           </Button>
           <span className="truncate text-sm font-medium md:hidden">
             {activeLabel}
@@ -402,8 +404,9 @@ function SettingsTabs({
 
                 Spacing lives BETWEEN the cards: each group carries its
                 own frame, a `space-y-10` (which separated blocks without borders)
-                laisserait des trous. */}
-            <div key={activeTab} className="flex flex-col gap-4">
+                would leave gaps. The gap between groups is generous
+                (`gap-8`, MIN-593): each card reads as its own section. */}
+            <div key={activeTab} className="flex flex-col gap-8">
               {visibleTabs.find((tab) => tab.value === activeTab)?.content}
             </div>
           </div>

@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { decodePullRequestContent } from "@/lib/server/agent/pull-request-content";
 import type {
   AssistantMention,
   AssistantPageContext,
@@ -81,12 +82,10 @@ export async function validateMessageContext(
     next.projectId = projectId;
     next.prNumber = Number(pullRequest.number);
     next.prState = String(pullRequest.state ?? "");
-    next.prHeadRef = typeof pullRequest.head_branch === "string"
-      ? pullRequest.head_branch
-      : undefined;
-    next.prBaseRef = typeof pullRequest.base_branch === "string"
-      ? pullRequest.base_branch
-      : undefined;
+    next.prHeadRef = await decodePullRequestContent(pullRequest.id,
+      "head_branch", pullRequest.head_branch) ?? undefined;
+    next.prBaseRef = await decodePullRequestContent(pullRequest.id,
+      "base_branch", pullRequest.base_branch) ?? undefined;
   }
   for (const [field, table, softDeleted] of [
     ["feedbackId", "feedback_posts", true],

@@ -30,56 +30,14 @@ class RequestBodyTooLargeError extends Error {
 }
 
 /**
- * THE SUPERVISOR'S LOCAL PROXY (MIN-286, lot 2) — the forty lines that
- * rendent au ledger ce qu'opencode ne dit pas.
- *
- * Opencode speaks to the provider with a `baseURL`; we make it point to
- * `127.0.0.1` **in the microVM**, and this server relays to the real one. THE
- * traffic therefore always leaves the VM with the PLACEHOLDER, the firewall places the
- * key after exit like today, `network-policy.ts` does not change one
- * line and no secrets enter the process where the model executes from the shell.
- *
- * AND ON THE USER'S MACHINE, IT IS THIS PROCESS WHICH SET THE KEY (MIN-357).
- * There is no firewall on a Mac: the key goes down here — and no more
- * low — requested from the control plane at the start of the tour, kept in memory, and
- * placed on the only route served (see `LlmProxyOptions.apiKey` and
- * `resolveProxyTarget`). This is what makes the path guard, below, a
- * safety piece and more a convenience.
- *
- * ─────────────────────────────────────────────────────────────────────────────
- * THREE THINGS THAT ARE ONLY DONE THERE, and it is for them that it exists
- *
- * 1. **The `generation_id`.** An opencode wizard message carries
- *    `id, sessionID, role, time, parentID, modelID, providerID, mode, agent,
- * path, cost, tokens, finish` — and that's it (file §2.6). The identifier of
- * generation of the supplier, the one by which an invoice is reconciled and by
- * which customer support escalates a call, does not exist anywhere. He is in
- * the RESPONSE, which this proxy sees.
- * 2. **The cost ACTUALLY charged.** `usage: {include: true}` asks OpenRouter
- * the cost of generation in the last frame of the flow. Opencode, he
- * CALCULATE yours (our prices × tokens from batch 1). The batch 0 probe has
- * measured a zero gap over five generations — but the zero gap of one day is not
- * not a guarantee, and it is the supplier's figure which is authentic on the day
- * they diverge. This is also what makes the ledger IDENTICAL between the two
- * engines, which is the changeover criterion for lot 3.
- * 3. **The level of reasoning of the compat. layers** Measured in batch 1:
- * `reasoning_effort` flat is REMOVED from body by opencode; only the form
- * nested (OpenRouter) survives. An openai/google BYOK would lose
- * so his reasoning in silence - the round leaves, it costs, it thinks less.
- * Anthropic has the same problem with its `thinking` form. The field is
- * reinjected here, in the model-aware form that the registry declares
- * ([agent-providers.ts](../../../agent-providers.ts), `reasoningField`) — and
- * in THIS ONE ONLY: a body which bears both forms at the same time leaves
- *    en 400 chez OpenRouter (« both provided with conflicting values »), donc
- * the other is removed from the body before the relay.
- *
- * WHAT IT DOES NOT DO: decide. He observes and completes the body; the ledger,
- * caps and matching remain with the supervisor.
+ * Local completion relay for OpenCode. It applies provider settings and secret
+ * redaction, captures generation IDs and observed usage, and propagates client
+ * disconnects to the upstream HTTP connection. Accounting never delays Stop.
  */
 
 /** What a generation has let us see in passing. */
 export interface CapturedGeneration {
-  /** L'`id` du fournisseur — `gen-…` chez OpenRouter. */
+  /** Provider generation ID (`gen-…` on OpenRouter). */
   id: string | null;
   /** The model as the supplier returns it (he can specify a variant). */
   model: string;
@@ -110,37 +68,12 @@ export interface LlmProxy {
    * an expense: the tokens and cost come from the round, not from the pairing.
    */
   take(round: { model: string; outputTokens: number }): CapturedGeneration | null;
-  /**
-   * THE GENERATIONS THAT NO MORE ROUND WILL COME TO TAKE, removed from the queue.
-   *
-   * This is what a CUT IN FLIGHT round leaves behind, and it's the only
-   * place of the harness where its expenditure still exists. Measured on 2026-08-12
-   * (file §2.23): opencode charges NOTHING for an aborted round — `finish: null`,
-   * `cost: 0`, `tokens: 0`, `error: MessageAbortedError` — while 179 characters
-   * were already written and the supplier actually invoiced
-   * $0.002827. Without this drain, a “Stop”, a ceiling or a deadline would emerge
-   * the expenditure of the ledger, the quota and the invoice, on a triggerable gesture
-   * will — the exact fault that MIN-216 had closed on the home loop side.
-   *
-   * What this proxy has more than everything else: **it does not cut upstream when
-   * the customer leaves**. The `fetch` to the supplier has no signal, the
-   * continuous playback loop until the end of the stream (measured: 1221 ms after the
-   * leaving the client, without a socket error), and the last frame — the one that
-   * carries `usage` and its cost — therefore arrives anyway. The written line is not
-   * an estimate: this is the supplier's figure.
-   */
+  /** Remove captured generations not consumed by an engine round. */
   drain(): CapturedGeneration[];
-  /**
-   * Waits for STILL IN FLIGHT relays to complete, at most `timeoutMs`.
-   *
-   * To call before `drain`, and it's a matter of racing, not caution:
-   * when the client cuts off, the upstream continues — measured at **1221 ms** longer
-   * until its last frame. Drain immediately after a `abort` does not
-   * would therefore find nothing, and the expense would go back through the hole that we have just
-   * butcher. The ceiling exists for the opposite case: a supplier who does not
-   * would never close its flow must not hold the end of the round.
-   */
+  /** Wait for relay cleanup, bounded by timeoutMs. */
   settle(timeoutMs: number): Promise<void>;
+  /** Retire this turn's relay and abort all parent/child generations. */
+  cancel(): void;
   close(): Promise<void>;
 }
 
@@ -429,6 +362,8 @@ export async function startLlmProxy(opts: LlmProxyOptions): Promise<LlmProxy> {
   const pool: CapturedGeneration[] = [];
   /** Relays started and not finished — what `settle` expects. */
   let inFlight = 0;
+  const controllers = new Set<AbortController>();
+  let canceled = false;
 
   /**
    * THE KEY, TAKEN BEFORE THE FIRST SERVER BYTE. The port does not exist yet
@@ -452,21 +387,38 @@ export async function startLlmProxy(opts: LlmProxyOptions): Promise<LlmProxy> {
       // The proxy is on the critical path of the model: a failure here must occur
       // tell the HTTP client (therefore to opencode, which will try it again), not do
       // fall the process which holds all the trick.
+      if (res.destroyed) return;
       if (!res.headersSent) res.writeHead(502, { "content-type": "application/json" });
       res.end(JSON.stringify({ error: { message: `proxy: ${(err as Error).message}` } }));
     });
   });
 
   async function relay(req: IncomingMessage, res: ServerResponse): Promise<void> {
+    if (canceled) {
+      req.resume();
+      res.writeHead(409, { "content-type": "application/json" });
+      res.end(JSON.stringify({ error: { message: "This turn was stopped" } }));
+      return;
+    }
     inFlight++;
+    const controller = new AbortController();
+    controllers.add(controller);
+    const disconnect = () => {
+      if (!res.writableFinished) controller.abort();
+    };
+    res.once("close", disconnect);
     try {
-      await relayOnce(req, res);
+      await relayOnce(req, res, controller.signal);
     } finally {
+      res.off("close", disconnect);
+      controllers.delete(controller);
       inFlight--;
     }
   }
 
-  async function relayOnce(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  async function relayOnce(
+    req: IncomingMessage, res: ServerResponse, signal: AbortSignal,
+  ): Promise<void> {
     const announcedLength = Number(req.headers["content-length"]);
     if (Number.isFinite(announcedLength) && announcedLength > MAX_LLM_PROXY_BODY_BYTES) {
       // Do not retain an announced oversized body. Draining the socket keeps the
@@ -490,7 +442,7 @@ export async function startLlmProxy(opts: LlmProxyOptions): Promise<LlmProxy> {
       // A refusal here is never trivial: it is either an opencode that has changed
       // route, or someone trying to use the proxy. It can be read in a
       // log, bounded because the request-target comes from opposite.
-      console.error(`[llm-proxy] refused ${req.method} ${(req.url ?? "").slice(0, 200)}`);
+      console.error("[llm-proxy] route_refused", route.status);
       res.writeHead(route.status, { "content-type": "application/json" });
       res.end(JSON.stringify({ error: { message: route.message } }));
       return;
@@ -545,10 +497,12 @@ export async function startLlmProxy(opts: LlmProxyOptions): Promise<LlmProxy> {
     if (relayKey) headers.authorization = `Bearer ${relayKey}`;
     if (opts.relay) headers.authorization = `Bearer ${opts.relay.token()}`;
 
+    signal.throwIfAborted();
     opts.onTiming?.("llm-upstream-request");
     const upstreamRequest: RequestInit = {
       method: "POST",
       headers,
+      signal,
       ...(body === undefined ? {} : { body }),
     };
     let upstream: Response;
@@ -593,20 +547,26 @@ export async function startLlmProxy(opts: LlmProxyOptions): Promise<LlmProxy> {
     const reader = upstream.body.getReader();
     const decoder = new TextDecoder();
     let firstChunk = true;
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      if (firstChunk) {
-        firstChunk = false;
-        opts.onTiming?.("llm-upstream-first-byte");
+    try {
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done || signal.aborted) break;
+        if (firstChunk) {
+          firstChunk = false;
+          opts.onTiming?.("llm-upstream-first-byte");
+        }
+        res.write(value);
+        if (sniff) sniffer.push(decoder.decode(value, { stream: true }));
       }
-      // We WRITE FIRST: the flow of the model must not wait for our reading.
-      res.write(value);
-      if (sniff) sniffer.push(decoder.decode(value, { stream: true }));
-    }
-    if (sniff) {
-      sniffer.end();
-      pool.push(...sniffer.captured());
+    } finally {
+      // Preserve IDs and any usage observed before cancellation. Missing final
+      // usage stays unknown; never keep generation alive to obtain an invoice.
+      if (sniff) {
+        sniffer.end();
+        pool.push(...sniffer.captured());
+      }
+      await reader.cancel().catch(() => {});
+      reader.releaseLock();
     }
     res.end();
   }
@@ -623,11 +583,15 @@ export async function startLlmProxy(opts: LlmProxyOptions): Promise<LlmProxy> {
         await new Promise((r) => setTimeout(r, 50));
       }
     },
+    cancel: () => {
+      canceled = true;
+      for (const controller of controllers) controller.abort();
+    },
     close: () =>
       new Promise<void>((resolve) => {
+        for (const controller of controllers) controller.abort();
         server.close(() => resolve());
-        // An open SSE flow would keep the server alive: the trick is over, we
-        // ne l'attend pas.
+        // Open SSE clients must not keep shutdown waiting.
         server.closeAllConnections?.();
       }),
   };

@@ -144,8 +144,12 @@ describe("sidebar visibility", () => {
       new MouseEvent("pointerover", { bubbles: true }),
     ));
     expect(panel()?.dataset.open).toBe("true");
+    // The floating panel overlaps the content header, whose macOS drag region
+    // must retire for exactly the time the panel is shown.
+    expect(document.body.getAttribute("data-sidebar-floating")).toBe("true");
     act(() => button().click());
     expect(isHidden()).toBe(false);
+    expect(document.body.hasAttribute("data-sidebar-floating")).toBe(false);
     expect(button().getAttribute("aria-label")).toBe("Hide sidebar");
   });
 

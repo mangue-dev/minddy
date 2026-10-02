@@ -2,8 +2,8 @@
 // still in it, the form state is stashed here instead of being lost, and a
 // recovery row above the title field lets the user restore or delete it later.
 //
-// Drafts live ONLY in the browser's localStorage: no server, no DB. Each kind
-// (issue / objective) keeps its own capped, most-recent-first list. Drafts are
+// Drafts use server-authenticated envelopes in localStorage, with no key on the
+// device. Each kind keeps a capped, most-recent-first list for 30 days. Drafts are
 // scoped to a project id because most of their fields (status, assignee,
 // objective, category ids) are meaningless outside the project they were
 // written in — so a draft is only ever offered inside its own project.
@@ -17,7 +17,8 @@ import type {
 } from "@/lib/issue-constants";
 import type { ObjectiveStatus } from "@/lib/objective-constants";
 import type { RecurrenceCadence } from "@/lib/recurrence";
-import type { AttachmentInput, ResourceInput } from "@/lib/types";
+import type { AttachmentInput, PendingRelationInput, ResourceInput } from "@/lib/types";
+import { localSnapshotGeneration, restoreLocalSnapshot, saveLocalSnapshot } from "./local-snapshots";
 
 export type DraftKind = "issue" | "objective";
 
@@ -28,6 +29,8 @@ interface DraftBase {
   projectId: string;
   /** Epoch ms of the last save — drives the most-recent-first ordering. */
   updatedAt: number;
+  /** Absent from drafts saved before creation supported relations. */
+  relations?: PendingRelationInput[];
 }
 
 export interface IssueDraft extends DraftBase {
@@ -70,8 +73,32 @@ export type DraftFor<K extends DraftKind> = K extends "issue"
 
 /** Keep the list short — this is a recovery aid, not a history. */
 export const MAX_DRAFTS = 10;
+export const DRAFT_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 
 const keyFor = (kind: DraftKind) => `minddy:drafts:${kind}`;
+const queues = new Map<DraftKind, Promise<unknown>>();
+export class LegacyDraftRecoveryRequired extends Error {}
+
+async function withDraftLock<T>(kind: DraftKind, operation: (guard: () => void) => Promise<T>): Promise<T> {
+  const generation = localSnapshotGeneration();
+  const guard = () => {
+    if (generation !== localSnapshotGeneration()) throw new Error("Local account changed");
+  };
+  const guarded = async () => {
+    guard();
+    const result = await operation(guard);
+    guard();
+    return result;
+  };
+  if (typeof navigator !== "undefined" && navigator.locks) {
+    return navigator.locks.request(`minddy:drafts:${kind}`, guarded);
+  }
+  const prior = queues.get(kind) ?? Promise.resolve();
+  const result = prior.catch(() => {}).then(guarded);
+  queues.set(kind, result);
+  try { return await result; }
+  finally { if (queues.get(kind) === result) queues.delete(kind); }
+}
 
 const byRecency = (a: DraftBase, b: DraftBase) => b.updatedAt - a.updatedAt;
 
@@ -87,57 +114,67 @@ function migrateDraft<K extends DraftKind>(draft: DraftFor<K>): DraftFor<K> {
   return { ...draft, resources: legacy };
 }
 
-function readRaw<K extends DraftKind>(kind: K): DraftFor<K>[] {
+async function readRaw<K extends DraftKind>(kind: K, recoverLegacy = false, guard = () => {}): Promise<DraftFor<K>[]> {
   if (typeof window === "undefined") return [];
   try {
     const raw = window.localStorage.getItem(keyFor(kind));
     if (!raw) return [];
-    const parsed = JSON.parse(raw);
+    const stored = JSON.parse(raw);
+    if (Array.isArray(stored) && !recoverLegacy) throw new LegacyDraftRecoveryRequired();
+    const parsed = stored?.format === "minddy-local-v1"
+      ? await restoreLocalSnapshot(window.localStorage, keyFor(kind), `${kind}-drafts`)
+      : stored;
+    // Legacy drafts are sealed before their clear disk copy is replaced. A
+    // failed seal leaves them recoverable and reports an error to the dialog.
+    if (Array.isArray(parsed) && stored?.format !== "minddy-local-v1") {
+      guard();
+      await saveLocalSnapshot(window.localStorage, keyFor(kind), `${kind}-drafts`, parsed, true);
+    }
     return Array.isArray(parsed)
-      ? (parsed as DraftFor<K>[]).map(migrateDraft)
+      ? (parsed as DraftFor<K>[]).filter((draft) => Number.isFinite(draft.updatedAt) && Date.now() - draft.updatedAt <= DRAFT_MAX_AGE_MS).map(migrateDraft)
       : [];
-  } catch {
-    // Corrupt JSON or localStorage unavailable (private mode) — start empty.
-    return [];
+  } catch (error) {
+    if (error instanceof LegacyDraftRecoveryRequired) throw error;
+    throw new Error("Unable to restore saved drafts");
   }
 }
 
-function persist<K extends DraftKind>(
+async function persist<K extends DraftKind>(
   kind: K,
   drafts: DraftFor<K>[]
-): DraftFor<K>[] {
+): Promise<DraftFor<K>[]> {
   const trimmed = [...drafts].sort(byRecency).slice(0, MAX_DRAFTS);
   if (typeof window !== "undefined") {
-    try {
-      window.localStorage.setItem(keyFor(kind), JSON.stringify(trimmed));
-    } catch {
-      /* quota / disabled — the draft simply isn't kept. */
-    }
+    await saveLocalSnapshot(window.localStorage, keyFor(kind), `${kind}-drafts`, trimmed);
   }
   return trimmed;
 }
 
 /** Every draft of a kind, most recent first. */
-export function readDrafts<K extends DraftKind>(kind: K): DraftFor<K>[] {
-  return readRaw(kind).sort(byRecency);
+export async function readDrafts<K extends DraftKind>(kind: K, recoverLegacy = false): Promise<DraftFor<K>[]> {
+  return withDraftLock(kind, async (guard) => (await readRaw(kind, recoverLegacy, guard)).sort(byRecency));
 }
 
 /** Insert or replace a draft (matched by id) and return the trimmed list. */
-export function upsertDraft<K extends DraftKind>(
+export async function upsertDraft<K extends DraftKind>(
   kind: K,
   draft: DraftFor<K>
-): DraftFor<K>[] {
-  const rest = readRaw(kind).filter((d) => d.id !== draft.id);
-  return persist(kind, [draft, ...rest]);
+): Promise<DraftFor<K>[]> {
+  return withDraftLock(kind, async (guard) => {
+    const rest = (await readRaw(kind)).filter((d) => d.id !== draft.id);
+    guard();
+    return persist(kind, [draft, ...rest]);
+  });
 }
 
 /** Drop a draft by id and return the remaining list. */
-export function deleteDraft<K extends DraftKind>(
+export async function deleteDraft<K extends DraftKind>(
   kind: K,
   id: string
-): DraftFor<K>[] {
-  return persist(
-    kind,
-    readRaw(kind).filter((d) => d.id !== id)
-  );
+): Promise<DraftFor<K>[]> {
+  return withDraftLock(kind, async (guard) => {
+    const remaining = (await readRaw(kind)).filter((d) => d.id !== id);
+    guard();
+    return persist(kind, remaining);
+  });
 }

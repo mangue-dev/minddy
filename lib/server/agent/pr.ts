@@ -1,5 +1,7 @@
 import "server-only";
 
+import { aiReviewProviderForLogin } from "@/lib/pr-ai-review/providers";
+
 import { GITHUB_API_BASE, githubHeaders } from "@/lib/server/git/github-rest";
 import { collectSignedAssets } from "@/lib/forge-image-assets";
 import {
@@ -313,7 +315,12 @@ async function ghJson<T>(
     headers: { ...githubHeaders(token, init?.accept), ...init?.headers },
   });
   const text = await res.text();
-  const data = text ? (JSON.parse(text) as unknown) : null;
+  let data: unknown = null;
+  try {
+    data = text ? JSON.parse(text) as unknown : null;
+  } catch {
+    throw new GithubApiError("GitHub response was not valid JSON", res.status);
+  }
   if (!res.ok) throw new GithubApiError(githubErrorMessage(data, res.status), res.status);
   return data as T;
 }
@@ -1575,10 +1582,15 @@ export async function listPullRequestComments(opts: {
   number: number;
 }): Promise<PullRequestComment[]> {
   const { owner, repo } = splitRepo(opts.repoFullName);
-  const comments = await ghJson<RawComment[]>(
-    `${GITHUB_API_BASE}/repos/${owner}/${repo}/issues/${opts.number}/comments?per_page=100`,
-    opts.token,
-  );
+  const comments: RawComment[] = [];
+  for (let page = 1; ; page++) {
+    const batch = await ghJson<RawComment[]>(
+      `${GITHUB_API_BASE}/repos/${owner}/${repo}/issues/${opts.number}/comments?per_page=100&page=${page}`,
+      opts.token,
+    );
+    comments.push(...batch);
+    if (batch.length < 100) break;
+  }
   return comments.map(toComment);
 }
 
@@ -2532,19 +2544,65 @@ function conversationReactionsUrl(opts: {
   return `${GITHUB_API_BASE}/repos/${owner}/${repo}/${subject}/reactions`;
 }
 
+interface RawReviewerReactionConnection {
+  pageInfo?: { hasNextPage?: boolean; endCursor?: string | null };
+  nodes?: Array<{ content?: string; createdAt?: string; user?: { login?: string } | null } | null>;
+}
+
+interface RawConversationReactionSubject {
+  id?: string;
+  databaseId?: number | null;
+  reactionGroups?: RawReactionGroup[] | null;
+  reactions?: RawReviewerReactionConnection | null;
+}
+
 interface RawConversationReactions {
   repository?: {
-    pullRequest?: {
-      reactionGroups?: RawReactionGroup[] | null;
+    pullRequest?: RawConversationReactionSubject & {
       comments?: {
         pageInfo?: { hasNextPage?: boolean; endCursor?: string | null };
-        nodes?: Array<{
-          databaseId?: number | null;
-          reactionGroups?: RawReactionGroup[] | null;
-        } | null>;
+        nodes?: Array<RawConversationReactionSubject | null>;
       } | null;
     } | null;
   } | null;
+}
+
+const REVIEWER_REACTION_FIELDS = "pageInfo{hasNextPage endCursor} nodes{content createdAt user{login}}";
+
+/** Enrich existing counts with verified provider identities, following reaction pages. */
+async function conversationSubjectReactions(
+  token: string,
+  subject: RawConversationReactionSubject | null | undefined,
+  commentId: number,
+  viewerIsActor: boolean,
+): Promise<ReviewCommentReaction[]> {
+  const groups = toReactions(commentId, subject?.reactionGroups, viewerIsActor);
+  let connection = subject?.reactions;
+  const cursors = new Set<string>();
+  while (connection) {
+    for (const reaction of connection.nodes ?? []) {
+      const login = reaction?.user?.login;
+      const provider = aiReviewProviderForLogin(login);
+      const content = reaction?.content ? GH_REACTION_BY_ENUM[reaction.content] : undefined;
+      if (!provider || !content || !provider.reactionStates[content] || !reaction?.createdAt || !login) continue;
+      const group = groups.find((entry) => entry.content === content);
+      if (group) (group.reviewerActors ??= []).push({ login, createdAt: reaction.createdAt });
+    }
+    const cursor = connection.pageInfo?.endCursor;
+    if (!connection.pageInfo?.hasNextPage || !cursor || !subject?.id || cursors.has(cursor)) break;
+    cursors.add(cursor);
+    const data = await ghGraphql<{ node?: RawConversationReactionSubject | null }>(token,
+      `query($id:ID!,$cursor:String!){node(id:$id){
+        ... on PullRequest{reactions(first:100,after:$cursor){${REVIEWER_REACTION_FIELDS}}}
+        ... on IssueComment{reactions(first:100,after:$cursor){${REVIEWER_REACTION_FIELDS}}}
+      }}`, { id: subject.id, cursor }).catch(() => {
+        console.error("[pr] reviewer_reaction_page_unreadable");
+        return null;
+      });
+    // Reviewer enrichment is best-effort; a failed extra page must retain the counts.
+    connection = data?.node?.reactions;
+  }
+  return groups;
 }
 
 /** Feed comment pages read for reactions — beyond that, only comments
@@ -2568,7 +2626,7 @@ export async function listPullRequestConversationReactions(opts: {
   viewerIsActor: boolean;
 }): Promise<ReviewCommentReaction[]> {
   const { owner, repo } = splitRepo(opts.repoFullName);
-  const groups = "reactionGroups{content viewerHasReacted reactors{totalCount}}";
+  const groups = `id reactionGroups{content viewerHasReacted reactors{totalCount}} reactions(first:100){${REVIEWER_REACTION_FIELDS}}`;
   const query = `query($owner:String!,$name:String!,$number:Int!,$cursor:String){
     repository(owner:$owner,name:$name){
       pullRequest(number:$number){
@@ -2594,13 +2652,13 @@ export async function listPullRequestConversationReactions(opts: {
     // the pagination of the comments, and rereading it would count its reactions twice.
     if (page === 0) {
       reactions.push(
-        ...toReactions(PR_BODY_COMMENT_ID, pr?.reactionGroups, opts.viewerIsActor),
+        ...await conversationSubjectReactions(opts.token, pr, PR_BODY_COMMENT_ID, opts.viewerIsActor),
       );
     }
     for (const comment of pr?.comments?.nodes ?? []) {
       const commentId = comment?.databaseId;
       if (commentId == null) continue;
-      reactions.push(...toReactions(commentId, comment?.reactionGroups, opts.viewerIsActor));
+      reactions.push(...await conversationSubjectReactions(opts.token, comment, commentId, opts.viewerIsActor));
     }
     const pageInfo = pr?.comments?.pageInfo;
     if (!pageInfo?.hasNextPage || !pageInfo.endCursor) break;

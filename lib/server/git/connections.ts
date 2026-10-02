@@ -1,9 +1,10 @@
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
+import { decodeProjectName } from "@/lib/server/project-content";
 import type { RepoProviderId } from "@/lib/repo-providers";
 import type { GitConnection } from "@/lib/types";
-import { encryptForgeToken } from "./token-crypto";
+import { encodeForgeOAuthTokens } from "./forge-oauth-token-content";
 import type { GitlabTokenSet } from "./gitlab-app";
 
 /**
@@ -63,13 +64,13 @@ export async function listUserConnections(
   // Projects linked by connection (for disconnection warning).
   const { data: links, error: linksError } = await supabase
     .from("project_git_links")
-    .select("connection_id, projects(id, name)")
+    .select("connection_id, projects(id, name, encrypted_content, encryption_version)")
     .in(
       "connection_id",
       rows.map((r) => r.id),
     );
   if (linksError) {
-    console.error("[git-connections] linked-project lookup failed:", linksError.message);
+    console.error("[git-connections] linked_project_lookup_failed");
     return null;
   }
   const byConnection = new Map<string, GitConnection["projects"]>();
@@ -77,11 +78,13 @@ export async function listUserConnections(
   // it's an object (FK many-to-one). We cast via unknown to reflect the runtime.
   for (const link of (links ?? []) as unknown as Array<{
     connection_id: string;
-    projects: { id: string; name: string } | null;
+    projects: { id: string; name: string | null;
+      encrypted_content?: string | null; encryption_version?: number } | null;
   }>) {
     if (!link.projects) continue;
     const list = byConnection.get(link.connection_id) ?? [];
-    list.push({ id: link.projects.id, name: link.projects.name });
+    list.push({ id: link.projects.id,
+      name: await decodeProjectName(link.projects, userId) });
     byConnection.set(link.connection_id, list);
   }
 
@@ -149,11 +152,16 @@ export async function updateConnectionAccount(
   const supabase = getServiceClient();
   const { data } = await supabase
     .from("git_connections")
-    .select("provider_account_id, account_login, account_type, repository_selection")
+    .select("provider, provider_account_id, account_login, account_type, repository_selection, encryption_version")
     .eq("id", connectionId)
     .maybeSingle();
   const row = data as Record<string, string | null> | null;
   if (!row) return;
+  if (row.provider === "gitlab" && Number(row.encryption_version ?? 0)>0 &&
+      account.providerAccountId !== undefined &&
+      account.providerAccountId !== row.provider_account_id) {
+    throw new Error("Protected GitLab connection requires reconnection for an account change");
+  }
 
   const patch: Record<string, string | null> = {};
   const put = (column: string, value: string | null | undefined) => {
@@ -278,13 +286,25 @@ export async function upsertGitlabConnection(params: {
   source?: "local" | "relay";
 }): Promise<string> {
   const supabase = getServiceClient();
-  const { data, error } = await supabase.rpc("upsert_gitlab_connection_atomic", {
+  const { data: existing } = await supabase.from("git_connections")
+    .select("encryption_version")
+    .eq("user_id",params.userId).eq("provider","gitlab")
+    .eq("provider_account_id",params.providerAccountId).maybeSingle();
+  const content = await encodeForgeOAuthTokens("git_connections",{
+    user_id: params.userId, provider: "gitlab",
+    provider_account_id: params.providerAccountId,
+  }, { accessToken: params.tokens.accessToken,
+    refreshToken: params.tokens.refreshToken }, { service: supabase,
+      force: Number(existing?.encryption_version ?? 0)>0 });
+  const { data, error } = await supabase.rpc("upsert_gitlab_connection_protected_atomic", {
     p_user_id: params.userId,
     p_provider_account_id: params.providerAccountId,
     p_account_login: params.accountLogin,
     p_source: params.source ?? "local",
-    p_access_token_encrypted: encryptForgeToken(params.tokens.accessToken),
-    p_refresh_token_encrypted: encryptForgeToken(params.tokens.refreshToken),
+    p_access_token_encrypted: content.access_token_encrypted,
+    p_refresh_token_encrypted: content.refresh_token_encrypted,
+    p_encrypted_content: content.encrypted_content,
+    p_encryption_version: content.encryption_version,
     p_token_expires_at: params.tokens.expiresAt,
     p_oauth_scopes: params.tokens.scope,
   });

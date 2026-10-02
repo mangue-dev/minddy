@@ -2,6 +2,8 @@ import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
 import { generateClientId } from "@/lib/server/oauth/crypto";
+import { decodeOAuthClientContent, encodeOAuthClientContent,
+  shouldProtectOAuthClients, type StoredOAuthClient } from "./client-content";
 
 /**
  * Dynamically registered OAuth clients (RFC 7591). Public clients
@@ -70,32 +72,39 @@ export async function registerClient({
   clientUri?: string | null;
 }): Promise<OAuthClient | null> {
   const service = getServiceClient();
+  const clientId = generateClientId();
+  const content = { client_name: clientName, redirect_uris: redirectUris,
+    logo_uri: logoUri ?? null, client_uri: clientUri ?? null };
+  const protectedWrite = await shouldProtectOAuthClients();
+  const stored = protectedWrite
+    ? { client_id: clientId, client_name: null, redirect_uris: null,
+        logo_uri: null, client_uri: null,
+        ...await encodeOAuthClientContent(clientId, content) }
+    : { client_id: clientId, ...content };
   const { data, error } = await service
     .from("oauth_clients")
-    .insert({
-      client_id: generateClientId(),
-      client_name: clientName,
-      redirect_uris: redirectUris,
-      logo_uri: logoUri ?? null,
-      client_uri: clientUri ?? null,
-    })
-    .select("client_id, client_name, redirect_uris, created_at")
+    .insert(stored as never)
+    .select("client_id, created_at")
     .single();
   if (error) {
     console.error("[oauth/clients] register failed:", error.message);
     return null;
   }
-  return data as unknown as OAuthClient;
+  return { client_id: clientId, client_name: clientName,
+    redirect_uris: redirectUris, created_at: data.created_at as string };
 }
 
 export async function getClient(clientId: unknown): Promise<OAuthClient | null> {
   if (typeof clientId !== "string" || !clientId) return null;
   const { data } = await getServiceClient()
     .from("oauth_clients")
-    .select("client_id, client_name, redirect_uris, created_at")
+    .select("*")
     .eq("client_id", clientId)
     .maybeSingle();
-  return (data as unknown as OAuthClient) ?? null;
+  if (!data) return null;
+  const content = await decodeOAuthClientContent(data as StoredOAuthClient);
+  return { client_id: data.client_id as string, client_name: content.client_name,
+    redirect_uris: content.redirect_uris, created_at: data.created_at as string };
 }
 
 /** Grant scan page size — bounded by PostgREST anyway. */

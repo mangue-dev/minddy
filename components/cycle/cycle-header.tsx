@@ -1,5 +1,7 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowDown01Icon, Settings01Icon, CheckIcon } from "@hugeicons/core-free-icons";
 import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
 import {
@@ -11,7 +13,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "mangue-ui";
-import { Check, ChevronDown, Settings } from "lucide-react";
 import { ProgressRing } from "@/components/progress-ring";
 import { addDays } from "@/lib/cycle";
 import type { BoardCycles, CycleInfo } from "@/lib/types";
@@ -76,7 +77,7 @@ export function CycleTitleSelector({
         {label ? `${label} · ` : ""}
         {formatCycleRange(format, cycle)}
       </span>
-      {cycle.id === selected.id && <Check className="ml-2 size-4 shrink-0" />}
+      {cycle.id === selected.id && <HugeiconsIcon icon={CheckIcon} className="ml-2 size-4 shrink-0" />}
     </DropdownMenuItem>
   );
 
@@ -91,7 +92,7 @@ export function CycleTitleSelector({
           <span className="truncate">
             {phaseLabel} · {formatCycleRange(format, selected)}
           </span>
-          <ChevronDown className="size-4 text-muted-foreground" aria-hidden />
+          <HugeiconsIcon icon={ArrowDown01Icon} className="size-4 text-muted-foreground" aria-hidden />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="min-w-56">
@@ -183,7 +184,7 @@ export function CycleControls({
         <TooltipTrigger asChild>
           <Button asChild variant="ghost" size="icon-sm">
             <Link href="/settings?tab=cycles" aria-label={t("settingsAction")}>
-              <Settings />
+              <HugeiconsIcon icon={Settings01Icon} />
             </Link>
           </Button>
         </TooltipTrigger>

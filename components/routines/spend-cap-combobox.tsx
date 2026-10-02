@@ -1,8 +1,10 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { AppIcon } from "@/components/icon";
+import { ArrowUpDownIcon, GaugeIcon as CircleGauge, CheckIcon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Check, ChevronsUpDown, CircleGauge } from "lucide-react";
 import {
   Button,
   Command,
@@ -68,9 +70,9 @@ export function SpendCapCombobox({
           disabled={disabled}
           className="h-8 shrink gap-1.5 rounded-full border border-border/60 bg-muted/50 px-2.5 text-xs font-medium text-foreground/80 hover:bg-muted"
         >
-          <CircleGauge className="size-3.5 shrink-0 text-muted-foreground" />
+          <AppIcon icon={CircleGauge} className="size-3.5 shrink-0 text-muted-foreground" />
           <span className="max-w-[9rem] truncate">{labelFor(value)}</span>
-          <ChevronsUpDown className="size-3 shrink-0 opacity-50" />
+          <HugeiconsIcon icon={ArrowUpDownIcon} className="size-3 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
       {/* `rounded-xl`: it is `Command` which paints the surface and it already imposes
@@ -99,12 +101,10 @@ export function SpendCapCombobox({
                         : t("spendCapValueDesc", { percent })}
                   </span>
                 </div>
-                <Check
-                  className={cn(
-                    "mt-0.5 size-4 shrink-0",
-                    value === percent ? "opacity-100" : "opacity-0",
-                  )}
-                />
+                <HugeiconsIcon icon={CheckIcon} className={cn(
+                                        "mt-0.5 size-4 shrink-0",
+                                        value === percent ? "opacity-100" : "opacity-0",
+                                      )} />
               </CommandItem>
             ))}
           </CommandList>

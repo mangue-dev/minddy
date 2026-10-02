@@ -29,8 +29,9 @@
 // of the pill — the pill HAS become the lozenge. What's left inside is this
 // that a color cannot render: a face, an orb, an emoji.
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Book02Icon, Target01Icon } from "@hugeicons/core-free-icons";
 import type { CSSProperties, MouseEvent } from "react";
-import { BookText, Target } from "lucide-react";
 import { cn } from "mangue-ui";
 import {
   NODE_LINK_CLASS,
@@ -146,10 +147,10 @@ export function MentionChip({
         icon ? (
           <span className="text-[0.85em] leading-none">{icon}</span>
         ) : (
-          <BookText className="size-full" />
+          <HugeiconsIcon icon={Book02Icon} className="size-full" />
         )
       ) : (
-        <Target className="size-full" />
+        <HugeiconsIcon icon={Target01Icon} className="size-full" />
       )}
     </span>
   );

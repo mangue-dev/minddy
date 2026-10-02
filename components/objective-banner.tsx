@@ -1,10 +1,11 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowDown01Icon, ArrowLeft01Icon, DateTimeIcon } from "@hugeicons/core-free-icons";
 import { startTransition } from "react";
 import Link from "next/link";
 import { useTranslations, useFormatter } from "next-intl";
 import { Button, cn } from "mangue-ui";
-import { ChevronDown, ChevronLeft, Target } from "lucide-react";
 import { OBJECTIVE_STATUS_MAP } from "@/lib/objective-constants";
 import { ObjectiveStatusIndicator } from "@/components/issue-indicators";
 import { AppContentHeader } from "@/components/app-content-header";
@@ -15,7 +16,8 @@ import { UserAvatar } from "@/components/user-avatar";
 import { displayName } from "@/lib/display-name";
 import { dueDateFormat, parseDueDate } from "@/lib/due-date";
 import { pushObjectiveBoardHistory } from "@/lib/objective-board-navigation";
-import type { Member, Objective } from "@/lib/types";
+import { ObjectiveRelationsSection } from "@/components/objective-relations-section";
+import type { Issue, Member, Objective } from "@/lib/types";
 import {
   Tooltip,
   TooltipContent,
@@ -63,7 +65,7 @@ function ObjectiveSwitch({
           className="flex max-w-full -translate-x-1.5 items-center gap-1.5 rounded-md px-1.5 py-0.5 font-medium leading-tight outline-none transition-colors hover:bg-muted focus-visible:bg-muted"
         >
           <span className="truncate">{objective.name}</span>
-          <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
+          <HugeiconsIcon icon={ArrowDown01Icon} className="size-3.5 shrink-0 text-muted-foreground" />
         </button>
       }
     />
@@ -75,6 +77,9 @@ export function ObjectiveBoardHeader({
   objective,
   objectives,
   projectId,
+  projectKey,
+  issues,
+  onOpenIssue,
   progress,
   lead,
 }: {
@@ -82,6 +87,9 @@ export function ObjectiveBoardHeader({
   /** All project objectives shown in the title selector. */
   objectives: Objective[];
   projectId: string;
+  projectKey: string;
+  issues: Issue[];
+  onOpenIssue: (issueId: string) => void;
   progress: { done: number; total: number; percent: number };
   lead: Member | null;
 }) {
@@ -109,7 +117,7 @@ export function ObjectiveBoardHeader({
           href={`/projects/${projectId}/objectives?open=${objective.id}`}
           aria-label={t("backToObjective")}
         >
-          <ChevronLeft />
+          <HugeiconsIcon icon={ArrowLeft01Icon} />
         </Link>
       </Button>
 
@@ -186,14 +194,14 @@ export function ObjectiveBoardHeader({
           <div className="flex items-center gap-2">
             <span
               className={cn(
-                "flex size-7 shrink-0 items-center justify-center rounded-full",
+                "flex size-7 shrink-0 items-center justify-center",
                 overdue
-                  ? "bg-destructive/10 text-destructive"
-                  : "bg-muted text-muted-foreground"
+                  ? "text-destructive"
+                  : "text-muted-foreground"
               )}
               aria-hidden
             >
-              <Target className="size-3.5" />
+              <HugeiconsIcon icon={DateTimeIcon} className="size-5" />
             </span>
             <div className="flex flex-col leading-tight">
               <span className="text-[11px] text-muted-foreground">
@@ -210,6 +218,7 @@ export function ObjectiveBoardHeader({
             </div>
           </div>
         )}
+        <ObjectiveRelationsSection objective={objective} projectId={projectId} projectKey={projectKey} issues={issues} onOpenIssue={onOpenIssue} variant="board" />
       </div>
     </AppContentHeader>
   );

@@ -15,6 +15,7 @@ import { broadcastPrChanged } from "@/lib/server/agent/pr-live";
 import {
   findPullRequest,
   findPullRequestForIssue,
+  pullRequestIssueIds,
   rowProvider,
   upsertPullRequest,
   type PullRequestRow,
@@ -585,7 +586,7 @@ async function resolvePullRequestThreads(
 
 /**
  * The after-merge bookkeeping, mirroring the app's own merge path
- * (`propagatePrState`): the row, the runs, then the issue status through the
+ * (`propagatePrState`): the row, the runs, then all linked issue statuses through the
  * shared sync core. Best-effort — a missed row write must never fail the
  * gesture, the webhook or the next scan would catch the state up anyway.
  */
@@ -598,7 +599,7 @@ async function settleState(
 ): Promise<string | null> {
   try {
     if (row) broadcastPrChanged(row.id, ["pr", "conversation"]);
-    await upsertPullRequest({
+    const updated = await upsertPullRequest({
       provider: target.provider,
       repoFullName: target.repoFullName,
       number,
@@ -612,19 +613,19 @@ async function settleState(
       prState: state,
       provider: target.provider,
     });
-    const issueId = row?.issue_id;
-    if (issueId) {
+    const prId = updated?.id ?? row?.id;
+    const issueIds = prId ? await pullRequestIssueIds(prId) : [];
+    for (const issueId of issueIds) {
       await syncIssueStatusFromPr({
         issueId,
         actorId: ctx.userId,
         prState: state,
         forgeSync: target.provider,
       });
-      return "done";
     }
-    return null;
-  } catch (err) {
-    console.error("[assistant] PR state sync skipped:", (err as Error).message);
+    return issueIds.length > 0 ? "done" : null;
+  } catch {
+    console.error("[assistant] pr_state_sync_failed");
     return null;
   }
 }

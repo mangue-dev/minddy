@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
+import { repositoryStorageName } from "@/lib/server/git/repository-name-content";
 
 /**
  * Control-plane side of `POST /relay/links`
@@ -116,11 +117,20 @@ export async function applyRelayLinkSync(input: {
   payload: RelayLinkSyncPayload;
 }): Promise<LinkSyncResult> {
   const supabase = getServiceClient();
+  const events = await Promise.all((input.payload.events ?? []).map(async (entry) => ({
+    ...entry, repo: await repositoryStorageName(entry.provider,entry.repo,
+      entry.event==="linked",supabase),
+  })));
+  const snapshot = input.payload.snapshot
+    ? await Promise.all(input.payload.snapshot.map(async (entry) => ({
+        ...entry, repo: await repositoryStorageName(entry.provider,entry.repo,
+          true,supabase),
+      }))) : null;
   const { data, error } = await supabase.rpc("apply_forge_relay_link_sync", {
     p_instance_id: input.instanceId,
     p_generation: input.generation,
-    p_events: input.payload.events ?? [],
-    p_snapshot: input.payload.snapshot ?? null,
+    p_events: events,
+    p_snapshot: snapshot,
   });
   if (error) return { ok: false, error: error.message };
   const result = data as { state?: unknown; applied?: unknown } | null;

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { INTERRUPTED_DELEGATION_NOTE } from "./agent-contract";
 import type { VmTurnReport } from "./vm/protocol";
 
 /**
@@ -33,6 +34,7 @@ const h = vi.hoisted(() => ({
   /** The clone target. `null` = deposit untied: landing PR must refrain. */
   target: null as Record<string, unknown> | null,
   run: null as Record<string, unknown> | null,
+  quotaRemaining: 0,
 }));
 
 vi.mock("@/lib/server/usage", () => ({
@@ -44,6 +46,7 @@ vi.mock("@/lib/server/usage", () => ({
 vi.mock("@/lib/server/ai-usage", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/server/ai-usage")>()),
   spentFromLedger: vi.fn(async () => 0.5),
+  spentPlatformForBudget: vi.fn(async () => 0.5),
 }));
 
 vi.mock("./runs", async (importOriginal) => ({
@@ -86,8 +89,8 @@ vi.mock("./quota", () => ({
   checkAgentQuota: vi.fn(async () => ({
     mode: "platform" as const,
     unlimited: false,
-    remaining: 0,
-    spent: 5,
+    remaining: h.quotaRemaining,
+    spent: 5 - h.quotaRemaining,
     cap: 5,
     resetsAt: null,
     planId: "go",
@@ -158,6 +161,7 @@ beforeEach(() => {
   h.stampFails = false;
   h.target = null;
   h.run = { ...RUN };
+  h.quotaRemaining = 0;
 });
 
 const run = () => h.run as unknown as Parameters<typeof landVmTurn>[0];
@@ -327,9 +331,49 @@ describe("les quatre sorties, et elles quittent toutes `running`", () => {
     expect(h.notifications).toEqual([]);
   });
 
-  it("budget épuisé : la carte qui dit pourquoi, et PAS de re-queue", async () => {
-    // Volontairement insensible au steering en file : re-queuer relancerait
-    // immediately a tour without a budget. The message waits for recovery.
+  it("interruption of a Numo worker: the handoff stays honest (partial marker)", async () => {
+    // MIN-599 — the executor stamps an interrupted run as `completed`; without
+    // the marker, Numo would receive `worker_completed` and proceed as if the
+    // objective succeeded.
+    h.run = { ...RUN, parent_numo_turn_id: "turn-1" };
+    await landVmTurn(run(), report({ status: "interrupted" }));
+    expect(h.stamped.find((f) => f.status === "completed")).toMatchObject({
+      error_message: INTERRUPTED_DELEGATION_NOTE,
+    });
+  });
+
+  it("interruption of a STANDALONE conversation keeps the bare interrupt", async () => {
+    await landVmTurn(run(), report({ status: "interrupted" }));
+    expect(h.stamped.find((f) => f.status === "completed")).not.toHaveProperty(
+      "error_message",
+    );
+  });
+
+  it("interruption with pending steering re-queues WITHOUT the interrupted marker", async () => {
+    // The run continues (it will drain the message), so it is not "stopped".
+    h.run = { ...RUN, parent_numo_turn_id: "turn-1" };
+    h.pendingMessages = true;
+    await landVmTurn(run(), report({ status: "interrupted" }));
+    const queued = h.stamped.find((f) => f.status === "queued");
+    expect(queued).toBeDefined();
+    expect(queued).not.toHaveProperty("error_message");
+  });
+
+  it.each([
+    { remaining: 4.5, allocation: 0.5, runCap: null, cause: "operation_allocation", nextPlan: null },
+    { remaining: 0, allocation: 0.5, runCap: null, cause: "account", nextPlan: "pro" },
+    { remaining: 4.5, allocation: 2, runCap: 0.5, cause: "run_cap", nextPlan: "pro" },
+  ])("reports the worker boundary $cause while retaining monthly budget semantics", async ({ remaining, allocation, runCap, cause, nextPlan }) => {
+    h.quotaRemaining = remaining;
+    h.run = { ...RUN, managed_budget_usd: allocation, budget_usd: runCap };
+    await landVmTurn(run(), report({ status: "budget_exhausted" }));
+    expect(h.events.find((e) => e.type === "quota_exhausted")?.payload)
+      .toMatchObject({ cause, nextPlanId: nextPlan });
+  });
+
+  it("shows why the budget is exhausted without requeuing the run", async () => {
+    // Requeuing would immediately restart a run without a budget. Keep any
+    // queued steering pending until the user resumes with available capacity.
     h.pendingMessages = true;
     await landVmTurn(run(), report({ status: "budget_exhausted" }));
     const quota = h.events.find((e) => e.type === "quota_exhausted");
@@ -500,6 +544,27 @@ describe("un tour arrêté se raconte, et une panne de fournisseur se re-queue",
       code: "turnTooLong",
     });
     expect(h.stamped.some((f) => f.status === "queued")).toBe(false);
+    expect(h.notifications).toEqual(["agent_failed"]);
+  });
+
+  it("retains incomplete work without claiming success or automatically requeuing", async () => {
+    const checkpoint = report().checkpoint;
+    h.run = { ...RUN, outcome: "The preceding review passed." };
+    await landVmTurn(run(), report({
+      status: "error", errorCode: "replyIncomplete", reply: undefined,
+      errorMessage: "The model repeatedly ended before completing its work.",
+      checkpoint,
+    }));
+    expect(h.stamped.some((fields) => fields.status === "queued")).toBe(false);
+    expect(h.stamped.find((fields) => fields.status === "completed")).toMatchObject({
+      checkpoint,
+      outcome: null,
+      error_message: "The model repeatedly ended before completing its work.",
+    });
+    expect(h.events.find((event) => event.type === "error")?.payload).toMatchObject({
+      code: "replyIncomplete",
+    });
+    expect(h.events.some((event) => event.type === "summary")).toBe(false);
     expect(h.notifications).toEqual(["agent_failed"]);
   });
 

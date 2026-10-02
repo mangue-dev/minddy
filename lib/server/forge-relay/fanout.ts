@@ -5,7 +5,11 @@ import crypto from "node:crypto";
 import { getServiceClient } from "@/lib/supabase-service";
 import { isManagedForgeEnabled } from "@/lib/managed-services";
 import { decryptForgeToken } from "@/lib/server/git/token-crypto";
+import { decodeRelayInstance, type RelayInstanceContentRow } from
+  "./instance-content";
 import { safeFetch } from "@/lib/server/safe-fetch";
+import { decodeRelayDelivery, encodeRelayDelivery,
+  shouldEncryptRelayDelivery } from "./delivery-content";
 
 /**
  * GitHub webhook fan-out, Cloud side (docs/managed-forge-relay-plan.md,
@@ -37,7 +41,7 @@ interface EnqueueRow {
 
 interface ActiveRelayDeliveryTarget {
   webhook_url: string | null;
-  webhook_secret_encrypted: string | null;
+  webhook_secret: string | null;
 }
 
 async function getActiveRelayDeliveryTarget(
@@ -46,14 +50,22 @@ async function getActiveRelayDeliveryTarget(
 ): Promise<ActiveRelayDeliveryTarget | null> {
   const { data, error } = await supabase
     .from("forge_relay_instances")
-    .select("webhook_url, webhook_secret_encrypted")
+    .select("id,name,webhook_url,webhook_secret_encrypted,encrypted_content,encryption_version")
     .eq("id", instanceId)
     .eq("status", "active")
     .maybeSingle();
   if (error) {
     throw new Error(`relay instance status lookup failed: ${error.message}`);
   }
-  return data as ActiveRelayDeliveryTarget | null;
+  if (!data) return null;
+  if (Number(data.encryption_version ?? 0) > 0) {
+    const plain = await decodeRelayInstance(data as RelayInstanceContentRow);
+    return { webhook_url: plain.webhook_url,
+      webhook_secret: plain.webhook_secret_encrypted };
+  }
+  return { webhook_url: data.webhook_url,
+    webhook_secret: data.webhook_secret_encrypted
+      ? decryptForgeToken(data.webhook_secret_encrypted) : null };
 }
 
 /**
@@ -95,15 +107,20 @@ export async function enqueueRelayDeliveryForPayload(input: {
   if (instances.length === 0) return null;
 
   let enqueuedInstanceId: string | null = null;
+  const protect = await shouldEncryptRelayDelivery();
   for (const claim of instances) {
     if (!(await getActiveRelayDeliveryTarget(supabase, claim.instance_id))) continue;
+    const payload = protect
+      ? await encodeRelayDelivery(claim.instance_id, input.provider,
+          input.deliveryGuid, "payload", input.rawBody)
+      : input.rawBody;
     const { error } = await supabase.from("forge_relay_deliveries").upsert(
       {
         instance_id: claim.instance_id,
         provider: input.provider,
         delivery_guid: input.deliveryGuid,
         event: input.event,
-        payload: input.rawBody,
+        payload,
       },
       { onConflict: "instance_id,provider,delivery_guid", ignoreDuplicates: true },
     );
@@ -139,6 +156,10 @@ export async function enqueueRelayDeliveryForProvider(input: {
   } catch {
     return false;
   }
+  const payload = await shouldEncryptRelayDelivery()
+    ? await encodeRelayDelivery(input.instanceId, input.provider,
+        input.deliveryGuid, "payload", input.rawBody)
+    : input.rawBody;
   const { error } = await supabase
     .from("forge_relay_deliveries")
     .upsert(
@@ -147,7 +168,7 @@ export async function enqueueRelayDeliveryForProvider(input: {
         provider: input.provider,
         delivery_guid: input.deliveryGuid,
         event: input.event,
-        payload: input.rawBody,
+        payload,
       },
       { onConflict: "instance_id,provider,delivery_guid", ignoreDuplicates: true },
     );
@@ -235,15 +256,14 @@ export async function processDueRelayDeliveries(limit = 25): Promise<FanoutOutco
       continue;
     }
     if (!target) {
-      if (await invalidateDelivery(supabase, row.id, "relay instance revoked")) {
+      if (await invalidateDelivery(supabase, row, "relay instance revoked")) {
         outcome.dead += 1;
       }
       continue;
     }
 
     const endpoint = target.webhook_url;
-    const encryptedSecret = target.webhook_secret_encrypted;
-    const secret = encryptedSecret ? decryptForgeToken(encryptedSecret) : null;
+    const secret = target.webhook_secret;
 
     // Not registered (yet): this pass counts as an attempt on the same
     // backoff ladder as any other failure. Without the cap, a delivery for an
@@ -256,6 +276,8 @@ export async function processDueRelayDeliveries(limit = 25): Promise<FanoutOutco
     }
 
     try {
+      const rawBody = (await decodeRelayDelivery(row.instance_id, row.provider,
+        row.delivery_guid, "payload", row.payload))!;
       // Re-resolve and pin the destination for every attempt. A target that
       // changed to a private address after registration must fail closed, and
       // redirects must not forward signed tenant data to another destination.
@@ -266,9 +288,9 @@ export async function processDueRelayDeliveries(limit = 25): Promise<FanoutOutco
           secret,
           guid: row.delivery_guid,
           event: row.event,
-          rawBody: row.payload,
+          rawBody,
         }),
-        body: row.payload,
+        body: rawBody,
         maxBytes: MAX_RESPONSE_BYTES,
         onOverflow: "truncate",
         maxRedirects: 0,
@@ -302,13 +324,16 @@ export async function processDueRelayDeliveries(limit = 25): Promise<FanoutOutco
 
 async function invalidateDelivery(
   supabase: ReturnType<typeof getServiceClient>,
-  deliveryId: string,
+  row: { id: string; instance_id: string; provider: string; delivery_guid: string },
   error: string,
 ): Promise<boolean> {
+  const stored = await shouldEncryptRelayDelivery()
+    ? await encodeRelayDelivery(row.instance_id, row.provider, row.delivery_guid,
+        "last_error", error) : error;
   const { data: written } = await supabase
     .from("forge_relay_deliveries")
-    .update({ status: "dead", last_error: error })
-    .eq("id", deliveryId)
+    .update({ status: "dead", last_error: stored })
+    .eq("id", row.id)
     .eq("status", "pending")
     .select("id");
   return Boolean(written?.length);
@@ -322,18 +347,22 @@ async function invalidateDelivery(
  */
 async function backoffDelivery(
   supabase: ReturnType<typeof getServiceClient>,
-  row: { id: string; status: string; attempts: number },
+  row: { id: string; instance_id: string; provider: string;
+    delivery_guid: string; status: string; attempts: number },
   error: string,
 ): Promise<boolean> {
   const attempts = row.attempts + 1;
   const dead = attempts >= MAX_ATTEMPTS;
   const backoffMinutes = BACKOFF_MINUTES[Math.min(attempts - 1, MAX_ATTEMPTS - 1)];
+  const stored = await shouldEncryptRelayDelivery()
+    ? await encodeRelayDelivery(row.instance_id, row.provider, row.delivery_guid,
+        "last_error", error) : error;
   const { data: written } = await supabase
     .from("forge_relay_deliveries")
     .update({
       status: dead ? "dead" : "pending",
       attempts,
-      last_error: error,
+      last_error: stored,
       next_attempt_at: new Date(Date.now() + backoffMinutes * 60_000).toISOString(),
     })
     .eq("id", row.id)
@@ -384,11 +413,15 @@ export async function listRelayDeliveries(input: {
   let query = supabase
     .from("forge_relay_deliveries")
     .select(
-      "id, provider, delivery_guid, event, status, attempts, last_error, created_at, delivered_at",
+      "id, instance_id, provider, delivery_guid, event, status, attempts, last_error, created_at, delivered_at",
     )
     .order("created_at", { ascending: false })
     .limit(Math.min(input.limit ?? 50, 200));
   if (input.instanceId) query = query.eq("instance_id", input.instanceId);
   const { data } = await query;
-  return (data ?? []) as RelayDeliveryRecord[];
+  return Promise.all((data ?? []).map(async (row) => ({
+    ...row,
+    last_error: await decodeRelayDelivery(row.instance_id, row.provider,
+      row.delivery_guid, "last_error", row.last_error),
+  }))) as Promise<RelayDeliveryRecord[]>;
 }

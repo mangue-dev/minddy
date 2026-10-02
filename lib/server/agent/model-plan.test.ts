@@ -27,6 +27,14 @@ beforeEach(() => {
 });
 
 describe("ensureModelInPlan", () => {
+  it("reuses admission billing while still enforcing its model ceiling", async () => {
+    const admittedBilling = await getResolvedBilling("user-1");
+    getResolvedBilling.mockClear();
+    await expect(ensureModelInPlan({
+      userId: "user-1", model: "provider/above-free", mode: "platform", admittedBilling,
+    })).rejects.toMatchObject({ code: "model_above_plan" });
+    expect(getResolvedBilling).not.toHaveBeenCalled();
+  });
   it("enforces the Free 1× ceiling on minddy-quota model choices", async () => {
     await expect(
       ensureModelInPlan({

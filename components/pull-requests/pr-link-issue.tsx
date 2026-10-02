@@ -1,5 +1,7 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Link02Icon } from "@hugeicons/core-free-icons";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
@@ -13,7 +15,6 @@ import {
   Spinner,
   toast,
 } from "mangue-ui";
-import { Link2 } from "lucide-react";
 import { SearchSelect, type PickerOption } from "@/components/search-select";
 import { StatusIndicator } from "@/components/issue-indicators";
 import { globalBoardQueryFn } from "@/lib/global-board-api";
@@ -24,31 +25,16 @@ import { linkPullRequestIssueApi } from "@/lib/agent-api";
 import type { PullRequestListItem } from "@/lib/agent-api";
 import type { GlobalBoardResponse } from "@/lib/types";
 
-/**
- * Attach a ticket to a PR that does not have one (MIN-163), from the header.
- *
- * The attachment is normally done BY ITSELF, by convention (project key
- * in the branch, the title, or a `Fixes:` line). When the convention was not
- * followed, the PR remained orphaned forever: this selector is the
- * catch-up, and it takes the exact place of the "no ticket" that it replaces.
- *
- * The gesture is in TWO stages, because it is definitive: we choose from the
- * same ticket picker as the Numo panel (global board loaded
- * lazily, upon opening), then we confirm in a dialog which names the
- * ticket AND announces the status it will take — the consequence is said before the
- * gesture, not after.
- *
- * Only tickets from the CE repository project are offered: this is the scope
- * that the server accepts (that of the conventional route), and offering more
- * wide would only serve to cause the confirmation to fail.
- */
+/** Add an issue from the repository project and explain the resulting status. */
 export function PrLinkIssue({
   prId,
   prState,
   projectId,
   projectKey,
   onLinked,
+  linkedIssueIds = [],
 }: {
+  linkedIssueIds?: string[];
   prId: string;
   prState: PullRequestListItem["pr_state"];
   projectId: string;
@@ -74,7 +60,7 @@ export function PrLinkIssue({
   const issues = (data?.issues ?? []) as GlobalBoardResponse["issues"];
   const options = useMemo<PickerOption[]>(() => {
     return issues
-      .filter((i) => i.project_id === projectId)
+      .filter((i) => i.project_id === projectId && !linkedIssueIds.includes(i.id))
       // Open first: a PR that is attached afterwards almost aims
       // still a ticket still alive. The closes remain achievable.
       .sort((a, b) => (isClosedStatus(a.status) ? 1 : 0) - (isClosedStatus(b.status) ? 1 : 0))
@@ -87,7 +73,7 @@ export function PrLinkIssue({
           icon: <StatusIndicator status={i.status} className="size-4" />,
         };
       });
-  }, [issues, projectId, projectKey]);
+  }, [issues, projectId, projectKey, linkedIssueIds]);
 
   const nextStatus = issueStatusForPrState(prState);
 
@@ -130,13 +116,13 @@ export function PrLinkIssue({
             size="sm"
             className="h-6 gap-1 px-1.5 font-sans text-xs font-normal text-muted-foreground"
           >
-            <Link2 className="size-3.5" />
-            {t("linkIssue")}
+            <HugeiconsIcon icon={Link02Icon} className="size-3.5" />
+            {t(linkedIssueIds.length > 0 ? "linkAnotherIssue" : "linkIssue")}
           </Button>
         }
       />
 
-      {/* Confirmation — the attachment is not canceled, it is confirmed. */}
+      {/* Confirm the status change before linking. */}
       <Dialog
         open={!!pending}
         onOpenChange={(next) => {

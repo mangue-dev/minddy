@@ -40,6 +40,9 @@ const PACKAGING_INPUTS = [
   // Offline shell documents load this packaged font outside the JS bundle.
   "app/fonts/inter-latin.woff2",
   "desktop/build/entitlements.mac.plist",
+  "desktop/build/entitlements.mac.inherit.plist",
+  // Restricted APNs capabilities must be authorized on a fresh installation.
+  "desktop/build/minddy-developer-id.provisionprofile",
   // The translations of `Info.plist`, posed by `extraResources` (MIN-359).
   // They are not entered by esbuild and are not named in any file
   // TypeScript: without this line, correct the French sentence of a request

@@ -1,10 +1,12 @@
 /**
- * Internal icon set — minimal inline SVGs so the package has zero icon deps.
+ * Internal icon set — minimal inline SVGs with shared Hugeicons status glyphs.
  * Items and actions supply their own icons; these only cover the chrome
  * (search field, popover, dropdowns…).
  */
 
 import type { SVGProps } from "react";
+import { CheckIcon as CheckIconData, LoaderCircleIcon } from "@hugeicons/core-free-icons";
+import { AppIcon } from "@/components/icon";
 
 type P = SVGProps<SVGSVGElement>;
 
@@ -62,9 +64,7 @@ export function ArrowRightIcon(props: P) {
 
 export function LoaderIcon(props: P) {
   return (
-    <svg {...base} {...props}>
-      <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-    </svg>
+    <AppIcon icon={LoaderCircleIcon} width={16} height={16} {...props} />
   );
 }
 
@@ -79,9 +79,7 @@ export function CopyIcon(props: P) {
 
 export function CheckIcon(props: P) {
   return (
-    <svg {...base} {...props}>
-      <path d="M20 6 9 17l-5-5" />
-    </svg>
+    <AppIcon icon={CheckIconData} width={16} height={16} {...props} />
   );
 }
 

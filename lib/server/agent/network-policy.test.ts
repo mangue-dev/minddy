@@ -17,10 +17,8 @@ import {
 } from "./network-policy";
 
 /**
- * What this test keeps is not an object shape — it is the MIN-223 measured
- * boundary. A `startsWith` placed
- * here "to make it simpler" would re-credit `/api/v1/key`, the OpenRouter provisioning route, and the microVM could issue its own keys.
- * Nothing in the product would say so; this file, if.
+ * Preserve the measured MIN-223 boundary. A `startsWith` here would also
+ * authorize `/api/v1/key`, allowing the microVM to provision its own keys.
  */
 
 const OPENROUTER = "https://openrouter.ai/api/v1";
@@ -43,20 +41,20 @@ function rulesFor(host: string): NetworkPolicyRule[] {
   return allow[host] ?? [];
 }
 
-describe("buildAgentNetworkPolicy — la route créditée", () => {
-  it("cible le chemin EXACT de complétion, jamais un préfixe", () => {
+describe("buildAgentNetworkPolicy — credited route", () => {
+  it("targets the exact completion path, never a prefix", () => {
     const [rule] = rulesFor("openrouter.ai");
     expect(rule.match?.path).toEqual({ exact: "/api/v1/chat/completions" });
     // The word that counts: a `startsWith` would credit /api/v1/key.
     expect(JSON.stringify(rule.match?.path)).not.toContain("startsWith");
   });
 
-  it("ne crédite que POST — un GET sur le même chemin ne porte rien", () => {
+  it("credits only POST on the completion path", () => {
     const [rule] = rulesFor("openrouter.ai");
     expect(rule.match?.method).toEqual(["POST"]);
   });
 
-  it("pose la vraie clé dans le transform, et nulle part ailleurs", () => {
+  it("places the real key only in the transform", () => {
     const built = policy();
     const [rule] = rulesFor("openrouter.ai");
     expect(rule.transform).toEqual([{ headers: { authorization: "Bearer sk-or-v1-secret" } }]);
@@ -65,7 +63,7 @@ describe("buildAgentNetworkPolicy — la route créditée", () => {
     expect(occurrences).toBe(1);
   });
 
-  it("suit la base URL du provider (BYOK générique compris)", () => {
+  it("follows the provider base URL, including custom providers", () => {
     const built = buildAgentNetworkPolicy({
       baseUrl: "https://llm.example.test/openai/v1/",
       llmKey: "k",
@@ -81,19 +79,19 @@ describe("buildAgentNetworkPolicy — la route créditée", () => {
   });
 });
 
-describe("buildAgentNetworkPolicy — le plan de contrôle", () => {
-  it("forwarde le préfixe du plan de contrôle vers l'origine nue", () => {
+describe("buildAgentNetworkPolicy — control plane", () => {
+  it("forwards the control plane prefix to the bare origin", () => {
     const [rule] = rulesFor("www.minddy.app");
     expect(rule.forwardURL).toBe(ORIGIN);
     expect(rule.match?.path).toEqual({ startsWith: `${AGENT_VM_PATH_PREFIX}/` });
   });
 
-  it("ne pose AUCUN transform sur le plan de contrôle — l'identité vient de l'OIDC", () => {
+  it("uses OIDC identity without a control plane transform", () => {
     const [rule] = rulesFor("www.minddy.app");
     expect(rule.transform).toBeUndefined();
   });
 
-  it("vise le déploiement qui lance le run, pas la prod", () => {
+  it("targets the deployment that launches the run", () => {
     const built = buildAgentNetworkPolicy({
       baseUrl: OPENROUTER,
       llmKey: "k",
@@ -107,7 +105,7 @@ describe("buildAgentNetworkPolicy — le plan de contrôle", () => {
     );
   });
 
-  it("l'URL appelée depuis la VM et l'URL de la route sont la même", () => {
+  it("uses the same route URL from the VM and network policy", () => {
     expect(agentVmUrl(ORIGIN, "events")).toBe("https://www.minddy.app/api/agent-vm/events");
     expect(agentVmUrl(`${ORIGIN}/`, "/checkpoint")).toBe(
       "https://www.minddy.app/api/agent-vm/checkpoint",
@@ -277,52 +275,53 @@ describe("forge authentication stays in trusted network policy", () => {
   });
 });
 
-describe("buildAgentNetworkPolicy — refus de démarrer plutôt que démarrer nu", () => {
-  it("refuse une base URL relative", () => {
+describe("buildAgentNetworkPolicy — fail closed", () => {
+  it("rejects a relative base URL", () => {
     expect(() => policy({ baseUrl: "/v1" })).toThrow(/absolute URL/);
   });
 
-  it("refuse une origine portant un chemin (le forwardURL doit rester nu)", () => {
+  it("rejects an origin with a path", () => {
     expect(() => policy({ appOrigin: "https://www.minddy.app/api" })).toThrow(/no path/);
   });
 
-  it("refuse une clé vide — mieux vaut pas de VM qu'une VM sans crédit", () => {
+  it("rejects an empty LLM key", () => {
     expect(() => policy({ llmKey: "  " })).toThrow(/missing LLM key/);
   });
 });
 
-describe("l'identité de la VM — le nom du sandbox EST le claim", () => {
+describe("VM identity from the sandbox name", () => {
   const RUN = "11111111-2222-4333-8444-555555555555";
 
-  it("fait l'aller-retour avec le nom que pose `getOrCreateAgentSandbox`", () => {
-    expect(agentSandboxName(RUN)).toBe(`agent-${RUN}`);
+  it("recovers the run ID from the assigned sandbox name", () => {
+    expect(agentSandboxName(RUN)).toBe(`agent-v2-${RUN}`);
     expect(runIdFromSandboxName(agentSandboxName(RUN))).toBe(RUN);
+    expect(runIdFromSandboxName(`${agentSandboxName(RUN)}-012345abcdef`)).toBe(RUN);
   });
 
-  it("refuse tout ce qui n'est pas un run — une sonde, un outil, un nom inventé", () => {
-    for (const name of ["probe-min223", "agent", "agent-", "sandbox-x", ""]) {
+  it("rejects probes, invented names and legacy sandboxes", () => {
+    for (const name of ["probe-min223", "agent", "agent-", `agent-${RUN}`, "sandbox-x", ""]) {
       expect(runIdFromSandboxName(name)).toBeNull();
     }
   });
 
-  it("exige un uuid — sinon un nom bricolé partirait en requête", () => {
-    // `agent-../..` ou `agent-*` ne doit jamais devenir un identifiant de run.
+  it("requires a UUID so a crafted name cannot become a run ID", () => {
+    // A path fragment or wildcard must never become a run identifier.
     for (const suffix of ["../../x", "*", "' or 1=1 --", "not-a-uuid"]) {
-      expect(runIdFromSandboxName(`agent-${suffix}`)).toBeNull();
+      expect(runIdFromSandboxName(`agent-v2-${suffix}`)).toBeNull();
     }
   });
 });
 
-describe("l'admission du plan de contrôle — le locataire avant le nom (MIN-331)", () => {
+describe("control plane admission — tenant before sandbox name (MIN-331)", () => {
   const RUN = "11111111-2222-4333-8444-555555555555";
   const TENANT = { teamId: "team_us", projectId: "prj_us" };
   const OURS = { ...TENANT, sandboxName: agentSandboxName(RUN) };
 
-  it("laisse passer NOTRE microVM, et en rend le run", () => {
+  it("admits our microVM and returns its run", () => {
     expect(admitSandboxCaller(OURS, TENANT)).toEqual({ ok: true, runId: RUN });
   });
 
-  it("refuse une sandbox d'un autre compte Vercel, même parfaitement nommée", () => {
+  it("rejects a sandbox from another Vercel account even with a valid name", () => {
     // The MIN-331 attack: a valid OIDC, a `aud` that the attacker placed
     // itself in its `forwardURL`, and the name of a real run from us.
     for (const foreign of [
@@ -338,7 +337,7 @@ describe("l'admission du plan de contrôle — le locataire avant le nom (MIN-33
     }
   });
 
-  it("refuse une sandbox à nous qui n'est pas celle d'un run", () => {
+  it("rejects our sandbox when it is not assigned to a run", () => {
     expect(admitSandboxCaller({ ...TENANT, sandboxName: "probe-min223" }, TENANT)).toEqual({
       ok: false,
       status: 403,
@@ -346,7 +345,7 @@ describe("l'admission du plan de contrôle — le locataire avant le nom (MIN-33
     });
   });
 
-  it("ferme la porte quand le locataire attendu manque — 503, pas un passe-droit", () => {
+  it("fails closed when the expected tenant is missing", () => {
     expect(admitSandboxCaller(OURS, null)).toEqual({
       ok: false,
       status: 503,
@@ -354,7 +353,7 @@ describe("l'admission du plan de contrôle — le locataire avant le nom (MIN-33
     });
   });
 
-  it("lit le locataire dans l'environnement, et exige les DEUX variables", () => {
+  it("reads the tenant from both required environment variables", () => {
     expect(
       resolveControlPlaneTenant({ VERCEL_TEAM_ID: " team_us ", VERCEL_PROJECT_ID: "prj_us" }),
     ).toEqual(TENANT);
@@ -364,8 +363,8 @@ describe("l'admission du plan de contrôle — le locataire avant le nom (MIN-33
   });
 });
 
-describe("le placeholder", () => {
-  it("est reconnaissable et n'est pas un secret", () => {
+describe("the placeholder", () => {
+  it("is recognizable and is not a secret", () => {
     expect(AGENT_LLM_PLACEHOLDER_KEY).toBe("minddy-placeholder");
     expect(AGENT_LLM_PLACEHOLDER_KEY).not.toMatch(/^sk-/);
   });

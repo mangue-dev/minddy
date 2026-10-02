@@ -1,81 +1,34 @@
 "use client";
 
-import { useCallback, useMemo, useState, type ComponentType } from "react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import {
+  ArrowRight01Icon,
+  DashboardSpeedIcon,
+  LoaderCircleIcon,
+} from "@hugeicons/core-free-icons";
+import { useCallback, useState } from "react";
 import Link from "next/link";
-import { useLocale, useTranslations } from "next-intl";
-import {
-  ArrowRight,
-  Bot,
-  CalendarClock,
-  Gauge,
-  Info,
-  Loader2,
-  Megaphone,
-  Mic,
-} from "lucide-react";
-import {
-  Button,
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-  Progress,
-  cn,
-} from "mangue-ui";
-import {
-  USAGE_SEGMENTS,
-  type BillingPlanId,
-  type UsageSegmentId,
-} from "@/lib/billing-plans";
+import { useTranslations } from "next-intl";
+import { Button, Popover, PopoverContent, PopoverTrigger, cn } from "mangue-ui";
+import { type BillingPlanId } from "@/lib/billing-plans";
 import {
   roundRemainingPercent,
   useBillingSummary,
 } from "@/lib/use-billing-query";
 import { createCheckoutApi, createPortalApi } from "@/lib/billing-api";
-import { NumoIcon } from "@/components/numo-icon";
-import { SmartAssignIcon } from "@/components/smart-icons";
 import { SIDEBAR_COMPACT_CONTROL_CLASS } from "@/lib/sidebar-control-styles";
 
-/**
- * Plan usage (MIN-72) — header pad + popover: unified budget bar
- * whose usage types tile consecutive segments; hover
- * a detail line lights the segment of this type IN PLACE, in its color
- * (mechanism taken from AutoKap credits-panel). The body (`UsageBreakdownBody`)
- * is shared as is with the billing tab of the settings.
- */
+import {
+  UsageBudgetSummary,
+  UsageSegmentBreakdown,
+} from "@/components/billing/usage-budget";
 
-// Numo in line icon: frozen face, aligned with the size of the lucid icons.
-// Its strokes are intrinsic to the drawing — strokeWidth deliberately ignored.
-function NumoRowIcon({ className }: { className?: string; strokeWidth?: number }) {
-  return <NumoIcon animated={false} className={className} />;
-}
+export { SEGMENT_UI } from "@/components/billing/usage-segment-ui";
 
-export const SEGMENT_UI: Record<
-  UsageSegmentId,
-  {
-    icon: ComponentType<{ className?: string; strokeWidth?: number }>;
-    text: string;
-    labelKey:
-      | "segmentAgents"
-      | "segmentRoutines"
-      | "segmentNumo"
-      | "segmentDictation"
-      | "segmentFeedback"
-      | "segmentAutomations";
-  }
+const PLAN_LABEL_KEYS: Record<
+  BillingPlanId,
+  "planFree" | "planGo" | "planPro"
 > = {
-  agents: { icon: Bot, text: "text-violet-600 dark:text-violet-400", labelKey: "segmentAgents" },
-  // The routines (MIN-185), just after the agents: same engine, other line
-  // bill — a subscription that we left running, not a gesture that we made.
-  routines: { icon: CalendarClock, text: "text-sky-600 dark:text-sky-400", labelKey: "segmentRoutines" },
-  numo: { icon: NumoRowIcon, text: "text-blue-600 dark:text-blue-400", labelKey: "segmentNumo" },
-  dictation: { icon: Mic, text: "text-amber-600 dark:text-amber-400", labelKey: "segmentDictation" },
-  feedback: { icon: Megaphone, text: "text-emerald-600 dark:text-emerald-400", labelKey: "segmentFeedback" },
-  // What minddy fills out for you when the ticket is born: who takes it
-  // (Smart Assign) and what it is (Smart-fill).
-  automations: { icon: SmartAssignIcon, text: "text-fuchsia-600 dark:text-fuchsia-400", labelKey: "segmentAutomations" },
-};
-
-const PLAN_LABEL_KEYS: Record<BillingPlanId, "planFree" | "planGo" | "planPro"> = {
   free: "planFree",
   go: "planGo",
   pro: "planPro",
@@ -91,7 +44,13 @@ export function UsageIndicator({
   onOpenChange?: (open: boolean) => void;
 }) {
   const t = useTranslations("Billing");
-  const { loading, remainingPercent, state, usage } = useBillingSummary();
+  const {
+    usageLoading: loading,
+    usageError,
+    remainingPercent,
+    state,
+    usage,
+  } = useBillingSummary();
   const [open, setOpen] = useState(false);
   const sidebar = variant === "sidebar";
   const handleOpenChange = (nextOpen: boolean) => {
@@ -99,7 +58,7 @@ export function UsageIndicator({
     onOpenChange?.(nextOpen);
   };
 
-  if (!loading && !usage?.managedAi) return null;
+  if (usage && !usage.managedAi) return null;
 
   const stateClass =
     state === "exhausted" || state === "low"
@@ -123,14 +82,24 @@ export function UsageIndicator({
                   "text-sidebar-foreground/70 hover:text-sidebar-foreground",
                 )
               : "h-8 rounded-full border border-border bg-card px-2.5 hover:bg-card",
-            stateClass
+            stateClass,
           )}
         >
-          {(!sidebar || collapsed) && <Gauge className="size-[15px]" strokeWidth={2} />}
+          {(!sidebar || collapsed) && (
+            <HugeiconsIcon
+              icon={DashboardSpeedIcon}
+              className="size-[15px]"
+              strokeWidth={2}
+            />
+          )}
           {!collapsed
             ? loading
               ? "…"
-              : t("usagePercent", { percent: roundRemainingPercent(remainingPercent) })
+              : usageError && !usage
+                ? "—"
+                : t("usagePercent", {
+                    percent: roundRemainingPercent(remainingPercent),
+                  })
             : null}
         </Button>
       </PopoverTrigger>
@@ -138,7 +107,7 @@ export function UsageIndicator({
         align="end"
         sideOffset={8}
         collisionPadding={sidebar ? 10 : 8}
-        className="w-80 p-0"
+        className="w-80 max-w-[calc(100vw-1.25rem)] p-0"
       >
         <UsageBreakdownBody compact />
         <UsageFooter onNavigate={() => handleOpenChange(false)} />
@@ -147,201 +116,17 @@ export function UsageIndicator({
   );
 }
 
-/**
- * Header (% REMAINING + plan chip), gauge which empties when hovered by type,
- * reset date and detail lines. Standalone (reads `useBillingSummary`) —
- * the caller owns the shell (popover or card).
- *
- * @param bordered Separates blocks with borders in the billing-page card.
- * @param compact Uses the denser spacing of the usage popover.
- */
-export function UsageBreakdownBody({
-  bordered = false,
-  compact = false,
-}: {
-  bordered?: boolean;
-  compact?: boolean;
-}) {
+/** Shared usage content with a compact layout for the real account popover. */
+export function UsageBreakdownBody({ compact = false }: { compact?: boolean }) {
   const t = useTranslations("Billing");
-  const locale = useLocale();
-  const {
-    loading,
-    planId,
-    includedUsd,
-    remainingPercent,
-    state,
-    segments,
-    nextResetAt,
-  } = useBillingSummary();
-
-  const [hoveredId, setHoveredId] = useState<UsageSegmentId | null>(null);
-
-  const rows = USAGE_SEGMENTS.map((segment) => ({
-    id: segment.id,
-    barClass: segment.barClass,
-    usd: segments.find((s) => s.id === segment.id)?.usd ?? 0,
-    ...SEGMENT_UI[segment.id],
-  }));
-
-  // The gauge displays the REMAINING: it is full at the start of the period and
-  // empty from the right. The consumed types therefore tile consecutively the
-  // emptied portion (same scale, denominator = budget), from the edge of the
-  // fill: the hovered segment lights in place. A line at zero
-  // doesn't bring any segments.
-  const hoveredIndex = rows.findIndex((row) => row.id === hoveredId);
-  const hovered = hoveredIndex >= 0 ? rows[hoveredIndex] : null;
-  const usdBefore = hovered
-    ? rows.slice(0, hoveredIndex).reduce((sum, row) => sum + row.usd, 0)
-    : 0;
-  const hoveredOffset =
-    hovered && includedUsd > 0
-      ? Math.min(remainingPercent + (usdBefore / includedUsd) * 100, 100)
-      : 0;
-  const hoveredWidth =
-    hovered && hovered.usd > 0 && includedUsd > 0
-      ? Math.min((hovered.usd / includedUsd) * 100, 100 - hoveredOffset)
-      : 0;
-
-  const indicatorClass =
-    state === "exhausted" || state === "low"
-      ? "[&>div]:bg-destructive"
-      : state === "warning"
-        ? "[&>div]:bg-amber-500"
-        : "";
-
-  const nextReset = useMemo(() => {
-    if (!nextResetAt) return null;
-    const date = new Date(nextResetAt);
-    if (Number.isNaN(date.getTime())) return null;
-    return new Intl.DateTimeFormat(locale, {
-      day: "numeric",
-      month: "long",
-    }).format(date);
-  }, [nextResetAt, locale]);
-
   return (
     <>
-      <div
-        className={cn(
-          "flex items-center justify-between gap-3",
-          compact ? "px-3 pb-1 pt-2" : "px-4 py-3"
-        )}
-      >
-        <div className="flex items-baseline gap-1.5">
-          <span className="text-2xl font-semibold tabular-nums leading-none text-foreground">
-            {loading ? "—" : `${roundRemainingPercent(remainingPercent)}%`}
-          </span>
-          <span className="text-sm text-muted-foreground">
-            {t("ofBudget")}
-          </span>
-        </div>
-        <span className="flex h-5 shrink-0 items-center rounded-full border border-primary bg-primary/10 px-2 text-xs font-semibold text-primary">
-          {t(PLAN_LABEL_KEYS[planId])}
-        </span>
-      </div>
-
-      <div
-        className={cn(
-          compact ? "space-y-1.5 px-3 pb-2 pt-1" : "space-y-2 px-4 py-3",
-          bordered && "border-t border-border"
-        )}
-      >
-        <div className="relative">
-          {/* Filling = remaining budget: full on reset, empty one
- times the budget consumed. */}
-          <Progress
-            value={loading ? 0 : remainingPercent}
-            className={cn("h-1.5", indicatorClass)}
-          />
-          {/* Hover overlay: paints the segment of the hovered type in place
- in the consumed portion, in its color. Slides to position
- and stretches; width 0 + fade to rest. */}
-          <div
-            aria-hidden
-            className={cn(
-              "pointer-events-none absolute inset-y-0 rounded-full transition-[left,width,opacity] duration-200",
-              hovered?.barClass,
-              hoveredWidth > 0 ? "opacity-100" : "opacity-0"
-            )}
-            style={{ left: `${hoveredOffset}%`, width: `${hoveredWidth}%` }}
-          />
-        </div>
-        {nextReset && !loading && (
-          <div className="flex pt-0.5">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
-              <Info className="size-3.5" strokeWidth={2} />
-              {t("resetsAt", { date: nextReset })}
-            </span>
-          </div>
-        )}
-      </div>
-
-      <div
-        className={cn(
-          compact ? "px-3 py-2" : "px-4 py-3",
-          bordered && "border-t border-border"
-        )}
-      >
-        {/* The gauge counts the remainder, the detail counts the consumed: we say,
- otherwise the two percentages read in the same direction. */}
-        <p className="mb-1.5 text-xs font-medium text-muted-foreground">
-          {t("breakdownTitle")}
+      <UsageBudgetSummary compact={compact} />
+      <div className="space-y-3 border-t border-border px-3 py-3">
+        <p className="text-xs text-muted-foreground">
+          {t("segmentBudgetHint")}
         </p>
-        <ul className="space-y-0">
-          {rows.map((row) => {
-            const rowPercent =
-              includedUsd > 0 ? Math.round((row.usd / includedUsd) * 100) : 0;
-            const isZero = !loading && row.usd <= 0;
-            const highlight = hoveredId === row.id && !isZero;
-            const Icon = row.icon;
-            return (
-              <li
-                key={row.id}
-                className="-mx-2 flex items-center justify-between gap-3 rounded-md px-2 py-1 transition-colors hover:bg-accent/50"
-                onMouseEnter={() => setHoveredId(row.id)}
-                onMouseLeave={() => setHoveredId(null)}
-              >
-                <div className="flex min-w-0 flex-1 items-center gap-2.5">
-                  <Icon
-                    className={cn(
-                      "size-4 shrink-0 transition-colors",
-                      isZero
-                        ? "text-muted-foreground/40"
-                        : highlight
-                          ? row.text
-                          : "text-foreground/70"
-                    )}
-                    strokeWidth={2}
-                  />
-                  <span
-                    className={cn(
-                      "truncate text-sm transition-colors",
-                      isZero
-                        ? "text-muted-foreground/60"
-                        : highlight
-                          ? row.text
-                          : "text-foreground"
-                    )}
-                  >
-                    {t(row.labelKey)}
-                  </span>
-                </div>
-                <span
-                  className={cn(
-                    "shrink-0 text-sm font-semibold tabular-nums transition-colors",
-                    isZero
-                      ? "text-muted-foreground/50"
-                      : highlight
-                        ? row.text
-                        : "text-foreground"
-                  )}
-                >
-                  {loading ? "—" : isZero ? "—" : `${Math.max(rowPercent, 1)}%`}
-                </span>
-              </li>
-            );
-          })}
-        </ul>
+        <UsageSegmentBreakdown compact={compact} />
       </div>
     </>
   );
@@ -385,7 +170,12 @@ function UsageFooter({ onNavigate }: { onNavigate?: () => void }) {
           onClick={() => void handleUpgrade()}
           disabled={redirecting}
         >
-          {redirecting && <Loader2 className="size-3.5 animate-spin" />}
+          {redirecting && (
+            <HugeiconsIcon
+              icon={LoaderCircleIcon}
+              className="size-3.5 animate-spin"
+            />
+          )}
           {t("upgradeTo", { plan: t(PLAN_LABEL_KEYS[nextPlanId]) })}
         </Button>
       )}
@@ -397,7 +187,7 @@ function UsageFooter({ onNavigate }: { onNavigate?: () => void }) {
       >
         <Link href="/billing" onClick={onNavigate}>
           {t("viewBilling")}
-          <ArrowRight className="size-3.5" />
+          <HugeiconsIcon icon={ArrowRight01Icon} className="size-3.5" />
         </Link>
       </Button>
     </div>

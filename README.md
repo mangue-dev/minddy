@@ -135,7 +135,9 @@ Public releases are distinct from deployments. Their SemVer/tag policy,
 artifacts, checksums, migrations, CI provenance, desktop distribution, and
 rollback procedure are documented in [docs/releases.md](docs/releases.md).
 Linux installation, GPG verification, XDG paths, and update behavior are
-documented in [docs/linux-desktop.md](docs/linux-desktop.md).
+documented in [docs/linux-desktop.md](docs/linux-desktop.md). The registration
+of the MCP server in the public registry after each release is documented in
+[docs/mcp-registry-publication.md](docs/mcp-registry-publication.md).
 
 The CI workflow is the source of truth for checks. It runs the public-repository
 check, lint, typecheck, desktop bundle build, tests, and dependency audit. See

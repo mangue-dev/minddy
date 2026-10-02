@@ -937,7 +937,8 @@ export const AUTOMATION_START_DELAY_META_KEY = "automation_start_delay_min";
 export const DEFAULT_AUTOMATION_START_DELAY_MIN = 5;
 /** The values ​​offered on the screen — beyond that, it is no longer a reprieve. */
 export const AUTOMATION_START_DELAY_CHOICES = [0, 2, 5, 10, 30] as const;
-const MAX_AUTOMATION_START_DELAY_MIN = 120;
+/** The hard bound every writer of the preference shares with the resolver. */
+export const MAX_AUTOMATION_START_DELAY_MIN = 120;
 
 export function resolveAutomationStartDelayMinutes(
   meta: Record<string, unknown> | null | undefined,
@@ -980,7 +981,7 @@ export function automationEffortKey(effort: IssueEffort | null | undefined): Iss
   return effort ?? "m";
 }
 
-const ALL_EFFORTS: readonly IssueEffort[] = ["xs", "s", "m", "l", "xl"];
+export const ALL_EFFORTS: readonly IssueEffort[] = ["xs", "s", "m", "l", "xl"];
 
 /**
  * The forces on which the loop rotates. Default: ALL — someone who

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const rpc = vi.fn();
 
@@ -14,8 +14,20 @@ beforeEach(() => {
   rpc.mockReset();
   vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "test-service-key");
 });
+afterEach(() => { vi.restoreAllMocks(); vi.unstubAllEnvs(); });
 
 describe("consumeFeedbackVoiceLimit", () => {
+  it.each(["response", "exception"])("does not log private quota %s data in production", async (failure) => {
+    const sentinel = "MIN591_PRIVATE_QUOTA_SENTINEL";
+    vi.stubEnv("NODE_ENV", "production");
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    if (failure === "response") rpc.mockResolvedValue({ data: null, error: { message: sentinel, code: sentinel } });
+    else rpc.mockRejectedValue(new Error(sentinel));
+    expect(await consumeFeedbackVoiceLimit({ boardId: "board", feedbackUserId: "user",
+      operation: "transcribe", userLimit: 20 })).toEqual({ allowed: false, retryAfter: 3600 });
+    expect(log).toHaveBeenCalled();
+    expect(log.mock.calls.flat().map(String).join("\n")).not.toContain(sentinel);
+  });
   it("reserves transcription user and IP quotas in one database call", async () => {
     rpc.mockResolvedValue({ data: true, error: null });
 

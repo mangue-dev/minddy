@@ -9,6 +9,8 @@ import {
   type DecisionSpec,
 } from "@/lib/server/decisions/types";
 import { getServiceClient } from "@/lib/supabase-service";
+import { prepareDecisionEvaluation, shouldProtectDecisionEvaluations } from
+  "./evaluation-content";
 
 /**
  * The shadow comparison of the decision layer (MIN-567) — the quality
@@ -118,9 +120,12 @@ interface EvaluationRow {
 
 async function writeEvaluation(row: EvaluationRow): Promise<void> {
   try {
-    const { error } = await getServiceClient()
+    const service = getServiceClient();
+    const saved = await prepareDecisionEvaluation(row as unknown as
+      Record<string, unknown>, await shouldProtectDecisionEvaluations(service));
+    const { error } = await service
       .from("ai_decision_evaluations")
-      .insert(row);
+      .insert(saved);
     if (error) console.error("[decisions-shadow] insert failed:", error.message);
   } catch (err) {
     console.error("[decisions-shadow] insert threw:", (err as Error).message);

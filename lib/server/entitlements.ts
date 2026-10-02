@@ -1,3 +1,4 @@
+import { issueStore } from "@/lib/server/issue-store";
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
@@ -86,9 +87,7 @@ export async function ensureIssueLimit(projectId: string): Promise<void> {
   const { plan } = await getResolvedBilling(project.owner_id);
   if (plan.maxIssuesPerProject == null) return;
 
-  const { count, error: countError } = await service
-    .from("issues")
-    .select("id", { count: "exact", head: true })
+  const { count, error: countError } = await issueStore(service).select("id", { count: "exact", head: true })
     .is("deleted_at", null)
     .eq("project_id", projectId);
   if (countError) throw new Error(countError.message);

@@ -1,25 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
+import { BarChartIcon, ComputerIcon, Copy01Icon, CreditCardIcon, Delete02Icon, Logout01Icon, MoonIcon, Settings01Icon, Shield01Icon, Sun01Icon, CheckIcon } from "@hugeicons/core-free-icons";
+import { useEffect, useMemo, useState, type SVGProps } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { APP_VERSION } from "@/lib/app-version";
 import { getDesktopBridge } from "@/lib/desktop/bridge";
 import { toast } from "mangue-ui";
-import {
-  BarChart3,
-  ClipboardCopy,
-  CreditCard,
-  Settings,
-  Shield,
-  Sun,
-  Moon,
-  Monitor,
-  LogOut,
-  Check,
-  Trash2,
-  type LucideIcon,
-} from "lucide-react";
+import type { IconComponent } from "@/components/icon";
 import { useAuth } from "@/lib/auth-context";
 import { useIsAdmin } from "@/lib/use-is-admin";
 import { useAccountTheme } from "@/lib/use-account-theme";
@@ -29,10 +18,17 @@ import { UserAvatar } from "@/components/user-avatar";
 import type { AppNavSection } from "@/components/app-sidebar";
 import type { PaletteGroup, PaletteItem } from "@/components/header-search-pill";
 
-const THEME_CHOICES: { value: "light" | "dark" | "system"; icon: LucideIcon; key: string }[] = [
-  { value: "light", icon: Sun, key: "themeLight" },
-  { value: "dark", icon: Moon, key: "themeDark" },
-  { value: "system", icon: Monitor, key: "themeSystem" },
+function dataIcon(icon: IconSvgElement): IconComponent {
+  const Component = ({ className, style, ref }: SVGProps<SVGSVGElement>) => (
+    <HugeiconsIcon icon={icon} ref={ref} className={className} style={style} />
+  );
+  return Component;
+}
+
+const THEME_CHOICES: { value: "light" | "dark" | "system"; icon: IconComponent; key: string }[] = [
+  { value: "light", icon: dataIcon(Sun01Icon), key: "themeLight" },
+  { value: "dark", icon: dataIcon(MoonIcon), key: "themeDark" },
+  { value: "system", icon: dataIcon(ComputerIcon), key: "themeSystem" },
 ];
 
 /**
@@ -62,12 +58,12 @@ export function useAccountActions(): {
         key: "account",
         label: t("account"),
         items: [
-          { key: "m-trash", label: t("trash"), icon: Trash2, href: "/trash" },
-          { key: "m-stats", label: t("statistics"), icon: BarChart3, href: "/statistics" },
-          { key: "m-billing", label: t("billing"), icon: CreditCard, href: "/billing" },
-          { key: "m-settings", label: t("accountSettings"), icon: Settings, href: "/settings" },
+          { key: "m-trash", label: t("trash"), icon: dataIcon(Delete02Icon), href: "/trash" },
+          { key: "m-stats", label: t("statistics"), icon: dataIcon(BarChartIcon), href: "/statistics" },
+          { key: "m-billing", label: t("billing"), icon: dataIcon(CreditCardIcon), href: "/billing" },
+          { key: "m-settings", label: t("accountSettings"), icon: dataIcon(Settings01Icon), href: "/settings" },
           ...(isAdmin
-            ? [{ key: "m-admin", label: t("adminDashboard"), icon: Shield, href: "/admin" }]
+            ? [{ key: "m-admin", label: t("adminDashboard"), icon: dataIcon(Shield01Icon), href: "/admin" }]
             : []),
         ],
       },
@@ -85,7 +81,7 @@ export function useAccountActions(): {
       {
         key: "session",
         items: [
-          { key: "m-signout", label: t("signOut"), icon: LogOut, onClick: () => void signOut() },
+          { key: "m-signout", label: t("signOut"), icon: dataIcon(Logout01Icon), onClick: () => void signOut() },
         ],
       },
     ];
@@ -94,7 +90,7 @@ export function useAccountActions(): {
       {
         key: "cmd-trash",
         label: t("trash"),
-        icon: Trash2,
+        icon: dataIcon(Delete02Icon),
         href: "/trash",
         keywords: ["trash", "corbeille", "deleted", "supprimé", "supprime", "restore", "restaurer"],
         onSelect: () => router.push("/trash"),
@@ -102,7 +98,7 @@ export function useAccountActions(): {
       {
         key: "cmd-stats",
         label: t("statistics"),
-        icon: BarChart3,
+        icon: dataIcon(BarChartIcon),
         href: "/statistics",
         keywords: ["statistics", "stats", "statistiques"],
         onSelect: () => router.push("/statistics"),
@@ -110,7 +106,7 @@ export function useAccountActions(): {
       {
         key: "cmd-billing",
         label: t("billing"),
-        icon: CreditCard,
+        icon: dataIcon(CreditCardIcon),
         href: "/billing",
         keywords: ["billing", "facturation", "plan", "abonnement", "subscription", "usage"],
         onSelect: () => router.push("/billing"),
@@ -120,7 +116,7 @@ export function useAccountActions(): {
             {
               key: "cmd-admin",
               label: t("adminDashboard"),
-              icon: Shield,
+              icon: dataIcon(Shield01Icon),
               href: "/admin",
               keywords: ["admin", "administration", "models", "modèles", "modeles", "ia", "ai"],
               onSelect: () => router.push("/admin"),
@@ -133,7 +129,7 @@ export function useAccountActions(): {
       {
         key: "cmd-git-sync-prompt",
         label: t("syncPrompt"),
-        icon: ClipboardCopy,
+        icon: dataIcon(Copy01Icon),
         keywords: [
           "git",
           "sync",
@@ -161,13 +157,13 @@ export function useAccountActions(): {
         icon: c.icon,
         keywords: ["theme", "thème", "appearance", "apparence", t(c.key as Parameters<typeof t>[0])],
         meta:
-          theme === c.value ? <Check className="size-3.5 text-muted-foreground" /> : undefined,
+          theme === c.value ? <HugeiconsIcon icon={CheckIcon} className="size-3.5 text-muted-foreground" /> : undefined,
         onSelect: () => setTheme(c.value),
       })),
       {
         key: "cmd-signout",
         label: t("signOut"),
-        icon: LogOut,
+        icon: dataIcon(Logout01Icon),
         keywords: ["logout", "sign out", "déconnexion", "deconnexion", "quitter"],
         onSelect: () => void signOut(),
       },

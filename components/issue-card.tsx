@@ -1,5 +1,7 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { AiAutoRotateIcon, ArrowRight01Icon, Calendar01Icon, GitMergeIcon, GitPullRequestDraftIcon, GitPullRequestIcon, RepeatIcon, TaskDone01Icon, TriangleIcon, UserIcon } from "@hugeicons/core-free-icons";
 import {
   memo,
   useCallback,
@@ -12,21 +14,9 @@ import { useRouter } from "next/navigation";
 import { useDraggable } from "@dnd-kit/core";
 import { useTranslations, useFormatter } from "next-intl";
 import { ConfirmDeleteDialog, Spinner, cn, toast } from "mangue-ui";
+import { AppIcon } from "@/components/icon";
 import { AgentBeam } from "@/components/agent-beam";
-import {
-  Calendar,
-  ChevronRight,
-  GitMerge,
-  GitPullRequest,
-  IterationCw,
-  Link2,
-  ListChecks,
-  Repeat,
-  Target,
-  Trash2,
-  Triangle,
-  User,
-} from "lucide-react";
+import { useIssueMenuActions } from "@/components/use-issue-menu-actions";
 import { useAgentMenuActions } from "@/components/agent/use-agent-menu-actions";
 import {
   CustomPromptDialog,
@@ -50,7 +40,6 @@ import {
   StatusIndicator,
   PriorityIndicator,
   EffortIndicator,
-  RelationIcon,
 } from "@/components/issue-indicators";
 import { RelationChips, type ChipRelation } from "@/components/relation-chips";
 import { RelationTargetPicker } from "@/components/relation-target-picker";
@@ -67,7 +56,6 @@ import {
   agentLaunchPromptVariant,
   agentPlanPromptVariant,
 } from "@/lib/agent-launch-prompt";
-import { RELATION_TYPES } from "@/lib/relation-constants";
 import type {
   Category,
   Issue,
@@ -247,7 +235,7 @@ function EffortPick({
     <EffortIndicator effort={value} />
   ) : (
     <span className="inline-flex items-center gap-1 text-muted-foreground/60">
-      <Triangle className="size-[18px] shrink-0" />
+      <HugeiconsIcon icon={TriangleIcon} className="size-[18px] shrink-0" />
       <span className="text-sm font-medium leading-none">–</span>
     </span>
   );
@@ -255,6 +243,7 @@ function EffortPick({
   const options: PickerOption[] = EFFORTS.map((e) => ({
     value: e.value,
     label: e.label,
+    icon: <HugeiconsIcon icon={TriangleIcon} className="size-4 text-muted-foreground" />,
   }));
   return (
     <SearchSelect
@@ -418,7 +407,7 @@ function AssigneePick({
     <Tooltip>
       <TooltipTrigger asChild>
         <span className="flex size-6 shrink-0 items-center justify-center rounded-full border border-dashed border-muted-foreground/40 text-muted-foreground/60">
-          <User className="size-3.5" />
+          <HugeiconsIcon icon={UserIcon} className="size-3.5" />
         </span>
       </TooltipTrigger>
       <TooltipContent>{tField("unassigned")}</TooltipContent>
@@ -481,9 +470,9 @@ function DueDatePick({
     return (
       <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
         {recurrence ? (
-          <Repeat className="size-3 shrink-0" />
+          <HugeiconsIcon icon={RepeatIcon} className="size-3 shrink-0" />
         ) : (
-          <Calendar className="size-3 shrink-0" />
+          <HugeiconsIcon icon={Calendar01Icon} className="size-3 shrink-0" />
         )}
         {format.dateTime(parsed, dueDateFormat(parsed, { compact: true }))}
       </span>
@@ -541,7 +530,7 @@ function PlanPick({
   const t = useTranslations("IssueUI");
   const content = (
     <>
-      <ListChecks className="size-3.5 shrink-0" />
+      <HugeiconsIcon icon={TaskDone01Icon} className="size-3.5 shrink-0" />
       <span className="tabular-nums">
         {progress.done}/{progress.total}
       </span>
@@ -579,7 +568,9 @@ function PlanPick({
     its review. Read-only (a span without a handler) in the drag overlay / public board.
 
     The colors are GitHub's, as everywhere else: GREEN when open,
-    PURPLE when merged. The chip used to be green in every state — announcing
+    PURPLE when merged, NEUTRAL when the PR is still a draft — and the
+    words follow the state: “PR open” once reviewable, “PR available”
+    while it is still a draft. The chip used to be green in every state — announcing
     “PR available” in green for work already delivered, while the side-panel
     chip said “PR merged” in purple one click away. */
 function PrPick({
@@ -591,19 +582,26 @@ function PrPick({
 }) {
   const t = useTranslations("Agent");
   const merged = state === "merged";
+  const draft = state === "draft";
+  const Icon = merged ? GitMergeIcon : draft ? GitPullRequestDraftIcon : GitPullRequestIcon;
   const content = (
     <>
-      {merged ? (
-        <GitMerge className="size-3.5 shrink-0" />
-      ) : (
-        <GitPullRequest className="size-3.5 shrink-0" />
-      )}
-      <span className="truncate">{merged ? t("prMerged") : t("prBadge")}</span>
+      <AppIcon icon={Icon} className="size-3.5 shrink-0" />
+      <span className="truncate">
+        {merged ? t("prMerged") : draft ? t("prBadge") : t("prOpen")}
+      </span>
     </>
   );
   const tone = merged
     ? "text-violet-700 dark:text-violet-400"
-    : "text-emerald-600 dark:text-emerald-500";
+    : draft
+      ? "text-foreground/80"
+      : "text-emerald-600 dark:text-emerald-500";
+  const hover = merged
+    ? "hover:bg-violet-500/10 focus-visible:bg-violet-500/10"
+    : draft
+      ? "hover:bg-muted focus-visible:bg-muted"
+      : "hover:bg-emerald-500/10 focus-visible:bg-emerald-500/10";
   if (!onOpen) {
     return (
       <span
@@ -627,9 +625,7 @@ function PrPick({
           className={cn(
             "flex items-center gap-1 rounded-md px-1 py-0.5 text-[11px] font-medium outline-none transition-colors",
             tone,
-            merged
-              ? "hover:bg-violet-500/10 focus-visible:bg-violet-500/10"
-              : "hover:bg-emerald-500/10 focus-visible:bg-emerald-500/10",
+            hover,
           )}
         >
           {content}
@@ -709,6 +705,7 @@ export const IssueCardBody = memo(function IssueCardBody({
   selected?: boolean;
   dragging?: boolean;
 }) {
+  const router = useRouter();
   const t = useTranslations("IssueUI");
   const tCycles = useTranslations("Cycles");
   const plan = planProgress(issue.plan);
@@ -787,7 +784,7 @@ export const IssueCardBody = memo(function IssueCardBody({
             <Tooltip>
               <TooltipTrigger asChild>
                 <span className="flex shrink-0 items-center text-blue-500 dark:text-blue-400">
-                  <IterationCw
+                  <AppIcon icon={AiAutoRotateIcon}
                     className="size-3"
                     aria-label={tCycles("inCurrentCycle")}
                   />
@@ -798,60 +795,33 @@ export const IssueCardBody = memo(function IssueCardBody({
           )}
           <IntegrationIndicator issue={issue} iconClassName="size-3" />
           <RemoteIssueIndicator issue={issue} iconClassName="size-3" />
-          {parentNumber != null &&
-            (onOpenParent ? (
-              <button
-                type="button"
-                onClick={(e) => {
-                  stop(e);
-                  onOpenParent();
-                }}
-                onPointerDown={stop}
-                aria-label={t("openParentAria", {
-                  id: issueIdentifier(projectKey, parentNumber),
-                })}
-                className="rounded-sm transition-colors hover:text-foreground hover:underline"
-              >
-                {issueIdentifier(projectKey, parentNumber)}
-              </button>
-            ) : (
-              <span>{issueIdentifier(projectKey, parentNumber)}</span>
-            ))}
-          {/* The chevron alone does not explain the prefix: on a sub-issue,
-              hovering “› MIN-42” names the relation — “Sub-issue of MIN-12”. */}
-          {parentNumber == null ? (
-            <span className="truncate">
-              {issueIdentifier(projectKey, issue.number)}
-            </span>
-          ) : (
+          {parentNumber != null && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <span className="flex min-w-0 items-center gap-1">
-                  <ChevronRight className="size-3 shrink-0" aria-hidden />
-                  <span className="truncate">
-                    {issueIdentifier(projectKey, issue.number)}
-                  </span>
-                </span>
+                <button type="button" disabled={!onOpenParent}
+                  onClick={(e) => { stop(e); onOpenParent?.(); }} onPointerDown={stop}
+                  aria-label={t("openParentAria", { id: issueIdentifier(projectKey, parentNumber) })}
+                  className="shrink-0 rounded-sm hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <HugeiconsIcon icon={ArrowRight01Icon} className="size-3" aria-hidden />
+                </button>
               </TooltipTrigger>
-              <TooltipContent>
-                {t("subIssueOf", {
-                  id: issueIdentifier(projectKey, parentNumber),
-                })}
-              </TooltipContent>
+              <TooltipContent>{t("subIssueOf", { id: issueIdentifier(projectKey, parentNumber) })}</TooltipContent>
             </Tooltip>
           )}
+          <span className="shrink-0 whitespace-nowrap">{issueIdentifier(projectKey, issue.number)}</span>
           {relations && relations.length > 0 && (
             <RelationChips
               relations={relations}
               projectKey={projectKey}
               onOpen={onOpenRelated}
-              max={1}
+              onOpenObjective={onOpenRelated ? (id) => router.push(`/projects/${issue.project_id}/objectives?open=${id}`) : undefined}
               className="shrink-0"
             />
           )}
         </span>
         <span className="flex shrink-0 items-center gap-1.5">
-          {/* PR disponible → remplace l'indicateur de plan ; sinon le plan. */}
+          {/* An actionable PR takes the place of plan progress. */}
           {pr && isPrWorthShowing(pr) ? (
             <PrPick state={pr.state} onOpen={onOpenPr} />
           ) : plan.total > 0 ? (
@@ -985,8 +955,8 @@ const IssueCardContent = memo(function IssueCardContent({
   onSelect?: (issueId: string) => void;
 }) {
   const t = useTranslations("IssueUI");
-  const tRel = useTranslations("Relations");
   const tAttach = useTranslations("Resources");
+  const buildIssueMenuActions = useIssueMenuActions();
   const tAgent = useTranslations("Agent");
   const tPlan = useTranslations("Plan");
   const tCommon = useTranslations("Common");
@@ -1142,7 +1112,7 @@ const IssueCardContent = memo(function IssueCardContent({
     if (!candidateIssues) return [];
     const linked = new Set(
       (relations ?? [])
-        .filter((r) => r.relation === relationType && r.otherType !== "objective")
+        .filter((r) => !r.inheritedObjectiveId && r.relation === relationType && r.otherType !== "objective")
         .map((r) => r.otherId),
     );
     return candidateIssues.filter(
@@ -1155,7 +1125,7 @@ const IssueCardContent = memo(function IssueCardContent({
     if (!relationType || !objectiveMap) return [];
     const linked = new Set(
       (relations ?? [])
-        .filter((r) => r.relation === relationType && r.otherType === "objective")
+        .filter((r) => !r.inheritedObjectiveId && r.relation === relationType && r.otherType === "objective")
         .map((r) => r.otherId),
     );
     return [...objectiveMap.values()].filter(
@@ -1383,122 +1353,29 @@ const IssueCardContent = memo(function IssueCardContent({
     // that it does not disappear. Before the first opening, the list is empty and
     // nothing has ever been returned: that’s where the economy happens.
     if (!menuPosition) return lastMenuActions.current;
-    return [
-      // Prompt and agent: two submenus “Generate a plan” / “Implement the
-      // ticket”, shared with the side panel. The code officer is working on
-      // the Agents PAGE; ⇧P and ⇧A remain on the “implement” branch.
-      ...agentActions,
-      // Open pull request — only offered when a PR exists for the ticket.
-      ...(pr && openPr
-        ? [
-            {
-              id: "open-pr",
-              label: tAgent("viewPullRequest"),
-              keywords: [
-                "pull request",
-                "pr",
-                "review",
-                "github",
-                "gitlab",
-                "merge",
-              ],
-              icon: <GitPullRequest className="size-4" />,
-              onSelect: openPr,
-            },
-          ]
-        : []),
-      // Relations (MIN-25 / MIN-30): grouped under a "Relations" submenu. Each
-      // leaf opens the target-issue picker at the pointer. Shown only when the
-      // board wired the relation handlers.
-      ...(onAddRelation
-        ? [
-            {
-              id: "relations",
-              label: tRel("relations"),
-              keywords: ["relation", "link", "lier", "bloc", "block"],
-              icon: <Link2 className="size-4" />,
-              children: RELATION_TYPES.map((type) => ({
-                id: `relation-${type}`,
-                label: tRel(`action_${type}`),
-                keywords: [tRel(type), "relation", "link", "lier"],
-                icon: <RelationIcon relation={type} className="size-4" />,
-                onSelect: () => setRelationType(type),
-              })),
-            },
-          ]
-        : []),
-      // Goal and deadline are ONLY displayed on the map when they are
-      // placed: without them, the card offers no socket for placing them. The menu
-      // then reopens the picker at the pointer — exactly what O and D do.
-      ...(!issue.objective_id && objectiveMap && objectiveMap.size > 0
-        ? [
-            {
-              id: "set-objective",
-              label: t("actionLinkObjective"),
-              keywords: ["objectif", "objective", "goal", "lier", "link"],
-              icon: <Target className="size-4" />,
-              shortcut: KEY_FOR_FIELD.objective,
-              onSelect: () => openFieldAtPointer("objective"),
-            },
-          ]
-        : []),
-      ...(!issue.due_date
-        ? [
-            {
-              id: "set-due-date",
-              label: t("actionSetDueDate"),
-              keywords: [
-                "échéance",
-                "echeance",
-                "date",
-                "due",
-                "deadline",
-                "calendrier",
-                "calendar",
-              ],
-              icon: <Calendar className="size-4" />,
-              shortcut: KEY_FOR_FIELD.dueDate,
-              onSelect: () => openFieldAtPointer("dueDate"),
-            },
-          ]
-        : []),
-      ...(buildMenuActions?.(issue) ?? []),
-      ...(onDelete
-        ? [
-            {
-              id: "delete",
-              label: tCommon("moveToTrash"),
-              keywords: [
-                "corbeille",
-                "trash",
-                "supprimer",
-                "delete",
-                "remove",
-                "archiver",
-              ],
-              icon: <Trash2 className="size-4" />,
-              separatorBefore: true,
-              variant: "destructive" as const,
-              onSelect: () => setConfirmDelete(true),
-            },
-          ]
-        : []),
-    ];
+    return buildIssueMenuActions({
+      issue,
+      projectKey,
+      agentActions,
+      pr,
+      hasObjectives: !!objectiveMap?.size,
+      onSelectRelation: onAddRelation ? setRelationType : undefined,
+      onOpenField: openFieldAtPointer,
+      extraActions: buildMenuActions?.(issue),
+      onDelete: onDelete ? () => setConfirmDelete(true) : undefined,
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     menuPosition,
+    buildIssueMenuActions,
     agentActions,
     pr,
-    openPr,
     onAddRelation,
     issue,
+    projectKey,
     objectiveMap,
     buildMenuActions,
     onDelete,
-    t,
-    tAgent,
-    tRel,
-    tCommon,
   ]);
   lastMenuActions.current = menuActions;
 

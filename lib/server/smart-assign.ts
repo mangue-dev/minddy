@@ -1,8 +1,12 @@
+import { issueStore } from "@/lib/server/issue-store";
 import "server-only";
+import { categoryStore } from "@/lib/server/category-store";
 
+import { previouslyAssignedIssues } from "./issue-event-store";
 import { afterOrNow } from "@/lib/server/after-safe";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getServiceClient } from "@/lib/supabase-service";
+import { decodeProject } from "@/lib/server/project-content";
 import { canUseSmartAssign } from "@/lib/server/entitlements";
 import { insertEvents } from "@/lib/server/issue-events";
 import { insertNotifications } from "@/lib/server/notifications";
@@ -124,15 +128,14 @@ export async function runSmartAssign(
     await Promise.all([
       service
         .from("projects")
-        .select("id, name, owner_id, smart_assign_enabled, smart_assign_rules")
+        .select("*")
         .eq("id", params.projectId)
         .is("deleted_at", null)
         .maybeSingle(),
-      service
-        .from("issues")
-        .select("id, title, description, status, priority, effort, assignee_id")
+      issueStore(service).select("id, title, description, status, priority, effort, assignee_id")
         .is("deleted_at", null)
         .eq("id", params.issueId)
+        .eq("project_id", params.projectId)
         .maybeSingle(),
       service
         .from("project_members")
@@ -143,6 +146,7 @@ export async function runSmartAssign(
   // Re-check everything at execution time — the world may have moved since
   // the schedule (toggle off, project deleted, issue assigned or re-triaged).
   if (!project?.smart_assign_enabled) return null;
+  const readableProject = await decodeProject(project);
   if (!issue || issue.assignee_id !== null) return null;
   if (!isSmartAssignEligibleStatus(issue.status)) return null;
 
@@ -155,7 +159,7 @@ export async function runSmartAssign(
       .filter((id) => id !== ownerId),
   ];
 
-  const rules = (project.smart_assign_rules ?? {}) as Record<string, string>;
+  const rules = (readableProject.smart_assign_rules ?? {}) as Record<string, string>;
   // A rule written for SOMEONE on the team is what makes the choice
   // possible: without any, the engines only have names to compare, and the
   // prompt already tells the model to fall back on the owner in this case.
@@ -182,11 +186,15 @@ export async function runSmartAssign(
         fetchAuthUsersById(service, memberIds),
         service
           .from("issue_categories")
-          .select("categories(name)")
+          .select("category_id")
           .eq("issue_id", params.issueId),
       ]);
+      const { data: decodedCategories, error: categoryError } = await categoryStore(service)
+        .select("id, name").eq("project_id", params.projectId)
+        .in("id", (categoryRows ?? []).map((row) => row.category_id));
+      if (categoryError) throw new Error("Unable to read smart-assignment categories");
       const spec = prepareSmartAssign({
-        projectName: (project.name as string) ?? "",
+        projectName: (readableProject.name as string) ?? "",
         issue: {
           title: issue.title as string,
           description: typeof issue.description === "string" ? issue.description : null,
@@ -197,9 +205,7 @@ export async function runSmartAssign(
         ownerId,
         rules,
         authUsers,
-        categoryNames: (categoryRows ?? [])
-          .map((r) => (r.categories as { name?: string } | null)?.name)
-          .filter((name): name is string => !!name),
+        categoryNames: (decodedCategories ?? []).map((row) => row.name as string),
       });
       // One decision, two engines: Jev first on the structured state, the
       // `choose_assignee` LLM pass replayed verbatim as the fallback, one
@@ -268,6 +274,7 @@ async function claimForSmartAssign(
     .update({ assignee_id: chosen })
     .is("deleted_at", null)
     .eq("id", params.issueId)
+    .eq("project_id", params.projectId)
     .is("assignee_id", null)
     .select("id")
     .maybeSingle();
@@ -400,9 +407,7 @@ export async function sweepUnassignedIssues(
   const service = getServiceClient();
   const since = new Date(Date.now() - SWEEP_WINDOW_MS).toISOString();
 
-  const { data: rows, error } = await service
-    .from("issues")
-    .select("id, project_id, projects!inner(smart_assign_enabled, deleted_at)")
+  const { data: rows, error } = await issueStore(service).select("id, project_id, projects!inner(smart_assign_enabled, deleted_at)")
     .is("deleted_at", null)
     .is("assignee_id", null)
     .not("status", "in", "(triage,canceled,duplicate)")
@@ -416,15 +421,7 @@ export async function sweepUnassignedIssues(
   const candidates = (rows ?? []) as Array<{ id: string; project_id: string }>;
   if (candidates.length === 0) return { candidates: 0, assigned: 0 };
 
-  const { data: touched } = await service
-    .from("issue_events")
-    .select("issue_id")
-    .eq("field", "assignee_id")
-    .in(
-      "issue_id",
-      candidates.map((c) => c.id)
-    );
-  const everAssigned = new Set((touched ?? []).map((e) => e.issue_id as string));
+  const everAssigned = await previouslyAssignedIssues(service, candidates.map((c) => c.id));
 
   let assigned = 0;
   for (const candidate of candidates) {
@@ -474,7 +471,7 @@ export async function loadSmartAssignConfigWarnings(
 
     const { data: projects, error } = await service
       .from("projects")
-      .select("id, name, smart_assign_rules")
+      .select("*")
       .eq("owner_id", userId)
       .eq("smart_assign_enabled", true)
       .is("deleted_at", null);
@@ -493,7 +490,8 @@ export async function loadSmartAssignConfigWarnings(
     }
 
     const warnings: SmartAssignConfigWarning[] = [];
-    for (const project of projects) {
+    for (const storedProject of projects) {
+      const project = await decodeProject(storedProject, userId);
       const team = teamByProject.get(project.id as string) ?? new Set([userId]);
       if (team.size <= 1) continue;
       const rules = (project.smart_assign_rules ?? {}) as Record<string, string>;

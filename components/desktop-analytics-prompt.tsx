@@ -1,5 +1,7 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { BarChartIcon } from "@hugeicons/core-free-icons";
 import { useRuntimeConfig } from "@/lib/runtime-config-provider";
 
 import { useEffect, useState } from "react";
@@ -11,8 +13,6 @@ import {
   DialogDescription,
   DialogTitle,
 } from "mangue-ui";
-import { BarChart3 } from "lucide-react";
-
 import { useAuth } from "@/lib/auth-context";
 import { isDesktop } from "@/lib/desktop/bridge";
 import {
@@ -111,7 +111,7 @@ export function DesktopAnalyticsPrompt() {
         className="max-w-[calc(100%-2rem)] sm:max-w-[420px]"
       >
         <div className="flex size-9 items-center justify-center rounded-full bg-muted text-muted-foreground">
-          <BarChart3 className="size-4" />
+          <HugeiconsIcon icon={BarChartIcon} className="size-4" />
         </div>
         <DialogTitle className="mt-3 text-base">{t("promptTitle")}</DialogTitle>
         <DialogDescription className="leading-relaxed">

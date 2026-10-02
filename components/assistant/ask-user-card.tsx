@@ -1,5 +1,7 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Cancel01Icon, CheckIcon, SquareIcon } from "@hugeicons/core-free-icons";
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
@@ -8,8 +10,8 @@ import {
   Input,
   cn,
 } from "mangue-ui";
-import { Square, SquareCheck, X } from "lucide-react";
 import { SendShortcutTooltip } from "@/components/send-shortcut";
+import { AppIcon } from "@/components/icon";
 import { useIsSendShortcut } from "@/lib/keyboard/use-send-mode";
 import {
   composeAskUserReply,
@@ -172,9 +174,10 @@ export function AskUserCard({ questions, onAnswer, onSkip }: AskUserCardProps) {
   // Selection indicator: radio = FULL circle when checked; checkbox = checkbox.
   const OptionIcon = ({ selected }: { selected: boolean }) => {
     if (q.multiSelect) {
-      const Icon = selected ? SquareCheck : Square;
+      const Icon = selected ? CheckIcon : SquareIcon;
       return (
-        <Icon
+        <AppIcon
+          icon={Icon}
           className={cn(
             "mt-0.5 h-3.5 w-3.5 shrink-0",
             selected ? "text-primary" : "opacity-50"
@@ -309,7 +312,7 @@ export function AskUserCard({ questions, onAnswer, onSkip }: AskUserCardProps) {
               aria-label={t("skipQuestions")}
               className="absolute right-2 top-2 size-6 rounded-md p-1 text-muted-foreground hover:text-foreground"
             >
-              <X className="h-3.5 w-3.5" />
+              <HugeiconsIcon icon={Cancel01Icon} className="h-3.5 w-3.5" />
             </IconButton>
           </TooltipTrigger>
           <TooltipContent side="top" sideOffset={6}>

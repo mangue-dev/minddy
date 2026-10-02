@@ -1,8 +1,8 @@
-import { ListTodo } from "lucide-react";
 import {
   ScratchpadTaskItemBase,
   ScratchpadTaskList,
 } from "@/components/scratchpad/task-nodes";
+import { Task01Icon as ListTodo } from "@hugeicons/core-free-icons";
 import type { PageBlock } from "@/components/pages/blocks/types";
 
 /**

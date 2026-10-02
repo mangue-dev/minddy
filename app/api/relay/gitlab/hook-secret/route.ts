@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
   await getServiceClient().from("forge_relay_audit").insert({
     instance_id: verification.instance.id,
     action: "gitlab_hook_secret_registered",
-    detail: { repoId },
+    detail: {},
   });
   return NextResponse.json({ ok: true });
 }

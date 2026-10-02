@@ -24,6 +24,18 @@
 import { createPlan } from "../../lib/guards.mjs";
 import { resolveCategories } from "./_categories.mjs";
 
+/** Legacy capture seeds cannot write content once issue encryption is active. */
+export async function assertIssueSeedWritable(world, projectId) {
+  const { data, error } = await world.admin.from("issue_encryption_scopes")
+    .select("project_id").eq("project_id", projectId).maybeSingle();
+  if (error && error.code !== "42P01" && error.code !== "PGRST205") {
+    throw new Error("Unable to check issue encryption before seeding");
+  }
+  if (data) {
+    throw new Error("Capture issue seeds require an unencrypted demo project");
+  }
+}
+
 /**
  * Aligns project ticket descriptions and categories with `issues`
  * (the table of the calling script: `title`, `description`, `categories`).
@@ -32,6 +44,7 @@ import { resolveCategories } from "./_categories.mjs";
  * absent, and never removes a category placed by hand.
  */
 export async function syncIssueMetadata(world, project, issues) {
+  await assertIssueSeedWritable(world, project.id);
   const { data: rows, error } = await world.admin
     .from("issues")
     .select("id, title, description")

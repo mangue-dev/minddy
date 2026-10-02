@@ -14,6 +14,7 @@
  * of truth of the diagram; the Storage API is that of buckets, because they do not
  * not part of a PostgreSQL schema dump.
  */
+import { encryptionChoice, encryptionEnvironment } from "./self-hosting-encryption.mjs";
 import { randomBytes } from "node:crypto";
 import { parseEnvironment } from "./self-hosting-install.mjs";
 import { chmodSync, existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
@@ -28,6 +29,7 @@ const DEFAULT_ENV_FILE = resolve(ROOT_DIR, ".env.local");
 const CORE_SECRET_KEYS = [
   "AI_KEY_ENCRYPTION_SECRET",
   "FEEDBACK_SSO_ENCRYPTION_SECRET",
+  "MINDDY_DATA_ROOT_KEY",
 ];
 const OPTIONAL_CAPABILITIES = ["scheduler"];
 export const MINIMAL_LOCAL_EXCLUDES = [
@@ -74,6 +76,8 @@ export function parseArgs(argv) {
       delete options.dbUrl;
     } else if (arg === "--skip-start") {
       options.start = false;
+    } else if (arg === "--encryption") {
+      options.encryption = encryptionChoice(value());
     } else if (arg === "--minimal") {
       options.minimal = true;
     } else if (arg === "--app-url") {
@@ -129,6 +133,7 @@ export function help() {
 
 Options:
   --local              Prepare the local Docker stack (default).
+  --encryption enabled|disabled  Encrypt new installations (default: enabled).
   --minimal            Skip local services that minddy does not need.
   --app-url <origin>   Public origin of the local app (default: http://localhost:3000).
   --db-url <url>       Applies migrations to an already started remote stack.
@@ -312,6 +317,11 @@ export async function main(argv = process.argv.slice(2)) {
     return;
   }
 
+  const existing = existsSync(options.envFile)
+    ? parseEnvironment(readFileSync(options.envFile, "utf8"))
+    : {};
+  const encryption = encryptionEnvironment(existing, options.encryption, { readOnly: options.existingEnv });
+
   const migrations = listMigrations();
   console.log(`→ ${migrations.length} migrations validated, from ${migrations[0]} to ${migrations.at(-1)}.`);
   run("supabase", ["--version"], { dryRun: options.dryRun });
@@ -341,7 +351,7 @@ export async function main(argv = process.argv.slice(2)) {
     appValues = remoteAppValues(options.existingEnv ? parseEnvironment(readFileSync(options.envFile, "utf8")) : process.env);
   }
 
-  const generated = { ...appValues, ...generatedSecrets(options.capabilities) };
+  const generated = { ...appValues, ...generatedSecrets(options.capabilities), ...encryption };
   if (options.existingEnv) {
     console.log("→ existing deployment environment read without modification.");
   } else if (options.dryRun) {

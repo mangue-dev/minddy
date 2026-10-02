@@ -1,4 +1,20 @@
+import { issueStore } from "@/lib/server/issue-store";
+import { abortableReadClient } from "./abortable-read-client";
+import { randomUUID } from "node:crypto";
+import { DatabaseOperationError, failureDiagnostics } from "@/lib/server/failure-diagnostics";
+import { categoryStore } from "@/lib/server/category-store";
+import { objectiveStore } from "@/lib/server/objective-store";
+import { commentStore } from "@/lib/server/comment-store";
 import "server-only";
+import { decodeView } from "@/lib/server/view-content";
+import { decodePageProjection } from "@/lib/server/page-content";
+import { decodeProjectName } from "@/lib/server/project-content";
+import { decodeAttachmentRow } from "@/lib/server/attachment-content";
+import { hydrateWorkerParentCopies } from "@/lib/server/agent/worker-parent-content";
+import { hydrateNumoUserMessages } from "@/lib/server/numo/user-message-content";
+import { decodeOperationJson, decodeOperationText, encodeOperationJson,
+  encodeOperationText, shouldProtectAutomationOperation } from
+  "@/lib/server/automations/operation-content";
 
 import { MCP_CLIENT_TOOL_NAMES, MCP_SETUP_TOOL_NAMES } from "@/lib/mcp-client-tools";
 import { executeMcpTool } from "@/lib/server/mcp-client";
@@ -67,9 +83,15 @@ import { createCategory, updateCategory } from "@/lib/server/categories";
 import { updateProjectSettings } from "@/lib/server/update-project";
 import {
   createRoutine,
+  getRoutineForUser,
   listRoutinesForUser,
   updateRoutine,
 } from "@/lib/server/routines";
+import {
+  routineOccurrenceDetail,
+  routineRunSummaries,
+} from "@/lib/server/routine-runs";
+import type { NumoRoutineOccurrence } from "@/lib/server/routine-occurrences";
 import {
   routineForAssistantTool,
   routinesForAssistantTool,
@@ -85,6 +107,7 @@ import {
   revokeIntegration,
   updateIntegrationWebhook,
 } from "@/lib/server/integrations";
+import { decodeIntegrationField } from "@/lib/server/integration-content";
 import { normalizeWebhookStatus } from "@/lib/server/webhooks";
 import {
   integrationUsage,
@@ -210,7 +233,7 @@ import {
   type InboxReadCategory,
   type InboxReadState,
 } from "@/lib/inbox-tool";
-import { resolveAssistantProjectId } from "./project-scope";
+import { resolveAssistantProjectId, resolveAssistantProjectTarget } from "./project-scope";
 import { readPlanUsageTool, readUserStatsTool } from "./stats-tools";
 
 // ── Tool execution ─────────────────────────────────────────────────────
@@ -220,6 +243,8 @@ import { readPlanUsageTool, readUserStatsTool } from "./stats-tools";
 // every event/notification stays attributed to the human who asked.
 
 export interface ToolContext {
+  /** Cancels the database transport of project and issue listing tools. */
+  readAbortSignal?: AbortSignal;
   /** Context project for legacy comment entry points. */
   projectId: string | null;
   /** Conversation tools must name their own target, independent of page navigation. */
@@ -320,7 +345,7 @@ function libError(r: {
  rather than inventing a reason. */
 const PR_LINK_REFUSALS: Record<PrLinkRefusal, string> = {
   pr_already_linked:
-    "This pull request is already attached to another issue. The link is definitive: it cannot be replaced, and there is no unlink.",
+    "The pull request could not be linked. Refresh it and try again.",
   issue_already_linked:
     "This issue already carries a live (draft or open) pull request. Only ONE live pull request per issue.",
   issue_outside_repo:
@@ -408,11 +433,13 @@ function delegationAuthorizations(raw: unknown): AgentDelegationAuthorization[] 
 async function parentTurnAttachments(ctx: ToolContext): Promise<AttachmentInput[]> {
   if (!ctx.turnId) return [];
   const { data } = await ctx.service.from("assistant_messages")
-    .select("metadata")
+    .select("id,content,metadata")
     .eq("turn_id", ctx.turnId)
     .eq("role", "user")
     .maybeSingle();
-  const raw = (data?.metadata as { attachments?: unknown } | null)?.attachments;
+  const hydrated = data ? (await hydrateWorkerParentCopies(ctx.service,
+    await hydrateNumoUserMessages(ctx.service, [data], ctx.userId)))[0] : null;
+  const raw = (hydrated?.metadata as { attachments?: unknown } | null)?.attachments;
   if (!Array.isArray(raw)) return [];
   return raw.slice(0, 20).flatMap((value) => {
     if (!value || typeof value !== "object" || Array.isArray(value)) return [];
@@ -541,6 +568,7 @@ function readCtx(
   return {
     db: ctx.supabase,
     service: ctx.service,
+    actorId: ctx.userId,
     projectId,
     projectKey: access.project.key,
   };
@@ -576,9 +604,7 @@ async function readIssueText(
 ): Promise<
   { plan: string; description: string; updatedAt: string } | { error: string }
 > {
-  const { data, error } = await ctx.supabase
-    .from("issues")
-    .select("plan, description, updated_at")
+  const { data, error } = await issueStore(ctx.supabase).select("plan, description, updated_at")
     .is("deleted_at", null)
     .eq("id", issueId)
     .maybeSingle();
@@ -679,14 +705,16 @@ async function listViews(
   // global views are personal, while project views are shared or the actor's.
   const base = ctx.service
     .from("views")
-    .select("id, name, kind, user_id, filters, sort, display");
+    .select("*");
   const { data, error } = await (
     projectId
       ? base.eq("project_id", projectId).or(`user_id.is.null,user_id.eq.${ctx.userId}`)
       : base.is("project_id", null).eq("user_id", ctx.userId)
   ).order("position", { ascending: true });
   if (error) return toolError(error.message);
-  const views = (data ?? []).map((v) => ({
+  const plain = await Promise.all((data ?? []).map((row) =>
+    decodeView(row, ctx.userId)));
+  const views = plain.map((v) => ({
     id: v.id,
     name: v.name,
     kind: v.kind,
@@ -707,7 +735,7 @@ async function accessibleProjects(ctx: ToolContext): Promise<{
     await Promise.all([
       ctx.service
         .from("projects")
-        .select("id, name, key, owner_id")
+        .select("id")
         .eq("owner_id", ctx.userId)
         .is("deleted_at", null),
       ctx.service
@@ -725,12 +753,15 @@ async function accessibleProjects(ctx: ToolContext): Promise<{
   if (ids.size === 0) return { projects: [], error: null };
   const { data: projects, error } = await ctx.service
     .from("projects")
-    .select("id, name, key, owner_id")
+    .select("id, name, key, owner_id, encrypted_content, encryption_version")
     .in("id", [...ids])
     .is("deleted_at", null)
     .order("created_at", { ascending: true });
   return {
-    projects: (projects ?? []) as Array<{ id: string; name: string; key: string; owner_id: string }>,
+    projects: await Promise.all((projects ?? []).map(async (project) => ({
+      id: project.id, name: await decodeProjectName(project, ctx.userId),
+      key: project.key, owner_id: project.owner_id,
+    }))),
     error: error?.message ?? null,
   };
 }
@@ -749,8 +780,8 @@ async function listGlobalFilterOptions(
   }
 
   const [catsRes, objsRes] = await Promise.all([
-    ctx.service.from("categories").select("id, name").in("project_id", projectIds),
-    ctx.service.from("objectives").select("id, name").in("project_id", projectIds).is("deleted_at", null),
+    categoryStore(ctx.service).select("id, name").in("project_id", projectIds),
+    objectiveStore(ctx.service).select("id, name").in("project_id", projectIds).is("deleted_at", null),
   ]);
   if (catsRes.error) return toolError(catsRes.error.message);
   if (objsRes.error) return toolError(objsRes.error.message);
@@ -758,11 +789,11 @@ async function listGlobalFilterOptions(
   // Integrations aren't readable under the user's RLS — service client, scoped
   // to the projects the user can access (mirrors GET /api/me/board).
   const { data: intRows } = projectIds.length
-    ? await ctx.service
+      ? await ctx.service
         .from("integrations")
-        .select("id, name")
+        .select("id, project_id, name")
         .in("project_id", projectIds)
-    : { data: [] as { id: string; name: string }[] };
+    : { data: [] as { id: string; project_id: string; name: string }[] };
 
   const group = (rows: { id: string; name: string }[]) => {
     const byName = new Map<string, string[]>();
@@ -778,7 +809,9 @@ async function listGlobalFilterOptions(
     result: {
       categories: group((catsRes.data ?? []) as { id: string; name: string }[]),
       objectives: group((objsRes.data ?? []) as { id: string; name: string }[]),
-      integrations: group((intRows ?? []) as { id: string; name: string }[]),
+      integrations: group(await Promise.all((intRows ?? []).map(async (row) => ({
+        id:row.id,name:(await decodeIntegrationField(row,"name",row.name))!,
+      })))),
     },
     success: true,
   };
@@ -828,6 +861,12 @@ export async function executeTool(
   args: Record<string, unknown>,
   ctx: ToolContext,
 ): Promise<ToolExecution> {
+  if (ctx.readAbortSignal && (toolName === "list_projects" || toolName === "list_issues")) {
+    ctx = { ...ctx,
+      service: abortableReadClient(ctx.service, ctx.readAbortSignal),
+      supabase: abortableReadClient(ctx.supabase, ctx.readAbortSignal) };
+  }
+  let launchStage = "prepare_launch";
   try {
     if (MCP_CLIENT_TOOL_NAMES.has(toolName)) {
       return executeMcpTool(ctx.userId, toolName, args);
@@ -902,15 +941,34 @@ export async function executeTool(
       if (outcome === "ok" && blockers.length > 0) {
         return toolError("An ok automation outcome cannot carry blockers.");
       }
+      const { data: bound, error: boundError } = await ctx.service
+        .from("numo_automation_operations")
+        .select("id, step")
+        .eq("chain_id", ctx.automationChainId)
+        .eq("turn_id", ctx.turnId)
+        .maybeSingle();
+      if (boundError) return toolError(boundError.message);
+      if (!bound) return toolError("The current Numo turn is not bound to this automation chain.");
+      const { data: chain, error: chainError } = await ctx.service
+        .from("agent_chains").select("project_id")
+        .eq("id", ctx.automationChainId).single();
+      if (chainError || !chain?.project_id) {
+        return toolError("Automation operation project is unavailable.");
+      }
+      const projectId = chain.project_id as string;
+      const protect = await shouldProtectAutomationOperation(ctx.service);
+      const storedSummary = protect ? await encodeOperationText(projectId,
+        ctx.automationChainId, bound.step, "outcome_summary", summary) : summary;
+      const storedBlockers = protect ? await encodeOperationJson(projectId,
+        ctx.automationChainId, bound.step, "outcome_blockers", blockers) : blockers;
       const { data, error } = await ctx.service
         .from("numo_automation_operations")
         .update({
           outcome,
-          outcome_summary: summary,
-          outcome_blockers: blockers,
+          outcome_summary: storedSummary,
+          outcome_blockers: storedBlockers,
         })
-        .eq("chain_id", ctx.automationChainId)
-        .eq("turn_id", ctx.turnId)
+        .eq("id", bound.id)
         .is("outcome", null)
         .select("id")
         .maybeSingle();
@@ -919,18 +977,23 @@ export async function executeTool(
         const { data: existing, error: existingError } = await ctx.service
           .from("numo_automation_operations")
           .select("outcome, outcome_summary, outcome_blockers")
-          .eq("chain_id", ctx.automationChainId)
-          .eq("turn_id", ctx.turnId)
+          .eq("id", bound.id)
           .maybeSingle();
         if (existingError) return toolError(existingError.message);
-        const sameBlockers = Array.isArray(existing?.outcome_blockers)
-          && existing.outcome_blockers.length === blockers.length
-          && existing.outcome_blockers.every(
+        const existingSummary = await decodeOperationText(projectId,
+          ctx.automationChainId, bound.step, "outcome_summary",
+          existing?.outcome_summary ?? null);
+        const existingBlockers = existing ? await decodeOperationJson(projectId,
+          ctx.automationChainId, bound.step, "outcome_blockers",
+          existing.outcome_blockers as unknown as unknown[]) : [];
+        const sameBlockers = Array.isArray(existingBlockers)
+          && existingBlockers.length === blockers.length
+          && existingBlockers.every(
             (blocker: unknown, index: number) => blocker === blockers[index],
           );
         if (
           existing?.outcome === outcome
-          && existing.outcome_summary === summary
+          && existingSummary === summary
           && sameBlockers
         ) {
           return {
@@ -1135,10 +1198,15 @@ export async function executeTool(
     }
 
     // ── Project scope resolution (all remaining tools) ──────────────────
-    const projectId = resolveAssistantProjectId(
+    const target = await resolveAssistantProjectTarget(
+      ctx,
       ctx.requireExplicitProjectTarget ? null : ctx.projectId,
       args.project_id,
     );
+    if (target.error) {
+      return toolError(target.error);
+    }
+    const projectId = target.projectId;
     if (!projectId) {
       return toolError(
         "No explicit project target. Pass project_id (use list_projects to discover projects).",
@@ -1146,7 +1214,9 @@ export async function executeTool(
     }
     const access = await getProjectAccess(ctx.userId, projectId);
     if (!access) {
-      return toolError("Project not found or not accessible.");
+      return toolError(
+        "Project not found or not accessible. Pass the project's id (resolve it with list_projects) or its exact key or name.",
+      );
     }
 
     switch (toolName) {
@@ -1191,7 +1261,7 @@ export async function executeTool(
         if ("error" in r) return toolError(r.error);
         // Owners also see pending invitations (for cancel_invitation).
         const pending_invitations = access.isOwner
-          ? await listPendingInvitations(projectId)
+          ? await listPendingInvitations(projectId, access.project.owner_id)
           : [];
         return {
           result: { ...r, pending_invitations },
@@ -1203,8 +1273,7 @@ export async function executeTool(
         if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(objectiveId)) {
           return toolError("objective_id must be an objective UUID from list_objectives.");
         }
-        const { data: objective, error } = await ctx.supabase
-          .from("objectives")
+        const { data: objective, error } = await objectiveStore(ctx.supabase)
           .select("id, name, description, status, lead_user_id, target_date")
           .is("deleted_at", null)
           .eq("project_id", projectId)
@@ -1250,8 +1319,7 @@ export async function executeTool(
         // basket goes back down `page: null`, and the pill remains inert without
         // that we have to take care of the trash (lib/server/resource-select.ts).
         const [{ data, error }, { data: attachmentRows }] = await Promise.all([
-          ctx.supabase
-            .from("objectives")
+          objectiveStore(ctx.supabase)
             .select("id, name, status, lead_user_id, target_date")
             .is("deleted_at", null)
             .eq("project_id", projectId)
@@ -1259,7 +1327,7 @@ export async function executeTool(
           ctx.supabase
             .from("attachments")
             .select(
-              "id, objective_id, kind, url, page_id, file_name, mime_type, size_bytes, page:pages(id, title)",
+              "id, objective_id, kind, url, page_id, file_name, mime_type, size_bytes, page:pages(id, project_id, title, encrypted_content, encryption_version)",
             )
             .eq("project_id", projectId)
             .not("objective_id", "is", null)
@@ -1275,7 +1343,9 @@ export async function executeTool(
           string,
           Record<string, unknown>[]
         >();
-        for (const row of attachmentRows ?? []) {
+        for (const stored of attachmentRows ?? []) {
+          const row = await decodeAttachmentRow("attachments", stored,
+            ctx.userId, projectId);
           const id = row.objective_id as string;
           const list = resourcesByObjective.get(id) ?? [];
           list.push(resourceSummary(row));
@@ -1295,8 +1365,7 @@ export async function executeTool(
         };
       }
       case "list_categories": {
-        const { data, error } = await ctx.supabase
-          .from("categories")
+        const { data, error } = await categoryStore(ctx.supabase)
           .select("id, name, color")
           .eq("project_id", projectId)
           .order("name", { ascending: true });
@@ -1309,23 +1378,23 @@ export async function executeTool(
           // A single literal string: `select` types its columns as READ
           // this text, and a concatenation makes the result opaque.
           .select(
-            "id, name, kind, revoked_at, webhook_url, webhook_events, webhook_scope, webhook_last_status, webhook_last_at",
+            "id, project_id, name, kind, revoked_at, webhook_url, webhook_events, webhook_scope, webhook_last_status, webhook_last_at",
           )
           .eq("project_id", projectId)
-          .order("name", { ascending: true });
+          .order("id", { ascending: true });
         if (error) return toolError(error.message);
         return {
           result: {
-            integrations: (data ?? []).map((row) => ({
+            integrations: await Promise.all((data ?? []).map(async (row) => ({
               id: row.id,
-              name: row.name,
+              name: await decodeIntegrationField(row,"name",row.name),
               kind: row.kind,
               revoked_at: row.revoked_at,
               // Without URL there is no webhook: `null` rather than an object to
               // half filled, which would make it look like a webhook is turned off but set.
               webhook: row.webhook_url
                 ? {
-                    url: row.webhook_url,
+                    url: await decodeIntegrationField(row,"webhook_url",row.webhook_url),
                     events: row.webhook_events,
                     scope: row.webhook_scope,
                     last_status: normalizeWebhookStatus(
@@ -1334,7 +1403,7 @@ export async function executeTool(
                     last_at: row.webhook_last_at,
                   }
                 : null,
-            })),
+            }))),
           },
           success: true,
         };
@@ -1843,8 +1912,7 @@ export async function executeTool(
           );
           if (!scoped.ok) return toolError(scoped.error);
         } else {
-          const { data: objective } = await ctx.supabase
-            .from("objectives")
+          const { data: objective } = await objectiveStore(ctx.supabase)
             .select("id")
             .is("deleted_at", null)
             .eq("id", objectiveId)
@@ -1861,16 +1929,17 @@ export async function executeTool(
           // that cannot select the wrong page.
           const { data: page } = await ctx.supabase
             .from("pages")
-            .select("id, title")
+            .select("id, project_id, title, encrypted_content, encryption_version")
             .eq("id", pageId)
             .eq("project_id", projectId)
             .is("deleted_at", null)
             .maybeSingle();
           if (!page) return toolError("Page not found in this project.");
+          const clearPage = await decodePageProjection(page, ctx.userId);
           resource = {
             kind: "page" as const,
             page_id: pageId,
-            file_name: ((page.title as string) ?? "").trim() || "Page",
+            file_name: ((clearPage.title as string) ?? "").trim() || "Page",
           };
         } else {
           try {
@@ -1984,9 +2053,7 @@ export async function executeTool(
         let issueSource: { number: number; title: string; plan: string | null } | null = null;
         let launchIssue: LaunchMessageIssue | null = null;
         if (issueId) {
-          const { data: row } = await ctx.supabase
-            .from("issues")
-            .select("number, title, plan, effort")
+          const { data: row } = await issueStore(ctx.supabase).select("number, title, plan, effort")
             .is("deleted_at", null)
             .eq("id", issueId)
             .maybeSingle();
@@ -2086,6 +2153,7 @@ export async function executeTool(
             ? args.continuation_run_id.trim()
             : "";
         if (durableDelegation && continuationRunId && objective) {
+          launchStage = "resume_worker";
           const relaunch = await relaunchNumoWorkerRun({
             conversationId: ctx.conversationId!,
             userId: ctx.userId,
@@ -2111,6 +2179,7 @@ export async function executeTool(
             };
           }
         }
+        launchStage = "launch_worker";
         const result = await launchAgentRun({
           ...(pullRequestMode === "review"
             ? { pullRequestId }
@@ -2152,7 +2221,10 @@ export async function executeTool(
           // Framing does not start the ticket; implement and check, yes.
           ...(mode ? { intent: intentForLaunchMode(mode) } : {}),
         });
-        if (!result.ok) return toolError(launchErrorMessage(result));
+        if (!result.ok) return {
+          result: { error: launchErrorMessage(result), error_code: result.error, retryable: false },
+          success: false,
+        };
         return {
           result: {
             launched: true,
@@ -2260,6 +2332,71 @@ export async function executeTool(
         if (!result.ok) return toolError(routineErrorMessage(result));
         return {
           result: { routine: routineForAssistantTool(result.routine) },
+          success: true,
+        };
+      }
+
+      // ── Routine runs (MIN-589) : relire ce que les occurrences ont fait ──
+      case "list_routine_runs": {
+        const routineId =
+          typeof args.routine_id === "string" ? args.routine_id : "";
+        if (!routineId)
+          return toolError("routine_id is required (see list_routines).");
+        const found = await getRoutineForUser(routineId, ctx.userId);
+        if (!found || found.routine.project_id !== projectId)
+          return toolError("No routine with that id in this project.");
+        const limit =
+          typeof args.limit === "number" && Number.isFinite(args.limit)
+            ? args.limit
+            : 20;
+        const runs = await routineRunSummaries(found.routine, limit);
+        return {
+          result: {
+            routine_id: routineId,
+            routine_title: found.routine.title,
+            runs,
+          },
+          success: true,
+        };
+      }
+
+      case "read_routine_occurrence": {
+        const occurrenceId =
+          typeof args.occurrence_id === "string" ? args.occurrence_id : "";
+        if (!occurrenceId)
+          return toolError(
+            "occurrence_id is required (see list_routine_runs).",
+          );
+        // Resolution goes through the occurrence first: its routine id is
+        // authoritative, so a single id is enough even when the conversation
+        // does not carry the routine anymore.
+        const { data: occurrenceRow, error: occurrenceError } = await ctx.service
+          .from("numo_routine_occurrences")
+          .select("*")
+          .eq("id", occurrenceId)
+          .maybeSingle();
+        if (occurrenceError) return toolError(occurrenceError.message);
+        if (!occurrenceRow)
+          return toolError(
+            "No occurrence with that id. Use list_routine_runs on the routine first.",
+          );
+        const occurrence = occurrenceRow as NumoRoutineOccurrence;
+        const found = await getRoutineForUser(occurrence.routine_id, ctx.userId);
+        if (!found || found.routine.project_id !== projectId)
+          return toolError("No occurrence with that id in this project.");
+        const detail = await routineOccurrenceDetail({
+          routine: found.routine,
+          occurrence,
+          readClient: ctx.supabase,
+        });
+        return {
+          result: {
+            occurrence: detail.occurrence,
+            transcript: detail.transcript,
+            ...(detail.transcript_note
+              ? { transcript_note: detail.transcript_note }
+              : {}),
+          },
           success: true,
         };
       }
@@ -2517,8 +2654,7 @@ export async function executeTool(
           typeof args.objective_id === "string" ? args.objective_id : "";
         if (!objectiveId) return toolError("objective_id is required.");
         // Scope check: the objective must belong to the project in scope.
-        const { data: obj } = await ctx.supabase
-          .from("objectives")
+        const { data: obj } = await objectiveStore(ctx.supabase)
           .select("id")
           .is("deleted_at", null)
           .eq("id", objectiveId)
@@ -2555,9 +2691,7 @@ export async function executeTool(
         ) {
           return toolError("decision must be accept, decline, or duplicate.");
         }
-        const { data: issue } = await ctx.supabase
-          .from("issues")
-          .select("id, status")
+        const { data: issue } = await issueStore(ctx.supabase).select("id, status")
           .is("deleted_at", null)
           .eq("id", issueId)
           .eq("project_id", projectId)
@@ -2699,13 +2833,13 @@ export async function executeTool(
         const detail = await getTeamFeedbackDetail(projectId, postId);
         if (!detail)
           return toolError("Feedback post not found in this project.");
-        const { data: comments } = await ctx.service
-          .from("comments")
+        const { data: comments, error: commentsError } = await commentStore(ctx.service, "comments", ctx.userId)
           .select(
-            "author_id, via_assistant, body, created_at, visibility, feedback_users!feedback_user_id (name, email, pseudonym)",
+            "author_id, via_assistant, body, created_at, visibility, feedback_users!feedback_user_id (id, name, email, pseudonym)",
           )
           .eq("feedback_post_id", postId)
           .order("created_at", { ascending: true });
+        if (commentsError) return toolError("Unable to read feedback comments.");
         // Resolve author display names (never surface raw uuids to the model).
         const commentAuthorIds = [
           ...new Set(
@@ -2923,6 +3057,7 @@ export async function executeTool(
               auto_assign_enabled: result.project.auto_assign_enabled,
               smart_assign_enabled: result.project.smart_assign_enabled,
               smart_assign_rules: result.project.smart_assign_rules,
+              smart_triage_mode: result.project.smart_triage_mode,
               automations_enabled: result.project.automations_enabled,
               feedback_review_enabled: result.project.feedback_review_enabled,
               feedback_review_skip_over_budget:
@@ -3067,11 +3202,37 @@ export async function executeTool(
       default:
         return toolError(`Unknown tool: ${toolName}`);
     }
-  } catch (err) {
-    console.error(`[assistant] tool ${toolName} threw:`, err);
-    return toolError(
-      err instanceof Error ? err.message : "Tool execution failed",
-    );
+  } catch (error) {
+    if (toolName === "launch_code_agent") {
+      const correlationId = randomUUID();
+      const diagnostics = failureDiagnostics(error);
+      const stage = error instanceof DatabaseOperationError ? error.operation : launchStage;
+      console.error("[assistant] code_agent_launch_failed", {
+        correlation_id: correlationId,
+        tool_name: toolName,
+        stage,
+        conversation_id: ctx.conversationId ?? null,
+        turn_id: ctx.turnId ?? null,
+        tool_call_id: ctx.toolCallId ?? null,
+        routine_id: ctx.routineId ?? null,
+        ...diagnostics,
+      });
+      return {
+        result: {
+          error: diagnostics.kind === "database_constraint"
+            ? "The database rejected the code-worker launch. Report the diagnostic reference; repeating the same request will not fix it."
+            : "The code-worker launch could not be confirmed. Report the diagnostic reference and check the run state before trying again.",
+          error_code: "code_agent_launch_failed",
+          correlation_id: correlationId,
+          stage,
+          retryable: false,
+          failure: diagnostics,
+        },
+        success: false,
+      };
+    }
+    console.error("[assistant] tool_execution_failed");
+    return toolError("Tool execution failed");
   }
 }
 
@@ -3329,9 +3490,7 @@ async function executeCycleTool(
       if (removing) {
         // Only pull issues out of the user's OWN current cycle — never someone
         // else's (project access alone would otherwise allow it).
-        const { data: row } = await ctx.service
-          .from("issues")
-          .select("cycle_id")
+        const { data: row } = await issueStore(ctx.service).select("cycle_id")
           .is("deleted_at", null)
           .eq("id", issueId)
           .maybeSingle();

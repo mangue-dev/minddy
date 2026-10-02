@@ -12,7 +12,7 @@ import {
   parseArgs,
   parseEnv,
 } from "./bootstrap-supabase.mjs";
-import { parseArgs as parseStorageArgs } from "./reconcile-storage-buckets.mjs";
+import { EXPECTED_BUCKETS, parseArgs as parseStorageArgs } from "./reconcile-storage-buckets.mjs";
 import { checkLocalConfig, verificationSql } from "./verify-supabase-bootstrap.mjs";
 import { BASELINE_VERSION } from "./repair-squashed-migration-history.mjs";
 
@@ -37,6 +37,8 @@ test("bootstrap always generates the forge secrets; optional secrets follow capa
   const minimal = generatedSecrets();
   assert.ok(minimal.AI_KEY_ENCRYPTION_SECRET);
   assert.ok(minimal.FEEDBACK_SSO_ENCRYPTION_SECRET);
+  assert.match(minimal.MINDDY_DATA_ROOT_KEY, /^[a-f0-9]{64}$/);
+  assert.notEqual(minimal.MINDDY_DATA_ROOT_KEY, minimal.AI_KEY_ENCRYPTION_SECRET);
   // Forge secrets are unconditional: GitHub/GitLab connect through the
   // managed forge relay by default.
   assert.ok(minimal.GIT_STATE_SECRET);
@@ -155,6 +157,19 @@ test("local verification derives Storage credentials from Supabase status", () =
   assert.equal(options.local, true);
   assert.equal(options.supabaseUrl, "http://127.0.0.1:54321");
   assert.equal(options.serviceRoleKey, "local-service-role");
+});
+
+test("local startup preserves private forge storage and migration-controlled icon activation", () => {
+  const config = readFileSync(new URL("../supabase/config.toml", import.meta.url), "utf8");
+  const forge = config.match(/\[storage\.buckets\.forge-attachments\]([^[]*)/);
+  assert.ok(forge, "the local forge bucket must be configured");
+  assert.match(forge[1], /public\s*=\s*false/);
+  assert.match(forge[1], /file_size_limit\s*=\s*"32MiB"/);
+  assert.equal(EXPECTED_BUCKETS["forge-attachments"].public, false);
+  assert.equal(EXPECTED_BUCKETS["forge-attachments"].file_size_limit, 32 * 1024 * 1024);
+  // Supabase reconciles declarative buckets after migrations and on restart.
+  // Icons change visibility during verified activation, so SQL owns this bucket.
+  assert.doesNotMatch(config, /\[storage\.buckets\.project-icons\]/);
 });
 
 

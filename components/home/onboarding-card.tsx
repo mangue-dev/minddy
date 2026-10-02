@@ -1,5 +1,7 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowRight01Icon, FileUploadIcon, PartyIcon } from "@hugeicons/core-free-icons";
 import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
@@ -18,7 +20,6 @@ import {
   Switch,
   toast,
 } from "mangue-ui";
-import { ArrowRight, FileUp, PartyPopper } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useCreate } from "@/lib/create-context";
 import { useProjects } from "@/lib/projects-context";
@@ -219,7 +220,7 @@ export function OnboardingCard({ onboarding }: { onboarding: UseOnboardingResult
               >
                 {finalScreen ? (
                   <div className="flex w-full max-w-md flex-col items-center gap-4 py-2">
-                    <PartyPopper className="size-6 text-brand" aria-hidden />
+                    <HugeiconsIcon icon={PartyIcon} className="size-6 text-brand" aria-hidden />
                     <p className="text-center text-sm font-medium text-foreground">
                       {t("finalTitle")}
                     </p>
@@ -240,7 +241,7 @@ export function OnboardingCard({ onboarding }: { onboarding: UseOnboardingResult
                       <div className="flex w-full flex-wrap items-center gap-2">
                         <Button type="button" onClick={openCreateProject}>
                           {t("projectCta")}
-                          <ArrowRight data-icon="inline-end" />
+                          <HugeiconsIcon icon={ArrowRight01Icon} data-icon="inline-end" />
                         </Button>
                         {/* Guest: the button names the project and enters it
  with one click, instead of opening the instructions for
@@ -274,7 +275,7 @@ export function OnboardingCard({ onboarding }: { onboarding: UseOnboardingResult
                         <div className="flex flex-wrap items-center gap-2">
                           <Button type="button" onClick={() => openCreateIssue()}>
                             {t("ticketsCreateCta")}
-                            <ArrowRight data-icon="inline-end" />
+                            <HugeiconsIcon icon={ArrowRight01Icon} data-icon="inline-end" />
                           </Button>
                           <Button
                             type="button"
@@ -285,7 +286,7 @@ export function OnboardingCard({ onboarding }: { onboarding: UseOnboardingResult
                           </Button>
                         </div>
                         <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                          <FileUp className="size-3.5 shrink-0" aria-hidden />
+                          <HugeiconsIcon icon={FileUploadIcon} className="size-3.5 shrink-0" aria-hidden />
                           {t("ticketsDropHint")}
                         </p>
                       </div>
@@ -351,7 +352,7 @@ export function OnboardingCard({ onboarding }: { onboarding: UseOnboardingResult
  events so that the container's `drop` remains reachable. */}
         {dragOver && (
           <div className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-brand bg-card/95 backdrop-blur-sm">
-            <FileUp className="size-6 text-brand" aria-hidden />
+            <HugeiconsIcon icon={FileUploadIcon} className="size-6 text-brand" aria-hidden />
             <p className="text-sm font-medium text-foreground">{t("ticketsDropOverlay")}</p>
           </div>
         )}

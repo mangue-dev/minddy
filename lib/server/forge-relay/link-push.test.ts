@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const relayRequest = vi.fn(async () => ({ ok: true, error: null, data: null }));
 let snapshotResult: { data: unknown[] | null; error: Error | null };
@@ -21,10 +21,12 @@ beforeEach(() => {
   snapshotResult = { data: [], error: null };
   vi.spyOn(console, "warn").mockImplementation(() => {});
 });
+afterEach(() => { vi.restoreAllMocks(); vi.unstubAllEnvs(); });
 
 describe("pushRelayLinkEvent", () => {
   it("does not publish an empty authoritative snapshot after a database read failure", async () => {
-    snapshotResult = { data: null, error: new Error("snapshot unavailable") };
+    vi.stubEnv("NODE_ENV", "production");
+    snapshotResult = { data: null, error: new Error("MIN591_PRIVATE_LINK_SENTINEL") };
 
     await expect(
       pushRelayLinkEvent({
@@ -37,9 +39,8 @@ describe("pushRelayLinkEvent", () => {
     ).resolves.toBeUndefined();
 
     expect(relayRequest).not.toHaveBeenCalled();
-    expect(console.warn).toHaveBeenCalledWith(
-      "[forge-relay] link sync push failed:",
-      "snapshot unavailable",
-    );
+    expect(console.warn).toHaveBeenCalled();
+    expect(vi.mocked(console.warn).mock.calls.flat().map(String).join("\n"))
+      .not.toContain("MIN591_PRIVATE_LINK_SENTINEL");
   });
 });

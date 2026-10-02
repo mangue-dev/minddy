@@ -4,10 +4,8 @@ import crypto from "node:crypto";
 
 import { getServiceClient } from "@/lib/supabase-service";
 import { requireSecret } from "@/lib/server/env-secrets";
-import {
-  encryptForgeToken,
-  decryptForgeToken,
-} from "@/lib/server/git/token-crypto";
+import { encodeDeliveryTokens, decodeDeliveryTokens,
+  type DeliveryTokenRow } from "./user-delivery-content";
 import type { GithubUserTokenSet } from "@/lib/server/git/github-user-auth";
 import type { GithubUserAccount } from "@/lib/server/git/github-user-auth";
 import { recordRefreshLineage } from "./refresh-broker";
@@ -277,19 +275,22 @@ export async function createUserDelivery(input: {
   delivery: RelayUserDelivery;
 }): Promise<string> {
   const supabase = getServiceClient();
+  const deliveryId = crypto.randomUUID();
+  const tokenContent = await encodeDeliveryTokens(deliveryId,input.instanceId,
+    { accessToken: input.delivery.tokens.accessToken,
+      refreshToken: input.delivery.tokens.refreshToken ?? null },
+    { service: supabase });
   const { data, error } = await supabase
     .from("forge_relay_user_deliveries")
     .insert({
+      id: deliveryId,
       instance_id: input.instanceId,
       provider: input.provider ?? "github",
       user_id: input.delivery.userId,
       provider_account_id: String(input.delivery.account.id),
       account_login: input.delivery.account.login || null,
       account_avatar_url: input.delivery.account.avatarUrl ?? null,
-      access_token_encrypted: encryptForgeToken(input.delivery.tokens.accessToken),
-      refresh_token_encrypted: input.delivery.tokens.refreshToken
-        ? encryptForgeToken(input.delivery.tokens.refreshToken)
-        : null,
+      ...tokenContent,
       token_expires_at: input.delivery.tokens.expiresAt,
       oauth_scopes: input.delivery.tokens.scope,
     })
@@ -327,32 +328,30 @@ export async function consumeUserDelivery(input: {
   let query = supabase
     .from("forge_relay_user_deliveries")
     .select(
-      "id, status, user_id, provider_account_id, account_login, account_avatar_url, access_token_encrypted, refresh_token_encrypted, token_expires_at, oauth_scopes, created_at",
+      "id, instance_id, status, user_id, provider_account_id, account_login, account_avatar_url, access_token_encrypted, refresh_token_encrypted, encrypted_content, encryption_version, token_expires_at, oauth_scopes, created_at",
     )
     .eq("instance_id", input.instanceId)
     .eq("id", input.deliveryId);
   if (input.provider) query = query.eq("provider", input.provider);
   const { data } = await query.maybeSingle();
-  const row = data as {
-    id: string;
+  const row = data as (DeliveryTokenRow & {
     status: string;
     user_id: string;
     provider_account_id: string;
     account_login: string | null;
     account_avatar_url: string | null;
-    access_token_encrypted: string;
-    refresh_token_encrypted: string | null;
     token_expires_at: string | null;
     oauth_scopes: string | null;
     created_at: string;
-  } | null;
+  }) | null;
   if (!row) return { status: "pending" };
 
-  const accessToken = decryptForgeToken(row.access_token_encrypted);
+  let tokens;
+  try { tokens = await decodeDeliveryTokens(row); }
+  catch { return { status: "pending" }; }
   // Expired window or undecryptable content: report pending rather than hand
   // out something unusable.
   if (
-    !accessToken ||
     Date.now() - Date.parse(row.created_at) > DELIVERY_RESULT_TTL_MS
   ) {
     return { status: "pending" };
@@ -375,10 +374,8 @@ export async function consumeUserDelivery(input: {
         avatarUrl: row.account_avatar_url,
       },
       tokens: {
-        accessToken,
-        refreshToken: row.refresh_token_encrypted
-          ? decryptForgeToken(row.refresh_token_encrypted)
-          : null,
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
         expiresAt: row.token_expires_at,
         scope: row.oauth_scopes,
       },

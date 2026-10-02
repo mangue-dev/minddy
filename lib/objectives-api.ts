@@ -1,5 +1,7 @@
 "use client";
 
+import { saveCreationRelations } from "./creation-relations";
+
 import type {
   CreateObjectiveInput,
   Objective,
@@ -54,13 +56,16 @@ export async function createObjectiveApi(
   input: CreateObjectiveInput
 ): Promise<Objective> {
   trackEvent("objective_created", {});
-  return parseJson<Objective>(
+  const { relations, ...payload } = input;
+  const objective = await parseJson<Objective>(
     await fetch(`/api/projects/${projectId}/objectives`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(input),
+      body: JSON.stringify(payload),
     })
   );
+  await saveCreationRelations(projectId, objective.id, "objective", relations);
+  return objective;
 }
 
 export async function updateObjectiveApi(

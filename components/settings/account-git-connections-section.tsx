@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { GitBranchIcon as GitBranch } from "@hugeicons/core-free-icons";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button, ConfirmDeleteDialog, Input, Spinner, cn, toast } from "mangue-ui";
-import { GitBranch } from "lucide-react";
 import { Github, Gitlab } from "@/components/git/provider-icons";
 import {
   disconnectGitConnectionApi,

@@ -1,6 +1,10 @@
+import { issueStore } from "@/lib/server/issue-store";
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { objectiveStore } from "@/lib/server/objective-store";
+import { categoryStore } from "@/lib/server/category-store";
+import { decodeProjectName } from "@/lib/server/project-content";
 import { CLOSED_STATUSES } from "@/lib/server/issue-reads";
 import { EFFORTS } from "@/lib/issue-constants";
 import type {
@@ -30,14 +34,16 @@ interface RawStats {
     completed: number;
   }>;
   per_category: Array<{
-    name: string;
+    id?: string;
+    project_id?: string;
+    name: string | null;
     color: string;
     completed: number;
   }>;
   per_objective: Array<{
     id: string;
     project_id: string;
-    name: string;
+    name: string | null;
     color: string | null;
     completed: number;
   }>;
@@ -200,9 +206,7 @@ export async function getUserStats(
     // `projects!inner(deleted_at)` carries the trash filter: a project
     // threw keeps his tickets and `can_access_project` ignores `deleted_at`, so
     // without him the load included tickets which are no longer anywhere.
-    supabase
-      .from("issues")
-      .select("status, projects!inner(deleted_at)")
+    issueStore(supabase).select("status, projects!inner(deleted_at)")
       .is("deleted_at", null)
       .is("projects.deleted_at", null)
       .eq("assignee_id", userId)
@@ -213,6 +217,34 @@ export async function getUserStats(
 
   if (statsRes.error) throw new Error(statsRes.error.message);
   const raw = (statsRes.data ?? {}) as RawStats;
+  const projectIds = (raw.per_project ?? []).flatMap((row) =>
+    typeof row.id === "string" ? [row.id] : []);
+  const projectNames = new Map<string, string>();
+  if (projectIds.length) {
+    const { data, error } = await supabase.from("projects")
+      .select("id, name, encrypted_content, encryption_version")
+      .in("id", projectIds);
+    if (error) throw new Error(error.message);
+    for (const project of data ?? []) {
+      projectNames.set(project.id, await decodeProjectName(project, userId));
+    }
+  }
+  const objectiveIds = (raw.per_objective ?? []).map((row) => row.id);
+  const objectiveNames = new Map<string, string>();
+  if (objectiveIds.length) {
+    const { data, error } = await objectiveStore(supabase, userId)
+      .select("id, name").in("id", objectiveIds);
+    if (error) throw new Error(error.message);
+    for (const objective of data ?? []) objectiveNames.set(objective.id, objective.name);
+  }
+  const categoryIds = (raw.per_category ?? []).flatMap((row) => typeof row.id === "string" ? [row.id] : []);
+  const categoryNames = new Map<string, string>();
+  for (let offset = 0; offset < categoryIds.length; offset += 500) {
+    const { data, error } = await categoryStore(supabase, userId)
+      .select("id, name").in("id", categoryIds.slice(offset, offset + 500));
+    if (error) throw new Error(error.message);
+    for (const category of data ?? []) categoryNames.set(category.id as string, category.name as string);
+  }
 
   // Best-effort: an error in the RPC cycles (e.g. function not yet deployed)
   // does not invalidate the page — we land on an empty cycles section.
@@ -243,11 +275,11 @@ export async function getUserStats(
     // During a rolling deploy, the previous RPC may still return its old
     // project shape. Drop incomplete rows instead of rendering false links.
     perProject: (raw.per_project ?? []).flatMap((project) =>
-      typeof project.id === "string" && typeof project.name === "string"
+      typeof project.id === "string" && projectNames.has(project.id)
         ? [
             {
               id: project.id,
-              name: project.name,
+              name: projectNames.get(project.id)!,
               color: project.color,
               iconUrl: project.icon_url,
               orbSeed: project.orb_seed,
@@ -255,21 +287,23 @@ export async function getUserStats(
             },
           ]
         : [],
-    ),
+    ).sort((left, right) => right.completed - left.completed ||
+      left.name.localeCompare(right.name)),
     // Keep the application-side merge during rolling deploys, when the old
     // RPC can still return one row per project for the same category identity.
     perCategory: Array.from(
       (raw.per_category ?? []).reduce((categories, category) => {
+        const name = category.id ? categoryNames.get(category.id) : category.name;
         if (
-          typeof category.name !== "string" ||
+          typeof name !== "string" ||
           typeof category.color !== "string"
         ) {
           return categories;
         }
-        const key = JSON.stringify([category.name, category.color]);
+        const key = JSON.stringify([name, category.color]);
         const previous = categories.get(key);
         categories.set(key, {
-          name: category.name,
+          name,
           color: category.color,
           completed:
             (previous?.completed ?? 0) + (num(category.completed) ?? 0),
@@ -286,18 +320,18 @@ export async function getUserStats(
     perObjective: (raw.per_objective ?? []).flatMap((objective) =>
       typeof objective.id === "string" &&
       typeof objective.project_id === "string" &&
-      typeof objective.name === "string"
+      typeof objectiveNames.get(objective.id) === "string"
         ? [
             {
               id: objective.id,
               projectId: objective.project_id,
-              name: objective.name,
+              name: objectiveNames.get(objective.id)!,
               color: objective.color,
               completed: num(objective.completed) ?? 0,
             },
           ]
         : [],
-    ),
+    ).sort((left, right) => right.completed - left.completed || left.name.localeCompare(right.name)),
     heatmap: { tz, start, end, max, days },
     workload,
     week: weekTotals(days),

@@ -1,6 +1,9 @@
 import "server-only";
 
+import { randomUUID } from "node:crypto";
 import { getServiceClient } from "@/lib/supabase-service";
+import { decodeRoutine, encodeRoutine, routineContentValues } from
+  "@/lib/server/routine-content";
 import { getProjectAccess } from "@/lib/server/project-access";
 import { softDeleteItem } from "@/lib/server/trash";
 import { checkAgentQuota } from "@/lib/server/agent/quota";
@@ -261,23 +264,17 @@ export async function createRoutine(
   const title = await titleFor(prompt, input.actorId, input.projectId);
   const enabled = input.enabled !== false;
   const service = getServiceClient();
-  const { data, error } = await service
-    .from("agent_routines")
-    .insert({
+  const row = await encodeRoutine({
+      id: randomUUID(),
       project_id: input.projectId,
-      // Technical actor = the owner, that is to say the caller (the guard above
-      // guarantees it). Written in a column so the cron doesn't have to re-join.
       owner_id: input.actorId,
       title,
       prompt: prompt.slice(0, MAX_PROMPT_LENGTH),
       prompt_mentions: input.promptMentions?.length ? input.promptMentions : [],
-      // Brought back within its limits rather than refused: a poorly written ceiling by a
-      // of the four doors should not prevent the routine from being established — the CHECK
-      // from the base, he would not forgive.
-      max_spend_percent:
-        input.maxSpendPercent == null
-          ? DEFAULT_MAX_SPEND_PERCENT
-          : clampSpendPercent(input.maxSpendPercent),
+      base_branch: null,
+      last_error: null,
+      max_spend_percent: input.maxSpendPercent == null
+        ? DEFAULT_MAX_SPEND_PERCENT : clampSpendPercent(input.maxSpendPercent),
       frequency: schedule.frequency,
       hour: schedule.hour,
       minute: schedule.minute,
@@ -285,17 +282,18 @@ export async function createRoutine(
       days_of_month: schedule.daysOfMonth,
       timezone: schedule.timezone,
       enabled,
-      // A disarmed routine has no deadline: the partial cron index does not
-      // doesn't see it, and reactivating it recalculates it.
       next_run_at: enabled ? next.toISOString() : null,
-    })
+    }, { service });
+  const { data, error } = await service
+    .from("agent_routines")
+    .insert(row)
     .select("*")
     .single();
   if (error || !data) {
     console.error("[routines] create failed:", error?.message);
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
-  return { ok: true, routine: data as Routine };
+  return { ok: true, routine: await decodeRoutine(data, input.actorId) as unknown as Routine };
 }
 
 export interface UpdateRoutineInput {
@@ -324,6 +322,7 @@ export interface UpdateRoutineInput {
  */
 export async function updateRoutine(
   input: UpdateRoutineInput,
+  attempt = 0,
 ): Promise<RoutineResult<Routine>> {
   const service = getServiceClient();
   const { data: current } = await service
@@ -334,11 +333,10 @@ export async function updateRoutine(
     .eq("id", input.routineId)
     .maybeSingle();
   if (!current) return { ok: false, status: 404, errorKey: "routineNotFound" };
-  const routine = current as Routine;
-
-  const access = await getProjectAccess(input.actorId, routine.project_id);
+  const access = await getProjectAccess(input.actorId, current.project_id as string);
   if (!access) return { ok: false, status: 404, errorKey: "routineNotFound" };
   if (!access.isOwner) return { ok: false, status: 403, errorKey: "ownerOnly" };
+  const routine = await decodeRoutine(current, input.actorId) as unknown as Routine;
   const supplied = input as UpdateRoutineInput & {
     model?: unknown;
     reasoningLevel?: unknown;
@@ -420,17 +418,22 @@ export async function updateRoutine(
     return { ok: false, status: 400, errorKey: "noFieldsToUpdate" };
   }
 
-  const { data, error } = await service
+  const encoded = await encodeRoutine({ ...routine, ...updates,
+    encryption_version: current.encryption_version }, { service });
+  let query = service
     .from("agent_routines")
-    .update(updates)
-    .eq("id", input.routineId)
-    .select("*")
-    .single();
+    .update({ ...updates, ...routineContentValues(encoded) })
+    .eq("id", input.routineId);
+  if (current.content_revision !== undefined) {
+    query = query.eq("content_revision", current.content_revision);
+  }
+  const { data, error } = await query.select("*").maybeSingle();
+  if (!error && !data && attempt < 2) return updateRoutine(input, attempt + 1);
   if (error || !data) {
     console.error("[routines] update failed:", error?.message);
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
-  return { ok: true, routine: data as Routine };
+  return { ok: true, routine: await decodeRoutine(data, input.actorId) as unknown as Routine };
 }
 
 /**
@@ -481,10 +484,10 @@ export async function getRoutineForUser(
     .is("deleted_at", null)
     .maybeSingle();
   if (!data) return null;
-  const routine = data as Routine;
-  const access = await getProjectAccess(userId, routine.project_id);
+  const access = await getProjectAccess(userId, data.project_id as string);
   if (!access) return null;
-  return { routine, isOwner: access.isOwner };
+  return { routine: await decodeRoutine(data, userId) as unknown as Routine,
+    isOwner: access.isOwner };
 }
 
 /**
@@ -522,9 +525,9 @@ export async function listRoutinesForUser(userId: string): Promise<Routine[]> {
     .is("deleted_at", null)
     .in("project_id", [...ids])
     .order("created_at", { ascending: false });
-  return ((data ?? []) as Array<Routine & { projects?: unknown }>).map(
-    ({ projects: _joined, ...routine }) => routine as Routine,
-  );
+  return Promise.all(((data ?? []) as Array<Routine & { projects?: unknown }>)
+    .map(async ({ projects: _joined, ...routine }) =>
+      await decodeRoutine(routine, userId) as unknown as Routine));
 }
 
 /**
@@ -560,9 +563,9 @@ export async function dueRoutines(limit = 20): Promise<Routine[]> {
     .order("next_run_at", { ascending: true })
     .limit(limit);
   // The join adds a key to the return: it does not travel further.
-  return ((data ?? []) as Array<Routine & { projects?: unknown }>).map(
-    ({ projects: _joined, ...routine }) => routine as Routine,
-  );
+  return Promise.all(((data ?? []) as Array<Routine & { projects?: unknown }>)
+    .map(async ({ projects: _joined, ...routine }) =>
+      await decodeRoutine(routine) as unknown as Routine));
 }
 
 /**

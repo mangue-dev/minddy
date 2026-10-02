@@ -1,4 +1,6 @@
 "use client";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Cancel01Icon, MoreHorizontalIcon } from "@hugeicons/core-free-icons";
 import { useAppTabDeparture } from "@/lib/app-tabs-context";
 import { useIssuePanelTab } from "@/lib/use-issue-panel-tab";
 
@@ -24,13 +26,6 @@ import {
   toast,
 } from "mangue-ui";
 import {
-  ChevronRight,
-  GitPullRequest,
-  MoreHorizontal,
-  Trash2,
-  X,
-} from "lucide-react";
-import {
   AssigneeValue,
   CategoryValue,
   DueDateValue,
@@ -42,6 +37,7 @@ import {
 } from "@/components/issue-property-fields";
 import { TAB_LIST_DENSE, TAB_TRIGGER_DENSE } from "@/components/tab-bar";
 import { SubIssuesSection } from "@/components/sub-issues-section";
+import { IssueParentMenu } from "@/components/issue-parent-menu";
 import { RelationsSection } from "@/components/relations-section";
 // Deferred: the agent conversation carries the whole AI streaming stack
 // (streamdown + shiki) — it must not ride along on every board navigation.
@@ -57,10 +53,9 @@ import {
   CustomPromptDialog,
   type CustomPromptTarget,
 } from "@/components/agent/custom-prompt-dialog";
-import {
-  IssueActionsMenu,
-  type ContextMenuAction,
-} from "@/components/issue-context-menu";
+import { IssueActionsMenu } from "@/components/issue-context-menu";
+import { useIssueMenuActions } from "@/components/use-issue-menu-actions";
+import { RelationTargetPicker } from "@/components/relation-target-picker";
 import { useCycleMenuActions } from "@/components/cycle/use-cycle-menu-actions";
 import { useIssueAgentRunsQuery } from "@/lib/use-agent-runs";
 import {
@@ -87,7 +82,7 @@ import {
   shouldAutoStartOnPromptCopy,
 } from "@/lib/prompt-copy-auto-start";
 import { RelationChips, type ChipRelation } from "@/components/relation-chips";
-import { resolveRelations } from "@/lib/relation-constants";
+import { resolveDisplayRelationsByIssue } from "@/lib/relation-constants";
 import {
   IssueShortcutMenu,
   useIssueFieldShortcuts,
@@ -112,7 +107,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useIssueTimeline } from "@/lib/use-issue-timeline";
 import { useIssueDictation } from "@/lib/use-issue-dictation";
 import { keepOverlayOpenForPopper } from "@/lib/overlay-dismiss";
-import { issueIdentifier } from "@/lib/issue-constants";
+import { isClosedStatus, issueIdentifier } from "@/lib/issue-constants";
 import { DocumentTitle } from "@/components/document-title";
 import { IntegrationIndicator } from "@/components/integration-indicator";
 import { RemoteIssueIndicator } from "@/components/remote-issue-indicator";
@@ -130,11 +125,6 @@ import type {
   Objective,
   RelationEndpointType,
 } from "@/lib/types";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 
 export function IssueSidePanel({
   issue,
@@ -198,6 +188,11 @@ export function IssueSidePanel({
   useIdleMarkdownEditorPreload();
   const [title, setTitle] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const buildIssueMenuActions = useIssueMenuActions();
+  const moreButtonRef = useRef<HTMLButtonElement>(null);
+  const menuPointerRef = useRef<{ x: number; y: number } | null>(null);
+  const [relationType, setRelationType] = useState<IssueRelationType | null>(null);
+  useEffect(() => setRelationType(null), [issue?.id, open]);
   const [tab, setTab] = useIssuePanelTab(issue?.id ?? null, initialTab);
   // Remount the description editor when the description is rewritten under it
   // (dictation, or distant writing) — it only reads `value` during editing and
@@ -366,21 +361,8 @@ export function IssueSidePanel({
     if (!issue) return [];
     const byId = new Map(allIssues.map((i) => [i.id, i]));
     const objectiveById = new Map(objectives.map((o) => [o.id, o]));
-    const statusById = new Map(allIssues.map((i) => [i.id, i.status]));
-    const objectiveStatusById = new Map(objectives.map((o) => [o.id, o.status]));
-    return resolveRelations(issue.id, relations, statusById, objectiveStatusById)
-      .map((r): ChipRelation | null => {
-        if (r.otherType === "objective") {
-          const objective = objectiveById.get(r.otherId);
-          return objective
-            ? { ...r, otherType: "objective" as const, otherName: objective.name }
-            : null;
-        }
-        const other = byId.get(r.otherId);
-        return other ? { ...r, otherNumber: other.number } : null;
-      })
-      .filter((r): r is ChipRelation => r !== null);
-  }, [issue?.id, relations, allIssues, objectives]); // eslint-disable-line react-hooks/exhaustive-deps
+    return resolveDisplayRelationsByIssue(relations, byId, objectiveById).get(issue.id) ?? [];
+  }, [issue, relations, allIssues, objectives]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // New work enters the common Numo conversation. Historical worker sessions
   // remain available only as navigation to existing execution details.
@@ -623,7 +605,7 @@ export function IssueSidePanel({
   // description, commentaire).
   // The “Custom” dialog suspends them: it covers the panel, and a key
   // hit in there should not open a picker on the ticket below.
-  const { containerProps, menuState, closeMenu } = useIssueFieldShortcuts(
+  const { containerProps, menuState, openField, closeMenu } = useIssueFieldShortcuts(
     open && !customTarget,
     {
       "shift+p": () => void copyPrompt(),
@@ -825,6 +807,25 @@ export function IssueSidePanel({
     return () => window.removeEventListener("blur", commitOnWindowBlur);
   }, []);
 
+  // Match the card's relation targets: exclude self, closed work, and direct
+  // links of the selected type; inherited objective links remain eligible.
+  const relationCandidates = useMemo(() => {
+    if (!issue || !relationType) return [];
+    const linked = new Set(resolvedRelations
+      .filter((r) => !r.inheritedObjectiveId && r.relation === relationType && r.otherType !== "objective")
+      .map((r) => r.otherId));
+    return allIssues.filter((target) => target.project_id === issue.project_id &&
+      target.id !== issue.id && !linked.has(target.id) && !isClosedStatus(target.status));
+  }, [issue, relationType, resolvedRelations, allIssues]);
+  const relationObjectiveCandidates = useMemo(() => {
+    if (!issue || !relationType) return [];
+    const linked = new Set(resolvedRelations
+      .filter((r) => !r.inheritedObjectiveId && r.relation === relationType && r.otherType === "objective")
+      .map((r) => r.otherId));
+    return objectives.filter((target) => target.project_id === issue.project_id &&
+      !linked.has(target.id) && target.status !== "done" && target.status !== "canceled");
+  }, [issue, relationType, resolvedRelations, objectives]);
+
   if (!issue) return null;
 
   const isChild = !!issue.parent_id;
@@ -838,34 +839,19 @@ export function IssueSidePanel({
     onOpenChange(false);
   };
 
-  // Header “⋯” menu: share parity with right-click on a card
-  // (prompt, agent, PR, cycle), plus the suppression that lived here before.
-  const menuActions: ContextMenuAction[] = [
-    ...agentActions,
-    // “See the pull request” as soon as there is one, REGARDLESS OF ITS STATUS: one
-    // Closed PR remains what happened on this ticket, and it's often her
-    // that we are looking for. The header chip is silent about it.
-    ...(pullRequest
-      ? [
-          {
-            id: "open-pr",
-            label: tAgent("viewPullRequest"),
-            keywords: ["pull request", "pr", "review", "github", "gitlab", "merge"],
-            icon: <GitPullRequest className="size-4" />,
-            onSelect: openPr,
-          },
-        ]
-      : []),
-    ...buildCycleActions(issue),
-    {
-      id: "delete",
-      label: tCommon("moveToTrash"),
-      icon: <Trash2 className="size-4" />,
-      separatorBefore: true,
-      variant: "destructive",
-      onSelect: () => setConfirmDelete(true),
+  const menuActions = buildIssueMenuActions({
+    issue,
+    projectKey,
+    agentActions,
+    pr: pullRequest,
+    hasObjectives: objectives.length > 0,
+    onSelectRelation: setRelationType,
+    onOpenField: (field) => {
+      if (menuPointerRef.current) openField(field, menuPointerRef.current);
     },
-  ];
+    extraActions: buildCycleActions(issue),
+    onDelete: () => setConfirmDelete(true),
+  });
 
   return (
     <>
@@ -885,58 +871,22 @@ export function IssueSidePanel({
           // Suppress the open-autofocus so nothing is focused on open.
           onOpenAutoFocus={(e) => e.preventDefault()}
         >
-          {/* Header: identifier · agent state · dictate · more · close */}
+          {/* Header: parent → identifier · agent state · dictate · more · close */}
           <div className="flex shrink-0 items-center justify-between gap-4 px-6 pt-5 pb-3">
             <div className="flex min-w-0 items-center gap-1">
+              <IssueParentMenu
+                key={issue.id}
+                parentIdentifier={parent ? issueIdentifier(projectKey, parent.number) : null}
+                onOpenParent={() => parent && onOpenIssue(parent.id)}
+                onUnlink={() => patch({ parent_id: null })}
+              />
               <SidePanelTitle asChild>
-                <span className="flex items-center gap-1.5 text-lg font-semibold tracking-tight">
+                <span className="flex shrink-0 items-center gap-1.5 whitespace-nowrap text-lg font-semibold tracking-tight">
                   <IntegrationIndicator issue={issue} iconClassName="size-4" />
                   <RemoteIssueIndicator issue={issue} iconClassName="size-4" />
-                  {parent && (
-                    <button
-                      type="button"
-                      onClick={() => onOpenIssue(parent.id)}
-                      aria-label={t("openParentAria", {
-                        id: issueIdentifier(projectKey, parent.number),
-                      })}
-                      className="rounded font-medium text-muted-foreground transition-colors hover:text-foreground hover:underline focus-visible:text-foreground focus-visible:outline-none"
-                    >
-                      {issueIdentifier(projectKey, parent.number)}
-                    </button>
-                  )}
-                  {/* As on the map: hovering over “› MIN-42” names the relationship
-                      that the chevron alone suggests. */}
-                  {parent ? (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span className="flex items-center gap-1.5">
-                          <ChevronRight
-                            className="size-4 shrink-0 text-muted-foreground"
-                            aria-hidden
-                          />
-                          {issueIdentifier(projectKey, issue.number)}
-                        </span>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        {t("subIssueOf", {
-                          id: issueIdentifier(projectKey, parent.number),
-                        })}
-                      </TooltipContent>
-                    </Tooltip>
-                  ) : (
-                    issueIdentifier(projectKey, issue.number)
-                  )}
+                  {issueIdentifier(projectKey, issue.number)}
                 </span>
               </SidePanelTitle>
-              {resolvedRelations.length > 0 && (
-                <RelationChips
-                  relations={resolvedRelations}
-                  projectKey={projectKey}
-                  onOpen={onOpenIssue}
-                  max={1}
-                  className="font-mono text-xs text-muted-foreground"
-                />
-              )}
               {/* Code Agent: the only state that deserves the header (at work,
                   or a PR to reread) — the rest is in the “⋯” menu. */}
               <IssueAgentChip
@@ -973,15 +923,23 @@ export function IssueSidePanel({
             </div>
             <div className="-mr-1.5 flex items-center gap-0.5">
               <IssueActionsMenu
+                key={issue.id}
                 actions={menuActions}
+                searchable
+                onOpenChange={(nextOpen) => {
+                  if (!nextOpen) return;
+                  const rect = moreButtonRef.current?.getBoundingClientRect();
+                  if (rect) menuPointerRef.current = { x: rect.left, y: rect.bottom };
+                }}
                 trigger={
                   <Button
                     variant="ghost"
                     size="icon-sm"
                     aria-label={t("moreActionsAriaLabel")}
+                    ref={moreButtonRef}
                     className="rounded-full text-muted-foreground hover:text-foreground"
                   >
-                    <MoreHorizontal />
+                    <HugeiconsIcon icon={MoreHorizontalIcon} />
                   </Button>
                 }
               />
@@ -992,11 +950,18 @@ export function IssueSidePanel({
                   aria-label={tCommon("close")}
                   className="rounded-full text-muted-foreground hover:text-foreground"
                 >
-                  <X />
+                  <HugeiconsIcon icon={Cancel01Icon} />
                 </Button>
               </SidePanelClose>
             </div>
           </div>
+
+          {resolvedRelations.some((r) => !r.resolved) && (
+            <div className="flex flex-wrap items-center gap-2 px-6 pb-3 text-xs text-muted-foreground">
+              <RelationChips relations={resolvedRelations} projectKey={projectKey} onOpen={onOpenIssue}
+                onOpenObjective={(id) => router.push(`/projects/${issue.project_id}/objectives?open=${id}`)} />
+            </div>
+          )}
 
           <SidePanelBody className="flex flex-col gap-4 pt-0" {...containerProps}>
             <AutoTextarea
@@ -1269,6 +1234,19 @@ export function IssueSidePanel({
               </TabsContent>
             </Tabs>
           </SidePanelBody>
+
+          <RelationTargetPicker
+            position={open && relationType ? menuPointerRef.current : null}
+            relation={relationType}
+            issues={relationCandidates}
+            objectives={relationObjectiveCandidates}
+            projectKey={projectKey}
+            onClose={() => setRelationType(null)}
+            onSelect={(targetId, targetType) => {
+              if (relationType) onAddRelation(issue.id, relationType, targetId, { targetType });
+              setRelationType(null);
+            }}
+          />
 
           <IssueShortcutMenu
             state={menuState}

@@ -43,6 +43,8 @@
 // GESTURES — including those that leave no state behind them (created, released
 // trash, restored, renamed).
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowDown01Icon, Cancel01Icon, Undo02Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useRef, useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -62,7 +64,6 @@ import {
   cn,
   toast,
 } from "mangue-ui";
-import { ChevronDown, RotateCcw, X } from "lucide-react";
 import type { JSONContent } from "@tiptap/react";
 
 import { keepOverlayOpenForPopper } from "@/lib/overlay-dismiss";
@@ -201,7 +202,7 @@ export function PageHistorySheet({
                 aria-label={tCommon("close")}
                 className="rounded-full text-muted-foreground hover:text-foreground"
               >
-                <X />
+                <HugeiconsIcon icon={Cancel01Icon} />
               </Button>
             </SidePanelClose>
           </div>
@@ -465,12 +466,10 @@ function VersionCard({
             {version.title || t("untitled")}
           </span>
         </span>
-        <ChevronDown
-          className={cn(
-            "size-4 shrink-0 text-muted-foreground transition-transform",
-            open && "rotate-180"
-          )}
-        />
+        <HugeiconsIcon icon={ArrowDown01Icon} className={cn(
+                          "size-4 shrink-0 text-muted-foreground transition-transform",
+                          open && "rotate-180"
+                        )} />
       </button>
 
       {open && (
@@ -500,7 +499,7 @@ function VersionCard({
                   {restoring ? (
                     <Spinner className="size-3.5" />
                   ) : (
-                    <RotateCcw className="size-3.5" />
+                    <HugeiconsIcon icon={Undo02Icon} className="size-3.5" />
                   )}
                   {t("historyRestore")}
                 </Button>

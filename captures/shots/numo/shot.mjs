@@ -128,7 +128,10 @@ async function capture({ locale, theme }) {
     if (!opened) {
       throw new Error(`${locale}/${theme} — la liste des conversations ne s'est pas ouverte.`);
     }
-    await conversationButton.click();
+    // A click via the DOM rather than Playwright's actionability walk: the
+    // list item can sit outside the viewport in its scroll container while
+    // the panel is still settling, and a retried click then never lands.
+    await conversationButton.dispatchEvent("click");
     await page
       .getByText("Nobody owns anything", { exact: false })
       .waitFor({ state: "visible", timeout: 15_000 });
@@ -140,6 +143,18 @@ async function capture({ locale, theme }) {
     // show what the concluding sentence already says.
     const summary = page.locator('[role="log"]').first().getByRole("button", { name: DURATION });
     await summary.waitFor({ state: "visible", timeout: 10_000 });
+
+    // The composer's model line loads its catalog asynchronously: shot too
+    // early, it reads “Chargement des modèles…” — a loading state has no
+    // place on a landing image. Wait for the loader to leave.
+    const loadingLabel = messages.Agent.modelSearchLoading.replace("…", "");
+    await page
+      .getByText(loadingLabel, { exact: false })
+      .first()
+      .waitFor({ state: "hidden", timeout: 15_000 })
+      .catch(async () => {
+        throw new Error(`${locale}/${theme} — le sélecteur de modèle est resté sur « ${loadingLabel} ».`);
+      });
 
     // COMPACT panel — we no longer extend it, and the return is motivated.
     //

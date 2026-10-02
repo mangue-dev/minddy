@@ -1,4 +1,5 @@
-import { Plug } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Plug01Icon } from "@hugeicons/core-free-icons";
 import { cn } from "mangue-ui";
 import { BrandLogo, type BrandMark } from "@/components/brand-logo";
 
@@ -59,10 +60,7 @@ export function McpServiceLogo({
   const mark = service ? marks[service] : undefined;
   if (!mark)
     return (
-      <Plug
-        aria-hidden
-        className={cn("size-5 shrink-0 text-muted-foreground", className)}
-      />
+      <HugeiconsIcon icon={Plug01Icon} aria-hidden className={cn("size-5 shrink-0 text-muted-foreground", className)} />
     );
   return (
     <BrandLogo

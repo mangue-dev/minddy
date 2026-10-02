@@ -1,10 +1,15 @@
 import { forwardRef } from "react";
-import type { LucideIcon, LucideProps } from "lucide-react";
+import type { ComponentType, SVGProps } from "react";
 
 /** Product icons supplied by design for Smart Fill and Smart Assign (MIN-570). */
 
-export const SmartFillIcon: LucideIcon = forwardRef<SVGSVGElement, LucideProps>(
-  function SmartFillIcon({ color = "currentColor", size = 24, ...props }, ref) {
+/** Props of a Lucide-style SVG icon component (px size, currentColor). */
+type SvgIconProps = SVGProps<SVGSVGElement> & { size?: number | string };
+
+export const SmartFillIcon: ComponentType<SvgIconProps> = forwardRef<
+  SVGSVGElement,
+  SvgIconProps
+>(function SmartFillIcon({ color = "currentColor", size = 24, ...props }, ref) {
     return (
       <svg
         ref={ref}
@@ -34,9 +39,9 @@ export const SmartFillIcon: LucideIcon = forwardRef<SVGSVGElement, LucideProps>(
   },
 );
 
-export const SmartAssignIcon: LucideIcon = forwardRef<
+export const SmartAssignIcon: ComponentType<SvgIconProps> = forwardRef<
   SVGSVGElement,
-  LucideProps
+  SvgIconProps
 >(function SmartAssignIcon(
   { color = "currentColor", size = 24, ...props },
   ref,

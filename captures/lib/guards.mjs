@@ -101,11 +101,18 @@ async function listDemoAccounts(admin) {
 }
 
 /**
- * Applies table anchor filters to a query. Returns `null` if
- * an anchor is empty — in which case there are NO demo lines for that
- * table, and you should definitely not run a query without a filter.
+ * Applies table anchor filters and RESOLVES the rows: the result is either
+ * `null` (no demo line — never query without a filter), or the resolved
+ * `{ data, error }` of the anchored select. Anchoring may need several
+ * round-trips, so the whole fetch lives here.
+ *
+ * A parent id set larger than the URL budget (the density seed grew Aurora to
+ * hundreds of tickets) cannot ride one `.in()` filter: those tables are
+ * matched the way `validateRow` admits an insert — every parent column is
+ * selected through chunked queries over the oversized parent, then the
+ * perimeter check runs in memory, mirroring `validateRow` line for line.
  */
-function applyAnchors(query, spec, world) {
+async function applyAnchors(table, query, spec, world, idColumn = "id") {
   if (spec.projectColumn) {
     const projects = world.demoIds.projects;
     if (!projects || projects.size === 0) return null;
@@ -115,26 +122,82 @@ function applyAnchors(query, spec, world) {
     if (world.demoUserIds.size === 0) return null;
     query = query.in(spec.ownerColumn, [...world.demoUserIds]);
   }
+
   const parents = spec.parents || [];
-  for (const parent of parents.filter((p) => !p.optional)) {
-    const ids = world.demoIds[parent.table];
-    if (!ids || ids.size === 0) return null;
-    query = query.in(parent.column, [...ids]);
-  }
-  // Optional parents: a row may point to ANY ONE of them (or to none, when
-  // `requireSomeParent` accepts an alternative anchor). An `.in()` per parent
-  // would AND the filters together and drop every row that leaves the other
-  // column null, so the demo set is matched with a single OR clause instead.
-  const optional = parents.filter((p) => p.optional);
-  if (optional.length > 0) {
-    const clauses = [];
-    for (const parent of optional) {
+  const required = parents.filter((p) => !p.optional);
+  const oversized = parents.filter((p) => (world.demoIds[p.table]?.size ?? 0) > 100);
+
+  if (oversized.length === 0) {
+    for (const parent of required) {
       const ids = world.demoIds[parent.table];
-      if (ids && ids.size > 0) clauses.push(`${parent.column}.in.(${[...ids].join(",")})`);
+      if (!ids || ids.size === 0) return null;
+      query = query.in(parent.column, [...ids]);
     }
-    if (clauses.length > 0) query = query.or(clauses.join(","));
+    // Optional parents: a row may point to ANY ONE of them (or to none, when
+    // `requireSomeParent` accepts an alternative anchor). An `.in()` per parent
+    // would AND the filters together and drop every row that leaves the other
+    // column null, so the demo set is matched by resolving each parent's rows
+    // separately and unioning the ids client-side.
+    const optional = parents.filter((p) => p.optional);
+    if (optional.length > 0) {
+      const matched = new Set();
+      for (const parent of optional) {
+        const ids = [...(world.demoIds[parent.table] ?? [])];
+        if (ids.length === 0) continue;
+        for (let start = 0; start < ids.length; start += 100) {
+          const { data, error } = await world.admin
+            .from(table)
+            .select(idColumn)
+            .in(parent.column, ids.slice(start, start + 100));
+          if (error) {
+            throw new Error(`captures: résolution des ids de démo sur ${table} — ${error.message}`);
+          }
+          for (const row of data || []) matched.add(row[idColumn]);
+        }
+      }
+      if (matched.size === 0) return null;
+      return world.admin.from(table).select(idColumn).in(idColumn, [...matched]).limit(5000);
+    }
+    return query.limit(5000);
   }
-  return query;
+
+  // Chunked path: walk the oversized parent's ids, select every anchor
+  // column, and keep the rows whose parent values mirror `validateRow`.
+  const walk = oversized[0];
+  const ids = [...world.demoIds[walk.table]];
+  const columns = [...new Set([idColumn, ...parents.map((p) => p.column)])];
+  const rows = [];
+  for (let start = 0; start < ids.length; start += 100) {
+    const { data, error } = await world.admin
+      .from(table)
+      .select(columns.join(","))
+      .in(walk.column, ids.slice(start, start + 100));
+    if (error) {
+      throw new Error(`captures: résolution des ids de démo sur ${table} — ${error.message}`);
+    }
+    rows.push(...(data || []));
+  }
+
+  const ok = rows.filter((row) => {
+    let anchored = false;
+    for (const parent of parents) {
+      const value = row[parent.column];
+      if (value == null) {
+        if (!parent.optional) return false;
+        continue;
+      }
+      if (!(world.demoIds[parent.table] ?? new Set()).has(value)) return false;
+      anchored = true;
+    }
+    if (allOptional(parents) && !anchored) return false;
+    return true;
+  });
+  if (ok.length === 0) return null;
+  return { data: ok.slice(0, 5000), error: null };
+}
+
+function allOptional(parents) {
+  return parents.length > 0 && parents.every((p) => p.optional);
 }
 
 /**
@@ -174,12 +237,12 @@ export async function openDemoWorld({ allowMissing = false } = {}) {
         if (!PARENT_TABLES.has(table)) continue;
         const spec = TABLE_SCOPES[table];
         const idColumn = spec.idColumn || "id";
-        const query = applyAnchors(admin.from(table).select(idColumn), spec, this);
-        if (!query) {
+        const resolved = await applyAnchors(table, admin.from(table).select(idColumn), spec, this);
+        if (!resolved) {
           this.demoIds[table] = new Set();
           continue;
         }
-        const { data, error } = await query.limit(5000);
+        const { data, error } = resolved;
         if (error) {
           throw new Error(`captures: résolution des ids de démo sur ${table} — ${error.message}`);
         }
@@ -302,16 +365,22 @@ export async function measureBlastRadius(world) {
       .select("*", { count: "exact", head: true });
     if (error) throw new Error(`captures: comptage impossible sur ${table} — ${error.message}`);
 
-    const scoped = applyAnchors(
-      world.admin.from(table).select("*", { count: "exact", head: true }),
+    // The demo rows are resolved (not counted server-side): chunked parents
+    // and intersection live in applyAnchors, and some tables (issue_categories)
+    // carry no own `id` column — the first anchor column stands in for it.
+    const rowColumn = spec.parents?.[0]?.column ?? spec.ownerColumn ?? spec.projectColumn;
+    const scoped = await applyAnchors(
+      table,
+      world.admin.from(table).select(rowColumn),
       spec,
       world,
+      rowColumn,
     );
     let mine = 0;
     if (scoped) {
-      const { count, error: e } = await scoped;
+      const { data, error: e } = scoped;
       if (e) throw new Error(`captures: comptage de démo sur ${table} — ${e.message}`);
-      mine = count ?? 0;
+      mine = (data ?? []).length;
     }
     counts[table] = (total ?? 0) - mine;
   }

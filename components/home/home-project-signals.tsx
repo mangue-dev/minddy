@@ -1,10 +1,11 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { useMemo } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { motion } from "framer-motion";
-import { ChevronRight } from "lucide-react";
 import { useProjects } from "@/lib/projects-context";
 import { useTriageCountsQuery } from "@/lib/use-triage-counts-query";
 import { ProjectOrb } from "@/components/project-orb";
@@ -123,7 +124,7 @@ export function HomeProjectSignals() {
                 }
               )}
             </span>
-            <ChevronRight className="size-4 shrink-0 text-muted-foreground/60 transition-transform group-hover:translate-x-0.5" />
+            <HugeiconsIcon icon={ArrowRight01Icon} className="size-4 shrink-0 text-muted-foreground/60 transition-transform group-hover:translate-x-0.5" />
           </Link>
         </li>
       ))}

@@ -3,7 +3,14 @@ import "server-only";
 import { getServiceClient } from "@/lib/supabase-service";
 import type { AgentLaunchIntent } from "@/lib/server/agent/launch";
 import type { AgentRunVerdict } from "@/lib/server/agent/runs";
-import type { NumoAutomationContext, NumoTurn } from "@/lib/server/numo/turns";
+import { decodeAgentVerdict, legacyAgentVerdictSchema,
+  type StoredAgentVerdict } from "@/lib/server/agent/run-verdict-content";
+import { hydrateNumoTurn, type NumoAutomationContext,
+  type NumoTurn } from "@/lib/server/numo/turns";
+import { encodeConversationTitle, shouldProtectConversationTitle } from
+  "@/lib/server/numo/conversation-title-content";
+import { decodeOperationJson, decodeOperationText, encodeOperationJson,
+  encodeOperationText, shouldProtectAutomationOperation } from "./operation-content";
 
 /**
  * The CHAIN ​​(MIN-147) — the durable object without which nothing else is
@@ -82,6 +89,30 @@ export interface NumoAutomationOperation {
 export interface NumoAutomationOperationState {
   operation: NumoAutomationOperation;
   turn: NumoTurn | null;
+}
+
+async function hydrateOperation(row: NumoAutomationOperation,
+  projectId: string): Promise<NumoAutomationOperation> {
+  const [prompt, context, outcomeSummary, outcomeBlockers] = await Promise.all([
+    decodeOperationText(projectId, row.chain_id, row.step, "prompt", row.prompt),
+    decodeOperationJson(projectId, row.chain_id, row.step, "context",
+      row.context as unknown as Record<string, unknown>),
+    decodeOperationText(projectId, row.chain_id, row.step, "outcome_summary",
+      row.outcome_summary),
+    decodeOperationJson(projectId, row.chain_id, row.step, "outcome_blockers",
+      row.outcome_blockers as unknown as unknown[]),
+  ]);
+  return { ...row, prompt: prompt ?? "",
+    context: context as unknown as NumoAutomationContext,
+    outcome_summary: outcomeSummary,
+    outcome_blockers: outcomeBlockers as string[] };
+}
+
+async function operationProjectId(chainId: string) {
+  const { data, error } = await getServiceClient().from("agent_chains")
+    .select("project_id").eq("id", chainId).maybeSingle();
+  if (error || !data?.project_id) throw new Error("Automation operation project is unavailable");
+  return data.project_id as string;
 }
 
 /**
@@ -199,7 +230,17 @@ export async function ensureNumoAutomationOperation(input: {
   locale: string;
   context: NumoAutomationContext;
 }): Promise<NumoAutomationOperation> {
-  const { data, error } = await getServiceClient().rpc(
+  const service = getServiceClient();
+  const protect = await shouldProtectAutomationOperation(service);
+  const prompt = protect ? await encodeOperationText(input.chain.project_id,
+    input.chain.id, input.chain.step, "prompt", input.prompt) : input.prompt;
+  const context = protect ? await encodeOperationJson(input.chain.project_id,
+    input.chain.id, input.chain.step, "context",
+    input.context as unknown as Record<string, unknown>) : input.context;
+  const title = await shouldProtectConversationTitle(service)
+    ? await encodeConversationTitle(input.chain.owner_id,
+      input.requestId, input.title) : input.title;
+  const { data, error } = await service.rpc(
     "ensure_numo_automation_operation",
     {
       p_chain_id: input.chain.id,
@@ -207,18 +248,18 @@ export async function ensureNumoAutomationOperation(input: {
       p_rule_id: input.ruleId,
       p_mode: input.mode,
       p_user_id: input.chain.owner_id,
-      p_title: input.title,
+      p_title: title,
       p_request_id: input.requestId,
-      p_prompt: input.prompt,
+      p_prompt: prompt,
       p_locale: input.locale,
-      p_context: input.context,
+      p_context: context,
     },
   );
   if (error || !data) {
     throw new Error(error?.message ?? "Numo automation operation was not reserved");
   }
   const row = Array.isArray(data) ? data[0] : data;
-  return row as NumoAutomationOperation;
+  return hydrateOperation(row as NumoAutomationOperation, input.chain.project_id);
 }
 
 /** Bind admission before execution so recovery always has one operation owner. */
@@ -238,7 +279,10 @@ export async function bindNumoAutomationOperation(
   if (existing.turn_id && existing.turn_id !== turnId) {
     throw new Error("Numo automation operation is already bound to another turn");
   }
-  if (existing.turn_id === turnId) return existing as NumoAutomationOperation;
+  const projectId = await operationProjectId(existing.chain_id);
+  if (existing.turn_id === turnId) {
+    return hydrateOperation(existing as NumoAutomationOperation, projectId);
+  }
 
   const { data, error } = await service
     .from("numo_automation_operations")
@@ -248,7 +292,7 @@ export async function bindNumoAutomationOperation(
     .select("*")
     .maybeSingle();
   if (error) throw new Error(error.message);
-  if (data) return data as NumoAutomationOperation;
+  if (data) return hydrateOperation(data as NumoAutomationOperation, projectId);
 
   const { data: raced, error: racedError } = await service
     .from("numo_automation_operations")
@@ -259,7 +303,7 @@ export async function bindNumoAutomationOperation(
   if (racedError || !raced) {
     throw new Error(racedError?.message ?? "Numo automation operation binding was lost");
   }
-  return raced as NumoAutomationOperation;
+  return hydrateOperation(raced as NumoAutomationOperation, projectId);
 }
 
 export async function lastNumoAutomationOperation(
@@ -275,8 +319,10 @@ export async function lastNumoAutomationOperation(
     .maybeSingle();
   if (error) throw new Error(error.message);
   if (!operation) return null;
+  const readable = await hydrateOperation(operation as NumoAutomationOperation,
+    await operationProjectId(chainId));
   if (!operation.turn_id) {
-    return { operation: operation as NumoAutomationOperation, turn: null };
+    return { operation: readable, turn: null };
   }
   const { data: turn, error: turnError } = await service
     .from("numo_assistant_turns")
@@ -285,8 +331,8 @@ export async function lastNumoAutomationOperation(
     .maybeSingle();
   if (turnError) throw new Error(turnError.message);
   return {
-    operation: operation as NumoAutomationOperation,
-    turn: (turn as NumoTurn | null) ?? null,
+    operation: readable,
+    turn: turn ? await hydrateNumoTurn(turn as NumoTurn) : null,
   };
 }
 
@@ -299,7 +345,8 @@ export async function numoAutomationOperationForTurn(
     .eq("turn_id", turnId)
     .maybeSingle();
   if (error) throw new Error(error.message);
-  return (data as NumoAutomationOperation | null) ?? null;
+  return data ? hydrateOperation(data as NumoAutomationOperation,
+    await operationProjectId(data.chain_id)) : null;
 }
 
 export async function activeNumoAutomationOperation(
@@ -322,7 +369,13 @@ export async function retryableNumoAutomationOperations(
     { p_limit: limit },
   );
   if (error) throw new Error(error.message);
-  const rows = (operations ?? []) as NumoAutomationOperation[];
+  const rawRows = (operations ?? []) as NumoAutomationOperation[];
+  const projects = new Map<string, string>();
+  for (const chainId of new Set(rawRows.map((row) => row.chain_id))) {
+    projects.set(chainId, await operationProjectId(chainId));
+  }
+  const rows = await Promise.all(rawRows.map((row) =>
+    hydrateOperation(row, projects.get(row.chain_id)!)));
   const turnIds = rows.map((operation) => operation.turn_id).filter((id): id is string => !!id);
   if (turnIds.length === 0) return [];
   const { data: turns, error: turnError } = await service
@@ -330,7 +383,9 @@ export async function retryableNumoAutomationOperations(
     .select("*")
     .in("id", turnIds);
   if (turnError) throw new Error(turnError.message);
-  const byId = new Map(((turns ?? []) as NumoTurn[]).map((turn) => [turn.id, turn]));
+  const hydrated = await Promise.all(((turns ?? []) as NumoTurn[])
+    .map((turn) => hydrateNumoTurn(turn)));
+  const byId = new Map(hydrated.map((turn) => [turn.id, turn]));
   return rows.map((operation) => ({
     operation,
     turn: byId.get(operation.turn_id!) ?? null,
@@ -595,7 +650,7 @@ export async function lastVerdictOfChain(chainId: string): Promise<AgentRunVerdi
   const service = getServiceClient();
   const { data: operation, error: operationError } = await service
     .from("numo_automation_operations")
-    .select("mode, outcome, outcome_summary, outcome_blockers")
+    .select("step, mode, outcome, outcome_summary, outcome_blockers")
     .eq("chain_id", chainId)
     .in("mode", ["plan", "verify"])
     .not("outcome", "is", null)
@@ -604,27 +659,44 @@ export async function lastVerdictOfChain(chainId: string): Promise<AgentRunVerdi
     .maybeSingle();
   if (operationError) throw new Error(operationError.message);
   if (operation?.outcome) {
+    const projectId = await operationProjectId(chainId);
+    const [summary, blockers] = await Promise.all([
+      decodeOperationText(projectId, chainId, operation.step,
+        "outcome_summary", operation.outcome_summary),
+      decodeOperationJson(projectId, chainId, operation.step,
+        "outcome_blockers", operation.outcome_blockers as unknown as unknown[]),
+    ]);
     return {
       ok: operation.outcome === "ok",
-      summary: typeof operation.outcome_summary === "string"
-        ? operation.outcome_summary
+      summary: typeof summary === "string"
+        ? summary
         : "Numo completed the automation check.",
-      blockers: Array.isArray(operation.outcome_blockers)
-        ? operation.outcome_blockers.filter((item: unknown): item is string => typeof item === "string")
+      blockers: Array.isArray(blockers)
+        ? blockers.filter((item: unknown): item is string => typeof item === "string")
         : [],
     };
   }
 
   // Compatibility for verification workers launched before Numo owned steps.
-  const { data } = await service
+  const { data, error } = await service
     .from("agent_runs")
-    .select("verdict")
+    .select("id,project_id,verdict,verdict_ciphertext,verdict_encryption_version")
     .eq("chain_id", chainId)
-    .not("verdict", "is", null)
+    .or("verdict.not.is.null,verdict_ciphertext.not.is.null")
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  const verdict = (data as { verdict?: AgentRunVerdict | null } | null)?.verdict ?? null;
+  if (legacyAgentVerdictSchema(error)) {
+    const legacy = await service.from("agent_runs").select("verdict")
+      .eq("chain_id", chainId).not("verdict", "is", null)
+      .order("created_at", { ascending: false }).limit(1).maybeSingle();
+    if (legacy.error) throw new Error("Unable to read chain verdict");
+    const verdict = legacy.data?.verdict as AgentRunVerdict | null | undefined;
+    return verdict && typeof verdict.ok === "boolean" ? verdict : null;
+  }
+  if (error) throw new Error("Unable to read chain verdict");
+  const decoded = data ? await decodeAgentVerdict(data as StoredAgentVerdict) : null;
+  const verdict = decoded?.verdict ?? null;
   return verdict && typeof verdict.ok === "boolean" ? verdict : null;
 }
 

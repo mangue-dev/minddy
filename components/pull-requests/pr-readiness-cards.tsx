@@ -1,43 +1,10 @@
 "use client";
 
-/**
- * Status cards of a pull request (MIN-548).
- *
- * Every condition that currently stands between the PR and the merge — plus
- * the checks and deployment stories, including when they succeed — renders as
- * one tinted card, with the same color grammar as the state badges:
- * red = blocked, orange = in progress, green = passed. A card shows an
- * illustration, a title, and when the forge dates it, a duration (ticking
- * while work runs, frozen once it settles).
- *
- * Cards read in a fixed order: the fix card leads, unresolved conversations
- * follow, then every error before every in-progress story before every
- * settled one.
- *
- * The grid is a bento: same height for every card, wrapping line by line —
- * no carousel, no horizontal scroll. A card never needs the whole width, but
- * may take it.
- *
- * Cards are interactive where a quick fix exists: hover blurs the content and
- * reveals a centered action button ("Update branch", "View deployment"…),
- * while click-through cards (checks, unresolved conversations) open the
- * matching surface directly.
- */
-
-import { useMemo, type ReactNode } from "react";
-import { useNow, useTranslations } from "next-intl";
-import {
-  ArrowUpRight,
-  Check,
-  CircleAlert,
-  Eye,
-  GitBranch,
-  GitMerge,
-  GitPullRequestDraft,
-  ShieldAlert,
-  UserRoundCheck,
-  Wrench,
-} from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { AppIcon } from "@/components/icon";
+import { AlertCircleIcon, ArrowUpRight01Icon, GitBranchIcon, GitMergeIcon, GitPullRequestDraftIcon, Shield01Icon, CheckIcon, UserRoundCheckIcon as UserRoundCheck, ViewIcon, Wrench01Icon } from "@hugeicons/core-free-icons";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useFormatter, useNow, useTranslations } from "next-intl";
 import {
   Popover,
   PopoverContent,
@@ -45,6 +12,7 @@ import {
   cn,
 } from "mangue-ui";
 
+import { AppTooltip } from "@/components/ui/app-tooltip";
 import { CheckLogo } from "@/components/pull-requests/pr-check-logo";
 import { NumoIcon } from "@/components/numo-icon";
 import { ForgeUserAvatar } from "@/components/git/forge-user-avatar";
@@ -53,12 +21,15 @@ import type {
   ChecksSummary,
 } from "@/lib/agent-api";
 import type { RepoProviderId } from "@/lib/repo-providers";
+import type { MessageKey } from "@/lib/i18n-keys";
 import type { PullRequestFeedbackThread } from "@/lib/pr-unresolved-conversations";
 import type {
   PullRequestReadiness,
   ReadinessAction,
   ReadinessBlocker,
 } from "@/lib/pr-readiness";
+import type { AiReviewStatus } from "@/lib/pr-ai-review";
+import type { AiReviewProvider, AiReviewState } from "@/lib/pr-ai-review/types";
 import type { PrDeploymentStory } from "@/lib/pr-deployment-story";
 
 export type PrStatusCardTone =
@@ -67,16 +38,19 @@ export type PrStatusCardTone =
   | "success"
   | "neutral";
 
-/** The tone grammar, shared by the merge-state control and the state badges. */
+/** The tone grammar, shared by the merge-state control and the state badges.
+ *  Since mango-ui 0.8.0 the badges carry no border — a tinted chip reads on
+ *  its background alone — and the tinted cards follow them: no border, only
+ *  the wash. The border belongs to the NEUTRAL card: idle, it is a plain
+ *  card (white in light, ink-dark in dark) and needs its edge to be seen. */
 const TONE_CARD: Record<PrStatusCardTone, string> = {
-  success:
-    "border-emerald-600/30 bg-emerald-600/10 dark:border-emerald-400/30",
-  progress: "border-amber-600/30 bg-amber-600/10 dark:border-amber-400/30",
-  danger: "border-destructive/30 bg-destructive/10",
+  success: "bg-emerald-600/10",
+  progress: "bg-amber-600/10",
+  danger: "bg-destructive/10",
   // A card that carries a GESTURE, not a verdict: it says nothing about the
   // merge state, so it reads in the plain card palette instead of borrowing
   // a meaning (red = blocked) it does not have.
-  neutral: "border-border bg-card",
+  neutral: "border border-border bg-card",
 };
 
 const TONE_TITLE: Record<PrStatusCardTone, string> = {
@@ -85,6 +59,23 @@ const TONE_TITLE: Record<PrStatusCardTone, string> = {
   danger: "text-destructive",
   neutral: "text-foreground",
 };
+
+/** The word a clicked split option replaces its label with, for a moment —
+    the visual proof the gesture landed (Copied, Opened, Launched). */
+export type PrSplitFeedback = "copied" | "opened" | "launched";
+
+const FEEDBACK_KEYS: Record<
+  PrSplitFeedback,
+  MessageKey<"PullRequests">
+> = {
+  copied: "cardFeedbackCopied",
+  opened: "cardFeedbackOpened",
+  launched: "cardFeedbackLaunched",
+};
+
+/** How long a clicked split option keeps its feedback word before the
+    regular label comes back. */
+const SPLIT_FEEDBACK_MS = 1_600;
 
 /** Alpha background of a check row, tinted by its own state. */
 const CHECK_ROW_BG: Record<CheckState, string> = {
@@ -128,6 +119,8 @@ interface PrStatusCard {
   durationMs: number | null;
   /** Live timer — the duration recomputes on every tick until it settles. */
   startedAt: string | null;
+  updatedAt?: string;
+  logo?: string;
   donutParts: CheckState[] | null;
   avatars: { login: string; avatar_url: string | null }[] | null;
   iconKind: ReadinessBlocker["kind"];
@@ -144,10 +137,22 @@ interface PrStatusCard {
     disabled?: boolean;
   };
   /** Hover overlay SPLIT in two: the card halves vertically, one option
-      on top, one below (MIN-548 review). */
+      on top, one below (MIN-548 review). A clicked option flashes its
+      feedback word (`feedback`) so the gesture visibly landed. */
   actions?: {
-    top: { label: string; onClick: () => void; testId?: string };
-    bottom: { label: string; onClick: () => void; testId?: string; disabled?: boolean };
+    top: {
+      label: string;
+      onClick: () => void;
+      testId?: string;
+      feedback?: PrSplitFeedback;
+    };
+    bottom: {
+      label: string;
+      onClick: () => void;
+      testId?: string;
+      disabled?: boolean;
+      feedback?: PrSplitFeedback;
+    };
   };
 }
 
@@ -178,10 +183,18 @@ interface PrStatusCardsProps {
   onOpenConversations: () => void;
   onOpenReviewApprove: () => void;
   onStartFileReview: () => void;
+  aiReviews?: AiReviewStatus[];
+  requestingReviewer?: string | null;
+  onRequestAiReview?: (provider: AiReviewProvider) => void;
   numoReview: PrNumoReviewCardSpec | null;
   /** A correction run works on this pull request right now (a Numo fix,
       not a reread): its own card, the whole surface opens the Numo panel. */
   fixRun: { startedAt: string | null; onOpen: () => void } | null;
+  /** A "generate then merge" job (MIN-548) runs in the background: Numo
+      writes the commit message, the merge fires the moment it lands. The
+      caller keeps the marker alive across navigation — the job does not
+      belong to the page that launched it. */
+  numoMerge: { startedAt: string | null } | null;
   /** Shared open state of the checks popover: the merge-state popover's
       "View checks" button opens the SAME list from further away. */
   checksOpen: boolean;
@@ -210,7 +223,11 @@ export function PrStatusCards(props: PrStatusCardsProps) {
       props.unresolvedThreads,
       props.acting,
       props.numoReview,
+      props.aiReviews,
+      props.requestingReviewer,
+      props.onRequestAiReview,
       props.fixRun,
+      props.numoMerge,
       props.fix,
     ],
   );
@@ -280,12 +297,14 @@ function buildStatusCards(
           label: t("cardFixCopyPrompt"),
           onClick: props.fix.onCopy,
           testId: "pr-card-fix-copy",
+          feedback: "copied",
         },
         bottom: {
           label: t("cardFixLaunchNumo"),
           onClick: props.fix.onLaunch,
           disabled: !props.fix.canLaunch,
           testId: "pr-card-fix-launch",
+          feedback: "launched",
         },
       },
     });
@@ -352,7 +371,26 @@ function buildStatusCards(
   // The story is sticky: a poll that comes back empty must not tear the
   // card down while the build goes on. The card never hides behind the
   // checks: an environment can exist whether or not the CI has spoken.
+  //
+  // When a URL exists the card is a SPLIT card, like the fix card: copy the
+  // link on top, open the deployment below.
   const deployment = props.deployment;
+  const deploymentActions = (url: string): PrStatusCard["actions"] => ({
+    top: {
+      label: t("cardCopyLink"),
+      onClick: () => {
+        void navigator.clipboard.writeText(url).catch(() => {});
+      },
+      testId: "pr-card-copy-deployment",
+      feedback: "copied",
+    },
+    bottom: {
+      label: t("viewDeployment"),
+      onClick: () => window.open(url, "_blank", "noreferrer"),
+      testId: "pr-card-view-deployment",
+      feedback: "opened",
+    },
+  });
   if (deployment?.status === "in_progress") {
     push({
       id: "deployment",
@@ -363,13 +401,7 @@ function buildStatusCards(
       donutParts: null,
       avatars: null,
       iconKind: "mergeability",
-      action: deployment.url
-        ? {
-            label: t("viewDeployment"),
-            onClick: () => window.open(deployment.url as string, "_blank", "noreferrer"),
-            testId: "pr-card-view-deployment",
-          }
-        : undefined,
+      actions: deployment.url ? deploymentActions(deployment.url) : undefined,
     });
   } else if (deployment?.status === "success" && deployment.url) {
     push({
@@ -381,11 +413,37 @@ function buildStatusCards(
       donutParts: null,
       avatars: null,
       iconKind: "mergeability",
-      action: {
-        label: t("viewDeployment"),
-        onClick: () => window.open(deployment.url as string, "_blank", "noreferrer"),
-        testId: "pr-card-view-deployment",
-      },
+      actions: deploymentActions(deployment.url),
+    });
+  }
+
+  for (const review of props.aiReviews ?? []) {
+    const active = review.state === "running" || review.state === "requested";
+    const tone: PrStatusCardTone = active ? "progress" : review.state === "findings" || review.state === "failed" ? "danger" : (review.state === "clean" || review.state === "completed") ? "success" : "neutral";
+    const labels: Record<AiReviewState, MessageKey<"PullRequests">> = {
+      requested: "cardAiReviewRequested", running: "cardAiReviewRunning",
+      completed: "cardAiReviewCompleted", clean: "cardAiReviewClean",
+      findings: "cardAiReviewFindings", failed: "cardAiReviewFailed", skipped: "cardAiReviewSkipped",
+    };
+    const request = !active && props.onRequestAiReview ? {
+      label: props.requestingReviewer === review.provider.id ? t("cardAiReviewSending") : t("cardAiReviewRequestAgain"),
+      onClick: () => props.onRequestAiReview?.(review.provider),
+      disabled: !!props.requestingReviewer,
+      testId: `pr-card-request-${review.provider.id}`,
+    } : undefined;
+    const open = review.url ? () => window.open(review.url!, "_blank", "noreferrer") : undefined;
+    push({
+      id: `ai-review-${review.provider.id}`, tone, logo: review.provider.logo,
+      title: t(labels[review.state], { provider: review.provider.name }),
+      startedAt: review.state === "running" ? review.startedAt : null,
+      durationMs: review.durationMs, updatedAt: review.updatedAt,
+      donutParts: null, avatars: null, iconKind: "review_requested",
+      actions: open && request ? {
+        top: { label: t("cardAiReviewView"), onClick: open }, bottom: request,
+      } : undefined,
+      action: !open ? request : undefined,
+      onSelect: open && !request ? open : undefined,
+      hoverLabel: open && !request ? t("cardAiReviewView") : undefined,
     });
   }
 
@@ -451,6 +509,24 @@ function buildStatusCards(
       iconKind: "mergeability",
       hoverLabel: t("numoReviewOpenSession"),
       onSelect: props.fixRun.onOpen,
+    });
+  }
+
+  // ── Numo merge ──────────────────────────────────────────────────────────
+  // A "generate then merge" job is running in the background: the card
+  // claims a STATE, not a method — the title stays short, the ticking
+  // duration says the work is alive. No gesture hangs on it: the merge
+  // fires on its own, and the card goes away when the PR turns merged.
+  if (props.numoMerge) {
+    push({
+      id: "numo-merge",
+      tone: "progress",
+      title: t("cardNumoMerging"),
+      durationMs: null,
+      startedAt: props.numoMerge.startedAt,
+      donutParts: null,
+      avatars: null,
+      iconKind: "mergeability",
     });
   }
 
@@ -660,10 +736,10 @@ function HoverWordOverlay({
 }) {
   return (
     <div className="group relative flex h-full min-w-0 flex-col">
-      <div className="pointer-events-none flex h-full min-w-0 flex-col gap-2.5 transition duration-150 group-hover:opacity-0 group-hover:blur-[2px]">
+      <div className="pointer-events-none flex h-full min-w-0 flex-col gap-2.5 transition duration-150 group-hover:opacity-0 group-hover:blur-[2px] group-focus-within:opacity-0 group-focus-within:blur-[2px]">
         {children}
       </div>
-      <div className="absolute inset-0 grid place-items-center px-3 text-center opacity-0 transition duration-150 group-hover:opacity-100">
+      <div className="absolute inset-0 grid place-items-center px-3 text-center opacity-0 transition duration-150 group-hover:opacity-100 group-focus-within:opacity-100">
         <span
           className={cn(
             "text-sm font-medium",
@@ -680,22 +756,22 @@ function HoverWordOverlay({
 
 function blockerIcon(kind: ReadinessBlocker["kind"]) {  switch (kind) {
     case "draft":
-      return <GitPullRequestDraft />;
+      return <HugeiconsIcon icon={GitPullRequestDraftIcon} />;
     case "review_requested":
-      return <Eye />;
+      return <HugeiconsIcon icon={ViewIcon} />;
     case "changes_requested":
-      return <CircleAlert />;
+      return <HugeiconsIcon icon={AlertCircleIcon} />;
     case "approvals":
-      return <UserRoundCheck />;
+      return <AppIcon icon={UserRoundCheck} />;
     case "branch":
-      return <GitBranch />;
+      return <HugeiconsIcon icon={GitBranchIcon} />;
     case "conflicts":
-      return <GitMerge />;
+      return <HugeiconsIcon icon={GitMergeIcon} />;
     case "policy":
-      return <ShieldAlert />;
+      return <HugeiconsIcon icon={Shield01Icon} />;
     case "mergeability":
     case "checks":
-      return <CircleAlert />;
+      return <HugeiconsIcon icon={AlertCircleIcon} />;
   }
 }
 
@@ -715,6 +791,22 @@ function PrStatusCardView({
   onChecksOpenChange: (open: boolean) => void;
 }) {
   const t = useTranslations("PullRequests");
+  const format = useFormatter();
+  // A clicked split option flashes its feedback word (Copied, Opened,
+  // Launched…): the gesture visibly landed. The regular label comes back
+  // after a beat.
+  const [pressed, setPressed] = useState<"top" | "bottom" | null>(null);
+  useEffect(() => {
+    if (!pressed) return;
+    const timer = setTimeout(() => setPressed(null), SPLIT_FEEDBACK_MS);
+    return () => clearTimeout(timer);
+  }, [pressed]);
+  const splitLabel = (which: "top" | "bottom", label: string) => {
+    if (pressed !== which) return label;
+    const feedback =
+      which === "top" ? card.actions?.top.feedback : card.actions?.bottom.feedback;
+    return feedback ? t(FEEDBACK_KEYS[feedback]) : label;
+  };
   const body = (
     <>
       {/* Illustration: donut for a mixed checks story, avatars for the
@@ -725,18 +817,22 @@ function PrStatusCardView({
           TONE_TITLE[card.tone],
         )}
       >
-        {card.donutParts ? (
+        {card.logo ? (
+          <span aria-hidden className="inline-block size-5 shrink-0 bg-current [mask-repeat:no-repeat] [mask-position:center] [mask-size:contain]" style={{ maskImage: `url(${card.logo})`, WebkitMaskImage: `url(${card.logo})` }} />
+        ) : card.donutParts ? (
           <ChecksDonut parts={card.donutParts} />
         ) : card.avatars ? (
           <AvatarCascade users={card.avatars} />
         ) : card.id === "checks-passed" ? (
-          <Check />
+          <HugeiconsIcon icon={CheckIcon} />
         ) : card.id === "deployment" ? (
-          <ArrowUpRight />
-        ) : card.id === "numo-review" || card.id === "numo-fix" ? (
+          <HugeiconsIcon icon={ArrowUpRight01Icon} />
+        ) : card.id === "numo-review" ||
+          card.id === "numo-fix" ||
+          card.id === "numo-merge" ? (
           <NumoIcon animated={false} />
         ) : card.id === "fix" ? (
-          <Wrench />
+          <HugeiconsIcon icon={Wrench01Icon} />
         ) : (
           blockerIcon(card.iconKind)
         )}
@@ -760,7 +856,11 @@ function PrStatusCardView({
                 t,
                 Math.max(now.getTime() - Date.parse(card.startedAt), 0),
               )
-            : formatRunDuration(t, card.durationMs)}
+            : formatRunDuration(t, card.durationMs) ?? (card.updatedAt ? (
+                <time dateTime={card.updatedAt}>
+                  {format.dateTime(new Date(card.updatedAt), { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+                </time>
+              ) : null)}
         </span>
       </p>
     </>
@@ -769,38 +869,45 @@ function PrStatusCardView({
   // The split card carries NO padding: the whole top half is the copy
   // gesture, the whole bottom half is Numo, edge to edge — only the
   // separating hairline between them (MIN-548 review).
-  const inner = card.actions ? (
+  const actions = card.actions;
+  const inner = actions ? (
     <div className="group relative flex h-24 min-w-0 flex-col">
-      <div className="pointer-events-none flex h-full min-w-0 flex-col gap-2.5 p-3 transition duration-150 group-hover:opacity-0 group-hover:blur-[2px]">
+      <div className="pointer-events-none flex h-full min-w-0 flex-col gap-2.5 p-3 transition duration-150 group-hover:opacity-0 group-hover:blur-[2px] group-focus-within:opacity-0 group-focus-within:blur-[2px]">
         {body}
       </div>
-      <div className="pointer-events-none absolute inset-0 flex flex-col opacity-0 transition duration-150 group-hover:pointer-events-auto group-hover:opacity-100">
+      <div className="pointer-events-none absolute inset-0 flex flex-col opacity-0 transition duration-150 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100">
         <button
           type="button"
-          data-testid={card.actions.top.testId}
-          onClick={card.actions.top.onClick}
+          data-testid={actions.top.testId}
+          onClick={() => {
+            setPressed("top");
+            actions.top.onClick();
+          }}
           className={cn(
             "flex min-h-0 flex-1 items-center justify-center rounded-t-xl text-sm font-medium outline-none",
             TONE_TITLE[card.tone],
             "hover:bg-muted/50 focus-visible:bg-muted/50",
           )}
         >
-          {card.actions.top.label}
+          {splitLabel("top", actions.top.label)}
         </button>
         <div className="h-px shrink-0 bg-border" />
         <button
           type="button"
-          data-testid={card.actions.bottom.testId}
-          onClick={card.actions.bottom.onClick}
-          disabled={card.actions.bottom.disabled}
+          data-testid={actions.bottom.testId}
+          onClick={() => {
+            setPressed("bottom");
+            actions.bottom.onClick();
+          }}
+          disabled={actions.bottom.disabled}
           className={cn(
             "flex min-h-0 flex-1 items-center justify-center rounded-b-xl text-sm font-medium outline-none",
             TONE_TITLE[card.tone],
-            card.actions.bottom.disabled && "opacity-50",
+            actions.bottom.disabled && "opacity-50",
             "hover:bg-muted/50 focus-visible:bg-muted/50",
           )}
         >
-          {card.actions.bottom.label}
+          {splitLabel("bottom", actions.bottom.label)}
         </button>
       </div>
     </div>
@@ -843,7 +950,7 @@ function PrStatusCardView({
   }
 
   const activate = card.onSelect ?? (card.action?.disabled ? undefined : card.action?.onClick);
-  return (
+  const surface = (
     <div
       role={activate ? "button" : undefined}
       tabIndex={activate ? 0 : undefined}
@@ -865,7 +972,7 @@ function PrStatusCardView({
       data-card-id={card.id}
       data-testid={card.action?.testId ?? `pr-status-card-${card.id}`}
       className={cn(
-        "max-w-full rounded-xl border text-left",
+        "max-w-full rounded-xl text-left",
         TONE_CARD[card.tone],
         activate &&
           "outline-none hover:brightness-95 focus-visible:ring-2 focus-visible:ring-ring",
@@ -874,6 +981,9 @@ function PrStatusCardView({
       {inner}
     </div>
   );
+  return card.updatedAt ? (
+    <AppTooltip label={format.dateTime(new Date(card.updatedAt), { dateStyle: "medium", timeStyle: "short" })}>{surface}</AppTooltip>
+  ) : surface;
 }
 
 function ChecksPopoverCard({
@@ -903,7 +1013,7 @@ function ChecksPopoverCard({
           role="button"
           tabIndex={0}
           className={cn(
-            "max-w-full rounded-xl border outline-none hover:brightness-95 focus-visible:ring-2 focus-visible:ring-ring",
+            "max-w-full rounded-xl outline-none hover:brightness-95 focus-visible:ring-2 focus-visible:ring-ring",
             TONE_CARD[tone],
           )}
         >

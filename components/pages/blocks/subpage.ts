@@ -1,6 +1,6 @@
 import { Node } from "@tiptap/core";
+import { FileTextIcon as FileText } from "@hugeicons/core-free-icons";
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
-import { FileText } from "lucide-react";
 import { escapeHtmlAttribute } from "@/components/pages/blocks/escape";
 import type {
   MarkdownNode,

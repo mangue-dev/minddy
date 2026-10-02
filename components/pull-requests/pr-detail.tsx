@@ -1,5 +1,9 @@
 "use client";
+import { PrLinkedIssues, linkedIssues } from "./pr-linked-issues";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { AppIcon } from "@/components/icon";
+import { ArrowDown01Icon, ArrowLeft01Icon, ArrowUp01Icon, Cancel01Icon, Copy01Icon, Edit04Icon, GitPullRequestDraftIcon, GitPullRequestIcon, HistoryIcon, LinkSquare01Icon, Message01Icon, MessageSquareQuoteIcon, MoreHorizontalIcon, CheckIcon, Undo02Icon, ViewIcon } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useFormatter, useNow, useTranslations } from "next-intl";
 import {
@@ -14,7 +18,6 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  Skeleton,
   Spinner,
   Tabs,
   TabsContent,
@@ -24,27 +27,6 @@ import {
   cn,
   toast,
 } from "mangue-ui";
-import {
-  ArrowLeft,
-  ArrowUp,
-  Check,
-  ChevronDown,
-  ChevronLeft,
-  Copy,
-  Ellipsis,
-  Eye,
-  ExternalLink,
-  GitPullRequest,
-  GitPullRequestDraft,
-  History,
-  Link2,
-  MessageSquare,
-  MoreHorizontal,
-  Pencil,
-  Reply,
-  RotateCcw,
-  X,
-} from "lucide-react";
 import { ForgeUserAvatar } from "@/components/git/forge-user-avatar";
 import { AppContentHeader } from "@/components/app-content-header";
 import { BotBadge, GitLogin } from "@/components/git/git-login";
@@ -53,6 +35,7 @@ import { TAB_LIST_DENSE, TAB_TRIGGER_DENSE } from "@/components/tab-bar";
 import { NumoIcon } from "@/components/numo-icon";
 import { ProjectOrb } from "@/components/project-orb";
 import { projectOrbSeed } from "@/lib/project-orb-colors";
+import { PrActivitySkeleton, PrFilesSkeleton, PrHeaderActionsSkeleton, PrMetadataSkeleton, PrStatusSkeleton } from "@/components/pull-requests/pr-loading-skeleton";
 import { PrCommits } from "@/components/pull-requests/pr-commits";
 import { PrCommentComposer } from "@/components/pull-requests/pr-comment-composer";
 import { PrDiff } from "@/components/pull-requests/pr-diff";
@@ -119,6 +102,8 @@ import { usePrLive } from "@/lib/use-pr-live";
 import { pullRequestStateToPropagate } from "@/lib/pr-state";
 import { useScrollFade } from "@/lib/use-scroll-fade";
 import { useForgeUploads } from "@/lib/use-forge-uploads";
+import { buildAiReviewStatuses } from "@/lib/pr-ai-review";
+import type { AiReviewProvider } from "@/lib/pr-ai-review/types";
 import { PR_BODY_COMMENT_ID } from "@/lib/pr-review-reactions";
 import { reviewedFileCount, setFileReviewed } from "@/lib/pr-file-review";
 import {
@@ -203,7 +188,7 @@ function CopyBranchButton({ value }: { value: string }) {
           aria-label={t("copyBranch")}
           onClick={() => void copy()}
         >
-          {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+          {copied ? <HugeiconsIcon icon={CheckIcon} className="size-3.5" /> : <HugeiconsIcon icon={Copy01Icon} className="size-3.5" />}
         </Button>
       </TooltipTrigger>
       <TooltipContent side="top">{t("copyBranch")}</TooltipContent>
@@ -451,7 +436,7 @@ function ThreadComment({
                   aria-label={t("commentMoreActions")}
                   className="-my-1 size-7 rounded-full text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
                 >
-                  <Ellipsis className="size-4" />
+                  <HugeiconsIcon icon={MoreHorizontalIcon} className="size-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
@@ -462,13 +447,13 @@ function ThreadComment({
                       setEditing(true);
                     }}
                   >
-                    <Pencil />
+                    <HugeiconsIcon icon={Edit04Icon} />
                     {t("editComment")}
                   </DropdownMenuItem>
                 ) : null}
                 {onQuoteReply ? (
                   <DropdownMenuItem onClick={onQuoteReply}>
-                    <Reply />
+                    <HugeiconsIcon icon={MessageSquareQuoteIcon} />
                     {t(quotingNumo ? "quoteReplyNumo" : "quoteReply")}
                   </DropdownMenuItem>
                 ) : null}
@@ -477,7 +462,7 @@ function ThreadComment({
                     and the menu must never open empty. */}
                 {edited ? (
                   <DropdownMenuItem onSelect={() => setHistoryOpen(true)}>
-                    <History />
+                    <HugeiconsIcon icon={HistoryIcon} />
                     {t("viewPreviousVersions")}
                   </DropdownMenuItem>
                 ) : null}
@@ -579,6 +564,55 @@ function ThreadComment({
   );
 }
 
+/** How long a pending Numo merge may pin the panel: the job usually lands
+    in well under a minute, the ceiling only exists so a lost background
+    job does not pin the card forever. */
+const NUMO_MERGE_WAIT_MS = 5 * 60_000;
+
+/** The pending "generate then merge" marker, kept in sessionStorage: the
+    job runs server-side and survives navigation, the marker must too.
+    Session scope (not local): a job is a gesture of THIS tab, and a stale
+    marker across days would claim a merge that no longer runs. */
+const NUMO_MERGE_MARKER_KEY = "minddy:numo-merge-pending";
+
+interface NumoMergeMarker {
+  prId: string;
+  /** Epoch ms of the launch — both the card's ticking clock and the
+      expiry: past the wait ceiling, the marker is dropped, not restored. */
+  startedAt: number;
+}
+
+function writeNumoMergeMarker(marker: NumoMergeMarker | null): void {
+  try {
+    if (marker) {
+      sessionStorage.setItem(NUMO_MERGE_MARKER_KEY, JSON.stringify(marker));
+    } else {
+      sessionStorage.removeItem(NUMO_MERGE_MARKER_KEY);
+    }
+  } catch {
+    // Storage unavailable (private mode, quota): the marker is an
+    // affordance, not data — the flow works without it.
+  }
+}
+
+function readNumoMergeMarker(): NumoMergeMarker | null {
+  try {
+    const raw = sessionStorage.getItem(NUMO_MERGE_MARKER_KEY);
+    const parsed: unknown = raw ? JSON.parse(raw) : null;
+    if (
+      parsed &&
+      typeof parsed === "object" &&
+      typeof (parsed as NumoMergeMarker).prId === "string" &&
+      typeof (parsed as NumoMergeMarker).startedAt === "number"
+    ) {
+      return parsed as NumoMergeMarker;
+    }
+  } catch {
+    // Unreadable marker = no marker.
+  }
+  return null;
+}
+
 export function PrDetail({
   item,
   onBack,
@@ -641,7 +675,17 @@ export function PrDetail({
     threads: reviewThreads,
     reactions: reviewReactions,
     refetch: refetchReviewComments,
+    loading: reviewCommentsLoading,
   } = usePrReviewCommentsQuery(prEndpoint(item.prId));
+  const [requestedReviewComments, setRequestedReviewComments] = useState<Awaited<ReturnType<typeof postPullRequestCommentApi>>["comment"][]>([]);
+  const [requestingReviewer, setRequestingReviewer] = useState<string | null>(null);
+  const reviewerRequestPending = useRef(false);
+  const aiReviews = useMemo(() => buildAiReviewStatuses({
+    forge: item.provider,
+    comments: [...comments, ...requestedReviewComments.filter((pending) => !comments.some((comment) => comment.id === pending.id))],
+    timeline, reviewComments, reviewThreads, reactions: commentReactions,
+    prUrl: pr?.url ?? item.pr_url,
+  }), [item.provider, item.pr_url, pr?.url, comments, requestedReviewComments, timeline, reviewComments, reviewThreads, commentReactions]);
   const unresolvedThreads = useMemo(
     () => unresolvedReviewThreads(reviewComments, reviewThreads),
     [reviewComments, reviewThreads],
@@ -700,8 +744,13 @@ export function PrDetail({
   const [mergeCommitDraftEdited, setMergeCommitDraftEdited] = useState(false);
   // "Generate then merge" (MIN-548): the generation runs in the
   // background and the merge fires the moment it lands; the panel marks the
-  // wait until the broadcast settles it one way or the other.
+  // wait until the broadcast settles it one way or the other. The marker
+  // survives navigation (sessionStorage): the job belongs to the PR, not to
+  // the page that launched it — coming back must still show it running.
   const [numoMerging, setNumoMerging] = useState(false);
+  const [numoMergeStartedAt, setNumoMergeStartedAt] = useState<string | null>(
+    null,
+  );
   const numoMergeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [mergeTab, setMergeTab] = useState<"numo" | "manual">("numo");
   const [reviewVerdict, setReviewVerdict] = useState<ReviewVerdict | null>(null);
@@ -807,6 +856,8 @@ export function PrDetail({
     if (!numoMerging) return;
     if (pr?.state === "merged" || item.pr_state === "merged") {
       setNumoMerging(false);
+      setNumoMergeStartedAt(null);
+      writeNumoMergeMarker(null);
     }
   }, [numoMerging, pr?.state, item.pr_state]);
   useEffect(() => {
@@ -814,6 +865,33 @@ export function PrDetail({
       if (numoMergeTimer.current) clearTimeout(numoMergeTimer.current);
     };
   }, []);
+  // Coming back to this PR while a Numo merge runs elsewhere in the
+  // session: restore the pending marker (card + expiry) from where it
+  // left. A terminal state drops it — the job is over, whatever it did.
+  useEffect(() => {
+    if (item.pr_state === "merged" || item.pr_state === "closed") {
+      if (readNumoMergeMarker()?.prId === item.prId) writeNumoMergeMarker(null);
+      return;
+    }
+    const marker = readNumoMergeMarker();
+    if (!marker || marker.prId !== item.prId) return;
+    const elapsed = Date.now() - marker.startedAt;
+    if (elapsed < 0 || elapsed >= NUMO_MERGE_WAIT_MS) {
+      writeNumoMergeMarker(null);
+      return;
+    }
+    setNumoMerging(true);
+    setNumoMergeStartedAt(new Date(marker.startedAt).toISOString());
+    numoMergeTimer.current = setTimeout(() => {
+      setNumoMerging(false);
+      setNumoMergeStartedAt(null);
+      writeNumoMergeMarker(null);
+      toast.error(t("numoMergeFailed"));
+    }, NUMO_MERGE_WAIT_MS - elapsed);
+    // Mount only: the marker is read once per PR page, the timer and the
+    // broadcast own everything after.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [item.prId]);
 
   const prevWorking = useRef(isWorking);
   useEffect(() => {
@@ -1134,7 +1212,10 @@ export function PrDetail({
 
   const startNumoMerge = async (method?: MergeMethod) => {
     if (numoMerging || !prPageContext) return;
+    const startedAt = Date.now();
     setNumoMerging(true);
+    setNumoMergeStartedAt(new Date(startedAt).toISOString());
+    writeNumoMergeMarker({ prId: item.prId, startedAt });
     setConfirmAction(null);
     setMergeCommitDraft(null);
     setMergeCommitDraftEdited(false);
@@ -1146,10 +1227,14 @@ export function PrDetail({
       // a lost background job must not pin the panel forever.
       numoMergeTimer.current = setTimeout(() => {
         setNumoMerging(false);
+        setNumoMergeStartedAt(null);
+        writeNumoMergeMarker(null);
         toast.error(t("numoMergeFailed"));
-      }, 5 * 60_000);
+      }, NUMO_MERGE_WAIT_MS);
     } catch (err) {
       setNumoMerging(false);
+      setNumoMergeStartedAt(null);
+      writeNumoMergeMarker(null);
       toast.error((err as Error).message);
     }
   };
@@ -1412,6 +1497,24 @@ export function PrDetail({
     setQuoteFocus((n) => n + 1);
   };
 
+  const canRequestExternalReview = canComment && !isTerminal && pr?.state !== "merged" && pr?.state !== "closed";
+  const requestAiReview = useCallback(async (provider: AiReviewProvider) => {
+    if (!canRequestExternalReview || item.provider !== "github" || reviewerRequestPending.current) return;
+    reviewerRequestPending.current = true;
+    setRequestingReviewer(provider.id);
+    try {
+      const { comment } = await postPullRequestCommentApi(item.prId, provider.requestCommand);
+      setRequestedReviewComments((pending) => [...pending, comment]);
+      toast.success(t("cardAiReviewRequestSent", { provider: provider.name }));
+      void refetchComments();
+    } catch {
+      toast.error(t("cardAiReviewRequestFailed", { provider: provider.name }));
+    } finally {
+      reviewerRequestPending.current = false;
+      setRequestingReviewer(null);
+    }
+  }, [canRequestExternalReview, item.provider, item.prId, refetchComments, t]);
+
   const submitComment = async () => {
     const body = commentBody.trim();
     if (!body || posting) return;
@@ -1436,10 +1539,6 @@ export function PrDetail({
   // `pr.url` of the forge: the identifier IS the link to the forge, which
   // replaces the “PR #30 ↗” which was lying under the title.
   const identifier = prIdentifier(item.provider, item.pr_number);
-  const linkedIssue =
-    item.issue && item.project
-      ? issueIdentifier(item.project.key, item.issue.number)
-      : null;
   const forgeUrl = pr?.url ?? item.pr_url;
 
   // The weight of PR, at a glance: GitHub puts it next to the title, and it's
@@ -1517,18 +1616,33 @@ export function PrDetail({
     ],
   );
 
-  // The FIX gesture of a failing PR (MIN-548 review): one prompt — identify
-  // what is wrong, fix it — that either lands in the clipboard or wakes
-  // Numo directly. A red card is only half the story; this card is the way
-  // out.
+  // The FIX gesture of a PR that needs a hand (MIN-548 review): one prompt —
+  // identify what is wrong, fix it — that either lands in the clipboard or
+  // wakes Numo directly. A red card is only half the story; this card is the
+  // way out.
+  //
+  // The card appears as soon as ANYTHING stands between the PR and its
+  // merge, not only once the whole CI suite has settled: one failing check
+  // is enough, and so is one unresolved review conversation, an
+  // out-of-date branch, or a conflict. The prompt carries the same stories.
+  const fixExtras = useMemo(
+    () => ({
+      unresolvedThreads,
+      branchOutOfDate: !!effectiveReadiness?.blockers.some(
+        (blocker) => blocker.kind === "branch",
+      ),
+    }),
+    [unresolvedThreads, effectiveReadiness?.blockers],
+  );
   const fixPrompt = useMemo(
-    () => buildPullRequestFixPrompt(feedbackContext, checks),
-    [feedbackContext, checks],
+    () => buildPullRequestFixPrompt(feedbackContext, checks, fixExtras),
+    [feedbackContext, checks, fixExtras],
   );
   const prFailing =
-    checks?.state === "failure" ||
+    !!checks?.checks.some((check) => check.state === "failure") ||
+    unresolvedThreads.length > 0 ||
     !!effectiveReadiness?.blockers.some(
-      (blocker) => blocker.kind === "conflicts",
+      (blocker) => blocker.kind === "conflicts" || blocker.kind === "branch",
     );
   const fixCard = useMemo(() => {
     if (!prFailing) return null;
@@ -1591,7 +1705,7 @@ export function PrDetail({
           className="md:hidden"
           onClick={onBack}
         >
-          <ChevronLeft />
+          <HugeiconsIcon icon={ArrowLeft01Icon} />
         </Button>
         {/* The project orb opens the header, like that of a conversation
             the agent: the column no longer says the project line by line (it is
@@ -1617,35 +1731,11 @@ export function PrDetail({
           ) : (
             <span className="shrink-0 text-foreground">{identifier}</span>
           )}
-          {linkedIssue ? (
-            // The link icon makes this a navigable association, not a dependency.
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (item.issue && item.project) onOpenIssue(item.issue.id, item.project.id);
-                  }}
-                  className="flex min-w-0 items-center gap-1 text-muted-foreground outline-none hover:text-foreground"
-                >
-                  <Link2
-                    data-testid="pr-issue-link-icon"
-                    className="size-3.5 shrink-0"
-                    aria-hidden
-                  />
-                  <span className="truncate">{linkedIssue}</span>
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">{t("linkedIssue")}</TooltipContent>
-            </Tooltip>
-          ) : item.project ? (
-            // Unattached: this is a NORMAL STATE since MIN-143 (the link comes
-            // of a `MIN-42` convention in the branch, title or a line
-            // Fixed — not a guess). The fact remains that the convention fails, and
-            // that nothing knew how to place the link afterwards: the selector
-            // takes the exact place of the missing ticket (MIN-163).
+          <PrLinkedIssues item={item} onOpenIssue={onOpenIssue} />
+          {item.project ? (
             <PrLinkIssue
               prId={item.prId}
+              linkedIssueIds={linkedIssues(item).map((issue) => issue.id)}
               prState={item.pr_state}
               projectId={item.project.id}
               projectKey={item.project.key}
@@ -1662,14 +1752,16 @@ export function PrDetail({
             </span>
           )}
         </span>
-        {isWorking || numoMerging ? (
+        {/* A Numo merge in progress has its own card in the status grid —
+            it survives navigation there, which a header spinner never did. */}
+        {isWorking ? (
           <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
             <Spinner />
-            {t(isWorking ? "numoWorking" : "numoMerging")}
+            {t("numoWorking")}
           </span>
         ) : null}
 
-        {isTerminal ? (
+        {loading ? <PrHeaderActionsSkeleton /> : isTerminal ? (
           // End of line of a completed PR: the only gesture left to it — reopen,
           // without confirmation, it does not destroy anything and the button next to it closes it
           // — then its STATE, last. The badge closes the line in both cases,
@@ -1684,7 +1776,7 @@ export function PrDetail({
                   size="icon-sm"
                   aria-label={t("moreActions")}
                 >
-                  <MoreHorizontal />
+                  <HugeiconsIcon icon={MoreHorizontalIcon} />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
@@ -1695,7 +1787,7 @@ export function PrDetail({
                       target="_blank"
                       rel="noreferrer"
                     >
-                      <ExternalLink />
+                      <HugeiconsIcon icon={LinkSquare01Icon} />
                       {t(item.provider === "gitlab" ? "openOnGitlab" : "openOnGithub")}
                     </a>
                   </DropdownMenuItem>
@@ -1707,7 +1799,7 @@ export function PrDetail({
                       setEditingTitle(true);
                     }}
                   >
-                    <Pencil />
+                    <HugeiconsIcon icon={Edit04Icon} />
                     {t("renamePr")}
                   </DropdownMenuItem>
                 ) : null}
@@ -1720,7 +1812,7 @@ export function PrDetail({
                 onClick={() => void act("reopen")}
                 disabled={!!acting}
               >
-                {acting === "reopen" ? <Spinner /> : <RotateCcw />}
+                {acting === "reopen" ? <Spinner /> : <HugeiconsIcon icon={Undo02Icon} />}
                 {t("reopen")}
               </Button>
             ) : null}
@@ -1749,16 +1841,16 @@ export function PrDetail({
                     <Button variant="outline" size="sm">
                       {aiReviewActive ? <Spinner /> : null}
                       {t("review")}
-                      <ChevronDown className="size-3.5" />
+                      <HugeiconsIcon icon={ArrowDown01Icon} className="size-3.5" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem onSelect={() => openReview("approve")}>
-                      <Check />
+                      <HugeiconsIcon icon={CheckIcon} />
                       {t("reviewApprove")}
                     </DropdownMenuItem>
                     <DropdownMenuItem onSelect={() => openReview("comment")}>
-                      <MessageSquare />
+                      <HugeiconsIcon icon={Message01Icon} />
                       {t("reviewComment")}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
@@ -1772,7 +1864,7 @@ export function PrDetail({
                   onClick={() => setConfirmAction({ kind: "close" })}
                   disabled={!!acting || isWorking}
                 >
-                  {acting === "close" ? <Spinner /> : <X />}
+                  {acting === "close" ? <Spinner /> : <HugeiconsIcon icon={Cancel01Icon} />}
                   {t("closePullRequest")}
                 </Button>
               ) : null}
@@ -1789,7 +1881,7 @@ export function PrDetail({
                   size="icon-sm"
                   aria-label={t("moreActions")}
                 >
-                  <MoreHorizontal />
+                  <HugeiconsIcon icon={MoreHorizontalIcon} />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
@@ -1800,7 +1892,7 @@ export function PrDetail({
                       target="_blank"
                       rel="noreferrer"
                     >
-                      <ExternalLink />
+                      <HugeiconsIcon icon={LinkSquare01Icon} />
                       {t(item.provider === "gitlab" ? "openOnGitlab" : "openOnGithub")}
                     </a>
                   </DropdownMenuItem>
@@ -1812,7 +1904,7 @@ export function PrDetail({
                       setEditingTitle(true);
                     }}
                   >
-                    <Pencil />
+                    <HugeiconsIcon icon={Edit04Icon} />
                     {t("renamePr")}
                   </DropdownMenuItem>
                 ) : null}
@@ -1833,7 +1925,7 @@ export function PrDetail({
                       className="2xl:hidden"
                       onSelect={startFileReview}
                     >
-                      <Eye />
+                      <HugeiconsIcon icon={ViewIcon} />
                       {t("reviewStart")}
                     </DropdownMenuItem>
                   </>
@@ -1847,7 +1939,7 @@ export function PrDetail({
                         disabled={!!acting || isWorking}
                         onSelect={() => void act("convert_to_draft")}
                       >
-                        {acting === "convert_to_draft" ? <Spinner /> : <GitPullRequestDraft />}
+                        {acting === "convert_to_draft" ? <Spinner /> : <HugeiconsIcon icon={GitPullRequestDraftIcon} />}
                         {t("convertToDraft")}
                       </DropdownMenuItem>
                     ) : null}
@@ -1858,7 +1950,7 @@ export function PrDetail({
                       disabled={!!acting || isWorking}
                       onSelect={() => setConfirmAction({ kind: "close" })}
                     >
-                      <X />
+                      <HugeiconsIcon icon={Cancel01Icon} />
                       {t("closePullRequest")}
                     </DropdownMenuItem>
                   </>
@@ -1878,7 +1970,7 @@ export function PrDetail({
                 disabled={!!acting || isWorking}
                 onClick={() => void act("ready_for_review")}
               >
-                {acting === "ready_for_review" ? <Spinner /> : <GitPullRequest />}
+                {acting === "ready_for_review" ? <Spinner /> : <HugeiconsIcon icon={GitPullRequestIcon} />}
                 {t("openPullRequest")}
               </Button>
             ) : effectiveReadiness ? (
@@ -1938,67 +2030,69 @@ export function PrDetail({
               ticket: since MIN-143 they no longer come in pairs, and a PR
               human may have none. (Numo names his
               “MIN-42: <titre du ticket>” — the display does not change for them.) */}
-          <div className="flex flex-col gap-2">
-            <h1 className="min-w-0 flex-1 font-display text-2xl leading-tight font-semibold break-words">
-              {pr?.title ?? item.title ?? item.issue?.title ?? identifier}
-            </h1>
-            <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 text-xs text-muted-foreground">
-              {/* Author first — avatar and name, like a comment header. Only a
-                  PR Numo OPENED takes the Numo seat (the forge login depends
-                  on the installation): a human PR Numo merely corrected — a
-                  fix session bears the number without having opened it —
-                  keeps its real author. */}
-              {author ? (
-                <span className="inline-flex items-center gap-1.5">
-                  {item.numoOpened ? (
-                    <NumoIcon animated={false} className="size-4" />
-                  ) : (
-                    <ForgeUserAvatar user={author} className="size-4" />
-                  )}
-                  <span className="font-medium text-foreground">
-                    {item.numoOpened
-                      ? t("numoAuthor")
-                      : parseForgeLogin(author.login).name}
+          {loading ? <PrMetadataSkeleton /> : (
+            <div className="flex flex-col gap-2">
+              <h1 className="min-w-0 flex-1 font-display text-2xl leading-tight font-semibold break-words">
+                {pr?.title ?? item.title ?? item.issue?.title ?? identifier}
+              </h1>
+              <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 text-xs text-muted-foreground">
+                {/* Author first — avatar and name, like a comment header. Only a
+                    PR Numo OPENED takes the Numo seat (the forge login depends
+                    on the installation): a human PR Numo merely corrected — a
+                    fix session bears the number without having opened it —
+                    keeps its real author. */}
+                {author ? (
+                  <span className="inline-flex items-center gap-1.5">
+                    {item.numoOpened ? (
+                      <NumoIcon animated={false} className="size-4" />
+                    ) : (
+                      <ForgeUserAvatar user={author} className="size-4" />
+                    )}
+                    <span className="font-medium text-foreground">
+                      {item.numoOpened
+                        ? t("numoAuthor")
+                        : parseForgeLogin(author.login).name}
+                    </span>
+                    {!item.numoOpened && parseForgeLogin(author.login).isBot ? (
+                      <BotBadge />
+                    ) : null}
                   </span>
-                  {!item.numoOpened && parseForgeLogin(author.login).isBot ? (
-                    <BotBadge />
-                  ) : null}
-                </span>
-              ) : null}
-              {/* The two branches, in code pills: base — head, the merge
-                  direction carried by the arrow between them. */}
-              {baseBranch ? (
-                <code className="rounded bg-muted px-1 py-0.5 font-mono text-[11px] text-foreground">
-                  {baseBranch}
-                </code>
-              ) : null}
-              {/* The diff in one number, between the two branches — the merge
-                  line reads left to right: from base, +adds −dels, toward head.
-                  Mute until files have answered: “+0 −0” would read as an
-                  empty PR. */}
-              {files.length > 0 ? (
-                <span className="inline-flex items-center gap-1 font-medium tabular-nums">
-                  <span className="text-green-700 dark:text-green-500">
-                    +{format.number(additions)}
-                  </span>
-                  <span className="text-red-700 dark:text-red-500">
-                    −{format.number(deletions)}
-                  </span>
-                </span>
-              ) : null}
-              {baseBranch && headBranch ? (
-                <ArrowLeft className="size-3.5" aria-hidden />
-              ) : null}
-              {headBranch ? (
-                <span className="inline-flex items-center gap-0.5">
+                ) : null}
+                {/* The two branches, in code pills: base — head, the merge
+                    direction carried by the arrow between them. */}
+                {baseBranch ? (
                   <code className="rounded bg-muted px-1 py-0.5 font-mono text-[11px] text-foreground">
-                    {headBranch}
+                    {baseBranch}
                   </code>
-                  <CopyBranchButton value={headBranch} />
-                </span>
-              ) : null}
+                ) : null}
+                {/* The diff in one number, between the two branches — the merge
+                    line reads left to right: from base, +adds −dels, toward head.
+                    Mute until files have answered: “+0 −0” would read as an
+                    empty PR. */}
+                {files.length > 0 ? (
+                  <span className="inline-flex items-center gap-1 font-medium tabular-nums">
+                    <span className="text-green-700 dark:text-green-500">
+                      +{format.number(additions)}
+                    </span>
+                    <span className="text-red-700 dark:text-red-500">
+                      −{format.number(deletions)}
+                    </span>
+                  </span>
+                ) : null}
+                {baseBranch && headBranch ? (
+                  <HugeiconsIcon icon={ArrowLeft01Icon} className="size-3.5" aria-hidden />
+                ) : null}
+                {headBranch ? (
+                  <span className="inline-flex items-center gap-0.5">
+                    <code className="rounded bg-muted px-1 py-0.5 font-mono text-[11px] text-foreground">
+                      {headBranch}
+                    </code>
+                    <CopyBranchButton value={headBranch} />
+                  </span>
+                ) : null}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* The only place to say which Git account is in use (MIN-144).
               It stays silent when everything is configured correctly. */}
@@ -2023,25 +2117,31 @@ export function PrDetail({
             showBar={false}
           />
 
-          <PrStatusCards
-            readiness={effectiveReadiness}
-            checks={checks}
-            provider={item.provider}
-            deployment={deploymentStory}
-            unresolvedThreads={unresolvedThreads}
-            canAct={canActOnBlocker}
-            acting={maintenanceAction}
-            onAction={(blocker) => void handleReadinessAction(blocker)}
-            onOpenConversations={() => setUnresolvedSidebarOpen(true)}
-            onOpenReviewApprove={() => openReview("approve")}
-            onStartFileReview={startFileReview}
-            numoReview={numoReviewCard}
-            fixRun={fixRunCard}
-            checksOpen={checksPopoverOpen}
-            onChecksOpenChange={setChecksPopoverOpen}
-            onRequestReview={openAiReviewDialog}
-            fix={fixCard}
-          />
+          {loading ? <PrStatusSkeleton /> : (
+            <PrStatusCards
+              readiness={effectiveReadiness}
+              checks={checks}
+              provider={item.provider}
+              deployment={deploymentStory}
+              unresolvedThreads={unresolvedThreads}
+              canAct={canActOnBlocker}
+              acting={maintenanceAction}
+              onAction={(blocker) => void handleReadinessAction(blocker)}
+              onOpenConversations={() => setUnresolvedSidebarOpen(true)}
+              onOpenReviewApprove={() => openReview("approve")}
+              onStartFileReview={startFileReview}
+              aiReviews={aiReviews}
+              requestingReviewer={requestingReviewer}
+              onRequestAiReview={canRequestExternalReview ? (provider) => void requestAiReview(provider) : undefined}
+              numoReview={numoReviewCard}
+              fixRun={fixRunCard}
+              numoMerge={numoMerging ? { startedAt: numoMergeStartedAt } : null}
+              checksOpen={checksPopoverOpen}
+              onChecksOpenChange={setChecksPopoverOpen}
+              onRequestReview={openAiReviewDialog}
+              fix={fixCard}
+            />
+          )}
 
           {/* GitHub style tabs: the thread on one side, the code on the other. */}
           <Tabs
@@ -2080,8 +2180,8 @@ export function PrDetail({
                 GitHub follow, compose closes. */}
             <TabsContent value="activity" className="mt-4 flex flex-col gap-3">
               {loading || commentsLoading ? (
-                <Skeleton className="h-16 rounded-lg" />
-              ) : !prDescription && feed.length === 0 ? (
+                <PrActivitySkeleton />
+              ) : !prDescription && feed.length === 0 && !reviewCommentsLoading ? (
                 <p className="text-sm text-muted-foreground">{t("noComments")}</p>
               ) : (
                 // MIN-548: the activity is a plain stack of cards and lines —
@@ -2184,6 +2284,8 @@ export function PrDetail({
                  </div>
                )}
 
+              {!loading && !commentsLoading && reviewCommentsLoading ? <PrActivitySkeleton /> : null}
+
               {canComment ? (
                 <div data-testid="pr-comment-composer-region" className="pt-1">
                   <PrCommentComposer
@@ -2213,10 +2315,7 @@ export function PrDetail({
 
             <TabsContent value="files" className="mt-4">
               {loading ? (
-                <div className="flex flex-col gap-2">
-                  <Skeleton className="h-6 w-40" />
-                  <Skeleton className="h-40 rounded-md" />
-                </div>
+                <PrFilesSkeleton />
               ) : pr ? (
                 <div className="flex flex-col gap-3">
                   {/* MIN-548: the review mode lives INSIDE the diff toolbar —
@@ -2259,7 +2358,7 @@ export function PrDetail({
                             size="sm"
                             onClick={fileReviewActive ? finishFileReview : startFileReview}
                           >
-                            {fileReviewActive ? <Check /> : <Eye />}
+                            {fileReviewActive ? <HugeiconsIcon icon={CheckIcon} /> : <HugeiconsIcon icon={ViewIcon} />}
                             {t(fileReviewActive ? "reviewFinish" : "reviewStart")}
                           </Button>
                         </div>
@@ -2279,7 +2378,7 @@ export function PrDetail({
                         size="sm"
                         onClick={finishFileReview}
                       >
-                        <Check />
+                        <HugeiconsIcon icon={CheckIcon} />
                         {t("reviewFinish")}
                       </Button>
                     </div>
@@ -2305,7 +2404,7 @@ export function PrDetail({
               scrollContainerRef.current?.scrollTo({ top: 0, behavior: "smooth" })
             }
           >
-            <ArrowUp className="size-4" />
+            <HugeiconsIcon icon={ArrowUp01Icon} className="size-4" />
           </Button>
         ) : null}
       </div>
@@ -2323,7 +2422,7 @@ export function PrDetail({
             onChange={(event) => setTitleDraft(event.target.value)}
             maxLength={256}
             autoFocus
-            className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="h-9 w-full rounded-md bg-control px-3 text-sm outline-none focus-visible:bg-control-hover"
             onKeyDown={(event) => {
               if (event.key === "Enter" && titleDraft.trim()) void saveTitle();
             }}
@@ -2333,7 +2432,7 @@ export function PrDetail({
               {t("cancel")}
             </Button>
             <Button disabled={!!maintenanceAction || !titleDraft.trim()} onClick={() => void saveTitle()}>
-              {maintenanceAction ? <Spinner /> : <Pencil />}
+              {maintenanceAction ? <Spinner /> : <HugeiconsIcon icon={Edit04Icon} />}
               {t("savePrTitle")}
             </Button>
           </DialogFooter>
@@ -2348,7 +2447,9 @@ export function PrDetail({
             setConfirmAction(null);
             setMergeCommitDraft(null);
             setMergeCommitDraftEdited(false);
+            if (numoMerging) writeNumoMergeMarker(null);
             setNumoMerging(false);
+            setNumoMergeStartedAt(null);
           }
         }}
       >
@@ -2371,7 +2472,7 @@ export function PrDetail({
                   {t("mergeTabNumo")}
                 </TabsTrigger>
                 <TabsTrigger value="manual" className={cn(TAB_TRIGGER_DENSE, "gap-1.5")}>
-                  <Pencil />
+                  <HugeiconsIcon icon={Edit04Icon} />
                   {t("mergeTabManual")}
                 </TabsTrigger>
               </TabsList>
@@ -2404,7 +2505,7 @@ export function PrDetail({
                       current ? { ...current, title: event.target.value } : current,
                     );
                   }}
-                  className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="h-9 w-full rounded-md bg-control px-3 text-sm font-normal outline-none focus-visible:bg-control-hover"
                 />
               </label>
               <label className="grid gap-1.5 text-sm font-medium">
@@ -2557,19 +2658,19 @@ export function PrDetail({
                   verdict: "comment",
                   label: t("reviewComment"),
                   hint: t("reviewChoiceCommentHint"),
-                  icon: MessageSquare,
+                  icon: Message01Icon,
                 },
                 {
                   verdict: "approve",
                   label: t("reviewApprove"),
                   hint: t("reviewChoiceApproveHint"),
-                  icon: Check,
+                  icon: CheckIcon,
                 },
                 {
                   verdict: "request_changes",
                   label: t("reviewRequestChanges"),
                   hint: t("reviewChoiceChangesHint"),
-                  icon: X,
+                  icon: Cancel01Icon,
                 },
               ] as const).map((choice) => {
                 const Icon = choice.icon;
@@ -2598,7 +2699,7 @@ export function PrDetail({
                           : "border-border text-muted-foreground",
                       )}
                     >
-                      <Icon className="size-3" />
+                      <AppIcon icon={Icon} className="size-3" />
                     </span>
                     <span className="grid gap-0.5">
                       <span className="text-sm font-medium">{choice.label}</span>
@@ -2652,8 +2753,8 @@ export function PrDetail({
 
           <div
             className={cn(
-              "relative min-w-0 max-w-full overflow-clip rounded-md border border-border transition-colors focus-within:border-ring",
-              reviewDrop.dragging && "border-brand",
+              "relative min-w-0 max-w-full overflow-clip rounded-md bg-control transition-colors",
+              reviewDrop.dragging && "ring-2 ring-brand/20",
             )}
             onPaste={pasteFileHandler(reviewUploads.addFiles)}
             {...reviewDrop.handlers}

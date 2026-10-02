@@ -1,5 +1,8 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { AppIcon } from "@/components/icon";
+import { Add01Icon, CheckIcon, CircleDotDashedIcon, CircleIcon, LayoutGridIcon, MessageMultiple01Icon, MoreHorizontalIcon, Settings01Icon, Target01Icon } from "@hugeicons/core-free-icons";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
@@ -11,18 +14,6 @@ import {
   DropdownMenuSeparator,
   cn,
 } from "mangue-ui";
-import {
-  Plus,
-  MoreHorizontal,
-  CircleDotDashed,
-  CircleDot,
-  CheckCircle2,
-  Target,
-  Settings,
-  LayoutGrid,
-  MessagesSquare,
-  type LucideIcon,
-} from "lucide-react";
 import { issuesQueryFn } from "@/lib/issues-api";
 import { usePrefetchProject } from "@/lib/use-prefetch-project";
 import { ProjectOrb } from "@/components/project-orb";
@@ -40,7 +31,7 @@ function Stat({
   value,
   label,
 }: {
-  icon: LucideIcon;
+  icon: AppIcon;
   value: number;
   label: string;
 }) {
@@ -51,7 +42,7 @@ function Stat({
           className="flex items-center gap-1.5 text-sm tabular-nums text-muted-foreground"
           aria-label={label}
         >
-          <Icon className="size-3.5 shrink-0" />
+          <AppIcon icon={Icon} className="size-3.5 shrink-0" />
           <span className="font-medium text-foreground/80">{value}</span>
         </span>
       </TooltipTrigger>
@@ -123,7 +114,7 @@ export function ProjectCard({ project }: { project: Project }) {
               onPointerDown={(e) => e.stopPropagation()}
               className="flex size-8 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             >
-              <MoreHorizontal className="size-4" />
+              <HugeiconsIcon icon={MoreHorizontalIcon} className="size-4" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent
@@ -134,32 +125,32 @@ export function ProjectCard({ project }: { project: Project }) {
             <DropdownMenuItem
               onSelect={() => router.push(`/projects/${project.id}`)}
             >
-              <LayoutGrid />
+              <HugeiconsIcon icon={LayoutGridIcon} />
               {t("tickets")}
             </DropdownMenuItem>
             <DropdownMenuItem
               onSelect={() => router.push(`/projects/${project.id}/triage`)}
             >
-              <CircleDotDashed />
+              <AppIcon icon={CircleDotDashedIcon} />
               {t("triage")}
             </DropdownMenuItem>
             <DropdownMenuItem
               onSelect={() => router.push(`/projects/${project.id}/feedback`)}
             >
-              <MessagesSquare />
+              <HugeiconsIcon icon={MessageMultiple01Icon} />
               {t("feedback")}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onSelect={() => router.push(`/projects/${project.id}/objectives`)}
             >
-              <Target />
+              <HugeiconsIcon icon={Target01Icon} />
               {t("objectives")}
             </DropdownMenuItem>
             <DropdownMenuItem
               onSelect={() => router.push(`/projects/${project.id}/settings`)}
             >
-              <Settings />
+              <HugeiconsIcon icon={Settings01Icon} />
               {t("settings")}
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -169,17 +160,17 @@ export function ProjectCard({ project }: { project: Project }) {
       {/* Quick indicators — right-aligned, always shown (even at zero) */}
       <div className="mt-auto flex flex-col items-end gap-1 pt-1">
         <Stat
-          icon={CircleDotDashed}
+          icon={CircleDotDashedIcon}
           value={triageCount}
           label={t("triageIssues", { entityPlural: tIssue("entityPlural") })}
         />
         <Stat
-          icon={CircleDot}
+          icon={CircleIcon}
           value={openCount}
           label={t("openIssues", { entityPlural: tIssue("entityPlural") })}
         />
         <Stat
-          icon={CheckCircle2}
+          icon={CheckIcon}
           value={doneCount}
           label={t("doneIssues", { entityPlural: tIssue("entityPlural") })}
         />
@@ -219,7 +210,7 @@ export function NewProjectCard({
       )}
     >
       <div className="flex size-9 items-center justify-center rounded-xl bg-muted text-muted-foreground">
-        <Plus className="size-4" />
+        <HugeiconsIcon icon={Add01Icon} className="size-4" />
       </div>
       <span className="text-sm font-medium text-muted-foreground">
         {t("newProject")}

@@ -31,7 +31,17 @@ vi.mock("next-intl/server", () => ({
   createTranslator: vi.fn(() => (key: string) => key),
 }));
 vi.mock("@/lib/supabase-service", () => ({
-  getServiceClient: () => ({ service: true }),
+  getServiceClient: () => ({ service: true, from: () => {
+    const query = {
+      select: () => query,
+      eq: (column: string, value: unknown) => {
+        H.eq(column, value);
+        return query;
+      },
+      maybeSingle: async () => ({ data: H.device, error: null }),
+    };
+    return query;
+  } }),
 }));
 vi.mock("@/lib/server/push/vapid", () => ({ isPushConfigured: () => true }));
 vi.mock("@/lib/server/push/apns", () => ({ isApnsConfigured: () => true }));
@@ -67,8 +77,9 @@ describe("POST /api/account/push-subscriptions/test", () => {
 
     expect(response.status).toBe(200);
     expect(H.eq).toHaveBeenCalledWith("id", "device-1");
+    expect(H.eq).toHaveBeenCalledWith("user_id", "user-1");
     expect(H.sendPushToUser).toHaveBeenCalledWith(
-      { service: true },
+      expect.objectContaining({ service: true }),
       "user-1",
       {
         title: "minddy",

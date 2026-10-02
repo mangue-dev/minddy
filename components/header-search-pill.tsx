@@ -1,9 +1,11 @@
 "use client";
 
-import { type ComponentType, type ReactNode } from "react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Search01Icon } from "@hugeicons/core-free-icons";
+import { type ReactNode } from "react";
+import { type AppIcon } from "@/components/icon";
 import { useTranslations } from "next-intl";
 import { Kbd } from "@/components/ui/kbd";
-import { Search } from "lucide-react";
 import { useModKey } from "@/lib/keyboard/use-mod-shortcut";
 
 /**
@@ -16,7 +18,7 @@ import { useModKey } from "@/lib/keyboard/use-mod-shortcut";
 export interface PaletteItem {
   key: string;
   label: string;
-  icon?: ComponentType<{ className?: string }>;
+  icon?: AppIcon;
   /** Extra terms to match against when searching (identifier, project name…). */
   keywords?: string[];
   /**
@@ -89,9 +91,9 @@ export function HeaderSearchPill({
       onPointerEnter={onWarm}
       onFocus={onWarm}
       aria-label={t("searchPlaceholder")}
-      className="flex h-8 items-center gap-1.5 rounded-full border border-border bg-card px-3 text-[0.8rem] font-medium text-muted-foreground shadow-none transition-[border-color,box-shadow] hover:border-primary/40 focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
+      className="flex h-8 items-center gap-1.5 rounded-full bg-control px-3 text-[0.8rem] font-medium text-muted-foreground shadow-none transition-colors hover:bg-control-hover focus-visible:bg-control-hover focus-visible:outline-none"
     >
-      <Search className="size-4 shrink-0" strokeWidth={2} />
+      <HugeiconsIcon icon={Search01Icon} className="size-4 shrink-0" strokeWidth={2} />
       <span className="hidden text-left sm:inline-block">
         {t("searchPlaceholder")}
       </span>

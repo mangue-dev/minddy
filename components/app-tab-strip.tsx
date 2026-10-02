@@ -1,4 +1,6 @@
 "use client";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Add01Icon, AlertCircleIcon, Home01Icon, LoaderCircleIcon, MoreHorizontalIcon } from "@hugeicons/core-free-icons";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   DndContext,
@@ -19,7 +21,6 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Ellipsis, Loader2, AlertCircle, Home, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import {
   Button,
@@ -51,6 +52,8 @@ import { useAppTabMetadata } from "@/lib/use-app-tab-metadata";
 import { AppTabIcon } from "./app-tab-icon";
 import { AppTabItem } from "./app-tab-item";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
+import { KbdSequence } from "./ui/kbd";
+import { useModKey } from "@/lib/keyboard/use-mod-shortcut";
 import type { MessageKey } from "@/lib/i18n-keys";
 
 const routeLabels: Record<string, MessageKey<"Nav">> = {
@@ -75,6 +78,7 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
   const nav = useTranslations("Nav");
   const common = useTranslations("Common");
   const tFamily = useTranslations("IssueFamily");
+  const modKey = useModKey();
   const hrefs = tabs.map((tab) => tab.id === activeId ? session.getActiveHref() ?? tab.href : tab.href);
   const { pageById, objectiveById, prById, routineById, issueById } = useAppTabMetadata(hrefs);
 
@@ -106,7 +110,7 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
       );
     }
     if (!agentsAllowed || (section !== "numo" && section !== "agents")) return null;
-    if (anyAgentWorking) return <Loader2 className="size-3 shrink-0 animate-spin text-muted-foreground" />;
+    if (anyAgentWorking) return <HugeiconsIcon icon={LoaderCircleIcon} className="size-3 shrink-0 animate-spin text-muted-foreground" />;
     if (anyAgentAwaiting) return <span className="size-2 shrink-0 rounded-full bg-yellow-500" aria-label={nav("agentsAwaiting")} />;
     if (anyAgentUnread) return <span className="size-2 shrink-0 rounded-full bg-blue-500" aria-label={nav("agentsUnread")} />;
     return null;
@@ -315,20 +319,20 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
           })()}
         </DragOverlay>
         </DndContext>
-        {loading && <Loader2 aria-label={t("loading")} className="size-4 shrink-0 animate-spin" />}
+        {loading && <HugeiconsIcon icon={LoaderCircleIcon} aria-label={t("loading")} className="size-4 shrink-0 animate-spin" />}
       </div>
       {hidden.length > 0 ? (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button type="button" aria-label={t("moreTabs")}
               className="flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-ring">
-              <Ellipsis className="size-4" aria-hidden />
+              <HugeiconsIcon icon={MoreHorizontalIcon} className="size-4" aria-hidden />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="max-h-80 overflow-y-auto">
             <DropdownMenuItem disabled={busy || loading || loadError} onPointerEnter={onNewTabWarm} onFocus={onNewTabWarm}
               onSelect={() => onNewTab()}>
-              <Plus />
+              <HugeiconsIcon icon={Add01Icon} />
               {t("newTab")}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
@@ -345,16 +349,19 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
         <Tooltip><TooltipTrigger asChild><button type="button" aria-label={t("newTab")} disabled={busy || loading || loadError}
           onClick={onNewTab} onMouseEnter={onNewTabWarm} onFocus={onNewTabWarm}
           className="flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40">
-          <Plus className="size-4" aria-hidden />
-        </button></TooltipTrigger><TooltipContent side="bottom">{t("newTab")}</TooltipContent></Tooltip>
+          <HugeiconsIcon icon={Add01Icon} className="size-4" aria-hidden />
+        </button></TooltipTrigger><TooltipContent side="bottom" className="flex items-center gap-2">
+          <span>{t("newTab")}</span>
+          <KbdSequence keys={[[modKey, "T"]]} size="sm" />
+        </TooltipContent></Tooltip>
       )}
       {(loadError || error) && <Tooltip><TooltipTrigger asChild><button type="button" aria-label={t("retry")}
         onClick={() => { reload(); void session.retry(); }} className="flex size-7 shrink-0 items-center justify-center text-destructive">
-        <AlertCircle className="size-4" aria-hidden /><span role="alert" className="sr-only">{t(errorKey)}</span>
+        <HugeiconsIcon icon={AlertCircleIcon} className="size-4" aria-hidden /><span role="alert" className="sr-only">{t(errorKey)}</span>
       </button></TooltipTrigger><TooltipContent side="bottom">{t(errorKey)} {t("retry")}</TooltipContent></Tooltip>}
       {error === "destination_unavailable" && <Tooltip><TooltipTrigger asChild><button type="button" aria-label={nav("home")}
         disabled={busy} onClick={() => { void session.goHome(); }} className="flex size-7 shrink-0 items-center justify-center rounded-md hover:bg-sidebar-accent">
-        <Home className="size-4" aria-hidden />
+        <HugeiconsIcon icon={Home01Icon} className="size-4" aria-hidden />
       </button></TooltipTrigger><TooltipContent side="bottom">{nav("home")}</TooltipContent></Tooltip>}
     </div>
     <Dialog open={Boolean(renaming)} onOpenChange={(open) => { if (!open) setRenaming(null); }}>

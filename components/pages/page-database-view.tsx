@@ -1,5 +1,9 @@
 "use client";
+import { removeLocalSnapshot, restoreLocalSnapshot, saveLocalSnapshot } from "@/lib/local-snapshots";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { AppIcon } from "@/components/icon";
+import { Add01Icon, ArrowDown01Icon, ArrowUp01Icon, ArrowUpDownIcon, Cancel01Icon, Copy01Icon, Delete02Icon, DragDropVerticalIcon, File02Icon, FilterIcon, Search01Icon, Settings02Icon, ViewIcon, ViewOffIcon } from "@hugeicons/core-free-icons";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
@@ -29,22 +33,6 @@ import {
   AlertDialogAction,
   toast,
 } from "mangue-ui";
-import {
-  ArrowDown,
-  ArrowDownUp,
-  Filter,
-  ArrowUp,
-  Copy,
-  Eye,
-  EyeOff,
-  GripVertical,
-  X,
-  FileText,
-  Plus,
-  Search,
-  Settings2,
-  Trash2,
-} from "lucide-react";
 import { DatabaseColumnName } from "./database-column-name";
 import { reorderDatabaseColumns } from "@/lib/page-database-columns";
 import { DatabaseTableScroll } from "./database-table-scroll";
@@ -146,7 +134,7 @@ function PropertySettings({
         <AppTooltip label={t("properties")}>
           <PopoverTrigger asChild>
             <Button variant="ghost" size="icon-sm" aria-label={t("properties")}>
-              <Settings2 className="size-4" />
+              <HugeiconsIcon icon={Settings02Icon} className="size-4" />
             </Button>
           </PopoverTrigger>
         </AppTooltip>
@@ -163,7 +151,7 @@ function PropertySettings({
                   key={property.id}
                   className="flex min-h-9 items-center gap-1 rounded-sm px-2 hover:bg-muted/50"
                 >
-                  <Icon className="mr-1 size-4 shrink-0 text-muted-foreground" />
+                  <AppIcon icon={Icon} className="mr-1 size-4 shrink-0 text-muted-foreground" />
                   {editing === property.id ? (
                     <form
                       className="flex min-w-0 flex-1 gap-1"
@@ -220,7 +208,7 @@ function PropertySettings({
                         setManage(property);
                       }}
                     >
-                      <Settings2 className="size-3.5" />
+                      <HugeiconsIcon icon={Settings02Icon} className="size-3.5" />
                     </Button>
                   )}
                   <Button
@@ -230,7 +218,7 @@ function PropertySettings({
                     disabled={pending || index === 0}
                     onClick={() => reorder(index, -1)}
                   >
-                    <ArrowUp className="size-3.5" />
+                    <HugeiconsIcon icon={ArrowUp01Icon} className="size-3.5" />
                   </Button>
                   <Button
                     variant="ghost"
@@ -239,7 +227,7 @@ function PropertySettings({
                     disabled={pending || index === schema.length - 1}
                     onClick={() => reorder(index, 1)}
                   >
-                    <ArrowDown className="size-3.5" />
+                    <HugeiconsIcon icon={ArrowDown01Icon} className="size-3.5" />
                   </Button>
                   <AppTooltip
                     label={t(
@@ -262,9 +250,9 @@ function PropertySettings({
                       onClick={() => onToggleVisibility(property.id)}
                     >
                       {hidden.includes(property.id) ? (
-                        <EyeOff className="size-3.5 text-muted-foreground" />
+                        <HugeiconsIcon icon={ViewOffIcon} className="size-3.5 text-muted-foreground" />
                       ) : (
-                        <Eye className="size-3.5" />
+                        <HugeiconsIcon icon={ViewIcon} className="size-3.5" />
                       )}
                     </Button>
                   </AppTooltip>
@@ -278,7 +266,7 @@ function PropertySettings({
                       setRemove(property);
                     }}
                   >
-                    <Trash2 className="size-3.5" />
+                    <HugeiconsIcon icon={Delete02Icon} className="size-3.5" />
                   </Button>
                 </div>
               );
@@ -294,7 +282,7 @@ function PropertySettings({
                 onCreate();
               }}
             >
-              <Plus className="size-4" />
+              <HugeiconsIcon icon={Add01Icon} className="size-4" />
               {t("addProperty")}
             </Button>
             {schema.length >= MAX_DATABASE_PROPERTIES && (
@@ -405,8 +393,15 @@ export function PageDatabaseView({
   const [preferencesReady, setPreferencesReady] = useState(false);
   const storageKey = `minddy:database-list:${projectId}:${database.id}`;
   useEffect(() => {
-    try {
-      const stored = JSON.parse(localStorage.getItem(storageKey) ?? "null");
+    let cancelled = false;
+    setPreferencesReady(false);
+    void (async () => {
+      const raw = JSON.parse(localStorage.getItem(storageKey) ?? "null");
+      const decoded = raw?.format === "minddy-local-v1"
+        ? await restoreLocalSnapshot(localStorage, storageKey, "page-list-settings") : null;
+      const stored = decoded && typeof decoded === "object" ? decoded as Record<string, unknown> : null;
+      if (raw && raw?.format !== "minddy-local-v1") removeLocalSnapshot(localStorage, storageKey);
+      if (cancelled) return;
       if (stored && typeof stored === "object") {
         if (typeof stored.sort === "string") setSort(stored.sort);
         if (typeof stored.descending === "boolean")
@@ -420,18 +415,14 @@ export function PageDatabaseView({
         )
           setHidden(stored.hidden);
       }
-    } catch {
-      /* Storage may be unavailable in private browsing. */
-    }
-    setPreferencesReady(true);
+    })().catch(() => {}).finally(() => { if (!cancelled) setPreferencesReady(true); });
+    return () => { cancelled = true; };
   }, [storageKey]);
   useEffect(() => {
     if (!preferencesReady) return;
     try {
-      localStorage.setItem(
-        storageKey,
-        JSON.stringify({ sort, descending, filter, filterValue, hidden }),
-      );
+      void saveLocalSnapshot(localStorage, storageKey, "page-list-settings",
+        { sort, descending, filter, filterValue, hidden }).catch(() => {});
     } catch {
       /* List controls remain usable without persistence. */
     }
@@ -638,7 +629,7 @@ export function PageDatabaseView({
                   aria-label={t("duplicate")}
                   onClick={() => duplicate(selectedRows)}
                 >
-                  <Copy className="size-4" />
+                  <HugeiconsIcon icon={Copy01Icon} className="size-4" />
                 </Button>
               </AppTooltip>
               <AppTooltip label={t("delete")}>
@@ -648,7 +639,7 @@ export function PageDatabaseView({
                   aria-label={t("delete")}
                   onClick={() => setRemove(selectedRows)}
                 >
-                  <Trash2 className="size-4" />
+                  <HugeiconsIcon icon={Delete02Icon} className="size-4" />
                 </Button>
               </AppTooltip>
               <AppTooltip label={t("clearSelection")}>
@@ -658,7 +649,7 @@ export function PageDatabaseView({
                   aria-label={t("clearSelection")}
                   onClick={() => setSelected([])}
                 >
-                  <X className="size-4" />
+                  <HugeiconsIcon icon={Cancel01Icon} className="size-4" />
                 </Button>
               </AppTooltip>
             </>
@@ -675,7 +666,7 @@ export function PageDatabaseView({
                   filterProperty ? "text-primary" : "text-muted-foreground"
                 }
               >
-                <Filter className="size-4" />
+                <HugeiconsIcon icon={FilterIcon} className="size-4" />
               </Button>
             </PopoverTrigger>
           </AppTooltip>
@@ -760,7 +751,7 @@ export function PageDatabaseView({
                     : "text-muted-foreground"
                 }
               >
-                <ArrowDownUp className="size-4" />
+                <HugeiconsIcon icon={ArrowUpDownIcon} className="size-4" />
               </Button>
             </PopoverTrigger>
           </AppTooltip>
@@ -802,7 +793,7 @@ export function PageDatabaseView({
                 aria-label={t("searchEntries")}
                 className={query ? "text-primary" : "text-muted-foreground"}
               >
-                <Search className="size-4" />
+                <HugeiconsIcon icon={Search01Icon} className="size-4" />
               </Button>
             </PopoverTrigger>
           </AppTooltip>
@@ -961,7 +952,7 @@ export function PageDatabaseView({
                     className="flex h-10 w-full items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring disabled:opacity-40"
                     onClick={() => setCreateProperty(true)}
                   >
-                    <Plus className="size-4" />
+                    <HugeiconsIcon icon={Add01Icon} className="size-4" />
                   </button>
                 </AppTooltip>
               </th>
@@ -1011,7 +1002,7 @@ export function PageDatabaseView({
                           aria-label={t("insertEntryHint")}
                           onClick={(event) => insert(entry, event.altKey)}
                         >
-                          <Plus className="size-4" />
+                          <HugeiconsIcon icon={Add01Icon} className="size-4" />
                         </button>
                       </AppTooltip>
                       <DropdownMenu
@@ -1048,19 +1039,19 @@ export function PageDatabaseView({
                                 setDropTarget(null);
                               }}
                             >
-                              <GripVertical className="size-4" />
+                              <HugeiconsIcon icon={DragDropVerticalIcon} className="size-4" />
                             </button>
                           </DropdownMenuTrigger>
                         </AppTooltip>
                         <DropdownMenuContent align="start" className="[&_[role=menuitem]]:rounded-sm">
                           {targets.length === 1 && (
                             <DropdownMenuItem onSelect={() => onOpen(entry.id)}>
-                              <FileText className="size-4" />
+                              <HugeiconsIcon icon={File02Icon} className="size-4" />
                               {t("openEntry")}
                             </DropdownMenuItem>
                           )}
                           <DropdownMenuItem onSelect={() => duplicate(targets)}>
-                            <Copy className="size-4" />
+                            <HugeiconsIcon icon={Copy01Icon} className="size-4" />
                             {t("duplicate")}
                           </DropdownMenuItem>
                           {targets.length === 1 && (
@@ -1071,7 +1062,7 @@ export function PageDatabaseView({
                                 }
                                 onSelect={() => move(entry, -1)}
                               >
-                                <ArrowUp className="size-4" />
+                                <HugeiconsIcon icon={ArrowUp01Icon} className="size-4" />
                                 {t("moveUp")}
                               </DropdownMenuItem>
                               <DropdownMenuItem
@@ -1080,7 +1071,7 @@ export function PageDatabaseView({
                                 }
                                 onSelect={() => move(entry, 1)}
                               >
-                                <ArrowDown className="size-4" />
+                                <HugeiconsIcon icon={ArrowDown01Icon} className="size-4" />
                                 {t("moveDown")}
                               </DropdownMenuItem>
                             </>
@@ -1090,7 +1081,7 @@ export function PageDatabaseView({
                             variant="destructive"
                             onSelect={() => setRemove(targets)}
                           >
-                            <Trash2 className="size-4" />
+                            <HugeiconsIcon icon={Delete02Icon} className="size-4" />
                             {t("delete")}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
@@ -1150,7 +1141,7 @@ export function PageDatabaseView({
                       onFocus={() => prefetchPage(entry.id)}
                     >
                       {entry.icon ?? (
-                        <FileText className="size-4 shrink-0 text-muted-foreground" />
+                        <HugeiconsIcon icon={File02Icon} className="size-4 shrink-0 text-muted-foreground" />
                       )}
                       <span className="min-w-0 overflow-hidden whitespace-nowrap text-clip">
                         {entry.title.slice(0, 160) || tPages("untitled")}
@@ -1192,7 +1183,7 @@ export function PageDatabaseView({
         className="justify-start text-muted-foreground"
         onClick={add}
       >
-        <Plus className="size-4" />
+        <HugeiconsIcon icon={Add01Icon} className="size-4" />
         {t("newEntry")}
       </Button>
       {editProperty && (

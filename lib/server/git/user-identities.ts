@@ -3,7 +3,8 @@ import "server-only";
 import { getServiceClient } from "@/lib/supabase-service";
 import type { RepoProviderId } from "@/lib/repo-providers";
 import type { GitIdentity } from "@/lib/types";
-import { decryptForgeToken, encryptForgeToken } from "./token-crypto";
+import { decodeForgeOAuthTokens, encodeForgeOAuthTokens,
+  type ForgeOAuthTokenRow } from "./forge-oauth-token-content";
 import {
   refreshGithubUserToken,
   type GithubUserTokenSet,
@@ -118,6 +119,15 @@ export async function upsertUserIdentity(params: {
   source?: "local" | "relay";
 }): Promise<string> {
   const supabase = getServiceClient();
+  const { data: existing } = await supabase.from("git_user_identities")
+    .select("encryption_version")
+    .eq("user_id",params.userId).eq("provider",params.provider)
+    .maybeSingle();
+  const content = await encodeForgeOAuthTokens("git_user_identities",{
+    user_id: params.userId, provider: params.provider,
+  }, { accessToken: params.tokens.accessToken,
+    refreshToken: params.tokens.refreshToken ?? null }, { service: supabase,
+      force: Number(existing?.encryption_version ?? 0)>0 });
   const { data, error } = await supabase
     .from("git_user_identities")
     .upsert(
@@ -127,10 +137,7 @@ export async function upsertUserIdentity(params: {
         provider_account_id: params.providerAccountId,
         account_login: params.accountLogin,
         account_avatar_url: params.accountAvatarUrl,
-        access_token_encrypted: encryptForgeToken(params.tokens.accessToken),
-        refresh_token_encrypted: params.tokens.refreshToken
-          ? encryptForgeToken(params.tokens.refreshToken)
-          : null,
+        ...content,
         token_expires_at: params.tokens.expiresAt,
         oauth_scopes: params.tokens.scope,
         source: params.source ?? "local",
@@ -220,15 +227,13 @@ export async function deleteUserIdentity(
   return !!data;
 }
 
-interface TokenRow {
+interface TokenRow extends ForgeOAuthTokenRow {
   id: string;
   /** "relay" → the grant belongs to the managed app's client; its refresh
    * must run Cloud-side (see `upsertUserIdentity`). */
   source: string | null;
   account_login: string | null;
   account_avatar_url: string | null;
-  access_token_encrypted: string | null;
-  refresh_token_encrypted: string | null;
   token_expires_at: string | null;
   oauth_refresh_claim: string | null;
 }
@@ -241,8 +246,8 @@ async function loadTokenRow(
   const { data } = await supabase
     .from("git_user_identities")
     .select(
-      "id, source, account_login, account_avatar_url, access_token_encrypted, " +
-        "refresh_token_encrypted, token_expires_at, oauth_refresh_claim",
+      "id, user_id, provider, source, account_login, account_avatar_url, access_token_encrypted, " +
+        "refresh_token_encrypted, encrypted_content, encryption_version, token_expires_at, oauth_refresh_claim",
     )
     .eq("user_id", userId)
     .eq("provider", provider)
@@ -319,23 +324,26 @@ async function mintGithubUserToken(
 ): Promise<GithubUserCredentials | null> {
   const row = await loadTokenRow(userId, "github");
   if (!row) return null;
+  let tokens;
+  try { tokens = await decodeForgeOAuthTokens("git_user_identities",row); }
+  catch { return null; }
   const account = { login: row.account_login, avatarUrl: row.account_avatar_url };
   const withToken = (token: string | null) => (token ? { token, ...account } : null);
 
   // Permanent token: the App does not expire its authorizations. Nothing to force no
   // plus — il n'y a pas de refresh token en face.
   if (row.token_expires_at == null) {
-    return withToken(decryptForgeToken(row.access_token_encrypted));
+    return withToken(tokens.accessToken);
   }
 
   const nowMs = Date.now();
   if (!force && Date.parse(row.token_expires_at) - nowMs > REFRESH_SKEW_MS) {
-    const token = decryptForgeToken(row.access_token_encrypted);
+    const token = tokens.accessToken;
     if (token) return withToken(token);
     // Decryption failed (secret twisted / corruption) → we attempt a refresh.
   }
 
-  const refreshToken = decryptForgeToken(row.refresh_token_encrypted);
+  const refreshToken = tokens.refreshToken;
   if (!refreshToken) return null;
 
   let claimId: string | null;
@@ -344,10 +352,11 @@ async function mintGithubUserToken(
       kind: "identity",
       rowId: row.id,
       expectedExpiresAt: row.token_expires_at,
-      expectedRefreshTokenEncrypted: row.refresh_token_encrypted,
+      expectedRefreshTokenEncrypted: row.encryption_version
+        ? row.encrypted_content ?? null : row.refresh_token_encrypted,
     });
-  } catch (err) {
-    console.warn(`[user-identities] GitHub token refresh claim failed: ${(err as Error).message}`);
+  } catch {
+    console.warn("[user-identities] github_token_refresh_claim_failed");
     return null;
   }
   if (!claimId) {
@@ -358,9 +367,15 @@ async function mintGithubUserToken(
       if (recovered.oauth_refresh_claim == null) {
         const advanced =
           recovered.token_expires_at !== row.token_expires_at ||
-          recovered.refresh_token_encrypted !== row.refresh_token_encrypted;
+          (recovered.encryption_version
+            ? recovered.encrypted_content : recovered.refresh_token_encrypted) !==
+          (row.encryption_version
+            ? row.encrypted_content : row.refresh_token_encrypted);
         if (advanced) {
-          const token = decryptForgeToken(recovered.access_token_encrypted);
+          let token: string | null = null;
+          try { token = (await decodeForgeOAuthTokens(
+            "git_user_identities",recovered)).accessToken; }
+          catch { return null; }
           if (token) return withToken(token);
         }
         return mintGithubUserToken(userId, force);
@@ -380,22 +395,27 @@ async function mintGithubUserToken(
       row.source === "relay"
         ? await refreshGithubUserTokensViaRelay(refreshToken)
         : await refreshGithubUserToken(refreshToken);
-  } catch (err) {
+  } catch {
     await releaseForgeOAuthRefreshClaim("identity", row.id, claimId);
-    console.warn(
-      `[user-identities] GitHub token refresh failed: ${(err as Error).message}`,
-    );
+    console.warn("[user-identities] github_token_refresh_failed");
     return null;
   }
 
   const supabase = getServiceClient();
+  let content;
+  try {
+    content = await encodeForgeOAuthTokens("git_user_identities",row,{
+      accessToken: refreshed.accessToken,
+      refreshToken: refreshed.refreshToken ?? null,
+    },{ service: supabase, force: !!row.encryption_version });
+  } catch {
+    await releaseForgeOAuthRefreshClaim("identity",row.id,claimId);
+    return null;
+  }
   const persist = supabase
     .from("git_user_identities")
     .update({
-      access_token_encrypted: encryptForgeToken(refreshed.accessToken),
-      refresh_token_encrypted: refreshed.refreshToken
-        ? encryptForgeToken(refreshed.refreshToken)
-        : null,
+      ...content,
       token_expires_at: refreshed.expiresAt,
       oauth_refresh_claim: null,
       oauth_refresh_claimed_at: null,
@@ -405,9 +425,7 @@ async function mintGithubUserToken(
     .eq("oauth_refresh_claim", claimId);
   const { data: written, error: persistError } = await persist.select("id");
   if (persistError || !written?.length) {
-    console.warn(
-      `[user-identities] GitHub refresh persistence failed: ${persistError?.message ?? "claim lost"}`,
-    );
+    console.warn("[user-identities] github_refresh_persistence_failed");
     return null;
   }
   return { token: refreshed.accessToken, ...account };

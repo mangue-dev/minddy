@@ -1,9 +1,11 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { AppIcon } from "@/components/icon";
+import { AlertCircleIcon, ArrowRight01Icon, CheckIcon, LoaderCircleIcon } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowRight, CheckCircle2, CircleAlert, Loader2 } from "lucide-react";
 import { Github } from "@/components/git/provider-icons";
 import { gitConnectionsQueryKey } from "@/lib/use-git-connections-query";
 import { gitIdentitiesQueryKey } from "@/lib/use-git-identities-query";
@@ -115,7 +117,7 @@ export function RelayGithubConnect() {
   if (status === "connected") {
     return (
       <ClaimCard title={t("title")}>
-        <CheckCircle2 className="h-10 w-10 text-primary" aria-hidden />
+        <AppIcon icon={CheckIcon} className="h-10 w-10 text-primary" aria-hidden />
         <p className="text-sm text-muted-foreground">{t("connected")}</p>
       </ClaimCard>
     );
@@ -124,7 +126,7 @@ export function RelayGithubConnect() {
   if (status === "failed") {
     return (
       <ClaimCard title={t("title")}>
-        <CircleAlert className="h-10 w-10 text-destructive" aria-hidden />
+        <HugeiconsIcon icon={AlertCircleIcon} className="h-10 w-10 text-destructive" aria-hidden />
         <p className="text-sm text-muted-foreground">
           {t("failed", { reason: error ?? "unknown" })}
         </p>
@@ -134,7 +136,7 @@ export function RelayGithubConnect() {
           className="mt-2 inline-flex items-center gap-2 rounded-full border border-border bg-background px-4 py-2 text-sm font-medium hover:bg-muted"
         >
           {t("back")}
-          <ArrowRight className="h-4 w-4" aria-hidden />
+          <HugeiconsIcon icon={ArrowRight01Icon} className="h-4 w-4" aria-hidden />
         </button>
       </ClaimCard>
     );
@@ -142,7 +144,7 @@ export function RelayGithubConnect() {
 
   return (
     <ClaimCard title={t("title")}>
-      <Loader2 className="h-8 w-8 animate-spin text-primary" aria-hidden />
+      <HugeiconsIcon icon={LoaderCircleIcon} className="h-8 w-8 animate-spin text-primary" aria-hidden />
       <p className="max-w-md text-sm leading-relaxed text-muted-foreground">
         {t("waiting")}
       </p>
@@ -155,7 +157,7 @@ export function RelayGithubConnect() {
         >
           <Github className="h-4 w-4" aria-hidden />
           {t("openGithub")}
-          <ArrowRight className="h-4 w-4" aria-hidden />
+          <HugeiconsIcon icon={ArrowRight01Icon} className="h-4 w-4" aria-hidden />
         </a>
       )}
     </ClaimCard>

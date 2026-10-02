@@ -8,10 +8,11 @@
 // same one the right-click context menu uses (see DropdownSearchRow), so all
 // searchable dropdowns share one look.
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Search01Icon } from "@hugeicons/core-free-icons";
 import * as React from "react";
 import { useTranslations } from "next-intl";
 import { Command as CommandPrimitive } from "cmdk";
-import { SearchIcon } from "lucide-react";
 import {
   Command,
   CommandEmpty,
@@ -40,7 +41,7 @@ export const searchInputClass =
 export function DropdownSearchRow({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex items-center gap-2 px-2 py-1">
-      <SearchIcon className="size-4 shrink-0 opacity-50" />
+      <HugeiconsIcon icon={Search01Icon} className="size-4 shrink-0 opacity-50" />
       {children}
     </div>
   );
@@ -48,6 +49,8 @@ export function DropdownSearchRow({ children }: { children: React.ReactNode }) {
 
 export type SearchMenuProps = {
   open: boolean;
+  /** Give body-portaled menus their own scroll lock when opened inside a modal. */
+  modal?: boolean;
   onOpenChange: (open: boolean) => void;
   /** Trigger-anchored mode: the element the menu hangs off. */
   trigger?: React.ReactNode;
@@ -85,6 +88,7 @@ export type SearchMenuProps = {
 
 export function SearchMenu({
   open,
+  modal,
   onOpenChange,
   trigger,
   position,
@@ -140,7 +144,7 @@ export function SearchMenu({
   if (position !== undefined) {
     if (!position) return null;
     return (
-      <Popover open={open} onOpenChange={onOpenChange}>
+      <Popover open={open} onOpenChange={onOpenChange} modal={modal}>
         <PopoverAnchor asChild>
           <span
             aria-hidden
@@ -163,7 +167,7 @@ export function SearchMenu({
   // that we make a `tooltip` conditional, the fault would appear without anything
   // does not link it to this change. What varies here is the OPENING.
   const popover = (
-    <Popover open={open} onOpenChange={onOpenChange}>
+    <Popover open={open} onOpenChange={onOpenChange} modal={modal}>
       <PopoverTrigger asChild>
         <TooltipTrigger asChild>{trigger}</TooltipTrigger>
       </PopoverTrigger>

@@ -1,6 +1,8 @@
+import { issueStore } from "@/lib/server/issue-store";
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
+import { repositoryStorageName } from "@/lib/server/git/repository-name-content";
 import { mentionsNumo } from "@/lib/server/assistant/comment-agent";
 import type { RepoProviderId } from "@/lib/repo-providers";
 import { findPullRequestByNumber, type PullRequestRow } from "./pull-requests";
@@ -82,9 +84,7 @@ async function scopeForPr(pr: PullRequestRow): Promise<MentionScope | null> {
   const ordered: Array<{ id: string; owner: string | null }> = [];
 
   if (pr.issue_id) {
-    const { data } = await service
-      .from("issues")
-      .select("project_id, projects(owner_id)")
+    const { data } = await issueStore(service).select("project_id, projects(owner_id)")
       .eq("id", pr.issue_id)
       .maybeSingle();
     const row = data as {
@@ -104,7 +104,8 @@ async function scopeForPr(pr: PullRequestRow): Promise<MentionScope | null> {
     .from("project_git_links")
     .select("project_id, created_at, projects(owner_id)")
     .eq("provider", pr.provider)
-    .eq("repo_full_name", pr.repo_full_name)
+    .eq("repo_full_name", await repositoryStorageName(pr.provider,
+      pr.repo_full_name,false,service))
     .order("created_at", { ascending: true });
   for (const row of (data ?? []) as Array<{
     project_id?: string | null;
@@ -141,10 +142,10 @@ const DENIAL_BODIES = {
 async function replyOnPr(scope: PrScope, body: string): Promise<void> {
   try {
     await scope.forge.createPullRequestComment({ ...scope.call, body });
-  } catch (err) {
+  } catch {
     // The refusal itself does not have to cause the webhook to fail: the mention is already
     // rejected, this comment is just politeness explaining it.
-    console.warn("[pr-mention] could not post denial comment:", (err as Error).message);
+    console.warn("[pr-mention] denial_comment_post_failed");
   }
 }
 
@@ -241,7 +242,7 @@ export async function handleForgeNumoMention(opts: {
       sourceEventId: opts.sourceEventId,
       question: { author: opts.authorLogin, body },
     });
-  } catch (err) {
-    console.error("[pr-mention] forge @numo request failed:", (err as Error).message);
+  } catch {
+    console.error("[pr-mention] forge_numo_request_failed");
   }
 }

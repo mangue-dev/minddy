@@ -1,9 +1,10 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { FileUploadIcon } from "@hugeicons/core-free-icons";
 import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { cn } from "mangue-ui";
-import { FileUp } from "lucide-react";
 
 /**
  * The CSV drop zone, and the link to the template — the only gesture of
@@ -87,10 +88,7 @@ export function CsvDropzone({
             : "border-border hover:border-ring/60 focus-visible:border-ring"
         )}
       >
-        <FileUp
-          className={cn("text-muted-foreground", size === "lg" ? "size-6" : "size-5")}
-          aria-hidden
-        />
+        <HugeiconsIcon icon={FileUploadIcon} className={cn("text-muted-foreground", size === "lg" ? "size-6" : "size-5")} aria-hidden />
         <p className="text-sm font-medium">{t("importDropTitle")}</p>
         <p className="text-xs text-muted-foreground">{t("importDropHint")}</p>
       </div>

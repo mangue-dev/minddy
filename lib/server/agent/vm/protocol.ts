@@ -497,7 +497,7 @@ export interface VmTurnReport {
    * ABSENT = an ordinary error, already told to the thread by the one who raised it
    * (the loop on a fatal LLM error, `main.ts` on a round which raises).
    */
-  errorCode?: "turnTooLong" | "providerUnavailable";
+  errorCode?: "turnTooLong" | "providerUnavailable" | "replyIncomplete";
   /**
    * What the provider responded last, on a `providerUnavailable` —
    * the only trace that says WHICH of the failures (429, 502, network) stopped the

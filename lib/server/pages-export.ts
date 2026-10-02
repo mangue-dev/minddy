@@ -13,6 +13,7 @@ import { zipSync, strToU8 } from "fflate";
 
 import { getServiceClient } from "@/lib/supabase-service";
 import { getProjectAccess } from "@/lib/server/project-access";
+import { decodePageProjection } from "@/lib/server/page-content";
 import { pageToMarkdownServer } from "@/lib/server/pages-projection";
 import { descendantIds } from "@/lib/pages";
 import {
@@ -76,7 +77,7 @@ export async function exportPage({
   const { data: root } = await service
     .from("pages")
     .select(
-      "id, project_id, parent_id, title, icon, content, position, database_schema, database_title_name, property_values, created_at",
+      "id, project_id, parent_id, title, icon, content, position, database_schema, database_title_name, property_values, created_at, encrypted_content, encryption_version",
     )
     .eq("id", pageId)
     .is("deleted_at", null)
@@ -86,17 +87,17 @@ export async function exportPage({
     return { ok: false, status: 404, errorKey: "pageNotFound" };
   }
 
-  const rootRow = root as unknown as PageRow;
+  const rootRow = await decodePageProjection(root, actorId) as PageRow;
   if (!branch && rootRow.database_schema == null) {
     const context: DatabaseDocumentPage[] = [rootRow];
     if (rootRow.parent_id) {
       const { data: parent } = await service
         .from("pages")
-        .select("id, parent_id, title, database_schema")
+        .select("id, project_id, parent_id, title, database_schema, encrypted_content, encryption_version")
         .eq("id", rootRow.parent_id)
         .eq("project_id", root.project_id)
         .maybeSingle();
-      if (parent) context.push(parent as DatabaseDocumentPage);
+      if (parent) context.push(await decodePageProjection(parent, actorId) as DatabaseDocumentPage);
     }
     const names = await databaseDocumentNames(context);
     const markdown = await pageToMarkdownServer({
@@ -121,7 +122,7 @@ export async function exportPage({
     const { data: skeleton, error } = await service
       .from("pages")
       .select(
-        "id, parent_id, title, icon, position, database_schema, database_title_name, property_values, created_at",
+        "id, project_id, parent_id, title, icon, position, database_schema, database_title_name, property_values, created_at, encrypted_content, encryption_version",
       )
       .eq("project_id", root.project_id as string)
       .is("deleted_at", null)
@@ -132,7 +133,8 @@ export async function exportPage({
       console.error("[pages-export] list failed:", error.message);
       return { ok: false, status: 500, errorKey: "databaseError" };
     }
-    all.push(...((skeleton ?? []) as unknown as Omit<PageRow, "content">[]));
+    all.push(...await Promise.all((skeleton ?? []).map(async (row) =>
+      await decodePageProjection(row, actorId) as Omit<PageRow, "content">)));
     if (!skeleton || skeleton.length < LIST_BATCH) break;
   }
   const inBranch = new Set([rootRow.id, ...descendantIds(all, rootRow.id)]);
@@ -147,13 +149,14 @@ export async function exportPage({
     if (ids.length === 0) continue;
     const { data: rows, error: bodyError } = await service
       .from("pages")
-      .select("id, content")
+      .select("id, project_id, content, encrypted_content, encryption_version")
       .in("id", ids);
     if (bodyError) {
       console.error("[pages-export] bodies failed:", bodyError.message);
       return { ok: false, status: 500, errorKey: "databaseError" };
     }
-    for (const row of (rows ?? []) as { id: string; content: unknown }[]) {
+    for (const stored of rows ?? []) {
+      const row = await decodePageProjection(stored, actorId);
       bodies.set(row.id, row.content);
     }
   }

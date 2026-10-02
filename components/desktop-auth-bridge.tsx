@@ -1,9 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { ShieldCheckIcon as ShieldCheck } from "@hugeicons/core-free-icons";
+import { AppIcon } from "@/components/icon";
 import { useTranslations } from "next-intl";
-import { Button, Card, CardContent, Spinner } from "mangue-ui";
-import { ShieldCheck } from "lucide-react";
+import { Button, Card, CardContent } from "mangue-ui";
 
 import { useAuth } from "@/lib/auth-context";
 import { getDesktopBridge } from "@/lib/desktop/bridge";
@@ -92,9 +93,12 @@ export function DesktopAuthBridge() {
   }, [exchange]);
 
   if (exchanging) {
+    // Full-page takeover with the same plain sentence as the login form's
+    // redirect: the session is being exchanged and the app is about to
+    // land — a spinner alone never said what was happening.
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-background">
-        <Spinner className="size-6" />
+        <p className="text-sm text-muted-foreground">{t("redirecting")}</p>
       </div>
     );
   }
@@ -105,7 +109,7 @@ export function DesktopAuthBridge() {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background p-6">
       <Card className="w-full max-w-md rounded-2xl">
         <CardContent className="flex flex-col items-center gap-6 px-8 py-10 text-center">
-          <ShieldCheck
+          <AppIcon icon={ShieldCheck}
             className="size-10 text-muted-foreground"
             strokeWidth={1.5}
             aria-hidden="true"

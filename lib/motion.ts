@@ -7,6 +7,13 @@ export const transitions = {
   snappy: { type: "spring", stiffness: 500, damping: 35 } as Transition,
   fade: { duration: 0.15, ease: "easeOut" } as Transition,
   /**
+   * The sliding of a PANEL INSIDE the sidebar: a level swap, the recalled
+   * navigation block. Fluidity here is felt more than it is measured —
+   * springs read as alive where a fixed-duration ease reads as a cut. The
+   * damping keeps it from overshooting so the rows never wobble.
+   */
+  panel: { type: "spring", stiffness: 340, damping: 30 } as Transition,
+  /**
  * The sliding of the CHASSIS: width of the primary sidebar, gutter of the
  * secondary sidebar, and by extension everything that is to their right — header,
  * breadcrumbs, content. All three MUST share this curve, otherwise their

@@ -6,6 +6,9 @@ import { parseRelayJsonObject } from "@/lib/server/forge-relay/json-body";
 import { encryptForgeToken } from "@/lib/server/git/token-crypto";
 import { assertPublicHttpUrl } from "@/lib/server/safe-fetch";
 import { getServiceClient } from "@/lib/supabase-service";
+import { decodeRelayInstance, encodeRelayInstance,
+  shouldProtectRelayInstance, type RelayInstanceContentRow } from
+  "@/lib/server/forge-relay/instance-content";
 
 /**
  * `POST /api/relay/webhook-secret` — the instance registers its webhook
@@ -79,21 +82,45 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { error } = await getServiceClient()
-    .from("forge_relay_instances")
-    .update({
-      webhook_url: acceptedWebhookUrl,
-      webhook_secret_encrypted: encryptForgeToken(secret),
-    })
-    .eq("id", verification.instance.id);
+  const service = getServiceClient();
+  const { data: current, error: lookupError } = await service
+    .from("forge_relay_instances").select("*")
+    .eq("id", verification.instance.id).eq("status", "active")
+    .maybeSingle();
+  if (lookupError || !current) {
+    return NextResponse.json({ error: "Relay instance is unavailable" },
+      { status: lookupError ? 500 : 409 });
+  }
+  const row = current as RelayInstanceContentRow;
+  const protect = Number(row.encryption_version ?? 0) > 0 ||
+    await shouldProtectRelayInstance(service);
+  const stored = protect
+    ? await encodeRelayInstance({ ...await decodeRelayInstance(row),
+        webhook_url: acceptedWebhookUrl,
+        webhook_secret_encrypted: secret }, { service, force: true })
+    : null;
+  let update = service.from("forge_relay_instances").update(protect ? {
+    name: null, webhook_url: null, webhook_secret_encrypted: null,
+    encrypted_content: stored!.encrypted_content,
+    encryption_version: stored!.encryption_version,
+  } : {
+    webhook_url: acceptedWebhookUrl,
+    webhook_secret_encrypted: encryptForgeToken(secret),
+  }).eq("id", verification.instance.id).eq("status", "active");
+  if ("content_revision" in row) {
+    update = update.eq("content_revision", row.content_revision ?? 0);
+  }
+  const { data, error } = await update.select("id").maybeSingle();
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+  if (!data) return NextResponse.json({ error: "Relay instance changed; retry" },
+    { status: 409 });
 
   await getServiceClient().from("forge_relay_audit").insert({
     instance_id: verification.instance.id,
     action: "webhook_secret_registered",
-    detail: { webhookUrl: acceptedWebhookUrl },
+    detail: {},
   });
   return NextResponse.json({ ok: true });
 }

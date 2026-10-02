@@ -6,8 +6,9 @@
 // integrated search input that filters the options, Linear-style). Single- and
 // multi-select variants both render it in trigger-anchored mode.
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Add01Icon } from "@hugeicons/core-free-icons";
 import * as React from "react";
-import { Plus } from "lucide-react";
 import { CommandGroup, CommandItem, CommandSeparator, Spinner, toast } from "mangue-ui";
 import { SearchMenu } from "@/components/search-menu";
 
@@ -22,11 +23,14 @@ import { SearchMenu } from "@/components/search-menu";
  * transparent is legitimate on a map; in a row of fields it reads
  * like a disabled or not yet loaded control.
  *
+ * Since mango-ui 0.8.0 the fields are borderless (`bg-control` only, focus
+ * marks nothing): the trigger follows them.
+ *
  * Pickers whose trigger is a PELLET (the compact fields of a
  * ticket) have nothing to do with this: they pass their own `trigger`.
  */
 export const PICKER_FIELD_TRIGGER =
-  "flex h-9 w-full items-center justify-between gap-2 rounded-lg border border-input bg-control px-3 text-sm outline-none transition-colors hover:bg-control-hover focus-visible:border-ring";
+  "flex h-9 w-full items-center justify-between gap-2 rounded-lg bg-control px-3 text-sm outline-none transition-colors hover:bg-control-hover focus-visible:outline-none";
 
 export type PickerOption = {
   value: string;
@@ -113,7 +117,7 @@ export function PickerCreateRow({
           {busy ? (
             <Spinner className="size-4 shrink-0" />
           ) : (
-            <Plus className="size-4 shrink-0 text-muted-foreground" />
+            <HugeiconsIcon icon={Add01Icon} className="size-4 shrink-0 text-muted-foreground" />
           )}
           <span className="truncate">{create.labelFor(name)}</span>
         </CommandItem>

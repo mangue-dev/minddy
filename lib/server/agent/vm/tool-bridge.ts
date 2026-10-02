@@ -394,7 +394,7 @@ export async function startToolBridge(
     if (!outcome) {
       // A tool served to the model and routed nowhere: this is our default, and it
       // must be seen in the VM logs as much as in the conversation.
-      console.error(`[tool-bridge] unrouted tool: ${name}`);
+      console.error("[tool-bridge] tool_unrouted");
       res.writeHead(404, { "content-type": "application/json" });
       res.end(JSON.stringify({ error: `unknown minddy tool: ${name}` }));
       return;

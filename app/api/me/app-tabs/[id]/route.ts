@@ -9,7 +9,7 @@ async function mutate(request: NextRequest, context: Context, operation: "update
   if (!auth.ok) return auth.response;
   const { id } = await context.params;
   const body = await request.json().catch(() => null);
-  const result = await mutateAppTab(auth.supabase, operation, { id, revision: body?.revision, patch: body?.patch });
+  const result = await mutateAppTab(auth.supabase, operation, { id, revision: body?.revision, patch: body?.patch }, auth.user.id);
   return NextResponse.json(result, { status: appTabResultStatus(result) });
 }
 export const PATCH = (request: NextRequest, context: Context) => mutate(request, context, "update");

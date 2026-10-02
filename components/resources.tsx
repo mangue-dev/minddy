@@ -1,5 +1,7 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Add01Icon, AttachmentIcon, Cancel01Icon, File02Icon, Link02Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
@@ -23,7 +25,6 @@ import {
   Spinner,
   cn,
 } from "mangue-ui";
-import { FileText, Link2, Paperclip, Plus, X } from "lucide-react";
 import { EntityPill, type PillRadius } from "@/components/entity-pill";
 import { ResourceTypeIcon } from "@/components/resource-type-icon";
 import {
@@ -129,7 +130,7 @@ export function AttachButton({
             onClick={() => inputRef.current?.click()}
             className={cn("rounded-full text-muted-foreground", className)}
           >
-            <Paperclip className="size-4" />
+            <HugeiconsIcon icon={AttachmentIcon} className="size-4" />
           </Button>
         </span>
       </AppTooltip>
@@ -198,7 +199,7 @@ export function AddResourceButton({
                 disabled={disabled}
                 className={cn("rounded-full text-muted-foreground", className)}
               >
-                <Plus className="size-4" />
+                <HugeiconsIcon icon={Add01Icon} className="size-4" />
               </Button>
             </DropdownMenuTrigger>
           </TooltipTrigger>
@@ -206,16 +207,16 @@ export function AddResourceButton({
         </Tooltip>
         <DropdownMenuContent align="end" className="w-44">
           <DropdownMenuItem onSelect={() => inputRef.current?.click()}>
-            <Paperclip className="size-4" />
+            <HugeiconsIcon icon={AttachmentIcon} className="size-4" />
             <span>{t("addFile")}</span>
           </DropdownMenuItem>
           <DropdownMenuItem onSelect={() => setLinkOpen(true)}>
-            <Link2 className="size-4" />
+            <HugeiconsIcon icon={Link02Icon} className="size-4" />
             <span>{t("addLink")}</span>
           </DropdownMenuItem>
           {pages && (
             <DropdownMenuItem onSelect={() => setPageOpen(true)}>
-              <FileText className="size-4" />
+              <HugeiconsIcon icon={File02Icon} className="size-4" />
               <span>{t("addPage")}</span>
             </DropdownMenuItem>
           )}
@@ -335,7 +336,7 @@ function PageOptions({
           }
         >
           <span className="w-4 shrink-0 text-center">
-            {page.icon ?? <FileText className="inline size-3.5 opacity-70" />}
+            {page.icon ?? <HugeiconsIcon icon={File02Icon} className="inline size-3.5 opacity-70" />}
           </span>
           <span className="truncate">{page.title.trim() || t("untitledPage")}</span>
         </CommandItem>
@@ -521,7 +522,7 @@ export function DropOverlay({
         className
       )}
     >
-      {icon ?? <Paperclip className="size-4 shrink-0" aria-hidden />}
+      {icon ?? <HugeiconsIcon icon={AttachmentIcon} className="size-4 shrink-0" aria-hidden />}
       <span className="truncate px-1">{label ?? t("dropHere")}</span>
     </div>
   );
@@ -741,10 +742,7 @@ export function ResourcePills({
       {emoji ? (
         <span className="text-xs leading-none">{emoji}</span>
       ) : (
-        <FileText
-          className="size-4 text-indigo-500 dark:text-indigo-400"
-          aria-hidden
-        />
+        <HugeiconsIcon icon={File02Icon} className="size-4 text-indigo-500 dark:text-indigo-400" aria-hidden />
       )}
     </ResourceFigure>;
 
@@ -761,10 +759,7 @@ export function ResourcePills({
           className="size-4 rounded-[2px] object-contain"
         />
       ) : (
-        <Link2
-          className="size-4 text-sky-600 dark:text-sky-400"
-          aria-hidden
-        />
+        <HugeiconsIcon icon={Link02Icon} className="size-4 text-sky-600 dark:text-sky-400" aria-hidden />
       )}
     </ResourceFigure>
   );
@@ -908,7 +903,7 @@ export function ResourcePills({
                 ? {
                     label: t("remove"),
                     onClick: () => onRemove(a),
-                    icon: <X className="size-3" />,
+                    icon: <HugeiconsIcon icon={Cancel01Icon} className="size-3" />,
                   }
                 : undefined
             }
@@ -931,7 +926,7 @@ export function ResourcePills({
                 ? {
                     label: t("remove"),
                     onClick: () => onRemovePending(p.localId),
-                    icon: <X className="size-3" />,
+                    icon: <HugeiconsIcon icon={Cancel01Icon} className="size-3" />,
                   }
                 : undefined
             }

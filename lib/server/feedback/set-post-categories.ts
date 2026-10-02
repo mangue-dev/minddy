@@ -43,7 +43,7 @@ export async function setFeedbackPostCategories({
     .delete()
     .eq("post_id", postId);
   if (delError) {
-    console.error("[feedback-categories] clear failed:", delError.message);
+    console.error("[feedback-categories] clear_failed");
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
 
@@ -57,7 +57,7 @@ export async function setFeedbackPostCategories({
         ignoreDuplicates: true,
       });
     if (insError) {
-      console.error("[feedback-categories] set failed:", insError.message);
+      console.error("[feedback-categories] set_failed");
       return { ok: false, status: 500, errorKey: "databaseError" };
     }
   }

@@ -1,7 +1,9 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { AppIcon } from "@/components/icon";
+import { BotIcon, CancelCircleIcon as CircleSlash, CheckIcon, CircleIcon } from "@hugeicons/core-free-icons";
 import { useNow, useTranslations } from "next-intl";
-import { Bot, CheckCircle2, Circle, CircleSlash } from "lucide-react";
 import { Spinner, cn } from "mangue-ui";
 import type { PlanStep } from "@/lib/agent-plan";
 import type { TurnSubagent } from "@/lib/agent-subagents";
@@ -30,15 +32,15 @@ function durationLabel(
 
 function PlanStatusIcon({ step }: { step: PlanStep }) {
   if (step.status === "completed") {
-    return <CheckCircle2 className="mt-0.5 size-3.5 shrink-0 text-brand" />;
+    return <AppIcon icon={CheckIcon} className="mt-0.5 size-3.5 shrink-0 text-brand" />;
   }
   if (step.status === "in_progress") {
     return <Spinner className="mt-0.5 size-3.5 shrink-0 text-blue-500" />;
   }
   if (step.status === "cancelled") {
-    return <CircleSlash className="mt-0.5 size-3.5 shrink-0" />;
+    return <AppIcon icon={CircleSlash} className="mt-0.5 size-3.5 shrink-0" />;
   }
-  return <Circle className="mt-0.5 size-3.5 shrink-0" />;
+  return <HugeiconsIcon icon={CircleIcon} className="mt-0.5 size-3.5 shrink-0" />;
 }
 
 function PlanTooltip({ steps }: { steps: PlanStep[] }) {
@@ -90,7 +92,7 @@ function SubagentTooltip({ subagents }: { subagents: TurnSubagent[] }) {
               {running ? (
                 <Spinner className="size-3.5 shrink-0 text-blue-500" />
               ) : (
-                <CheckCircle2 className="size-3.5 shrink-0 text-brand" />
+                <AppIcon icon={CheckIcon} className="size-3.5 shrink-0 text-brand" />
               )}
               <span className="min-w-0 flex-1 truncate">
                 {t(
@@ -218,7 +220,7 @@ export function AgentActivityPill({
                 aria-label={t("subagentsWorking", { count: runningSubagents.length })}
                 className="flex shrink-0 items-center gap-1.5 rounded-full outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
               >
-                <Bot className="size-3.5 text-muted-foreground" />
+                <HugeiconsIcon icon={BotIcon} className="size-3.5 text-muted-foreground" />
                 <span className="whitespace-nowrap font-medium text-muted-foreground">
                   {t("subagentsWorking", { count: runningSubagents.length })}
                 </span>

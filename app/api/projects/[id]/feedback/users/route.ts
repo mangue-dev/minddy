@@ -2,6 +2,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getServiceClient } from "@/lib/supabase-service";
 import { requireProjectMember } from "@/lib/server/feedback/team-guard";
 import { eraseFeedbackUser } from "@/lib/server/feedback/erasure";
+import { decodeFeedbackIdentityRow } from
+  "@/lib/server/feedback/identity-content";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -33,25 +35,29 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
 
   const query = (request.nextUrl.searchParams.get("q") ?? "").trim();
   const service = getServiceClient();
-  let select = service
-    .from("feedback_users")
-    .select("id, email, name, pseudonym")
-    .eq("project_id", id)
-    // A deleted identity no longer has either email or name: offering it would amount to
-    // offer an empty line to the selector, and let people believe that we can still
-    // write on behalf of someone who has asked to disappear.
-    .is("erased_at", null)
-    .order("created_at", { ascending: false })
-    .limit(LIMIT);
-  if (query) {
-    // `%` and `,` are metacharacters of the PostgREST `or` syntax:
-    // letting pass would let a keystroke change the form of the query.
-    const needle = query.replace(/[%,()]/g, " ");
-    select = select.or(`email.ilike.%${needle}%,name.ilike.%${needle}%`);
+  const needle = query.toLocaleLowerCase();
+  const users: TeamFeedbackUserOption[] = [];
+  for (let offset = 0; users.length < LIMIT; offset += 200) {
+    const { data, error } = await service.from("feedback_users")
+      .select("id, project_id, email, name, pseudonym")
+      .eq("project_id", id).is("erased_at", null)
+      .order("created_at", { ascending: false }).order("id", { ascending: false })
+      .range(offset, offset + 199);
+    if (error) return NextResponse.json({ error: "Unable to load feedback users" },
+      { status: 500 });
+    const rows = data ?? [];
+    for (const row of rows) {
+      const plain = await decodeFeedbackIdentityRow(row, id, guard.userId);
+      if (!needle || plain.email?.toLocaleLowerCase().includes(needle) ||
+          plain.name?.toLocaleLowerCase().includes(needle)) {
+        users.push({ id: plain.id, email: plain.email, name: plain.name,
+          pseudonym: plain.pseudonym });
+        if (users.length === LIMIT) break;
+      }
+    }
+    if (rows.length < 200) break;
   }
-
-  const { data } = await select;
-  return NextResponse.json({ users: (data ?? []) as TeamFeedbackUserOption[] });
+  return NextResponse.json({ users });
 }
 
 /**

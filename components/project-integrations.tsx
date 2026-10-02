@@ -1,5 +1,7 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Add01Icon, MessageMultiple01Icon, Plug01Icon, WebhookIcon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
 import { useTranslations, useFormatter } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
@@ -10,7 +12,6 @@ import {
   cn,
   toast,
 } from "mangue-ui";
-import { MessagesSquare, Plug, Plus, Webhook } from "lucide-react";
 import {
   revokeIntegrationApi,
   updateIntegrationWebhookApi,
@@ -50,12 +51,12 @@ import {
 const KIND_STYLES: Record<IntegrationKind, { badge: string; avatar: string }> =
   {
     issues: {
-      badge: "border-brand/30 bg-brand/10 text-brand",
+      badge: "bg-brand/10 text-brand",
       avatar: "bg-brand/10 text-brand",
     },
     feedback: {
       badge:
-        "border-amber-600/25 bg-amber-600/10 text-amber-700 dark:border-amber-500/25 dark:bg-amber-500/15 dark:text-amber-400",
+        "bg-amber-600/10 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400",
       avatar: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
     },
   };
@@ -169,7 +170,7 @@ function WebhookStatusDot({ integration }: { integration: Integration }) {
     <Tooltip>
       <TooltipTrigger asChild>
         <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <Webhook className="size-3.5" />
+          <HugeiconsIcon icon={WebhookIcon} className="size-3.5" />
           <span
             className={cn(
               "size-1.5 rounded-full",
@@ -241,7 +242,7 @@ export function ProjectIntegrations({
       action={
         isOwner && integrations.length > 0 ? (
           <Button type="button" size="sm" onClick={() => setCreateOpen(true)}>
-            <Plus />
+            <HugeiconsIcon icon={Add01Icon} />
             {t("newIntegration")}
           </Button>
         ) : undefined
@@ -256,10 +257,10 @@ export function ProjectIntegrations({
       {loading ? (
         <SettingsEmpty>{tc("loading")}</SettingsEmpty>
       ) : integrations.length === 0 ? (
-        <EmptyScene size="compact" icon={Plug} title={t("integrationsEmpty")}>
+        <EmptyScene size="compact" icon={Plug01Icon} title={t("integrationsEmpty")}>
           {isOwner && (
             <Button type="button" size="sm" onClick={() => setCreateOpen(true)}>
-              <Plus />
+              <HugeiconsIcon icon={Add01Icon} />
               {t("newIntegration")}
             </Button>
           )}
@@ -277,9 +278,9 @@ export function ProjectIntegrations({
                   )}
                 >
                   {integration.kind === "feedback" ? (
-                    <MessagesSquare className="size-4" />
+                    <HugeiconsIcon icon={MessageMultiple01Icon} className="size-4" />
                   ) : (
-                    <Plug className="size-4" />
+                    <HugeiconsIcon icon={Plug01Icon} className="size-4" />
                   )}
                 </span>
               }
@@ -324,7 +325,7 @@ export function ProjectIntegrations({
                           size="sm"
                           onClick={() => setWebhookFor(integration)}
                         >
-                          <Webhook />
+                          <HugeiconsIcon icon={WebhookIcon} />
                           {t("webhookButton")}
                         </Button>
                       )}

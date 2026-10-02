@@ -43,7 +43,7 @@ RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack 
     && rm -f /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack \
       /usr/local/bin/pnpm /usr/local/bin/pnpx /usr/local/bin/yarn /usr/local/bin/yarnpkg \
     && apt-get update \
-    && apt-get install --yes --no-install-recommends ca-certificates git \
+    && apt-get install --yes --no-install-recommends ca-certificates git libpcre2-8-0 \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd --gid 10001 minddy \
     && useradd --uid 10001 --gid minddy --create-home --shell /usr/sbin/nologin minddy

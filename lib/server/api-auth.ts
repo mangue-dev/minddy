@@ -137,7 +137,7 @@ async function liveAuthorizationState(
       p_amr: Array.isArray(amr) ? amr : [],
     })
     .abortSignal(AbortSignal.timeout(BACKEND_REQUEST_TIMEOUT_MS));
-  if (error) throw new Error(error.message);
+  if (error) throw new Error("live_authorization_lookup_failed");
   if (
     !data ||
     typeof data !== "object" ||
@@ -188,10 +188,7 @@ export async function getAuthedUser(
   options?: { allowAal1?: boolean }
 ): Promise<AuthedResult> {
   if (isMutatingMethod(request.method) && hasForeignOrigin(request)) {
-    console.error(
-      `[api-auth] cross-origin ${request.method} refused: ` +
-        `${request.headers.get("origin") ?? request.headers.get("referer")}`
-    );
+    console.error("[api-auth] cross_origin_request_refused");
     return {
       ok: false,
       response: NextResponse.json({ error: "Forbidden" }, { status: 403 }),
@@ -202,9 +199,9 @@ export async function getAuthedUser(
   let authResult: Awaited<ReturnType<typeof supabase.auth.getClaims>>;
   try {
     authResult = await supabase.auth.getClaims();
-  } catch (error) {
-    if (isBackendUnavailableError(error)) return serviceUnavailableResult();
-    throw error;
+  } catch {
+    console.error("[api-auth] claims_verification_failed");
+    return serviceUnavailableResult();
   }
   const { data, error } = authResult;
   const claims = data?.claims;
@@ -233,11 +230,8 @@ export async function getAuthedUser(
       claims.amr,
       options?.allowAal1 === true,
     );
-  } catch (liveAuthorizationError) {
-    console.error(
-      "[api-auth] live authorization check failed:",
-      (liveAuthorizationError as Error).message,
-    );
+  } catch {
+    console.error("[api-auth] live_authorization_check_failed");
     return serviceUnavailableResult();
   }
   if (!liveState.sessionActive) {

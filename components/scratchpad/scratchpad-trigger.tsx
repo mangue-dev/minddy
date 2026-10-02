@@ -1,8 +1,9 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { StickyNote02Icon } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
 import { Button, cn } from "mangue-ui";
-import { NotebookPen } from "lucide-react";
 import { KbdSequence } from "@/components/ui/kbd";
 import { useModKey, useModShiftShortcut } from "@/lib/keyboard/use-mod-shortcut";
 import { useScratchpad } from "@/lib/scratchpad-context";
@@ -61,7 +62,7 @@ export function ScratchpadTrigger({
             !sidebar && !chrome && left > 0 && "gap-1.5 px-2.5"
           )}
         >
-          <NotebookPen className={sidebar || chrome ? "size-4" : "size-[18px]"} />
+          <HugeiconsIcon icon={StickyNote02Icon} className={sidebar || chrome ? "size-4" : "size-[18px]"} />
           {left > 0 && (
             <span className="tabular-nums leading-none">{left}</span>
           )}

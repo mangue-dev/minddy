@@ -9,7 +9,6 @@ import {
   type AiFeature,
 } from "@/lib/server/ai-usage";
 import { getAccountSettings } from "@/lib/server/account-settings";
-import { afterOrNow } from "@/lib/server/after-safe";
 import { defaultLocale } from "@/i18n/config";
 import { DEFAULT_NUMO_STATUS } from "@/lib/numo-default-status";
 
@@ -41,7 +40,10 @@ import {
   executeScratchpadTool,
   type ScratchpadToolContext,
 } from "./scratchpad-tools";
-import { agentRunTopic, broadcastToTopic } from "./live";
+import { saveAgentLiveSnapshot } from "./live-snapshot";
+import { decodeAgentLaunch } from "./run-launch-content";
+import { decodeAgentBaseBranch } from "./run-base-branch-content";
+import { decodeAgentWorkBranch } from "./run-work-branch-content";
 import {
   appendEvent,
   appendRunJournal,
@@ -247,13 +249,10 @@ async function usagePricingFor(
   try {
     const { getOpenRouterModelInfo } = await import("./openrouter-index");
     return await getOpenRouterModelInfo(model);
-  } catch (err) {
+  } catch {
     // An unreachable index must not cause the line to be lost: without a tariff, only
     // hard bounds apply — that's exactly what `null` renders.
-    console.error(
-      "[agent-control-plane] pricing read failed:",
-      (err as Error).message,
-    );
+    console.error("[agent-control-plane] pricing_read_failed");
     return null;
   }
 }
@@ -361,11 +360,8 @@ async function turnBudgetRemainingUsd(run: AgentRun): Promise<number | null> {
         : Math.max(0, Number(run.budget_usd) - runSpent);
     const both = [account, fromRun].filter((v): v is number => v !== null);
     return both.length ? Math.min(...both) : null;
-  } catch (err) {
-    console.error(
-      "[agent-control-plane] budget read failed:",
-      (err as Error).message,
-    );
+  } catch {
+    console.error("[agent-control-plane] budget_read_failed");
     return null;
   }
 }
@@ -485,7 +481,7 @@ export async function handleControlPlaneRequest(opts: {
   // which makes the surface stateless, therefore safe to call from a VM which can
   // die between two requests. A deleted run (retention) or sandbox name
   // which does not correspond to anything falls here, no further.
-  const run = await getRun(runId);
+  const run = await getRun(runId, { decode: false });
   if (!run) return { status: 404, body: { error: "unknown run" } };
 
   // The microVM of the run is named once and for all and persisted: another
@@ -572,21 +568,25 @@ export async function handleControlPlaneRequest(opts: {
   /**
    * Live output is privileged control-plane output too. It stays behind the
    * same current membership, repository, sandbox, status, and local generation
-   * checks as persisted surfaces, so revoking a lease also revokes broadcast.
+   * checks as persisted surfaces, so revoking a lease also stops snapshot writes.
    */
   if (method === "POST" && surface === "/stream") {
     const fileStats = liveFileStats(body.fileStats);
-    afterOrNow(() =>
-      broadcastToTopic(agentRunTopic(runId), "stream", {
+    const at = Date.now();
+    try {
+      await saveAgentLiveSnapshot({ projectId: run.project_id, runId, kind: "stream",
+        at, payload: {
         text: typeof body.text === "string" ? body.text : "",
         tools: num(body.tools) ?? 0,
         reasoningActive: body.reasoningActive === true,
         reasoningMs: num(body.reasoningMs) ?? 0,
         ...liveFiles(body.files, body.filesTruncated),
         ...(fileStats ? { fileStats } : {}),
-        at: Date.now(),
-      }),
-    );
+        },
+      });
+    } catch {
+      return { status: 503, body: { error: "agent live snapshot unavailable" } };
+    }
     return ok();
   }
 
@@ -607,12 +607,15 @@ export async function handleControlPlaneRequest(opts: {
     if (!opts.local)
       return forbidden("local diff requires a local execution token");
     const diff = localDiffPayload(body);
-    afterOrNow(() =>
-      broadcastToTopic(agentRunTopic(runId), "diff", {
-        ...diff,
-        at: Date.now(),
-      }),
-    );
+    const at = Date.now();
+    try {
+      await saveAgentLiveSnapshot({
+        projectId: run.project_id, runId, kind: "diff", at,
+        payload: { ...diff },
+      });
+    } catch {
+      return { status: 503, body: { error: "agent live snapshot unavailable" } };
+    }
     return ok();
   }
 
@@ -837,6 +840,7 @@ export async function handleControlPlaneRequest(opts: {
       await syncIssuePlanStates(
         run.issue_id,
         steps as Parameters<typeof syncIssuePlanStates>[1],
+        run.project_id,
       );
     }
     return ok();
@@ -1324,6 +1328,7 @@ async function runCreatePr(
   args: Record<string, unknown>,
   body: Record<string, unknown>,
 ): Promise<ControlPlaneResult> {
+  run = await decodeAgentWorkBranch(await decodeAgentBaseBranch(run));
   const [
     { openPullRequestAfterPush, PrLandingAuthorityError },
     { resolveRepoCloneTarget },
@@ -1361,13 +1366,14 @@ async function runCreatePr(
    * this first push in the normal case. Reading it alone here opened the pull request
    * on an empty head, and stamped `branch_name: ""` in passing.
    */
+  const launch = run.branch_name ? null : await decodeAgentLaunch(run, run.created_by);
   const expectedBranch =
     run.branch_name ??
     generatedAgentBranchName({
       runId: run.id,
       issueIdentifier: identifier,
-      conversationTitle: run.title,
-      prompt: run.prompt,
+      conversationTitle: launch?.title ?? run.title,
+      prompt: launch?.prompt ?? run.prompt,
       branchPrefix,
     });
   const suppliedBranch =

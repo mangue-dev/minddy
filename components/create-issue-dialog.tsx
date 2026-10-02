@@ -10,12 +10,14 @@ import {
   DialogContent,
   DialogTitle,
   DropdownMenuItem,
+  DropdownMenuLabel,
   Spinner,
   SplitButton,
   Switch,
   toast,
 } from "mangue-ui";
 import { AutoTextarea } from "@/components/auto-textarea";
+import { CreationRelationPills, CreationRelationsCompact } from "@/components/creation-relations";
 // Deferred editor: keeps tiptap (~1.5 MB) out of every board route's graph —
 // see markdown-editor-lazy.tsx. The chunk is warmed from idle time by the
 // hook below, so the first open waits on nothing.
@@ -79,6 +81,7 @@ import type {
   IssueDraftPatch,
   Member,
   Objective,
+  PendingRelationInput,
   Project,
 } from "@/lib/types";
 
@@ -161,13 +164,16 @@ export function CreateIssueDialog({
   analyticsSource?: AnalyticsPropsFor<"issue_created">["source"];
 }) {
   const t = useTranslations("IssueUI");
-  const tCommon = useTranslations("Common");
+  const tDrafts = useTranslations("Drafts");
+  const tRelations = useTranslations("Relations");
   const { user } = useAuth();
   const { track } = useAnalytics();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [fields, setFields] = useState(DEFAULTS);
   const [categoryIds, setCategoryIds] = useState<string[]>([]);
+  const [relations, setRelations] = useState<PendingRelationInput[]>([]);
+  useEffect(() => { setRelations([]); }, [projectId]);
   const [createMore, setCreateMore] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   // Which field picker a keyboard shortcut (S/P/E/A/L/D/O) has opened, if any.
@@ -360,6 +366,7 @@ export function CreateIssueDialog({
     setDescription("");
     setEditorKey((k) => k + 1);
     uploads.clear();
+    setRelations([]);
   };
 
   const reset = () => {
@@ -384,12 +391,13 @@ export function CreateIssueDialog({
     title.trim() !== "" ||
     description.trim() !== "" ||
     editorNonEmptyRef.current ||
-    uploads.inputs.length > 0;
+    uploads.inputs.length > 0 ||
+    relations.length > 0;
 
   // Snapshot the form as a draft (MIN-41) — reuses the active id so re-closing a
   // recovered draft updates it in place instead of piling up copies.
-  const saveDraft = () => {
-    drafts.save({
+  const saveDraft = async () => {
+    await drafts.save({
       id: activeDraftId ?? createUuid(),
       projectId,
       updatedAt: Date.now(),
@@ -404,21 +412,22 @@ export function CreateIssueDialog({
       recurrence: fields.recurrence,
       category_ids: categoryIds,
       resources: uploads.inputs,
+      relations,
     });
   };
 
   // Stash the draft and close (the confirmation's "Save" action).
-  const saveDraftAndClose = () => {
-    saveDraft();
-    closeAndReset();
+  const saveDraftAndClose = async () => {
+    try { await saveDraft(); closeAndReset(); }
+    catch { toast.error(tDrafts("saveFailed")); }
   };
 
   // “Abandon”: we close WITHOUT keeping, and the original draft goes away
   // with — otherwise we would find in the repeat row the one we thought
   // having given up. Same gesture as successful creation, which also consumes the
   // draft it came from.
-  const discardDraftAndClose = () => {
-    if (activeDraftId) drafts.remove(activeDraftId);
+  const discardDraftAndClose = async () => {
+    if (activeDraftId && !await drafts.remove(activeDraftId)) return;
     closeAndReset();
   };
 
@@ -481,14 +490,19 @@ export function CreateIssueDialog({
     });
     setCategoryIds(draft.category_ids);
     uploads.restore(draft.resources);
+    setRelations(draft.relations ?? []);
     setActiveDraftId(draft.id);
   };
 
   // `target` is set only when creating in a different project (dropdown item).
   const submit = async (keepOpen: boolean, target?: Project) => {
     const trimmed = title.trim();
-    if (!trimmed) return;
+    if (!trimmed || submitting) return;
     const other = target && target.id !== projectId ? target : null;
+    if (other && relations.length > 0) {
+      toast.info(tRelations("crossProjectUnavailable"));
+      return;
+    }
     setSubmitting(true);
     try {
       if (other) {
@@ -527,6 +541,7 @@ export function CreateIssueDialog({
           ...fields,
           category_ids: categoryIds,
           resources: uploads.inputs,
+          relations,
           smart_fill: smartFill,
         });
         // Smart-fill: the card is not yet there (the server fills before
@@ -655,6 +670,10 @@ export function CreateIssueDialog({
             {...drop.handlers}
           >
             <DropOverlay show={drop.dragging} />
+            {drafts.legacyAvailable && <div className="mb-3 text-sm">
+              <p>{tDrafts("legacyWarning")}</p>
+              <Button type="button" variant="ghost" onClick={() => void drafts.recoverLegacy()}>{tDrafts("recoverLegacy")}</Button>
+            </div>}
             {/* Recent drafts — a row above the title to restore or delete an
               abandoned draft (MIN-41). Hidden once the form has content. */}
             {title.trim() === "" && description.trim() === "" && (
@@ -680,6 +699,14 @@ export function CreateIssueDialog({
               }}
               onRemovePending={uploads.remove}
               className="mb-3"
+            />
+            <CreationRelationPills
+              projectId={projectId}
+              projectKey={currentProject?.key ?? ""}
+              active={open}
+              value={relations}
+              onChange={setRelations}
+              disabled={submitting}
             />
             <AutoTextarea
               ref={arrowTitle.ref}
@@ -779,6 +806,14 @@ export function CreateIssueDialog({
                   shortcutHint={KEY_FOR_FIELD.objective}
                 />
               )}
+              <CreationRelationsCompact
+                projectId={projectId}
+                projectKey={currentProject?.key ?? ""}
+                active={open}
+                value={relations}
+                onChange={setRelations}
+                disabled={submitting}
+              />
               {smartFillAvailable && (
                 <SmartFillCompact
                   value={smartFill}
@@ -850,16 +885,9 @@ export function CreateIssueDialog({
                 />
               </div>
               {/* The button in its own block: it is he who switches to a
- line, full width, when the bar passes the line. */}
+  line, full width, when the bar passes the line. No Cancel button:
+  the dialog's own close X already does that job. */}
               <div className="flex items-center justify-end gap-2 max-sm:w-full sm:ml-1">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  disabled={submitting || numoBusy}
-                  onClick={() => handleOpenChange(false)}
-                >
-                  {tCommon("cancel")}
-                </Button>
                 {otherProjects.length > 0 && currentProject ? (
                   /* The tooltip clings to the action, not the chevron: its
  props pass through `SplitButton` to the left button,
@@ -872,18 +900,20 @@ export function CreateIssueDialog({
                       type="submit"
                       disabled={submitting || numoBusy || !title.trim() || uploads.uploading}
                       className="max-sm:w-full"
-                      actionClassName="rounded-l-full pl-4 max-sm:flex-1"
-                      triggerClassName="rounded-r-full"
+                      actionClassName="max-sm:flex-1"
                       menuLabel={t("createInOtherProject")}
-                      menu={otherProjects.map((p) => (
+                      menu={<>
+                        {relations.length > 0 && <DropdownMenuLabel className="max-w-60 whitespace-normal">{tRelations("crossProjectUnavailable")}</DropdownMenuLabel>}
+                        {otherProjects.map((p) => (
                         <DropdownMenuItem
                           key={p.id}
+                          disabled={relations.length > 0}
                           onSelect={() => void submit(createMore, p)}
                         >
                           <ProjectOrb seed={projectOrbSeed(p)} iconUrl={p.icon_url} className="size-4" />
                           <span className="truncate">{p.name}</span>
                         </DropdownMenuItem>
-                      ))}
+                      ))}</>}
                     >
                       {submitting && <Spinner />}
                       <span className="max-w-[14rem] truncate">

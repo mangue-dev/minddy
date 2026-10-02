@@ -1,8 +1,10 @@
 "use client";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Download04Icon as ArrowDownToLine, LoaderCircleIcon, Refresh01Icon, ShoppingBag01Icon } from "@hugeicons/core-free-icons";
 import { useId, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button, Popover, PopoverAnchor, PopoverContent, PopoverDescription, PopoverHeader, PopoverTitle, cn } from "mangue-ui";
-import { ArrowDownToLine, ShoppingBag, RefreshCw, Loader2, type LucideIcon } from "lucide-react";
+import { AppIcon } from "@/components/icon";
 import { getDesktopBridge } from "@/lib/desktop/bridge";
 import { useDesktopUpdateStatus } from "@/lib/desktop/use-update-status";
 import { useWindowsStoreUpdateAvailable } from "@/lib/desktop/use-windows-store-update";
@@ -27,7 +29,7 @@ function FooterRow({
   className,
   compact = false,
 }: {
-  icon: LucideIcon;
+  icon: AppIcon;
   label: string;
   expandedLabel?: string;
   onClick: () => void;
@@ -38,7 +40,7 @@ function FooterRow({
   iconClassName?: string;
   iconCollapsedOnly?: boolean;
   centerLabel?: boolean;
-  trailingIcon?: LucideIcon;
+  trailingIcon?: AppIcon;
   ariaControls?: string;
   ariaExpanded?: boolean;
   className?: string;
@@ -68,7 +70,7 @@ function FooterRow({
       )}
     >
       {collapsed || !iconCollapsedOnly ? (
-        <Icon className={cn(
+        <AppIcon icon={Icon} className={cn(
           "size-[18px] shrink-0",
           centerLabel && !collapsed && "absolute left-[9px]",
           iconClassName,
@@ -85,7 +87,7 @@ function FooterRow({
           {expandedLabel}
         </span>
       )}
-      {!collapsed && TrailingIcon && <TrailingIcon className="size-4 shrink-0" />}
+      {!collapsed && TrailingIcon && <AppIcon icon={TrailingIcon} className="size-4 shrink-0" />}
     </button>
   );
   // Keep the trigger mounted when switching presentation so focus is retained.
@@ -208,7 +210,7 @@ export function AppUpdateAction({
           className="bg-[#0085FF] text-white hover:bg-[#0085FF]/90"
           onClick={applyUpdate}
         >
-          {pending && <Loader2 className="animate-spin" />}
+          {pending && <HugeiconsIcon icon={LoaderCircleIcon} className="animate-spin" />}
           {actionLabel}
         </Button>
       </div>
@@ -219,12 +221,12 @@ export function AppUpdateAction({
     <FooterRow
       icon={
         isWebUpdate
-          ? RefreshCw
+          ? Refresh01Icon
           : isStoreUpdate
-            ? ShoppingBag
+            ? ShoppingBag01Icon
             : ready
               ? ArrowDownToLine
-              : Loader2
+              : LoaderCircleIcon
       }
       iconClassName={!ready || pending ? "animate-spin" : undefined}
       iconCollapsedOnly={ready && !pending}

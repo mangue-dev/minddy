@@ -1,10 +1,12 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Copy01Icon, GlobeIcon, Key02Icon, Mail01Icon, Plug01Icon, CheckIcon } from "@hugeicons/core-free-icons";
+import type { IconSvgElement } from "@hugeicons/react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button, Textarea, toast } from "mangue-ui";
-import { Check, Copy, Globe, KeyRound, Mail, Plug } from "lucide-react";
 import { NumoIcon } from "@/components/numo-icon";
 import { DictateButton } from "@/components/ai-elements/dictate-button";
 import {
@@ -12,7 +14,20 @@ import {
   type WizardStep,
 } from "@/components/wizard/wizard-dialog";
 import { WizardChoiceCard } from "@/components/wizard/wizard-choice-card";
+import { type SceneIcon } from "@/components/illustrations/iso-icon";
+
+function sceneIcon(icon: IconSvgElement): SceneIcon {
+  return function HugeiconsSceneIcon({ className, style }) {
+    return <HugeiconsIcon icon={icon} className={className} style={style} />;
+  };
+}
+
+const GlobeSceneIcon = sceneIcon(GlobeIcon);
+const PlugSceneIcon = sceneIcon(Plug01Icon);
+const KeySceneIcon = sceneIcon(Key02Icon);
+const MailSceneIcon = sceneIcon(Mail01Icon);
 import { CustomDomainSection } from "@/components/custom-domain-section";
+import { CustomDomainRemovalDialog } from "@/components/custom-domain-removal-dialog";
 import {
   BoardAccentRow,
   BoardVisibilityRows,
@@ -109,6 +124,7 @@ export function FeedbackSetupWizard({
   const [envCopied, setEnvCopied] = useState(false);
   /** Did this journey light up the board itself? Only this case falls apart. */
   const [provisionedBoard, setProvisionedBoard] = useState(false);
+  const [confirmDisable, setConfirmDisable] = useState(false);
 
   const {
     board,
@@ -165,6 +181,7 @@ export function FeedbackSetupWizard({
     setCopied(false);
     setEnvCopied(false);
     setProvisionedBoard(false);
+    setConfirmDisable(false);
   };
 
   const handleOpenChange = (next: boolean) => {
@@ -190,7 +207,11 @@ export function FeedbackSetupWizard({
    * next steps have something to fix — and go back to the API on
    * returned to the condition in which it was found.
    */
-  const applyType = async () => {
+  const applyType = async (confirmed = false) => {
+    if (mode !== "board" && provisionedBoard && !confirmed) {
+      setConfirmDisable(true);
+      return;
+    }
     const alreadyOn = board?.enabled === true;
     setWorking(true);
     try {
@@ -320,14 +341,14 @@ export function FeedbackSetupWizard({
         >
           <WizardChoiceCard
             selected={mode === "board"}
-            icon={Globe}
+            icon={GlobeSceneIcon}
             label={t("feedbackWizardTypeBoard")}
             description={t("feedbackWizardTypeBoardDesc")}
             onSelect={() => setMode("board")}
           />
           <WizardChoiceCard
             selected={mode === "api"}
-            icon={Plug}
+            icon={PlugSceneIcon}
             label={t("feedbackWizardTypeApi")}
             description={t("feedbackWizardTypeApiDesc")}
             onSelect={() => setMode("api")}
@@ -351,14 +372,14 @@ export function FeedbackSetupWizard({
         >
           <WizardChoiceCard
             selected={sso}
-            icon={KeyRound}
+            icon={KeySceneIcon}
             label={t("feedbackWizardSsoYes")}
             description={t("feedbackWizardSsoYesDesc")}
             onSelect={() => setSso(true)}
           />
           <WizardChoiceCard
             selected={!sso}
-            icon={Mail}
+            icon={MailSceneIcon}
             label={t("feedbackWizardSsoNo")}
             // Choosing the email when a secret exists DELETES this secret: the
             // card says it before the click, not a toast after.
@@ -528,9 +549,9 @@ export function FeedbackSetupWizard({
                   }}
                 >
                   {envCopied ? (
-                    <Check className="size-4 text-emerald-500" />
+                    <HugeiconsIcon icon={CheckIcon} className="size-4 text-emerald-500" />
                   ) : (
-                    <Copy className="size-4" />
+                    <HugeiconsIcon icon={Copy01Icon} className="size-4" />
                   )}
                 </Button>
               </div>
@@ -551,9 +572,9 @@ export function FeedbackSetupWizard({
             onClick={() => prompt && void copyToClipboard(prompt)}
           >
             {copied ? (
-              <Check className="size-4 text-emerald-500" />
+              <HugeiconsIcon icon={CheckIcon} className="size-4 text-emerald-500" />
             ) : (
-              <Copy className="size-4" />
+              <HugeiconsIcon icon={Copy01Icon} className="size-4" />
             )}
             {t("feedbackWizardCopy")}
           </Button>
@@ -594,31 +615,39 @@ export function FeedbackSetupWizard({
   const atStake = stepIndex > 0 && currentStep !== "done";
 
   return (
-    <WizardDialog
-      open={open}
-      onOpenChange={handleOpenChange}
-      label={t("feedbackWizardTitle")}
-      steps={steps.map((id) => stepDefs[id])}
-      stepIndex={stepIndex}
-      onStepIndexChange={setStepIndex}
-      submitting={working || generating}
-      dismissConfirm={
-        atStake
-          ? {
-              title: t("feedbackWizardQuitTitle"),
-              description: t("feedbackWizardQuitDesc"),
-              confirmLabel: t("feedbackWizardQuitConfirm"),
-              cancelLabel: t("feedbackWizardQuitCancel"),
-            }
-          : undefined
-      }
-      onSubmit={(id) => {
-        if (id === "type") void applyType();
-        else if (id === "sso") void applySso();
-        else if (id === "placement") void generate();
-        else if (id === "done") handleOpenChange(false);
-        else setStepIndex((i) => i + 1);
-      }}
-    />
+    <>
+      <CustomDomainRemovalDialog
+        kind="board"
+        open={open && confirmDisable}
+        onOpenChange={setConfirmDisable}
+        onConfirm={async () => { await applyType(true); }}
+      />
+      <WizardDialog
+        open={open}
+        onOpenChange={handleOpenChange}
+        label={t("feedbackWizardTitle")}
+        steps={steps.map((id) => stepDefs[id])}
+        stepIndex={stepIndex}
+        onStepIndexChange={setStepIndex}
+        submitting={working || generating}
+        dismissConfirm={
+          atStake
+            ? {
+                title: t("feedbackWizardQuitTitle"),
+                description: t("feedbackWizardQuitDesc"),
+                confirmLabel: t("feedbackWizardQuitConfirm"),
+                cancelLabel: t("feedbackWizardQuitCancel"),
+              }
+            : undefined
+        }
+        onSubmit={(id) => {
+          if (id === "type") void applyType();
+          else if (id === "sso") void applySso();
+          else if (id === "placement") void generate();
+          else if (id === "done") handleOpenChange(false);
+          else setStepIndex((i) => i + 1);
+        }}
+      />
+    </>
   );
 }

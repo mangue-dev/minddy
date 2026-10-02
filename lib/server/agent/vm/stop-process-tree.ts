@@ -13,10 +13,10 @@ export async function stopProcessTree(child: ChildProcess): Promise<void> {
       encoding: "utf8",
       timeout: 2_000,
     }).trim().split("\n").map((line) => line.trim().split(/\s+/).map(Number));
-  } catch (error) {
+  } catch {
     // Descendant discovery is best-effort. A missing or overloaded ps must
     // not prevent SIGTERM and SIGKILL from reaching the known server process.
-    console.warn("[opencode] Could not enumerate descendants; stopping the server only:", error);
+    console.warn("[opencode] descendant_enumeration_failed");
   }
   const pids = new Set([child.pid]);
   for (let size = 0; size !== pids.size;) {

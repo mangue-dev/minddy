@@ -4,8 +4,9 @@
 // stylesheet): every part is styled with mangue-ui design tokens so it matches
 // the app in light and dark, and reads cleanly on desktop and mobile.
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowLeft01Icon, ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import * as React from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 import {
   DayButton,
   DayPicker,
@@ -67,9 +68,9 @@ export function Calendar({
       components={{
         Chevron: ({ orientation }) =>
           orientation === "left" ? (
-            <ChevronLeft className="size-4" />
+            <HugeiconsIcon icon={ArrowLeft01Icon} className="size-4" />
           ) : (
-            <ChevronRight className="size-4" />
+            <HugeiconsIcon icon={ArrowRight01Icon} className="size-4" />
           ),
         DayButton: CalendarDayButton,
       }}

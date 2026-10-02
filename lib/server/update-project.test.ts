@@ -40,7 +40,8 @@ import { updateProjectSettings } from "./update-project";
 
 const ACCESS = {
   isOwner: true,
-  project: { id: "project-1", owner_id: "user-owner" },
+  project: { id: "project-1", owner_id: "user-owner", name: "Project",
+    automations: [], smart_assign_rules: {} },
 };
 
 let updated: Record<string, unknown> | null;

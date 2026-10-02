@@ -1,3 +1,4 @@
+import { listIssuePullRequests } from "@/lib/server/agent/issue-pull-requests";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { getAuthedUser } from "@/lib/server/api-auth";
@@ -36,11 +37,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
       .neq("status", "failed")
       .not("issue_id", "is", null)
       .order("created_at", { ascending: false }),
-    auth.supabase
-      .from("pull_requests")
-      .select("id, issue_id, number, state, updated_at, issue:issues!inner(project_id)")
-      .eq("issue.project_id", id)
-      .order("updated_at", { ascending: false }),
+    listIssuePullRequests(auth.supabase, { projectId: id }).then((data) => ({ data })),
   ]);
 
   const rows = (data ?? []) as AgentRunRow[];

@@ -10,12 +10,14 @@ describe("unretained comment resources", () => {
     const remove = vi.fn(async () => ({ error: null }));
     const client = {
       from: () => ({
+        delete: () => ({ in: async () => ({ error: null }) }),
         select: () => ({
           in: async () => ({ data: [], error: null }),
         }),
       }),
       storage: {
-        from: () => ({ remove }),
+        from: () => ({
+        delete: () => ({ in: async () => ({ error: null }) }), remove }),
       },
     } as unknown as SupabaseClient;
     const file = {

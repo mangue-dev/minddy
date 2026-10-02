@@ -1,5 +1,7 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Add01Icon, FilterIcon, Target01Icon } from "@hugeicons/core-free-icons";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import {
@@ -19,7 +21,6 @@ import {
   toast,
 } from "mangue-ui";
 import { Kbd } from "@/components/ui/kbd";
-import { ListFilter, Plus, Target } from "lucide-react";
 import { useProjects } from "@/lib/projects-context";
 import {
   useAssistantContext,
@@ -151,7 +152,7 @@ function ObjectiveFilterMenu({
           aria-label={tooltip}
         >
           <span className="relative flex items-center justify-center">
-            <ListFilter className="size-[18px]" />
+            <HugeiconsIcon icon={FilterIcon} className="size-[18px]" />
             {active ? (
               /* The ring in the color of the bar detaches the pellet from the line
  of the icon, which passes just below. */
@@ -486,6 +487,7 @@ function ObjectivesInner() {
       members={members}
       objective={null}
       projectId={projectId}
+      projectKey={project.key}
       onCreate={createObjective}
       onUpdate={updateObjective}
     />
@@ -504,9 +506,9 @@ function ObjectivesInner() {
  the gestures that fill the page. The scene is the
  tab icon, placed on the ground — the page can be recognized by what names it
  in the sidebar. No import here: an objective cannot be exported from any tool. */}
-              <EmptyScene icon={Target} title={t("emptyTitle")}>
+              <EmptyScene icon={Target01Icon} title={t("emptyTitle")}>
                 <Button onClick={() => setDialogOpen(true)}>
-                  <Plus />
+                  <HugeiconsIcon icon={Add01Icon} />
                   {t("newObjective")}
                   <Kbd
                     size="sm"
@@ -566,7 +568,7 @@ function ObjectivesInner() {
                   aria-label={t("newObjective")}
                   onClick={() => setDialogOpen(true)}
                 >
-                  <Plus className="size-[18px]" />
+                  <HugeiconsIcon icon={Add01Icon} className="size-[18px]" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent className="flex items-center gap-2">
@@ -592,7 +594,7 @@ function ObjectivesInner() {
  is restricting. */
           <EmptyScene
             size="compact"
-            icon={Target}
+            icon={Target01Icon}
             title={
               !query.trim() && state !== "all"
                 ? t(EMPTY_BY_STATE[state])

@@ -1,6 +1,7 @@
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowRight01Icon, CheckListIcon, Key02Icon, MessageAdd01Icon, ShieldCheckIcon as ShieldCheck, SparklesIcon, TaskDone01Icon, TerminalIcon as Terminal, CheckIcon, UserCheck01Icon } from "@hugeicons/core-free-icons";
 import type { Metadata } from "next";
 import { getLocale, getTranslations } from "next-intl/server";
-import { ArrowRight, Check, ClipboardList, KeyRound, ListChecks, MessageSquarePlus, ShieldCheck, Sparkles, Terminal, UserCheck } from "lucide-react";
 import { Button } from "mangue-ui/components/ui/button";
 import { cn } from "mangue-ui/lib/utils";
 import { publicPageMetadata } from "@/lib/seo";
@@ -8,9 +9,11 @@ import type { Locale } from "@/i18n/config";
 import { MCP_ENDPOINT, SITE_URL } from "@/lib/site";
 import { MCP_AGENTS, type McpAgent } from "@/lib/mcp-agents";
 import { McpAgentLogo } from "@/components/mcp-agent-logo";
+import { AppIcon } from "@/components/icon";
 import { CARD_TONES } from "@/components/marketing/card-tones";
 import { CopyButton } from "@/components/marketing/copy-button";
 import { FaqAccordion } from "@/components/marketing/faq-accordion";
+import { FaqAskBox } from "@/components/marketing/faq-ask-box";
 import { MCP_FAQ_KEYS } from "@/components/marketing/faq-keys";
 import { SectionCta } from "@/components/marketing/section-cta";
 import { SectionHeading } from "@/components/marketing/section-heading";
@@ -24,15 +27,15 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 const AUTH_POINTS = [
-  { key: "who", icon: UserCheck, tone: CARD_TONES.sky },
+  { key: "who", icon: UserCheck01Icon, tone: CARD_TONES.sky },
   { key: "consent", icon: ShieldCheck, tone: CARD_TONES.sage },
-  { key: "revoke", icon: KeyRound, tone: CARD_TONES.peach },
+  { key: "revoke", icon: Key02Icon, tone: CARD_TONES.peach },
 ] as const;
 
 const FLOWS = [
-  { key: "plan", icon: ClipboardList, tone: CARD_TONES.lavender },
-  { key: "track", icon: ListChecks, tone: CARD_TONES.sage },
-  { key: "create", icon: MessageSquarePlus, tone: CARD_TONES.peach },
+  { key: "plan", icon: CheckListIcon, tone: CARD_TONES.lavender },
+  { key: "track", icon: TaskDone01Icon, tone: CARD_TONES.sage },
+  { key: "create", icon: MessageAdd01Icon, tone: CARD_TONES.peach },
 ] as const;
 
 /** Reuse the landing's capability descriptions and the account's agent registry. */
@@ -69,14 +72,14 @@ export default async function McpPage() {
               {t("heroSubtitle")}
             </p>
             <Button asChild size="lg" className="mt-7 rounded-full">
-              <a href="#connect">{t("connectTitle")}<ArrowRight data-icon="inline-end" /></a>
+              <a href="#connect">{t("connectTitle")}<HugeiconsIcon icon={ArrowRight01Icon} data-icon="inline-end" /></a>
             </Button>
           </header>
 
           <div className="grid gap-4 md:grid-cols-3">
             <div className={cn("flex min-w-0 flex-col justify-between gap-8 rounded-2xl p-6 sm:p-8 md:col-span-2", CARD_TONES.sage)}>
               <div className="flex items-center gap-3">
-                <Terminal className="size-6 shrink-0" strokeWidth={1.5} aria-hidden />
+                <AppIcon icon={Terminal} className="size-6 shrink-0" strokeWidth={1.5} aria-hidden />
                 <h2 className="text-xl font-medium tracking-tight">{t("factEndpoint")}</h2>
               </div>
               <div className="flex flex-wrap items-center justify-between gap-4">
@@ -85,7 +88,7 @@ export default async function McpPage() {
               </div>
             </div>
             <div className={cn("rounded-2xl p-6 sm:p-8", CARD_TONES.butter)}>
-              <ShieldCheck className="mb-5 size-6" strokeWidth={1.5} aria-hidden />
+              <AppIcon icon={ShieldCheck} className="mb-5 size-6" strokeWidth={1.5} aria-hidden />
               <h2 className="text-xl font-medium tracking-tight">{t("factAuthValue")}</h2>
               <p className="mt-3 text-sm leading-relaxed opacity-80">{t("heroNote")}</p>
             </div>
@@ -98,7 +101,7 @@ export default async function McpPage() {
           <SectionHeading title={t("connectTitle")} description={t("connectSubtitle")} />
           <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 [&>*]:min-w-0">
             <li className={cn("flex flex-col rounded-2xl p-6 sm:p-8 md:col-span-2", CARD_TONES.sky)}>
-              <Sparkles className="mb-5 size-6" strokeWidth={1.5} aria-hidden />
+              <HugeiconsIcon icon={SparklesIcon} className="mb-5 size-6" strokeWidth={1.5} aria-hidden />
               <h3 className="text-2xl font-medium tracking-tight">{t("assistantTitle")}</h3>
               <p className="mt-3 max-w-xl text-sm leading-relaxed opacity-80">{t("assistantBody")}</p>
               <p className="mt-5 rounded-xl bg-background/50 p-4 text-sm leading-relaxed [overflow-wrap:anywhere]">
@@ -127,7 +130,7 @@ export default async function McpPage() {
               <ul className="flex h-full flex-col justify-between gap-5">
                 {CAPABILITY_KEYS.map(key => (
                   <li key={key} className="flex items-start gap-3 text-sm leading-relaxed">
-                    <Check className="mt-0.5 size-4 shrink-0" aria-hidden />
+                    <HugeiconsIcon icon={CheckIcon} className="mt-0.5 size-4 shrink-0" aria-hidden />
                     {tl(`agentsCapability_${key}`)}
                   </li>
                 ))}
@@ -143,7 +146,7 @@ export default async function McpPage() {
           <ul className="grid gap-4 lg:grid-cols-3 [&>*]:min-w-0">
             {FLOWS.map(flow => (
               <li key={flow.key} className={cn("flex flex-col rounded-2xl p-6 sm:p-8", flow.tone)}>
-                <flow.icon className="mb-5 size-6" strokeWidth={1.5} aria-hidden />
+                <HugeiconsIcon icon={flow.icon} className="mb-5 size-6" strokeWidth={1.5} aria-hidden />
                 <h3 className="text-2xl font-medium tracking-tight">{t(`flow_${flow.key}_title`)}</h3>
                 <p className="mt-3 text-sm leading-relaxed opacity-80">{t(`flow_${flow.key}_body`)}</p>
                 <div className="mt-auto pt-8">
@@ -156,7 +159,7 @@ export default async function McpPage() {
             ))}
           </ul>
           <Button asChild size="lg" className="mt-8 rounded-full">
-            <TrackedCta href="/signup" location="mcp_page">{tl("ctaButton")}<ArrowRight data-icon="inline-end" /></TrackedCta>
+            <TrackedCta href="/signup" location="mcp_page">{tl("ctaButton")}<HugeiconsIcon icon={ArrowRight01Icon} data-icon="inline-end" /></TrackedCta>
           </Button>
         </div>
       </section>
@@ -167,7 +170,7 @@ export default async function McpPage() {
           <ul className="grid gap-4 md:grid-cols-3">
             {AUTH_POINTS.map(point => (
               <li key={point.key} className={cn("rounded-2xl p-6 sm:p-8", point.tone)}>
-                <point.icon className="mb-5 size-6" strokeWidth={1.5} aria-hidden />
+                <AppIcon icon={point.icon} className="mb-5 size-6" strokeWidth={1.5} aria-hidden />
                 <h3 className="text-xl font-medium tracking-tight">{t(`auth_${point.key}_title`)}</h3>
                 <p className="mt-3 text-sm leading-relaxed opacity-80">{t(`auth_${point.key}_body`)}</p>
               </li>
@@ -179,7 +182,7 @@ export default async function McpPage() {
       <section className="px-4 py-16 sm:px-6 sm:py-24">
         <div className="mx-auto max-w-3xl">
           <h2 className="mb-8 text-3xl leading-tight font-medium tracking-[-0.035em] text-balance sm:text-4xl">{tl("faqTitle")}</h2>
-          <FaqAccordion items={faqItems} />
+          <FaqAccordion items={faqItems} footer={<FaqAskBox section="mcp" />} />
         </div>
       </section>
       <SectionCta />

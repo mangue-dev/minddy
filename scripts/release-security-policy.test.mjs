@@ -191,11 +191,11 @@ test("daily CI reuses the checks runner for every edition", () => {
   }
 });
 
-test("daily CI does not repeat an already verified production SHA", () => {
+test("daily CI validates every main push, including release records, without repeating production", () => {
   const workflow = readFileSync(new URL("../.github/workflows/ci.yml", import.meta.url), "utf8");
   assert.match(workflow, /^    branches: \[main\]$/m);
   assert.doesNotMatch(workflow, /branches: \[main, production\]/);
-  assert.match(workflow, /^      - desktop\/released\.json$/m);
+  assert.doesNotMatch(workflow, /^    paths(?:-ignore)?:/m);
 });
 
 test("promotion only fast-forwards a green main SHA and waits for Vercel Production", () => {

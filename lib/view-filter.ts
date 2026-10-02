@@ -5,7 +5,7 @@ import {
   type StatusMeta,
 } from "./issue-constants";
 import { calendarDaysBetween, isDueDateOverdue, parseDueDate } from "./due-date";
-import type { Issue, IssueRelation, ViewConfig, ViewSort } from "./types";
+import type { Issue, IssueRelation, SortDirection, ViewConfig, ViewSort } from "./types";
 
 /** Dynamic assignee filter value: "assigned to me", resolved at filter time
     to the viewing user (on public shares: to the view owner). */
@@ -37,9 +37,28 @@ export function isDefaultConfig(config: ViewConfig): boolean {
   return (
     empty &&
     config.sort === "smart" &&
+    (!config.display.sortDirection || config.display.sortDirection === "asc") &&
     !config.display.hideDone &&
     !config.display.hideRecurring
   );
+}
+
+/** The sorts the invert-direction button applies to (MIN-592): "smart" and
+    "manual" carry their own order and never reverse. */
+export const DIRECTIONAL_SORTS: readonly ViewSort[] = [
+  "priority",
+  "created",
+  "updated",
+  "due",
+];
+
+export function isDirectionalSort(sort: ViewSort): boolean {
+  return (DIRECTIONAL_SORTS as readonly string[]).includes(sort);
+}
+
+/** The other direction — the invert button's flip. */
+export function reverseSortDirection(direction: SortDirection): SortDirection {
+  return direction === "asc" ? "desc" : "asc";
 }
 
 /** The config a saved view encodes. */
@@ -70,6 +89,7 @@ export function normalizeConfig(c: ViewConfig): string {
     integration: norm(f.integration),
     project: norm(f.project),
     sort: c.sort,
+    sortDirection: c.display.sortDirection ?? "asc",
     hideDone: !!c.display.hideDone,
     hideRecurring: !!c.display.hideRecurring,
   });
@@ -195,8 +215,23 @@ export function smartIssueComparator(
   };
 }
 
-/** Comparator for ordering issues WITHIN a column. "manual" = the position field. */
+/** Comparator for ordering issues WITHIN a column. "manual" = the position
+    field. `direction` (MIN-592) reverses the directional sorts — "smart" and
+    "manual" carry their own order and ignore it. */
 export function issueComparator(
+  sort: ViewSort,
+  smart?: SmartSortContext,
+  direction: SortDirection = "asc"
+): (a: Issue, b: Issue) => number {
+  const base = baseIssueComparator(sort, smart);
+  if (direction === "desc" && isDirectionalSort(sort)) {
+    const ascending = base;
+    return (a, b) => ascending(b, a);
+  }
+  return base;
+}
+
+function baseIssueComparator(
   sort: ViewSort,
   smart?: SmartSortContext
 ): (a: Issue, b: Issue) => number {

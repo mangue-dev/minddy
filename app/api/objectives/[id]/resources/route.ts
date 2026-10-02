@@ -1,3 +1,4 @@
+import { objectiveStore } from "@/lib/server/objective-store";
 import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
@@ -9,6 +10,7 @@ import {
   ResourceScopeError,
 } from "@/lib/server/attachments";
 import { RESOURCE_SELECT } from "@/lib/server/resource-select";
+import { decodeAttachmentRow } from "@/lib/server/attachment-content";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -32,7 +34,8 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     console.error("[api/objectives/:id/resources] list failed:", error.message);
     return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
-  return NextResponse.json(data ?? []);
+  return NextResponse.json(await Promise.all((data ?? []).map((row) =>
+    decodeAttachmentRow("attachments", row, auth.user.id))));
 }
 
 /** POST /api/objectives/[id]/resources — register resources on an existing
@@ -52,8 +55,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   }
 
   const service = getServiceClient();
-  const { data: objective } = await service
-    .from("objectives")
+  const { data: objective } = await objectiveStore(service)
     .select("project_id")
     .is("deleted_at", null)
     .eq("id", id)

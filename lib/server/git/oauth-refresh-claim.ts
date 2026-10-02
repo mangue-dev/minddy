@@ -40,7 +40,7 @@ export async function releaseForgeOAuthRefreshClaim(
     .eq("id", rowId)
     .eq("oauth_refresh_claim", claimId);
   if (error) {
-    console.error("[forge-oauth] refresh claim release failed:", error.message);
+    console.error("[forge-oauth] refresh_claim_release_failed");
   }
 }
 

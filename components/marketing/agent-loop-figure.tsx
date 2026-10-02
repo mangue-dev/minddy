@@ -1,6 +1,8 @@
+import { HugeiconsIcon } from "@hugeicons/react";
+import { AppIcon } from "@/components/icon";
+import { GitPullRequestIcon, MessageSquareDashedIcon, TaskDone01Icon, CheckIcon } from "@hugeicons/core-free-icons";
 import type { CSSProperties } from "react";
 import { getTranslations } from "next-intl/server";
-import { Check, GitPullRequest, ListChecks, MessageSquareDashed } from "lucide-react";
 import { cn } from "mangue-ui/lib/utils";
 import { PriorityIndicator, StatusIndicator } from "@/components/issue-indicators";
 import { NumoFace } from "@/components/numo-face";
@@ -139,7 +141,7 @@ export async function AgentLoopFigure() {
 
       <ol className="mt-5">
         {/* ① The plan, written by the agent ─────────────────────────────────── */}
-        <Beat index={1} icon={<ListChecks className="size-3.5" />} label={t("heroLoopStepPlan")}>
+        <Beat index={1} icon={<HugeiconsIcon icon={TaskDone01Icon} className="size-3.5" />} label={t("heroLoopStepPlan")}>
           <Panel>
             <ul className="flex flex-col gap-2">
               {PLAN_TASKS.map((task, i) => (
@@ -148,7 +150,7 @@ export async function AgentLoopFigure() {
                     className="loop-check mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-[4px] border border-primary bg-primary text-primary-foreground"
                     style={beat(i)}
                   >
-                    <Check className="size-3" />
+                    <HugeiconsIcon icon={CheckIcon} className="size-3" />
                   </span>
                   {/* The bar is a drawn LINE and not a `line-through`:
                       a text decoration does not animate, a line is drawn. */}
@@ -173,10 +175,10 @@ export async function AgentLoopFigure() {
         </Beat>
 
         {/* ③ The pull request, attached to the ticket ────────────────────────── */}
-        <Beat index={3} icon={<GitPullRequest className="size-3.5" />} label={t("heroLoopStepPr")}>
+        <Beat index={3} icon={<HugeiconsIcon icon={GitPullRequestIcon} className="size-3.5" />} label={t("heroLoopStepPr")}>
           <Panel className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2.5">
             <span className="flex items-center gap-2 text-sm font-medium">
-              <GitPullRequest className="size-4 shrink-0 text-green-700 dark:text-green-400" />
+              <HugeiconsIcon icon={GitPullRequestIcon} className="size-4 shrink-0 text-green-700 dark:text-green-400" />
               #128
             </span>
             <span className="font-mono text-xs tabular-nums">
@@ -187,16 +189,16 @@ export async function AgentLoopFigure() {
         </Beat>
 
         {/* ④ Verification — the time that cannot be delegated ────────────── */}
-        <Beat index={4} icon={<Check className="size-3.5" />} label={t("heroLoopStepReview")} last>
+        <Beat index={4} icon={<HugeiconsIcon icon={CheckIcon} className="size-3.5" />} label={t("heroLoopStepReview")} last>
           {/* Pellets, not buttons: nothing is clickable here, and a
               full button would invoke the click that the real action deserves. */}
           <div className="flex flex-wrap gap-2">
             <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-medium shadow-sm">
-              <Check className="size-3.5 shrink-0 text-green-700 dark:text-green-400" />
+              <HugeiconsIcon icon={CheckIcon} className="size-3.5 shrink-0 text-green-700 dark:text-green-400" />
               {tPr("reviewApprove")}
             </span>
             <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm">
-              <MessageSquareDashed className="size-3.5 shrink-0" />
+              <AppIcon icon={MessageSquareDashedIcon} className="size-3.5 shrink-0" />
               {tPr("reviewRequestChanges")}
             </span>
           </div>

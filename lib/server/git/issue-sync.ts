@@ -1,3 +1,7 @@
+import { issueStore } from "@/lib/server/issue-store";
+import { commentStore, syncGithubComment } from "@/lib/server/comment-store";
+import { encodeGithubIssueMetadata, shouldEncryptGithubIssueMetadata } from
+  "./issue-sync-content";
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
@@ -24,6 +28,8 @@ import {
   type RemoteGithubIssueComment,
 } from "./github-app";
 import { forgeProviderForConnection } from "./forge-provider";
+import { decodeRepositoryName, registerRepositoryName,
+  shouldProtectRepositoryNames } from "./repository-name-content";
 import { getGitlabAccessToken, listGitlabOpenIssues } from "./gitlab-app";
 import {
   buildForgeAssigneeIndex,
@@ -111,14 +117,14 @@ type TargetRow = {
   git_connections?: { source: string | null } | { source: string | null }[] | null;
 };
 
-const toTarget = (row: TargetRow): IssueSyncTarget => ({
+const toTarget = async (row: TargetRow): Promise<IssueSyncTarget> => ({
   linkId: row.id,
   projectId: row.project_id,
   provider: row.provider as RepoProviderId,
   connectionId: row.connection_id,
   installationId: row.installation_id,
   externalRepoId: row.external_repo_id,
-  repoFullName: row.repo_full_name,
+  repoFullName: await decodeRepositoryName(row.provider,row.repo_full_name),
   // Embedded to-one relationship: object at runtime, cast via unknown.
   connectionSource: Array.isArray(row.git_connections)
     ? row.git_connections[0]?.source ?? null
@@ -149,10 +155,10 @@ export async function listIssueSyncTargets(params: {
     .eq("external_repo_id", params.repoId)
     .eq("issue_sync_enabled", true);
   if (error) {
-    console.error("[issue-sync] targets lookup failed:", error.message);
+    console.error("[issue-sync] targets_lookup_failed");
     return [];
   }
-  return ((data ?? []) as TargetRow[]).map(toTarget);
+  return Promise.all(((data ?? []) as TargetRow[]).map(toTarget));
 }
 
 /** The link of a project, whether active or not (backfill, activation). */
@@ -165,7 +171,7 @@ export async function getIssueSyncLink(
     .select(TARGET_COLUMNS)
     .eq("project_id", projectId)
     .maybeSingle();
-  return data ? toTarget(data as TargetRow) : null;
+  return data ? await toTarget(data as TargetRow) : null;
 }
 
 /** Writes the binding toggle (and the id of the provisioned GitLab hook). */
@@ -185,7 +191,7 @@ export async function setIssueSyncEnabled(params: {
     .from("project_git_links")
     .update(patch)
     .eq("id", params.linkId);
-  if (error) throw new Error(error.message);
+  if (error) throw new Error("issue_sync_toggle_failed");
 }
 
 /**
@@ -215,9 +221,7 @@ export async function applyRemoteIssue(
     return;
   }
   const service = getServiceClient();
-  const { data: existing, error } = await service
-    .from("issues")
-    .select("id, status, title, description, assignee_id, priority, effort, due_date, updated_at")
+  const { data: existing, error } = await issueStore(service).select("id, status, title, description, assignee_id, priority, effort, due_date, updated_at")
     .is("deleted_at", null)
     .eq("project_id", target.projectId)
     .eq("remote_provider", remote.provider)
@@ -225,7 +229,7 @@ export async function applyRemoteIssue(
     .eq("remote_number", remote.number)
     .maybeSingle();
   if (error) {
-    console.error("[issue-sync] lookup failed:", error.message);
+    console.error("[issue-sync] issue_lookup_failed");
     return;
   }
 
@@ -277,12 +281,7 @@ export async function applyRemoteIssue(
     if (!result.ok) {
       // 409 = reissue of the webhook, the normal path: silence.
       if (result.errorKey !== "remoteIssueAlreadyImported") {
-        console.error(
-          "[issue-sync] create failed for %s#%s:",
-          remote.repoFullName,
-          remote.number,
-          result.errorKey ?? result.rawMessage,
-        );
+        console.error("[issue-sync] issue_create_failed", target.linkId);
       }
       return;
     }
@@ -347,12 +346,7 @@ export async function applyRemoteIssue(
       forgeSync: remote.provider,
     });
     if (!updated.ok) {
-      console.error(
-        "[issue-sync] update failed for %s#%s:",
-        remote.repoFullName,
-        remote.number,
-        updated.errorKey ?? updated.rawMessage,
-      );
+      console.error("[issue-sync] issue_update_failed", target.linkId);
     }
   }
 
@@ -388,7 +382,7 @@ async function readGithubIssueSyncState(
     .eq("issue_id", issueId)
     .maybeSingle();
   if (error) {
-    console.error(`[issue-sync] GitHub sync state lookup failed for issue ${issueId}:`, error.message);
+    console.error("[issue-sync] github_state_lookup_failed", issueId);
     return null;
   }
   return data as GithubSyncState | null;
@@ -435,13 +429,23 @@ async function syncGithubMetadata(issueId: string, remote: RemoteIssue): Promise
     .eq("issue_id", issueId)
     .maybeSingle();
   if (error) {
-    console.error(`[issue-sync] GitHub metadata lookup failed for issue ${issueId}:`, error.message);
+    console.error("[issue-sync] github_metadata_lookup_failed", issueId);
     return;
   }
   if (isOlderThanLocal(remote.updatedAt, data?.updated_at_remote)) return;
   const metadata = remote.githubMetadata;
-  const { error: writeError } = await service.from("github_issue_sync_metadata").upsert(
-    {
+  const { data: issueScope, error: issueScopeError } = await service.from("issues")
+    .select("project_id").eq("id", issueId).maybeSingle();
+  if (issueScopeError || !issueScope?.project_id) {
+    throw new Error("Unable to resolve GitHub issue metadata scope");
+  }
+  const encrypted = await shouldEncryptGithubIssueMetadata(service, issueScope.project_id);
+  const content = encrypted
+    ? await encodeGithubIssueMetadata(issueScope.project_id, issueId, {
+        milestone: metadata.milestone, metadata: { issue_type: metadata.issueType },
+      })
+    : { milestone: metadata.milestone, metadata: { issue_type: metadata.issueType } };
+  const values = {
       issue_id: issueId,
       github_node_id: metadata.nodeId,
       author_login: metadata.authorLogin,
@@ -449,18 +453,21 @@ async function syncGithubMetadata(issueId: string, remote: RemoteIssue): Promise
       state_reason: metadata.stateReason,
       locked: metadata.locked,
       active_lock_reason: metadata.activeLockReason,
-      milestone: metadata.milestone,
+      ...content,
       created_at_remote: metadata.createdAt,
       updated_at_remote: remote.updatedAt,
       closed_at_remote: metadata.closedAt,
       closed_by_login: metadata.closedByLogin,
-      metadata: { issue_type: metadata.issueType },
       synced_at: new Date().toISOString(),
-    },
-    { onConflict: "issue_id" },
-  );
+    };
+  const { error: writeError } = encrypted
+    ? await service.rpc("sync_github_issue_metadata_encrypted", {
+        p_issue_id: issueId, p_project_id: issueScope.project_id, p_values: values,
+      })
+    : await service.from("github_issue_sync_metadata")
+        .upsert(values as Record<string, unknown>, { onConflict: "issue_id" });
   if (writeError) {
-    console.error(`[issue-sync] GitHub metadata write failed for issue ${issueId}:`, writeError.message);
+    console.error("[issue-sync] github_metadata_write_failed", issueId);
   }
 }
 
@@ -520,10 +527,7 @@ async function applyRemoteLabels(
     forgeSync: target.provider,
   });
   if (!result.ok) {
-    console.error(
-      `[issue-sync] categories failed for issue ${issueId}:`,
-      result.errorKey ?? result.rawMessage,
-    );
+    console.error("[issue-sync] category_update_failed", issueId);
   }
 }
 
@@ -536,11 +540,8 @@ export async function syncRemoteIssueEvent(remote: RemoteIssue): Promise<void> {
   for (const target of targets) {
     try {
       await applyRemoteIssue(target, remote);
-    } catch (err) {
-      console.error(
-        `[issue-sync] target ${target.linkId} failed:`,
-        (err as Error).message,
-      );
+    } catch {
+      console.error("[issue-sync] target_apply_failed", target.linkId);
     }
   }
   await refreshRepoFullName(targets, remote.repoFullName);
@@ -557,13 +558,8 @@ export async function syncGithubIssueComment(comment: GithubIssueComment): Promi
     if (!target.createdBy) continue;
     try {
       await applyGithubIssueComment(target, comment);
-    } catch (error) {
-      console.error(
-        "[issue-sync] GitHub comment %s for target %s failed:",
-        comment.remoteCommentId,
-        target.linkId,
-        (error as Error).message,
-      );
+    } catch {
+      console.error("[issue-sync] github_comment_apply_failed", target.linkId);
     }
   }
 }
@@ -581,18 +577,14 @@ export async function syncGithubIssueDependency(
     try {
       const service = getServiceClient();
       const [blocking, blocked] = await Promise.all([
-        service
-          .from("issues")
-          .select("id")
+        issueStore(service).select("id")
           .is("deleted_at", null)
           .eq("project_id", target.projectId)
           .eq("remote_provider", "github")
           .eq("remote_repo_id", dependency.blockingRepoId)
           .eq("remote_number", dependency.blockingNumber)
           .maybeSingle(),
-        service
-          .from("issues")
-          .select("id")
+        issueStore(service).select("id")
           .is("deleted_at", null)
           .eq("project_id", target.projectId)
           .eq("remote_provider", "github")
@@ -616,7 +608,7 @@ export async function syncGithubIssueDependency(
           targetId,
           type: "blocks",
         });
-        if (!result.ok) throw new Error(result.errorKey ?? result.rawMessage);
+        if (!result.ok) throw new Error("issue_dependency_add_failed");
       } else {
         const relation = await findIssueRelation(
           target.projectId,
@@ -629,16 +621,10 @@ export async function syncGithubIssueDependency(
           relationId: relation.id,
           actorId: target.createdBy,
         });
-        if (!result.ok) throw new Error(result.errorKey ?? result.rawMessage);
+        if (!result.ok) throw new Error("issue_dependency_remove_failed");
       }
-    } catch (error) {
-      console.error(
-        "[issue-sync] GitHub dependency %s→%s failed for target %s:",
-        dependency.blockingNumber,
-        dependency.blockedNumber,
-        target.linkId,
-        (error as Error).message,
-      );
+    } catch {
+      console.error("[issue-sync] github_dependency_apply_failed", target.linkId);
     }
   }
 }
@@ -648,9 +634,7 @@ async function applyGithubIssueComment(
   remote: GithubIssueComment,
 ): Promise<void> {
   const service = getServiceClient();
-  const { data: issue, error: issueError } = await service
-    .from("issues")
-    .select("id")
+  const { data: issue, error: issueError } = await issueStore(service).select("id")
     .is("deleted_at", null)
     .eq("project_id", target.projectId)
     .eq("remote_provider", "github")
@@ -666,17 +650,16 @@ async function applyGithubIssueComment(
     .eq("remote_comment_id", remote.remoteCommentId)
     .eq("issue_id", issueId)
     .maybeSingle();
-  if (syncedError) throw new Error(syncedError.message);
+  if (syncedError) throw new Error("issue_comment_sync_lookup_failed");
 
   let commentUpdatedAt: string | null = null;
   if (synced?.comment_id) {
-    const { data: localComment, error: commentError } = await service
-      .from("comments")
+    const { data: localComment, error: commentError } = await commentStore(service, "comments")
       .select("updated_at")
       .eq("id", synced.comment_id as string)
       .eq("issue_id", issueId)
       .maybeSingle();
-    if (commentError) throw new Error(commentError.message);
+    if (commentError) throw new Error("issue_comment_lookup_failed");
     commentUpdatedAt = (localComment?.updated_at as string | null | undefined) ?? null;
   }
   if (
@@ -692,7 +675,7 @@ async function applyGithubIssueComment(
   }
 
   const body = remote.action === "deleted" ? "[Deleted on GitHub]" : remote.body;
-  const { error: writeError } = await service.rpc("sync_github_issue_comment_atomic", {
+  await syncGithubComment(service, {
     p_issue_id: issueId,
     p_remote_comment_id: remote.remoteCommentId,
     p_author_id: target.createdBy,
@@ -707,7 +690,6 @@ async function applyGithubIssueComment(
         ? remote.updatedAt ?? new Date().toISOString()
         : null,
   });
-  if (writeError) throw new Error(writeError.message);
 }
 
 function toGithubIssueComment(
@@ -756,11 +738,8 @@ async function backfillGithubIssueComments(
           toGithubIssueComment(target.externalRepoId, issue.number, comment),
         );
       }
-    } catch (error) {
-      console.error(
-        `[issue-sync] GitHub comment backfill failed for ${target.repoFullName}#${issue.number}:`,
-        (error as Error).message,
-      );
+    } catch {
+      console.error("[issue-sync] github_comment_backfill_failed", target.linkId);
     }
   }
 }
@@ -773,16 +752,14 @@ async function backfillGithubMetadata(
   const numbers = issues.map((issue) => issue.number);
   if (numbers.length === 0) return;
   const service = getServiceClient();
-  const { data, error } = await service
-    .from("issues")
-    .select("id, remote_number")
+  const { data, error } = await issueStore(service).select("id, remote_number")
     .is("deleted_at", null)
     .eq("project_id", target.projectId)
     .eq("remote_provider", "github")
     .eq("remote_repo_id", target.externalRepoId)
     .in("remote_number", numbers);
   if (error) {
-    console.error("[issue-sync] GitHub metadata backfill lookup failed:", error.message);
+    console.error("[issue-sync] github_metadata_backfill_lookup_failed");
     return;
   }
   const idByNumber = new Map(
@@ -813,11 +790,15 @@ async function refreshRepoFullName(
   );
   if (stale.length === 0) return;
   const cut = repoFullName.lastIndexOf("/");
+  const service = getServiceClient();
+  const protectNames = await shouldProtectRepositoryNames(service);
   const patch: Record<string, unknown> = {
-    repo_full_name: repoFullName,
+    repo_full_name: protectNames
+      ? await registerRepositoryName(targets[0].provider,repoFullName)
+      : repoFullName,
     // The owner is what precedes the LAST `/` — the rule applies to
     // two forges, including a nested GitLab group (`groupe/sous-groupe`).
-    repo_owner: cut > 0 ? repoFullName.slice(0, cut) : null,
+    repo_owner: protectNames ? null : cut > 0 ? repoFullName.slice(0, cut) : null,
     updated_at: new Date().toISOString(),
   };
   // `repo_name` does not have the same meaning on both sides: at GitHub it is the
@@ -825,9 +806,8 @@ async function refreshRepoFullName(
   // payload of an issue does not carry. We therefore only rewrite the one we
   // sait dire juste.
   if (targets[0]?.provider === "github" && cut >= 0) {
-    patch.repo_name = repoFullName.slice(cut + 1);
+    patch.repo_name = protectNames ? null : repoFullName.slice(cut + 1);
   }
-  const service = getServiceClient();
   const { error } = await service
     .from("project_git_links")
     .update(patch)
@@ -835,7 +815,7 @@ async function refreshRepoFullName(
       "id",
       stale.map((t) => t.linkId),
     );
-  if (error) console.error("[issue-sync] repo rename failed:", error.message);
+  if (error) console.error("[issue-sync] repository_rename_failed");
 }
 
 // --- Backfill on activation ------------------------------------------------
@@ -845,15 +825,13 @@ async function loadImportedNumbers(
   target: IssueSyncTarget,
 ): Promise<Set<number>> {
   const service = getServiceClient();
-  const { data, error } = await service
-    .from("issues")
-    .select("remote_number")
+  const { data, error } = await issueStore(service).select("remote_number")
     .is("deleted_at", null)
     .eq("project_id", target.projectId)
     .eq("remote_provider", target.provider)
     .eq("remote_repo_id", target.externalRepoId);
   if (error) {
-    console.error("[issue-sync] backfill lookup failed:", error.message);
+    console.error("[issue-sync] backfill_lookup_failed");
     return new Set();
   }
   return new Set(
@@ -1046,7 +1024,7 @@ async function runRemoteIssueBackfill(target: IssueSyncTarget): Promise<number> 
       source: target.provider,
     });
     if (!result.ok) {
-      console.error("[issue-sync] backfill import failed:", result.errorKey);
+      console.error("[issue-sync] backfill_import_failed", target.linkId);
       return 0;
     }
     created = result.result.created;

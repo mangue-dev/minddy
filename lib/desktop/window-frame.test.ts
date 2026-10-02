@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   desktopWindowFrameOptions,
+  desktopTitleBarOverlay,
   MACOS_TRAFFIC_LIGHT_POSITION,
   desktopDocumentChrome,
 } from "./window-frame";
@@ -19,7 +20,7 @@ describe("desktopWindowFrameOptions", () => {
     (platform) => {
       expect(desktopWindowFrameOptions(platform, true)).toEqual({
         titleBarStyle: "hidden",
-        titleBarOverlay: { color: "#191a1b", symbolColor: "#eeeeee", height: 44 },
+        titleBarOverlay: { color: platform === "win32" ? "#00000000" : "#191a1b", symbolColor: "#eeeeee", height: 44 },
         autoHideMenuBar: true,
       });
     }
@@ -36,5 +37,25 @@ describe("desktopWindowFrameOptions", () => {
     expect(desktopDocumentChrome({ ...response, resourceType: "subFrame" }, origin)).toBeNull();
     expect(desktopDocumentChrome({ ...response, statusCode: 307 }, origin)).toBeNull();
     expect(desktopDocumentChrome({ ...response, url: "https://other.example.test" }, origin)).toBeNull();
+  });
+});
+
+describe("desktopTitleBarOverlay", () => {
+  it.each([
+    ["light", "#222222"],
+    ["dark", "#eeeeee"],
+  ] as const)("reveals the app surface on Windows with readable %s symbols", (theme, symbolColor) => {
+    expect(desktopTitleBarOverlay("win32", theme)).toEqual({
+      color: "#00000000",
+      symbolColor,
+      height: 44,
+    });
+  });
+
+  it.each([
+    ["light", "#fafafa", "#222222"],
+    ["dark", "#191a1b", "#eeeeee"],
+  ] as const)("preserves the Linux %s caption colors", (theme, color, symbolColor) => {
+    expect(desktopTitleBarOverlay("linux", theme)).toEqual({ color, symbolColor, height: 44 });
   });
 });

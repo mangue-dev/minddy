@@ -1,8 +1,9 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { GitMergeIcon, Target01Icon, TriangleIcon, UserCircleIcon } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
 import { Button } from "mangue-ui";
-import { UserCircle2, Triangle, Target, GitMerge } from "lucide-react";
 import {
   ALL_STATUSES,
   PRIORITIES,
@@ -67,7 +68,7 @@ export function ObjectivePicker({
           {current ? (
             <Dot color={current.color} />
           ) : (
-            <Target className="text-muted-foreground" />
+            <HugeiconsIcon icon={Target01Icon} className="text-muted-foreground" />
           )}
           {current ? current.name : tField("noObjective")}
         </Button>
@@ -150,6 +151,7 @@ export function EffortPicker({
   const options: PickerOption[] = EFFORTS.map((e) => ({
     value: e.value,
     label: e.label,
+    icon: <HugeiconsIcon icon={TriangleIcon} className="size-4 text-muted-foreground" />,
   }));
   return (
     <SearchSelect
@@ -159,7 +161,7 @@ export function EffortPicker({
       noneOption={{ label: tCommon("none") }}
       trigger={
         <Button variant="outline" size={size}>
-          <Triangle className="text-muted-foreground" />
+          <HugeiconsIcon icon={TriangleIcon} className="text-muted-foreground" />
           {value ? EFFORT_MAP[value].label : tField("effort")}
         </Button>
       }
@@ -202,7 +204,7 @@ export function AssigneePicker({
       noneOption={{ label: empty }}
       trigger={
         <Button variant="outline" size={size}>
-          <UserCircle2 className="text-muted-foreground" />
+          <HugeiconsIcon icon={UserCircleIcon} className="text-muted-foreground" />
           {current ? memberLabel(current) : empty}
         </Button>
       }
@@ -244,7 +246,7 @@ export function ParentPicker({
       noneOption={{ label: tField("noParent") }}
       trigger={
         <Button variant="outline" size={size}>
-          <GitMerge className="text-muted-foreground" />
+          <HugeiconsIcon icon={GitMergeIcon} className="text-muted-foreground" />
           {current
             ? issueIdentifier(projectKey, current.number)
             : tField("noParent")}

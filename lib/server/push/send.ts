@@ -8,6 +8,7 @@ import { sendApnsNotification } from "./apns";
 import { sendWnsNotification } from "./wns";
 import type { PushPayload } from "./payload";
 import { sendPinnedWebPushNotification } from "./web";
+import { openPush } from "./content";
 
 /**
  * Web Push delivery and the related subscription maintenance (MIN-183).
@@ -91,7 +92,7 @@ async function sendToSubscription(
       return "gone";
     }
     console.error(
-      `[push/apns] delivery failed (${response.status || "no status"}): ${response.reason ?? "unknown reason"}`
+      "[push/apns] delivery_failed", { status: response.status }
     );
     await incrementFailureCount(service, sub.id);
     return "failed";
@@ -111,7 +112,7 @@ async function sendToSubscription(
       return "gone";
     }
     console.error(
-      `[push/wns] delivery failed (${response.status || "no status"}): ${response.reason ?? "unknown reason"}`
+      "[push/wns] delivery_failed", { status: response.status }
     );
     await incrementFailureCount(service, sub.id);
     return "failed";
@@ -151,8 +152,7 @@ async function sendToSubscription(
     }
 
     console.error(
-      `[push] delivery failed (${status ?? "no status"}):`,
-      (e as Error).message
+      "[push] delivery_failed", { status }
     );
     // `failure_count + 1` without RPC: the value read may be out of date, but
     // this is a maintenance indicator, not a transactional counter.
@@ -196,14 +196,14 @@ export async function activeSubscriptionsOf(
 ): Promise<PushSubscriptionRow[]> {
   const { data, error } = await service
     .from("push_subscriptions")
-    .select("id, endpoint, transport, p256dh, auth")
+    .select("id, user_id, endpoint, endpoint_digest, transport, p256dh, auth, native_installation_id, device_label, user_agent, encrypted_content")
     .eq("user_id", userId)
     .eq("enabled", true);
   if (error) {
-    console.error("[push] failed to read subscriptions:", error.message);
+    console.error("[push] subscriptions_read_failed");
     return [];
   }
-  return (data ?? []) as PushSubscriptionRow[];
+  return Promise.all((data ?? []).map(async (row) => openPush(row))) as Promise<PushSubscriptionRow[]>;
 }
 
 /**

@@ -1,5 +1,8 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { AppIcon } from "@/components/icon";
+import { ArrowDown01Icon, CodeSimpleIcon as Code2, Copy01Icon, Edit04Icon, Search01Icon, TaskDone01Icon } from "@hugeicons/core-free-icons";
 import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
@@ -10,14 +13,6 @@ import {
   DropdownMenuTrigger,
   Progress,
 } from "mangue-ui";
-import {
-  ChevronDown,
-  ClipboardCopy,
-  Code2,
-  ListChecks,
-  Pencil,
-  SearchCheck,
-} from "lucide-react";
 import { Markdown } from "@/components/markdown";
 import { NumoIcon } from "@/components/numo-icon";
 import { TaskRow } from "@/components/plan-task-row";
@@ -139,7 +134,7 @@ export function IssuePlan({
           placeholder={t("editorPlaceholder")}
           autoFocus
           spellCheck={false}
-          className="min-h-[45vh] w-full resize-y rounded-lg border border-input bg-control p-3 font-mono text-sm leading-relaxed outline-none placeholder:text-muted-foreground/50 focus-visible:border-ring"
+          className="min-h-[45vh] w-full resize-y rounded-lg bg-control p-3 font-mono text-sm leading-relaxed outline-none placeholder:text-muted-foreground/50 focus-visible:bg-control-hover"
         />
         <div className="flex justify-end gap-2">
           <Button variant="ghost" size="sm" onClick={() => setEditing(false)}>
@@ -172,7 +167,7 @@ export function IssuePlan({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button variant="outline" size="sm" onClick={onCopyPrompt}>
-                    <ClipboardCopy className="size-4" />
+                    <HugeiconsIcon icon={Copy01Icon} className="size-4" />
                     {t("copyPlanPrompt")}
                   </Button>
                 </TooltipTrigger>
@@ -213,7 +208,7 @@ export function IssuePlan({
           className="rounded-full text-muted-foreground hover:text-foreground"
           onClick={startEditing}
         >
-          <Pencil />
+          <HugeiconsIcon icon={Edit04Icon} />
         </Button>
       </div>
 
@@ -266,27 +261,27 @@ export function IssuePlan({
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" className="grow basis-32">
-                    <ClipboardCopy className="size-4" />
+                    <HugeiconsIcon icon={Copy01Icon} className="size-4" />
                     {t("copyPlanPrompt")}
-                    <ChevronDown className="size-3.5 opacity-60" />
+                    <HugeiconsIcon icon={ArrowDown01Icon} className="size-3.5 opacity-60" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
                   {onCopyImplementPrompt && (
                     <DropdownMenuItem onSelect={onCopyImplementPrompt}>
-                      <Code2 className="size-4" />
+                      <AppIcon icon={Code2} className="size-4" />
                       {tIssue("actionImplement")}
                     </DropdownMenuItem>
                   )}
                   {started && onCopyVerifyPrompt && (
                     <DropdownMenuItem onSelect={onCopyVerifyPrompt}>
-                      <SearchCheck className="size-4" />
+                      <HugeiconsIcon icon={Search01Icon} className="size-4" />
                       {tIssue("actionVerifyImplementation")}
                     </DropdownMenuItem>
                   )}
                   {onCopyPrompt && (
                     <DropdownMenuItem onSelect={onCopyPrompt}>
-                      <ListChecks className="size-4" />
+                      <HugeiconsIcon icon={TaskDone01Icon} className="size-4" />
                       {tIssue(reviewing ? "actionReviewPlan" : "actionWritePlan")}
                     </DropdownMenuItem>
                   )}

@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
+import { feedbackPostStore } from "@/lib/server/feedback-post-store";
 import { resolveConfiguredModel, withModelSuffixFallback } from "@/lib/server/model-config";
 import type { FeedbackPostStatus } from "@/lib/feedback/types";
 import {
@@ -197,16 +198,56 @@ export async function matchFeedbackPosts(params: {
   publicOnly?: boolean;
 }): Promise<MatchedPost[]> {
   const service = getServiceClient();
-  const { data, error } = await service.rpc("match_feedback_posts", {
-    p_project_id: params.projectId,
-    p_embedding: toVectorLiteral(params.embedding),
-    p_exclude: params.exclude ?? null,
-    p_limit: params.limit ?? 8,
-    p_public_only: params.publicOnly ?? false,
-  });
-  if (error) {
-    console.error("[embeddings] match_feedback_posts failed:", error.message);
-    return [];
+  const maxCount = Number.isFinite(params.limit ?? 8)
+    ? Math.max(0, Math.min(Math.trunc(params.limit ?? 8), 100)) : 8;
+  if (maxCount === 0) return [];
+  const matches: MatchedPost[] = [];
+  const pageSize = 200;
+  for (let offset = 0; ; offset += pageSize) {
+    let query = feedbackPostStore(service)
+      .select("id, project_id, title, body, status, vote_count, issue_id, embedding")
+      .eq("project_id", params.projectId).is("deleted_at", null)
+      .is("merged_into_id", null).order("id", { ascending: true })
+      .range(offset, offset + pageSize - 1);
+    if (params.publicOnly) query = query.eq("is_public", true)
+      .eq("review_state", "published").neq("status", "spam");
+    const { data, error } = await query;
+    if (error) throw new Error("Unable to search feedback posts");
+    for (const row of data ?? []) {
+      if (row.id === params.exclude) continue;
+      const vector = parseStoredFeedbackEmbedding(row.embedding);
+      if (!vector || vector.length !== params.embedding.length) continue;
+      const similarity = cosineSimilarity(params.embedding, vector);
+      if (similarity === null) continue;
+      matches.push({ id: row.id, title: row.title, body: row.body, status: row.status,
+        vote_count: row.vote_count, issue_id: row.issue_id, similarity });
+      if (matches.length > maxCount) {
+        matches.sort((a, b) => b.similarity - a.similarity || a.id.localeCompare(b.id));
+        matches.length = maxCount;
+      }
+    }
+    if ((data ?? []).length < pageSize) break;
   }
-  return (data ?? []) as MatchedPost[];
+  matches.sort((a, b) => b.similarity - a.similarity || a.id.localeCompare(b.id));
+  return matches;
+}
+
+function parseStoredFeedbackEmbedding(value: unknown): number[] | null {
+  if (Array.isArray(value) && value.every((item) => typeof item === "number" && Number.isFinite(item))) {
+    return value;
+  }
+  if (typeof value !== "string") return null;
+  try {
+    const parsed: unknown = JSON.parse(value);
+    return Array.isArray(parsed) && parsed.every((item) => typeof item === "number" && Number.isFinite(item))
+      ? parsed : null;
+  } catch { return null; }
+}
+
+function cosineSimilarity(a: number[], b: number[]): number | null {
+  let dot = 0, aa = 0, bb = 0;
+  for (let i = 0; i < a.length; i++) {
+    dot += a[i] * b[i]; aa += a[i] * a[i]; bb += b[i] * b[i];
+  }
+  return aa > 0 && bb > 0 ? dot / Math.sqrt(aa * bb) : null;
 }

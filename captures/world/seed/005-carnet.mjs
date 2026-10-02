@@ -1,17 +1,15 @@
 /**
  * 005 — Camille's notebook.
  *
- * For which capture: `scratchpad` — “the task book modal: two
- * “##” sections, tasks checked and others to do, and an action to
- * section visible au survol ».
+ * Used by the scratchpad capture: two sections, completed and pending tasks,
+ * and the section action revealed on hover.
  *
  * The notebook is a UNIQUE markdown note per person (`user_scratchpad`),
- * cross-project, in lib/plan.ts plan format: `- [ ]` to do, `- [~]` in
- * course, `- [x]` done, `- [-]` cancelled.
+ * cross-project, in lib/plan.ts plan format: `- [ ]` pending, `- [~]` in
+ * progress, `- [x]` done, `- [-]` cancelled.
  *
- * Idempotent: the note is only written if it does not exist. We don't rewrite
- * never over — the notebook can be edited by hand, and overwrite
- * silently would lose what would have been adjusted for a capture.
+ * Existing notes are left untouched, including encrypted notes. Only the
+ * owner's identifier is needed to check existence; never read their content.
  *
  *   node captures/world/seed/005-carnet.mjs --dry-run
  *   node captures/world/seed/005-carnet.mjs
@@ -44,8 +42,8 @@ const CONTENT = `## Before the release
 
 async function main() {
   if (DRY_RUN) {
-    console.log("Ce que ce script créerait (rien n'est écrit) :\n");
-    console.log("  • Créer 1 carnet personnel pour Camille Roy, avec 2 sections :");
+    console.log("Planned changes (nothing is written):\n");
+    console.log("  • Create one personal notebook for Camille Roy, with two sections:");
     for (const line of CONTENT.split("\n")) {
       if (line.startsWith("## ")) console.log(`      « ${line.slice(3)} »`);
       else if (line.startsWith("- [")) console.log(`        ${line}`);
@@ -58,22 +56,21 @@ async function main() {
 
   const { data: existing, error } = await world.admin
     .from("user_scratchpad")
-    .select("user_id, content")
+    .select("user_id")
     .eq("user_id", people.camille)
     .maybeSingle();
-  if (error) throw new Error(`captures: lecture du carnet — ${error.message}`);
+  if (error) throw new Error(`captures: notebook lookup failed — ${error.message}`);
 
   if (existing) {
-    const tasks = (existing.content || "").split("\n").filter((l) => l.startsWith('- [')).length;
-    console.log(`  → carnet déjà là (${tasks} tâches), laissé tel quel`);
+    console.log("  → Notebook already exists; left unchanged");
     return;
   }
 
   const plan = createPlan(world);
-  plan.insert("user_scratchpad", [{ user_id: people.camille, content: CONTENT }], "carnet");
+  plan.insert("user_scratchpad", [{ user_id: people.camille, content: CONTENT }], "notebook");
   console.log(plan.describe());
   await plan.apply({ confirmed: true });
-  console.log("  → carnet créé pour Camille");
+  console.log("  → Notebook created for Camille");
 }
 
 await main();

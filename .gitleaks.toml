@@ -1,12 +1,64 @@
 title = "Minddy public-repository secret and data-marker policy"
 
 [[allowlists]]
+description = "Exact synthetic key sentinel in the production key-provisioning regression."
+targetRules = ["generic-api-key"]
+condition = "AND"
+paths = ['''(?:^|/)lib/server/agent/sandbox-key-provisioning\.test\.ts$''']
+regexTarget = "secret"
+regexes = ['''^MIN591_PRIVATE_KEY_SECRET$''']
+
+[[allowlists]]
+description = "Exact synthetic webhook-secret sentinel in the production logging regression."
+targetRules = ["generic-api-key"]
+condition = "AND"
+paths = ['''(?:^|/)lib/server/private-provider-logs\.test\.ts$''']
+regexTarget = "secret"
+regexes = ['''^synthetic-secret-of-at-least-32-characters$''']
+
+[[allowlists]]
+description = "Exact non-routable synthetic email in the Auth-arrival logging regression."
+targetRules = ["minddy-personal-email-marker"]
+condition = "AND"
+paths = ['''(?:^|/)lib/server/auth-arrival-private-logs\.test\.ts$''']
+regexTarget = "secret"
+regexes = ['''^synthetic@fixture\.invalid$''']
+
+[[allowlists]]
+description = "Exact SHA-256 migration fingerprints, independently verified by check:encryption-schema."
+targetRules = ["generic-api-key"]
+condition = "AND"
+paths = ['''(?:^|/)docs/security/encryption/migrations\.json$''']
+regexTarget = "secret"
+regexes = [
+  '''^e91b66803ed385e3160a1e2d8787ceff63f270b96689a88687717081fa930001$''',
+  '''^90c932c3a3436456374dadb1b127925eea76d5f431af4eb3416e8a666501bc54$''',
+  '''^4806eeded943436c26925b2ddc516390d76e6da199def289a2bddbcf39d45fbd$''',
+]
+
+[[allowlists]]
 description = "Accessible tab-reorder keyboard shortcut, not an API credential."
 targetRules = ["generic-api-key"]
 condition = "AND"
 paths = ['''(?:^|/)components/app-tab-item\.tsx$''']
 regexTarget = "secret"
 regexes = ['''^Alt\+Shift\+ArrowLeft$''']
+
+[[allowlists]]
+description = "Exact synthetic signing-key label in the relay provisioning codec test."
+targetRules = ["generic-api-key"]
+condition = "AND"
+paths = ['''(?:^|/)lib/server/forge-relay/provisioning-content\.test\.ts$''']
+regexTarget = "secret"
+regexes = ['''^private-ed25519-signing-key$''']
+
+[[allowlists]]
+description = "Migration digest manifest: sha256 checksums of tracked Supabase migration files, not credentials. The manifest exists so encrypted deployments can verify the migration bundle it replays; every entry is a digest of a file that ships in the same repository."
+targetRules = ["generic-api-key"]
+condition = "AND"
+paths = ['''(?:^|/)docs/security/encryption/migrations\.json$''']
+regexTarget = "secret"
+regexes = ['''^[0-9a-f]{64}$''']
 
 [extend]
 useDefault = true
@@ -85,6 +137,7 @@ paths = [
 description = "Exact synthetic credential fixtures and non-secret release identifiers."
 targetRules = ["generic-api-key"]
 paths = [
+  '''(?:^|/)lib/server/forge-relay/provisioning-content\.test\.ts$''',
   '''(?:^|/)deploy/self-hosted/\.env\.example$''',
   '''(?:^|/)desktop/released\.json$''',
   '''(?:^|/)scripts/(?:linux-desktop-release\.test|validate-self-hosted-compose)\.mjs$''',
@@ -121,3 +174,19 @@ paths = ['''(?:^|/)lib/server/git/relayed-token-refresh\.test\.ts$''']
 description = "Synthetic GitLab tokens used by the legacy focused redaction test."
 targetRules = ["gitlab-pat"]
 paths = ['''(?:^|/)lib/server/agent/redact\.test\.ts$''']
+
+[[allowlists]]
+description = "Exact root-key placeholder in the self-hosted encryption environment rendering test."
+targetRules = ["generic-api-key"]
+condition = "AND"
+paths = ['''(?:^|/)scripts/self-hosting-encryption\.test\.mjs$''']
+regexTarget = "secret"
+regexes = ['''^replace-with-64-hex-characters$''']
+
+[[allowlists]]
+description = "Exact private-LAN example used to test the full self-hosted encryption profile."
+targetRules = ["minddy-internal-network-url"]
+condition = "AND"
+paths = ['''(?:^|/)scripts/self-hosting-encryption\.test\.mjs$''']
+regexTarget = "secret"
+regexes = ['''^192\.168\.1\.50$''']

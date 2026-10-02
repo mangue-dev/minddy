@@ -13,10 +13,10 @@
 // which the user may as well drop. What we NEVER do:
 // overwrite without saying it, one way or the other.
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Cancel01Icon } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
 import { Button } from "mangue-ui";
-import { X } from "lucide-react";
-
 import type { PageBlockConflict } from "@/lib/pages-merge";
 
 /** The start of the text of a block — enough to recognize it on the page. */
@@ -90,7 +90,7 @@ export function PageConflictBanner({
           onClick={onDismiss}
           className="-mr-1 -mt-1 size-7 shrink-0"
         >
-          <X className="size-4" />
+          <HugeiconsIcon icon={Cancel01Icon} className="size-4" />
         </Button>
       </div>
     </div>

@@ -50,12 +50,8 @@ export function decryptForgeToken(
   if (!isEncryptedEnvelope(envelope)) return null;
   try {
     return decrypt(envelope, getForgeTokenSecret());
-  } catch (err) {
-    console.warn(
-      `[token-crypto] failed to decrypt token: ${
-        err instanceof Error ? err.message : String(err)
-      }`,
-    );
+  } catch {
+    console.warn("[token-crypto] token_decryption_failed");
     return null;
   }
 }

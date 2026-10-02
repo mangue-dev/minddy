@@ -12,6 +12,17 @@ import type { DesktopBridge } from "@/lib/desktop/bridge";
 import * as channelModule from "@/lib/desktop/channel";
 import messages from "@/messages/en.json";
 
+// The hint of each row measures itself with a ResizeObserver to decide
+// whether it truncates (MIN-593). jsdom has none.
+vi.stubGlobal(
+  "ResizeObserver",
+  class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  },
+);
+
 vi.mock("mangue-ui", async () => {
   const { createElement: element, Fragment } = await import("react");
   return {
@@ -43,6 +54,16 @@ vi.mock("mangue-ui", async () => {
     PopoverTrigger: ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) =>
       element("button", props, children),
     PopoverContent: ({ children }: React.PropsWithChildren) =>
+      element("div", null, children),
+    // The hint renders its overflow tooltip through `components/ui/tooltip`
+    // (built on mangue-ui). The test needs the tooltip JSX to pass children
+    // through, nothing more.
+    Tooltip: ({ children }: React.PropsWithChildren) => element(Fragment, null, children),
+    TooltipTrigger: ({
+      children,
+      ...props
+    }: React.HTMLAttributes<HTMLElement>) => element("span", props, children),
+    TooltipContent: ({ children }: React.PropsWithChildren) =>
       element("div", null, children),
   };
 });

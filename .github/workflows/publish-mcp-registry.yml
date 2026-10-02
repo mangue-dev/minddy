@@ -1,0 +1,63 @@
+name: Publish to MCP registry
+
+# Publishes the server manifest (`server.json`) to the official MCP registry
+# (registry.modelcontextprotocol.io) after each core release, and on demand.
+# Runs outside `release.yml` on purpose: a registry hiccup must neither fail a
+# finished release nor make the release workflow unreplayable.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to publish (must match server.json, without v prefix)"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: publish-mcp-registry
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish server.json to the official registry
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+
+      - name: Check the manifest matches the released version
+        env:
+          RELEASE_VERSION: ${{ github.event.release.tag_name || inputs.version }}
+        run: |
+          VERSION=${RELEASE_VERSION#v}
+          test "$(node -p "require('./server.json').version")" = "$VERSION" || {
+            echo "::error::server.json does not carry version $VERSION."
+            exit 1
+          }
+
+      # Not an action: the publisher is a standalone binary, fetched and
+      # checksum-pinned by a repository script so a swapped upstream tarball
+      # can never publish under minddy's name.
+      - name: Fetch the pinned mcp-publisher
+        run: echo "path=$(node scripts/fetch-mcp-publisher.mjs .vendor/mcp-publisher)" >> "$GITHUB_OUTPUT"
+        id: publisher
+
+      - name: Authenticate to the registry through GitHub OIDC
+        run: |
+          chmod +x "$PUBLISHER"
+          "$PUBLISHER" login github-oidc
+        env:
+          PUBLISHER: ${{ steps.publisher.outputs.path }}
+
+      - name: Publish server.json
+        run: '"$PUBLISHER" publish'
+        env:
+          PUBLISHER: ${{ steps.publisher.outputs.path }}

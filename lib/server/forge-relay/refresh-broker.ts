@@ -29,19 +29,19 @@ export type RefreshBrokerResult =
   | { ok: true; tokens: BrokeredTokenSet }
   | { ok: false; status: number; error: string };
 
-/** Append-only trace of a relay action. Best-effort: the action already happened. */
+/** Append-only trace of a relay action. Caller detail is excluded from storage. */
 async function recordRelayAudit(
   instanceId: string,
   action: string,
-  detail: Record<string, unknown>,
+  _detail: Record<string, unknown>,
 ): Promise<void> {
   try {
     const { error } = await getServiceClient()
       .from("forge_relay_audit")
-      .insert({ instance_id: instanceId, action, detail });
+      .insert({ instance_id: instanceId, action, detail: {} });
     if (error) throw error;
-  } catch (err) {
-    console.error("[forge-relay] audit write failed:", (err as Error).message);
+  } catch {
+    console.error("[forge-relay] audit_write_failed");
   }
 }
 
@@ -63,7 +63,7 @@ export async function brokerTokenRefresh(input: {
     .limit(1)
     .maybeSingle();
   if (lookupError) {
-    console.error("[forge-relay] refresh lineage lookup failed:", lookupError.message);
+    console.error("[forge-relay] refresh_lineage_lookup_failed");
     return { ok: false, status: 503, error: "Refresh lineage is unavailable" };
   }
   if (!knownLineage) {
@@ -89,7 +89,7 @@ export async function brokerTokenRefresh(input: {
     },
   );
   if (claimError) {
-    console.error("[forge-relay] refresh lineage claim failed:", claimError.message);
+    console.error("[forge-relay] refresh_lineage_claim_failed");
     return { ok: false, status: 503, error: "Refresh lineage is unavailable" };
   }
   if (typeof lineageId !== "string") {
@@ -140,8 +140,7 @@ export async function brokerTokenRefresh(input: {
       .select("id");
     if (updateError || !updated?.length) {
       console.error(
-        "[forge-relay] refresh lineage update failed:",
-        updateError?.message ?? "claim lost",
+        "[forge-relay] refresh_lineage_update_failed",
       );
       return { ok: false, status: 503, error: "Refreshed token lineage could not be stored" };
     }

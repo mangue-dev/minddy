@@ -40,15 +40,12 @@ export async function consumeFeedbackVoiceLimit(params: {
       }
     );
     if (error) {
-      console.error("[feedback-voice] atomic rate limit failed:", error.message);
+      console.error("[feedback-voice] atomic_rate_limit_failed");
       return { allowed: false, retryAfter: WINDOW_SECONDS };
     }
     return { allowed: data === true, retryAfter: WINDOW_SECONDS };
-  } catch (error) {
-    console.error(
-      "[feedback-voice] atomic rate limit failed:",
-      error instanceof Error ? error.message : String(error)
-    );
+  } catch {
+    console.error("[feedback-voice] atomic_rate_limit_failed");
     return { allowed: false, retryAfter: WINDOW_SECONDS };
   }
 }

@@ -8,6 +8,7 @@ import {
   gitRelayConfig,
   gitRelayTarget,
 } from "./agent-runner-git-relay.mjs";
+import { agentSandboxStorage } from "./agent-runner-storage.mjs";
 
 const socketPath = process.env.DOCKER_HOST?.replace(/^unix:\/\//, "") || "/var/run/docker.sock";
 const secret = process.env.AGENT_RUNNER_SECRET?.trim();
@@ -16,7 +17,6 @@ const sandboxNetwork = process.env.AGENT_RUNNER_NETWORK?.trim();
 const port = Number(process.env.AGENT_RUNNER_PORT || 6464);
 const maxBodyBytes = 5 * 1024 * 1024;
 const maxGitBodyBytes = 100 * 1024 * 1024;
-const stoppedSandboxRetentionMs = 7 * 24 * 60 * 60_000;
 const llmRelays = new Map();
 const gitRelays = new Map();
 
@@ -56,7 +56,9 @@ function parseJson(buffer) {
 }
 
 function sandboxContainerName(name) {
-  if (!/^agent-[0-9a-f-]{36}$/i.test(name)) throw Object.assign(new Error("invalid sandbox name"), { status: 400 });
+  if (!/^agent-(?:v2-)?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(name)) {
+    throw Object.assign(new Error("invalid sandbox name"), { status: 400 });
+  }
   return `minddy-${name}`;
 }
 
@@ -74,10 +76,31 @@ async function inspectContainer(name) {
   }
 }
 
+async function removeSandbox(name, container) {
+  if (container?.State?.Running) {
+    await docker("POST", `/v1.44/containers/${encodeURIComponent(sandboxContainerName(name))}/stop?t=10`);
+  }
+  if (container) {
+    await docker("DELETE", `/v1.44/containers/${encodeURIComponent(sandboxContainerName(name))}?v=true`);
+  }
+  llmRelays.delete(name);
+  gitRelays.delete(name);
+  // Retire volumes created by previous runner versions as soon as the container is gone.
+  await docker("DELETE", `/v1.44/volumes/${encodeURIComponent(sandboxVolumeName(name))}`).catch((error) => {
+    if (error.status !== 404) throw error;
+  });
+}
+
 async function ensureSandbox(name) {
   const containerName = sandboxContainerName(name);
   let container = await inspectContainer(name);
   let created = false;
+  // A stopped container has lost its volatile store. An older volume-backed
+  // container must never be resumed with its historical plaintext files.
+  if (container && (!container.State?.Running || container.Mounts?.some((mount) => mount.Type === "volume"))) {
+    await removeSandbox(name, container);
+    container = null;
+  }
   if (!container) {
     await docker("POST", `/v1.44/containers/create?name=${encodeURIComponent(containerName)}`, {
       Image: sandboxImage,
@@ -98,8 +121,7 @@ async function ensureSandbox(name) {
         PidsLimit: 512,
         Memory: Number(process.env.AGENT_RUNNER_SANDBOX_MEMORY_BYTES || 4_294_967_296),
         NanoCpus: Number(process.env.AGENT_RUNNER_SANDBOX_NANO_CPUS || 2_000_000_000),
-        Mounts: [{ Type: "volume", Source: sandboxVolumeName(name), Target: "/vercel" }],
-        Tmpfs: { "/tmp": "rw,nosuid,nodev,size=1073741824" },
+        ...agentSandboxStorage(),
       },
     });
     created = true;
@@ -120,23 +142,14 @@ async function ensureSandbox(name) {
   return { created };
 }
 
-async function removeExpiredSandboxes(now = Date.now()) {
+async function removeExpiredSandboxes() {
   const filters = encodeURIComponent(JSON.stringify({ label: ["io.minddy.agent-sandbox"] }));
   const containers = parseJson((await docker("GET", `/v1.44/containers/json?all=true&filters=${filters}`)).payload) || [];
   for (const container of containers) {
     const name = container?.Labels?.["io.minddy.agent-sandbox"];
     if (!name || container.State === "running") continue;
-    const inspected = await inspectContainer(name);
-    const finishedAt = Date.parse(inspected?.State?.FinishedAt || "");
-    if (!Number.isFinite(finishedAt) || now - finishedAt < stoppedSandboxRetentionMs) continue;
-    await docker("DELETE", `/v1.44/containers/${encodeURIComponent(sandboxContainerName(name))}?v=true`).then(async () => {
-      llmRelays.delete(name);
-      gitRelays.delete(name);
-      await docker("DELETE", `/v1.44/volumes/${encodeURIComponent(sandboxVolumeName(name))}`).catch((error) => {
-        if (error.status !== 404) throw error;
-      });
-    }).catch((error) => {
-      console.error(`[agent-runner] could not remove expired sandbox ${name}:`, error.message);
+    await removeSandbox(name, await inspectContainer(name)).catch(() => {
+      console.error("[agent-runner] stopped sandbox cleanup failed");
     });
   }
 }
@@ -288,19 +301,32 @@ async function relayLlmCompletion(name, request, response) {
   }
   if (relay.apiKey) headers.authorization = `Bearer ${relay.apiKey}`;
 
-  const upstream = await requestPublicUrl(relay.url, {
-    method: "POST",
-    headers,
-    body: JSON.stringify(body),
-  });
-  const responseHeaders = {};
-  upstream.headers.forEach((value, key) => {
-    if (["content-encoding", "content-length", "transfer-encoding"].includes(key)) return;
-    responseHeaders[key] = value;
-  });
-  response.writeHead(upstream.status, responseHeaders);
-  for await (const chunk of upstream.stream) response.write(chunk);
-  response.end();
+  const controller = new AbortController();
+  const disconnect = () => {
+    if (!response.writableFinished) controller.abort();
+  };
+  response.once("close", disconnect);
+  try {
+    const upstream = await requestPublicUrl(relay.url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+    const responseHeaders = {};
+    upstream.headers.forEach((value, key) => {
+      if (["content-encoding", "content-length", "transfer-encoding"].includes(key)) return;
+      responseHeaders[key] = value;
+    });
+    response.writeHead(upstream.status, responseHeaders);
+    for await (const chunk of upstream.stream) response.write(chunk);
+    response.end();
+  } catch (error) {
+    // A sandbox disconnect is an expected Stop, not a second HTTP response.
+    if (!controller.signal.aborted) throw error;
+  } finally {
+    response.off("close", disconnect);
+  }
 }
 
 async function relayGit(name, action, request, response, url) {
@@ -426,15 +452,21 @@ const server = createServer(async (request, response) => {
       return json(response, 200, { ok: true });
     }
     if (action === "/stop" && request.method === "POST") {
-      const container = await inspectContainer(name);
-      if (container?.State?.Running) await docker("POST", `/v1.44/containers/${encodeURIComponent(sandboxContainerName(name))}/stop?t=10`);
-      llmRelays.delete(name);
-      gitRelays.delete(name);
+      await removeSandbox(name, await inspectContainer(name));
+      return json(response, 200, { ok: true });
+    }
+    if (action === "" && request.method === "DELETE") {
+      await removeSandbox(name, await inspectContainer(name));
       return json(response, 200, { ok: true });
     }
     return json(response, 404, { error: "not found" });
   } catch (error) {
-    console.error("[agent-runner]", error instanceof Error ? error.message : error);
+    if (response.destroyed || response.writableEnded) return;
+    if (response.headersSent) {
+      response.destroy();
+      return;
+    }
+    console.error("[agent-runner] request failed", { status: Number(error?.status) || 500 });
     // Upstream errors can contain stack traces, paths, or credentials.
     const status = Number(error?.status);
     const publicStatus = Number.isInteger(status) && status >= 400 && status <= 599 ? status : 500;
@@ -449,10 +481,10 @@ const server = createServer(async (request, response) => {
 
 server.listen(port, "0.0.0.0", () => {
   console.log(`[agent-runner] ready on port ${port}`);
-  setTimeout(() => void removeExpiredSandboxes().catch((error) => {
-    console.error("[agent-runner] cleanup failed:", error.message);
+  setTimeout(() => void removeExpiredSandboxes().catch(() => {
+    console.error("[agent-runner] cleanup failed");
   }), 30_000).unref();
-  setInterval(() => void removeExpiredSandboxes().catch((error) => {
-    console.error("[agent-runner] cleanup failed:", error.message);
+  setInterval(() => void removeExpiredSandboxes().catch(() => {
+    console.error("[agent-runner] cleanup failed");
   }), 6 * 60 * 60_000).unref();
 });

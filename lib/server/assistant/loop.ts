@@ -1,4 +1,9 @@
 import "server-only";
+import { visibleAssistantContent } from "./visible-content";
+import { hasSerializedToolCall, looksLikePendingAction } from "@/lib/ai-completion";
+import { randomUUID } from "node:crypto";
+import { encodeNumoToolMessage,
+  shouldProtectNumoToolContent } from "@/lib/server/numo/tool-content";
 
 import type { AssistantToolCall } from "@/lib/assistant-types";
 import { parseAskUserQuestions } from "@/lib/ask-user";
@@ -10,9 +15,12 @@ import {
 } from "./execute-tool";
 import type { AssistantToolDef } from "./tools";
 import { redactDeep, SecretRedactor } from "@/lib/server/agent/redact";
-import { stripModelSuffix } from "@/lib/ai-model-config";
 import { fetchAiChat, type ResolvedAiRuntime } from "@/lib/server/ai-runtime";
-import { fetchAiProviderBytes } from "@/lib/server/ai-provider-request";
+import {
+  getCachedOpenRouterModelInfo,
+  getOpenRouterModelInfo,
+  loadOpenRouterIndex,
+} from "@/lib/server/agent/openrouter-index";
 import {
   getToolResultCharLimit,
   serializeToolResult,
@@ -72,6 +80,42 @@ export interface ProcessChatCheckpoint {
   pendingToolCalls?: AssistantToolCall[];
   completedToolCallIds?: string[];
   roundCount?: number;
+  /** Keep correction attempts bounded across durable resumes. */
+  completionRepairs?: number;
+  completionRepairPending?: boolean;
+  completionRepairExhausted?: boolean;
+}
+
+export class NumoCompletionError extends Error {
+  constructor(readonly reason: string) {
+    super(`The model did not complete the requested work: ${reason}. No completion was recorded.`);
+    this.name = "NumoCompletionError";
+  }
+}
+
+const MAX_COMPLETION_REPAIRS = 2;
+const SUCCESSFUL_FINISH_REASONS = new Set(["stop", "tool_calls", "function_call", "end_turn", "stop_sequence"]);
+const COMPLETION_REPAIR_PROMPT =
+  "Your previous response did not complete the requested work. " +
+  "If work remains, use the advertised native tool calls now; never serialize tool calls as XML or prose. " +
+  "Complete the task and return the actual outcome, or state the concrete blocker. " +
+  "Do not finish with an announcement of an action you have not performed.";
+
+function malformedNativeCalls(calls: Iterable<{ id: string; name: string; arguments: string }>): boolean {
+  const ids = new Set<string>();
+  for (const call of calls) {
+    if (typeof call.id !== "string" || !call.id.trim()
+      || typeof call.name !== "string" || !call.name.trim()
+      || typeof call.arguments !== "string" || ids.has(call.id)) return true;
+    ids.add(call.id);
+    try {
+      const args: unknown = JSON.parse(call.arguments);
+      if (!args || typeof args !== "object" || Array.isArray(args)) return true;
+    } catch {
+      return true;
+    }
+  }
+  return false;
 }
 
 export interface ToolLedgerClaim {
@@ -114,11 +158,9 @@ export class AmbiguousToolExecutionError extends Error {
  */
 const STREAM_IDLE_TIMEOUT_MS = 90_000;
 /**
- * Ceiling between two `shouldStop` polls while streaming. A stop requested
- * while a round streams must abort the provider request promptly instead of
- * waiting for the round to finish on its own.
+ * Ceiling between two `shouldStop` polls throughout model and tool execution.
  */
-const STOP_POLL_INTERVAL_MS = 1_000;
+const STOP_POLL_INTERVAL_MS = 250;
 
 /**
  * Raised when the provider stream carried nothing for the idle ceiling. The
@@ -134,74 +176,28 @@ export class LlmStreamIdleError extends Error {
   }
 }
 
-/** Module-level cache — OpenRouter model list is fetched at most once per
-    process (on success), then feeds both capability lookups below. */
-const modelIndexCache = new Map<
-  string,
-  { caching: boolean; modalities: string[] }
->();
-let modelIndexLoaded = false;
-const MAX_MODEL_INDEX_BYTES = 5 * 1024 * 1024;
-
-async function loadModelIndex(apiKey: string): Promise<void> {
-  if (modelIndexLoaded) return;
-  try {
-    const res = await fetchAiProviderBytes(
-      "openrouter",
-      "https://openrouter.ai/api/v1/models",
-      {
-        headers: { Authorization: `Bearer ${apiKey}` },
-        maxBytes: MAX_MODEL_INDEX_BYTES,
-      },
-    );
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const body = JSON.parse(res.bytes.toString("utf8")) as {
-      data?: Array<{
-        id: string;
-        pricing?: { input_cache_read?: string | number };
-        architecture?: { input_modalities?: string[] };
-      }>;
-    };
-    for (const m of body.data ?? []) {
-      modelIndexCache.set(m.id, {
-        caching: Number(m.pricing?.input_cache_read ?? 0) > 0,
-        modalities: m.architecture?.input_modalities ?? ["text"],
-      });
-    }
-    modelIndexLoaded = true;
-  } catch {
-    // Left unloaded — callers fall back to the conservative default and the
-    // next call retries the fetch.
-  }
-}
-
 /**
- * Returns true if the model supports explicit prompt caching via cache_control,
- * detected from OpenRouter's pricing metadata (input_cache_read > 0).
+ * Prompt-cache hints are optional: use available metadata and refresh it in
+ * the background so a cold or slow catalog cannot delay the first token.
  */
 export async function modelSupportsCaching(
   model: string,
-  apiKey: string
+  apiKey: string,
 ): Promise<boolean> {
-  await loadModelIndex(apiKey);
-  // The NU id: the OpenRouter catalog does not know the routing shortcuts
-  // (`…:nitro`, MIN-263), and a failed lookup would cut off the cache without saying anything.
-  return modelIndexCache.get(stripModelSuffix(model))?.caching ?? false;
+  void loadOpenRouterIndex(apiKey);
+  return getCachedOpenRouterModelInfo(model)?.promptCaching ?? false;
 }
 
 /**
- * The model's input modalities per OpenRouter ("text", "image", "file"…) —
- * gates whether attachments are sent as image/file parts or degraded to text
- * notes. Falls back to text-only when the index is unavailable.
+ * Attachment capabilities must be resolved before constructing provider input.
+ * This shares the catalog used by model validation and prompt-cache hints.
  */
 export async function getModelInputModalities(
   model: string,
-  apiKey: string
+  apiKey: string,
 ): Promise<Set<string>> {
-  await loadModelIndex(apiKey);
-  // Same: without the bare id, a suffixed model would pass as text alone and the
-  // attachments would be degraded to notes.
-  return new Set(modelIndexCache.get(stripModelSuffix(model))?.modalities ?? ["text"]);
+  const info = await getOpenRouterModelInfo(model, apiKey);
+  return new Set(info?.inputModalities ?? ["text"]);
 }
 
 export interface ProcessChatContext extends ToolContext {
@@ -219,10 +215,17 @@ export interface ProcessChatContext extends ToolContext {
     assistantReasoning: AssistantReasoning | null;
     pendingToolCalls: AssistantToolCall[];
     roundCount: number;
+    completionRepairs?: number;
   }) => Promise<string>;
   registerActiveRun?: (runId: string) => void;
   toolLedger?: ToolExecutionLedger;
   shouldStop?: () => Promise<boolean>;
+  /**
+   * Registers a synchronous stop listener, called the instant a stop request
+   * lands in this process. It stays armed across generation and tool rounds,
+   * including pending provider reads and cancellable database reads.
+   */
+  onStopSignal?: (notify: () => void) => () => void;
   /** Budget gate immediately before every provider generation. */
   beforeGeneration?: (roundCount: number) => Promise<void>;
   /** Persist one generation before any tool it requested can launch work. */
@@ -259,6 +262,8 @@ const RETRYABLE_READ_TOOLS = new Set([
   "get_page",
   "search_pages",
   "list_routines",
+  "list_routine_runs",
+  "read_routine_occurrence",
   "read_pull_request",
   "propose_backlog",
   "web_search",
@@ -279,7 +284,13 @@ async function saveToolResultMessage(
   context: ProcessChatContext,
   row: Record<string, unknown>,
 ): Promise<void> {
-  const { error } = await context.service.from("assistant_messages").insert(row);
+  const protectedRow = await shouldProtectNumoToolContent(context.service)
+    ? await encodeNumoToolMessage(context.userId, randomUUID(), {
+        role: "tool", content: row.content as string | null,
+        tool_calls: null, context: null, metadata: row.metadata ?? {},
+      }) : null;
+  const { error } = await context.service.from("assistant_messages")
+    .insert({ ...row, ...protectedRow });
   if (!error) return;
   // A completed ledger entry can be replayed after the message insert committed
   // but before its checkpoint did. The per-turn partial unique index proves that
@@ -335,10 +346,46 @@ export async function processChat(
   const redactor = new SecretRedactor();
   let suspension: ProcessChatSuspension | null = null;
   let resumeCheckpoint = context.resumeCheckpoint ?? null;
+  let completionRepairs = Math.min(MAX_COMPLETION_REPAIRS,
+    Math.max(0, Math.floor(resumeCheckpoint?.completionRepairs ?? 0)));
+  if (resumeCheckpoint?.phase === "model" && resumeCheckpoint.completionRepairPending) {
+    messages.push({ role: "user", content: COMPLETION_REPAIR_PROMPT });
+  }
+  // True as soon as a stop was observed anywhere in the round (mid-stream or
+  // between tools): the loop stops handing the turn back with no persisted
+  // work beyond the durable checkpoints already written.
+  let stopObserved = false;
+  const executionStop = new AbortController();
+  let activeGeneration: AbortController | null = null;
+  let stopPollTimer: ReturnType<typeof setTimeout> | null = null;
+  let executionClosed = false;
+  const observeStop = () => {
+    stopObserved = true;
+    executionStop.abort();
+    activeGeneration?.abort();
+  };
+  const pollStop = async () => {
+    try {
+      if (await context.shouldStop?.()) observeStop();
+    } catch {
+      // Retry transient authority reads while the execution remains live.
+    } finally {
+      if (!executionClosed && !stopObserved) {
+        stopPollTimer = setTimeout(() => { void pollStop(); }, STOP_POLL_INTERVAL_MS);
+      }
+    }
+  };
+  const stopSignalOff = context.onStopSignal?.(observeStop) ?? null;
+  stopPollTimer = setTimeout(() => { void pollStop(); }, STOP_POLL_INTERVAL_MS);
 
+  try {
   while (continueLoop) {
     continueLoop = false;
-    if (await context.shouldStop?.()) break;
+    if (await context.shouldStop?.()) observeStop();
+    if (stopObserved) break;
+    if (resumeCheckpoint?.completionRepairExhausted) {
+      throw new NumoCompletionError("the bounded correction attempts were exhausted");
+    }
     const resumingTools = resumeCheckpoint?.phase === "tools";
     roundCount = resumingTools
       ? Math.max(roundCount, resumeCheckpoint?.roundCount ?? 1)
@@ -350,6 +397,7 @@ export async function processChat(
     let fullContent = resumingTools
       ? resumeCheckpoint?.assistantContent ?? ""
       : "";
+    let rawContent = fullContent;
     let generationId: string | null = null;
     let usageInfo: {
       prompt_tokens?: number;
@@ -358,6 +406,9 @@ export async function processChat(
       cost?: number;
     } | null = null;
     let modelUsed: string | null = null;
+    let terminalFinish: string | null = null;
+    let receivedDone = false;
+    let malformedToolDelta = false;
     const toolCallAccumulators: Map<
       number,
       { id: string; name: string; arguments: string }
@@ -367,23 +418,29 @@ export async function processChat(
       : null;
 
     if (resumingTools) {
+      if (forceConclusion) throw new NumoCompletionError("a resumed tool round exceeded the execution round limit");
       for (const [index, call] of (resumeCheckpoint?.pendingToolCalls ?? []).entries()) {
         toolCallAccumulators.set(index, {
-          id: call.id,
-          name: call.function.name,
-          arguments: call.function.arguments,
+          id: call?.id,
+          name: call?.function?.name,
+          arguments: call?.function?.arguments,
         });
       }
+      if (!toolCallAccumulators.size || malformedNativeCalls(toolCallAccumulators.values())) {
+        throw new NumoCompletionError("the resumed native tool checkpoint was malformed");
+      }
     } else {
-      await context.beforeGeneration?.(roundCount);
       // One controller per generation round: it carries both the idle watchdog
       // and a mid-stream stop. Aborting the signal destroys the pinned socket,
       // which is what makes a hung stream, or a stop request, observable here.
       const generationController = new AbortController();
+      activeGeneration = generationController;
       let idleTimer: ReturnType<typeof setTimeout> | null = null;
       let idleAborted = false;
-      let stopObserved = false;
-      let lastStopCheckAt = 0;
+      const closeRound = () => {
+        if (idleTimer) clearTimeout(idleTimer);
+        if (activeGeneration === generationController) activeGeneration = null;
+      };
       const armIdleTimer = () => {
         if (idleTimer) clearTimeout(idleTimer);
         idleTimer = setTimeout(() => {
@@ -394,6 +451,25 @@ export async function processChat(
       armIdleTimer();
       let call;
       try {
+        // Budget and preparation reads can be slow too. A hosted executor
+        // must observe Stop before opening a provider request, not only once
+        // response headers or text arrive.
+        let rejectPreparation!: () => void;
+        const interrupted = new Promise<never>((_resolve, reject) => {
+          rejectPreparation = () => reject(new Error("Generation preparation interrupted"));
+          generationController.signal.addEventListener("abort", rejectPreparation, { once: true });
+        });
+        try {
+          if (generationController.signal.aborted) rejectPreparation();
+          await Promise.race([context.beforeGeneration?.(roundCount), interrupted]);
+        } finally {
+          generationController.signal.removeEventListener("abort", rejectPreparation);
+        }
+        if (stopObserved || await context.shouldStop?.()) {
+          observeStop();
+          closeRound();
+          break;
+        }
         call = await fetchAiChat(
           aiRuntime,
           requestModel,
@@ -410,44 +486,53 @@ export async function processChat(
           { signal: generationController.signal },
         );
       } catch (error) {
+        closeRound();
         // The watchdog also covers the connection phase: a provider that
         // accepts the request and never answers must end as a retryable idle
         // failure, not as an opaque abort.
+        if (stopObserved) {
+          // The stop fired during the connection attempt: hand the turn back
+          // unpersisted, like a stop observed mid-stream.
+          break;
+        }
         if (idleAborted || generationController.signal.aborted) throw new LlmStreamIdleError();
         throw error;
       }
       const response = call.response;
       requestModel = call.model;
-      // These early exits leave before the stream try/finally disarms the
-      // watchdog: without an explicit cleanup every provider refusal would
-      // keep a 90 s timer armed on an already-abandoned controller.
+      // These early exits precede the stream's watchdog cleanup. Keep the
+      // turn's stop observer armed until the entire execution finishes.
       if (!response.ok) {
-        if (idleTimer) clearTimeout(idleTimer);
-        const errorText = await response.text();
+        let errorText: string;
+        try {
+          errorText = await response.text();
+        } catch (error) {
+          if (stopObserved) break;
+          throw error;
+        } finally {
+          closeRound();
+        }
         throw new Error(`LLM error (${response.status}): ${errorText.slice(0, 200)}`);
       }
       const reader = response.body?.getReader();
       if (!reader) {
-        if (idleTimer) clearTimeout(idleTimer);
+        closeRound();
         throw new Error("No response body from LLM");
       }
 
       const decoder = new TextDecoder();
       let buffer = "";
       const reasoningStream = new AssistantReasoningStream(emitter);
+      // A stop requested while the loop sits on a pending `reader.read()`
+      // (silent reasoning phases) aborts the provider request, which errors
+      // the body stream and unblocks the pending read; the read rejection
+      // sees `stopObserved` and the round is handed back unpersisted.
       try {
         while (true) {
           // A stop that arrives mid-stream aborts the provider request right
           // away: waiting for the round to end would leave a stop pending for
           // minutes on a long or hung stream.
-          if (Date.now() - lastStopCheckAt >= STOP_POLL_INTERVAL_MS) {
-            lastStopCheckAt = Date.now();
-            if (await context.shouldStop?.()) {
-              stopObserved = true;
-              generationController.abort();
-              break;
-            }
-          }
+          if (stopObserved) break;
           let chunk;
           try {
             chunk = await reader.read();
@@ -457,15 +542,20 @@ export async function processChat(
             throw readError;
           }
           const { done, value } = chunk;
-          if (done) break;
-          armIdleTimer();
-          buffer += decoder.decode(value, { stream: true });
+          if (stopObserved) break;
+          if (!done) armIdleTimer();
+          // A provider can close directly after its final data line. Flush the
+          // decoder and that line instead of discarding its terminal/tool data.
+          buffer += done ? `${decoder.decode()}\n` : decoder.decode(value, { stream: true });
           const lines = buffer.split("\n");
           buffer = lines.pop() || "";
           for (const line of lines) {
-            if (!line.startsWith("data: ")) continue;
-            const data = line.slice(6).trim();
-            if (data === "[DONE]") continue;
+            if (!line.startsWith("data:")) continue;
+            const data = line.slice(5).trim();
+            if (data === "[DONE]") {
+              receivedDone = true;
+              continue;
+            }
             let parsed;
             try {
               parsed = JSON.parse(data);
@@ -475,12 +565,15 @@ export async function processChat(
             if (parsed.id && !generationId) generationId = parsed.id;
             if (parsed.model) modelUsed = parsed.model;
             if (parsed.usage) usageInfo = parsed.usage;
+            const choice = parsed.choices?.[0];
+            const finish = choice?.finish_reason ?? choice?.native_finish_reason;
+            if (typeof finish === "string" && finish) terminalFinish = finish;
             // OpenRouter reports mid-stream provider failures in-band: a
             // top-level `error` beside the choice, with `finish_reason:
             // "error"` and no usable content. Swallowing it would surface a
             // silently truncated reply, so it goes through the durable retry
             // path like any other generation failure.
-            const streamError = parsed.error
+            const streamError = parsed.error ?? choice?.error
               ?? (parsed.choices?.[0]?.finish_reason === "error"
                 ? { message: "The provider disconnected mid-stream" }
                 : null);
@@ -496,12 +589,27 @@ export async function processChat(
             }
             if (delta.content) {
               roundReasoning = reasoningStream.finish();
-              fullContent += delta.content;
-              emitter.emit("content_delta", { delta: delta.content });
+              rawContent += delta.content;
+              const visible = visibleAssistantContent(rawContent);
+              const visibleDelta = visible.slice(fullContent.length);
+              fullContent = visible;
+              if (visibleDelta) emitter.emit("content_delta", { delta: visibleDelta });
             }
-            if (delta.tool_calls) {
+            if (delta.tool_calls != null && !Array.isArray(delta.tool_calls)) {
+              malformedToolDelta = true;
+            } else if (Array.isArray(delta.tool_calls)) {
               roundReasoning = reasoningStream.finish();
               for (const tc of delta.tool_calls) {
+                if (!tc || typeof tc !== "object" || Array.isArray(tc)
+                  || (tc.index != null && (!Number.isInteger(tc.index) || tc.index < 0))
+                  || (tc.id != null && typeof tc.id !== "string")
+                  || (tc.type != null && tc.type !== "function")
+                  || (tc.function != null && (typeof tc.function !== "object" || Array.isArray(tc.function)))
+                  || (tc.function?.name != null && typeof tc.function.name !== "string")
+                  || (tc.function?.arguments != null && typeof tc.function.arguments !== "string")) {
+                  malformedToolDelta = true;
+                  continue;
+                }
                 const idx = tc.index ?? 0;
                 if (!toolCallAccumulators.has(idx)) {
                   toolCallAccumulators.set(idx, {
@@ -523,9 +631,10 @@ export async function processChat(
               }
             }
           }
+          if (done) break;
         }
       } finally {
-        if (idleTimer) clearTimeout(idleTimer);
+        closeRound();
         roundReasoning = reasoningStream.finish();
       }
       const generation = {
@@ -545,10 +654,52 @@ export async function processChat(
         // `stopped`.
         break;
       }
+
+      const serializedCall = hasSerializedToolCall(rawContent);
+      const pendingAction = toolCallAccumulators.size === 0 && looksLikePendingAction(fullContent);
+      const truncated = terminalFinish === "length" || terminalFinish === "max_tokens";
+      const invalidFinish = terminalFinish !== null && !SUCCESSFUL_FINISH_REASONS.has(terminalFinish);
+      const incompleteTransport = !receivedDone && !terminalFinish;
+      const emptyAnswer = toolCallAccumulators.size === 0 && !fullContent.trim();
+      const missingNativeCalls = (terminalFinish === "tool_calls" || terminalFinish === "function_call")
+        && toolCallAccumulators.size === 0;
+      const invalidNativeCall = malformedToolDelta || malformedNativeCalls(toolCallAccumulators.values());
+      const toolCapExceeded = forceConclusion && toolCallAccumulators.size > 0;
+      const completionProblem = toolCapExceeded ? "a tool call exceeded the execution round limit"
+        : serializedCall ? "a tool call was returned as text"
+        : truncated ? "the response reached its token limit"
+        : invalidFinish ? "the provider did not report a successful finish"
+        : incompleteTransport ? "the stream closed before a terminal response"
+        : invalidNativeCall ? "the native tool call was malformed"
+        : missingNativeCalls ? "the native tool call was missing"
+        : pendingAction ? "the response only announced unfinished work"
+        : emptyAnswer ? "the response was empty"
+        : null;
+      if (completionProblem) {
+        if (await context.shouldStop?.()) observeStop();
+        if (stopObserved) break;
+        // Action/protocol correction needs real tools. Do not silently turn a
+        // repair into a text-only conclusion when the existing round cap is hit.
+        const actionRepairUnavailable = toolCapExceeded || (
+          (serializedCall || pendingAction || missingNativeCalls || invalidNativeCall)
+          && tools.length > 0 && roundCount >= MAX_TOOL_EXECUTION_ROUNDS
+        );
+        const exhausted = completionRepairs >= MAX_COMPLETION_REPAIRS || actionRepairUnavailable;
+        if (!exhausted) completionRepairs++;
+        await context.persistCheckpoint?.({
+          phase: "model", roundCount, completionRepairs,
+          completionRepairPending: !exhausted,
+          completionRepairExhausted: exhausted,
+        });
+        if (exhausted) throw new NumoCompletionError(completionProblem);
+        messages.push({ role: "user", content: COMPLETION_REPAIR_PROMPT });
+        continueLoop = true;
+        continue;
+      }
     }
 
     // Process completed tool calls
-    if (toolCallAccumulators.size > 0) {
+    if (toolCallAccumulators.size > 0 && !stopObserved) {
       const assistantToolCalls: AssistantToolCall[] = [];
       for (const [, acc] of toolCallAccumulators) {
         if (acc.name === "ask_user" && context.workerInput) {
@@ -590,9 +741,16 @@ export async function processChat(
             assistantReasoning: roundReasoning,
             pendingToolCalls: assistantToolCalls,
             roundCount,
+            completionRepairs,
           }),
         };
       } else {
+        const protectedRow = await shouldProtectNumoToolContent(context.service)
+          ? await encodeNumoToolMessage(context.userId, randomUUID(), {
+              role: "assistant",content: fullContent || null,
+              tool_calls: assistantToolCalls,context: null,
+              metadata: roundReasoning ? { reasoning: roundReasoning } : {},
+            }) : null;
         const { data, error } = await context.service
           .from("assistant_messages")
           .insert({
@@ -602,6 +760,7 @@ export async function processChat(
             content: fullContent || null,
             tool_calls: assistantToolCalls,
             ...(roundReasoning ? { metadata: { reasoning: roundReasoning } } : {}),
+            ...protectedRow,
           })
           .select("id")
           .single();
@@ -628,6 +787,7 @@ export async function processChat(
           pendingToolCalls: assistantToolCalls,
           completedToolCallIds: [...completedToolCallIds],
           roundCount,
+          completionRepairs,
         });
       }
       resumeCheckpoint = null;
@@ -649,8 +809,12 @@ export async function processChat(
       // which it puts before the user's eyes awaits his gesture.
       let pausedByTool = false;
 
-      // Execute each tool and save results to DB
+      // Execute each tool and save results to DB. A stop requested while a
+      // slow tool runs also reaches the read transport. Mutating tools retain
+      // their durable completion boundary before the stopped turn is returned.
       for (const [, acc] of toolCallAccumulators) {
+        if (await context.shouldStop?.()) observeStop();
+        if (stopObserved) break;
         const alreadyCompleted = completedToolCallIds.has(acc.id);
         if (acc.name === "ask_user") {
           // ask_user: emit a synthetic result and do NOT continue the loop
@@ -699,6 +863,7 @@ export async function processChat(
             pendingToolCalls: assistantToolCalls,
             completedToolCallIds: [...completedToolCallIds],
             roundCount,
+            completionRepairs,
           });
           continue;
         }
@@ -711,6 +876,7 @@ export async function processChat(
         }
 
         let execution: ToolExecution;
+        const cancellableRead = acc.name === "list_projects" || acc.name === "list_issues";
         const ledgerClaim = context.toolLedger
           ? await context.toolLedger.claim({
               toolCallId: acc.id,
@@ -728,21 +894,36 @@ export async function processChat(
         if (ledgerClaim.action === "reuse" && ledgerClaim.execution) {
           execution = ledgerClaim.execution;
         } else {
-          execution = await executeTool(acc.name, args, {
+          if (stopObserved || await context.shouldStop?.()) {
+            observeStop();
+            break;
+          }
+          const pendingExecution = executeTool(acc.name, args, {
             ...context,
             toolCallId: acc.id,
+            ...(cancellableRead ? { readAbortSignal: executionStop.signal } : {}),
           });
+          if (cancellableRead) {
+            let onReadStop!: () => void;
+            const interrupted = new Promise<null>((resolve) => {
+              onReadStop = () => resolve(null);
+              executionStop.signal.addEventListener("abort", onReadStop, { once: true });
+              if (executionStop.signal.aborted) onReadStop();
+            });
+            try {
+              const read = await Promise.race([pendingExecution, interrupted]);
+              if (!read || stopObserved) break;
+              execution = read;
+            } finally {
+              executionStop.signal.removeEventListener("abort", onReadStop);
+            }
+          } else {
+            execution = await pendingExecution;
+          }
         }
+        if (await context.shouldStop?.()) observeStop();
+        if (stopObserved && (cancellableRead || ledgerClaim.action === "reuse")) break;
         const { result, success, modelResult, pause, secrets } = execution;
-        // The complete result goes to the browser with any secret included.
-        // This is the only place where a fresh key appears live, once
-        // (MIN-343). Nothing later can see it again.
-        emitter.emit("tool_result", {
-          id: acc.id,
-          name: acc.name,
-          result,
-          success,
-        });
         if (pause) pausedByTool = true;
 
         // Apply redaction before persistence and before sending data back to
@@ -766,6 +947,15 @@ export async function processChat(
             pause: pause === true,
           });
         }
+        if (stopObserved) break;
+        // Emit only after recording the result and confirming live authority.
+        // Fresh secrets remain visible once and never enter later model input.
+        emitter.emit("tool_result", {
+          id: acc.id,
+          name: acc.name,
+          result,
+          success,
+        });
         if (!alreadyCompleted) {
           await saveToolResultMessage(context, {
             conversation_id: context.conversationId,
@@ -809,6 +999,7 @@ export async function processChat(
           pendingToolCalls: assistantToolCalls,
           completedToolCallIds: [...completedToolCallIds],
           roundCount,
+          completionRepairs,
         });
       }
 
@@ -816,8 +1007,8 @@ export async function processChat(
       // - ask_user, or a tool that hands the turn back: stop and wait for user
       // - other tools: continue normally with tools enabled (round cap only —
       //   minddy tools chain legitimately: create issue → set categories → comment)
-      if (!hasAskUser && !pausedByTool && roundCount <= MAX_TOOL_EXECUTION_ROUNDS) {
-        await context.persistCheckpoint?.({ phase: "model", roundCount });
+      if (!hasAskUser && !pausedByTool && !stopObserved && roundCount <= MAX_TOOL_EXECUTION_ROUNDS) {
+        await context.persistCheckpoint?.({ phase: "model", roundCount, completionRepairs });
         continueLoop = true;
       }
       fullContent = "";
@@ -835,4 +1026,9 @@ export async function processChat(
     generations,
     suspension,
   };
+  } finally {
+    executionClosed = true;
+    if (stopPollTimer) clearTimeout(stopPollTimer);
+    stopSignalOff?.();
+  }
 }

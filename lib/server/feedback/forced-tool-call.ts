@@ -9,6 +9,7 @@ import {
   type OpenRouterUsage,
 } from "@/lib/server/ai-usage";
 import { getAgentProvider } from "@/lib/agent-providers";
+import type { ReasoningLevel } from "@/lib/agent-reasoning";
 import type { AiSurface, ByokModelKey } from "@/lib/ai-surfaces";
 import {
   fetchAiChat,
@@ -81,8 +82,19 @@ export async function forcedToolCall(
  * hold the `maxDuration` from the road above.
  */
     timeoutMs?: number;
+    /** Cancel auxiliary work with the execution that requested it. */
+    signal?: AbortSignal;
+    /**
+ * Reasoning effort to request, when the provider knows how to express one.
+ * Absent = nothing is sent, and the model applies its family default — which
+ * on a mandatory-reasoning model can be its MOST expensive level, counted
+ * inside `maxTokens` and able to eat the whole budget before the tool call
+ * is emitted (MIN-594).
+ */
+    reasoning?: ReasoningLevel;
   }
 ): Promise<Record<string, unknown> | null> {
+  if (options?.signal?.aborted) return null;
   const logPrefix = options?.logPrefix ?? "[feedback-llm]";
 
   const billedUserId = await (async (): Promise<string | null> => {
@@ -123,6 +135,7 @@ export async function forcedToolCall(
     };
 
   try {
+    if (options?.signal?.aborted) return null;
     const call = await fetchAiChat(
       effectiveRuntime,
       resolvedModel,
@@ -144,17 +157,20 @@ export async function forcedToolCall(
         ],
         toolChoice: { type: "function", function: { name: toolName } },
         maxOutputTokens: options?.maxTokens ?? 1024,
+        ...(options?.reasoning ? { reasoning: { effort: options.reasoning } } : {}),
       }),
       options?.xTitle ?? "Feedback (minddy)",
       logPrefix,
-      { signal: AbortSignal.timeout(options?.timeoutMs ?? 45_000) },
+      { signal: options?.signal
+        ? AbortSignal.any([options.signal, AbortSignal.timeout(options?.timeoutMs ?? 45_000)])
+        : AbortSignal.timeout(options?.timeoutMs ?? 45_000) },
     );
     const response = call.response;
     if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`LLM error (${response.status}): ${errorText.slice(0, 200)}`);
+      console.error(`${logPrefix} LLM call failed: provider_http_${response.status}`);
+      return null;
     }
-    const data = (await response.json()) as {
+    let data: {
       choices?: {
         message?: {
           tool_calls?: { function?: { name?: string; arguments?: string } }[];
@@ -164,6 +180,13 @@ export async function forcedToolCall(
       model?: string;
       usage?: OpenRouterUsage;
     };
+    try {
+      data = await response.json();
+    } catch {
+      if (options?.signal?.aborted) return null;
+      console.error(`${logPrefix} LLM call failed: response_json_invalid`);
+      return null;
+    }
     if (options?.record) {
       const u = parseOpenRouterUsage(data.usage);
       await recordAiUsage({
@@ -187,9 +210,15 @@ export async function forcedToolCall(
     }
     const toolCall = data.choices?.[0]?.message?.tool_calls?.[0]?.function;
     if (toolCall?.name !== toolName) return null;
-    return JSON.parse(toolCall.arguments || "{}") as Record<string, unknown>;
-  } catch (err) {
-    console.error(`${logPrefix} LLM call failed:`, (err as Error).message);
+    try {
+      return JSON.parse(toolCall.arguments || "{}") as Record<string, unknown>;
+    } catch {
+      console.error(`${logPrefix} LLM call failed: tool_arguments_invalid`);
+      return null;
+    }
+  } catch {
+    if (options?.signal?.aborted) return null;
+    console.error(`${logPrefix} LLM call failed: request_failed`);
     return null;
   }
 }

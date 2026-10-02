@@ -152,6 +152,11 @@ const SLOTS = {
     ratio: "16/10",
     src: null,
   },
+  // NO SECTION PLACES IT since the landing refinement (MIN-581): the pages card
+  // shows the PagesFigure (tree + database) rather than the capture. The location
+  // stays here, and its capture published with it — the `captures/` chain knows it
+  // produce (`captures/shots/pagesEditor/`), and the page that needs it will not have
+  // nothing to do again.
   pagesEditor: {
     id: "pagesEditor",
     route: "/projects/<id>/pages/<pageId>",

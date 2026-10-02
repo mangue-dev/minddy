@@ -11,7 +11,10 @@ desktop/out
 desktop
 captures
 assets
-docs
+docs/**
+!docs/security
+!docs/security/encryption
+!docs/security/encryption/schema.json
 supabase/*
 !supabase/email-templates
 !supabase/email-templates/**

@@ -1,6 +1,7 @@
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
-import { ArrowRight } from "lucide-react";
 import { PricingPlans } from "./pricing-plans";
 import { SectionHeading } from "./section-heading";
 import { localizedHref } from "@/lib/locale-href";
@@ -16,7 +17,7 @@ export async function SectionPricingTeaser() {
         <PricingPlans compact comparisonLink={
           <Link href={localizedHref("/pricing", locale as Locale)}
             className="inline-flex min-h-11 items-center gap-3 rounded-sm text-sm font-medium underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring">
-            {t("pricingCompareLink")}<ArrowRight className="size-4 shrink-0" aria-hidden />
+            {t("pricingCompareLink")}<HugeiconsIcon icon={ArrowRight01Icon} className="size-4 shrink-0" aria-hidden />
           </Link>
         } />
       </div>

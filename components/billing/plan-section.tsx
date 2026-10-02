@@ -1,9 +1,10 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowRight01Icon, GiftIcon, CheckIcon } from "@hugeicons/core-free-icons";
 import { useCallback, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowRight, Check, Gift } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -143,7 +144,7 @@ export function PlanSection() {
       <div className="rounded-xl border border-primary/25 bg-gradient-to-br from-primary/8 to-card p-5 shadow-sm">
         <div className="flex items-start gap-3">
           <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/12 text-primary">
-            <Gift className="size-4" aria-hidden="true" />
+            <HugeiconsIcon icon={GiftIcon} className="size-4" aria-hidden="true" />
           </span>
           <div className="min-w-0 flex-1">
             <h3 className="text-sm font-semibold text-foreground">
@@ -310,7 +311,7 @@ export function PlanSection() {
               <ul className="mb-9 flex-1 space-y-3.5">
                 {planFeatureLabels(plan, t).map((feature) => (
                   <li key={feature} className="flex items-start gap-3 text-sm leading-relaxed">
-                    <Check className="mt-1 size-4 shrink-0" strokeWidth={1.5} aria-hidden />
+                    <HugeiconsIcon icon={CheckIcon} className="mt-1 size-4 shrink-0" strokeWidth={1.5} aria-hidden />
                     <span>{feature}</span>
                   </li>
                 ))}
@@ -323,7 +324,7 @@ export function PlanSection() {
                 className="inline-flex min-h-12 items-center justify-between gap-3 rounded-lg border border-current/20 px-4 py-3 text-left text-sm font-medium transition-colors enabled:hover:bg-white/40 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-current disabled:cursor-default disabled:opacity-50 dark:enabled:hover:bg-white/10"
               >
                 <span>{submittingPlanId === plan.id ? t("loading") : ctaLabel}</span>
-                {onAction && <ArrowRight className="size-4 shrink-0" aria-hidden />}
+                {onAction && <HugeiconsIcon icon={ArrowRight01Icon} className="size-4 shrink-0" aria-hidden />}
               </button>
             </article>
           );

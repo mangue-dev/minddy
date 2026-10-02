@@ -1,9 +1,10 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { GitMergeIcon } from "@hugeicons/core-free-icons";
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { GitMerge } from "lucide-react";
 import { MessageResponse } from "@/components/ai-elements/message";
 import type {
   PublicComment,
@@ -112,7 +113,7 @@ export function FeedbackPostClient({
 
       {mergedFromTitles.length > 0 && (
         <div className="flex items-start gap-2 rounded-md border border-border/60 bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
-          <GitMerge className="mt-0.5 size-3.5 shrink-0" />
+          <HugeiconsIcon icon={GitMergeIcon} className="mt-0.5 size-3.5 shrink-0" />
           <span>{t("mergedFrom", { titles: mergedFromTitles.join(" · ") })}</span>
         </div>
       )}

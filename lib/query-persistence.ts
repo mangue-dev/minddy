@@ -1,4 +1,5 @@
 import { type Query } from "@tanstack/react-query";
+import { restoreLocalSnapshot, saveLocalSnapshot } from "./local-snapshots";
 import {
   persistQueryClientSave,
   type Persister,
@@ -118,17 +119,26 @@ export function subscribeToQueryPersistence(
   };
 }
 
-/** Synchronous storage avoids a second timer after the snapshot is prepared. */
+/** Snapshots retain reload recovery without placing decrypted data on disk. */
 export function createQueryStorage(storage: Storage | undefined, key: string): Persister {
+  let revision = 0;
   return {
-    persistClient: (client) => {
-      storage?.setItem(key, JSON.stringify(client));
+    persistClient: async (client) => {
+      if (!storage) return;
+      const current = ++revision;
+      const guardedStorage = { setItem: (slot: string, value: string) => {
+        if (current === revision) storage.setItem(slot, value);
+      } } as Storage;
+      await saveLocalSnapshot(guardedStorage, key, "query-cache", client);
     },
-    restoreClient: () => {
-      const value = storage?.getItem(key);
-      return value ? JSON.parse(value) : undefined;
+    restoreClient: async () => {
+      if (!storage) return undefined;
+      const value = storage.getItem(key);
+      if (value && JSON.parse(value)?.format !== "minddy-local-v1") storage.removeItem(key);
+      return await restoreLocalSnapshot(storage, key, "query-cache") as Awaited<ReturnType<Persister["restoreClient"]>>;
     },
     removeClient: () => {
+      revision += 1;
       storage?.removeItem(key);
     },
   };

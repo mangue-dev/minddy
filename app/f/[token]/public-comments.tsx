@@ -1,9 +1,10 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowTurnDownIcon, Delete02Icon, LockIcon } from "@hugeicons/core-free-icons";
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
-import { CornerDownRight, Lock, Trash2 } from "lucide-react";
 import { Button, Spinner, cn } from "mangue-ui";
 import { AutoTextarea } from "@/components/auto-textarea";
 import { SendShortcutTooltip } from "@/components/send-shortcut";
@@ -189,7 +190,7 @@ export function PublicComments({
         />
       ) : (
         <p className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Lock className="size-3.5 shrink-0" />
+          <HugeiconsIcon icon={LockIcon} className="size-3.5 shrink-0" />
           {t("commentsClosed")}
         </p>
       )}
@@ -260,7 +261,7 @@ function Composer({
         placeholder={placeholder}
         maxLength={FEEDBACK_COMMENT_BODY_MAX}
         autoFocus={autoFocus}
-        className="min-h-16 w-full resize-none rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring"
+        className="min-h-16 w-full resize-none rounded-lg bg-control px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:bg-control-hover"
       />
       {error && (
         <p className="text-sm text-destructive">
@@ -347,7 +348,7 @@ function PublicCommentRow({
             onClick={onDelete}
             className="ml-auto hover:text-destructive"
           >
-            <Trash2 className="size-3.5" />
+            <HugeiconsIcon icon={Delete02Icon} className="size-3.5" />
           </IconAction>
         )}
       </div>
@@ -362,7 +363,7 @@ function PublicCommentRow({
           onClick={onReply}
           className="inline-flex w-fit items-center gap-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
         >
-          <CornerDownRight className="size-3.5" />
+          <HugeiconsIcon icon={ArrowTurnDownIcon} className="size-3.5" />
           {t("commentReply")}
         </button>
       )}

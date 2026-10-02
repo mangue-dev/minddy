@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
+import { randomUUID } from "node:crypto";
 
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getServiceClient } from "@/lib/supabase-service";
@@ -9,6 +10,9 @@ import {
   keyPrefix,
   LOCAL_ENDPOINT_WITHOUT_API_KEY,
 } from "@/lib/server/agent/byok-credentials";
+import { decodeUserAiKeyRow, encodeUserAiKeyRow,
+  shouldProtectUserAiKeys, type UserAiKeyRow } from
+  "@/lib/server/user-ai-key-content";
 import {
   BYOK_PROBE_RETRY_AFTER_SECONDS,
   probeByokKey,
@@ -44,8 +48,8 @@ import {
  * user deliberately chooses a compatible model in Account settings.
  */
 
-const SANITIZED =
-  "id, provider, key_prefix, base_url, created_at, updated_at, last_used_at, validated_at, enabled_surfaces, feature_models";
+const STORED =
+  "id, user_id, provider, key_encrypted, key_prefix, base_url, created_at, updated_at, last_used_at, validated_at, enabled_surfaces, feature_models, encrypted_content, encryption_version, content_revision";
 
 // Wide bounds: an actual API key and base URL fit well below.
 const MAX_KEY_LENGTH = 1024;
@@ -62,6 +66,20 @@ interface SanitizedAiKeyRow {
   validated_at: string | null;
   enabled_surfaces: string[];
   feature_models: ByokFeatureModels;
+}
+
+async function sanitizedAiKey(row: UserAiKeyRow, actorId: string):
+  Promise<SanitizedAiKeyRow> {
+  const plain = await decodeUserAiKeyRow(row, actorId);
+  return { id: plain.id, provider: plain.provider,
+    key_prefix: plain.key_prefix as string | null,
+    base_url: plain.base_url,
+    created_at: plain.created_at as string,
+    updated_at: plain.updated_at as string,
+    last_used_at: plain.last_used_at as string | null,
+    validated_at: plain.validated_at as string | null,
+    enabled_surfaces: plain.enabled_surfaces as string[],
+    feature_models: plain.feature_models as ByokFeatureModels };
 }
 
 function supportedFeatureModels(
@@ -135,7 +153,7 @@ export async function GET(request: NextRequest) {
   const service = getServiceClient();
   const { data } = await service
     .from("user_ai_keys")
-    .select(SANITIZED)
+    .select(STORED)
     .eq("user_id", auth.user.id)
     .order("created_at", { ascending: false });
   const { data: assignments } = await service
@@ -152,10 +170,10 @@ export async function GET(request: NextRequest) {
     ]);
   }
   const keys = await Promise.all(
-    (data ?? []).map((row) =>
+    (data ?? []).map(async (row) =>
       decorateAiKey(
-        row as SanitizedAiKeyRow,
-        assignedByKey.get((row as SanitizedAiKeyRow).id),
+        await sanitizedAiKey(row as UserAiKeyRow, auth.user.id),
+        assignedByKey.get(row.id),
       ),
     ),
   );
@@ -257,37 +275,70 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: t("aiKeyRejected") }, { status: 400 });
   }
 
-  // `user_ai_keys.key_encrypted` is NOT NULL on instances already
-  // deployed. A local endpoint without authentication has no secrets
-  // encrypt: persist a non-sensitive marker understood by
-  // `getUserByok`, rather than a NULL which would cause the save to fail.
-  let encrypted = LOCAL_ENDPOINT_WITHOUT_API_KEY;
-  if (key) {
-    try {
-      encrypted = encryptUserAiKey(key);
-    } catch {
-      // Missing AI_KEY_ENCRYPTION_SECRET → fail closed (never store plaintext).
+  const service = getServiceClient();
+  let data: UserAiKeyRow | null = null;
+  let error: { code?: string; message: string } | null = null;
+  const validatedAt = verdict === "valid" ? new Date().toISOString() : null;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const existing = await service.from("user_ai_keys").select(STORED)
+      .eq("user_id", auth.user.id).eq("provider", provider)
+      .maybeSingle();
+    if (existing.error) { error = existing.error; break; }
+    const previous = existing.data as UserAiKeyRow | null;
+    const protect = Number(previous?.encryption_version ?? 0) > 0 ||
+      await shouldProtectUserAiKeys(service);
+    if (protect) {
+      try {
+        const plain = previous
+          ? await decodeUserAiKeyRow(previous, auth.user.id) : null;
+        const encoded = await encodeUserAiKeyRow({
+          ...plain, id: previous?.id ?? randomUUID(),
+          user_id: auth.user.id, provider,
+          key_encrypted: key || LOCAL_ENDPOINT_WITHOUT_API_KEY,
+          base_url: baseUrl,
+          feature_models: plain?.feature_models ?? {},
+        } as UserAiKeyRow, { service, force: true });
+        const result = await service.rpc("upsert_user_ai_key_protected", {
+          p_user_id: auth.user.id, p_provider: provider,
+          p_id: encoded.id,
+          p_revision: previous?.content_revision ?? 0,
+          p_encrypted_content: encoded.encrypted_content,
+          p_encryption_version: encoded.encryption_version,
+          p_key_prefix: key ? keyPrefix(key) : null,
+          p_validated_at: validatedAt,
+        }).select(STORED).single();
+        if (result.error?.code === "40001" && attempt === 0) continue;
+        data = result.data as UserAiKeyRow | null;
+        error = result.error;
+      } catch {
+        error = { message: "Protected BYOK write failed" };
+      }
+    } else {
+      let encrypted = LOCAL_ENDPOINT_WITHOUT_API_KEY;
+      try {
+        if (key) encrypted = encryptUserAiKey(key);
+      } catch {
+        error = { message: "Legacy BYOK encryption is unavailable" };
+        break;
+      }
+      const result = await service.rpc("upsert_user_ai_key", {
+        p_user_id: auth.user.id, p_provider: provider,
+        p_key_encrypted: encrypted,
+        p_key_prefix: key ? keyPrefix(key) : null,
+        p_base_url: baseUrl, p_validated_at: validatedAt,
+      }).select(STORED).single();
+      data = result.data as UserAiKeyRow | null;
+      error = result.error;
+    }
+    break;
+  }
+  if (error || !data) {
+    if (error?.code === "40001") {
       return NextResponse.json(
-        { error: "BYOK is not configured on the server" },
-        { status: 503 },
+        { error: "BYOK configuration changed; retry" },
+        { status: 409 },
       );
     }
-  }
-
-  const service = getServiceClient();
-
-  const { data, error } = await service
-    .rpc("upsert_user_ai_key", {
-      p_user_id: auth.user.id,
-      p_provider: provider,
-      p_key_encrypted: encrypted,
-      p_key_prefix: key ? keyPrefix(key) : null,
-      p_base_url: baseUrl,
-      p_validated_at: verdict === "valid" ? new Date().toISOString() : null,
-    })
-    .select(SANITIZED)
-    .single();
-  if (error || !data) {
     console.error("[api/account/ai-keys] upsert failed:", error?.message);
     const t = await getTranslations("ApiErrors");
     return NextResponse.json({ error: t("aiKeySaveFailed") }, { status: 500 });
@@ -297,12 +348,13 @@ export async function POST(request: NextRequest) {
     .from("user_ai_capability_assignments")
     .select("capability")
     .eq("user_id", auth.user.id)
-    .eq("ai_key_id", (data as SanitizedAiKeyRow).id);
+    .eq("ai_key_id", data.id);
   const assignedCapabilities = (Array.isArray(assignments) ? assignments : [])
     .map((assignment) => (assignment as { capability: string }).capability)
     .filter(isModelCatalogCapability);
   return NextResponse.json({
-    key: await decorateAiKey(data as SanitizedAiKeyRow, assignedCapabilities),
+    key: await decorateAiKey(await sanitizedAiKey(data, auth.user.id),
+      assignedCapabilities),
   });
 }
 
@@ -414,7 +466,7 @@ export async function PATCH(request: NextRequest) {
   }
   const { data: active } = await service
     .from("user_ai_keys")
-    .select("provider")
+    .select(STORED)
     .eq("id", body.key_id)
     .eq("user_id", auth.user.id)
     .maybeSingle();
@@ -473,16 +525,49 @@ export async function PATCH(request: NextRequest) {
     );
   }
 
-  const { data, error } = await service
-    .rpc("update_user_ai_key_preferences", {
+  let data: UserAiKeyRow | null = null;
+  let error: { code?: string; message: string } | null = null;
+  const protect = Number((active as UserAiKeyRow).encryption_version ?? 0) > 0 ||
+    await shouldProtectUserAiKeys(service);
+  if (protect) {
+    try {
+      const plain = await decodeUserAiKeyRow(active as UserAiKeyRow,
+        auth.user.id);
+      const featureModels = update.feature_models ?? plain.feature_models ?? {};
+      const encoded = await encodeUserAiKeyRow({ ...plain,
+        feature_models: Object.fromEntries(Object.entries(featureModels)
+          .filter(([name]) => !["agent_model", "automation_agent_model",
+            "pr_review_model"].includes(name))) }, { service, force: true });
+      const result = await service.rpc(
+        "update_user_ai_key_preferences_protected", {
+          p_user_id: auth.user.id, p_key_id: body.key_id,
+          p_revision: (active as UserAiKeyRow).content_revision ?? 0,
+          p_encrypted_content: encoded.encrypted_content,
+          p_encryption_version: encoded.encryption_version,
+          p_enabled_surfaces: update.enabled_surfaces ?? null,
+        }).select(STORED).maybeSingle();
+      data = result.data as UserAiKeyRow | null;
+      error = result.error;
+    } catch {
+      error = { message: "Protected BYOK preference update failed" };
+    }
+  } else {
+    const result = await service.rpc("update_user_ai_key_preferences", {
       p_user_id: auth.user.id,
       p_key_id: body.key_id,
       p_enabled_surfaces: update.enabled_surfaces ?? null,
       p_feature_models: update.feature_models ?? null,
-    })
-    .select(SANITIZED)
-    .maybeSingle();
+    }).select(STORED).maybeSingle();
+    data = result.data as UserAiKeyRow | null;
+    error = result.error;
+  }
   if (error) {
+    if (error.code === "40001") {
+      return NextResponse.json(
+        { error: "BYOK configuration changed; retry" },
+        { status: 409 },
+      );
+    }
     console.error(
       "[api/account/ai-keys] preferences update failed:",
       error.message,
@@ -505,7 +590,7 @@ export async function PATCH(request: NextRequest) {
     .eq("ai_key_id", body.key_id);
   return NextResponse.json({
     key: await decorateAiKey(
-      data as SanitizedAiKeyRow,
+      await sanitizedAiKey(data, auth.user.id),
       (Array.isArray(assignments) ? assignments : [])
         .map((assignment) => (assignment as { capability: string }).capability)
         .filter(isModelCatalogCapability),

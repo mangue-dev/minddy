@@ -259,6 +259,69 @@ describe("runSmartTriage — rules mode", () => {
   });
 });
 
+describe("runSmartTriage — objective blocking (MIN-604)", () => {
+  it.each([
+    ["rules", "planned"], ["rules", "in_progress"], ["rules", "done"], ["rules", "canceled"],
+    ["jev", "planned"], ["jev", "in_progress"], ["jev", "done"], ["jev", "canceled"],
+  ])("%s: respects a member's blocking objective when it is %s", async (mode, status) => {
+    DB.project.smart_triage_mode = mode;
+    DB.objectives = [{ id: "obj-1", name: "Release", description: null, status }];
+    DB.issues = [
+      issue({ id: "member", objective_id: "obj-1", priority: "urgent", effort: "xs", position: 10 }),
+      issue({ id: "target", priority: "high", position: 20 }),
+      issue({ id: "free", priority: "low", position: 30 }),
+    ];
+    DB.relations = [
+      { id: "r1", source_id: "obj-1", source_type: "objective", target_id: "member", target_type: "issue", type: "blocks" },
+      { id: "r2", source_id: "member", source_type: "issue", target_id: "target", target_type: "issue", type: "blocks" },
+    ];
+    runDecisionMock.mockResolvedValue({
+      engine: "jev",
+      answers: { member: { value: 5 }, target: { value: 4 }, free: { value: 1 } },
+    });
+
+    const result = await runSmartTriage({ projectId: "project-1", actorId: "user-1" });
+    expect(result.ok).toBe(true);
+    const positionOf = (id: string): number =>
+      writtenMoves.find((move) => move.id === id)?.position ??
+      DB.issues.find((row) => row.id === id)!.position as number;
+    const ordered = DB.issues.slice()
+      .sort((a, b) => positionOf(a.id as string) - positionOf(b.id as string))
+      .map((row) => row.id);
+    expect(ordered).toEqual(status === "planned" || status === "in_progress"
+      ? ["free", "member", "target"]
+      : ["member", "free", "target"]);
+    if (mode === "jev") {
+      expect(buildSmartTriageSpecMock).toHaveBeenCalledWith(expect.objectContaining({
+        tickets: expect.arrayContaining([expect.objectContaining({
+          id: "member",
+          blocksOpen: 1,
+          blockedByOpen: status === "planned" || status === "in_progress" ? 1 : 0,
+        })]),
+      }));
+    }
+  });
+
+  it.each(["rules", "jev"])("%s: sinks a member blocking its own objective", async (mode) => {
+    DB.project.smart_triage_mode = mode;
+    DB.objectives = [{ id: "obj-1", name: "Release", description: null, status: "planned" }];
+    DB.issues = [
+      issue({ id: "member", objective_id: "obj-1", priority: "urgent", position: 10 }),
+      issue({ id: "free", priority: "low", position: 20 }),
+    ];
+    DB.relations = [
+      { id: "r", source_id: "member", source_type: "issue", target_id: "obj-1", target_type: "objective", type: "blocks" },
+    ];
+    runDecisionMock.mockResolvedValue({
+      engine: "jev",
+      answers: { member: { value: 5 }, free: { value: 1 } },
+    });
+    const result = await runSmartTriage({ projectId: "project-1", actorId: "user-1" });
+    expect(result.ok).toBe(true);
+    expect(writtenMoves).toEqual([{ id: "free", position: 10 }, { id: "member", position: 20 }]);
+  });
+});
+
 describe("runSmartTriage — jev mode", () => {
   beforeEach(() => {
     DB.project.smart_triage_mode = "jev";

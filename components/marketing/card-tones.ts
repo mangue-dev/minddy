@@ -1,6 +1,7 @@
 /** Shared pastel surfaces for the public site's product, agent, and hosting cards. */
 export const CARD_TONES = {
   sage: "bg-[#eaf0e5] text-[#263c2c] dark:bg-[#222e25] dark:text-[#dce8dc]",
+  mint: "bg-[#e0efe8] text-[#1e4436] dark:bg-[#223330] dark:text-[#d7eae1]",
   lavender: "bg-[#f0ecf6] text-[#433352] dark:bg-[#2e2638] dark:text-[#e8dff2]",
   peach: "bg-[#f7ecdf] text-[#573e28] dark:bg-[#342b22] dark:text-[#f1e1ce]",
   sky: "bg-[#e6edf5] text-[#293d56] dark:bg-[#232e3c] dark:text-[#dce7f4]",

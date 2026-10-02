@@ -1,4 +1,6 @@
 "use client";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Add01Icon, AiNetworkIcon, FileUploadIcon, LayoutGridIcon, LinkSquare01Icon } from "@hugeicons/core-free-icons";
 import { useAppTabChange } from "@/lib/use-app-tab-change";
 import { useGeneratingViews } from "@/lib/use-generating-views";
 import { useOptionalAppTabSession } from "@/lib/app-tabs-context";
@@ -25,7 +27,6 @@ import {
   toast,
 } from "mangue-ui";
 import { Kbd } from "@/components/ui/kbd";
-import { ExternalLink, FileUp, LayoutGrid, Network, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
@@ -192,18 +193,18 @@ function ProjectBoard() {
           id: "issue-family-board",
           label: tFamily("menuLabel"),
           keywords: ["family", "parent", "children", "famille", "sous-ticket"],
-          icon: <Network className="size-4" />,
+          icon: <HugeiconsIcon icon={AiNetworkIcon} className="size-4" />,
           children: [
             {
               id: "issue-family-board-current",
               label: tFamily("openHere"),
-              icon: <LayoutGrid className="size-4" />,
+              icon: <HugeiconsIcon icon={LayoutGridIcon} className="size-4" />,
               onSelect: () => window.history.pushState(null, "", href),
             },
             {
               id: "issue-family-board-new-tab",
               label: tFamily("openNewTab"),
-              icon: <ExternalLink className="size-4" />,
+              icon: <HugeiconsIcon icon={LinkSquare01Icon} className="size-4" />,
               onSelect: () => {
                 if (appTabs) void appTabs.create(href);
                 else window.open(href, "_blank", "noopener,noreferrer");
@@ -563,14 +564,15 @@ function ProjectBoard() {
     const view = await createViewAndSelect(name);
     const wish = description?.trim();
     if (wish) {
-      // Hand the view over to Numo: mark it generating, then ask Numo to fill in
-      // its filters/sort from the description. It edits this exact view (the id
-      // rides along in pageContext), and the board reflects the change live once
-      // realtime brings the updated view back (see the config-sync effect).
+      // Hand the view over to the AI: mark it generating, then ask the AI to
+      // fill in its filters/sort from the description. It edits this exact
+      // view (the id rides along in pageContext), and the board reflects the
+      // change live once realtime brings the updated view back (see the
+      // config-sync effect).
       beginGenerating(view);
       openAssistant({
         projectId,
-        prompt: t("numoBuildViewPrompt", { name, description: wish }),
+        prompt: t("aiBuildViewPrompt", { name, description: wish }),
         pageContext: { projectId, viewId: view.id, viewName: name },
       });
     } else {
@@ -578,12 +580,14 @@ function ProjectBoard() {
     }
   };
 
-  // Let Numo shape the currently selected view: open the chat carrying the
-  // active view as context so "this view" resolves without the user re-stating
-  // it. Reachable from the "Ask Numo" entry in the filters dropdown.
-  const handleAskNumo = () => {
+  // The filters menu's AI input: hand the typed wish to the Numo conversation
+  // (MIN-592, review — the classifier pass proved unreliable for filter
+  // selection, the agent with its hardened view tools is the reliable path),
+  // carrying the active view as context so "this view" resolves.
+  const handleAskAI = (wish: string) => {
     openAssistant({
       projectId,
+      prompt: t("aiFilterPrompt", { wish }),
       pageContext: activeView
         ? { projectId, viewId: activeView.id, viewName: activeView.name }
         : { projectId },
@@ -750,19 +754,19 @@ function ProjectBoard() {
  remains. Import and seed remain with the owner (the API reserves them for him, and he pays for the call). */
         <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8">
           <div className="mx-auto max-w-5xl">
-            <EmptyScene icon={LayoutGrid} title={t("emptyTitle")}>
+            <EmptyScene icon={LayoutGridIcon} title={t("emptyTitle")}>
               {isOwner ? (
                 <SplitButton
                   onClick={() => openCreate()}
                   menuLabel={t("emptyMoreWays")}
                   menu={
                     <DropdownMenuItem onSelect={() => setImportOpen(true)}>
-                      <FileUp />
+                      <HugeiconsIcon icon={FileUploadIcon} />
                       {t("emptyImport")}
                     </DropdownMenuItem>
                   }
                 >
-                  <Plus />
+                  <HugeiconsIcon icon={Add01Icon} />
                   {t("newIssue")}
                   <Kbd
                     size="sm"
@@ -773,7 +777,7 @@ function ProjectBoard() {
                 </SplitButton>
               ) : (
                 <Button type="button" onClick={() => openCreate()}>
-                  <Plus />
+                  <HugeiconsIcon icon={Add01Icon} />
                   {t("newIssue")}
                 </Button>
               )}
@@ -821,6 +825,9 @@ function ProjectBoard() {
               objective={activeObjective}
               objectives={objectives}
               projectId={project.id}
+              projectKey={project.key}
+              issues={issues}
+              onOpenIssue={openIssueById}
               progress={objectiveProgress(activeObjective.id, issues)}
               lead={
                 activeObjective.lead_user_id
@@ -852,7 +859,7 @@ function ProjectBoard() {
               onUpdateActiveView={saveActiveView}
               onRenameView={renameView}
               onDeleteView={deleteView}
-              onAskNumo={handleAskNumo}
+              onAskAI={handleAskAI}
               // The cycle is personal & cross-project: the tab exists on every
               // board but is canonical on /all only — here it just links out
               // (↗), it never scopes the cycle to this project (MIN-32).
@@ -871,6 +878,7 @@ function ProjectBoard() {
               relations={relations}
               statuses={statuses}
               sort={sort}
+              sortDirection={config.display.sortDirection}
               // The Smart sort's AI scores (project mode jev, MIN-576): the
               // comparator orders by urgency when the view sort is "smart".
               smartScores={smartScores}

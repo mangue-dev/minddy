@@ -3,6 +3,7 @@ import "server-only";
 import { recordSandboxUsage } from "@/lib/server/usage";
 import {
   spentForBudget,
+  spentPlatformForBudget,
   spentFromLedger,
   type AiUsageBillTo,
 } from "@/lib/server/ai-usage";
@@ -32,7 +33,10 @@ import {
   stampRunResult,
   type AgentRun,
 } from "./runs";
-import type { EmitAgentEvent } from "./agent-contract";
+import {
+  INTERRUPTED_DELEGATION_NOTE,
+  type EmitAgentEvent,
+} from "./agent-contract";
 import type { VmTurnReport } from "./vm/protocol";
 import { localDiffPayload } from "./local-diff-payload";
 
@@ -181,8 +185,8 @@ export async function landVmTurn(run: AgentRun, report: VmTurnReport): Promise<v
   // is already on the repository at this point, and a run that remains `running` because the
   // forge responds 502 would be a much worse evil.
   const prState = { number: run.pr_number, url: run.pr_url, state: run.pr_state };
-  await landOnPullRequest(run, report, prState, emit, locale).catch((err) => {
-    console.error("[agent-vm-rest] pull request landing failed:", (err as Error).message);
+  await landOnPullRequest(run, report, prState, emit, locale).catch(() => {
+    console.error("[agent-vm-rest] pull_request_landing_failed");
   });
 
   // The diff of the round, calculated by git IN the VM (the function no longer has the repository).
@@ -292,7 +296,17 @@ export async function landVmTurn(run: AgentRun, report: VmTurnReport): Promise<v
 
   if (report.status === "interrupted") {
     await clearInterrupt(run.id).catch(() => {});
-    await restStamp({});
+    // restStamp RE-QUEUES when steering is still queued (a message drained but
+    // unplayed at the cut): that run continues, so it must not carry the
+    // interrupted marker.
+    const pending = await hasPendingRunMessages(run.id).catch(() => false);
+    // An interrupted Numo worker must not read as a completed handoff
+    // (MIN-599): the marker keeps the delegation result `partial`. A
+    // standalone conversation stays as it was — interrupt, no note.
+    const interruptedNote = !pending && run.parent_numo_turn_id
+      ? { error_message: INTERRUPTED_DELEGATION_NOTE }
+      : {};
+    await restStamp({ ...interruptedNote });
     await revokeKey(run);
     return;
   }
@@ -363,11 +377,14 @@ export async function landVmTurn(run: AgentRun, report: VmTurnReport): Promise<v
         message:
           report.errorCode === "providerUnavailable"
             ? "The model provider kept failing, so this turn was paused. Send a message to carry on."
+            : report.errorCode === "replyIncomplete"
+              ? "The model ended before completing its work. Its checkpoint was kept and nothing was committed. Send a message to carry on."
             : "This turn reached its time limit. Send a message to carry on.",
       });
     }
     const pending = await restStamp({
       error_message: report.errorMessage ? cap(report.errorMessage, 1000) : null,
+      ...(report.errorCode === "replyIncomplete" ? { outcome: null } : {}),
     });
     if (!pending) await notifyAgentRun(run, "agent_failed");
     await revokeKey(run);
@@ -423,8 +440,8 @@ async function landOnPullRequest(
   // The branch only exists for the app from the first REAL push: it's him
   // which creates it on the repository (MIN-123).
   if (!run.branch_name && report.workBranch) {
-    await stampRun(run.id, { branch_name: report.workBranch }).catch((err) => {
-      console.error("[agent-vm-rest] branch stamp failed:", (err as Error).message);
+    await stampRun(run.id, { branch_name: report.workBranch }).catch(() => {
+      console.error("[agent-vm-rest] branch_stamp_failed");
     });
   }
 
@@ -470,10 +487,8 @@ async function identifierOf(run: AgentRun): Promise<string | null> {
 }
 
 /**
- * The "exhausted budget" card, word for word that of the old form: two
- * causes behind the same border, and they are not resolved the same - the
- * budget of the ACCOUNT is at zero (wait, go up plan, switch to BYOK), or
- * it is the ceiling placed on THIS run which has bitten, and the account will very good.
+ * Distinguish monthly exhaustion, a routine cap, and the operation allocation.
+ * An allocation can end while the monthly account still has funds.
  */
 async function emitBudgetExhausted(run: AgentRun, emit: EmitAgentEvent): Promise<void> {
   const quota = await checkAgentQuota(run.created_by ?? "").catch(() => null);
@@ -487,17 +502,24 @@ async function emitBudgetExhausted(run: AgentRun, emit: EmitAgentEvent): Promise
     run.budget_usd == null
       ? undefined
       : Math.max(0, Number(run.budget_usd) - (operationSpent ?? run.cost_usd));
+  const platformSpent = run.managed_budget_usd == null ? null
+    : await spentPlatformForBudget(run.run_id ?? run.id, run.parent_numo_turn_id).catch(() => null);
+  const allocationRemainingUsd = run.managed_budget_usd == null ? undefined
+    : Math.max(0, Number(run.managed_budget_usd) - (platformSpent ?? run.cost_usd));
   const cappedByRun =
     runCapRemainingUsd !== undefined &&
-    (accountRemainingUsd === undefined || runCapRemainingUsd < accountRemainingUsd);
+    (accountRemainingUsd === undefined || runCapRemainingUsd < accountRemainingUsd) &&
+    (allocationRemainingUsd === undefined || runCapRemainingUsd <= allocationRemainingUsd);
+  const cappedByAllocation = !cappedByRun && allocationRemainingUsd !== undefined &&
+    (accountRemainingUsd === undefined || allocationRemainingUsd < accountRemainingUsd);
   await emit("quota_exhausted", {
     spent: quota?.spent ?? null,
     cap: quota?.cap ?? null,
-    resetsAt: quota?.resetsAt ?? null,
+    resetsAt: cappedByAllocation ? null : quota?.resetsAt ?? null,
     planId: quota?.planId ?? null,
-    nextPlanId: quota?.nextPlanId ?? null,
+    nextPlanId: cappedByAllocation ? null : quota?.nextPlanId ?? null,
     byok: quota?.mode === "byok",
-    cause: cappedByRun ? "run_cap" : "account",
+    cause: cappedByRun ? "run_cap" : cappedByAllocation ? "operation_allocation" : "account",
     capPercent:
       cappedByRun && quota?.cap && run.budget_usd != null
         ? Math.round((Number(run.budget_usd) / quota.cap) * 100)

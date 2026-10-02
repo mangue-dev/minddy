@@ -4,6 +4,10 @@ import { getServiceClient } from "@/lib/supabase-service";
 import { getProjectAccess } from "@/lib/server/project-access";
 import { forgeProviderForConnection } from "@/lib/server/git/forge-provider";
 import { GITLAB_API_BASE, GITLAB_HOST, gitlabHeaders } from "@/lib/server/git/gitlab-rest";
+import { decodeRepositoryName, repositoryNameToken,
+  shouldProtectRepositoryNames } from
+  "@/lib/server/git/repository-name-content";
+import { decodeDefaultBranch } from "@/lib/server/git/default-branch-content";
 
 /**
  * Resolve access to the repository linked to a project (MIN-46 + MIN-69).
@@ -145,7 +149,7 @@ function linkConnectionSource(row: GitLinkRow): string | null {
 }
 
 const GIT_LINK_COLUMNS =
-  "id, provider, connection_id, installation_id, external_repo_id, repo_full_name, default_branch, git_connections(source)";
+  "id, project_id, provider, connection_id, installation_id, external_repo_id, repo_full_name, default_branch, git_connections(source)";
 
 /**
  * Clone target of the project, or null if it has no repository linked to it. Raise if the link
@@ -216,11 +220,14 @@ export async function resolveProjectLinkForRepo(opts: {
   repoFullName: string;
 }): Promise<ResolvedRepoLink | null> {
   const supabase = getServiceClient();
+  const storedName = await shouldProtectRepositoryNames(supabase)
+    ? await repositoryNameToken(opts.provider,opts.repoFullName)
+    : opts.repoFullName;
   const { data } = await supabase
     .from("project_git_links")
     .select(`${GIT_LINK_COLUMNS}, project_id`)
     .eq("provider", opts.provider)
-    .eq("repo_full_name", opts.repoFullName);
+    .eq("repo_full_name", storedName);
 
   const rows = (data ?? []) as GitLinkRow[];
   for (const row of rows) {
@@ -233,8 +240,9 @@ export async function resolveProjectLinkForRepo(opts: {
       externalRepoId: row.external_repo_id,
       projectId: row.project_id,
       provider: opts.provider,
-      repoFullName: row.repo_full_name,
-      defaultBranch: row.default_branch ?? "main",
+      repoFullName: (await decodeRepositoryName(opts.provider,
+        row.repo_full_name,opts.userId))!,
+      defaultBranch: await decodeDefaultBranch(row.project_id!,row.default_branch) ?? "main",
       row,
     };
   }
@@ -268,6 +276,8 @@ async function targetFromLink(
   if (!row.repo_full_name) {
     throw new Error("Project git link is missing repo_full_name");
   }
+  const repoFullName = (await decodeRepositoryName(row.provider,
+    row.repo_full_name))!;
 
   // Token source behind the ForgeProvider seam (docs/managed-forge-relay-plan.md):
   // the connection's `source` marker decides — "relay" connections mint their
@@ -296,10 +306,10 @@ async function targetFromLink(
     });
     return {
       provider: "github",
-      repoFullName: row.repo_full_name,
-      defaultBranch: row.default_branch ?? "main",
-      remoteUrl: `https://github.com/${row.repo_full_name}.git`,
-      authUrl: `https://x-access-token:${token}@github.com/${row.repo_full_name}.git`,
+      repoFullName,
+      defaultBranch: await decodeDefaultBranch(row.project_id!,row.default_branch) ?? "main",
+      remoteUrl: `https://github.com/${repoFullName}.git`,
+      authUrl: `https://x-access-token:${token}@github.com/${repoFullName}.git`,
       token,
       linkId: row.id,
       connectionId: row.connection_id,
@@ -322,10 +332,10 @@ async function targetFromLink(
     const host = new URL(GITLAB_HOST).host;
     return {
       provider: "gitlab",
-      repoFullName: row.repo_full_name,
-      defaultBranch: row.default_branch ?? "main",
-      remoteUrl: `${GITLAB_HOST.replace(/\/+$/, "")}/${row.repo_full_name}.git`,
-      authUrl: `https://oauth2:${encodeURIComponent(token)}@${host}/${row.repo_full_name}.git`,
+      repoFullName,
+      defaultBranch: await decodeDefaultBranch(row.project_id!,row.default_branch) ?? "main",
+      remoteUrl: `${GITLAB_HOST.replace(/\/+$/, "")}/${repoFullName}.git`,
+      authUrl: `https://oauth2:${encodeURIComponent(token)}@${host}/${repoFullName}.git`,
       token,
       linkId: row.id,
       connectionId: row.connection_id,

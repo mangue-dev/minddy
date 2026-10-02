@@ -1,5 +1,5 @@
 import { BulletList, ListItem } from "@tiptap/extension-list";
-import { List } from "lucide-react";
+import { LeftToRightListBulletIcon as List } from "@hugeicons/core-free-icons";
 import type { PageBlock } from "@/components/pages/blocks/types";
 
 /** `ListItem` is brought here AND by the numbered list: it is the same node

@@ -1,0 +1,185 @@
+# MIN-591 source and copy closure matrix
+
+## Current review of `2ddcbbd4e`
+
+The [corrective report](review-2026-09-29.md) supersedes historical checkpoint
+counts and remaining-code claims below. No passing row certifies production
+ciphertext or retained-copy deletion.
+
+| Source/copy | Corrective boundary | Evidence and remaining gate |
+| --- | --- | --- |
+| Forge legacy and current Storage objects | Authenticate historical-key bytes and equivalence before original removal; exact-reference proof CAS, cleanup/rotation barriers, attempted versus checked markers; restored proof invalidation. | Failing-before/passing-after byte and SQL regressions, independent reference/metadata and simulated-byte arrival orders, cold-cache multiple keys and wrong-root refusal. Real Storage-service backup/restore remains a distinct gate. |
+| Agent external allocation and new provider keys | Durable account/project reservation, immutable live binding, unique generation, revocation before cleanup and key-mint intent. | Both commit orders on real PostgreSQL plus synthetic Vercel/self-hosted late-allocation/attachment/retry fixtures. In-flight/unknown outcomes cannot certify erasure; historical pre-ledger workers and provider retention require retirement. |
+| Application and provider logs | Controlled codes/statuses/opaque IDs at the reviewed entry points and adjacent push, relay, Numo, Feedback, desktop and API Auth paths. | Forced-production sentinel tests. Historical log sinks, external command telemetry and unrelated future writers are not certified. |
+| Browser/Electron renderer caches and drafts | Server-sealed account snapshots, access-revocation guard for cached responses, bounded expiry, explicit legacy draft recovery and logout fencing. | Real crypto/route and synthetic client lifecycle tests; see [copy inventory](local-client-copies.md). Personal drafts remain account-owned recovery copies; inactive profiles/backups require retention evidence. |
+| Supabase Auth metadata import | Only explicit public identity and bounded product preference keys. | Actual import sentinel regression. Existing arbitrary Auth metadata needs a separate inventory/scrub; login email is not a general exemption. |
+
+The read-only endpoint reports a scoped observation of ten critical row
+families and forge object bytes, with `globalReadiness: "not_assessed"`.
+Repeat it with quiescent writers and stable counts; independently close every
+target and copy before completing MIN-591. Vault hardening and atomic
+ciphertext replacement follow the current README, not older dual-write or
+Vault-migration proposals.
+
+This matrix tracks code conversion and earlier domain proofs. The review of
+`2645bc129` found durable clear copies and incomplete rotation despite the
+previous 69 restore scenarios. Treat a passing domain row as evidence for the
+listed fixture, not as proof that production data has been converted or that
+every downstream copy is closed. The corrective review below records the
+additional checks. Representative search, latency, key-cache and load
+measurements remain checks before production activation.
+
+| Source | Copies | Writers | Readers | Migration | Proof and state |
+| --- | --- | --- | --- | --- | --- |
+| Agent runs, turns, runtime sessions, journal and messages | Agent contexts, Numo worker events/checkpoints, artifacts, PR URL and branch copies | Agent launch, status, queue, SQL capture and synchronization RPCs, Numo title editor, account import | Authorized run/turn repositories, Numo detail, AI/MCP, account export | Project-key CAS workers and activated SQL guards | Dedicated SQL regressions and child-first, mixed-key PostgreSQL restores pass; Numo's agent-title editor now uses the protected RPC path. Numo conversation and tool copies are covered by their row below; the run boundary has targeted SQL and recovery proof. |
+| Agent automation chain codes | Pending event and stop reason Realtime/analytics copies | Chain open, stop and pending scheduler paths | Chain, report and notification readers | Bounded CAS normalizes legacy free values; SQL rejects non-code writers | SQL regression and child-first PostgreSQL restore pass; Numo conversation content is covered by the separate row below. |
+| Issues and feedback posts | Histories, comments, agent launches, forge metadata, PR titles and URLs, attachment rows | Issue/feedback repositories, imports, SQL sidecars and forge handlers | Search, Numo, notifications, AI/MCP, exports | Project-key CAS workers and activated SQL guards | Source and copy regressions plus mixed-key restores pass; Repository identities, notification projections and exports are covered by the related rows below. |
+| Attachment and page-file metadata and bytes | Storage objects, path aliases, links and export/import payloads | Authenticated upload route, metadata repository, object backfill | Authorized download route, AI/MCP, export | Opaque paths, encrypted chunks, guarded metadata CAS and object registration | Earlier SQL and PostgreSQL fixtures passed, but the v3 object codec accepted a truncated tail, protected downloads could accept raw bytes, and registered objects were omitted from rotation. The corrective v4 and rotation proof is tracked below. Private project icons are covered separately. Feedback post attachments use this boundary. |
+| Feedback visitor identity and pending OTP email | Lookup digests and sessions | Team/visitor repositories and protected OTP RPCs | Authorized team/visitor readers, search and exports | Purpose-separated index, row/system envelopes, bounded CAS | SQL regression and child-first, mixed-key restore pass. |
+| Feedback merge undo journal | Moved/dropped vote and repointed-chain UUID links | Atomic SQL merge and undo functions | Authorized merge activity and SQL undo | Bounded CAS conversion of legacy JSON to typed links; obsolete JSON writer guard | SQL merge/undo regression and child-first PostgreSQL restore pass. |
+| Application configuration values | No durable text copy in the repository; in-process TTL cache | Admin configuration repository | Batched and single-key configuration repository | System-key row envelope, bounded CAS, activated old-writer guard | SQL regression, unit tests and mixed-key restore pass. |
+| BYOK credentials and private provider settings | Provider endpoint and model preferences; capability assignments contain opaque IDs only | Account save/preferences RPCs and bounded maintenance worker | Owner settings, agent resolver and account export | User-key row envelope, bounded CAS and activated old-writer guard | SQL source/old-writer regression, codec tests and child-first mixed-key PostgreSQL restore pass. Other credential stores are covered by the forge, MCP, OAuth and push rows below. |
+| Private forge repository names and default branches | Link owner/name and aliases, relay mirror/claims, PR keys, syncs, comment edits, run bindings and branch choices | Link, webhook, relay, PR and atomic rename paths | Authorized forge clients, agent launch, notifications, AI/MCP and exports | System-key name registry, stable blind-index keys, project-bound branch envelopes, bounded CAS and activation guards | Source/copy/PR projection and default-branch SQL regressions and child-first mixed-key PostgreSQL recovery pass. Webhook credentials are covered by the hook and integration rows below. |
+| Forge relay instance label and webhook configuration | Instance registry, fan-out destination and secret | Admin/public registration, authenticated relay secret rotation and revocation | Admin list and active fan-out | System-key row envelope, bounded CAS, activated guard | SQL source/old-writer regression and child-first mixed-key PostgreSQL restore pass. Forge credentials are covered by the hook, provisioning and OAuth rows below. |
+| GitLab relay hook mirror | Per-repository keyed authentication digest | Authenticated hook registration | GitLab relay webhook | Drop unused recoverable secret column | SQL old-writer rejection and route tests confirm the digest remains sufficient. |
+| Project repository hook secret | Shared copies across project links for one physical GitLab hook | Authorized hook creation, retries and rotation | Repository webhook verification and forge provisioning | System-key field envelope bound to provider/repository, exact-ciphertext CAS, activated guard | Source/copy/old-writer SQL regression, shared-link verification tests and child-first mixed-key PostgreSQL restore pass. Persistent forge grants are covered below. |
+| Self-hosted forge relay provisioning identity | Relay URL, private signing key and webhook secret in the singleton | Authenticated first-connect registration and reconnect | Webhook receiver and authorized forge connect flow | System-key singleton envelope, revision CAS and activated guard | SQL source/old-writer regression, protected codec test and PostgreSQL dump/restore with historical keys, cold cache and wrong root pass. Brokered and persistent OAuth credentials are covered below. |
+| Brokered forge OAuth delivery | Access and refresh token pair in the one-time delivery | GitHub and GitLab broker callbacks | Authenticated instance-bound consumption and retry | System-key row envelope bound to delivery and instance, revision CAS and activated guard | SQL source/old-writer regression, protected broker test and child-first mixed-key PostgreSQL restore pass. External token transmission to the authorized instance is documented. |
+| Persistent forge OAuth grants | Access and refresh pairs in GitLab connections and GitHub user identities; refresh claim stores only a claim ID | Atomic GitLab upsert, identity reauthorization, local/relay token refresh | Owner settings projections, forge actor and authenticated refresh paths | User-key row envelopes, guarded scope, revision CAS and protected refresh claim | SQL source/RPC/old-writer regression, protected refresh tests and child-first two-key PostgreSQL restore pass. External provider refresh remains authorized. |
+| Personal MCP connections and OAuth attempts | Connection endpoint/name, headers and token state, single-use endpoint and PKCE snapshot | Account and Numo setup, OAuth discovery/refresh/callback | Owner list, Numo tool execution and authorized remote MCP/OAuth endpoints | User-key row envelopes, revision-checked OAuth lease and CAS workers, activated SQL guards | Source/attempt/old-writer SQL regression, codec and OAuth tests, child-first two-key PostgreSQL restore pass. External credential use is authorized. |
+| Numo conversation and tool content | History views, assistant messages, turn checkpoints, tool results, routine occurrences and automation operations | Numo turn RPCs, assistant loop, routine and surface writers | Numo history/detail, AI/MCP and exports | Row-bound message/checkpoint/ledger envelopes, purpose-separated argument digest, bounded CAS rotation and activated guards | Earlier source/copy SQL and restore fixtures passed, but the real checkpoint worker failed model/tools phases. Its corrected worker and linked-row proof are tracked below. Non-Numo projections are covered by the agent, issue, notification, export and board rows. |
+| Private project icons | SQL route and opaque path, Storage bytes, public share URL, transfer bytes | Icon upload, site import, account import and bounded object worker | Current-member route, enabled board and public share capabilities, owner export | Project-key object codec, CAS reference swap, orphan cleanup and private-bucket activation | SQL source/copy/old-writer regression, route tests, encrypted-byte test and child-first mixed-key PostgreSQL restore pass. |
+| Project and personal board views | Share joins, feedback navigation and Numo tool output | Authorized create/edit/seed paths and account import | Owner lists/exports, Numo and public capability paths | Row-bound project/user envelopes, revision CAS worker and activated guard | SQL source/share/old-writer regression and child-first mixed-key PostgreSQL recovery pass. |
+| Personal saved-view bookmarks | Name equality index and account transfer | Authenticated save/rename and account import | Owner list and export | User-key envelope, stable user blind-index equality, bounded CAS and activated guard | SQL uniqueness/source/old-writer regression and child-first mixed-key PostgreSQL recovery pass. |
+| Agent routine instructions | Realtime, Numo occurrence context, app tabs, inbox and push labels, account transfer | Owner create/edit, schedule and status hooks | Member/owner UI, Numo/AI/MCP, owner export and notifications | Project-key row envelope, bounded CAS, code-only last error and activated guard | SQL source/old-writer regression and child-first mixed-key PostgreSQL recovery pass. |
+| Personal agent branch namespace | Account settings, worker launch choices and account transfer | Account and Numo preferences, import and bounded maintenance pass | Owner settings and authorized agent launch | User-key field envelope, atomic partial-preference RPC, exact-ciphertext CAS and activated guard | SQL source/old-writer/partial-update regression, codec test and child-first mixed-key PostgreSQL restore pass. |
+| Personal application tabs | RPC and move result rows, owner list, Realtime invalidation | Owner create, ensure, update and bounded maintenance pass | Owner tab list, move and conflict responses | User-key fields bound to tab ID, exact-value and revision CAS, activated guard | SQL source/RPC/old-writer regression, codec and adapter tests, and tab-before-user mixed-key PostgreSQL restore pass. |
+| Shadow AI decision evaluations | Subject IDs and Jev/LLM answer maps; weekly quality aggregate | Background comparison writer and bounded maintenance pass | Admin weekly quality dashboard | System-key row envelope bound to a new primary key, revision CAS and activated guard | SQL source/aggregate/old-writer regression, codec test and two-key PostgreSQL recovery pass. |
+| Stripe webhook event bodies | No content copy is required for deduplication; reservation metadata remains | Signed webhook receiver, retention and bounded scrub | Replay claim checks ID, time and processed state only | Remove payload, idempotent bounded scrub and activated old-writer guard | SQL source/old-writer regression, webhook replay tests and PostgreSQL dump/restore show no former body. |
+| Custom-domain DNS verification | Board and shared-view domain rows, authorized TXT instructions | Vercel attach/refresh and bounded maintenance pass | Authorized board/share settings and public hostname lookup | System-key field envelope bound to domain row, revision CAS and activated guard | SQL board/share source and old-writer regression, TXT projection test and child-first two-key PostgreSQL restore pass. |
+| Billing account email and administrative note | Checkout customer identity, Stripe and admin RPC results, account export; Realtime carries only a plan key | Checkout/admin writes, atomic partial patch RPC, Stripe event RPC and bounded maintenance pass | Owner billing and authorized account export | User-key field envelopes, revision CAS, activated guard | SQL source/RPC/old-writer regression, codec and service tests, and billing-before-user two-key PostgreSQL restore pass. |
+| Dynamic OAuth clients, authorization codes and API-key actor labels | Client registration URLs and names, grant display, code redirect/resource and event attribution | Client registration, code issue, actor-key creation and bounded maintenance | Authorized registration/consent, grant list, event actor projection, account export and atomic code exchange | System-key client envelope and user-key code/actor envelopes, revision CAS, verified activation and old-writer guards | SQL source/activation/old-writer regressions, sealed exchange and actor tests, and child-first mixed-key PostgreSQL restore with wrong-root rejection pass. |
+| Project integration labels and webhook destinations | Board/global-filter options, activity/agent actor labels, webhook delivery payloads and account API responses | Owner integration create/update and bounded maintenance | Authorized board, event, MCP/assistant and webhook readers | Project-key field envelopes, exact-value and revision CAS, verified activation and old-writer guard | SQL source/activation/old-writer regression, codec and 197 targeted integration/SSRF/event tests, plus child-first two-key PostgreSQL restore with cold caches and wrong-root rejection pass. |
+| Push destinations, device credentials and labels | Web endpoint, native installation identity, Web Push keys, user agent, owner settings and export projection | Authenticated registration through service-only transactional RPC, delivery status and bounded maintenance | Owner device routes, notification delivery and account export | User-key envelope, stable endpoint and native-installation equality indexes, revision CAS, verified activation and old-writer guard | Earlier SQL and restore fixtures passed, but flag suspension revived a clear registration path, legacy edits escaped the revision, and cross-owner transfers compared unrelated key versions. The corrective SQL and real-codec tests are tracked below. Production flags remain off. |
+| Project names and free-form rules | Statistics and billing RPC labels, public board/share headers, agent/Numo context, member and invitation views | Authorized project create/edit, account import and icon reference updates | Member UI, AI/MCP, forge webhooks, exports and public capabilities | Project-key row envelope, bounded CAS, icon-first activation and old-writer guard | SQL source/copy/old-writer regression, two-key child-first PostgreSQL restore and full unit suite pass. |
+| Pages | Database cells, search vectors, Realtime, Numo/public projections, histories and file references | Product repositories, guarded SQL batches, imports and parent mirror | Authorized UI, AI/MCP, public sharing and exports | Project-key row codec, bounded CAS, encrypted atomic database edits/import, activated guards and ciphertext-only deletion | Earlier SQL and restore fixtures passed. A paused mixed migration still lost search for protected pages, and the protected reader did not preserve OR query semantics. The corrective mixed-reader and grammar tests are tracked below. |
+
+## Corrective review of `2645bc129`
+
+| Finding | Corrective code and isolated proof |
+| --- | --- |
+| Agent Realtime durable events, streams and diffs | Content broadcasts were replaced by invalidations and an authorized encrypted live snapshot. SQL refuses old calls and purges historical run messages transactionally. `encryption-agent-realtime-regression.sql` reproduced the clear sentinel in an effective partition, then proved purge and refusal. |
+| Forge PR attachments | The migration makes the existing bucket private; new uploads have opaque project-bound paths and v4 ciphertext. The proxy retains published and historical capability reads, while the bounded worker verifies rewrites, rotates immutable copies and removes abandoned uploads. `encryption-forge-attachment-regression.sql` checks the SQL guards and completion gate. Storage byte tests use a memory fixture; a real service backup and restore remains unverified. |
+| Attachment object integrity and downgrade | The v4 manifest binds total length, chunk count and generation. Codec tests reject truncation, deletion, permutation and mixed generations. Registered protected objects cannot be read as raw bytes; the v3 rotation fixture uses a historical key and CAS conflict. |
+| Invitation writer fence | The first protected write persists a SQL marker. Old clear inserts and protected downgrades fail; activation scans for clear rows. The isolated push/invitation PostgreSQL test checks these guards, mixed reads, uniqueness and purge. |
+| Numo checkpoint migration | The worker handles model/tools/done and linked messages atomically; failed and conflicted rows advance fairly. The real-codec isolated PostgreSQL integration test covers historical keys and CAS conflicts. |
+| Push writer fence and CAS | The persistent marker keeps refresh and account transfer protected after flag suspension. The transactional RPC reconciles clear/digest identities; legacy sensitive edits advance revision, and key monotonicity is owner scoped. The isolated PostgreSQL test covers both transfer directions and a concurrent legacy edit. |
+| Historical rotation | Invitation candidates include old key and envelope versions. Registered attachment objects return to the fair queue; the worker verifies a new immutable copy before a scoped CAS reference swap and cleanup. `encryption-historical-rotation-regression.sql` checks stale and successful swaps. Historical root and content keys remain necessary for old backups. |
+| Page search | A paused mixed migration probes protected row state and uses the authorized application reader. Tests cover OR, exclusions, phrases, rank, limits, permissions and resumed writers. Representative latency and key/cache load remain a separate preactivation gate. |
+
+These are code and isolated-fixture gates. Production data may still contain
+clear legacy rows and historical copies. Supabase Auth login email is the
+explicit narrow exception; it does not exempt application invitation emails
+or other copies. Keep the PR draft and MIN-591 open until the remaining
+preactivation checks, production migration and ciphertext inventory are done.
+No production flag, deployment or production data migration is part of this
+matrix.
+
+## Follow-up review of `0ee91f97a`
+
+| Defect | Correction | Isolated proof and limit |
+| --- | --- | --- |
+| Historical Numo event A stalls after worker B starts | Migration authenticates the event's frozen run, turn, conversation and project association without demanding that A remain active. Pre-parent rows with no trustworthy run ID require a manually reviewed service-only association; opaque source revisions invalidate stale review. New events retain the live-worker guard; CAS and attempted-at ordering preserve fair progress. | Final-schema A→B SQL and worker regressions cover migration, pre-parent quarantine and reviewed repair, malformed rows, conflict retries and old-writer refusal. The review reference is an audit pointer; unresolved ambiguous rows block activation. |
+| Forge migration can report complete without a writer fence | The backfill activates a durable SQL marker even with zero candidates. Storage writes and marker activation share a lock; completion also requires the private bucket, protected object metadata and registrations. Non-READ-COMMITTED writes are refused to close a stale-snapshot race. Root and codec preflight precede the marker; historical object encoding and upload follow it. | Final-schema SQL, upload order and two-session READ COMMITTED/REPEATABLE READ tests pass. A real Storage-service backup and restore is still required before activation. |
+| Webhook URL and billing note can return to clear storage after NULL | Irreversible row/field markers survive deletion; writers consult them with flags paused. SQL guards reject clear replacements and marker rollback. Activation and writer transactions require READ COMMITTED so a pre-marker snapshot cannot bypass the fence. | Final-schema SQL, mixed-tenant, webhook CAS, atomic billing patch and two-session race tests pass. A value cleared before the new marker migration has no row evidence; pre-migration audit and activation checks must account for it. |
+| Twin-PR repository rename deletes forge attachment bindings | A service-only atomic SQL reconcile transfers registered objects, explicit historical owners and old-path aliases to the retained PR before deleting the old row. The plain-name fallback uses the same validated transaction boundary. Direct service updates and internal merge execution are revoked. | Published object, historical alias, fallback, orphan cleanup, privilege and isolation regressions pass on final-schema PostgreSQL. |
+| Agent journal duplicate batch fails on second rotation | The alternate ID-bound digest is retained on every rotation so the unique deduplication key remains stable. | Real codec plus PostgreSQL conversion → key rotation → replay regression passes. |
+| Feedback first-page failures starve later rows | Identity, OTP, SSO and neighboring merge workers order by separate attempted-at timestamps; failures and CAS conflicts advance attempts without recording a successful verification. | Multi-pass all-failing first-page and following-valid-row tests plus final-schema SQL pass. |
+| Protected page search changes `limit=1` ordering | In-memory cover density counts occurrences and proximity with title/body weights and handles OR, exclusion, phrases and tested PostgreSQL punctuation, email, IP and CJK classes. Excerpt selection prefers a complete matching passage when the first hit is less relevant. | PostgreSQL oracle compares 9,200 deterministic match/rank/order cases and exact selected excerpts, including a later best fragment, and exercises the real `search_pages` function with RLS and `limit=1`; route tests cover permissions and ties. Other unusual token classes remain a staging corpus gate, along with representative latency. |
+
+All 69 dump/restore scenarios pass on a final-schema isolated PostgreSQL clone,
+including independent parent/child batches, historical key versions, cold
+caches, constraints and wrong-root rejection. The Realtime test uses an
+effective partition and applies its corrective migration between the clear
+sentinel reproduction and refusal assertions. Neither proof covers production
+data, old backups or a real Storage-service restore. Production flags remain
+off; retain MIN-591 in progress and PR #289 in draft.
+
+## Follow-up security review of draft PR #289
+
+| Confirmed gap | Correction | Evidence and remaining boundary |
+| --- | --- | --- |
+| A stale `REPEATABLE READ` snapshot can commit clear data after activation; Feedback also races in `READ COMMITTED` | All current encrypted table guards and activation functions require `READ COMMITTED`. Writers, direct scope writes, key creation and activation use common transaction locks. Marker rollback is refused. | The two-session PostgreSQL test reproduces the old commits and verifies both validation orders, paused flags, old writers and updates after `NULL`. The final-schema trigger inventory covers 68 protected table families and 28 activation functions. A newly added family requires the same audit. |
+| Deleting the final project after a twin-PR rename leaves an old PR-ID Storage object readable | Project deletion collects historical PR aliases before cascade; a bounded orphan scan handles paths already ownerless. Explicit owners determine deletion when a project survives. | Simulated-Storage tests verify bytes removed and `/api/pr-attachments/...` returning 404; surviving project paths remain. PostgreSQL SQL verifies alias and orphan selection. Restore of the actual Storage service remains unverified. |
+| Failed Numo intent and related conversion rows can occupy the first batch forever | Separate attempt timestamps order all similarly shaped workers. Successful verification timestamps remain separate; exact-row CAS protects both outcomes. The obsolete tool marker is refused and suspect historical checks are reset for verification. | Multi-pass worker fixtures prove healthy later rows advance despite a failed first batch. SQL checks unverified rows stay activation blockers. |
+| Historical comment Realtime rows and Agent live startup prerequisites | Effective comment partitions purge clear history and reject old content broadcasts. Stream and diff acknowledge only after an encrypted snapshot write succeeds. | Isolated pre/post PostgreSQL Realtime regression and live endpoint tests pass. Old backups and external sinks need a retention inventory; every deployed live writer needs the root key, snapshot schema and RPC before traffic. |
+
+This follow-up proves code behavior on isolated PostgreSQL and simulated
+Storage. It does not establish production ciphertext inventory, actual Storage
+service restoration or historic backup deletion. Run representative search,
+latency, key-cache and load measurements in staging before activation. Leave
+MIN-591 in progress and PR #289 in draft through those operational gates.
+On the final isolated schema, 91 post-migration SQL regressions, both historical
+pre/post migration replays, the two-session fence test, all 69 independent
+parent/child restore scenarios, 106 targeted tests and 8,669 full-suite tests
+pass. The PostgreSQL search oracle, build, typecheck, lint and repository
+encryption/English checks also pass.
+
+## Corrective review of `4e9268554`
+
+This checkpoint supersedes the older test counts and remaining-code statements
+above. Every item below was reproduced against the reviewed code before its
+repair. The final isolated schema is `minddy_min591_security_final_20260927`,
+which includes the four migrations after the verified v3 template. The older
+`minddy_min591_final_review` remains useful only for pre-correction replays.
+
+| Defect | Before-fix evidence | Corrective code and final-schema proof |
+| --- | --- | --- |
+| Trashed protected content | Raw page columns made protected roots appear blank; issue and objective labels were empty. | Decrypt before page visibility and label construction. Real encrypted fixtures cover ordinary pages, databases, blank drafts, trees, list, restore, purge and retention. `encryption-page-trash-regression.sql` checks SQL metadata restoration and retention. |
+| AI provider and JSON error logs | Sentinels from malformed JSON and provider bodies reached the forced-tool-call log. | Controlled provider/status, response-JSON, tool-argument and request-failure codes replace raw errors. Sentinel tests cover every branch and the callers use fixed prefixes. |
+| Agent drain logs | A decrypted deployment URL and thrown provider error reached logs. | Only opaque run IDs and controlled outcomes are logged. Success, timeout and error fixtures reject secret sentinels. |
+| Protected tab and backlink labels | RLS-visible protected rows returned null titles or ciphertext. | Page, issue, objective and PR decoders restore authorized labels; cross-project paths remain filtered. The CI guard pins protected dynamic-reader contracts and the consumer inventory records dynamic access. |
+| Failed migration queues | A corrupt first batch and repeated CAS conflicts could monopolize checked-at ordering. | PR, Agent, generic row and specialized analogue workers rotate attempted-at independently, with exact-row CAS. PostgreSQL and worker fixtures prove a later healthy row advances while failed rows remain unverified. The forge mirror cursor uses its full composite key. Nine Numo workers were audited and already use fair attempt cursors. |
+| False verification | Current-format tags could be accepted without authentication; checkpoint, journal and generic row marker calls could set checked-at before decode. | Current-format rows decrypt before unchanged. Suspect historical checks are reset; old generic row-worker marker calls are reclassified as attempts. Corrupt tags, wrong roots, missing historical keys and retries remain blockers. The read-only critical-family verifier decrypts every current PR URL/content, Agent run/runtime checkpoint and journal row before reporting readiness. |
+| Feedback erasure | A failed session delete still produced success; erased identities could authorize sessions, and retries skipped revocation. | One locked SQL transaction revokes sessions and OTP rows and scrubs identity; unit tests and a two-session PostgreSQL race cover both commit orders and retries. |
+
+The final clone passes 95 post-migration SQL regressions, 70 independent
+parent/child restores with multiple key versions, cold caches and wrong-root
+rejection, plus the PostgreSQL search oracle. Separate pre/post Realtime and
+Numo replays and the two-session write-fence regression pass on earlier
+isolated schemas. The full suite passes 8,728 tests with 103 skipped;
+typecheck, lint, build and the encryption/English checks pass. Database
+restore tests prove metadata and ciphertext rows;
+simulated Storage fixtures prove byte handling; restoring the actual Storage
+service is still a separate operational gate. Live snapshots rotate by kind
+and timestamp, survive long runs and restarts with historical keys, and are
+removed when a run becomes terminal. Abandoned running rows need operational
+cleanup because they have no age-only expiry.
+
+No production data or retained copy is assumed encrypted. Keep the ticket in
+progress, the PR in draft, and all production flags off. Inventory and migrate
+every target and copy before completion. Run representative search parity,
+latency, key-cache and load checks in staging before activation. Supabase Auth
+login email is the only provider-identity exception and does not cover an
+application copy.
+
+## Six-defect correction on draft PR #289
+
+The review at `96f46e8bf2cc20464032b4af4a32a8dbca7209e5` reproduced all
+six gaps before correction. The following proofs use schema-only isolated
+PostgreSQL clones and disposable private sentinels. They do not claim a
+production inventory or service backup restore.
+
+| Confirmed defect | Correction | After-fix proof and limit |
+| --- | --- | --- |
+| Agent job, OpenCode SQLite/WAL, tool files, Docker volumes and Vercel snapshots could remain after a run or account deletion. | Nonpersistent, versioned Vercel sessions rebuild from the pushed branch and encrypted journal; Docker uses tmpfs with no log driver and removes stopped containers/volumes. The one-shot job file is unlinked. An account erasure fence and project deletion guard prevent new runs from racing sandbox enumeration and deletion. | Agent storage and lifecycle fixtures pass; PostgreSQL role and two-session tests prove account and project fences. Historical snapshots, volumes, endpoint files, provider command telemetry and backups require the separate retirement inventory in `agent-ephemeral-storage.md`. |
+| Forge and Numo logs could contain repository names, provider bodies or echoed submitted content. | Controlled error codes, SQL codes and opaque IDs replace arbitrary error values across the identified and adjacent Agent/VM paths. | Sentinel tests cover provider failures, malformed JSON and echoed submitted content. External provider telemetry is separately inventoried. |
+| Feedback erasure compared the project identity digest with the distinct system OTP digest. | The real OTP codec digest is passed to a project-board-scoped atomic delete; a 15-minute digest fence serializes concurrent issuance, and retries always revoke sessions. Old erased identities receive a one-time project-board OTP purge. | Real-codec fixture, SQL regression and two-session commit-order tests pass. The one-time legacy recovery can invalidate another participant's pending code for at most its 10-minute lifetime. |
+| Six content workers could repeatedly select the same conflicted first row. | An attempted-at write survives stale revision CAS and failed verification while checked-at remains unset. | Multi-passage worker tests and two-session PostgreSQL contention show the next healthy row advances for API keys, push, integrations, billing and both OAuth tables. |
+| Shape-only OAuth content could receive a checked marker and activate. | Old markers are reset. Write CAS and authenticated proof CAS are separate; direct marker writes are refused. The same pattern covers the analogous five families. | Truncated envelopes, bad tags, wrong roots, unavailable historical keys and stale revisions remain unverified in real-codec and SQL tests. The proof RPC trusts service-role backfill; the independent readiness scan decrypts every current row. |
+| Readiness created a data key while claiming to be read-only. | Registry keys are loaded only if already present; a missing key blocks readiness. The scan authenticates ten critical families, including OAuth, API keys, integration, push and billing content. | Empty-registry and legacy-row fixtures assert zero mutating calls and `ready: false`; corrupt envelopes fail despite stale checked markers. A staging quiescent double scan is still needed before activation. |
+
+Production flags remain off. Keep MIN-591 in progress and PR #289 in draft
+until every target and retained copy has an inventory, migration and evidence.
+Representative Issues search parity, latency and key/cache load measurements
+remain staging activation controls.

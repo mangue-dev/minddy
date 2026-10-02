@@ -1,10 +1,11 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Mail01Icon, CheckIcon } from "@hugeicons/core-free-icons";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { Button, Spinner, cn } from "mangue-ui";
-import { Check, Mail } from "lucide-react";
 import { Github } from "@/components/git/provider-icons";
 import { MinddyLogo } from "@/components/minddy-logo";
 import { IsoIcon } from "@/components/illustrations/iso-icon";
@@ -319,7 +320,7 @@ export function PasswordRules({ password }: { password: string }) {
               met ? "border-transparent bg-emerald-600 text-white" : "border-border"
             }`}
           >
-            {met && <Check className="size-3" strokeWidth={3} />}
+            {met && <HugeiconsIcon icon={CheckIcon} className="size-3" strokeWidth={3} />}
           </span>
           {t(id, { min: MIN_PASSWORD_LENGTH })}
         </li>
@@ -338,5 +339,5 @@ export function PasswordRules({ password }: { password: string }) {
  * registration, and the only one that only has one image to show.
  */
 export function MailGlyph() {
-  return <IsoIcon icon={Mail} className="mx-auto w-24" />;
+  return <IsoIcon icon={Mail01Icon} className="mx-auto w-24" />;
 }

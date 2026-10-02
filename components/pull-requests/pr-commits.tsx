@@ -1,12 +1,13 @@
 "use client";
 
+import { PrCommitsSkeleton } from "@/components/pull-requests/pr-loading-skeleton";
 import { useMemo, useState } from "react";
+import { AppIcon } from "@/components/icon";
+import { ShieldCheckIcon as ShieldCheck } from "@hugeicons/core-free-icons";
 import { useFormatter, useNow, useTranslations } from "next-intl";
 import {
   Badge,
-  Skeleton,
 } from "mangue-ui";
-import { ShieldCheck } from "lucide-react";
 import { AuthorNames, AuthorStack } from "@/components/git/author-stack";
 import { normalizeForgeInstant } from "@/lib/forge-time";
 import { PrCommitDiffSheet } from "@/components/pull-requests/pr-commit-diff-sheet";
@@ -208,7 +209,7 @@ function CommitRow({
           <TooltipTrigger asChild>
             <Badge
               variant="secondary"
-              icon={<ShieldCheck className="size-3" />}
+              icon={<AppIcon icon={ShieldCheck} className="size-3" />}
               className="mt-0.5 h-6 shrink-0 border-emerald-600/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-500"
             >
               {t("commitVerified")}
@@ -266,14 +267,7 @@ export function PrCommits({
     setDiffOpen(true);
   };
 
-  if (loading) {
-    return (
-      <div className="flex flex-col gap-2">
-        <Skeleton className="h-5 w-40" />
-        <Skeleton className="h-32 rounded-lg" />
-      </div>
-    );
-  }
+  if (loading) return <PrCommitsSkeleton />;
   if (commits.length === 0) {
     return <p className="text-sm text-muted-foreground">{t("noCommits")}</p>;
   }

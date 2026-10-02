@@ -1,6 +1,6 @@
 "use client";
-
-import { Mic, Square } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Mic01Icon, SquareIcon } from "@hugeicons/core-free-icons";
 import { useLocale, useTranslations } from "next-intl";
 import {
   useCallback,
@@ -583,9 +583,9 @@ export function DictateButton({
                 {status === "processing" ? (
                   <Spinner className="h-4 w-4" />
                 ) : isRecording ? (
-                  <Square className="h-4 w-4 fill-current" />
+                  <HugeiconsIcon icon={SquareIcon} className="h-4 w-4 fill-current" />
                 ) : (
-                  <Mic className="h-4 w-4" />
+                  <HugeiconsIcon icon={Mic01Icon} className="h-4 w-4" />
                 )}
               </button>
             </PopoverTrigger>

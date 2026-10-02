@@ -1,12 +1,12 @@
 import { after, NextResponse, type NextRequest } from "next/server";
+import { decodeRepositoryName } from "@/lib/server/git/repository-name-content";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { type RepoProviderId } from "@/lib/repo-providers";
-import { resolveRepoCloneTargetForRepo } from "@/lib/server/agent/repo-access";
-import { getRun } from "@/lib/server/agent/runs";
 import {
   findPullRequest,
+  loadPullRequestIssues,
   listPullRequestsForUser,
   listVisibleRepos,
   needsRepoSync,
@@ -14,12 +14,12 @@ import {
   repoSyncKey,
   resolvePrForRun,
   rowProvider,
-  stampRepoSync,
-  syncRepoPullRequests,
   type PullRequestState,
   type PullRequestWithIssue,
   type VisibleRepo,
 } from "@/lib/server/agent/pull-requests";
+import { sweepRepo } from "@/lib/server/agent/pull-requests-sweep";
+import { getRun } from "@/lib/server/agent/runs";
 
 /**
  * GLOBAL list of pull requests from linked repositories, all projects accessible
@@ -72,6 +72,7 @@ export interface PullRequestListItem {
   created_at: string;
   updated_at: string;
   issue: { id: string; number: number; title: string } | null;
+  issues: PullRequestWithIssue["issues"];
   project: {
     id: string;
     key: string;
@@ -112,33 +113,11 @@ const STATE_FILTERS: Record<string, PullRequestState[]> = {
  * would appear empty on a repository that has just been linked. Simply OUT OF DATE, it
  * part in `after()`: the response does not make the user wait for a
  * lost webhook, and the next display will be correct.
+ *
+ * The shared `sweepRepo` (lib/server/agent/pull-requests-sweep.ts, MIN-595) is
+ * also fired by the badge count route: every reader of a TTL window coalesces
+ * into one forge read, whichever route got there first.
  */
-async function sweepRepo(userId: string, repo: VisibleRepo): Promise<boolean> {
-  try {
-    const target = await resolveRepoCloneTargetForRepo({
-      userId,
-      provider: repo.provider,
-      repoFullName: repo.repoFullName,
-    });
-    if (!target) return false;
-    const { truncated } = await syncRepoPullRequests({
-      provider: repo.provider,
-      repoFullName: repo.repoFullName,
-      token: target.token,
-    });
-    return truncated;
-  } catch (err) {
-    console.error(
-      `[pull-requests] sweep ${repo.repoFullName} failed:`,
-      (err as Error).message,
-    );
-    // We stamp all the same: a broken down forge should not make the user try again.
-    // scan EACH view of the page. The list remains as before, and
-    // the next window will try again.
-    await stampRepoSync(repo.provider, repo.repoFullName);
-    return false;
-  }
-}
 
 /**
  * PR targeted by a deep-link (direct `?pr=`, historical `?run=`) when the page
@@ -160,8 +139,9 @@ async function pinnedRow(
 
   let pr = prId ? await findPullRequest(prId) : null;
   if (!pr && runId) {
-    const run = await getRun(runId);
-    pr = run ? await resolvePrForRun(run) : null;
+    const run = await getRun(runId, { decode: false });
+    pr = run && repos.some((repo) => repo.project.id === run.project_id)
+      ? await resolvePrForRun(run) : null;
   }
   if (!pr) return null;
   const found = pr;
@@ -170,18 +150,10 @@ async function pinnedRow(
   const visible = new Set(repos.map((r) => repoSyncKey(r.provider, r.repoFullName)));
   if (!visible.has(repoSyncKey(rowProvider(found), found.repo_full_name))) return null;
 
-  // The ticket travels with it, read by the AUTHENTIFIED customer: its RLS makes it null
-  // if it is in the trash, exactly as on the lines of the page.
-  let issue: PullRequestWithIssue["issue"] = null;
-  if (found.issue_id) {
-    const { data } = await supabase
-      .from("issues")
-      .select("id, number, title, project_id")
-      .eq("id", found.issue_id)
-      .maybeSingle();
-    issue = (data as PullRequestWithIssue["issue"]) ?? null;
-  }
-  return { ...found, issue };
+  const linked = await loadPullRequestIssues(supabase, [found.id]);
+  const issues = linked.get(found.id) ?? [];
+  issues.sort((a, b) => Number(b.id === found.issue_id) - Number(a.id === found.issue_id));
+  return { ...found, issue: issues[0] ?? null, issues };
 }
 
 export async function GET(request: NextRequest) {
@@ -207,7 +179,7 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  // ── Rattrapage ────────────────────────────────────────────────────────────
+  // ── Catch-up ────────────────────────────────────────────────────────────
   // The sync states and the PR rows are independent reads, so they run
   // together. A repository that was NEVER swept forces a blocking forge scan
   // that must precede the row read for its PRs to exist yet — in that case the
@@ -283,7 +255,8 @@ export async function GET(request: NextRequest) {
     for (const run of (data ?? []) as unknown as RunRow[]) {
       const link = run.repo_link;
       if (!link?.repo_full_name || run.pr_number == null) continue;
-      const key = `${link.provider}:${link.repo_full_name}:${run.pr_number}`;
+      const clearName = await decodeRepositoryName(link.provider,link.repo_full_name);
+      const key = `${link.provider}:${clearName}:${run.pr_number}`;
       const list = runsByPr.get(key);
       if (list) list.push(run);
       else runsByPr.set(key, [run]);
@@ -339,6 +312,7 @@ export async function GET(request: NextRequest) {
       created_at: row.opened_at ?? row.updated_at,
       updated_at: row.updated_at,
       issue: issue ? { id: issue.id, number: issue.number, title: issue.title } : null,
+      issues: row.issues,
       project:
         (issue ? projectById.get(issue.project_id) : null) ??
         projectByRepo.get(repoSyncKey(provider, row.repo_full_name)) ??

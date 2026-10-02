@@ -6,11 +6,17 @@ const reserveProviderOperation = vi.fn();
 const addDomainToVercel = vi.fn();
 const getVercelDomainState = vi.fn();
 const removeDomainFromVercel = vi.fn();
+const acquireDomainLease = vi.fn();
 
 vi.mock("@/lib/supabase-service", () => ({
   getServiceClient: () => ({ from: (name: string) => new FakeQuery(name) }),
 }));
 vi.mock("@/lib/server/provider-operation-guard", () => ({ reserveProviderOperation }));
+vi.mock("@/lib/server/custom-domain-cleanup", () => ({
+  acquireDomainLease,
+  releaseDomainLease: async () => {},
+  cleanRemovedDomain: async () => {},
+}));
 vi.mock("@/lib/server/vercel-domains", () => ({
   addDomainToVercel,
   getVercelDomainState,
@@ -29,7 +35,6 @@ vi.mock("@/lib/public-hosts", () => ({
 vi.mock("@/lib/site", () => ({ SITE_URL: "https://www.minddy.app" }));
 
 const {
-  detachDomainFromVercelOnly,
   refreshDomainStatus,
   removeDomain,
   serializeDomainStatus,
@@ -44,6 +49,7 @@ const ROW = {
   share_id: null,
   status: "pending" as const,
   verification: null,
+  content_revision: 0,
   cname_target: null,
   created_at: "2026-08-26T00:00:00.000Z",
   updated_at: "2026-08-26T00:00:00.000Z",
@@ -54,6 +60,7 @@ beforeEach(() => {
   addDomainToVercel.mockReset();
   getVercelDomainState.mockReset();
   removeDomainFromVercel.mockReset();
+  acquireDomainLease.mockReset().mockResolvedValue("lease-token");
   setFakeTable("custom_domains", []);
 });
 
@@ -128,20 +135,18 @@ describe("custom-domain provider admission", () => {
     expect(removeDomainFromVercel).not.toHaveBeenCalled();
   });
 
-  it("does not detach a hostname retained by a newer database mapping", async () => {
-    reserveProviderOperation.mockResolvedValue({ state: "reserved", retryAfter: 0 });
-    setFakeTable("custom_domains", [
-      {
-        ...ROW,
-        id: "domain-new",
-        board_id: "board-new",
-      },
-    ]);
-
-    await detachDomainFromVercelOnly(ROW, ACTOR, {
-      mutationAlreadyReserved: true,
-    });
-
+  it("refuses attachment while cleanup owns the hostname lease", async () => {
+    acquireDomainLease.mockResolvedValue(null);
+    expect(await setDomain({ boardId: "board-1" }, ROW.domain, ACTOR))
+      .toEqual({ ok: false, error: "operation_in_progress", retryAfter: 120 });
+    expect(addDomainToVercel).not.toHaveBeenCalled();
     expect(removeDomainFromVercel).not.toHaveBeenCalled();
+  });
+
+  it("fails closed when durable hostname admission is unavailable", async () => {
+    acquireDomainLease.mockRejectedValue(new Error("database unavailable"));
+    expect(await setDomain({ boardId: "board-1" }, ROW.domain, ACTOR))
+      .toEqual({ ok: false, error: "provider_unavailable" });
+    expect(addDomainToVercel).not.toHaveBeenCalled();
   });
 });

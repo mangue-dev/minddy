@@ -3,6 +3,7 @@ import { MCP_MAX_RESULT_BYTES } from "@/lib/mcp-client-tools";
 
 import {
   ROUTINE_LIST_RESULT_CHAR_LIMIT,
+  ROUTINE_RUNS_TOOL_RESULT_CHAR_LIMIT,
   ROUTINE_TOOL_RESULT_CHAR_LIMIT,
 } from "./routine-tool-result";
 import {
@@ -75,6 +76,24 @@ describe("Numo tool result serialization", () => {
     expect(getToolResultCharLimit("list_routines")).toBe(
       ROUTINE_LIST_RESULT_CHAR_LIMIT,
     );
+  });
+
+  it("keeps a routine's run history intact (MIN-589)", () => {
+    const result = {
+      runs: Array.from({ length: 40 }, (_, index) => ({
+        id: `occurrence-${index}`,
+        outcome: "x".repeat(500),
+      })),
+    };
+    const serialized = serializeToolResult(
+      result,
+      getToolResultCharLimit("list_routine_runs"),
+    );
+    expect(getToolResultCharLimit("read_routine_occurrence")).toBe(
+      ROUTINE_RUNS_TOOL_RESULT_CHAR_LIMIT,
+    );
+    expect(serialized).not.toContain("... [truncated]");
+    expect(JSON.parse(serialized)).toEqual(result);
   });
 
   it("retains the default ceiling for unrelated tools", () => {

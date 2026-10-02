@@ -1,10 +1,12 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { AppIcon } from "@/components/icon";
+import { ArrowDown01Icon, CheckIcon } from "@hugeicons/core-free-icons";
 import { createUuid } from "@/lib/create-uuid";
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Check, ChevronDown } from "lucide-react";
 import {
   Input,
   Popover,
@@ -118,7 +120,7 @@ export function DatabaseOptionsDialog({
                     className="size-3 rounded-full"
                     style={{ backgroundColor: option.color }}
                   />
-                  <ChevronDown className="size-3 text-muted-foreground" />
+                  <HugeiconsIcon icon={ArrowDown01Icon} className="size-3 text-muted-foreground" />
                 </button>
               </PopoverTrigger>
               <PopoverContent
@@ -146,7 +148,7 @@ export function DatabaseOptionsDialog({
                       style={{ backgroundColor: color }}
                     >
                       {color === option.color && (
-                        <Check className="size-3 text-white" />
+                        <HugeiconsIcon icon={CheckIcon} className="size-3 text-white" />
                       )}
                     </span>
                   </button>
@@ -302,7 +304,7 @@ function DatabaseColumnDialog({
                 return {
                   value: kind,
                   label: t(kind),
-                  icon: <TypeIcon className="size-4 text-muted-foreground" />,
+                  icon: <AppIcon icon={TypeIcon} className="size-4 text-muted-foreground" />,
                 };
               })}
               trigger={
@@ -313,10 +315,10 @@ function DatabaseColumnDialog({
                   className={PICKER_FIELD_TRIGGER}
                 >
                   <span className="flex items-center gap-2">
-                    <Icon className="size-4 text-muted-foreground" />
+                    <AppIcon icon={Icon} className="size-4 text-muted-foreground" />
                     {t(type)}
                   </span>
-                  <ChevronDown className="size-4 text-muted-foreground" />
+                  <HugeiconsIcon icon={ArrowDown01Icon} className="size-4 text-muted-foreground" />
                 </button>
               }
             />

@@ -13,10 +13,15 @@ import { RECURRENCE_CADENCES } from "@/lib/recurrence";
 import { MAX_SCRATCHPAD_LENGTH } from "@/lib/scratchpad";
 import { NUMO_DEFAULT_STATUS_OPTIONS } from "@/lib/numo-default-status";
 import { ACCOUNT_THEMES } from "@/lib/account-theme";
+import { SEND_MODES } from "@/lib/keyboard/send-shortcut";
+import {
+  SANDBOX_REGIONS,
+  SANDBOX_SIZES,
+} from "@/lib/agent-sandbox-config";
 import { WEBHOOK_EVENTS, WEBHOOK_SCOPES } from "@/lib/server/webhooks";
 import { CYCLE_INTENSITIES } from "@/lib/cycle-prefs";
 import { FEEDBACK_POST_STATUSES } from "@/lib/feedback/types";
-import { AUTOMATION_PRESET_IDS } from "@/lib/automations";
+import { AUTOMATION_PRESET_IDS, AUTOMATION_START_DELAY_CHOICES } from "@/lib/automations";
 import {
   CREATE_ROUTINE_DESCRIPTION,
   CREATE_ROUTINE_PARAMETERS,
@@ -28,6 +33,7 @@ import { OBJECTIVE_STATUS_VALUES } from "@/lib/objective-validation";
 import { RELATION_TYPE_VALUES } from "@/lib/relation-validation";
 import { TRASH_TYPES } from "@/lib/server/trash";
 import { VIEW_SORTS } from "@/lib/server/views";
+import { SMART_TRIAGE_MODES } from "@/lib/smart-triage";
 import { locales } from "@/i18n/config";
 
 // ── Tool definitions (OpenAI function-calling format) ──────────────────
@@ -160,36 +166,44 @@ const VIEW_FILTER_PROPERTIES = {
   status: {
     type: "array",
     items: { type: "string", enum: [...ISSUE_STATUSES] },
+    description:
+      "Status values to KEEP, copied VERBATIM from this enum — never paraphrase or invent one.",
   },
   priority: {
     type: "array",
     items: { type: "string", enum: [...ISSUE_PRIORITIES] },
+    description:
+      "Priority values to KEEP, copied VERBATIM from this enum — never paraphrase or invent one.",
   },
   effort: {
     type: "array",
     items: { type: "string", enum: [...ISSUE_EFFORTS] },
+    description:
+      "Effort values to KEEP, copied VERBATIM from this enum — never paraphrase or invent one.",
   },
   assignee: {
     type: "array",
     items: { type: ["string", "null"] },
     description:
-      "user_ids; null = unassigned; '@me' = assigned to the viewing user (dynamic).",
+      "user_ids to KEEP, resolved via list_members / list_global_filter_options FIRST — never guess or fabricate an id. null = unassigned; '@me' (this exact sentinel) = assigned to the viewing user (dynamic).",
   },
   objective: {
     type: "array",
     items: { type: ["string", "null"] },
-    description: "objective ids; null = no objective.",
+    description:
+      "objective ids to KEEP, resolved via list_objectives / list_global_filter_options FIRST. null = no objective.",
   },
   category: {
     type: "array",
     items: { type: "string" },
-    description: "category ids.",
+    description:
+      "category ids to KEEP, resolved via list_categories / list_global_filter_options FIRST.",
   },
   integration: {
     type: "array",
     items: { type: ["string", "null"] },
     description:
-      "integration ids (from list_integrations); null = not created by an integration.",
+      "integration ids (from list_integrations) to KEEP; null = not created by an integration.",
   },
 } as const;
 
@@ -426,7 +440,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "list_views",
       description:
-        "List the saved kanban views of the current scope — the project's views in project mode, the user's personal cross-project views on the global board — with their id, name, kind, shared, filters, sort, display. Call it before update_view to read the filters currently set on a view. kind 'my' is the user's system view ('Mes tickets'): its name and its assignee filter (locked to [\"@me\"], the dynamic 'assigned to me' value) can never change, and it cannot be deleted — other filters/sort/display remain editable.",
+        "List the saved kanban views of the current scope — the project's views in project mode, the user's personal cross-project views on the global board — with their id, name, kind, shared, filters, sort, display. Call it BEFORE update_view: the `filters` argument of update_view replaces the whole config, so you must read the current one and resend every key you want to keep. kind 'my' is the user's system view ('Mes tickets'): its name and its assignee filter (locked to [\"@me\"], the dynamic 'assigned to me' value) can never change, and it cannot be deleted — other filters/sort/display remain editable.",
       parameters: { type: "object", properties: {} },
     },
   },
@@ -436,7 +450,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "create_issue",
       description:
-        "Create an issue. IMPORTANT: unless the user explicitly asked for a specific status, DO NOT pass status — minddy files new issues in the user's chosen Numo landing status (an account setting) on its own. Fill every other field you can: pass an estimated priority and effort (inferred from the description when not stated) unless smart_fill is true, and pass matching category_ids unless smart_fill is true. Resolve assignee/objective/category ids via the list_* tools first.",
+        "Create an issue. IMPORTANT: unless the user explicitly asked for a specific status, DO NOT pass status — minddy files new issues in the user's chosen Numo landing status (an account setting) on its own. Fill every other field you can: pass an estimated priority and effort (inferred from the description when not stated) unless smart_fill is true, and pass matching category_ids unless smart_fill is true. Resolve assignee/objective/category ids via the list_* tools first. When no project is attached to the conversation, resolve the project the user named (by key like 'MIN' or by name like 'minddy') to its id with list_projects BEFORE calling this — never guess an id, and never silently give up because the id was not attached.",
       parameters: {
         type: "object",
         properties: {
@@ -865,7 +879,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "create_view",
       description:
-        "Create a saved kanban view. In project mode it is shared with the whole project; in global mode it is your personal CROSS-PROJECT view (spanning every project). The kanban ALWAYS groups by status — a view only filters, sorts and optionally hides done issues. Filters take IDS (resolve names via list_members/list_categories/list_objectives/list_integrations, or list_global_filter_options in global mode, first); null inside assignee/objective/integration means 'unassigned'/'no objective'/'not from an integration'; '@me' inside assignee means 'assigned to the viewing user' (dynamic).",
+        "Create a saved kanban view. In project mode it is shared with the whole project; in global mode it is your personal CROSS-PROJECT view (spanning every project). The kanban ALWAYS groups by status — a view only filters, sorts and optionally hides done issues. STRICT ID RULE: filter values are IDS or enum values, never names or free text — resolve member/category/objective/integration names through list_members / list_categories / list_objectives / list_integrations (or list_global_filter_options in global mode) BEFORE calling, and copy status/priority/effort verbatim from their enums. null inside assignee/objective/integration means 'unassigned'/'no objective'/'not from an integration'; '@me' inside assignee means 'assigned to the viewing user' (dynamic). Omitting a filter key means 'do not filter on it' — a view with NO filters shows everything.",
       parameters: {
         type: "object",
         properties: {
@@ -886,6 +900,12 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
             properties: {
               hideDone: { type: "boolean" },
               hideRecurring: { type: "boolean" },
+              sortDirection: {
+                type: "string",
+                enum: ["asc", "desc"],
+                description:
+                  "Direction of the sort (default asc) — only meaningful for the priority/created/updated/due sorts; smart and manual ignore it.",
+              },
             },
             description: "Display options.",
           },
@@ -899,7 +919,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "update_view",
       description:
-        "Update a saved kanban view (name, filters, sort, display). Same filter shape and ID rules as create_view. Get view ids via list_views. `filters` REPLACES the whole filter config — read the view with list_views first and resend the keys you want to keep, otherwise you drop them. On the kind='my' system view the name and the assignee filter are locked (assignee stays [\"@me\"]); everything else is editable.",
+        "Update a saved kanban view (name, filters, sort, display). Same filter shape and ID rules as create_view (IDS and enum values only, resolved through the list_* tools first). Get view ids via list_views. DANGER: `filters` REPLACES the whole filter config — read the view with list_views first and resend EVERY key you want to keep, otherwise you silently drop the user's existing filters. On the kind='my' system view the name and the assignee filter are locked (assignee stays [\"@me\"]); everything else is editable.",
       parameters: {
         type: "object",
         properties: {
@@ -920,6 +940,12 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
             properties: {
               hideDone: { type: "boolean" },
               hideRecurring: { type: "boolean" },
+              sortDirection: {
+                type: "string",
+                enum: ["asc", "desc"],
+                description:
+                  "Direction of the sort (default asc) — only meaningful for the priority/created/updated/due sorts; smart and manual ignore it.",
+              },
             },
           },
         },
@@ -1237,7 +1263,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "update_project",
       description:
-        "Update the project's own settings — every switch of its Settings page: identity (name, key, accent color), auto-assign on create, Smart Assign and its per-member rules, the automations switch (the agent loop), AI review of incoming feedback, and feedback translation (enabled, team language, languages to skip). OWNER ONLY — fails for a non-owner. Changing the key rewrites how every issue is referenced (MIND-42 → NEW-42): confirm with the user before doing it. Only pass the fields to change. Smart Assign and automations are plan-gated: turning one ON can be refused for the owner's plan — relay that refusal, don't retry.",
+        "Update the project's own settings — every switch of its Settings page: identity (name, key, accent color), auto-assign on create, Smart Assign and its per-member rules, Smart Triage's engine (rules, or the AI scoring pass), the automations switch (the agent loop), AI review of incoming feedback, and feedback translation (enabled, team language, languages to skip). OWNER ONLY — fails for a non-owner. Changing the key rewrites how every issue is referenced (MIND-42 → NEW-42): confirm with the user before doing it. Only pass the fields to change. Smart Assign, Smart Triage's AI engine and automations are plan- or budget-gated: turning one ON can be refused for the owner's plan or usage budget — relay that refusal, don't retry.",
       parameters: {
         type: "object",
         properties: {
@@ -1266,6 +1292,12 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
             type: "object",
             description:
               "Smart Assign rules, as a map user_id → one sentence describing what that person takes on (from list_members). REPLACES the whole map: resend the members you want to keep. An empty text drops a member's rule.",
+          },
+          smart_triage_mode: {
+            type: "string",
+            enum: [...SMART_TRIAGE_MODES],
+            description:
+              "Smart Triage's engine for the board's 'Smart' sort and triage button: 'rules' is the free, deterministic static rules; 'jev' is the AI urgency scoring pass (shown as 'AI' in the interface). Arming 'jev' consumes the owner's AI usage and can be refused when their budget is dry — 'rules' is free and always passes.",
           },
           automations_enabled: {
             type: "boolean",
@@ -1459,7 +1491,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "get_account_settings",
       description:
-        "Read the current user's own account settings: display name, email (read-only), interface language, display theme, the status Numo-created issues land in, the auto-assign, Smart Fill (master, created issues, triage), and prompt-copy-auto-start preferences, the cycle preferences (enabled, duration, start day, intensity, auto-capture), the Inbox notification toggles, the code agent's default model, reasoning level and branch prefix, and the automation preset. Call this before update_account_settings so you use exact current values.",
+        "Read the current user's own account settings: display name, email (read-only), interface language, display theme, keyboard send shortcut, the status Numo-created issues land in, the auto-assign, Smart Fill (master, created issues, triage), and prompt-copy-auto-start preferences, the cycle preferences (enabled, duration, start day, intensity, auto-capture), the Inbox notification toggles, the automation preset with its start delay and per-effort switches, analytics consent, the code agent's default model, reasoning level, branch prefix and sandbox (region, size). Call this before update_account_settings so you use exact current values.",
       parameters: { type: "object", properties: {} },
     },
   },
@@ -1486,6 +1518,12 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
             enum: [...ACCOUNT_THEMES, null],
             description:
               "Display theme, saved on the account so every device of the user picks it up. null clears it: devices fall back to their own default.",
+          },
+          send_shortcut: {
+            type: "string",
+            enum: [...SEND_MODES],
+            description:
+              "The keyboard gesture that SENDS a composer (comments, Numo, issue fields). 'mod-enter' (default) sends on Cmd/Ctrl+Enter, Enter only inserts a line break; 'enter' sends on plain Enter, Shift+Enter still inserts a line break. Cmd/Ctrl+Enter sends in BOTH modes.",
           },
           numo_default_status: {
             type: "string",
@@ -1598,6 +1636,41 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
             enum: [...AUTOMATION_PRESET_IDS, null],
             description:
               "The automation loop applied to EVERY project this account owns (each project still has its own on/off switch — update_project, automations_enabled). null clears it: no loop at all, without touching each project.",
+          },
+          automation_start_delay_minutes: {
+            type: "number",
+            enum: [...AUTOMATION_START_DELAY_CHOICES],
+            description:
+              "How long (minutes) an automation waits AFTER its trigger before starting the code agent — the reprieve that lets a stray drag or a change of mind cancel the run. 0 = immediate. Applies to the whole account's automation loop.",
+          },
+          automation_efforts: {
+            type: "object",
+            description:
+              "Per-effort switches for the automation loop: which ticket sizes the agent may run on, as a map of effort → boolean. Only pass the efforts to CHANGE — an effort left out keeps its current value; every effort is enabled by default. Set false to exclude a size ('no automation on my xl'), true to re-include it.",
+            properties: Object.fromEntries(
+              ISSUE_EFFORTS.map((effort) => [
+                effort,
+                { type: "boolean" as const },
+              ]),
+            ),
+          },
+          analytics_consent: {
+            type: ["string", "null"],
+            enum: ["accepted", "declined", null],
+            description:
+              "The user's product-analytics consent (cookies, PostHog). 'accepted' enables measurement, 'declined' turns it off, null clears the stored answer (they will be asked again).",
+          },
+          sandbox_region: {
+            type: "string",
+            enum: [...SANDBOX_REGIONS],
+            description:
+              "Region of the server sandbox where Numo's code agent runs: 'eu' (Dublin) or 'us' (Virginia). Closer region, faster worker I/O.",
+          },
+          sandbox_size: {
+            type: "string",
+            enum: [...SANDBOX_SIZES],
+            description:
+              "Resources of the server sandbox where Numo's code agent runs: 'standard' (4 vCPU / 8 GB) or 'performance' (8 vCPU / 16 GB, costs more per hour against the AI budget).",
           },
           branch_prefix: {
             type: ["string", "null"],
@@ -2184,6 +2257,49 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
   {
     type: "function",
     function: {
+      name: "list_routine_runs",
+      description:
+        "List the past and running occurrences (runs) of ONE routine: for each, its state — running, completed, failed, canceled, or paused waiting for the owner's input (waiting_input) — its scheduled/manual origin, outcome, error, cost and pull request. Resolve the routine with list_routines first. Use read_routine_occurrence on a returned occurrence id to reread what that occurrence actually did.",
+      parameters: {
+        type: "object",
+        properties: {
+          routine_id: {
+            type: "string",
+            description:
+              "id of the routine whose runs to list (see list_routines, or the routine in context).",
+          },
+          limit: {
+            type: "number",
+            description:
+              "Optional cap on returned runs (default 20, most recent first).",
+          },
+        },
+        required: ["routine_id"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "read_routine_occurrence",
+      description:
+        "Read ONE occurrence of a routine in full: its run state (running, completed, failed, canceled or paused waiting for the owner's input), its outcome and error, any delegated code work (pull request), and — when the caller is the routine's owner — its conversation: what the occurrence said and decided (assistant messages; tool actions summarized). The transcript is private to the owner; for a member the tool returns the state only. Use list_routine_runs to find occurrence ids.",
+      parameters: {
+        type: "object",
+        properties: {
+          occurrence_id: {
+            type: "string",
+            description:
+              "id of the occurrence to read (from list_routine_runs).",
+          },
+        },
+        required: ["occurrence_id"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "read_pull_request",
       description:
         "Read a selected pull request, or the pull request attached to an issue: its title, description, state, branch, CI checks, per-file diffs (patches, capped), and review comments anchored to code — grouped into conversations, each carrying the root comment `id` that resolve_pull_request_threads targets. Use pull_request_id when the conversation carries a PR directly, including a human PR with no issue. Otherwise use issue_id to resolve the issue's live or most recently updated PR. To delegate repository work, use launch_code_agent with that exact pull_request_id and mode review or fix.",
@@ -2209,7 +2325,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "link_pull_request",
       description:
-        "Attach an existing pull request of the project's linked repository to an issue, when it did not attach on its own. A PR normally finds its issue by CONVENTION at ingestion — the issue identifier in the branch name, the title, or a closing line ('Fixes MIND-42') of the description — so use this only for a PR the user points at that shows up with NO issue. Identify it by number ('42', '#42', '!42' for a GitLab merge request) or by the forge URL the user pasted; on the pull requests page, 'cette PR' is the one in context. Attaching also ALIGNS the issue's status on the state of the PR: open → in_review, draft → in_progress, merged → done, closed → todo — say which. The link is DEFINITIVE and cannot be undone: a PR already attached to another issue is refused, and so is an issue that already carries a live (draft or open) PR. Ask the user before attaching when you had to guess either side.",
+        "Attach an existing pull request of the project's linked repository to an issue, when it did not attach on its own. A PR normally finds its issue by CONVENTION at ingestion — the issue identifier in the branch name, the title, or a closing line ('Fixes MIND-42') of the description — Use it to add an issue to a PR the user identifies, including a PR already linked to other issues. Identify it by number ('42', '#42', '!42' for a GitLab merge request) or by the forge URL the user pasted; on the pull requests page, 'this PR' is the one in context. Attaching also ALIGNS the issue's status on the state of the PR: open → in_review, draft → in_progress, merged → done, closed → todo — say which. A PR may carry multiple issues; an issue that already carries another live (draft or open) PR is refused. Ask the user before attaching when you had to guess either side.",
       parameters: {
         type: "object",
         properties: {
@@ -2478,8 +2594,8 @@ function withProjectId(
           project_id: {
             type: "string",
             description: options.required
-              ? "The project ID to operate on. Use list_projects to discover available projects."
-              : "The project ID to operate on. Omit it for the current project. Set it only when the user explicitly names another project, after resolving that project with list_projects.",
+              ? "The project ID to operate on. Use list_projects to discover available projects — when the user names one (key like 'MIN' or display name), resolve it to its id there first; a key or exact name is also matched as a fallback."
+              : "The project ID to operate on. Omit it for the current project. Set it only when the user explicitly names another project, after resolving that project with list_projects (a key or exact name is also matched as a fallback).",
           },
           ...params.properties,
         },

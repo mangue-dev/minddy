@@ -1,8 +1,9 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowRight01Icon, Folder01Icon } from "@hugeicons/core-free-icons";
 import type { ReactNode } from "react";
 import { cn } from "mangue-ui";
-import { ChevronRight, Folder } from "lucide-react";
 import { ProjectOrb } from "@/components/project-orb";
 import { projectOrbSeed } from "@/lib/project-orb-colors";
 
@@ -129,7 +130,7 @@ export function SidebarProjectGroup({
           className="size-4 shrink-0"
         />
       ) : (
-        <Folder className="size-4 shrink-0 text-muted-foreground" />
+        <HugeiconsIcon icon={Folder01Icon} className="size-4 shrink-0 text-muted-foreground" />
       ))}
       <span className="min-w-0 flex-1 truncate text-sm font-medium">
         {project?.name ?? fallbackLabel}
@@ -170,12 +171,10 @@ export function SidebarProjectGroup({
             aria-hidden
             className="flex size-6 shrink-0 items-center justify-center outline-none"
           >
-            <ChevronRight
-              className={cn(
-                "size-3 text-muted-foreground transition-transform",
-                open && "rotate-90",
-              )}
-            />
+            <HugeiconsIcon icon={ArrowRight01Icon} className={cn(
+                                      "size-3 text-muted-foreground transition-transform",
+                                      open && "rotate-90",
+                                    )} />
           </button>
         ) : null}
       </div>

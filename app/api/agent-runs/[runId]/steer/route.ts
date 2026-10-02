@@ -103,7 +103,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   const messageWithFiles = await promptWithAttachments(message, attachments);
   const mentions = parseAgentMentions(payload?.mentions);
 
-  const run = await getRun(runId);
+  const run = await getRun(runId, { decode: false });
   if (!run)
     return NextResponse.json({ error: "Run not found" }, { status: 404 });
 
@@ -320,7 +320,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       // (quick double-send, another tab which just woke it up), the message
       // is legitimate — he joins the turn that starts, as for a run that
       // work. We only refuse if it was ANOTHER run that took the outcome.
-      const now = await getRun(runId);
+      const now = await getRun(runId, { decode: false });
       if (!now || !["queued", "running"].includes(now.status)) {
         return NextResponse.json(
           { error: "alreadyRunning", code: "alreadyRunning" },
@@ -377,7 +377,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       );
     }
     if (inserted === "conflict") {
-      const now = await getRun(runId);
+      const now = await getRun(runId, { decode: false });
       if (!now || !RESUME_FROM.includes(now.status)) {
         return NextResponse.json(
           { error: "alreadyRunning", code: "alreadyRunning" },
@@ -395,7 +395,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   // run at rest). We re-read: if the run has just landed, we re-queue it ourselves-
   // same (the guard avoids double waking if another client has already done so).
   if (!resumed) {
-    const now = await getRun(runId);
+    const now = await getRun(runId, { decode: false });
     if (now && RESUME_FROM.includes(now.status)) {
       const ownerId = now.created_by;
       if (!ownerId) {

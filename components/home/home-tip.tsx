@@ -17,9 +17,10 @@
 // It therefore occupies its line from the first painting, and the trick that arrives does not
 //     pousse rien.
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { BulbIcon } from "@hugeicons/core-free-icons";
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Lightbulb } from "lucide-react";
 import { KbdSequence } from "@/components/ui/kbd";
 import { resolveKeyToken } from "@/lib/keyboard/shortcuts";
 import { pickTip, tipShortcut } from "@/lib/home-tips";
@@ -45,10 +46,7 @@ export function HomeTip() {
            centered on the WHOLE row (mx-auto + w-fit) — the text keeps
            its natural left alignment inside the container. */
         <span className="mx-auto flex w-fit max-w-[36rem] items-center gap-x-2">
-          <Lightbulb
-            className="size-3.5 shrink-0"
-            aria-hidden
-          />
+          <HugeiconsIcon icon={BulbIcon} className="size-3.5 shrink-0" aria-hidden />
           <span className="text-balance">
             {t(tip.key)}
             {shortcut && (

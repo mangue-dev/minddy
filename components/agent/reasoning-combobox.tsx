@@ -1,8 +1,9 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowUpDownIcon, BrainIcon, CheckIcon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Brain, Check, ChevronsUpDown } from "lucide-react";
 import {
   Button,
   Command,
@@ -86,7 +87,7 @@ export function ReasoningCombobox({
         <TooltipTrigger asChild>
           <span className="inline-flex cursor-not-allowed">
             <span className="pointer-events-none flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-transparent bg-transparent px-1.5 text-xs font-medium text-foreground/45">
-              <Brain className="size-3.5 shrink-0" />
+              <HugeiconsIcon icon={BrainIcon} className="size-3.5 shrink-0" />
               <span className="whitespace-nowrap">{label}</span>
             </span>
           </span>
@@ -114,13 +115,13 @@ export function ReasoningCombobox({
           className={cn(
             "gap-1.5 text-xs font-medium text-foreground/80",
             variant === "field"
-              ? "h-10 w-full justify-start rounded-md border border-input bg-transparent px-3 text-left hover:bg-muted/50"
+              ? "h-10 w-full justify-start rounded-md bg-control px-3 text-left hover:bg-control-hover"
               : "h-8 shrink-0 rounded-full border border-transparent bg-transparent px-1.5 hover:bg-muted/50",
           )}
         >
-          <Brain className="size-3.5 shrink-0 text-muted-foreground" />
+          <HugeiconsIcon icon={BrainIcon} className="size-3.5 shrink-0 text-muted-foreground" />
           <span className="whitespace-nowrap text-left">{label}</span>
-          <ChevronsUpDown className="size-3 shrink-0 opacity-50" />
+          <HugeiconsIcon icon={ArrowUpDownIcon} className="size-3 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
       {/* The name of the level is enough to designate it: the list is short, ordered from
@@ -148,9 +149,7 @@ export function ReasoningCombobox({
                 }}
               >
                 <span className="flex-1 whitespace-nowrap">{t(LABEL_KEYS[level])}</span>
-                <Check
-                  className={cn("size-4 shrink-0", value === level ? "opacity-100" : "opacity-0")}
-                />
+                <HugeiconsIcon icon={CheckIcon} className={cn("size-4 shrink-0", value === level ? "opacity-100" : "opacity-0")} />
               </CommandItem>
             ))}
           </CommandList>

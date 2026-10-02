@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
+import { decodeRepositoryName } from "@/lib/server/git/repository-name-content";
 import { isForgeRelayClientConfigured, relayRequest } from "./client";
 
 /**
@@ -35,13 +36,13 @@ export async function pushGitlabHookSecret(
     if (!row?.repo_full_name) return;
     const response = await relayRequest("/api/relay/gitlab/hook-secret", {
       repoId: row.external_repo_id,
-      repo: row.repo_full_name,
+      repo: (await decodeRepositoryName("gitlab",row.repo_full_name))!,
       secret,
     });
     if (!response.ok) {
-      console.error("[forge-relay] hook-secret push refused:", response.error);
+      console.error("[forge-relay] hook_secret_push_refused", { status: response.status });
     }
-  } catch (err) {
-    console.error("[forge-relay] hook-secret push failed:", (err as Error).message);
+  } catch {
+    console.error("[forge-relay] hook_secret_push_failed");
   }
 }

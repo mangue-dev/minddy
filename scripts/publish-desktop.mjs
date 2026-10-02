@@ -9,6 +9,7 @@ import { put } from "@vercel/blob";
 
 import { computeDesktopFingerprint } from "./desktop-fingerprint.mjs";
 import { requireMacReleaseArtifacts } from "./macos-desktop-release.mjs";
+import { verifyMacProvisioningProfile } from "./macos-provisioning-profile.mjs";
 
 /**
  * PUBLISH DESKTOP APP FLOW (MIN-292).
@@ -50,6 +51,7 @@ function fail(message) {
 
 /** Verify the complete signed bundle, including nested helpers and its ticket. */
 async function verifyMacApp(app, label) {
+  await verifyMacProvisioningProfile(app);
   try {
     await exec("codesign", ["--verify", "--deep", "--strict", "--verbose=2", app]);
   } catch {

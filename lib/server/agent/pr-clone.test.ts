@@ -100,7 +100,7 @@ describe("clonePullRequest — diff anchor", () => {
     expect(commands[0]).toContain("git rev-parse --verify");
   });
 
-  it("ne fetche rien quand la forge n'a pas su donner la base", async () => {
+  it("skips the anchor fetch when the forge cannot supply a valid base", async () => {
     for (const baseSha of [
       null,
       undefined,
@@ -115,7 +115,7 @@ describe("clonePullRequest — diff anchor", () => {
     }
   });
 
-  it("laisse le clone bon quand l'ancre échoue — la relecture tourne dégradée, pas jamais", async () => {
+  it("keeps the clone usable when its review anchor cannot be fetched", async () => {
     const { host, commands } = fakeHost({
       fails: (cmd) => cmd.includes("git tag"),
     });
@@ -125,10 +125,10 @@ describe("clonePullRequest — diff anchor", () => {
     expect(commands.some((c) => c.includes("git tag"))).toBe(true);
   });
 
-  it("échoue en revanche si la TÊTE n'a pas pu être récupérée", async () => {
+  it("fails with a controlled code when the pull request head cannot be checked out", async () => {
     const { host } = fakeHost({ fails: (cmd) => cmd.includes("git checkout") });
     await expect(
       clonePullRequest(host, { ...BASE, baseSha: SHA }),
-    ).rejects.toThrow(/pull request checkout failed/);
+    ).rejects.toThrow("pull_request_checkout_failed");
   });
 });

@@ -1,3 +1,5 @@
+import { issueStore } from "@/lib/server/issue-store";
+import { commentStore } from "@/lib/server/comment-store";
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
@@ -8,6 +10,9 @@ import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
 import type { Forge } from "./forge";
 import { toPrLineThreads, type PrReviewIssueContext, type PrReviewNote } from "./prompt";
 import type { PullRequestState } from "./pull-requests";
+import { decodePullRequestUrlRow } from "./pull-request-url-content";
+import { decodePullRequestContentRow } from "./pull-request-content";
+import { decodeRepositoryName } from "@/lib/server/git/repository-name-content";
 
 /**
  * The PULL REQUEST anchor of an agent run (MIN-168), resolved ONE time and served
@@ -84,7 +89,12 @@ export async function loadPrRunContext(pullRequestId: string): Promise<PrRunCont
     .select(PR_RUN_COLUMNS)
     .eq("id", pullRequestId)
     .maybeSingle();
-  return data ? toContext(data as PrRunRow) : null;
+  if (!data) return null;
+  const row = await decodePullRequestContentRow(
+    await decodePullRequestUrlRow(data as PrRunRow));
+  row.repo_full_name = (await decodeRepositoryName(row.provider,
+    row.repo_full_name))!;
+  return toContext(row);
 }
 
 /**
@@ -125,27 +135,24 @@ type IssueCommentRow = { body: unknown; author_id: unknown; via_assistant: unkno
  */
 export async function loadPrIssueContext(
   issueId: string | null,
+  projectId: string,
 ): Promise<PrReviewIssueContext | null> {
   if (!issueId) return null;
   try {
     const service = getServiceClient();
-    const [{ data }, { data: commentRows }] = await Promise.all([
-      service
-        .from("issues")
-        .select("number, title, description, plan, projects(key)")
-        .eq("id", issueId)
-        .is("deleted_at", null)
-        .maybeSingle(),
-      // The MOST RECENT first on the SQL side, then put back in reading order:
-      // an ascending `limit` would keep the beginning of a discussion, never its end.
-      service
-        .from("comments")
-        .select("body, author_id, via_assistant")
-        .eq("issue_id", issueId)
-        .order("created_at", { ascending: false })
-        .limit(ISSUE_COMMENTS_LIMIT),
-    ]);
+    const { data } = await issueStore(service)
+      .select("number, title, description, plan, projects(key)")
+      .eq("id", issueId).eq("project_id", projectId)
+      .is("deleted_at", null).maybeSingle();
     if (!data) return null;
+    // Read the thread only after the issue has been bound to this run's project.
+    // The MOST RECENT first on the SQL side, then put back in reading order:
+    // an ascending `limit` would keep the beginning of a discussion, never its end.
+    const { data: commentRows } = await commentStore(service, "comments")
+      .select("body, author_id, via_assistant")
+      .eq("issue_id", issueId)
+      .order("created_at", { ascending: false })
+      .limit(ISSUE_COMMENTS_LIMIT);
     const key = ((data.projects as { key?: string } | null)?.key ?? "").toString();
     return {
       identifier: issueIdentifier(key, data.number as number),
@@ -154,8 +161,8 @@ export async function loadPrIssueContext(
       plan: (data.plan as string | null) ?? null,
       comments: await issueNotes(service, commentRows ?? []),
     };
-  } catch (err) {
-    console.error("[pr-run] issue context failed:", (err as Error).message);
+  } catch {
+    console.error("[pr-run] issue_context_failed");
     return null;
   }
 }
@@ -185,8 +192,8 @@ async function issueNotes(
 
 /** Journalized fallback from a context reading: what is missing is missing, the session takes place. */
 function unreadable<T>(what: string, fallback: T): (err: unknown) => T {
-  return (err) => {
-    console.error(`[pr-run] ${what} unreadable:`, (err as Error).message);
+  return () => {
+    console.error(`[pr-run] ${what} unreadable`);
     return fallback;
   };
 }
@@ -221,6 +228,7 @@ export async function loadPrReviewBoot(input: {
   forge: Forge;
   call: { token: string; repoFullName: string; number: number };
   pr: PrRunContext;
+  projectId: string;
 }): Promise<PrReviewBoot> {
   const { forge, call, pr } = input;
 
@@ -244,7 +252,7 @@ export async function loadPrReviewBoot(input: {
         .catch(unreadable("checks", null))
     : null;
 
-  const issue = await loadPrIssueContext(pr.issueId);
+  const issue = await loadPrIssueContext(pr.issueId, input.projectId);
 
   return {
     issue,

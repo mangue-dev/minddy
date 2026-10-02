@@ -5,7 +5,8 @@
  * (shell wires this into the SearchBar/SearchView).
  */
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { removeLocalSnapshot, restoreLocalSnapshot, saveLocalSnapshot } from "@/lib/local-snapshots";
 
 const MAX_HISTORY = 50;
 
@@ -13,12 +14,17 @@ function historyKey(prefix: string): string {
   return `${prefix}:history`;
 }
 
-function loadHistory(prefix: string): string[] {
+async function loadHistory(prefix: string): Promise<string[]> {
   try {
     const stored = localStorage.getItem(historyKey(prefix));
     if (!stored) return [];
-    const parsed = JSON.parse(stored) as string[];
-    return Array.isArray(parsed) ? parsed : [];
+    const legacy = JSON.parse(stored);
+    if (legacy?.format !== "minddy-local-v1") {
+      removeLocalSnapshot(localStorage, historyKey(prefix));
+      return [];
+    }
+    const parsed = await restoreLocalSnapshot(localStorage, historyKey(prefix), "search-history");
+    return Array.isArray(parsed) ? parsed.filter((entry): entry is string => typeof entry === "string").slice(0, MAX_HISTORY) : [];
   } catch {
     return [];
   }
@@ -26,7 +32,7 @@ function loadHistory(prefix: string): string[] {
 
 function saveHistory(prefix: string, entries: string[]): void {
   try {
-    localStorage.setItem(historyKey(prefix), JSON.stringify(entries.slice(0, MAX_HISTORY)));
+    void saveLocalSnapshot(localStorage, historyKey(prefix), "search-history", entries.slice(0, MAX_HISTORY)).catch(() => {});
   } catch {
     // Ignore storage errors
   }
@@ -46,10 +52,17 @@ export interface QueryHistory {
 export function useQueryHistory(storagePrefix: string): QueryHistory {
   const [historyIndex, setHistoryIndex] = useState(-1);
   const entriesRef = useRef<string[] | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    void loadHistory(storagePrefix).then((saved) => {
+      if (!cancelled) entriesRef.current = [...new Set([...(entriesRef.current ?? []), ...saved])].slice(0, MAX_HISTORY);
+    });
+    return () => { cancelled = true; };
+  }, [storagePrefix]);
 
   const getEntries = useCallback(() => {
     if (entriesRef.current === null) {
-      entriesRef.current = loadHistory(storagePrefix);
+      entriesRef.current = [];
     }
     return entriesRef.current;
   }, [storagePrefix]);

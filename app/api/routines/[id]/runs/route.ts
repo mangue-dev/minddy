@@ -9,6 +9,9 @@ import { routineRunUsagePercent } from "@/lib/routine-run-metrics";
 import { occurrencesForRoutine } from "@/lib/server/routine-occurrences";
 import { getServiceClient } from "@/lib/supabase-service";
 import type { NumoTurnStatus } from "@/lib/assistant-types";
+import { decodeAgentPrUrl } from "@/lib/server/agent/run-pr-url-content";
+import { decodeNumoError } from "@/lib/server/numo/error-content";
+import { decodeNumoTurnOutcome } from "@/lib/server/numo/final-content";
 
 /**
  * Routine execution history. New rows summarize the complete Numo occurrence;
@@ -110,7 +113,7 @@ export async function GET(request: NextRequest, ctx: RouteContext) {
   const [workerResult, usageResult] = await Promise.all([
     turnIds.length
       ? service.from("agent_runs")
-          .select("id, parent_numo_turn_id, conversation_id, pr_number, pr_url, pr_state")
+          .select("id, project_id, parent_numo_turn_id, conversation_id, pr_number, pr_url, pr_state")
           .in("parent_numo_turn_id", turnIds)
           .order("created_at", { ascending: false })
       : Promise.resolve({ data: [], error: null }),
@@ -131,7 +134,12 @@ export async function GET(request: NextRequest, ctx: RouteContext) {
     if (!turns.has(conversationId)) turns.set(conversationId, turn);
   }
   const workers = new Map<string, Record<string, unknown>>();
-  for (const worker of (workerResult.data ?? []) as Array<Record<string, unknown>>) {
+  for (const stored of (workerResult.data ?? []) as Array<Record<string, unknown>>) {
+    if (stored.project_id !== found.routine.project_id) continue;
+    const worker = await decodeAgentPrUrl(stored as Record<string, unknown> & {
+      id: string; project_id: string; pr_url: string | null;
+      parent_numo_turn_id: string | null;
+    }, auth.user.id);
     const conversationId = turnConversation.get(worker.parent_numo_turn_id as string);
     if (conversationId && !workers.has(conversationId)) {
       workers.set(conversationId, worker);
@@ -148,7 +156,7 @@ export async function GET(request: NextRequest, ctx: RouteContext) {
     );
   }
 
-  const numoRuns = occurrences.map((occurrence) => {
+  const numoRuns = await Promise.all(occurrences.map(async (occurrence) => {
     const turn = turns.get(occurrence.conversation_id) ?? null;
     const status = (turn?.status as NumoTurnStatus | undefined) ?? null;
     const worker = workers.get(occurrence.conversation_id) ?? null;
@@ -175,8 +183,13 @@ export async function GET(request: NextRequest, ctx: RouteContext) {
       pr_state: worker?.pr_state ?? null,
       continuations: 0,
       cost_usd: Number(turn?.cost_usd ?? 0),
-      outcome: turn?.outcome ?? null,
-      error_message: occurrence.error_message ?? turn?.error_message ?? null,
+      outcome: turn ? await decodeNumoTurnOutcome(found.routine.owner_id,
+        turn.id as string, turn.outcome as string | null, auth.user.id) : null,
+      error_message: occurrence.error_message ?? (turn
+        ? await decodeNumoError(found.routine.owner_id,
+            "numo_assistant_turns", turn.id as string,
+            turn.error_message as string | null, auth.user.id)
+        : null),
       started_at: turn?.started_at ?? null,
       completed_at: turn?.completed_at ?? null,
       created_at: createdAt,
@@ -197,7 +210,7 @@ export async function GET(request: NextRequest, ctx: RouteContext) {
           })
         : null,
     };
-  });
+  }));
 
   const runs = [...numoRuns, ...legacyRuns].sort(
     (left, right) => Date.parse(String(right.created_at)) - Date.parse(String(left.created_at)),

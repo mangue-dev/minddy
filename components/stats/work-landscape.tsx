@@ -1,7 +1,9 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { AppIcon } from "@/components/icon";
+import { FolderKanbanIcon, TagsIcon, Target01Icon } from "@hugeicons/core-free-icons";
 import type { ReactNode } from "react";
-import { FolderKanban, Tags, Target } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { MentionChip } from "@/components/mention-chip";
@@ -118,7 +120,7 @@ export function WorkLandscape({
 
       <div className="grid overflow-hidden rounded-2xl border border-border bg-card shadow-sm lg:grid-cols-3 lg:divide-x lg:divide-y-0">
         <BreakdownGroup
-          icon={<FolderKanban className="size-4 text-muted-foreground" />}
+          icon={<AppIcon icon={FolderKanbanIcon} className="size-4 text-muted-foreground" />}
           title={t("projectsBreakdown")}
           info={t("projectsBreakdownInfo")}
           rows={projectRows}
@@ -126,7 +128,7 @@ export function WorkLandscape({
           emptyLabel={t("projectsBreakdownEmpty")}
         />
         <BreakdownGroup
-          icon={<Tags className="size-4 text-muted-foreground" />}
+          icon={<HugeiconsIcon icon={TagsIcon} className="size-4 text-muted-foreground" />}
           title={t("categoriesBreakdown")}
           info={t("categoriesBreakdownInfo")}
           rows={categoryRows}
@@ -134,7 +136,7 @@ export function WorkLandscape({
           emptyLabel={t("categoriesBreakdownEmpty")}
         />
         <BreakdownGroup
-          icon={<Target className="size-4 text-muted-foreground" />}
+          icon={<HugeiconsIcon icon={Target01Icon} className="size-4 text-muted-foreground" />}
           title={t("objectivesBreakdown")}
           info={t("objectivesBreakdownInfo")}
           rows={objectiveRows}

@@ -5,6 +5,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { toast } from "sonner";
 import { StatusLine, StatusLineFloating } from "@/components/status-line";
+import { clearErrorHistory, readErrorHistory } from "@/lib/status-history";
 
 // The pill uses mangue-ui's radix popover; a passthrough keeps the assertions
 // on text and DOM structure, with the content always in the tree.
@@ -38,8 +39,6 @@ vi.mock("next-intl", () => ({
   useLocale: () => "en",
 }));
 
-const HISTORY_KEY = "minddy:status-errors";
-
 let container: HTMLDivElement;
 let root: Root;
 
@@ -49,6 +48,7 @@ beforeEach(() => {
   // over from the previous test are replayed to the freshly mounted line.
   toast.dismiss();
   window.localStorage.clear();
+  clearErrorHistory();
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   vi.useFakeTimers();
   container = document.createElement("div");
@@ -111,7 +111,7 @@ describe("the status line", () => {
     });
     expect(line()).toBeNull();
 
-    const history = JSON.parse(window.localStorage.getItem(HISTORY_KEY) ?? "[]");
+    const history = readErrorHistory();
     expect(history).toHaveLength(1);
     expect(history[0]).toMatchObject({ message: "Boom" });
     expect(bell()).not.toBeNull();
@@ -131,7 +131,7 @@ describe("the status line", () => {
     for (let i = 0; i < 7; i++) {
       fire(() => toast.error(`Failure ${i}`));
     }
-    const history = JSON.parse(window.localStorage.getItem(HISTORY_KEY) ?? "[]");
+    const history = readErrorHistory();
     expect(history).toHaveLength(5);
     expect(history[0].message).toBe("Failure 6");
   });
@@ -148,7 +148,7 @@ describe("the status line", () => {
     fire(() => toast.error("Mobile boom"));
     expect(text()).toContain("Mobile boom");
     expect(bell()).not.toBeNull();
-    const history = JSON.parse(window.localStorage.getItem(HISTORY_KEY) ?? "[]");
+    const history = readErrorHistory();
     expect(history).toHaveLength(1);
   });
 });

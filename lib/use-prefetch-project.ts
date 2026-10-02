@@ -40,7 +40,7 @@ export function prefetchProjectQueries(queryClient: QueryClient, projectId: stri
   });
   void queryClient.prefetchQuery({
     queryKey: ["issue-relations", projectId],
-    queryFn: () => fetchIssueRelationsApi(projectId),
+    queryFn: () => fetchIssueRelationsApi(projectId, queryClient),
   });
 }
 

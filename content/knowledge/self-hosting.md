@@ -40,7 +40,7 @@ The deployed application needs these values:
 - `MINDDY_PUBLIC_SUPABASE_URL` and `MINDDY_PUBLIC_SUPABASE_ANON_KEY`: the public API origin and anon key of the selected Supabase service.
 - `SUPABASE_SERVICE_ROLE_KEY`: server-only and required in production; never expose it to a browser.
 
-The installer generates `GIT_STATE_SECRET`, `GIT_TOKEN_ENCRYPTION_SECRET`, `AI_KEY_ENCRYPTION_SECRET`, `FEEDBACK_SSO_ENCRYPTION_SECRET`, `CRON_SECRET`, and `AGENT_RUNNER_SECRET` on every installation; `MINDDY_PUBLIC_VAPID_PUBLIC_KEY` and its private counterpart are generated when the `web-push` capability is selected. Preserve encryption secrets when upgrading. Configure a complete set of external credentials for any optional capability; an incomplete set is disabled rather than guessed. Leave `MINDDY_MANAGED_AI=0` and `MINDDY_MANAGED_BILLING=0` for self-hosting.
+The installer generates `GIT_STATE_SECRET`, `GIT_TOKEN_ENCRYPTION_SECRET`, `AI_KEY_ENCRYPTION_SECRET`, `FEEDBACK_SSO_ENCRYPTION_SECRET`, `MINDDY_DATA_ROOT_KEY`, `CRON_SECRET`, and `AGENT_RUNNER_SECRET` on every installation; `MINDDY_PUBLIC_VAPID_PUBLIC_KEY` and its private counterpart are generated when the `web-push` capability is selected. Preserve encryption secrets when upgrading. Configure a complete set of external credentials for any optional capability; an incomplete set is disabled rather than guessed. Leave `MINDDY_MANAGED_AI=0` and `MINDDY_MANAGED_BILLING=0` for self-hosting.
 
 ## Numo, routines, and server execution
 
@@ -121,3 +121,60 @@ Configure Supabase Auth with the exact app origin, `/auth/callback`, an operator
 ## Moving data from Minddy Cloud
 
 The Data section of account settings can export a JSON transfer file and restore it on another minddy instance. Import is additive: it preserves project, issue, page, and personal-data IDs when safe; conflicts receive new IDs and are reported. It does not transfer passwords, API keys, OAuth tokens, repository credentials, or billing subscriptions. Reconnect those services on the self-hosted destination. Export from Cloud, install and verify the destination, then import and review the reported conflicts.
+
+## Workspace encryption setup
+
+Minddy supports server-side AES-256-GCM encryption for workspace content and
+files. Versioned project, user and system data keys are wrapped by
+`MINDDY_DATA_ROOT_KEY`, a dedicated 32-byte key stored outside PostgreSQL.
+The application decrypts for authorized access and AI processing. This is not
+end-to-end encryption: a compromised application runtime or access to both the
+root key and database can expose content. Auth login emails and routing metadata
+remain readable; exports and content sent to external providers need their own
+protection.
+
+The server installer and local Supabase bootstrap generate the root key.
+For a manual setup, generate it once with `openssl rand -hex 32` and store it in
+the protected server environment. Never reuse an AI or forge secret, put the root
+in SQL or a client bundle, or regenerate it during an update. Losing it makes
+protected content unreadable. Keep a protected recovery copy, including the
+historical roots needed for older backups. Encrypt and restrict access to any
+backup that contains both the environment and database.
+
+New local and server installations enable encryption by default. The guide offers
+an explicit enabled/disabled choice and includes it in both the manual commands
+and copied assistant prompt. Both modes generate the dedicated root key; the
+opt-out affects workspace content encryption, not saved provider credentials.
+
+For a new server installation, pass `--encryption enabled` (the default) or
+`--encryption disabled` to `pnpm self-host:install`. The installer writes
+`MINDDY_CONTENT_ENCRYPTION_ENABLED=true` or `false` accordingly, plus an
+independent `MINDDY_DATA_ROOT_KEY` in the mode-0600 deployment environment.
+The same choice applies to both managed and full Supabase profiles.
+
+For the local desktop flow, prepare the configuration before opening the clone
+in the desktop app:
+
+```sh
+pnpm bootstrap:supabase -- --minimal --app-url http://localhost:6463 --encryption enabled
+# Use --encryption disabled instead to opt out.
+```
+
+This prepares the schema, Storage and `.env.local`, including the selected flag
+and root key. Later desktop starts reuse those settings. Complete installation
+and its migration/verification checks before importing data or using the instance.
+Scheduled maintenance advances bounded legacy conversion and key rotation; an
+initial flag or generated key alone does not prove historical data and retained
+copies have all been converted. Use `docs/security/encryption/` for rollout,
+readiness and recovery checks on existing data.
+
+Reruns preserve the saved flag and root key. A conflicting explicit CLI choice
+fails with instructions to review the environment instead of silently replacing
+it. An existing configuration without the flag stays disabled until deliberately
+configured; a missing root on an enabled instance blocks installation and must be
+recovered. For a deliberate mode change, preserve the root, update the flag in
+the protected environment and restart the application. Turning encryption off
+never decrypts or permits plaintext writes to already protected data. Replacing
+a root requires the guarded offline rewrap procedure in
+`docs/security/encryption/root-key-rotation.md`. Rehearse database, Storage and
+matching-key recovery in an isolated environment, and protect retained backups.

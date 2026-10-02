@@ -6,11 +6,14 @@ import {
   MAX_PAGE_FILE_BYTES,
   pageFileIdsInBody,
   pageFileStoragePrefix,
-  sanitizeFileKey,
 } from "@/lib/page-files";
 import { resolveUploadedMimeType } from "@/lib/inline-safe";
-import { removeStorageObjects } from "@/lib/server/attachments";
+import { opaqueAttachmentPath, removeStorageObjects,
+  uploadPrivateAttachmentObject } from "@/lib/server/attachments";
 import { projectStorageAllowed } from "@/lib/server/storage-quota";
+import { decodeAttachmentRow, encodeAttachmentValue,
+  shouldEncryptAttachmentMetadata } from "@/lib/server/attachment-content";
+import { decodePageProjection } from "@/lib/server/page-content";
 
 /**
  * One-page files, server side (MIN-280): sending, and HOUSEHOLD.
@@ -97,22 +100,24 @@ export async function createPageFile(
   // the line, which becomes the trusted source of the read gate.
   const mime = resolveUploadedMimeType(args.mimeType, args.data).slice(0, 120);
   const fileName = args.fileName.trim().slice(0, 200) || "fichier";
-  const path = `${pageFileStoragePrefix(args.projectId, args.pageId)}/${crypto.randomUUID()}/${sanitizeFileKey(fileName)}`;
-
-  const { error: uploadError } = await service.storage
-    .from("attachments")
-    .upload(path, args.data, { contentType: mime });
-  if (uploadError) {
-    throw new PageFileError(`upload failed: ${uploadError.message}`, 500);
+  const id = crypto.randomUUID();
+  const path = opaqueAttachmentPath(pageFileStoragePrefix(args.projectId, args.pageId));
+  try {
+    await uploadPrivateAttachmentObject(service, path, args.data, mime);
+  } catch (error) {
+    throw new PageFileError(`upload failed: ${(error as Error).message}`, 500);
   }
 
   const { data, error } = await service
     .from("page_files")
     .insert({
+      id,
       page_id: args.pageId,
       project_id: args.projectId,
       storage_path: path,
-      file_name: fileName,
+      file_name: await shouldEncryptAttachmentMetadata(service)
+        ? await encodeAttachmentValue("page_files", args.projectId, id,
+          "file_name", fileName) : fileName,
       mime_type: mime,
       size_bytes: size,
       created_by: args.createdBy,
@@ -124,7 +129,7 @@ export async function createPageFile(
     await removeStorageObjects(service, [path]);
     throw new PageFileError(`page file insert failed: ${error?.message}`, 500);
   }
-  return data as PageFileRow;
+  return decodeAttachmentRow("page_files", data) as Promise<PageFileRow>;
 }
 
 /** The storage path of a file, if the actor can see it — the reading gate (`GET /api/projects/{id}/pages/files/{fileId}`) only needs that.
@@ -137,11 +142,12 @@ export async function getPageFilePath(
 ): Promise<{ storage_path: string; file_name: string; mime_type: string } | null> {
   const { data } = await service
     .from("page_files")
-    .select("storage_path, file_name, mime_type")
+    .select("id, project_id, storage_path, file_name, mime_type")
     .eq("id", fileId)
     .eq("project_id", projectId)
     .maybeSingle();
-  return (data as { storage_path: string; file_name: string; mime_type: string } | null) ?? null;
+  return data ? decodeAttachmentRow("page_files", data) as Promise<{
+    storage_path: string; file_name: string; mime_type: string }> : null;
 }
 
 /** The storage paths for the files on these pages. Read BEFORE the delete —
@@ -216,14 +222,13 @@ export async function sweepOrphanPageFiles(
 
   const { data: pages, error: pagesError } = await service
     .from("pages")
-    .select("id, content")
+    .select("id, project_id, content, encrypted_content, encryption_version")
     .in("id", [...byPage.keys()]);
   if (pagesError) throw pagesError;
 
   const orphans: typeof candidates = [];
-  const bodies = new Map(
-    ((pages ?? []) as { id: string; content: unknown }[]).map((p) => [p.id, p.content])
-  );
+  const bodies = new Map((await Promise.all((pages ?? []).map((row) =>
+    decodePageProjection(row)))).map((page) => [page.id, page.content]));
   for (const [pageId, rows] of byPage) {
     // A page that has NOT returned from reading no longer exists (it just
     // to be purged between two scans): its files are orphaned

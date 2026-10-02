@@ -1,7 +1,6 @@
 "use client";
 
-// Numo's context pill: what the assistant has in front of him, a
-// chose par pilule.
+// Numo's context pills show one item of context per pill.
 //
 // The DRAWING (concentric rays, superimposed order) lives in
 // [components/entity-pill.tsx](../entity-pill.tsx), shared with resources
@@ -15,24 +14,11 @@
 // corresponding field leaves the sent context. What we pinned to the
 // hand, he withdraws for good — a cross.
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { AiAutoRotateIcon as CycleIcon, File02Icon, BubbleChatDelayIcon, Cancel01Icon, FileAttachmentIcon, GitPullRequestIcon, InboxIcon, Layers01Icon, Layout3ColumnIcon, MessageMultiple01Icon, Settings01Icon, Target01Icon, ViewIcon, ViewOffIcon } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
-import {
-  BookText,
-  Eye,
-  EyeOff,
-  FileText,
-  CalendarClock,
-  IterationCw,
-  Inbox,
-  Layers,
-  LayoutGrid,
-  MessagesSquare,
-  GitPullRequest,
-  Settings2,
-  Target,
-  X,
-} from "lucide-react";
 import { cn } from "mangue-ui";
+import { AppIcon } from "@/components/icon";
 import {
   EntityPill,
   PillIcon,
@@ -59,59 +45,58 @@ import {
  */
 const STYLES: Record<
   AssistantContextKind,
-  { icon: React.ComponentType<{ className?: string }>; tint: string }
+  { icon: AppIcon; tint: string }
 > = {
   issue: {
-    icon: FileText,
+    icon: FileAttachmentIcon,
     tint: "bg-blue-500/12 text-blue-600 dark:text-blue-400",
   },
   issues: {
-    icon: Layers,
+    icon: Layers01Icon,
     tint: "bg-violet-500/12 text-violet-600 dark:text-violet-400",
   },
   pull_request: {
-    icon: GitPullRequest,
+    icon: GitPullRequestIcon,
     tint: "bg-emerald-500/12 text-emerald-600 dark:text-emerald-400",
   },
   // The lens does NOT take its shade here: it wears HIS, the one it
   // displayed everywhere else (see below, ObjectiveIconBadge). The entrance remains
   // so that the table covers all context types.
-  objective: { icon: Target, tint: "" },
+  objective: { icon: Target01Icon, tint: "" },
   feedback: {
-    icon: MessagesSquare,
+    icon: MessageMultiple01Icon,
     tint: "bg-rose-500/12 text-rose-600 dark:text-rose-400",
   },
-  // The same clock as the Routines tab and its empty state: a routine is
-  // recognized by his face, here and there.
+  // Match the Routines tab and sidebar.
   routine: {
-    icon: CalendarClock,
+    icon: BubbleChatDelayIcon,
     tint: "bg-amber-500/12 text-amber-600 dark:text-amber-400",
   },
   inbox: {
-    icon: Inbox,
+    icon: InboxIcon,
     tint: "bg-sky-500/12 text-sky-600 dark:text-sky-400",
   },
   // The wiki: the same figure as the page tree in the sidebar.
   page: {
-    icon: BookText,
+    icon: File02Icon,
     tint: "bg-indigo-500/12 text-indigo-600 dark:text-indigo-400",
   },
   view: {
-    icon: LayoutGrid,
+    icon: Layout3ColumnIcon,
     tint: "bg-cyan-500/12 text-cyan-600 dark:text-cyan-400",
   },
   cycle: {
-    icon: IterationCw,
+    icon: CycleIcon,
     tint: "bg-teal-500/12 text-teal-600 dark:text-teal-400",
   },
   settings: {
-    icon: Settings2,
+    icon: Settings01Icon,
     tint: "bg-slate-500/12 text-slate-600 dark:text-slate-400",
   },
   // Member and project never pass through this table: they carry their
   // its own figure (portrait, orb).
-  member: { icon: FileText, tint: "" },
-  project: { icon: FileText, tint: "" },
+  member: { icon: FileAttachmentIcon, tint: "" },
+  project: { icon: FileAttachmentIcon, tint: "" },
 };
 
 export function ContextPill({
@@ -149,6 +134,7 @@ export function ContextPill({
         <EntityPill
           radius={radius}
           dimmed={disabled}
+          bordered={false}
           ariaLabel={chip.tooltip}
           className={cn("max-w-[14rem] shrink-0", className)}
           action={
@@ -160,11 +146,11 @@ export function ContextPill({
                   // return to context.
                   persistent: disabled,
                   icon: onRemove ? (
-                    <X className="size-3" />
+                    <HugeiconsIcon icon={Cancel01Icon} className="size-3" />
                   ) : disabled ? (
-                    <EyeOff className="size-3" />
+                    <HugeiconsIcon icon={ViewOffIcon} className="size-3" />
                   ) : (
-                    <Eye className="size-3" />
+                    <HugeiconsIcon icon={ViewIcon} className="size-3" />
                   ),
                 }
               : undefined
@@ -203,7 +189,7 @@ export function ContextPill({
             </PillIcon>
           ) : (
             <PillIcon radius={radius} tint={disabled ? undefined : style.tint}>
-              <Icon className="h-3 w-3" />
+              <AppIcon icon={Icon} className="h-3 w-3" />
             </PillIcon>
           )}
           <span

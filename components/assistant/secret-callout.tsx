@@ -1,9 +1,10 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Copy01Icon, Key02Icon, CheckIcon, ViewIcon, ViewOffIcon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button, Input } from "mangue-ui";
-import { Check, Copy, Eye, EyeOff, KeyRound } from "lucide-react";
 import { REDACTED_MARK } from "@/lib/server/agent/redact";
 import { ssoEnvLine } from "@/lib/feedback/env-lines";
 import {
@@ -77,7 +78,7 @@ export function SecretCallout({ envLine }: { envLine: string }) {
   return (
     <div className="flex flex-col gap-2 rounded-lg border border-brand/25 bg-brand/5 p-3">
       <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-        <KeyRound className="size-3.5 shrink-0" />
+        <HugeiconsIcon icon={Key02Icon} className="size-3.5 shrink-0" />
         {t("secretShownOnce")}
       </p>
       <div className="flex items-center gap-2">
@@ -93,7 +94,7 @@ export function SecretCallout({ envLine }: { envLine: string }) {
           aria-label={reveal ? t("secretHide") : t("secretReveal")}
           onClick={() => setReveal((r) => !r)}
         >
-          {reveal ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+          {reveal ? <HugeiconsIcon icon={ViewOffIcon} className="size-4" /> : <HugeiconsIcon icon={ViewIcon} className="size-4" />}
         </Button>
         <Button
           variant="ghost"
@@ -106,9 +107,9 @@ export function SecretCallout({ envLine }: { envLine: string }) {
           }}
         >
           {copied ? (
-            <Check className="size-4 text-emerald-500" />
+            <HugeiconsIcon icon={CheckIcon} className="size-4 text-emerald-500" />
           ) : (
-            <Copy className="size-4" />
+            <HugeiconsIcon icon={Copy01Icon} className="size-4" />
           )}
         </Button>
       </div>

@@ -1,8 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { randomUUID } from "node:crypto";
 
 import { isManagedForgeEnabled } from "@/lib/managed-services";
 import { getServiceClient } from "@/lib/supabase-service";
 import { normalizeRelayPublicKey } from "@/lib/server/forge-relay/protocol";
+import { encodeRelayInstance } from
+  "@/lib/server/forge-relay/instance-content";
 
 /**
  * `POST /api/relay/register` — self-service instance registration
@@ -93,9 +96,14 @@ export async function POST(request: NextRequest) {
       : "self-hosted";
 
   const supabase = getServiceClient();
+  const encoded = await encodeRelayInstance({ id: randomUUID(), name,
+    webhook_url: null, webhook_secret_encrypted: null }, { service: supabase });
   const { data: inserted, error } = await supabase
     .from("forge_relay_instances")
-    .insert({ name, public_key: publicKey })
+    .insert({ id: encoded.id, name: encoded.name, public_key: publicKey,
+      webhook_url: null, webhook_secret_encrypted: null,
+      encrypted_content: encoded.encrypted_content ?? null,
+      encryption_version: encoded.encryption_version ?? 0 })
     .select("id")
     .single();
   if (!error && inserted) {
@@ -104,7 +112,7 @@ export async function POST(request: NextRequest) {
     const { error: auditError } = await supabase.from("forge_relay_audit").insert({
       instance_id: inserted.id as string,
       action: "instance_registered",
-      detail: { name, selfService: true },
+      detail: {},
     });
     if (auditError) {
       console.error("[relay/register] audit insert failed:", auditError.message);

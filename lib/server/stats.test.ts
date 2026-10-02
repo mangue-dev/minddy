@@ -30,6 +30,29 @@ function fakeSupabase(byEffort: RawEffort[]) {
     then: (resolve: (r: { data: unknown[]; error: null }) => unknown) =>
       resolve({ data: [], error: null }),
   };
+  const objectives = {
+    select: () => objectives,
+    in: () => objectives,
+    then: (resolve: (r: { data: unknown[]; error: null }) => unknown) =>
+      resolve({ data: [{ id: "objective-1", project_id: "project-1", name: "Launch",
+        description: null, encryption_version: 0, encrypted_content: null }], error: null }),
+  };
+  const categories = {
+    select: () => categories,
+    in: () => categories,
+    order: () => categories,
+    then: (resolve: (r: { data: unknown[]; error: null }) => unknown) =>
+      resolve({ data: [
+        { id: "category-1", project_id: "project-1", name: "Design" },
+        { id: "category-2", project_id: "project-2", name: "Design" },
+      ], error: null }),
+  };
+  const projects = {
+    select: () => projects,
+    in: () => projects,
+    then: (resolve: (r: { data: unknown[]; error: null }) => unknown) =>
+      resolve({ data: [{ id: "project-1", name: "minddy" }], error: null }),
+  };
   return {
     rpc: async (name: string) =>
       name === "get_cycle_stats"
@@ -41,7 +64,7 @@ function fakeSupabase(byEffort: RawEffort[]) {
               per_project: [
                 {
                   id: "project-1",
-                  name: "minddy",
+                  name: null,
                   color: "#8b5cf6",
                   icon_url: null,
                   orb_seed: "orb-1",
@@ -77,7 +100,8 @@ function fakeSupabase(byEffort: RawEffort[]) {
             },
             error: null,
           },
-    from: () => workload,
+    from: (table: string) => table === "objectives" ? objectives :
+      table === "categories" ? categories : table === "projects" ? projects : workload,
   } as unknown as SupabaseClient;
 }
 

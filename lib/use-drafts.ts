@@ -1,8 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
+import { useTranslations } from "next-intl";
+import { useAuth } from "./auth-context";
 import {
   deleteDraft,
+  LegacyDraftRecoveryRequired,
   readDrafts,
   upsertDraft,
   type DraftFor,
@@ -23,11 +27,24 @@ export function useDrafts<K extends DraftKind>(
   projectId: string | null,
   active: boolean
 ) {
-  const [all, setAll] = useState<DraftFor<K>[]>(() => readDrafts(kind));
+  const t = useTranslations("Drafts");
+  const { user } = useAuth();
+  const [all, setAll] = useState<DraftFor<K>[]>([]);
+  const [legacyAvailable, setLegacyAvailable] = useState(false);
 
   useEffect(() => {
-    if (active) setAll(readDrafts(kind));
-  }, [active, kind]);
+    let cancelled = false;
+    setAll([]); setLegacyAvailable(false);
+    if (active) void readDrafts(kind).then((drafts) => {
+      if (!cancelled) setAll(drafts);
+    }).catch((error) => {
+      if (!cancelled) {
+        if (error instanceof LegacyDraftRecoveryRequired) setLegacyAvailable(true);
+        else toast.error(t("restoreFailed"));
+      }
+    });
+    return () => { cancelled = true; };
+  }, [active, kind, user?.id, t]);
 
   const drafts = useMemo(
     () => (projectId ? all.filter((d) => d.projectId === projectId) : []),
@@ -35,13 +52,16 @@ export function useDrafts<K extends DraftKind>(
   );
 
   const save = useCallback(
-    (draft: DraftFor<K>) => setAll(upsertDraft(kind, draft)),
+    async (draft: DraftFor<K>) => setAll(await upsertDraft(kind, draft)),
     [kind]
   );
 
   const remove = useCallback(
-    (id: string) => setAll(deleteDraft(kind, id)),
-    [kind]
+    async (id: string) => {
+      try { setAll(await deleteDraft(kind, id)); return true; }
+      catch { toast.error(t("deleteFailed")); return false; }
+    },
+    [kind, t]
   );
 
   const find = useCallback(
@@ -49,5 +69,9 @@ export function useDrafts<K extends DraftKind>(
     [all]
   );
 
-  return { drafts, save, remove, find };
+  const recoverLegacy = async () => {
+    try { setAll(await readDrafts(kind, true)); setLegacyAvailable(false); }
+    catch { toast.error(t("restoreFailed")); }
+  };
+  return { drafts, save, remove, find, legacyAvailable, recoverLegacy };
 }

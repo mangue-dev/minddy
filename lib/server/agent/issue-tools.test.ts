@@ -35,6 +35,7 @@ const STORED_PLAN =
 const ISSUE_ROWS = [
   {
     id: ANCHOR_ID,
+    title: "Anchor issue",
     number: 42,
     project_id: "proj-1",
     updated_at: "2026-08-26T00:00:00.000Z",
@@ -43,12 +44,14 @@ const ISSUE_ROWS = [
   },
   {
     id: OTHER_ID,
+    title: "Other issue",
     number: 7,
     project_id: "proj-1",
     updated_at: "2026-08-26T00:00:00.000Z",
   },
   {
     id: FOREIGN_ID,
+    title: "Foreign issue",
     number: 3,
     project_id: "proj-2",
     updated_at: "2026-08-26T00:00:00.000Z",
@@ -56,6 +59,7 @@ const ISSUE_ROWS = [
   // MIN-133: same project, but in the trash — the agent should not see it.
   {
     id: TRASHED_ID,
+    title: "Trashed issue",
     number: 9,
     project_id: "proj-1",
     deleted_at: "2026-07-01T00:00:00.000Z",
@@ -66,8 +70,8 @@ const ISSUE_ROWS = [
 const OBJECTIVE_ID = "44444444-4444-4444-8444-444444444444";
 const FOREIGN_OBJECTIVE_ID = "55555555-5555-4555-8555-555555555555";
 const OBJECTIVE_ROWS = [
-  { id: OBJECTIVE_ID, project_id: "proj-1", name: "Refonte du board", status: "in_progress" },
-  { id: FOREIGN_OBJECTIVE_ID, project_id: "proj-2", name: "Ailleurs", status: "planned" },
+  { id: OBJECTIVE_ID, project_id: "proj-1", name: "Refonte du board", description: null, status: "in_progress" },
+  { id: FOREIGN_OBJECTIVE_ID, project_id: "proj-2", name: "Ailleurs", description: null, status: "planned" },
 ];
 
 const attachmentBase = {

@@ -1,10 +1,13 @@
-import { Ban, OctagonX, Link2, type LucideIcon } from "lucide-react";
+import type { AppIcon } from "@/components/icon";
 import type {
   IssueRelation,
   IssueRelationType,
+  Issue,
+  Objective,
   RelationEndpointType,
   ResolvedRelation,
 } from "./types";
+import { CancelCircleIcon as Ban, Link02Icon as Link2, OctagonXIcon as OctagonX } from "@hugeicons/core-free-icons";
 import type { ObjectiveStatus } from "./objective-constants";
 import {
   endpointType,
@@ -18,7 +21,7 @@ import { isClosedStatus, type IssueStatus } from "./issue-constants";
 
 export interface RelationMeta {
   value: IssueRelationType;
-  icon: LucideIcon;
+  icon: AppIcon;
   /** Tailwind text-color class for the icon (see the `!` note below). */
   color: string;
 }
@@ -226,6 +229,67 @@ export function resolveRelationsByIssue(
 
   for (const relations of byIssue.values()) sortResolvedRelations(relations);
   return byIssue;
+}
+
+/** A hydrated dependency, optionally inherited from objective membership. */
+export interface DisplayRelation extends ResolvedRelation {
+  otherNumber?: number;
+  otherName?: string;
+  inheritedObjectiveId?: string;
+  inheritedObjectiveName?: string;
+}
+
+/** Resolve board and panel dependencies against the complete visible project data.
+ * Inherited rows point to the actual blocker; they never represent a new DB edge.
+ */
+export function resolveDisplayRelationsByIssue(
+  rows: IssueRelation[],
+  issueById: Map<string, Issue>,
+  objectiveById: Map<string, Objective>,
+): Map<string, DisplayRelation[]> {
+  const statuses = new Map(Array.from(issueById.values(), (i) => [i.id, i.status] as const));
+  const objectiveStatuses = new Map(Array.from(objectiveById.values(), (o) => [o.id, o.status] as const));
+  const direct = resolveRelationsByIssue(rows, statuses, objectiveStatuses);
+  const result = new Map<string, DisplayRelation[]>();
+  const hydrate = (r: ResolvedRelation): DisplayRelation | null => {
+    const other = r.otherType === "objective" ? objectiveById.get(r.otherId) : issueById.get(r.otherId);
+    if (!other) return null;
+    return "number" in other
+      ? { ...r, otherNumber: other.number, otherName: other.title }
+      : { ...r, otherName: other.name };
+  };
+  const members = new Map<string, Issue[]>();
+  for (const issue of issueById.values()) {
+    const hydrated = (direct.get(issue.id) ?? []).map(hydrate).filter((r): r is DisplayRelation => r !== null);
+    if (hydrated.length) result.set(issue.id, hydrated);
+    if (!issue.objective_id || isClosedStatus(issue.status)) continue;
+    const objective = objectiveById.get(issue.objective_id);
+    if (!objective || isClosedObjectiveStatus(objective.status)) continue;
+    const list = members.get(objective.id);
+    if (list) list.push(issue);
+    else members.set(objective.id, [issue]);
+  }
+  for (const row of rows) {
+    if (row.type !== "blocks" || endpointType(row.target_type) !== "objective") continue;
+    const objective = objectiveById.get(row.target_id);
+    if (!objective) continue;
+    const blocker = hydrate({ id: row.id, relation: "blocked_by", otherId: row.source_id,
+      otherType: endpointType(row.source_type), resolved: false });
+    if (!blocker) continue;
+    const closed = blocker.otherType === "objective"
+      ? isClosedObjectiveStatus(objectiveById.get(blocker.otherId)!.status)
+      : isClosedStatus(issueById.get(blocker.otherId)!.status);
+    if (closed) continue;
+    for (const issue of members.get(objective.id) ?? []) {
+      if (issue.id === blocker.otherId) continue;
+      const list = result.get(issue.id) ?? [];
+      if (list.some((r) => r.relation === "blocked_by" && r.otherId === blocker.otherId)) continue;
+      list.push({ ...blocker, inheritedObjectiveId: objective.id, inheritedObjectiveName: objective.name });
+      result.set(issue.id, list);
+    }
+  }
+  for (const list of result.values()) sortResolvedRelations(list);
+  return result;
 }
 
 /**

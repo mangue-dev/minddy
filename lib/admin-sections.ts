@@ -1,26 +1,9 @@
 "use client";
 
 import { useMemo } from "react";
+import { Activity, BotIcon as Bot, CrosshairIcon as Crosshair, DollarCircleIcon as CircleDollarSign, FlowIcon as Workflow, GaugeIcon, Globe, KeyRoundIcon as KeyRound, LayoutDashboardIcon, MessageSquareHeartIcon, Mic01Icon as Mic, PieChart, ReceiptText, Rocket, Sparkles, UserGroupIcon as Users, WalletCards } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
-import {
-  Activity,
-  Bot,
-  CircleDollarSign,
-  Crosshair,
-  Gauge,
-  KeyRound,
-  LayoutDashboard,
-  MessageSquareHeart,
-  Mic,
-  PieChart,
-  ReceiptText,
-  Rocket,
-  Sparkles,
-  Users,
-  WalletCards,
-  Workflow,
-  type LucideIcon,
-} from "lucide-react";
+import type { AppIcon } from "@/components/icon";
 import type { MessageKey } from "@/lib/i18n-keys";
 import {
   AI_MODEL_CONFIG_FIELDS,
@@ -49,6 +32,7 @@ export const ADMIN_SECTIONS = {
   modelsByok: "models-byok",
   modelsVoice: "models-voice",
   modelsFeedback: "models-feedback",
+  modelsSite: "models-site",
 } as const;
 
 export type AdminSectionId =
@@ -63,7 +47,7 @@ export function adminSectionAnchor(id: AdminSectionId): string {
 export type AdminSection = {
   id: AdminSectionId;
   tab: AdminTabId;
-  icon: LucideIcon;
+  icon: AppIcon;
   title: string;
   tabLabel: string;
   keywords: string[];
@@ -73,14 +57,15 @@ type AdminKey = MessageKey<"Admin">;
 
 const MODEL_GROUP_SECTIONS: Record<
   AiConfigGroup,
-  { id: AdminSectionId; icon: LucideIcon }
+  { id: AdminSectionId; icon: AppIcon }
 > = {
   assistant: { id: ADMIN_SECTIONS.modelsAssistant, icon: Sparkles },
   automations: { id: ADMIN_SECTIONS.modelsAutomations, icon: Workflow },
   agent: { id: ADMIN_SECTIONS.modelsAgent, icon: Bot },
   byok: { id: ADMIN_SECTIONS.modelsByok, icon: KeyRound },
   voice: { id: ADMIN_SECTIONS.modelsVoice, icon: Mic },
-  feedback: { id: ADMIN_SECTIONS.modelsFeedback, icon: MessageSquareHeart },
+  feedback: { id: ADMIN_SECTIONS.modelsFeedback, icon: MessageSquareHeartIcon },
+  site: { id: ADMIN_SECTIONS.modelsSite, icon: Globe },
 };
 
 /**
@@ -130,7 +115,7 @@ export function useAdminSections(): AdminSection[] {
       section({
         id: ADMIN_SECTIONS.overviewSummary,
         tab: "overview",
-        icon: LayoutDashboard,
+        icon: LayoutDashboardIcon,
         title: t("overview.summary"),
         keywords: [
           t("overview.totalUsers"),
@@ -294,7 +279,7 @@ export function useAdminSections(): AdminSection[] {
       section({
         id: ADMIN_SECTIONS.financeCap,
         tab: "finances",
-        icon: Gauge,
+        icon: GaugeIcon,
         title: t("finance.capTitle"),
         keywords: [
           "openrouter",

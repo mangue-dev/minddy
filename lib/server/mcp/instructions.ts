@@ -82,7 +82,7 @@ export const MCP_FULL_USAGE_GUIDE =
       "the title, or a 'Fixes KEY-42' line); when it followed none of them and stayed " +
       "unattached, minddy_link_pull_request attaches it after the fact, by PR number or " +
       "URL, and aligns the issue's status on the state of the PR. That link is " +
-      "definitive — there is no unlink. " +
+      "removable from the issue card menu or the PR page. " +
       "The key owner may have a " +
       "CYCLE: their personal, cross-project week/fortnight ('what am I working on " +
       "right now'). minddy_get_cycle reads it (pass the owner's IANA timezone), " +

@@ -8,9 +8,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  */
 
 interface ShareRow {
+  id: string;
   token: string;
   level: "public" | "password";
-  views?: { id: string; name: string; project_id: string } | null;
+  views?: { id: string; name: string; project_id: string; filters: object; display: object } | null;
   pages?: { id: string; title: string; project_id: string } | null;
 }
 
@@ -68,14 +69,16 @@ beforeEach(() => {
   };
   shares = [
     {
+      id: "share-open",
       token: "tok-open",
       level: "public",
-      views: { id: "view-open", name: "Roadmap", project_id: "proj" },
+      views: { id: "view-open", name: "Roadmap", project_id: "proj", filters: {}, display: {} },
     },
     {
+      id: "share-locked",
       token: "tok-locked",
       level: "password",
-      views: { id: "view-locked", name: "Interne", project_id: "proj" },
+      views: { id: "view-locked", name: "Interne", project_id: "proj", filters: {}, display: {} },
     },
   ];
 });
@@ -112,6 +115,7 @@ describe("getPublicSiteTabs", () => {
   it("lists checked public pages as tabs, after the shared views", async () => {
     board = { ...board, show_pages: true, visible_page_ids: ["page-doc"] };
     shares.push({
+      id: "share-page",
       token: "tok-page",
       level: "public",
       pages: { id: "page-doc", title: "Guide", project_id: "proj" },
@@ -134,6 +138,7 @@ describe("getPublicSiteTabs", () => {
   it("does not list protected pages, even when checked in the settings", async () => {
     board = { ...board, show_pages: true, visible_page_ids: ["page-secret"] };
     shares.push({
+      id: "share-secret",
       token: "tok-secret",
       level: "password",
       pages: { id: "page-secret", title: "Confidentiel", project_id: "proj" },
@@ -156,6 +161,7 @@ describe("getPublicSiteTabs", () => {
       visible_page_ids: ["page-doc"],
     };
     shares.push({
+      id: "share-page",
       token: "tok-page",
       level: "public",
       pages: { id: "page-doc", title: "Guide", project_id: "proj" },
@@ -185,6 +191,7 @@ describe("getPublicSiteTabs", () => {
   it("falls back to the untitled label for a page without a title", async () => {
     board = { ...board, show_pages: true, visible_page_ids: ["page-doc"] };
     shares.push({
+      id: "share-page",
       token: "tok-page",
       level: "public",
       pages: { id: "page-doc", title: "", project_id: "proj" },

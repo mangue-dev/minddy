@@ -1,11 +1,12 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Cancel01Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Button, IconButton } from "mangue-ui";
-import { X } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -130,7 +131,7 @@ export function DesktopInstallBanner() {
               aria-label={t("desktopBannerDismiss")}
               onClick={dismiss}
             >
-              <X />
+              <HugeiconsIcon icon={Cancel01Icon} />
             </IconButton>
           </TooltipTrigger>
           <TooltipContent>{t("desktopBannerDismiss")}</TooltipContent>

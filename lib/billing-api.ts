@@ -4,6 +4,7 @@ import type {
   BillingStatusResponse,
   UsageHistoryResponse,
   UsageSummaryResponse,
+  UsageAnalyticsResponse,
 } from "@/lib/billing-types";
 import type {
   BillingInterval,
@@ -13,7 +14,7 @@ import type {
 import { isDesktop } from "@/lib/desktop/bridge";
 import { trackEvent } from "./analytics";
 
-/** Fetchers client du billing (MIN-72) : statut de plan, usage, checkout, portal. */
+/** Client fetchers for billing status, usage, checkout, and the customer portal. */
 
 async function parseJson<T>(response: Response): Promise<T> {
   const text = await response.text();
@@ -25,7 +26,9 @@ async function parseJson<T>(response: Response): Promise<T> {
   }
   if (!response.ok) {
     const message =
-      (data as { error?: string } | null)?.error || text.trim() || "Request failed";
+      (data as { error?: string } | null)?.error ||
+      text.trim() ||
+      "Request failed";
     throw new Error(message);
   }
   return data as T;
@@ -39,6 +42,12 @@ export async function fetchBillingUsageApi(): Promise<UsageSummaryResponse> {
   return parseJson(await fetch("/api/billing/usage", { cache: "no-store" }));
 }
 
+export async function fetchUsageAnalyticsApi(): Promise<UsageAnalyticsResponse> {
+  return parseJson(
+    await fetch("/api/billing/usage-analytics", { cache: "no-store" }),
+  );
+}
+
 export async function fetchUsageHistoryApi(params: {
   segment?: UsageSegmentId | null;
   offset?: number;
@@ -50,14 +59,14 @@ export async function fetchUsageHistoryApi(params: {
   return parseJson(
     await fetch(`/api/billing/usage-history${qs ? `?${qs}` : ""}`, {
       cache: "no-store",
-    })
+    }),
   );
 }
 
 /** Starts a Stripe checkout → Redirect URL. */
 export async function createCheckoutApi(
   planId: BillingPlanId,
-  interval: BillingInterval = "month"
+  interval: BillingInterval = "month",
 ): Promise<string> {
   trackEvent("checkout_started", { plan_id: planId, interval });
   const { url } = await parseJson<{ url: string | null }>(
@@ -69,7 +78,7 @@ export async function createCheckoutApi(
       // (MIN-293). Only the page can see this — the server would only see a
       // user agent, and a user agent doesn't decide anything here.
       body: JSON.stringify({ planId, interval, desktop: isDesktop() }),
-    })
+    }),
   );
   if (!url) throw new Error("Missing checkout URL");
   return url;
@@ -81,7 +90,7 @@ export async function createCheckoutApi(
  * subscription.
  */
 export async function setCancelAtPeriodEndApi(
-  cancel: boolean
+  cancel: boolean,
 ): Promise<boolean> {
   trackEvent(cancel ? "subscription_canceled" : "subscription_resumed", {});
   const { cancelAtPeriodEnd } = await parseJson<{ cancelAtPeriodEnd: boolean }>(
@@ -89,7 +98,7 @@ export async function setCancelAtPeriodEndApi(
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ resume: !cancel }),
-    })
+    }),
   );
   return cancelAtPeriodEnd;
 }
@@ -103,7 +112,7 @@ export async function createPortalApi(): Promise<string> {
       headers: { "Content-Type": "application/json" },
       // The “Return” button of the Stripe portal, same story as the checkout.
       body: JSON.stringify({ desktop: isDesktop() }),
-    })
+    }),
   );
   return url;
 }

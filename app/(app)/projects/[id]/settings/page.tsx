@@ -1,21 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { GitBranchIcon as GitBranch, ImportIcon, ListOrderedIcon as ListOrdered, MessageMultiple01Icon as MessagesSquare, PlugIcon as Plug, RepeatIcon as Repeat, Settings02Icon as Settings2, TagsIcon as Tags, UserGroupIcon as Users } from "@hugeicons/core-free-icons";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Button, ConfirmDeleteDialog, toast } from "mangue-ui";
-import {
-  GitBranch,
-  Import as ImportIcon,
-  ListOrdered,
-  MessagesSquare,
-  Plug,
-  Repeat,
-  Settings2,
-  Tags,
-  Users,
-} from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
 import { useMembersQuery } from "@/lib/use-members-query";

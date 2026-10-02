@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   clearErrorHistory,
   formatStatusAge,
@@ -17,10 +17,19 @@ const error = (id: string, message: string, at: number): StatusError => ({
 });
 
 beforeEach(() => {
+  vi.spyOn(Date, "now").mockReturnValue(10_000);
+  clearErrorHistory();
   window.localStorage.clear();
 });
+afterEach(() => vi.restoreAllMocks());
 
 describe("the status-line error history", () => {
+  it("does not renew expired occurrences when a new error is persisted", () => {
+    recordError(error("old", "Expired failure", 1_000));
+    vi.mocked(Date.now).mockReturnValue(25 * 60 * 60 * 1000);
+    recordError(error("new", "New failure", Date.now()));
+    expect(readErrorHistory().map((entry) => entry.id)).toEqual(["new"]);
+  });
   it("records errors most recent first", () => {
     recordError(error("1", "First failure", 1_000));
     recordError(error("2", "Second failure", 2_000));

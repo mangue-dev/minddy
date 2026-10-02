@@ -1,0 +1,105 @@
+-- Restore the current Numo projection on installations that recorded an older
+-- definition under the detail-link migration version. Run before encryption
+-- replaces this view; CREATE OR REPLACE cannot remove legacy view columns.
+BEGIN;
+DO $reconcile$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name IN ('numo_work', 'numo_conversation_history', 'numo_user_conversation_history')
+      AND column_name = 'detail_href'
+  ) THEN
+    RETURN;
+  END IF;
+
+-- The dedicated Numo page is gone: every conversation reads in the FAB, and
+-- the legacy `/agents?run=` pointers the history views carried are dead URLs
+-- nothing navigates to any more. Drop the column rather than null it — the
+-- views are the only place it ever existed.
+-- PostgreSQL cannot remove view columns with CREATE OR REPLACE. Rebuild the
+-- known views and policies in order; avoid CASCADE so unexpected dependencies fail.
+DROP POLICY assistant_active_conversation_insert ON public.assistant_active_conversation;
+DROP POLICY assistant_active_conversation_update ON public.assistant_active_conversation;
+DROP VIEW public.numo_user_conversation_history;
+DROP VIEW public.numo_conversation_history;
+DROP VIEW public.numo_work;
+
+CREATE VIEW public.numo_work WITH (security_invoker = true) AS
+SELECT r.id, COALESCE(o.conversation_id, i.id) AS conversation_id,
+  i.id AS work_conversation_id, r.conversation_id AS legacy_conversation_id,
+  r.project_id, r.issue_id, r.pull_request_id, r.status, r.title,
+  r.branch_name, r.pr_number, r.pr_url, r.pr_state, r.routine_id,
+  r.created_at, r.updated_at, r.completed_at, c.archived_at, c.visibility,
+  pin.created_at AS pinned_at, rd.last_read_at
+FROM public.agent_runs r
+JOIN public.agent_conversations c ON c.id = r.conversation_id
+JOIN public.projects p ON p.id = c.project_id AND p.deleted_at IS NULL
+LEFT JOIN public.agent_conversation_pins pin ON pin.conversation_id = c.id AND pin.user_id = auth.uid()
+LEFT JOIN public.agent_conversation_reads rd ON rd.conversation_id = c.id AND rd.user_id = auth.uid()
+JOIN public.numo_conversation_ids i ON i.agent_id = r.conversation_id
+LEFT JOIN public.numo_work_origins o ON o.agent_id = r.conversation_id;
+
+CREATE VIEW public.numo_conversation_history WITH (security_invoker = true) AS
+SELECT i.id, 'assistant'::text AS source, c.id AS legacy_id,
+  c.user_id, c.project_id, NULL::uuid AS access_project_id,
+  'private'::text AS visibility, c.title, c.status, c.error_message,
+  c.archived_at, s.pinned_at, s.last_read_at, c.created_at,
+  greatest(c.updated_at, w.updated_at) AS updated_at,
+  CASE WHEN p.id IS NOT NULL AND p.deleted_at IS NULL THEN jsonb_build_object('name', p.name) END AS project,
+  w.id AS latest_work_id
+FROM public.conversations c
+JOIN public.numo_conversation_ids i ON i.assistant_id = c.id
+LEFT JOIN public.projects p ON p.id = c.project_id
+LEFT JOIN public.numo_conversation_state s ON s.conversation_id = i.id AND s.user_id = auth.uid()
+LEFT JOIN (
+  SELECT DISTINCT ON (conversation_id) conversation_id, id, updated_at
+  FROM public.numo_work
+  ORDER BY conversation_id, updated_at DESC, id
+) w ON w.conversation_id = i.id
+UNION ALL
+SELECT i.id, 'agent', c.id, c.owner_id, c.project_id, c.project_id,
+  c.visibility, COALESCE(c.title, r.title, issue.title, pr.title),
+  CASE WHEN r.status IN ('queued', 'running') THEN 'generating'
+    WHEN r.status = 'failed' THEN 'error' ELSE 'idle' END,
+  r.error_message, c.archived_at, pin.created_at, rd.last_read_at, c.created_at,
+  greatest(c.updated_at, r.updated_at), jsonb_build_object('name', p.name), r.id
+FROM public.agent_conversations c
+JOIN public.numo_conversation_ids i ON i.agent_id = c.id
+JOIN public.projects p ON p.id = c.project_id AND p.deleted_at IS NULL
+LEFT JOIN public.agent_conversation_pins pin ON pin.conversation_id = c.id AND pin.user_id = auth.uid()
+LEFT JOIN public.agent_conversation_reads rd ON rd.conversation_id = c.id AND rd.user_id = auth.uid()
+LEFT JOIN LATERAL (
+  SELECT * FROM public.agent_runs WHERE conversation_id = c.id
+  ORDER BY created_at DESC, id DESC LIMIT 1
+) r ON true
+LEFT JOIN public.issues issue ON issue.id = r.issue_id
+LEFT JOIN public.pull_requests pr ON pr.id = r.pull_request_id
+WHERE NOT EXISTS (SELECT 1 FROM public.numo_work_origins o WHERE o.agent_id = c.id)
+  AND (r.id IS NULL OR r.routine_id IS NULL)
+  AND (r.issue_id IS NULL OR issue.id IS NOT NULL)
+  AND (r.pull_request_id IS NULL OR pr.id IS NOT NULL);
+
+CREATE VIEW public.numo_user_conversation_history WITH (security_invoker = true) AS
+SELECT history.*
+FROM public.numo_conversation_history AS history
+WHERE history.source <> 'assistant'
+   OR NOT public.is_numo_routine_conversation(history.legacy_id);
+
+REVOKE ALL ON public.numo_work, public.numo_conversation_history,
+  public.numo_user_conversation_history FROM PUBLIC, anon, authenticated;
+GRANT SELECT ON public.numo_work, public.numo_conversation_history,
+  public.numo_user_conversation_history TO authenticated, service_role;
+
+CREATE POLICY assistant_active_conversation_insert ON public.assistant_active_conversation
+  FOR INSERT TO authenticated WITH CHECK (user_id = auth.uid() AND EXISTS (
+    SELECT 1 FROM public.numo_conversation_history c WHERE c.id = conversation_id
+  ));
+CREATE POLICY assistant_active_conversation_update ON public.assistant_active_conversation
+  FOR UPDATE TO authenticated USING (user_id = auth.uid())
+  WITH CHECK (user_id = auth.uid() AND EXISTS (
+    SELECT 1 FROM public.numo_conversation_history c WHERE c.id = conversation_id
+  ));
+END;
+$reconcile$;
+COMMIT;

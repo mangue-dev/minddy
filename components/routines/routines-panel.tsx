@@ -1,12 +1,12 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Add01Icon, Calendar01Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { useLocale, useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button, Skeleton, cn } from "mangue-ui";
-import { CalendarClock, Plus } from "lucide-react";
-
 import { EmptyScene } from "@/components/empty-scene";
 import { SecondarySidebar } from "@/components/secondary-sidebar";
 import { matchesFilter } from "@/components/sidebar-filter-field";
@@ -285,10 +285,10 @@ export function RoutinesPanel({
  its `job` step — providing them twice would require keeping them updated in
  two places. */
     <div className="px-3 py-6">
-      <EmptyScene icon={CalendarClock} title={emptyTitle} size="compact">
+      <EmptyScene icon={Calendar01Icon} title={emptyTitle} size="compact">
         {anyEligible ? (
           <Button size="sm" onClick={() => openWizard()}>
-            <Plus />
+            <HugeiconsIcon icon={Add01Icon} />
             {t("createFirst")}
           </Button>
         ) : null}
@@ -332,7 +332,7 @@ export function RoutinesPanel({
                     aria-label={t("newInProject", { project: g.project?.name ?? "" })}
                     className="pointer-events-none size-6 shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover/project:pointer-events-auto group-hover/project:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100"
                   >
-                    <Plus className="size-3.5" />
+                    <HugeiconsIcon icon={Add01Icon} className="size-3.5" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -395,7 +395,7 @@ export function RoutinesPanel({
                   className={cn(SIDEBAR_COMPACT_CONTROL_CLASS, "-mr-2")}
                   aria-label={t("newRoutine")}
                 >
-                  <Plus className="size-[18px]" />
+                  <HugeiconsIcon icon={Add01Icon} className="size-[18px]" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>{t("newRoutine")}</TooltipContent>
@@ -436,10 +436,10 @@ export function RoutinesPanel({
  leaving “choose a routine” when there is none
  sent searching in an empty column. */
           <div className="flex flex-1 flex-col items-center justify-center p-6">
-            <EmptyScene icon={CalendarClock} title={emptyTitle}>
+            <EmptyScene icon={Calendar01Icon} title={emptyTitle}>
               {anyEligible ? (
                 <Button onClick={() => openWizard()}>
-                  <Plus className="size-4" />
+                  <HugeiconsIcon icon={Add01Icon} className="size-4" />
                   {t("createFirst")}
                 </Button>
               ) : null}
@@ -452,7 +452,7 @@ export function RoutinesPanel({
  is as often wanting to place one as wanting to read one. */}
             {anyEligible ? (
               <Button size="sm" variant="outline" onClick={() => openWizard()}>
-                <Plus className="size-4" />
+                <HugeiconsIcon icon={Add01Icon} className="size-4" />
                 {t("newRoutine")}
               </Button>
             ) : null}

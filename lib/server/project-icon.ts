@@ -2,6 +2,10 @@ import "server-only";
 
 import sharp from "sharp";
 import { getServiceClient } from "@/lib/supabase-service";
+import { projectIconPaths } from "./project-storage";
+import { downloadProtectedProjectIcon, projectIconRoute,
+  removeProtectedProjectIcon, shouldProtectProjectIcons,
+  uploadProtectedProjectIcon } from "./project-icon-content";
 import {
   ICON_MIME_EXT,
   iconExtFromContentType,
@@ -9,9 +13,9 @@ import {
 } from "@/lib/server/favicon";
 
 /**
- * The stored icon of a project (MIN-62): the file lives in the public bucket
- * `project-icons`, one entry per project, and its URL is placed on
- * `projects.icon_url`. Two sources, one location:
+ * A project icon is either a legacy public object or a project-key encrypted
+ * object in the private `project-icons` bucket. The row points to an immutable
+ * opaque path and an authorization-gated application URL.
  *
  * - the live site favicon, downloaded as is ([favicon.ts](./favicon.ts));
  * - an image sent by the user, recompressed here.
@@ -22,12 +26,12 @@ import {
  * a product rule but a memory safeguard: the entire request is
  * buffered before reaching libvips.
  *
- * The remote favicon is NOT recompressed: the `.ico` are the most common
+ * The remote favicon is not recompressed: `.ico` is a common
  * format on the web and libvips cannot read them. They are already tiny.
  */
 
 /** Memory guardrail, not a framing constraint. */
-export const MAX_ICON_UPLOAD_BYTES = 25 * 1024 * 1024; // 25 Mo
+export const MAX_ICON_UPLOAD_BYTES = 25 * 1024 * 1024;
 
 /** Max rendering side (64 px in the wizard) × 4: beyond that, the screen shows nothing more. */
 const ICON_SIZE = 256;
@@ -86,20 +90,55 @@ export async function compressIconFile(bytes: Buffer): Promise<Buffer> {
 }
 
 /**
- * Set bytes already ready as project icon: upsert in
- * `project-icons/{projectId}.{ext}`, update of `projects.icon_url` (public URL
- * + cache-buster). Returns the stored URL.
+ * Store a ready icon with a CAS row swap. New protected objects are verified
+ * before publication and the former object is deleted only after the swap.
  */
-async function storeProjectIcon(
+export async function storeProjectIcon(
   projectId: string,
   bytes: Buffer,
   contentType: string,
   ext: string
 ): Promise<string> {
-  const path = `${projectId}.${ext}`;
+  if (!ICON_MIME_EXT[contentType] || bytes.length === 0 ||
+      bytes.length > MAX_ICON_UPLOAD_BYTES) {
+    throw new IconFileError("invalidFile");
+  }
   const service = getServiceClient();
+  if (await shouldProtectProjectIcons(service)) {
+    const path = await uploadProtectedProjectIcon(service, projectId, bytes,
+      contentType);
+    const iconUrl = projectIconRoute(projectId);
+    try {
+      const { data: prior, error } = await service.from("projects")
+        .select("icon_url,icon_storage_path").eq("id", projectId).single();
+      if (error || !prior) throw new Error("Project icon row is unavailable");
+      const swap = await service.rpc("replace_project_icon", {
+        p_id: projectId, p_old_url: prior.icon_url,
+        p_old_path: prior.icon_storage_path,
+        p_new_url: iconUrl, p_new_path: path,
+      });
+      if (swap.error || !swap.data) {
+        throw new Error("Project icon changed concurrently");
+      }
+      if (prior.icon_storage_path) {
+        await removeProtectedProjectIcon(service, prior.icon_storage_path);
+      } else {
+        await removeLegacyProjectIconObjects(projectId);
+      }
+      return iconUrl;
+    } catch (error) {
+      const { data } = await service.from("projects")
+        .select("icon_storage_path").eq("id", projectId).maybeSingle();
+      if (data?.icon_storage_path !== path) {
+        await removeProtectedProjectIcon(service, path);
+      }
+      throw error;
+    }
+  }
 
-  await removeProjectIconObjects(projectId); // only one extension at a time
+  const path = `${projectId}.${ext}`;
+
+  await removeLegacyProjectIconObjects(projectId);
   const { error: uploadError } = await service.storage
     .from(BUCKET)
     .upload(path, bytes, { contentType, upsert: true });
@@ -144,21 +183,53 @@ export async function uploadProjectIcon(
 }
 
 /** Removes possible storage objects from the icon (all extensions). */
-async function removeProjectIconObjects(projectId: string): Promise<void> {
+async function removeLegacyProjectIconObjects(projectId: string): Promise<void> {
   const service = getServiceClient();
-  const exts = [...new Set([...Object.values(ICON_MIME_EXT), "webp"])];
-  await service.storage
-    .from(BUCKET)
-    .remove(exts.map((ext) => `${projectId}.${ext}`));
+  const paths = (await projectIconPaths(service, [projectId]))
+    .filter((path) => path.startsWith(`${projectId}.`));
+  if (paths.length > 0) {
+    const removed = await service.storage.from(BUCKET).remove(paths);
+    if (removed.error) throw new Error("Unable to remove legacy project icon");
+  }
 }
 
 /** Clears the project icon (column + storage objects). */
 export async function clearProjectIcon(projectId: string): Promise<void> {
   const service = getServiceClient();
-  const { error } = await service
-    .from("projects")
-    .update({ icon_url: null })
-    .eq("id", projectId);
-  if (error) throw new Error(error.message);
-  await removeProjectIconObjects(projectId);
+  const { data: prior, error } = await service.from("projects")
+    .select("icon_url,icon_storage_path").eq("id", projectId).single();
+  if (error || !prior) throw new Error("Project icon row is unavailable");
+  const swap = await service.rpc("replace_project_icon", {
+    p_id: projectId, p_old_url: prior.icon_url,
+    p_old_path: prior.icon_storage_path,
+    p_new_url: null, p_new_path: null,
+  });
+  if (swap.error || !swap.data) throw new Error("Project icon changed concurrently");
+  if (prior.icon_storage_path) {
+    await removeProtectedProjectIcon(service, prior.icon_storage_path);
+  } else {
+    await removeLegacyProjectIconObjects(projectId);
+  }
+}
+
+/** Return original bytes after the caller has authorized the project. */
+export async function downloadProjectIcon(projectId: string): Promise<{
+  bytes: Buffer; mimeType: string;
+} | null> {
+  const service = getServiceClient();
+  const { data, error } = await service.from("projects")
+    .select("icon_url,icon_storage_path").eq("id", projectId).maybeSingle();
+  if (error) throw new Error("Unable to read project icon reference");
+  if (!data?.icon_url) return null;
+  if (data.icon_storage_path) {
+    return downloadProtectedProjectIcon(service, projectId,
+      data.icon_storage_path);
+  }
+  const path = (await projectIconPaths(service, [projectId]))
+    .find((candidate) => candidate.startsWith(`${projectId}.`));
+  if (!path) return null;
+  const source = await service.storage.from(BUCKET).download(path);
+  if (source.error || !source.data) throw new Error("Unable to download legacy project icon");
+  return { bytes: Buffer.from(await source.data.arrayBuffer()),
+    mimeType: source.data.type || "image/webp" };
 }

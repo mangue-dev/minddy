@@ -1,8 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import {
+  ArrowDown01Icon,
+  ArrowLeft01Icon,
+  ArrowRight01Icon,
+  LoaderCircleIcon,
+  WorkHistoryIcon,
+} from "@hugeicons/core-free-icons";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useLocale, useTranslations } from "next-intl";
-import { ChevronDown, ChevronLeft, ChevronRight, History, Loader2 } from "lucide-react";
 import {
   Button,
   Collapsible,
@@ -17,59 +25,52 @@ import {
 } from "mangue-ui";
 import { USAGE_SEGMENTS, type UsageSegmentId } from "@/lib/billing-plans";
 import { fetchUsageHistoryApi } from "@/lib/billing-api";
-import { formatBudgetPercent, useBillingSummary } from "@/lib/use-billing-query";
+import {
+  formatBudgetPercent,
+  useBillingSummary,
+} from "@/lib/use-billing-query";
 import { FEATURE_LABEL_KEYS } from "@/lib/usage-features";
-import { SEGMENT_UI } from "@/components/usage-indicator";
+import { SEGMENT_UI } from "@/components/billing/usage-segment-ui";
+import { UsageLoadError } from "@/components/billing/usage-budget";
+import { AppIcon } from "@/components/icon";
 import { EmptyState } from "@/components/empty-state";
-import type { UsageHistoryEntry } from "@/lib/billing-types";
 
 /** API side page size (get_user_usage_history / usage-history route). */
 const PAGE_SIZE = 25;
 
-/**
- * Typical usage history of the billing page (MIN-72, returns — AutoKap style):
- * an ACCORDION folded by default; open, one line per run of the ledger (date,
- * type with icon/color of segments, project, share of budget in %), filter
- * by type and Previous/Next pagination (25 per page). Lazy loading
- * when first opened.
- */
+/** Current-period history with cancellation-safe query keys and a mobile row layout. */
 export function UsageHistorySection() {
   const t = useTranslations("Billing");
   const locale = useLocale();
-  const { includedUsd, usage } = useBillingSummary();
+  const { includedUsd, usage, usageError } = useBillingSummary();
 
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
   const [segment, setSegment] = useState<UsageSegmentId | "all">("all");
-  const [page, setPage] = useState(0);
-  const [entries, setEntries] = useState<UsageHistoryEntry[]>([]);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [loadedOnce, setLoadedOnce] = useState(false);
-
-  const load = useCallback(
-    async (target: UsageSegmentId | "all", targetPage: number) => {
-      setLoading(true);
-      try {
-        const result = await fetchUsageHistoryApi({
-          segment: target === "all" ? null : target,
-          offset: targetPage * PAGE_SIZE,
-        });
-        setTotal(result.total);
-        setEntries(result.entries);
-        setLoadedOnce(true);
-      } catch (err) {
-        console.error("[usage-history] load failed:", (err as Error).message);
-      } finally {
-        setLoading(false);
-      }
-    },
-    []
-  );
-
-  useEffect(() => {
-    if (!open) return;
-    void load(segment, page);
-  }, [open, segment, page, load]);
+  const windowKey = `${usage?.periodStart}:${usage?.nextResetAt}`;
+  const [pagination, setPagination] = useState({ windowKey, page: 0 });
+  const page = pagination.windowKey === windowKey ? pagination.page : 0;
+  const setPage = (value: number) => setPagination({ windowKey, page: value });
+  const query = useQuery({
+    queryKey: [
+      "billing",
+      "history",
+      usage?.periodStart,
+      usage?.nextResetAt,
+      segment,
+      page,
+    ],
+    queryFn: () =>
+      fetchUsageHistoryApi({
+        segment: segment === "all" ? null : segment,
+        offset: page * PAGE_SIZE,
+      }),
+    enabled: open && !!usage?.managedAi,
+    staleTime: 60_000,
+    refetchInterval: open ? 60_000 : false,
+  });
+  const entries = query.data?.entries ?? [];
+  const total = query.data?.total ?? 0;
+  const loading = query.isPending;
 
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
@@ -80,7 +81,7 @@ export function UsageHistorySection() {
     minute: "2-digit",
   });
 
-  if (usage && !usage.managedAi) return null;
+  if ((usage && !usage.managedAi) || (usageError && !usage)) return null;
 
   return (
     <Collapsible
@@ -89,17 +90,22 @@ export function UsageHistorySection() {
       className="rounded-xl border border-border bg-card"
     >
       <CollapsibleTrigger className="group flex w-full items-center justify-between gap-3 px-4 py-3 text-left">
-        <div className="flex min-w-0 items-center gap-2.5">
-          <History className="size-4 shrink-0 text-foreground/70" strokeWidth={2} />
+        <div className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1">
+          <HugeiconsIcon
+            icon={WorkHistoryIcon}
+            className="size-4 shrink-0 text-foreground/70"
+            strokeWidth={2}
+          />
           <span className="text-sm font-semibold">{t("historyTitle")}</span>
-          <span className="truncate text-xs text-muted-foreground">
+          <span className="w-full text-xs text-muted-foreground sm:w-auto">
             {t("historySubtitle")}
           </span>
         </div>
-        <ChevronDown
+        <HugeiconsIcon
+          icon={ArrowDown01Icon}
           className={cn(
             "size-4 shrink-0 text-muted-foreground transition-transform",
-            open && "rotate-180"
+            open && "rotate-180",
           )}
         />
       </CollapsibleTrigger>
@@ -114,7 +120,11 @@ export function UsageHistorySection() {
                 setPage(0);
               }}
             >
-              <SelectTrigger size="sm" className="w-52">
+              <SelectTrigger
+                size="sm"
+                className="w-full sm:w-60"
+                aria-label={t("historyAllTypes")}
+              >
                 <SelectValue />
               </SelectTrigger>
               <SelectContent align="end">
@@ -128,14 +138,27 @@ export function UsageHistorySection() {
             </Select>
           </div>
 
-          {!loadedOnce || (loading && entries.length === 0) ? (
+          {query.isError && query.data && (
+            <p role="status" className="px-4 pb-3 text-xs text-destructive">
+              {t("usageRefreshFailed")}
+            </p>
+          )}
+
+          {query.isError && !query.data ? (
+            <UsageLoadError onRetry={() => void query.refetch()} />
+          ) : loading ? (
             <div className="flex items-center justify-center gap-2 border-t border-border px-4 py-8 text-sm text-muted-foreground">
-              <Loader2 className="size-4 animate-spin" />
+              <HugeiconsIcon
+                icon={LoaderCircleIcon}
+                className="size-4 animate-spin"
+              />
             </div>
           ) : total === 0 ? (
             <div className="border-t border-border p-4">
               <EmptyState
-                icon={<History className="size-6" />}
+                icon={
+                  <HugeiconsIcon icon={WorkHistoryIcon} className="size-6" />
+                }
                 description={t("historyEmpty")}
               />
             </div>
@@ -144,7 +167,7 @@ export function UsageHistorySection() {
               <ul
                 className={cn(
                   "divide-y divide-border border-t border-border",
-                  loading && "opacity-60"
+                  loading && "opacity-60",
                 )}
               >
                 {entries.map((entry) => {
@@ -153,30 +176,33 @@ export function UsageHistorySection() {
                   return (
                     <li
                       key={entry.runId}
-                      className="flex items-center justify-between gap-3 px-4 py-2.5"
+                      className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-1 px-4 py-3 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center"
                     >
-                      <div className="flex min-w-0 flex-1 items-center gap-2.5">
-                        <Icon
+                      <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                        <AppIcon
+                          icon={Icon}
                           className={cn("size-4 shrink-0", ui.text)}
                           strokeWidth={2}
                         />
-                        <span className="truncate text-sm text-foreground">
-                          {/* The gesture, not the family: “Smart-fill”, not
- “Automations”. The family remains readable —
- is the icon and its color. */}
-                          {t(entry.feature ? FEATURE_LABEL_KEYS[entry.feature] : ui.labelKey)}
+                        <span className="min-w-0 break-words text-sm text-foreground">
+                          {/* Name the specific action; the icon identifies its usage segment. */}
+                          {t(
+                            entry.feature
+                              ? FEATURE_LABEL_KEYS[entry.feature]
+                              : ui.labelKey,
+                          )}
                         </span>
                         {entry.projectName && (
-                          <span className="truncate text-xs text-muted-foreground">
+                          <span className="w-full break-words pl-6 text-xs text-muted-foreground sm:w-auto sm:pl-0">
                             {entry.projectName}
                           </span>
                         )}
                       </div>
-                      <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+                      <span className="col-start-1 row-start-2 pl-6 text-xs tabular-nums text-muted-foreground sm:col-start-2 sm:row-start-1 sm:pl-0">
                         {dateFormat.format(new Date(entry.at))}
                       </span>
-                      <span className="w-14 shrink-0 text-right text-sm font-medium tabular-nums">
-                        {formatBudgetPercent(entry.usd, includedUsd)}
+                      <span className="col-start-2 row-start-1 text-right text-sm font-medium tabular-nums sm:col-start-3">
+                        {formatBudgetPercent(entry.usd, includedUsd, locale)}
                       </span>
                     </li>
                   );
@@ -193,18 +219,24 @@ export function UsageHistorySection() {
                       size="icon-sm"
                       aria-label={t("historyPrev")}
                       disabled={loading || page === 0}
-                      onClick={() => setPage((p) => Math.max(0, p - 1))}
+                      onClick={() => setPage(Math.max(0, page - 1))}
                     >
-                      <ChevronLeft className="size-4" />
+                      <HugeiconsIcon
+                        icon={ArrowLeft01Icon}
+                        className="size-4"
+                      />
                     </Button>
                     <Button
                       variant="ghost"
                       size="icon-sm"
                       aria-label={t("historyNext")}
                       disabled={loading || page >= pages - 1}
-                      onClick={() => setPage((p) => Math.min(pages - 1, p + 1))}
+                      onClick={() => setPage(Math.min(pages - 1, page + 1))}
                     >
-                      <ChevronRight className="size-4" />
+                      <HugeiconsIcon
+                        icon={ArrowRight01Icon}
+                        className="size-4"
+                      />
                     </Button>
                   </div>
                 </div>

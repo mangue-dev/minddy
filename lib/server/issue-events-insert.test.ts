@@ -64,7 +64,7 @@ describe("activity batch persistence", () => {
     }), { status: 400, headers: { "content-type": "application/json" } }));
     const log = vi.spyOn(console, "error").mockImplementation(() => {});
     await insertEvents(service, [{ issue_id: "issue-1", actor_id: null, type: "created" }]);
-    expect(log).toHaveBeenCalledWith("[issue-events] insert failed:", "activity constraint failed");
+    expect(log).toHaveBeenCalledWith("[issue-events] insert failed");
     expect(dispatch).not.toHaveBeenCalled();
   });
 

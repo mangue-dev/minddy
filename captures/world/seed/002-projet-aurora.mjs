@@ -19,7 +19,7 @@
  */
 import { openDemoWorld, createPlan, callRpc } from "../../lib/guards.mjs";
 import { categoryLabel, ensureCategories } from "./_categories.mjs";
-import { describeMetadata, syncIssueMetadata } from "./_issues.mjs";
+import { assertIssueSeedWritable, describeMetadata, syncIssueMetadata } from "./_issues.mjs";
 
 const DRY_RUN = process.argv.includes("--dry-run");
 
@@ -288,6 +288,7 @@ async function main() {
   } else {
     console.log(`  → projet ${project.key} déjà là, réutilisé`);
   }
+  await assertIssueSeedWritable(world, project.id);
 
   // The categories no longer come from a trigger: it is the app that sows them, and
   // the seeds write in base without going through it. See `_categories.mjs`.

@@ -1,8 +1,9 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Cancel01Icon, CommandIcon } from "@hugeicons/core-free-icons";
 import { useMemo } from "react";
 import { useTranslations } from "next-intl";
-import { Command as CommandIcon, X } from "lucide-react";
 import { Button } from "mangue-ui";
 import { Kbd } from "@/components/ui/kbd";
 import { NumoIcon } from "@/components/numo-icon";
@@ -99,7 +100,7 @@ export function BulkIssueActions({
         className="h-8 gap-1.5 rounded-full px-3 text-xs"
         onClick={openActions}
       >
-        <CommandIcon className="size-3.5" />
+        <HugeiconsIcon icon={CommandIcon} className="size-3.5" />
         {t("actions")}
       </Button>
       <Tooltip>
@@ -129,7 +130,7 @@ export function BulkIssueActions({
         onClick={onClear}
         aria-label={t("clear")}
       >
-        <X className="size-4" />
+        <HugeiconsIcon icon={Cancel01Icon} className="size-4" />
       </Button>
     </div>
   );

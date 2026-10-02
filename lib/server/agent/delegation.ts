@@ -1,6 +1,11 @@
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { decodeWorkBranchValue, isEncryptedWorkBranch,
+  workBranchArtifactRef } from "./run-work-branch-content";
+import { decodeAgentPrUrlValue } from "./run-pr-url-content";
+import { decodeDelegationResult, encodeDelegationResult,
+  shouldEncryptDelegationResult } from "./run-delegation-result-content";
 
 import {
   AGENT_DELEGATION_CONTRACT_VERSION,
@@ -14,6 +19,7 @@ import {
   type AgentDelegationVerification,
 } from "./agent-contract";
 import type { AgentRun } from "./runs";
+import { listRunEvents } from "./run-event-store";
 import { parseAskUserQuestions } from "@/lib/ask-user";
 
 const EXPECTED_DELEGATION_OUTPUT = [
@@ -212,32 +218,57 @@ export async function finalizeAgentDelegationResult(
 ): Promise<AgentDelegationResult | null> {
   if (!run.delegation_brief || !run.parent_numo_turn_id) return null;
   const [eventsResult, artifactsResult] = await Promise.all([
-    service.from("agent_run_events")
-      .select("seq, type, payload")
-      .eq("run_id", run.id)
-      .in("type", ["files_changed", "tool_call", "tool_result", "commit", "pr_opened", "question", "needs_input", "error"])
-      .order("seq", { ascending: true }),
+    listRunEvents(service, run, {
+      types: ["files_changed", "tool_call", "tool_result", "commit", "pr_opened",
+        "question", "needs_input", "error"],
+    }),
     service.from("agent_artifacts")
-      .select("kind, ref, url")
+      .select("*")
       .eq("run_id", run.id)
       .order("created_at", { ascending: true }),
   ]);
-  if (eventsResult.error) {
-    throw new Error(`Delegation event read failed: ${eventsResult.error.message}`);
-  }
   if (artifactsResult.error) {
     throw new Error(`Delegation artifact read failed: ${artifactsResult.error.message}`);
   }
+  const artifactRows = await Promise.all((artifactsResult.data ?? []).map(async (stored) => {
+    let ref = stored.ref as string;
+    if (stored.kind === "branch" && isEncryptedWorkBranch(ref)) {
+      if (typeof stored.ref_ciphertext !== "string" ||
+          workBranchArtifactRef(stored.ref_ciphertext) !== ref) {
+        throw new Error("Invalid encrypted delegation artifact");
+      }
+      ref = await decodeWorkBranchValue(run.project_id,
+        (stored.ref_bound_run_id as string | null) ?? null, stored.id as string,
+        stored.ref_ciphertext);
+    }
+    const url = await decodeAgentPrUrlValue(run.project_id,
+      (stored.url_bound_run_id as string | null) ?? null, stored.id as string,
+      (stored.url as string | null) ?? null);
+    return { ...stored, ref, url };
+  }));
   const result = buildAgentDelegationResult({
     run,
-    events: (eventsResult.data ?? []) as RunEvent[],
-    artifactRows: (artifactsResult.data ?? []) as Array<{ kind?: unknown; ref?: unknown; url?: unknown }>,
+    events: eventsResult as RunEvent[],
+    artifactRows: artifactRows as Array<{ kind?: unknown; ref?: unknown; url?: unknown }>,
   });
-  const { error } = await service.from("agent_runs")
-    .update({ delegation_result: result })
-    .eq("id", run.id)
+  const protectedResult = await shouldEncryptDelegationResult(service, run.project_id);
+  const values = protectedResult
+    ? await encodeDelegationResult(run.project_id, run.id, result)
+    : { delegation_result: result };
+  let query = service.from("agent_runs")
+    .update(values).eq("id", run.id).eq("project_id", run.project_id)
     .is("delegation_result", null);
+  if (protectedResult) query = query.is("delegation_result_ciphertext", null);
+  const { data: written, error } = await query.select("id").maybeSingle();
   if (error) throw new Error(`Delegation result persistence failed: ${error.message}`);
+  if (!written) {
+    const { data: stored, error: readError } = await service.from("agent_runs")
+      .select("*").eq("id", run.id).eq("project_id", run.project_id).maybeSingle();
+    if (readError || !stored) throw new Error("Delegation result changed during persistence");
+    const current = await decodeDelegationResult(stored as typeof run);
+    if (current.delegation_result) return current.delegation_result;
+    throw new Error("Delegation result changed during persistence");
+  }
   return result;
 }
 

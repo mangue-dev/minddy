@@ -377,6 +377,8 @@ export interface NumoIntent {
 export interface AssistantChatRequest {
   /** Idempotency key for one user intent. Reuse it when the same POST is retried. */
   requestId?: string;
+  /** Identity reserved by the browser before the first response headers arrive. */
+  newConversationId?: string;
   conversationId?: string;
   projectId?: string;
   message: string;

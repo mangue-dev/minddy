@@ -1,6 +1,6 @@
 import "server-only";
 
-import { randomBytes } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import { getServiceClient } from "@/lib/supabase-service";
 import {
   ACCESS_TOKEN_PREFIX,
@@ -10,6 +10,10 @@ import {
   sha256Hex,
 } from "@/lib/server/oauth/crypto";
 import type { OAuthClient } from "@/lib/server/oauth/clients";
+import { decodeOAuthClientContent, type StoredOAuthClient } from
+  "@/lib/server/oauth/client-content";
+import { decodeApiKeyContent, encodeApiKeyContent,
+  shouldProtectApiKeys, type StoredApiKey } from "@/lib/server/api-key-content";
 import { mapClientNameToAgent } from "@/lib/mcp-agents";
 import { afterOrNow } from "@/lib/server/after-safe";
 
@@ -90,12 +94,19 @@ export async function ensureGrantWithActorKey({
   // Actor line: key_hash of a secret never revealed (satisfied NOT NULL +
   // UNIQUE without ever being able to authenticate), hidden from settings via
   // oauth_client_id.
+  const keyId = randomUUID();
+  const actorContent = { name: client.client_name,
+    agent: mapClientNameToAgent(client.client_name) };
+  const protectedActor = await shouldProtectApiKeys();
   const { data: actorKey, error: keyError } = await service
     .from("api_keys")
     .insert({
+      id: keyId,
       user_id: userId,
-      name: client.client_name,
-      agent: mapClientNameToAgent(client.client_name),
+      name: protectedActor ? null : actorContent.name,
+      agent: protectedActor ? null : actorContent.agent,
+      ...(protectedActor ? await encodeApiKeyContent({ id: keyId,
+        user_id: userId }, actorContent) : {}),
       key_hash: sha256Hex(randomBytes(32).toString("base64url")),
       key_prefix: "oauth",
       oauth_client_id: client.client_id,
@@ -366,7 +377,7 @@ export async function listGrantsForUser(
   const { data, error } = await getServiceClient()
     .from("oauth_grants")
     .select(
-      "id, client_id, scope, created_at, last_used_at, oauth_clients(client_name), api_keys(agent)"
+      "id, client_id, scope, created_at, last_used_at, oauth_clients(*), api_keys(*)"
     )
     .eq("user_id", userId)
     .is("revoked_at", null)
@@ -375,17 +386,19 @@ export async function listGrantsForUser(
     console.error("[oauth/grants] list failed:", error.message);
     return null;
   }
-  return (data ?? []).map((g) => ({
+  return Promise.all((data ?? []).map(async (g) => ({
     id: g.id as string,
     client_id: g.client_id as string,
-    client_name:
-      ((g.oauth_clients as unknown as { client_name: string } | null)?.client_name ??
-        "MCP client"),
-    agent: ((g.api_keys as unknown as { agent: string | null } | null)?.agent ?? null),
+    client_name: g.oauth_clients
+      ? (await decodeOAuthClientContent(g.oauth_clients as unknown as StoredOAuthClient))
+        .client_name : "MCP client",
+    agent: g.api_keys
+      ? (await decodeApiKeyContent(g.api_keys as unknown as StoredApiKey)).agent
+      : null,
     scope: g.scope as string,
     created_at: g.created_at as string,
     last_used_at: (g.last_used_at as string | null) ?? null,
-  }));
+  })));
 }
 
 async function revokeGrantById(grantId: string, apiKeyId: string): Promise<void> {

@@ -1,5 +1,7 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Add01Icon, FolderAddIcon, LayoutGridIcon } from "@hugeicons/core-free-icons";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppTabRouteBoundary, useAppTabRoute } from "@/lib/app-tab-route-context";
@@ -7,7 +9,6 @@ import { useQuery } from "@tanstack/react-query";
 import { useFormatter, useTranslations } from "next-intl";
 import { Button, Skeleton, toast } from "mangue-ui";
 import { Kbd } from "@/components/ui/kbd";
-import { FolderPlus, LayoutGrid, Plus } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
 import { useCreate } from "@/lib/create-context";
@@ -204,13 +205,13 @@ function GlobalBoardInner() {
     const view = await createViewAndSelect(name);
     const wish = description?.trim();
     if (wish) {
-      // Hand the fresh GLOBAL view to Numo (global mode, projectId null): its id
-      // rides along in pageContext so Numo edits this exact view; the board
-      // adopts the new filters live once realtime brings the row back.
+      // Hand the fresh GLOBAL view to the AI (global mode, projectId null): its
+      // id rides along in pageContext so the agent edits this exact view; the
+      // board adopts the new filters live once realtime brings the row back.
       beginGenerating(view);
       openAssistant({
         projectId: null,
-        prompt: tBoard("numoBuildViewPrompt", { name, description: wish }),
+        prompt: tBoard("aiBuildViewPrompt", { name, description: wish }),
         pageContext: { viewId: view.id, viewName: name },
       });
     } else {
@@ -218,11 +219,14 @@ function GlobalBoardInner() {
     }
   };
 
-  // Let Numo shape the currently selected global view: open the chat in global
-  // mode carrying the active view as context so "this view" resolves.
-  const handleAskNumo = () => {
+  // The filters menu's AI input: hand the typed wish to the Numo conversation
+  // (MIN-592, review — the classifier pass proved unreliable for filter
+  // selection, the agent with its hardened view tools is the reliable path),
+  // carrying the active view as context so "this view" resolves.
+  const handleAskAI = (wish: string) => {
     openAssistant({
       projectId: null,
+      prompt: tBoard("aiFilterPrompt", { wish }),
       pageContext: activeView
         ? { viewId: activeView.id, viewName: activeView.name }
         : undefined,
@@ -603,7 +607,7 @@ function GlobalBoardInner() {
           onDeleteView={deleteView}
           withNumo
           withShare={false}
-          onAskNumo={handleAskNumo}
+          onAskAI={handleAskAI}
           cycleTab={{
             active: cycleMode,
             completionPercent: currentCycleCompletionPercent,
@@ -687,16 +691,16 @@ function GlobalBoardInner() {
         <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8">
           <div className="mx-auto max-w-5xl">
             {projects.length === 0 ? (
-              <EmptyScene icon={FolderPlus} title={t("emptyNoProject")}>
+              <EmptyScene icon={FolderAddIcon} title={t("emptyNoProject")}>
                 <Button onClick={openCreateProject}>
-                  <Plus />
+                  <HugeiconsIcon icon={Add01Icon} />
                   {tProjects("firstProject")}
                 </Button>
               </EmptyScene>
             ) : (
-              <EmptyScene icon={LayoutGrid} title={tBoard("emptyTitle")}>
+              <EmptyScene icon={LayoutGridIcon} title={tBoard("emptyTitle")}>
                 <Button onClick={() => openCreateIssue()}>
-                  <Plus />
+                  <HugeiconsIcon icon={Add01Icon} />
                   {tBoard("newIssue")}
                   <Kbd
                     size="sm"
@@ -719,6 +723,7 @@ function GlobalBoardInner() {
             issues={filtered}
             statuses={statuses}
             sort={config.sort}
+            sortDirection={config.display.sortDirection}
             // The Smart sort's AI scores (jev-mode projects, MIN-576).
             smartScores={smartScores}
             projectMap={projectMap}

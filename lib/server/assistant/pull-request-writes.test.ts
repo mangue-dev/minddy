@@ -23,11 +23,12 @@ const ctx = {
   supabase: {} as never,
 };
 
-const { findPullRequest, findPullRequestForIssue, upsertPullRequest } =
+const { findPullRequest, findPullRequestForIssue, upsertPullRequest, pullRequestIssueIds } =
   vi.hoisted(() => ({
     findPullRequest: vi.fn(),
     findPullRequestForIssue: vi.fn(),
     upsertPullRequest: vi.fn(),
+    pullRequestIssueIds: vi.fn(),
   }));
 const { resolveRepoCloneTarget } = vi.hoisted(() => ({
   resolveRepoCloneTarget: vi.fn(),
@@ -58,6 +59,7 @@ vi.mock("@/lib/server/agent/pull-requests", () => ({
   findPullRequestForIssue,
   rowProvider: (row: { provider: string }) => row.provider,
   upsertPullRequest,
+  pullRequestIssueIds,
 }));
 vi.mock("@/lib/server/agent/repo-access", () => ({ resolveRepoCloneTarget }));
 vi.mock("@/lib/server/agent/forge", async (importOriginal) => {
@@ -120,6 +122,7 @@ beforeEach(() => {
   findPullRequestForIssue.mockResolvedValue(ROW);
   resolveRepoCloneTarget.mockResolvedValue(TARGET);
   upsertPullRequest.mockResolvedValue(ROW);
+  pullRequestIssueIds.mockResolvedValue([ISSUE_OK]);
   syncPrState.mockResolvedValue([]);
   syncIssueStatusFromPr.mockResolvedValue(undefined);
   broadcastPrChanged.mockReturnValue(undefined);
@@ -182,6 +185,54 @@ describe("merge_pull_request", () => {
         forgeSync: "github",
       }),
     );
+  });
+
+  it.each(["github", "gitlab"])("settles every current issue association after a %s merge", async (provider) => {
+    const ids = ["issue-b", "issue-c", "issue-d"];
+    pullRequestIssueIds.mockResolvedValue(ids);
+    resolveRepoCloneTarget.mockResolvedValue({ ...TARGET, provider });
+    findPullRequest.mockResolvedValue({ ...ROW, provider });
+    findPullRequestForIssue.mockResolvedValue({ ...ROW, provider });
+    forgeFor.mockReturnValue(forgeWith({
+      getPullRequest: vi.fn().mockResolvedValue(pr()),
+      mergePullRequest: vi.fn().mockResolvedValue(undefined),
+    }));
+    expect((await run()).result).toMatchObject({ state: "merged", issue_status: "done" });
+    expect(pullRequestIssueIds).toHaveBeenCalledWith(PR_ROW_ID);
+    expect(syncIssueStatusFromPr.mock.calls.map(([input]) => input.issueId)).toEqual(ids);
+    expect(syncIssueStatusFromPr).toHaveBeenCalledWith({
+      issueId: "issue-d", actorId: ctx.userId, prState: "merged", forgeSync: provider,
+    });
+  });
+
+  it("keeps a merged PR without current associations from updating its former primary issue", async () => {
+    pullRequestIssueIds.mockResolvedValue([]);
+    forgeFor.mockReturnValue(forgeWith({
+      getPullRequest: vi.fn().mockResolvedValue(pr()),
+      mergePullRequest: vi.fn().mockResolvedValue(undefined),
+    }));
+    const { result } = await run();
+    expect(result).toMatchObject({ state: "merged" });
+    expect(result).not.toHaveProperty("issue_status");
+    expect(syncIssueStatusFromPr).not.toHaveBeenCalled();
+  });
+
+  it("does not log a private PR state synchronization exception in production", async () => {
+    const sentinel = "MIN591_PRIVATE_PR_SYNC_SENTINEL";
+    vi.stubEnv("NODE_ENV", "production");
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    forgeFor.mockReturnValue(forgeWith({
+      getPullRequest: vi.fn().mockResolvedValue(pr()),
+      mergePullRequest: vi.fn().mockResolvedValue(undefined),
+    }));
+    syncPrState.mockRejectedValue(new Error(sentinel));
+    try {
+      expect((await run()).success).toBe(true);
+      expect(log.mock.calls.flat().map(String).join("\n")).not.toContain(sentinel);
+    } finally {
+      log.mockRestore();
+      vi.unstubAllEnvs();
+    }
   });
 
   it("refuses a draft, a closed pull request and a conflicting one before calling the forge", async () => {

@@ -1,11 +1,12 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { UserAdd01Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Button, Input, Spinner, toast } from "mangue-ui";
-import { UserPlus } from "lucide-react";
 import { MfaChallenge } from "@/components/auth/mfa-challenge";
 import {
   AuthColumn,
@@ -67,6 +68,14 @@ export function LoginForm({ invite }: { invite: InvitationPreview | null }) {
   // Provider being redirected — the page is going to Google/GitHub, so this
   // state is never reset to null on success (only on error).
   const [oauthPending, setOauthPending] = useState<OAuthProvider | null>(null);
+  /**
+   * The screen's work is done and the app is TAKING OVER: the session (or
+   * the onboarding handoff) carries the user elsewhere, and until the
+   * navigation lands the form has nothing left to say. The content steps
+   * aside for a plain "Redirecting…" page (MIN-548 review): a form that
+   * keeps sitting there reads as nothing happening.
+   */
+  const [redirecting, setRedirecting] = useState(false);
   const authErrorMessages: Record<string, string> = {
     auth_callback_failed: t("callbackFailed"),
     confirmation_failed: t("confirmationFailed"),
@@ -152,6 +161,7 @@ export function LoginForm({ invite }: { invite: InvitationPreview | null }) {
         setMfaStep("required");
         return;
       }
+      setRedirecting(true);
       router.push(redirectTo);
     } catch (err) {
       // The raw refusal in the console: we only display one sentence, but it is
@@ -187,19 +197,25 @@ export function LoginForm({ invite }: { invite: InvitationPreview | null }) {
     <AuthColumn inDesktopApp={inDesktopApp}>
       {mfaStep === "required" ? (
         <MfaChallenge
-          onVerified={() => router.replace(redirectTo)}
+          onVerified={() => {
+            setRedirecting(true);
+            router.replace(redirectTo);
+          }}
           onRecovered={async () => {
             // 2FA has just been cut: refresh the token before leaving,
             // otherwise the proxy still reads the old flag and returns here — a
             // loop, just after burning some code.
             await refreshUser();
             toast.success(t("mfaDisabledNotice"));
+            setRedirecting(true);
             router.replace(redirectTo);
           }}
         />
-      ) : mfaStep === "unknown" || redirectingToSignup ? (
-        <div className="flex justify-center">
-          <Spinner className="size-6" />
+      ) : redirecting || mfaStep === "unknown" || redirectingToSignup ? (
+        /* Full-page takeover, no form left behind: the redirect owns the
+           screen until the app lands on the other side. */
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background">
+          <p className="text-sm text-muted-foreground">{t("redirecting")}</p>
         </div>
       ) : (
         <div className="space-y-8">
@@ -208,7 +224,7 @@ export function LoginForm({ invite }: { invite: InvitationPreview | null }) {
  his session which takes care of it, at /auth/callback. */}
           {invite && (
             <div className="flex gap-3 rounded-lg border border-border bg-card p-3.5">
-              <UserPlus className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+              <HugeiconsIcon icon={UserAdd01Icon} className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
               <div className="space-y-1">
                 <p className="text-sm font-medium leading-snug">
                   {t("inviteBannerTitle", {
@@ -246,7 +262,7 @@ export function LoginForm({ invite }: { invite: InvitationPreview | null }) {
               <Input
                 id="email"
                 type="email"
-                className="h-10 bg-card"
+                className="h-10 bg-control"
                 autoComplete="email"
                 required
                 placeholder={t("emailPlaceholder")}
@@ -259,7 +275,7 @@ export function LoginForm({ invite }: { invite: InvitationPreview | null }) {
               <Input
                 id="password"
                 type="password"
-                className="h-10 bg-card"
+                className="h-10 bg-control"
                 autoComplete="current-password"
                 required
                 minLength={8}

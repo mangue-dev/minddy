@@ -51,9 +51,11 @@ apply them to another project.
 - Run `npm run work:pr -- "Short title" -m "Complete description"` to create
   the pull request. The `-m` flag may be repeated for several paragraphs.
 - If the pull request already exists, the command pushes the new commits but
-  keeps its title and description: never retitle or rewrite the description
-  of an existing pull request. A deliberate rewrite needs the explicit
-  `--replace` flag of `work:pr` (or a manual `gh pr edit`).
+  keeps its title and description, including manual edits. Use `npm run work:pr`
+  for follow-up commits; supplying another title or description also succeeds
+  without replacing either field. Never retitle or rewrite the description
+  of an existing pull request unless explicitly requested. A deliberate rewrite
+  needs the explicit `--replace` flag of `work:pr` (or a manual `gh pr edit`).
 - After confirming the pull request is merged, run `npm run work:done`.
 - Run `npm run deploy` only when the user explicitly asks for a production
   deployment.
@@ -69,6 +71,10 @@ apply them to another project.
   pull request description to a bare `Signed-off-by` trailer or a copy of the
   commit message. The DCO trailer belongs in the commits, not as the body of
   the pull request.
+- For UI changes, include screenshots of the work in the pull request
+  description whenever feasible. Keep these images up to date as the pull
+  request evolves. Prefer light mode by default; include both light and dark
+  mode screenshots when relevant, but covering both modes is optional.
 - Every commit must carry the DCO sign-off (see below).
 
 ## DCO sign-offs

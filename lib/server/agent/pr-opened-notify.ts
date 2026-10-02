@@ -1,6 +1,8 @@
+import { issueStore } from "@/lib/server/issue-store";
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
+import { repositoryStorageName } from "@/lib/server/git/repository-name-content";
 import { insertNotifications, projectMemberIds } from "@/lib/server/notifications";
 import type { NotificationRow } from "@/lib/server/notifications";
 import { minddyUsersForForgeAccount } from "./pr-activity";
@@ -84,8 +86,8 @@ export async function notifyPullRequestOpened(
     if (rows.length === 0) return;
 
     await insertNotifications(service, rows, { deduplicatePullRequestOpened: true });
-  } catch (e) {
-    console.error("[pr-opened-notify] notify failed:", (e as Error).message);
+  } catch {
+    console.error("[pr-opened-notify] notify_failed");
   }
 }
 
@@ -100,9 +102,7 @@ export async function notifyPullRequestOpened(
 async function projectsForPr(pr: PullRequestRow): Promise<string[]> {
   const service = getServiceClient();
   if (pr.issue_id) {
-    const { data } = await service
-      .from("issues")
-      .select("project_id")
+    const { data } = await issueStore(service).select("project_id")
       .eq("id", pr.issue_id)
       .is("deleted_at", null)
       .maybeSingle();
@@ -113,7 +113,8 @@ async function projectsForPr(pr: PullRequestRow): Promise<string[]> {
     .from("project_git_links")
     .select("project_id")
     .eq("provider", pr.provider)
-    .eq("repo_full_name", pr.repo_full_name);
+    .eq("repo_full_name", await repositoryStorageName(pr.provider,
+      pr.repo_full_name,false,service));
   return [
     ...new Set(((data ?? []) as { project_id: string }[]).map((l) => l.project_id)),
   ];

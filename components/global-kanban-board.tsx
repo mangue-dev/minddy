@@ -30,12 +30,13 @@ import type {
   Member,
   Objective,
   Project,
+  SortDirection,
   ViewSort,
 } from "@/lib/types";
 import { boardComparatorFactory } from "@/lib/smart-triage";
 import { cycleBlockingRelations } from "@/lib/cycle";
 import type { ObjectiveStatus } from "@/lib/objective-constants";
-import { resolveRelationsByIssue } from "@/lib/relation-constants";
+import { resolveDisplayRelationsByIssue } from "@/lib/relation-constants";
 import { issueIdentifier } from "@/lib/issue-constants";
 import { promptRelations } from "@/lib/issue-prompt";
 import { useBulkSelectionActions } from "@/lib/use-bulk-selection-actions";
@@ -67,7 +68,6 @@ import {
   useMarqueeSelection,
 } from "@/components/marquee-selection";
 import { splitCycleSelection } from "@/components/cycle/use-cycle-menu-actions";
-import type { ChipRelation } from "@/components/relation-chips";
 import type { ContextMenuAction } from "@/components/issue-context-menu";
 import {
   restoreBoardScroll,
@@ -87,6 +87,7 @@ export const GlobalKanbanBoard = memo(function GlobalKanbanBoard({
   relations,
   statuses,
   sort,
+  sortDirection,
   projectMap,
   memberMapByProject,
   categoryMapByProject,
@@ -118,6 +119,9 @@ export const GlobalKanbanBoard = memo(function GlobalKanbanBoard({
   relations?: IssueRelation[];
   statuses: StatusMeta[];
   sort: ViewSort;
+  /** Direction of the sort (MIN-592) — reversed by the invert button for the
+      directional sorts; ignored by "smart" and "manual". */
+  sortDirection?: SortDirection;
   projectMap: Map<string, Project>;
   memberMapByProject: Map<string, Map<string, Member>>;
   categoryMapByProject: Map<string, Map<string, Category>>;
@@ -203,26 +207,9 @@ export const GlobalKanbanBoard = memo(function GlobalKanbanBoard({
     (projectId: string) => issuesByProjectRef.current.get(projectId),
     [],
   );
-  const relationsByIssue = useMemo(() => {
-    const map = new Map<string, ChipRelation[]>();
-    if (!relations?.length) return map;
-    // Blocker statuses drive relation resolution (a done blocker no longer blocks).
-    const statusById = new Map(
-      Array.from(allIssueMap.values(), (i) => [i.id, i.status] as const),
-    );
-    const resolvedByIssue = resolveRelationsByIssue(relations, statusById);
-    for (const issue of issues) {
-      const resolved = (resolvedByIssue.get(issue.id) ?? [])
-        .map((r): ChipRelation | null => {
-          if (r.otherType === "objective") return r;
-          const other = allIssueMap.get(r.otherId);
-          return other ? { ...r, otherNumber: other.number } : null;
-        })
-        .filter((r): r is ChipRelation => r !== null);
-      if (resolved.length > 0) map.set(issue.id, resolved);
-    }
-    return map;
-  }, [issues, relations, allIssueMap]);
+  const relationsByIssue = useMemo(() => resolveDisplayRelationsByIssue(
+    relations ?? [], allIssueMap, new Map(Array.from(objectiveMapByProject.values()).flatMap((map) => Array.from(map))),
+  ), [relations, allIssueMap, objectiveMapByProject]);
 
   // Cycle mode pins ONE comparator for every column (the reco order);
   // otherwise the view sort builds its comparator per column (MIN-576).
@@ -259,12 +246,16 @@ export const GlobalKanbanBoard = memo(function GlobalKanbanBoard({
         r.type !== "blocks" ||
         (statusById.has(r.source_id) && statusById.has(r.target_id)),
     );
-    return boardComparatorFactory(sort, {
-      relations: known,
-      statusById,
-      jevScores: smartScores ?? undefined,
-    });
-  }, [comparator, sort, relations, allIssueMap, smartScores, allIssues, issues, objectiveMapByProject]);
+    return boardComparatorFactory(
+      sort,
+      {
+        relations: known,
+        statusById,
+        jevScores: smartScores ?? undefined,
+      },
+      sortDirection ?? "asc"
+    );
+  }, [comparator, sort, sortDirection, relations, allIssueMap, smartScores, allIssues, issues, objectiveMapByProject]);
   const buildColumns = useMemo(() => createBoardColumnsBuilder(), []);
   const columns = useMemo(
     () => buildColumns(statuses, issues, makeComparator),

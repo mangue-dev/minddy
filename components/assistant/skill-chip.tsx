@@ -1,6 +1,6 @@
 "use client";
-
-import { Layers } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Layers01Icon } from "@hugeicons/core-free-icons";
 import { cn } from "mangue-ui";
 
 /** Compact skill badge shared by the composer and sent messages. */
@@ -21,7 +21,7 @@ export function SkillChip({
   );
   const content = (
     <>
-      <Layers className="size-3 shrink-0" aria-hidden />
+      <HugeiconsIcon icon={Layers01Icon} className="size-3 shrink-0" aria-hidden />
       <span className="truncate">{name}</span>
     </>
   );

@@ -1,5 +1,7 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useNow, useTranslations } from "next-intl";
 import {
@@ -7,7 +9,6 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "mangue-ui";
-import { ChevronRight } from "lucide-react";
 
 /**
  * Shared turn accordion for the assistant and agent feeds. Active turns stay open
@@ -71,7 +72,7 @@ export function WorkAccordion({
         </div>
       ) : (
         <CollapsibleTrigger className="group flex w-full items-center gap-1.5 pb-2.5 text-xs font-medium text-muted-foreground outline-hidden transition-colors hover:text-foreground">
-          <ChevronRight className="size-3.5 shrink-0 transition-transform group-data-[state=open]:rotate-90" />
+          <HugeiconsIcon icon={ArrowRight01Icon} className="size-3.5 shrink-0 transition-transform group-data-[state=open]:rotate-90" />
           <span>{label}</span>
         </CollapsibleTrigger>
       )}

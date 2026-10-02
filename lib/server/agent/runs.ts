@@ -5,6 +5,8 @@ import { createHash, randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { getServiceClient } from "@/lib/supabase-service";
+import { DatabaseOperationError } from "@/lib/server/failure-diagnostics";
+import { repositoryStorageName } from "@/lib/server/git/repository-name-content";
 import { insertNotifications } from "@/lib/server/notifications";
 import type { RepoProviderId } from "@/lib/repo-providers";
 import type { AgentProviderId } from "@/lib/agent-providers";
@@ -36,10 +38,37 @@ import { getProjectAccess } from "@/lib/server/project-access";
 import type { AssistantMention } from "@/lib/assistant-types";
 import type { AgentUserMessage } from "@/lib/agent-mentions";
 import {
-  decodeRunJournalRow,
-  encodeRunJournal,
-  type StoredRunJournalRow,
-} from "./run-journal-codec";
+  decodeJournal,
+  encryptJournal,
+  journalEncodedRow,
+  journalProject,
+  shouldEncryptJournal,
+} from "./encrypted-journal";
+import { encodeRunEvent, shouldEncryptRunEvent } from "./run-event-store";
+import { decodeAgentLaunch, encodeAgentLaunch, legacyAgentLaunchSchema,
+  shouldEncryptAgentLaunch } from "./run-launch-content";
+import { decodeQueueMessage, queueMessageValues } from "./run-queue-content";
+import { encodeAgentTitle, shouldEncryptAgentTitle } from "./run-title-content";
+import { decodeAgentCheckpoint, encodeAgentCheckpoint,
+  shouldEncryptAgentCheckpoint } from "./run-checkpoint-content";
+import { decodeAgentDelegationInput, encodeAgentDelegationInput,
+  shouldEncryptAgentDelegation } from "./run-delegation-content";
+import { decodeAgentVerdict, encodeAgentVerdict,
+  shouldEncryptAgentVerdict } from "./run-verdict-content";
+import { decodeAgentDeploymentUrl, deploymentLookupPrefix,
+  encodeAgentDeploymentUrl, shouldEncryptAgentDeployment } from "./run-deployment-content";
+import { decodeAgentBaseBranch, encodeAgentBaseBranch,
+  shouldEncryptAgentBaseBranch } from "./run-base-branch-content";
+import { decodeAgentWorkBranch, encodeAgentWorkBranch,
+  shouldEncryptAgentWorkBranch, workBranchLookupPrefix } from "./run-work-branch-content";
+import { decodeDelegationResult } from "./run-delegation-result-content";
+import { decodeRunSummary, decodeRunSummaryValue, encodeRunSummary,
+  shouldEncryptAgentSummary } from "./run-summary-content";
+import { decodeAgentPrUrl, decodeAgentPrUrlValue, encodeAgentPrUrl,
+  shouldEncryptAgentPrUrl } from "./run-pr-url-content";
+import { decodePullRequestUrl, isEncryptedPullRequestUrl } from
+  "./pull-request-url-content";
+import { hasDataRootKey } from "@/lib/server/encryption/local-key-wrapper";
 
 /**
  * Data access to code agent runs (MIN-46): creation, CAS claim,
@@ -113,6 +142,7 @@ export async function deliverAgentDelegationResult(
     : "worker_failed" as const;
   const disposition = await resumeNumoTurnFromWorker({
     runId: run.id,
+    projectId: run.project_id,
     eventId: numoWorkerEventId(run),
     type,
     payload: {
@@ -283,6 +313,8 @@ export interface AgentRun {
   created_by: string | null;
   prompt: string | null;
   prompt_mentions: AssistantMention[] | null;
+  encrypted_launch_content?: string | null;
+  launch_encryption_version?: number;
   /** Durable Numo ownership and idempotency correlation for delegated work. */
   parent_numo_conversation_id?: string | null;
   parent_numo_turn_id?: string | null;
@@ -290,10 +322,16 @@ export interface AgentRun {
   continued_from_run_id?: string | null;
   delegation_brief?: AgentDelegationBrief | null;
   delegation_result?: AgentDelegationResult | null;
+  delegation_result_ciphertext?: string | null;
+  delegation_result_encryption_version?: number;
   delegation_attachments?: AttachmentInput[] | null;
+  encrypted_delegation_input?: string | null;
+  delegation_encryption_version?: number;
   /** Short summary of the note, for the CARNET sessions. Null = no summary
    * (issue run, whose title is that of the ticket; or failed generation). */
   title: string | null;
+  title_ciphertext?: string | null;
+  title_encryption_version?: number;
   model: string | null;
   model_forced: boolean;
   /** Level of reasoning FROZEN at launch (MIN-122), like the model: one run
@@ -314,6 +352,8 @@ export interface AgentRun {
   sandbox_id: string | null;
   sandbox_billing?: SandboxBilling | null;
   checkpoint: AgentCheckpoint | null;
+  checkpoint_ciphertext?: string | null;
+  checkpoint_encryption_version?: number;
   continuations: number;
   attempts: number;
   not_before: string;
@@ -363,6 +403,8 @@ export interface AgentRun {
   intent: AgentLaunchIntent | null;
   /** Verdict of a verification step (see `AgentRunVerdict`). */
   verdict: AgentRunVerdict | null;
+  verdict_ciphertext?: string | null;
+  verdict_encryption_version?: number;
   /**
    * REVOCATION identifier of the LLM key issued for this run (MIN-223) — the
    * `hash` from OpenRouter, never the secret. He lives on the line and not in the
@@ -556,7 +598,46 @@ export async function createRun(input: CreateRunInput): Promise<AgentRun> {
    */
   const engine = AGENT_ENGINE;
   const loopInVm = true;
+  const encryptLaunch = await shouldEncryptAgentLaunch(service, input.projectId);
+  const encryptTitle = await shouldEncryptAgentTitle(service, input.projectId);
+  const encryptDelegation = input.delegationBrief &&
+    await shouldEncryptAgentDelegation(service, input.projectId);
+  const deploymentScope = currentDeploymentScope();
+  const encryptDeployment = deploymentScope &&
+    await shouldEncryptAgentDeployment(service, input.projectId);
+  const encryptBaseBranch = input.baseBranch &&
+    await shouldEncryptAgentBaseBranch(service, input.projectId);
+  const encryptWorkBranch = input.branchName !== null && input.branchName !== undefined &&
+    await shouldEncryptAgentWorkBranch(service, input.projectId);
+  const encryptPrUrl = !!input.prUrl &&
+    await shouldEncryptAgentPrUrl(service, input.projectId);
+  const id = encryptLaunch || encryptTitle || encryptDelegation || encryptDeployment ||
+    encryptBaseBranch || encryptWorkBranch || encryptPrUrl
+    ? randomUUID() : null;
+  const launchContent = {
+    prompt: stripUnstorable(input.prompt ?? null),
+    prompt_mentions: stripUnstorable(input.promptMentions ?? null),
+  };
+  const storedLaunch = encryptLaunch
+    ? await encodeAgentLaunch(input.projectId, id!, launchContent)
+    : launchContent;
+  const storedTitle = encryptTitle
+    ? await encodeAgentTitle(input.projectId, input.conversationId ?? id!, input.title ?? null)
+    : { title: input.title ?? null };
+  const storedDelegation = input.delegationBrief
+    ? encryptDelegation
+      ? await encodeAgentDelegationInput(input.projectId, id!, {
+          delegation_brief: input.delegationBrief,
+          delegation_attachments: input.delegationAttachments ?? [],
+        })
+      : { delegation_brief: input.delegationBrief,
+          delegation_attachments: input.delegationAttachments ?? [] }
+    : null;
+  const storedDeployment = encryptDeployment
+    ? await encodeAgentDeploymentUrl(input.projectId, id!, deploymentScope!)
+    : deploymentScope;
   const values = {
+    ...(id ? { id } : {}),
     ...(input.conversationId ? { conversation_id: input.conversationId } : {}),
     project_id: input.projectId,
     issue_id: input.issueId,
@@ -569,29 +650,33 @@ export async function createRun(input: CreateRunInput): Promise<AgentRun> {
     status: "queued",
     triggered_by: input.triggeredBy,
     created_by: input.createdBy,
-    prompt: input.prompt ?? null,
-    prompt_mentions: input.promptMentions ?? null,
+    ...storedLaunch,
     ...(input.delegationBrief
       ? {
           parent_numo_conversation_id: input.parentNumoConversationId,
           parent_numo_turn_id: input.parentNumoTurnId,
           parent_numo_tool_call_id: input.parentNumoToolCallId,
           continued_from_run_id: input.continuedFromRunId ?? null,
-          delegation_brief: input.delegationBrief,
-          delegation_attachments: input.delegationAttachments ?? [],
+          ...storedDelegation,
         }
       : {}),
-    title: input.title ?? null,
+    ...storedTitle,
     model: input.model,
     model_forced: input.modelForced,
     reasoning_level: input.reasoningLevel,
     key_mode: input.keyMode,
     worker_model_source: "account",
     worker_model_provider: input.workerModelProvider,
-    base_branch: input.baseBranch ?? null,
-    branch_name: input.branchName ?? null,
+    base_branch: encryptBaseBranch
+      ? await encodeAgentBaseBranch(input.projectId, id!, input.baseBranch!)
+      : input.baseBranch ?? null,
+    branch_name: encryptWorkBranch
+      ? await encodeAgentWorkBranch(input.projectId, id!, input.branchName!)
+      : input.branchName ?? null,
     pr_number: input.prNumber ?? null,
-    pr_url: input.prUrl ?? null,
+    pr_url: encryptPrUrl
+      ? await encodeAgentPrUrl(input.projectId, id!, input.prUrl!)
+      : input.prUrl ?? null,
     pr_state: input.prState ?? null,
     run_id: randomUUID(),
     chain_id: input.chainId ?? null,
@@ -600,7 +685,7 @@ export async function createRun(input: CreateRunInput): Promise<AgentRun> {
     intent: input.intent ?? null,
     // Deployment affinity (MIN-165): set ONCE, at creation. All
     // the chunks of a run launched from a preview remain on this deployment.
-    deployment_url: currentDeploymentScope(),
+    deployment_url: storedDeployment,
     loop_in_vm: loopInVm,
     agent_engine: engine,
     // Historical columns remain readable, but all newly admitted workers use
@@ -627,7 +712,22 @@ export async function createRun(input: CreateRunInput): Promise<AgentRun> {
     if (error?.code === PG_UNIQUE_VIOLATION) throw new ActiveRunExistsError();
     if (!error && input.managedBudget)
       throw new ManagedBudgetUnavailableError();
-    throw new Error(error?.message ?? "Failed to create agent run");
+    throw new DatabaseOperationError("create_agent_run", error, result.status);
+  }
+  // BYOK insertion does not lock the parent as the budget RPC does. Recheck
+  // after commit so a stop whose cascade ran before this insert cannot miss it.
+  if (!input.managedBudget) {
+    let parentAllowsWorker: boolean;
+    try {
+      parentAllowsWorker = await numoParentAllowsNewWorker(data as AgentRun);
+    } catch (error) {
+      await requestInterrupt(data.id);
+      throw error;
+    }
+    if (!parentAllowsWorker) {
+      await requestInterrupt(data.id);
+      data.interrupt_requested = true;
+    }
   }
   // Analytics (MIN-78): the launch is also tracked on the client side, but it
   // only does not see runs triggered by mention or restarted by drain.
@@ -656,7 +756,25 @@ export async function createRun(input: CreateRunInput): Promise<AgentRun> {
     },
     groups: { project: input.projectId },
   });
-  return data as AgentRun;
+  return (await hydrateRun(data as AgentRun))!;
+}
+
+async function hydrateRun(row: AgentRun | null): Promise<AgentRun | null> {
+  return row ? decodeAgentPrUrl(await decodeRunSummary(await decodeDelegationResult(await decodeAgentWorkBranch(await decodeAgentBaseBranch(await decodeAgentDeploymentUrl(await decodeAgentVerdict(
+    await decodeAgentDelegationInput(await decodeAgentCheckpoint(
+      await decodeAgentLaunch(row)))))))))) : null;
+}
+
+/** Only gate new workers; an individual stop must leave running siblings alone. */
+async function numoParentAllowsNewWorker(run: AgentRun): Promise<boolean> {
+  if (!run.parent_numo_turn_id) return true;
+  if (!run.created_by || !run.parent_numo_conversation_id) return false;
+  const { data, error } = await getServiceClient().from("numo_assistant_turns")
+    .select("status").eq("id", run.parent_numo_turn_id)
+    .eq("conversation_id", run.parent_numo_conversation_id)
+    .eq("user_id", run.created_by).maybeSingle();
+  if (error) throw new Error("Could not verify the Numo worker parent");
+  return !!data && ["running", "waiting_work", "waiting_input", "reconciling"].includes(data.status);
 }
 
 /** Atomic CAS claim (queued → running). Returns null when another worker won. */
@@ -666,13 +784,13 @@ export async function claimRun(runId: string): Promise<AgentRun | null> {
     p_run_id: runId,
   });
   if (error) {
-    console.error("[agent-runs] claim failed:", error.message);
+    console.error("[agent-runs] claim_failed");
     return null;
   }
   const rows = (data ?? []) as AgentRun[];
   const run = rows[0] ?? null;
   if (!run) return null;
-  if (await runAuthorityIsCurrent(run)) return run;
+  if (await runAuthorityIsCurrent(run)) return (await hydrateRun(run))!;
 
   // The generic claim RPC only arbitrates queued workers. Authorization can
   // change after the run was queued, so close a stale claim before an executor
@@ -695,10 +813,10 @@ export async function claimRunRest(runId: string): Promise<AgentRun | null> {
     p_run_id: runId,
   });
   if (error) {
-    console.error("[agent-runs] rest claim failed:", error.message);
+    console.error("[agent-runs] rest_claim_failed");
     return null;
   }
-  return ((data ?? []) as AgentRun[])[0] ?? null;
+  return hydrateRun(((data ?? []) as AgentRun[])[0] ?? null);
 }
 
 /**
@@ -721,20 +839,23 @@ export async function claimLocalRun(input: {
     },
   );
   if (error) {
-    console.error("[agent-runs] local claim failed:", error.message);
+    console.error("[agent-runs] local_claim_failed");
     return null;
   }
-  return ((data ?? []) as AgentRun[])[0] ?? null;
+  return hydrateRun(((data ?? []) as AgentRun[])[0] ?? null);
 }
 
-export async function getRun(runId: string): Promise<AgentRun | null> {
+export async function getRun(
+  runId: string, options: { decode?: boolean } = {},
+): Promise<AgentRun | null> {
   const service = getServiceClient();
   const { data } = await service
     .from("agent_runs")
     .select("*, conversation:agent_conversations(owner_id, visibility)")
     .eq("id", runId)
     .maybeSingle();
-  return (data as AgentRun | null) ?? null;
+  const row = (data as AgentRun | null) ?? null;
+  return options.decode === false ? row : hydrateRun(row);
 }
 
 /** True when no newer run exists on the anchor whose history this run shares. */
@@ -753,7 +874,7 @@ export async function runIsLatestOnAnchor(run: AgentRun): Promise<boolean> {
   else query = query.eq("conversation_id", run.conversation_id);
   const { data, error } = await query;
   if (error) {
-    console.error("[agent-runs] latest-anchor check failed:", error.message);
+    console.error("[agent-runs] latest_anchor_check_failed");
     return false;
   }
   return ((data ?? [])[0] as { id?: string } | undefined)?.id === run.id;
@@ -773,14 +894,19 @@ export async function insertLatestRunMessage(
   | "superseded"
   | "message_id_conflict"
 > {
-  const { data, error } = await getServiceClient().rpc(
+  const service = getServiceClient();
+  const values = await queueMessageValues(service, runId, messageId, {
+    content: stripUnstorable(content),
+    mentions: mentions?.length ? stripUnstorable(mentions) : null,
+  });
+  const { data, error } = await service.rpc(
     "insert_latest_agent_run_message",
     {
       p_run_id: runId,
       p_message_id: messageId,
       p_user_id: userId,
-      p_content: stripUnstorable(content),
-      p_mentions: mentions?.length ? stripUnstorable(mentions) : null,
+      p_content: values.content,
+      p_mentions: values.mentions,
     },
   );
   if (error) throw new Error(`agent_run_messages insert failed: ${error.message}`);
@@ -817,17 +943,20 @@ export async function resumeLatestRunWithMessage(input: {
   | "superseded"
   | "message_id_conflict"
 > {
-  const { data, error } = await getServiceClient().rpc(
+  const service = getServiceClient();
+  const values = await queueMessageValues(service, input.runId, input.messageId, {
+    content: stripUnstorable(input.content),
+    mentions: input.mentions?.length ? stripUnstorable(input.mentions) : null,
+  });
+  const { data, error } = await service.rpc(
     "resume_latest_agent_run_with_message",
     {
       p_run_id: input.runId,
       p_owner_id: input.ownerId,
       p_actor_id: input.actorId,
       p_message_id: input.messageId,
-      p_content: stripUnstorable(input.content),
-      p_mentions: input.mentions?.length
-        ? stripUnstorable(input.mentions)
-        : null,
+      p_content: values.content,
+      p_mentions: values.mentions,
       p_not_before: input.notBefore,
       p_usage_since: input.usageSince,
       p_budget_cap: input.budgetCap,
@@ -861,10 +990,7 @@ export async function reserveRunInlineComment(
     },
   );
   if (error) {
-    console.error(
-      "[agent-runs] inline comment reservation failed:",
-      error.message,
-    );
+    console.error("[agent-runs] inline_comment_reservation_failed");
     return null;
   }
   const value = Array.isArray(data) ? data[0] : data;
@@ -881,7 +1007,7 @@ export async function releaseRunInlineComment(
     },
   );
   if (error) {
-    console.error("[agent-runs] inline comment release failed:", error.message);
+    console.error("[agent-runs] inline_comment_release_failed");
     return null;
   }
   const value = Array.isArray(data) ? data[0] : data;
@@ -972,30 +1098,30 @@ export async function findQueuedLocalRunForMachine(input: {
   if (input.projectIds.length === 0) return null;
 
   const client = input.client ?? getServiceClient();
-  let query = client
-    .from("agent_runs")
-    .select("*")
-    .eq("status", "queued")
-    .eq("local_exec", true)
-    .eq("created_by", input.userId)
-    .in("project_id", [...input.projectIds])
-    .lte("not_before", new Date().toISOString());
   const scope = currentDeploymentScope();
-  query =
-    scope === null
-      ? query.is("deployment_url", null)
-      : query.eq("deployment_url", scope);
-
-  const { data, error } = await query
-    .order("not_before", { ascending: true })
-    .order("created_at", { ascending: true })
-    .limit(1)
-    .maybeSingle();
-  if (error) {
-    console.error("[agent-runs] local queue lookup failed:", error.message);
+  const prefix = scope && hasDataRootKey() ? await deploymentLookupPrefix(scope) : null;
+  const base = () => client.from("agent_runs").select("*")
+    .eq("status", "queued").eq("local_exec", true)
+    .eq("created_by", input.userId).in("project_id", [...input.projectIds])
+    .lte("not_before", new Date().toISOString());
+  const candidates = await Promise.all([
+    (scope === null ? base().is("deployment_url", null)
+      : base().eq("deployment_url", scope))
+      .order("not_before", { ascending: true })
+      .order("created_at", { ascending: true }).limit(1).maybeSingle(),
+    ...(prefix ? [base().like("deployment_url", `${prefix}%`)
+      .order("not_before", { ascending: true })
+      .order("created_at", { ascending: true }).limit(1).maybeSingle()] : []),
+  ]);
+  if (candidates.some((candidate) => candidate.error)) {
+    console.error("[agent-runs] local queue lookup failed");
     return null;
   }
-  return (data as AgentRun | null) ?? null;
+  const run = candidates.map((candidate) => candidate.data as AgentRun | null)
+    .filter((candidate): candidate is AgentRun => candidate !== null)
+    .sort((a, b) => a.not_before.localeCompare(b.not_before) ||
+      a.created_at.localeCompare(b.created_at))[0] ?? null;
+  return hydrateRun(run);
 }
 
 /**
@@ -1017,13 +1143,10 @@ export async function declineQueuedLocalRun(
     .select("*")
     .maybeSingle();
   if (error) {
-    console.error(
-      `[agent-runs] local fallback failed on ${runId}:`,
-      error.message,
-    );
+    console.error("[agent-runs] local_fallback_failed", runId);
     return null;
   }
-  return (data as AgentRun | null) ?? null;
+  return hydrateRun((data as AgentRun | null) ?? null);
 }
 
 /**
@@ -1133,7 +1256,7 @@ export async function activeRunForIssue(
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  return (data as AgentRun | null) ?? null;
+  return hydrateRun((data as AgentRun | null) ?? null);
 }
 
 /** Run ACTIVE of an automation chain. The ticket is no longer a lock:
@@ -1151,7 +1274,7 @@ export async function activeRunForChain(
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  return (data as AgentRun | null) ?? null;
+  return hydrateRun((data as AgentRun | null) ?? null);
 }
 
 /**
@@ -1174,7 +1297,7 @@ export async function activeRunForPullRequest(
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  return (data as AgentRun | null) ?? null;
+  return hydrateRun((data as AgentRun | null) ?? null);
 }
 
 /**
@@ -1197,7 +1320,7 @@ export async function activeRunForRoutine(
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  return (data as AgentRun | null) ?? null;
+  return hydrateRun((data as AgentRun | null) ?? null);
 }
 
 /**
@@ -1219,7 +1342,8 @@ export async function runsForRoutine(
     .is("parent_numo_turn_id", null)
     .order("created_at", { ascending: false })
     .limit(limit);
-  return (data ?? []) as AgentRun[];
+  return Promise.all(((data ?? []) as AgentRun[]).map(async (row) =>
+    (await hydrateRun(row))!));
 }
 
 /**
@@ -1239,7 +1363,7 @@ export async function latestRunForPullRequest(
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  return (data as AgentRun | null) ?? null;
+  return hydrateRun((data as AgentRun | null) ?? null);
 }
 
 /**
@@ -1294,24 +1418,28 @@ export async function inheritableWorkForPr(opts: {
   if (linkIds.length === 0) return null;
   const { data } = await service
     .from("agent_runs")
-    .select("branch_name, base_branch, pr_number, pr_url, pr_state")
+    .select("id, project_id, branch_name, base_branch, pr_number, pr_url, pr_state")
     .eq("pr_number", opts.prNumber)
     .in("repo_link_id", linkIds)
     .not("branch_name", "is", null)
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  const row = data as {
+  const stored = data as {
+    id: string;
+    project_id: string;
     branch_name: string | null;
     base_branch: string | null;
     pr_number: number | null;
     pr_url: string | null;
     pr_state: AgentRun["pr_state"];
   } | null;
-  if (!row?.branch_name) return null;
+  if (!stored?.branch_name) return null;
+  const row = await decodeAgentPrUrl(await decodeAgentWorkBranch(
+    await decodeAgentBaseBranch(stored)));
   if (row.pr_state === "merged") return null;
   return {
-    branchName: row.branch_name,
+    branchName: row.branch_name!,
     baseBranch: row.base_branch,
     prNumber: row.pr_number,
     prUrl: row.pr_url,
@@ -1342,7 +1470,7 @@ export async function activeRunForPrNumber(opts: {
     .in("status", ACTIVE_STATUSES)
     .order("created_at", { ascending: false })
     .limit(1);
-  return ((data ?? []) as AgentRun[])[0] ?? null;
+  return hydrateRun(((data ?? []) as AgentRun[])[0] ?? null);
 }
 
 /**
@@ -1358,14 +1486,22 @@ export async function branchHasPriorRun(
   beforeCreatedAt: string,
 ): Promise<boolean> {
   const service = getServiceClient();
-  const { data } = await service
+  const legacy = await service
     .from("agent_runs")
     .select("id")
     .eq("issue_id", issueId)
     .eq("branch_name", branchName)
     .lt("created_at", beforeCreatedAt)
     .limit(1);
-  return ((data ?? []) as unknown[]).length > 0;
+  if (legacy.error) throw new Error("Unable to check prior work branches");
+  if ((legacy.data ?? []).length > 0) return true;
+  const prefix = await workBranchLookupPrefix(branchName);
+  const encrypted = await service.from("agent_runs")
+    .select("id").eq("issue_id", issueId)
+    .like("branch_name", `${prefix}%`)
+    .lt("created_at", beforeCreatedAt).limit(1);
+  if (encrypted.error) throw new Error("Unable to check encrypted work branches");
+  return (encrypted.data ?? []).length > 0;
 }
 
 /**
@@ -1381,7 +1517,7 @@ export async function previousRunSummaryForIssue(
   const service = getServiceClient();
   const { data } = await service
     .from("agent_runs")
-    .select("outcome")
+    .select("id,project_id,outcome")
     .eq("issue_id", issueId)
     .neq("id", excludeRunId)
     .eq("status", "completed")
@@ -1389,7 +1525,8 @@ export async function previousRunSummaryForIssue(
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  const outcome = (data as { outcome?: string | null } | null)?.outcome ?? null;
+  const outcome = data ? await decodeRunSummaryValue(data.project_id as string,
+    data.id as string, "outcome", data.outcome as string | null) : null;
   return outcome?.trim() ? outcome.trim() : null;
 }
 
@@ -1412,7 +1549,7 @@ export async function previousRunSummaryForPr(
   if (linkIds.length === 0) return null;
   const { data } = await service
     .from("agent_runs")
-    .select("outcome")
+    .select("id,project_id,outcome")
     .eq("pr_number", opts.prNumber)
     .in("repo_link_id", linkIds)
     .neq("id", excludeRunId)
@@ -1421,7 +1558,8 @@ export async function previousRunSummaryForPr(
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  const outcome = (data as { outcome?: string | null } | null)?.outcome ?? null;
+  const outcome = data ? await decodeRunSummaryValue(data.project_id as string,
+    data.id as string, "outcome", data.outcome as string | null) : null;
   return outcome?.trim() ? outcome.trim() : null;
 }
 
@@ -1562,23 +1700,127 @@ export async function stampRunResult(
 ): Promise<{ run: AgentRun | null; failed: boolean }> {
   const service = getServiceClient();
   const guard = opts?.guard ?? ["running"];
+  let storedFields: Record<string, unknown> = { ...stripUnstorable(fields) };
+  let checkpointProjectId: string | null = null;
+  if (Object.prototype.hasOwnProperty.call(fields, "checkpoint")) {
+    const { data: metadata, error: metadataError } = await service.from("agent_runs")
+      .select("project_id").eq("id", runId).maybeSingle();
+    if (metadataError || !metadata?.project_id) {
+      console.error("[agent-runs] checkpoint scope lookup failed");
+      return { run: null, failed: true };
+    }
+    checkpointProjectId = metadata.project_id as string;
+    if (await shouldEncryptAgentCheckpoint(service, checkpointProjectId)) {
+      storedFields = { ...storedFields,
+        ...await encodeAgentCheckpoint(checkpointProjectId, runId,
+          storedFields.checkpoint as AgentCheckpoint | null) };
+    }
+  }
+  if (Object.prototype.hasOwnProperty.call(fields, "verdict")) {
+    let projectId = checkpointProjectId;
+    if (!projectId) {
+      const { data: metadata, error: metadataError } = await service.from("agent_runs")
+        .select("project_id").eq("id", runId).maybeSingle();
+      if (metadataError || !metadata?.project_id) {
+        console.error("[agent-runs] verdict scope lookup failed");
+        return { run: null, failed: true };
+      }
+      projectId = metadata.project_id as string;
+    }
+    if (await shouldEncryptAgentVerdict(service, projectId)) {
+      storedFields = { ...storedFields,
+        ...await encodeAgentVerdict(projectId, runId, fields.verdict ?? null) };
+    }
+    checkpointProjectId = projectId;
+  }
+  if (Object.prototype.hasOwnProperty.call(fields, "base_branch")) {
+    let projectId = checkpointProjectId;
+    if (!projectId) {
+      const { data: metadata, error: metadataError } = await service.from("agent_runs")
+        .select("project_id").eq("id", runId).maybeSingle();
+      if (metadataError || !metadata?.project_id) {
+        console.error("[agent-runs] base branch scope lookup failed");
+        return { run: null, failed: true };
+      }
+      projectId = metadata.project_id as string;
+    }
+    if (await shouldEncryptAgentBaseBranch(service, projectId)) {
+      storedFields = { ...storedFields, base_branch: await encodeAgentBaseBranch(
+        projectId, runId, fields.base_branch ?? null) };
+    }
+    checkpointProjectId = projectId;
+  }
+  if (Object.prototype.hasOwnProperty.call(fields, "branch_name")) {
+    let projectId = checkpointProjectId;
+    if (!projectId) {
+      const { data: metadata, error: metadataError } = await service.from("agent_runs")
+        .select("project_id").eq("id", runId).maybeSingle();
+      if (metadataError || !metadata?.project_id) {
+        console.error("[agent-runs] work branch scope lookup failed");
+        return { run: null, failed: true };
+      }
+      projectId = metadata.project_id as string;
+    }
+    if (await shouldEncryptAgentWorkBranch(service, projectId)) {
+      storedFields = { ...storedFields, branch_name: await encodeAgentWorkBranch(
+        projectId, runId, fields.branch_name ?? null) };
+    }
+    checkpointProjectId = projectId;
+  }
+  if (Object.prototype.hasOwnProperty.call(fields, "pr_url")) {
+    let projectId = checkpointProjectId;
+    if (!projectId) {
+      const { data: metadata, error: metadataError } = await service.from("agent_runs")
+        .select("project_id").eq("id", runId).maybeSingle();
+      if (metadataError || !metadata?.project_id) {
+        console.error("[agent-runs] PR URL scope lookup failed");
+        return { run: null, failed: true };
+      }
+      projectId = metadata.project_id as string;
+    }
+    if (await shouldEncryptAgentPrUrl(service, projectId)) {
+      storedFields.pr_url = await encodeAgentPrUrl(projectId, runId,
+        storedFields.pr_url as string | null);
+    }
+    checkpointProjectId = projectId;
+  }
+  if (Object.prototype.hasOwnProperty.call(fields, "outcome") ||
+      Object.prototype.hasOwnProperty.call(fields, "error_message")) {
+    let projectId = checkpointProjectId;
+    if (!projectId) {
+      const { data: metadata, error: metadataError } = await service.from("agent_runs")
+        .select("project_id").eq("id", runId).maybeSingle();
+      if (metadataError || !metadata?.project_id) {
+        console.error("[agent-runs] summary scope lookup failed");
+        return { run: null, failed: true };
+      }
+      projectId = metadata.project_id as string;
+    }
+    if (await shouldEncryptAgentSummary(service, projectId)) {
+      for (const field of ["outcome", "error_message"] as const) {
+        if (Object.prototype.hasOwnProperty.call(fields, field)) {
+          storedFields[field] = await encodeRunSummary(projectId, runId,
+            field, storedFields[field] as string | null);
+        }
+      }
+    }
+    checkpointProjectId = projectId;
+  }
   let query = service
     .from("agent_runs")
     // What we write here comes from the model and its shell (checkpoint, summary,
     // error message): a null byte in it would cause the ENTIRE line to be refused.
-    .update(stripUnstorable(fields))
+    .update(storedFields)
     .eq("id", runId)
     .in("status", guard);
+  if (checkpointProjectId) query = query.eq("project_id", checkpointProjectId);
   for (const [column, expected] of Object.entries(opts?.expected ?? {})) {
     query =
       expected === null ? query.is(column, null) : query.eq(column, expected);
   }
   const { data, error } = await query.select("*").maybeSingle();
   if (error) {
-    console.error(
-      `[agent-runs] stampRun ${runId} → ${fields.status ?? "(fields)"} failed:`,
-      error.message,
-    );
+    console.error("[agent-runs] stamp_run_failed", runId);
   }
 
   // End of run (MIN-78). Tracked here and not in the execution loop: this is
@@ -1589,7 +1831,7 @@ export async function stampRunResult(
   // deliberately target an already-terminal run (for example, clearing its
   // provider key). Treating those writes as fresh endings repeats analytics and
   // routine notifications.
-  const run = (data as AgentRun | null) ?? null;
+  const run = await hydrateRun((data as AgentRun | null) ?? null);
   const enteredTerminalStatus =
     fields.status != null && TERMINAL_RUN_STATUSES.has(fields.status);
   if (run && enteredTerminalStatus && TERMINAL_RUN_STATUSES.has(run.status)) {
@@ -1634,8 +1876,8 @@ export async function stampRunResult(
     // chains and routines. The event ID is stable, so a repeated delivery is
     // harmless; the turn RPC also ignores late events from superseded runs.
     if (run.parent_numo_turn_id || run.triggered_by === "chat") afterOrNow(async () => {
-      await deliverAgentDelegationResult(run).catch((error) => {
-        console.error("[agent-runs] delegation delivery failed:", error);
+      await deliverAgentDelegationResult(run).catch(() => {
+        console.error("[agent-runs] delegation_delivery_failed", run.id);
       });
     });
   }
@@ -1678,8 +1920,8 @@ export async function notifyAgentRun(
       ],
       { replaceUnread: true },
     );
-  } catch (e) {
-    console.error("[agent-runs] notify failed:", (e as Error).message);
+  } catch {
+    console.error("[agent-runs] notify_failed");
   }
 }
 
@@ -1720,8 +1962,8 @@ export async function notifyDelegatedAgentRun(
       }],
       { replaceUnread: true },
     );
-  } catch (error) {
-    console.error("[agent-runs] delegated notification failed:", (error as Error).message);
+  } catch {
+    console.error("[agent-runs] delegated_notification_failed");
   }
 }
 
@@ -1770,10 +2012,11 @@ async function repoLinkIds(
   repoFullName: string,
   provider: RepoProviderId,
 ): Promise<string[]> {
+  const storedName = await repositoryStorageName(provider, repoFullName, false, service);
   const { data: links } = await service
     .from("project_git_links")
     .select("id")
-    .eq("repo_full_name", repoFullName)
+    .eq("repo_full_name", storedName)
     .eq("provider", provider);
   return ((links ?? []) as Array<{ id: string }>).map((l) => l.id);
 }
@@ -1813,24 +2056,48 @@ export async function syncPrState(opts: {
   provider: RepoProviderId;
 }): Promise<SyncedPrRun[]> {
   const service = getServiceClient();
+  const storedName = await repositoryStorageName(opts.provider, opts.repoFullName,
+    false, service);
   const linkIds = await repoLinkIds(service, opts.repoFullName, opts.provider);
   if (linkIds.length === 0) return [];
   // Read and copy the PR row inside one database transaction. A delayed caller
   // can never write the state it observed earlier over a newer webhook/action.
   const { error } = await service.rpc("sync_agent_runs_from_pull_request", {
     p_provider: opts.provider,
-    p_repo_full_name: opts.repoFullName,
+    p_repo_full_name: storedName,
     p_number: opts.prNumber,
   });
   if (error) {
-    console.error("[agent-runs] PR state sync failed:", error.message);
+    console.error("[agent-runs] pr_state_sync_failed");
     return [];
   }
   const { data: runs } = await service
     .from("agent_runs")
-    .select(SYNCED_PR_RUN_COLUMNS)
+    .select(`${SYNCED_PR_RUN_COLUMNS}, pr_url`)
     .eq("pr_number", opts.prNumber)
     .in("repo_link_id", linkIds);
+  const { data: pr, error: prError } = await service.from("pull_requests")
+    .select("id,url,updated_at")
+    .eq("provider", opts.provider).eq("repo_full_name", storedName)
+    .eq("number", opts.prNumber).maybeSingle();
+  if (prError) throw new Error("Unable to load current pull request URL");
+  if (pr?.url) {
+    const plain = await decodePullRequestUrl(pr.id, pr.url);
+    for (const run of (runs ?? []) as Array<RawSyncedPrRun & { pr_url: string | null }>) {
+      const prior = await decodeAgentPrUrlValue(run.project_id, run.id, null,
+        run.pr_url);
+      const encrypt = isEncryptedPullRequestUrl(pr.url) ||
+        await shouldEncryptAgentPrUrl(service, run.project_id);
+      if (prior === plain && (!encrypt || run.pr_url?.startsWith("mdyp3:"))) continue;
+      const replacement = encrypt
+        ? await encodeAgentPrUrl(run.project_id, run.id, plain) : plain;
+      const synced = await service.rpc("sync_agent_run_pr_url", {
+        p_pr_id: pr.id, p_pr_updated_at: pr.updated_at, p_pr_url: pr.url,
+        p_run_id: run.id, p_old_run_url: run.pr_url, p_new_run_url: replacement,
+      });
+      if (synced.error) throw new Error("Unable to sync protected agent PR URL");
+    }
+  }
   return ((runs ?? []) as RawSyncedPrRun[]).map(toSyncedPrRun);
 }
 
@@ -1846,16 +2113,16 @@ export async function insertRunMessage(
   messageId: string = randomUUID(),
 ): Promise<string> {
   const service = getServiceClient();
+  const values = await queueMessageValues(service, runId, messageId, {
+    content: stripUnstorable(content),
+    mentions: mentions?.length ? stripUnstorable(mentions) : null,
+  });
   const { error } = await service.from("agent_run_messages").upsert(
     {
       id: messageId,
       run_id: runId,
       created_by: userId,
-      content: stripUnstorable(content),
-      // The labels of mentions come from titles and names: they go through
-      // the same filter as the text, otherwise a null byte in it would cause it to be refused
-      // the jsonb insert — and the message with it.
-      ...(mentions?.length ? { mentions: stripUnstorable(mentions) } : {}),
+      ...values,
     },
     { onConflict: "id", ignoreDuplicates: true },
   );
@@ -1878,34 +2145,30 @@ export async function pullPendingMessages(
   runId: string,
 ): Promise<AgentUserMessage[]> {
   const service = getServiceClient();
-  const { data, error } = await service
+  const { data: run, error: runError } = await service.from("agent_runs")
+    .select("project_id").eq("id", runId).maybeSingle();
+  if (runError || !run?.project_id) throw new Error("Unable to resolve agent queue project");
+  const first = await service
     .from("agent_run_messages")
     .update({ consumed_at: new Date().toISOString() })
     .eq("run_id", runId)
     .is("consumed_at", null)
-    .select("id, content, mentions, created_at");
-  /**
-   * A DRAIN THAT FAILS IS SAYING. This `return []` means “no one has anything for you
-   * written » to the calling turn: a missing column (migration not yet
-   * thrust), EPIRB, failure — and user messages
-   * disappear silently, while they are STILL in line, uneaten.
-   * The symptom is the most confusing of the product: “it does not respond to me”, without
-   * a line nowhere.
-   */
+    .select("id, run_id, content, mentions, content_encryption_version, created_at");
+  const { data, error } = legacyAgentLaunchSchema(first.error)
+    ? await service.from("agent_run_messages")
+        .update({ consumed_at: new Date().toISOString() })
+        .eq("run_id", runId).is("consumed_at", null)
+        .select("id, run_id, content, mentions, created_at")
+    : first;
+  // A failed claim cannot be reported as an empty queue: the worker would
+  // continue while the unconsumed user messages remain in storage.
   if (error) {
-    console.error("[agent-runs] pullPendingMessages failed:", error.message);
-    return [];
+    throw new Error("Unable to claim pending agent messages");
   }
   if (!data) return [];
-  return (
-    data as Array<{
-      id: string;
-      content: string;
-      mentions?: AssistantMention[] | null;
-      created_at: string;
-    }>
-  )
-    .sort((a, b) => a.created_at.localeCompare(b.created_at))
+  const decoded = await Promise.all(data.map((row) =>
+    decodeQueueMessage(run.project_id, row, null)));
+  return decoded.sort((a, b) => a.created_at.localeCompare(b.created_at))
     .map((r) => ({
       id: r.id,
       text: r.content,
@@ -1965,11 +2228,8 @@ export async function bumpRunActivity(runId: string): Promise<void> {
       .update({ last_activity_at: new Date().toISOString() })
       .eq("id", runId)
       .neq("status", "running");
-  } catch (err) {
-    console.error(
-      "[agent-runs] bumpRunActivity failed:",
-      (err as Error).message,
-    );
+  } catch {
+    console.error("[agent-runs] run_activity_bump_failed");
   }
 }
 
@@ -2002,7 +2262,7 @@ export async function runSteeredByOther(
     .neq("created_by", ownerId)
     .limit(1);
   if (error) {
-    console.error("[agent-runs] runSteeredByOther failed:", error.message);
+    console.error("[agent-runs] steering_lookup_failed");
     return true;
   }
   return (data ?? []).length > 0;
@@ -2021,6 +2281,65 @@ export async function requestInterrupt(runId: string): Promise<void> {
     .eq("id", runId)
     .in("status", ["queued", "running"]);
   if (error) throw new Error(`Could not request agent interruption: ${error.message}`);
+}
+
+/** Stop a worker with the atomic RPC, or the preceding schema's safe ordering. */
+export async function requestNumoWorkerStop(runId: string): Promise<void> {
+  const service = getServiceClient();
+  const { data, error } = await service.rpc("request_numo_worker_stop", {
+    p_run_id: runId,
+  });
+  if (error && error.code !== "PGRST202") {
+    throw new Error(`Could not stop Numo worker: ${error.message}`);
+  }
+  const turnId = error ? await stopNumoWorkerBeforeMigration(service, runId) : data;
+  if (typeof turnId === "string") {
+    const { signalNumoTurnStopInProcess } = await import("@/lib/server/numo/turns");
+    signalNumoTurnStopInProcess(turnId);
+  }
+}
+
+async function stopNumoWorkerBeforeMigration(service: SupabaseClient, runId: string) {
+  const { data: run, error: runError } = await service.from("agent_runs")
+    .select("parent_numo_turn_id,parent_numo_conversation_id").eq("id", runId).maybeSingle();
+  if (runError || !run?.parent_numo_turn_id || !run.parent_numo_conversation_id) {
+    throw new Error("Unable to identify stopped Numo worker");
+  }
+  const { data: conversation, error: conversationError } = await service.from("conversations")
+    .select("updated_at").eq("id", run.parent_numo_conversation_id).maybeSingle();
+  if (conversationError || !conversation) throw new Error("Unable to read stopped conversation");
+  const now = new Date().toISOString();
+  // Revoke first: completion, steering and claim RPCs lock this parent row and
+  // cannot resume a stopped turn. Every later operation is scoped and retryable.
+  const { data: retired, error: retireError } = await service.from("numo_assistant_turns")
+    .update({ status: "stopped", claim_token: null, claimed_at: null,
+      completed_at: now, error_message: null, updated_at: now })
+    .eq("id", run.parent_numo_turn_id)
+    .in("status", ["queued", "running", "stopping", "waiting_work", "waiting_input", "retryable", "reconciling"])
+    .select("id").maybeSingle();
+  if (retireError) throw new Error("Unable to revoke stopped worker continuation");
+  await discardPendingWorkerMessages(runId);
+  const { cancelStoppedWorkerInput } = await import("@/lib/server/numo/worker-mediation");
+  await cancelStoppedWorkerInput(runId);
+  await requestInterrupt(runId);
+  if (retired) {
+    // A concurrent new turn updates this timestamp; never idle its conversation.
+    const { error: idleError } = await service.from("conversations")
+      .update({ status: "idle", error_message: null, updated_at: now })
+      .eq("id", run.parent_numo_conversation_id).eq("updated_at", conversation.updated_at);
+    if (idleError) throw new Error("Unable to update stopped conversation");
+  }
+  return run.parent_numo_turn_id as string;
+}
+
+/** Discard queued steering after an authorized stop of a Numo-owned worker. */
+export async function discardPendingWorkerMessages(runId: string): Promise<void> {
+  const { error } = await getServiceClient()
+    .from("agent_run_messages")
+    .update({ consumed_at: new Date().toISOString() })
+    .eq("run_id", runId)
+    .is("consumed_at", null);
+  if (error) throw new Error("Unable to discard stopped worker messages");
 }
 
 /** Reads the interrupt flag (poll via loop: round boundary + stream). */
@@ -2097,6 +2416,9 @@ export async function appendEvent(
 ): Promise<void> {
   try {
     const service = getServiceClient();
+    const projectId = await journalProject(runId);
+    const encrypt = await shouldEncryptRunEvent(service, projectId);
+    const clearPayload = stripUnstorable(payload);
     for (let attempt = 0; attempt < APPEND_EVENT_MAX_ATTEMPTS; attempt++) {
       const { data } = await service
         .from("agent_run_events")
@@ -2109,17 +2431,15 @@ export async function appendEvent(
       // supabase-js does not RISK on a refused insert (CHECK constraint, RLS…) — it
       // returns { error }. Without this log, a type of event not declared in the CHECK
       // of agent_run_events disappears in total silence (experienced on `question`, MIN-86).
+      const stored: Record<string, unknown> = encrypt
+        ? await encodeRunEvent(projectId, runId, nextSeq, type, clearPayload)
+        : { run_id: runId, seq: nextSeq, type, payload: clearPayload };
       const { data: row, error } = await service
         .from("agent_run_events")
         // Same guard as `stampRun`: the payload of a `tool_result` carries the
         // output of a model command, where a null byte slips in by itself.
-        .insert({
-          run_id: runId,
-          seq: nextSeq,
-          type,
-          payload: stripUnstorable(payload),
-        })
-        .select("id, seq, type, payload, created_at")
+        .insert(stored)
+        .select("id, seq, type, created_at")
         .single();
       if (error) {
         // `seq` already taken by another transmitter: we reread the max and try again.
@@ -2131,22 +2451,16 @@ export async function appendEvent(
         ) {
           continue;
         }
-        console.error(
-          `[agent-runs] appendEvent(${type}) rejected:`,
-          error.message,
-        );
+        console.error("[agent-runs] event_append_rejected");
         return;
       }
       if (row) {
-        broadcastRunEvent(
-          runId,
-          row as Parameters<typeof broadcastRunEvent>[1],
-        );
+        broadcastRunEvent(runId, row);
       }
       return;
     }
-  } catch (err) {
-    console.error("[agent-runs] appendEvent failed:", (err as Error).message);
+  } catch {
+    console.error("[agent-runs] event_append_failed");
   }
 }
 
@@ -2177,19 +2491,29 @@ export async function appendRunJournal(
   events: Record<string, unknown>[],
 ): Promise<void> {
   if (!sessionId || events.length === 0) return;
-  const encoded = encodeRunJournal(stripUnstorable(events));
+  const sanitized = stripUnstorable(events);
+  const encoded = journalEncodedRow(runId, sessionId, sanitized);
   const service = getServiceClient();
-  const { error } = await service.from("agent_run_journal").insert({
-    run_id: runId,
-    session_id: sessionId,
-    events: null,
-    payload: encoded.payload,
-    payload_encoding: encoded.encoding,
-    payload_sha256: encoded.sha256,
-    event_count: encoded.eventCount,
-    payload_bytes: encoded.payloadBytes,
-    stored_bytes: encoded.storedBytes,
-  });
+  const projectId = await journalProject(runId);
+  const encrypt = await shouldEncryptJournal(projectId);
+  if (encrypt) {
+    const legacy = await service.from("agent_run_journal").select("id")
+      .eq("run_id", runId).eq("session_id", sessionId)
+      .eq("payload_sha256", encoded.payload_sha256)
+      .eq("encryption_version", 0).maybeSingle();
+    if (legacy.error) throw new Error("Unable to check agent journal retry");
+    if (legacy.data) return;
+    const oldJson = await service.rpc("agent_journal_legacy_batch_exists", {
+      p_run_id: runId, p_session_id: sessionId, p_events: sanitized,
+    });
+    if (oldJson.error) throw new Error("Unable to check legacy agent journal retry");
+    if (oldJson.data) return;
+  }
+  const stored = encrypt
+    ? await encryptJournal(projectId, { ...encoded, id: 0 })
+    : encoded;
+  const { id: _unused, ...insert } = stored as typeof stored & { id?: number };
+  const { error } = await service.from("agent_run_journal").insert(insert as never);
   if (error && error.code !== JOURNAL_DUPLICATE) {
     throw new Error(`agent_run_journal insert failed: ${error.message}`);
   }
@@ -2209,6 +2533,13 @@ export async function loadRunJournal(
 ): Promise<Record<string, unknown>[] | null> {
   if (!sessionId) return null;
   const service = getServiceClient();
+  let projectId: string;
+  try {
+    projectId = await journalProject(runId);
+  } catch {
+    console.error("[agent-runs] loadRunJournal failed: unable to resolve run");
+    return null;
+  }
   const events: Record<string, unknown>[] = [];
   let afterId = 0;
   let payloadBytes = 0;
@@ -2217,7 +2548,7 @@ export async function loadRunJournal(
     const { data, error } = await service
       .from("agent_run_journal")
       .select(
-        "id,events,payload,payload_encoding,payload_sha256,payload_bytes,event_count,stored_bytes",
+        "id,run_id,session_id,events,payload,payload_encoding,payload_sha256,payload_bytes,event_count,stored_bytes,encryption_version",
       )
       .eq("run_id", runId)
       .eq("session_id", sessionId)
@@ -2226,7 +2557,7 @@ export async function loadRunJournal(
       .limit(1)
       .maybeSingle();
     if (error) {
-      console.error("[agent-runs] loadRunJournal failed:", error.message);
+      console.error("[agent-runs] journal_lookup_failed", runId);
       return null;
     }
     if (!data) return events.length > 0 ? events : null;
@@ -2238,12 +2569,12 @@ export async function loadRunJournal(
     }
 
     try {
-      const row = data as StoredRunJournalRow & { id: number | string };
+      const row = data as Parameters<typeof decodeJournal>[1];
       const nextId = Number(row.id);
       if (!Number.isSafeInteger(nextId) || nextId <= afterId) {
         throw new Error("agent journal row has an invalid cursor");
       }
-      const decoded = decodeRunJournalRow(row);
+      const decoded = await decodeJournal(projectId, row);
       payloadBytes += decoded.payloadBytes;
       if (payloadBytes > RUN_JOURNAL_REPLAY_MAX_BYTES) {
         console.warn(
@@ -2253,11 +2584,8 @@ export async function loadRunJournal(
       }
       events.push(...decoded.events);
       afterId = nextId;
-    } catch (error) {
-      console.error(
-        "[agent-runs] journal row is unreadable:",
-        (error as Error).message,
-      );
+    } catch {
+      console.error("[agent-runs] journal_row_unreadable", runId);
       return null;
     }
   }

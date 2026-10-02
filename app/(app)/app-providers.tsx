@@ -3,7 +3,7 @@
 import { Suspense } from "react";
 import dynamic from "next/dynamic";
 import { AuthProvider } from "@/lib/auth-context";
-import { AppQueryProvider } from "@/lib/query-provider";
+import { AccountQueryProvider } from "@/lib/account-query-provider";
 import { RealtimeProvider } from "@/lib/realtime-provider";
 import { ProjectsProvider } from "@/lib/projects-context";
 import { CreateProvider } from "@/lib/create-context";
@@ -70,7 +70,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
  composers of the app are below, and none need to know
  Supabase to read it (see lib/keyboard/use-send-mode). */}
       <SendModeBoundary>
-        <AppQueryProvider>
+        <AccountQueryProvider>
           <RealtimeProvider>
             <ProjectsProvider>
               <IssuePanelProvider>
@@ -145,7 +145,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
               </IssuePanelProvider>
             </ProjectsProvider>
           </RealtimeProvider>
-        </AppQueryProvider>
+        </AccountQueryProvider>
       </SendModeBoundary>
     </AuthProvider>
   );

@@ -1,3 +1,5 @@
+import { issueStore } from "@/lib/server/issue-store";
+import { MAX_ATTACHMENT_UPLOAD_BYTES } from "@/lib/attachment-upload-limits";
 import "server-only";
 
 import { after, NextResponse, type NextRequest } from "next/server";
@@ -7,6 +9,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { resolveUploadedMimeType, servedMimeType } from "@/lib/inline-safe";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getServiceClient } from "@/lib/supabase-service";
+import { repositoryStorageName } from "@/lib/server/git/repository-name-content";
 import { insertEvents } from "@/lib/server/issue-events";
 import {
   collapsesInBurst,
@@ -30,6 +33,8 @@ import { forcedToolCall } from "@/lib/server/feedback/forced-tool-call";
 import { getAppConfigValues } from "@/lib/server/app-config";
 import { modelConfigKeys, resolveFromValues } from "@/lib/server/model-config";
 import { forgeFor, isForgeApiError, type Forge, type MergeMethod } from "./forge";
+import { encodePullRequestContent, shouldEncryptPullRequestContent } from
+  "./pull-request-content";
 import {
   lastReviewedShaForPullRequest,
   latestRunForPullRequest,
@@ -38,6 +43,7 @@ import {
 } from "./runs";
 import {
   findPullRequest,
+  pullRequestIssueIds,
   prStateFromRef,
   resolvePrForRun,
   rowProvider,
@@ -69,6 +75,8 @@ import {
   SIGNED_ASSET_HOST,
 } from "@/lib/forge-image-assets";
 import { canonicalAppOrigin } from "@/lib/server/app-origin";
+import { attachmentObjectMetadata, decodeAttachmentObject,
+  encodeAttachmentObject } from "@/lib/server/encryption/attachment-object-content";
 import type { ChecksSummary } from "./checks-core";
 import {
   numoIntentErrorResponse,
@@ -101,9 +109,9 @@ import {
  * implementation and forge errors are translated to HTTP in one place.
  *
  * The ticket link moved to the PR. `syncIssueStatusFromPr` and activity tracking
- * read `pull_requests.issue_id` instead of `run.issue_id`: a human PR can now
- * carry a ticket, rather than this being limited to Numo PRs. A PR without a
- * ticket silently synchronizes and records nothing; that is a normal case.
+ * read the current `pull_request_issues` associations. Human and Numo PRs can
+ * carry several tickets. A PR without a ticket silently synchronizes and
+ * records nothing; that is a normal case.
  */
 
 /**
@@ -161,8 +169,8 @@ export async function resolvePrScope(
         userId,
         provider: target.provider,
         repoFullName: target.repoFullName,
-      }).catch((err) => {
-        console.error("[pr-actions] actor unresolved:", (err as Error).message);
+      }).catch(() => {
+        console.error("[pr-actions] actor_unresolved");
         return { kind: "none", reason: "noAccount" } as ForgeActor;
       })),
   };
@@ -278,7 +286,7 @@ export async function authorizeRunPrRequest(
   const auth = await getAuthedUser(request);
   if (!auth.ok) return { ok: false, response: auth.response };
 
-  const run = await getRun(runId);
+  const run = await getRun(runId, { decode: false });
   if (!run || !(await canReadAgentRun(auth.user.id, run))) {
     return { ok: false, response: NextResponse.json({ error: "Run not found" }, { status: 404 }) };
   }
@@ -542,11 +550,8 @@ export async function prDetailResponse(scope: PrScope): Promise<NextResponse> {
         } else if (outcome.status === "in_progress") {
           deploymentStartedAt = outcome.startedAt;
         }
-      } catch (error) {
-        console.error(
-          "[pr-actions] deployment unreadable:",
-          (error as Error).message,
-        );
+      } catch {
+        console.error("[pr-actions] deployment_unreadable");
       }
     }
 
@@ -608,8 +613,8 @@ export async function prReadinessBatchResponse(
         const forgePr = await scope.forge.getPullRequest(scope.call);
         const result = await readPullRequestReadiness(scope, forgePr);
         readiness[prId] = result.readiness;
-      } catch (error) {
-        console.error(`[pr-actions] readiness unavailable for ${prId}:`, (error as Error).message);
+      } catch {
+        console.error("[pr-actions] readiness_unavailable", prId);
         unavailablePrIds.push(prId);
       }
     }
@@ -647,8 +652,8 @@ export async function prCommitsResponse(scope: PrScope): Promise<NextResponse> {
     // openable, and it bears its own numbers.
     const extras = await scope.forge
       .listPullRequestCommitExtras(scope.call)
-      .catch((err) => {
-        console.error("[pr-actions] commit extras unreadable:", (err as Error).message);
+      .catch(() => {
+        console.error("[pr-actions] commit_extras_unreadable");
         return new Map<string, CommitExtras>();
       });
     return NextResponse.json({
@@ -859,8 +864,8 @@ export async function prCommentsResponse(scope: PrScope): Promise<NextResponse> 
   try {
     const [comments, timeline, actor] = await Promise.all([
       scope.forge.listPullRequestComments(scope.call),
-      scope.forge.listTimeline(scope.call).catch((err) => {
-        console.error("[pr-actions] timeline unreadable:", (err as Error).message);
+      scope.forge.listTimeline(scope.call).catch(() => {
+        console.error("[pr-actions] timeline_unreadable");
         return [];
       }),
       scope.actor(),
@@ -874,8 +879,8 @@ export async function prCommentsResponse(scope: PrScope): Promise<NextResponse> 
         commentIds: [PR_BODY_COMMENT_ID, ...comments.map((c) => c.id)],
         viewerIsActor,
       })
-      .catch((err) => {
-        console.error("[pr-actions] conversation reactions unreadable:", (err as Error).message);
+      .catch(() => {
+        console.error("[pr-actions] conversation_reactions_unreadable");
         return [];
       });
     return NextResponse.json({ comments, timeline, reactions });
@@ -922,19 +927,20 @@ export async function createPrCommentResponse(
   const actor = await requireActor(scope, "read");
   if (!actor.ok) return actor.response;
   try {
-    const comment = await scope.forge.createPullRequestComment({
+    const comment = await withForgeAttachmentPublication(scope.pr.id, body,
+      () => scope.forge.createPullRequestComment({
       ...actorCall(actor.actor, scope),
       body: body.slice(0, MAX_COMMENT_BODY_LENGTH),
-    });
+    }));
     // Direct: the thread, among everyone who watches this PR. The webhook echo
     // would say the same thing a few seconds later — too late for a
     // conversation, and never at all if the webhook is not deployed (dev).
     broadcastPrChanged(scope.pr.id, ["conversation"]);
     // Record “commented on the PR” on the linked ticket only after publication;
     // a message rejected by the forge does not exist for anyone.
-    if (scope.pr.issue_id) {
+    for (const issueId of await pullRequestIssueIds(scope.pr.id)) {
       await recordPrActionEvent(
-        scope.pr.issue_id,
+        issueId,
         userId,
         "pr_commented",
         scope.pr.number,
@@ -964,6 +970,35 @@ export async function createPrCommentResponse(
   }
 }
 
+async function withForgeAttachmentPublication<T>(prId: string, body: string,
+  publish: () => Promise<T>): Promise<T> {
+  const ids = [...new Set([...body.matchAll(/\/api\/pr-attachments\/([0-9a-f-]{36})(?![\w/-])/gi)]
+    .map((match) => match[1]))];
+  if (!ids.length) return publish();
+  const service = getServiceClient();
+  const reserved = await service.rpc("reserve_forge_attachment_publications",
+    { p_pr_id: prId, p_ids: ids });
+  if (reserved.error || reserved.data !== ids.length) {
+    throw new Error("Unable to reserve forge attachment publication");
+  }
+  let published: T;
+  try {
+    published = await publish();
+  } catch (error) {
+    await service.rpc("finish_forge_attachment_publications",
+      { p_pr_id: prId, p_ids: ids, p_published: false });
+    throw error;
+  }
+  const finished = await service.rpc("finish_forge_attachment_publications",
+    { p_pr_id: prId, p_ids: ids, p_published: true });
+  if (finished.error || finished.data !== ids.length) {
+    // A claim remains after an ambiguous finalization, so cleanup cannot remove
+    // bytes that the forge may already reference.
+    console.error("[pr-actions] forge attachment publication claim pending");
+  }
+  return published;
+}
+
 /**
  * Edits an existing thread comment (MIN-548). Human gesture, under the
  * person's git account like the create. The CURRENT body is snapshotted into
@@ -988,8 +1023,8 @@ export async function updatePrCommentResponse(
     try {
       const comments = await scope.forge.listPullRequestComments(scope.call);
       previous = comments.find((c) => c.id === payload.commentId)?.body ?? null;
-    } catch (err) {
-      console.error("[pr-actions] edit snapshot read failed:", (err as Error).message);
+    } catch {
+      console.error("[pr-actions] edit_snapshot_read_failed");
     }
     if (previous != null) {
       await recordPrCommentEditQuiet({
@@ -1001,11 +1036,12 @@ export async function updatePrCommentResponse(
         editedBy: actor.actor.login,
       });
     }
-    const comment = await scope.forge.updatePullRequestComment({
+    const comment = await withForgeAttachmentPublication(scope.pr.id, payload.body,
+      () => scope.forge.updatePullRequestComment({
       ...actorCall(actor.actor, scope),
       commentId: payload.commentId,
       body: payload.body.slice(0, MAX_COMMENT_BODY_LENGTH),
-    });
+    }));
     // Direct (MIN-161): the thread, among everyone who watches this PR — the
     // webhook echo (`issue_comment`/note update) would only repeat it later,
     // and GitLab does not deliver a note-edit echo at all.
@@ -1048,9 +1084,7 @@ export async function startNumoPrReview(input: {
 
     let projectId = input.projectId ?? null;
     if (!projectId && scope.pr.issue_id) {
-      const { data: issue } = await supabase
-        .from("issues")
-        .select("project_id")
+      const { data: issue } = await issueStore(supabase).select("project_id")
         .eq("id", scope.pr.issue_id)
         .maybeSingle();
       projectId = (issue?.project_id as string | undefined) ?? null;
@@ -1060,7 +1094,8 @@ export async function startNumoPrReview(input: {
         .from("project_git_links")
         .select("project_id")
         .eq("provider", scope.target.provider)
-        .eq("repo_full_name", scope.target.repoFullName)
+        .eq("repo_full_name", await repositoryStorageName(scope.target.provider,
+          scope.target.repoFullName,false))
         .limit(1)
         .maybeSingle();
       projectId = (link?.project_id as string | undefined) ?? null;
@@ -1143,15 +1178,15 @@ export async function startNumoPrReview(input: {
     after(async () => {
       try {
         await executeNumoTurn({ turnId: started.turnId, readClient: supabase });
-      } catch (error) {
-        console.error("[pr-actions] @numo background turn failed:", error);
+      } catch {
+        console.error("[pr-actions] numo_background_turn_failed");
       }
     });
     return started;
-  } catch (err) {
+  } catch {
     // Including plan and budget refusals: they make sense on a CLICK,
     // who can display them. Here there is no screen to tell them to.
-    console.error("[pr-actions] @numo mention ignored:", (err as Error).message);
+    console.error("[pr-actions] numo_mention_ignored");
     if (eventId) await failNumoSurfaceEvent(service, eventId);
     return null;
   }
@@ -1180,8 +1215,8 @@ export async function prReviewCommentsResponse(scope: PrScope): Promise<NextResp
   try {
     const [comments, threads, actor] = await Promise.all([
       scope.forge.listPullRequestReviewComments(scope.call),
-      scope.forge.listReviewThreads(scope.call).catch((err) => {
-        console.error("[pr-actions] review threads unreadable:", (err as Error).message);
+      scope.forge.listReviewThreads(scope.call).catch(() => {
+        console.error("[pr-actions] review_threads_unreadable");
         return [];
       }),
       scope.actor(),
@@ -1202,8 +1237,8 @@ export async function prReviewCommentsResponse(scope: PrScope): Promise<NextResp
             commentIds: comments.map((c) => c.id),
             viewerIsActor,
           })
-          .catch((err) => {
-            console.error("[pr-actions] review reactions unreadable:", (err as Error).message);
+          .catch(() => {
+            console.error("[pr-actions] review_reactions_unreadable");
             return [];
           })
       : [];
@@ -1424,28 +1459,32 @@ export async function createPrReviewCommentResponse(
       would overwhelm the ticket journal. */
   const trace = async () => {
     broadcastPrChanged(scope.pr.id, ["reviewComments"]);
-    if (!scope.pr.issue_id) return;
-    await recordPrActionEvent(
-      scope.pr.issue_id,
-      userId,
-      "pr_code_commented",
-      scope.pr.number,
-      scope.target.provider,
-    );
+    for (const issueId of await pullRequestIssueIds(scope.pr.id)) {
+      await recordPrActionEvent(
+        issueId,
+        userId,
+        "pr_code_commented",
+        scope.pr.number,
+        scope.target.provider,
+      );
+    }
   };
   try {
     if (payload.inReplyTo != null) {
-      const comment = await scope.forge.replyToPullRequestReviewComment({
+      const commentId = payload.inReplyTo;
+      const comment = await withForgeAttachmentPublication(scope.pr.id, payload.body,
+        () => scope.forge.replyToPullRequestReviewComment({
         ...call,
-        commentId: payload.inReplyTo,
+        commentId,
         body: payload.body,
-      });
+      }));
       await trace();
       return NextResponse.json({ comment });
     }
     // The comment anchor is resolved BY the provider (PR head reread at
     // hot on GitHub, diff_refs on GitLab) — the caller doesn't have to pre-read anything.
-    const comment = await scope.forge.createPullRequestReviewComment({
+    const comment = await withForgeAttachmentPublication(scope.pr.id, payload.body,
+      () => scope.forge.createPullRequestReviewComment({
       ...call,
       body: payload.body,
       path: payload.path as string,
@@ -1453,7 +1492,7 @@ export async function createPrReviewCommentResponse(
       side: payload.side as "LEFT" | "RIGHT",
       startLine: payload.startLine,
       startSide: payload.startSide,
-    });
+    }));
     await trace();
     return NextResponse.json({ comment });
   } catch (err) {
@@ -1646,45 +1685,12 @@ export async function prFileBytesResponse(
 
 // ── PR comment attachments ───────────────────────────────────────────────────
 
-/** Same limit as ticket attachments (and bucket). */
-const MAX_FORGE_ATTACHMENT_BYTES = 20 * 1024 * 1024;
-
-/** Storage keys reject unusual characters while display names retain them.
-    Mirrors the sanitizer in `lib/use-attachment-uploads`. */
-function sanitizeKeyPart(name: string): string {
-  const sanitized = name.replace(/[^a-zA-Z0-9._-]+/g, "_").replace(/^_+|_+$/g, "");
-  return (sanitized || "fichier").slice(-140);
-}
-
-/**
- * The type used to serve the file from the public bucket. Anything outside the
- * allowlist ([lib/inline-safe.ts](../../inline-safe.ts)) is stored as
- * `application/octet-stream`.
- *
- * The client supplies the declared type, and the resulting URL is public and
- * stable. The file is served through the canonical Minddy origin, so comments
- * never expose the underlying storage provider. `text/html` would open as a
- * page, while a directly loaded `image/svg+xml` can execute scripts. Any
- * account with PR access could otherwise host phishing content under our name.
- * The PR gate decides who can write, not what can be served.
- */
+/** Restrict the type served by the capability proxy to the inline allowlist. */
 const servedAttachmentType = servedMimeType;
 
 /**
- * Hosts a file intended for a pull request comment (MIN-162) and renders its
- * stable Minddy proxy URL—the URL placed in the comment body.
- *
- * The URL is public rather than signed because the comment goes to the forge.
- * Its reader may be a GitHub email notification or someone without a minddy
- * account. A short-lived signed URL would leave a persistent comment with a dead
- * image a few hours later.
- *
- * Writes go through this server path, never directly through the browser. The
- * bucket has no insert policy, PR access is checked first, and files use
- * unguessable UUIDs. Without access to a PR, nothing can be written.
- *
- * This requires `read`, not `write`, because attaching a file is part of the
- * comment action and uses the same permission.
+ * Store encrypted bytes under an opaque key and return a durable capability URL
+ * for readers of the published forge comment. Upload requires PR read access.
  */
 /**
  * The file of a multipart body, or `null`.
@@ -1710,7 +1716,7 @@ export async function prAttachmentResponse(
   const actor = await requireActor(scope, "read");
   if (!actor.ok) return actor.response;
 
-  if (file.size > MAX_FORGE_ATTACHMENT_BYTES) {
+  if (file.size > MAX_ATTACHMENT_UPLOAD_BYTES) {
     return NextResponse.json({ error: "File too large" }, { status: 413 });
   }
 
@@ -1719,18 +1725,50 @@ export async function prAttachmentResponse(
   // The bytes first, the announcement then: a `.png` which contains HTML is
   // unmasked before going through the allowlist (MIN-340).
   const contentType = servedAttachmentType(resolveUploadedMimeType(file.type, bytes));
-  const path = `${scope.pr.id}/${crypto.randomUUID()}/${sanitizeKeyPart(name)}`;
+  const id = crypto.randomUUID();
   const service = getServiceClient();
+  const link = await service.from("project_git_links")
+    .select("project_id").eq("id", scope.target.linkId).single();
+  if (link.error || !link.data?.project_id) {
+    return NextResponse.json({ error: "Upload unavailable" }, { status: 503 });
+  }
+  const projectId = link.data.project_id;
+  const path = `projects/${projectId}/forge/${id}/${crypto.randomUUID()}`;
+  const stored = await encodeAttachmentObject(path, bytes);
+  const activated = await service.rpc("activate_forge_attachment_encryption");
+  if (activated.error || activated.data !== true) {
+    return NextResponse.json({ error: "Upload unavailable" }, { status: 503 });
+  }
   const { error } = await service.storage
     .from(FORGE_ATTACHMENTS_BUCKET)
-    .upload(path, bytes, { contentType });
+    .upload(path, stored, { contentType: "application/octet-stream",
+      metadata: { minddy_encrypted: "true" } });
   if (error) {
-    console.error("[pr-actions] forge attachment upload failed:", error.message);
+    console.error("[pr-actions] forge_attachment_upload_failed");
+    return NextResponse.json({ error: "Upload failed" }, { status: 502 });
+  }
+
+  try {
+    const downloaded = await service.storage.from(FORGE_ATTACHMENTS_BUCKET)
+      .download(path);
+    if (downloaded.error || !downloaded.data ||
+        !Buffer.from(await decodeAttachmentObject(path,
+          Buffer.from(await downloaded.data.arrayBuffer()))).equals(Buffer.from(bytes))) {
+      throw new Error("Forge attachment verification failed");
+    }
+    const registered = await service.from("forge_attachment_objects").insert({
+      id, pr_id: scope.pr.id, project_id: projectId,
+      storage_path: path,
+      ...attachmentObjectMetadata(stored),
+    });
+    if (registered.error) throw new Error("Forge attachment registration failed");
+  } catch {
+    await service.storage.from(FORGE_ATTACHMENTS_BUCKET).remove([path]);
     return NextResponse.json({ error: "Upload failed" }, { status: 502 });
   }
 
   return NextResponse.json({
-    url: forgeAttachmentProxyUrl(canonicalAppOrigin(), path),
+    url: forgeAttachmentProxyUrl(canonicalAppOrigin(), id),
     name,
     // Composing it deduces the markdown form: `![](…)` for an image, a link
     // named for the rest. It's the SERVED guy who decides, not the one who was
@@ -1755,8 +1793,8 @@ export async function prAttachmentResponse(
  * that the user explicitly typed.
  */
 export async function prMembersResponse(scope: PrScope): Promise<NextResponse> {
-  const members = await scope.forge.listRepoMembers(scope.call).catch((err) => {
-    console.error("[pr-actions] repo members unreadable:", (err as Error).message);
+  const members = await scope.forge.listRepoMembers(scope.call).catch(() => {
+    console.error("[pr-actions] repo_members_unreadable");
     return [];
   });
   return NextResponse.json(
@@ -1924,9 +1962,9 @@ async function propagatePrState(
     provider: scope.target.provider,
   });
   const currentState = runs[0]?.prState ?? state;
-  if (scope.pr.issue_id) {
+  for (const issueId of await pullRequestIssueIds(scope.pr.id)) {
     await syncIssueStatusFromPr({
-      issueId: scope.pr.issue_id,
+      issueId,
       actorId,
       prState: currentState,
     });
@@ -2004,35 +2042,7 @@ const LINK_REFUSAL_KEYS = {
   issue_outside_repo: "issueOutsideRepo",
 } as const satisfies Record<PrLinkRefusal, string>;
 
-/**
- * `link_issue`—manually attach a ticket to a PR that has none (MIN-163).
- *
- * The normal link is convention-based (project key in the branch or title, or a
- * `Fixes:` line) and is created during ingestion. When that convention was not
- * followed, the PR remained orphaned because neither the UI nor API could add
- * the link later.
- *
- * The link is final, which determines these rules:
- * - reject a PR that is already linked (409); the link cannot be replaced;
- * - make the database write conditional and atomic so two tabs selecting
- *   different tickets cannot silently overwrite each other;
- * - reject a ticket that already has a live PR (409). This preserves “one
- *   ticket, one PR” for active work while allowing several terminal PRs over the
- *   lifetime of a ticket Numo handled more than once.
- *
- * This requires no forge call because the link is a minddy fact, so there is no
- * `requireActor`. The result is still reread with the authenticated client,
- * whose RLS is the gate, and the ticket project must link this repository—the
- * exact scope used by conventional `resolveIssueForPr` linking.
- *
- * The ticket status then follows the PR through the same path used everywhere:
- * open becomes `in_review`, draft becomes `in_progress`, merged becomes `done`,
- * and closed becomes `todo`.
- *
- * The rule itself lives in `linkPullRequestToIssue`, shared by MCP and Numo
- * (MIN-163bis). This function contains only HTTP-specific behavior:
- * access via the RLS, and the translation of refusals into status codes.
- */
+/** Authorize the issue through RLS, then append it using the shared linking rules. */
 export async function prLinkIssueResponse(
   scope: PrScope,
   supabase: SupabaseClient,
@@ -2043,16 +2053,9 @@ export async function prLinkIssueResponse(
   if (!UUID_RE.test(issueId)) {
     return NextResponse.json({ error: "Invalid issue id" }, { status: 400 });
   }
-  // Check before reading the ticket: an already linked PR is rejected regardless
-  // of the requested ticket, and reporting that first avoids a misleading
-  // “ticket not found” response.
-  if (scope.pr.issue_id) return linkRefusal("prAlreadyLinked", 409);
-
   // Use the authenticated client. RLS returns nothing for a ticket the user
   // cannot see, which becomes a 404 without revealing that it exists elsewhere.
-  const { data } = await supabase
-    .from("issues")
-    .select("id, number, title, project_id, deleted_at")
+  const { data } = await issueStore(supabase).select("id, number, title, project_id, deleted_at")
     .eq("id", issueId)
     .maybeSingle();
   const issue = data as {
@@ -2078,16 +2081,38 @@ export async function prLinkIssueResponse(
       ? linkRefusal("issueOutsideRepo", 400)
       : linkRefusal(LINK_REFUSAL_KEYS[result.code], 409);
   }
-  // Repeating the action for the same ticket remains a 409. The app offers this
-  // action only on an unlinked PR, so reaching this case means two tabs raced and
-  // the UI should report it instead of pretending nothing happened.
-  if (result.already) return linkRefusal("prAlreadyLinked", 409);
-
   return NextResponse.json({
     ok: true,
     issue: { id: issue.id, number: issue.number, title: issue.title },
     status: result.status,
   });
+}
+
+/** Remove only the requested association; issue status and forge data stay unchanged. */
+export async function prUnlinkIssueResponse(
+  scope: PrScope,
+  supabase: SupabaseClient,
+  body: PrActionBody,
+): Promise<NextResponse> {
+  const issueId = typeof body.issueId === "string" ? body.issueId.trim() : "";
+  if (!UUID_RE.test(issueId)) {
+    return NextResponse.json({ error: "Invalid issue id" }, { status: 400 });
+  }
+  const { data: issue, error } = await issueStore(supabase).select("id")
+    .eq("id", issueId).is("deleted_at", null).maybeSingle();
+  if (error) return NextResponse.json({ error: "Unable to read issue" }, { status: 500 });
+  if (!issue) return NextResponse.json({ error: "Issue not found" }, { status: 404 });
+  const { data, error: unlinkError } = await getServiceClient()
+    .rpc("unlink_pull_request_from_issue_atomic", { p_pr_id: scope.pr.id, p_issue_id: issueId });
+  if (unlinkError) return NextResponse.json({ error: "Unable to unlink issue" }, { status: 500 });
+  if (data === "pr_not_found") {
+    return NextResponse.json({ error: "Pull request not found" }, { status: 404 });
+  }
+  if (data !== "unlinked" && data !== "already") {
+    return NextResponse.json({ error: "Unable to unlink issue" }, { status: 500 });
+  }
+  broadcastPrChanged(scope.pr.id, ["pr"]);
+  return NextResponse.json({ ok: true });
 }
 
 /** Merge, close, reopen, and draft/review transitions for a pull request. */
@@ -2204,9 +2229,9 @@ export async function prStateActionResponse(
       );
       await propagatePrState(scope, "merged", userId);
       // Record “accepted the PR” in the linked ticket activity.
-      if (scope.pr.issue_id) {
+      for (const issueId of await pullRequestIssueIds(scope.pr.id)) {
         await recordPrActionEvent(
-          scope.pr.issue_id,
+          issueId,
           userId,
           "pr_accepted",
           scope.pr.number,
@@ -2226,9 +2251,9 @@ export async function prStateActionResponse(
       // “in progress”, not “in review”.
       const state = prStateFromRef(reopened);
       await propagatePrState(scope, state, userId);
-      if (scope.pr.issue_id) {
+      for (const issueId of await pullRequestIssueIds(scope.pr.id)) {
         await recordPrActionEvent(
-          scope.pr.issue_id,
+          issueId,
           userId,
           "pr_reopened",
           scope.pr.number,
@@ -2264,9 +2289,9 @@ export async function prStateActionResponse(
     await forge.closePullRequest(myCall);
     // A closed PR returns the ticket to `todo`, never `canceled` (MIN-46).
     await propagatePrState(scope, "closed", userId);
-    if (scope.pr.issue_id) {
+    for (const issueId of await pullRequestIssueIds(scope.pr.id)) {
       await recordPrActionEvent(
-        scope.pr.issue_id,
+        issueId,
         userId,
         "pr_rejected",
         scope.pr.number,
@@ -2387,7 +2412,15 @@ async function runAiMergeJob(
       {
         xTitle: "Merge commit (minddy)",
         logPrefix: "[pr-ai-merge]",
-        maxTokens: 1_024,
+        // The default model (GLM-5.3) reasons MANDATORILY, and without this
+        // field it runs at its family default `max`: the reasoning tokens
+        // count inside the output ceiling and, at 1_024, a thinking burst
+        // ate the whole budget before any tool call — the merge failed
+        // silently in roughly one gesture out of two (MIN-594). Ask for the
+        // cheapest level the model publishes, and give the ceiling room
+        // for both the reasoning trace and the message.
+        reasoning: "low",
+        maxTokens: 2_048,
         timeoutMs: 120_000,
       },
     );
@@ -2414,17 +2447,17 @@ async function runAiMergeJob(
       }),
     );
     await propagatePrState(scope, "merged", userId);
-    if (scope.pr.issue_id) {
+    for (const issueId of await pullRequestIssueIds(scope.pr.id)) {
       await recordPrActionEvent(
-        scope.pr.issue_id,
+        issueId,
         userId,
         "pr_accepted",
         scope.pr.number,
         scope.target.provider,
       );
     }
-  } catch (error) {
-    console.error("[pr-ai-merge] failed:", (error as Error).message);
+  } catch {
+    console.error("[pr-ai-merge] merge_failed");
   } finally {
     // One push either way: the open panel unwinds its pending marker on it.
     broadcastPrChanged(scope.pr.id, ["pr"]);
@@ -2544,8 +2577,8 @@ export async function prMaintenanceActionResponse(
             editedBy: actor.actor.login,
           });
         }
-      } catch (err) {
-        console.error("[pr-actions] body edit snapshot read failed:", (err as Error).message);
+      } catch {
+        console.error("[pr-actions] body_edit_snapshot_read_failed");
       }
       await withPrOperation(`${scope.pr.id}:update-body`, () =>
         scope.forge.updatePullRequestBody({ ...call, body: nextBody }),
@@ -2563,9 +2596,12 @@ export async function prMaintenanceActionResponse(
     const updated = await withPrOperation(`${scope.pr.id}:update-title`, () =>
       scope.forge.updatePullRequestTitle({ ...call, title }),
     );
+    const storedTitle = await shouldEncryptPullRequestContent()
+      ? await encodePullRequestContent(scope.pr.id, "title", updated.title ?? title)
+      : updated.title ?? title;
     await getServiceClient()
       .from("pull_requests")
-      .update({ title: updated.title ?? title, updated_at: new Date().toISOString() })
+      .update({ title: storedTitle, updated_at: new Date().toISOString() })
       .eq("id", scope.pr.id);
     broadcastPrChanged(scope.pr.id, ["pr", "conversation"]);
     return NextResponse.json({ ok: true, title: updated.title ?? title });
@@ -2681,7 +2717,7 @@ export async function prReviewResponse(
     // The Numo conversation already carries the request, so a later forge
     // failure must not make the user believe that the fix request was lost.
     if (!relaunch) return forgeErrorResponse(err);
-    console.error("[pr-actions] review post failed:", (err as Error).message);
+    console.error("[pr-actions] review_post_failed");
     published = "comment";
   }
 
@@ -2695,9 +2731,9 @@ export async function prReviewResponse(
   // comment: this is where the user will read "approved the PR". Nothing to
   // trace when no verdict has been given: the revival is told by
   // the agent launch event.
-  if (scope.pr.issue_id && postVerdict) {
+  for (const issueId of postVerdict ? await pullRequestIssueIds(scope.pr.id) : []) {
     await recordPrActionEvent(
-      scope.pr.issue_id,
+      issueId,
       userId,
       eventForVerdict(verdict),
       scope.pr.number,

@@ -1,4 +1,7 @@
+import { filterLinkedIssueRuns } from "@/lib/server/agent/activity";
+import { pullRequestIssueIds } from "@/lib/server/agent/pull-requests";
 import { type NextRequest, NextResponse } from "next/server";
+import { repositoryStorageName } from "@/lib/server/git/repository-name-content";
 import { afterOrNow } from "@/lib/server/after-safe";
 import {
   syncPrState,
@@ -227,7 +230,8 @@ async function isServiceAccount(
   const { data } = await service
     .from("project_git_links")
     .select("git_connections(provider_account_id, account_login)")
-    .eq("repo_full_name", repoFullName)
+    .eq("repo_full_name", await repositoryStorageName("gitlab",
+      repoFullName,false,service))
     .eq("provider", "gitlab");
   // Embedded to-one relationship: object at runtime, cast via unknown (see Supabase).
   const connections = (
@@ -326,7 +330,7 @@ async function handleMergeRequest(
   if (!prState && !actionType) return;
 
   // Runs affected. merge/close/reopen/open resets pr_state in passing.
-  const runs: SyncedPrRun[] = prState
+  const prRuns: SyncedPrRun[] = prState
     ? await syncPrState({
         repoFullName,
         prNumber: iid,
@@ -335,28 +339,21 @@ async function handleMergeRequest(
         provider: "gitlab",
       })
     : await findRunsForPr({ repoFullName, prNumber: iid, provider: "gitlab" });
+  const linkedPr = await findPullRequestByNumber({ provider: "gitlab", repoFullName, number: iid });
+  const runs = filterLinkedIssueRuns(prRuns, linkedPr ? await pullRequestIssueIds(linkedPr.id) : []);
   const currentPrState =
-    runs[0]?.prState ??
-    (
-      await findPullRequestByNumber({
-        provider: "gitlab",
-        repoFullName,
-        number: iid,
-      })
-    )?.state ??
+    linkedPr?.state ?? prRuns[0]?.prState ??
     ingested?.state ??
     prState;
 
-  // NO run: it's a human MR (MIN-143). This guard was dismissive — it's
-  // he who made them ineffective on the tickets. However, she can wear it
-  // one, by its branch, its title or a closing line: merge it on
-  // GitLab should produce what the merge from minddy produces.
-  if (runs.length === 0) {
+  // Synchronize manual associations; worker issues keep their existing notification path.
+  {
     const echoed =
       !!actionType &&
       isServiceAccountGesture(actionType) &&
       (await isServiceAccount(repoFullName, payload.user));
     await applyForgePrToIssue({
+      excludeIssueIds: runs.map((run) => run.issueId),
       provider: "gitlab",
       repoFullName,
       prNumber: iid,
@@ -366,7 +363,7 @@ async function handleMergeRequest(
       login: payload.user?.username ?? null,
       occurredAt: prEventAt,
     });
-    return;
+    if (runs.length === 0) return;
   }
 
   // Aligns the status of the exits with the new MR state (MIN-46):

@@ -10,9 +10,13 @@ const HOTZONE = 12;
 
 /**
  * Keep one navigation tree mounted across docked, rail, and hidden modes.
- * Commit the reserved width once; only the floating panel's transform animates.
- * Tweening layout width reflows every card and editor on every animation frame.
- * Hidden navigation can be recalled by pointer, keyboard focus, or a portaled layer.
+ * The panel slides with a transform; the reserved width travels ALONG it on
+ * the same shared chassis curve, so the content pane resizes live, fluidly,
+ * instead of snapping when the surface lands (MIN-548 review). The panel
+ * itself is absolutely positioned — nothing inside the sidebar reflows
+ * during travel; only the content pane to the right follows the width.
+ * Hidden navigation can be recalled by pointer, keyboard focus, or a
+ * portaled layer.
  */
 export function SidebarNavOverlay({
   width,
@@ -71,6 +75,21 @@ export function SidebarNavOverlay({
       shell?.removeAttribute("data-sidebar-hidden");
     };
   }, [shellHiddenAttribute]);
+
+  // While the floating panel is actually on screen, it covers the content
+  // pane's header. On macOS that header is a draggable window region, and
+  // regions resolve in layout order — the header comes after this panel in
+  // the DOM, so its `drag` rect wins over the overlap and the panel's top
+  // controls stay visible but inert. The attribute lets the stylesheet retire
+  // the header's drag region for exactly the time the panel overlaps it.
+  const floating = hidden && shown;
+  useEffect(() => {
+    if (!floating) return;
+    document.body.setAttribute("data-sidebar-floating", "true");
+    return () => {
+      document.body.removeAttribute("data-sidebar-floating");
+    };
+  }, [floating]);
 
   const openPanel = useCallback((e?: { clientX: number; clientY: number }) => {
     if (e) {
@@ -194,7 +213,7 @@ export function SidebarNavOverlay({
 
   return (
     <div
-      className="relative h-full shrink-0"
+      className="relative h-full shrink-0 [transition:width_180ms_cubic-bezier(0.32,0.72,0,1)] motion-reduce:[transition:none]"
       data-sidebar-hidden={hidden}
       style={{ width: flowWidth }}
     >

@@ -16,6 +16,7 @@ import {
   CAPTURE_VARIANTS,
 } from "../../lib/browser.mjs";
 import { publishShot, writeManifest } from "../../lib/publish.mjs";
+import { catalog } from "../../lib/messages.mjs";
 import { serveFixture } from "./serve-fixture.mjs";
 import {
   COMMITS,
@@ -714,12 +715,13 @@ async function capture({ locale, theme }) {
 
     }
 
-    // Files tab: designated by its rank, its wording is translated and carries
-    // the file counter. This is the THIRD since a tab
-    // “Commit” slipped between Conversation and Files — aim for
-    // second opened the commits list, and the diff check failed
-    // sans dire pourquoi.
-    const filesTab = page.getByRole("tab").nth(2);
+    // Files tab: designated by its translated label, which carries the file
+    // counter reconstructed from the fixture. A raw rank no longer works:
+    // the sidebar's PR list item now carries the `tab` role too, so the
+    // Files tab is the FOURTH `tab` — rank 3 opens the commits list and the
+    // diff check fails without saying why.
+    const filesLabel = (await catalog(locale)).PullRequests.tabFiles;
+    const filesTab = page.getByRole("tab", { name: new RegExp(filesLabel.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")) });
     await filesTab.click();
     if ((await filesTab.getAttribute("aria-selected")) !== "true") {
       throw new Error(

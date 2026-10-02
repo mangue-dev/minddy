@@ -1,6 +1,8 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowDown01Icon, ArrowRight01Icon, ArrowTurnDownIcon, CheckIcon, Copy01Icon, HappyIcon } from "@hugeicons/core-free-icons";
+import { useCallback, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useFormatter, useNow, useTranslations } from "next-intl";
 import {
@@ -16,14 +18,6 @@ import {
   cn,
   toast,
 } from "mangue-ui";
-import {
-  ChevronDown,
-  ChevronRight,
-  CircleCheck,
-  Copy,
-  CornerDownRight,
-  SmilePlus,
-} from "lucide-react";
 import { AutoTextarea } from "@/components/auto-textarea";
 import { PrCommentComposer } from "@/components/pull-requests/pr-comment-composer";
 import { PrHunk } from "@/components/pull-requests/pr-hunk";
@@ -34,8 +28,6 @@ import { ForgeUserAvatar } from "@/components/git/forge-user-avatar";
 import { Markdown } from "@/components/markdown";
 import {
   replyPrReviewCommentApi,
-  setPrCommentReactionApi,
-  setPrReviewCommentReactionApi,
   setPrReviewThreadResolvedApi,
   type PrEndpoint,
   type PullRequestReviewComment,
@@ -52,12 +44,12 @@ import {
   type ReviewThreadState,
 } from "@/lib/pr-review-threads";
 import {
-  groupReactionsByComment,
   REVIEW_REACTIONS,
   REVIEW_REACTION_EMOJI,
   type ReviewCommentReaction,
   type ReviewReactionContent,
 } from "@/lib/pr-review-reactions";
+import type { CommentReactions } from "@/lib/use-comment-reactions";
 import type { MessageKey } from "@/lib/i18n-keys";
 import type { PrReviewThread } from "@/lib/pr-diff-anchors";
 import {
@@ -191,56 +183,8 @@ export function useThreadResolution(endpoint: PrEndpoint, onChanged: () => unkno
 
 export type ThreadResolution = ReturnType<typeof useThreadResolution>;
 
-/**
- * Emoji reactions of PR comments (MIN-139, expanded by MIN-147): the
- * table indexed by comment, the desired state to ask, and the thread in flight.
- *
- * `canReact` separates READ from ASK — a read-only view displays the
- * reactions of others without offering any: hiding them would make one believe that there are none
- * not.
- *
- * The flip-flop sends the DESIRED STATE (`!mine`), not a “reverse what you have”:
- * it is the server which decides, and a referral after a network failure does not undo
- * then not what had resulted.
- *
- * `surface` says on WHICH family of comments we react — both have the
- * same form and the same gestures, but not the same route: at GitHub, the
- * comments anchored to the code and those in the thread do not live in the same place. THE
- * rest (grouping, chips, palette) is strictly common, and this is what
- * makes react behave the same everywhere.
- */
-export function useCommentReactions(
-  endpoint: PrEndpoint,
-  onChanged: () => unknown,
-  reactions: ReviewCommentReaction[],
-  canReact: boolean,
-  surface: "review" | "conversation" = "review",
-) {
-  const [pending, setPending] = useState<string | null>(null);
-  const byComment = useMemo(() => groupReactionsByComment(reactions), [reactions]);
-
-  const toggle = useCallback(
-    async (commentId: number, content: ReviewReactionContent, on: boolean) => {
-      if (pending) return;
-      setPending(`${commentId}:${content}`);
-      try {
-        const post =
-          surface === "review" ? setPrReviewCommentReactionApi : setPrCommentReactionApi;
-        await post(endpoint, { commentId, content, on });
-        await onChanged();
-      } catch (err) {
-        toast.error((err as Error).message);
-      } finally {
-        setPending(null);
-      }
-    },
-    [endpoint, onChanged, pending, surface],
-  );
-
-  return { byComment, pending, canReact, toggle };
-}
-
-export type CommentReactions = ReturnType<typeof useCommentReactions>;
+export { useCommentReactions } from "@/lib/use-comment-reactions";
+export type { CommentReactions };
 
 /** Label key of each reaction — typed, otherwise `t()` no longer checks anything. */
 const REACTION_LABELS: Record<ReviewReactionContent, MessageKey<"PullRequests">> = {
@@ -254,11 +198,7 @@ const REACTION_LABELS: Record<ReviewReactionContent, MessageKey<"PullRequests">>
   eyes: "reactionEyes",
 };
 
-/**
- * The gesture “changes this reaction”, shared by the two places hence the
- * palette opens: the DESIRED state is deduced from what is already placed, never from a
- * « inverse ce que tu as » — cf. `useCommentReactions`.
- */
+/** Toggle the viewer's desired reaction state from either a chip or the picker. */
 export function reactionToggler(
   reactions: CommentReactions,
   commentId: number,
@@ -302,7 +242,7 @@ export function CommentReactionChips({
   return (
     <div className="flex flex-wrap items-center gap-1">
       {list.map((reaction) => {
-        const busy = reactions.pending === `${commentId}:${reaction.content}`;
+        const busy = reactions.isPending(commentId, reaction.content);
         // `aria-disabled` and not `disabled`: a disabled button receives no
         // pointer event, so never displays its tooltip — but this is
         // in read-only that we MOST need to read what the emoji wants
@@ -388,7 +328,7 @@ export function ReactionPicker({
               aria-label={t("addReaction")}
               className={cn("size-7 rounded-full text-muted-foreground", className)}
             >
-              <SmilePlus className="size-4" />
+              <HugeiconsIcon icon={HappyIcon} className="size-4" />
             </Button>
           </PopoverTrigger>
         </TooltipTrigger>
@@ -561,7 +501,7 @@ function PlainComposer({
 
   return (
     <div className="flex flex-col gap-2 font-sans">
-      <div className="w-full rounded-lg border border-border bg-background transition-colors focus-within:border-ring">
+      <div className="w-full rounded-lg bg-control transition-colors">
         <AutoTextarea
           autoFocus={autoFocus}
           value={value}
@@ -692,7 +632,7 @@ export function ReviewThreadCard({
         <div className="flex items-center gap-1.5">
           {resolved ? (
             <span className="mr-auto flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
-              <CircleCheck className="size-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+              <HugeiconsIcon icon={CheckIcon} className="size-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
               <span className="truncate">{resolvedLabel}</span>
             </span>
           ) : null}
@@ -735,12 +675,12 @@ export function ReviewThreadCard({
                       className="-ml-px rounded-l-none px-2"
                       aria-label={t("conversationActions")}
                     >
-                      <ChevronDown className="size-3.5" />
+                      <HugeiconsIcon icon={ArrowDown01Icon} className="size-3.5" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem onSelect={() => threadActions.copyPrompt(thread)}>
-                      <Copy />
+                      <HugeiconsIcon icon={Copy01Icon} />
                       {t("copyPromptShort")}
                     </DropdownMenuItem>
                     {threadActions.launchNumo ? (
@@ -797,7 +737,7 @@ export function LineWidget({
     <div className="flex flex-col gap-2 bg-muted/20 px-3 py-2.5">
       {/* The arrow ↳ says “this relates to the above”. */}
       <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-        <CornerDownRight className="size-3 shrink-0" />
+        <HugeiconsIcon icon={ArrowTurnDownIcon} className="size-3 shrink-0" />
         <span className="font-mono">{label}</span>
       </div>
       {children}
@@ -840,9 +780,9 @@ export function StaleThreads({
         className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-muted-foreground transition-colors hover:bg-muted/60"
       >
         {open ? (
-          <ChevronDown className="size-3.5 shrink-0" />
+          <HugeiconsIcon icon={ArrowDown01Icon} className="size-3.5 shrink-0" />
         ) : (
-          <ChevronRight className="size-3.5 shrink-0" />
+          <HugeiconsIcon icon={ArrowRight01Icon} className="size-3.5 shrink-0" />
         )}
         {label ? label(threads.length) : t("staleConversations", { count: threads.length })}
       </button>

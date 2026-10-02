@@ -1,13 +1,46 @@
+import { issueStore } from "@/lib/server/issue-store";
+import { categoryStore } from "@/lib/server/category-store";
+import { objectiveStore } from "@/lib/server/objective-store";
+import { commentStore } from "@/lib/server/comment-store";
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
+import { decodeApiKeyContent, type StoredApiKey } from
+  "@/lib/server/api-key-content";
+import { decodeBillingAccount } from "@/lib/server/billing-content";
+import { openPush, type StoredPush } from "@/lib/server/push/content";
 import { CONTACT_EMAIL } from "@/lib/site";
 import {
   ACCOUNT_TRANSFER_FORMAT,
   ACCOUNT_TRANSFER_VERSION,
   CURRENT_ACCOUNT_EXPORT_VERSION,
 } from "@/lib/account-transfer";
-import { projectIconPaths } from "@/lib/server/project-storage";
+import { downloadProjectIcon } from "@/lib/server/project-icon";
+import { decodeView } from "@/lib/server/view-content";
+import { decodeSavedView } from "@/lib/server/saved-view-bookmark";
+import { decodeRoutine } from "@/lib/server/routine-content";
+import { decodeProject } from "@/lib/server/project-content";
+import { decodePageProjection } from "@/lib/server/page-content";
+import { decodeUserAiKeyRow, type UserAiKeyRow } from
+  "@/lib/server/user-ai-key-content";
+import { downloadAttachment } from "@/lib/server/attachments";
+import { decodeAttachmentRow, type AttachmentTable } from
+  "@/lib/server/attachment-content";
+import { getScratchpadRow } from "@/lib/server/scratchpad";
+import { readStatEvents } from "@/lib/server/stat-events";
+import { hydrateAgentSummaryCopies } from "@/lib/server/agent/run-event-store";
+import { hydrateAgentLaunchCopies, hydrateImportedAgentMessages } from "@/lib/server/agent/run-launch-content";
+import { hydrateAgentQueueCopies } from "@/lib/server/agent/run-queue-content";
+import { hydrateWorkerParentCopies } from "@/lib/server/agent/worker-parent-content";
+import { hydrateNumoUserMessages } from "@/lib/server/numo/user-message-content";
+import { hydrateNumoFinalMessages } from "@/lib/server/numo/final-content";
+import { hydrateNumoToolMessages } from "@/lib/server/numo/tool-content";
+import { decodeConversationTitle } from
+  "@/lib/server/numo/conversation-title-content";
+import { decodeAgentContextSnapshot, legacyAgentContextSchema } from
+  "@/lib/server/agent/context-snapshot-content";
+import { decodeAgentBranchPrefix } from
+  "@/lib/server/agent/branch-prefix-content";
 
 /**
  * Export of account data (MIN-119, GDPR art. 15 and 20).
@@ -20,8 +53,8 @@ import { projectIconPaths } from "@/lib/server/project-storage";
  * Concretely:
  * • the ENTIRE content of the projects it owns — these are those
  * that the deletion of the account takes away, members included;
- * • her contributions in the projects of others — tickets that she created or
- * that are assigned to her, comments that she wrote;
+ * • tickets she created or was assigned in projects she can currently access,
+ *   plus comments that she wrote;
  * • everything that is strictly personal: cycles, notepads, conversations
  * with the assistant, notifications, statistics, preferences.
  *
@@ -71,46 +104,37 @@ function one(table: string, result: QueryResult): Row | null {
 async function includeStorageBytes(
   service: ReturnType<typeof getServiceClient>,
   rows: Row[],
+  table: AttachmentTable,
+  actorId: string,
 ): Promise<Row[]> {
   return Promise.all(
-    rows.map(async (row) => {
+    rows.map(async (stored) => {
+      const row = await decodeAttachmentRow(table, stored, actorId);
       const storagePath = row.storage_path;
       if (typeof storagePath !== "string" || !storagePath) return row;
-      const { data, error } = await service.storage
-        .from("attachments")
-        .download(storagePath);
-      if (error || !data) {
-        throw new Error(`attachments/${storagePath}: ${error?.message ?? "download failed"}`);
-      }
+      const data = await downloadAttachment(service, storagePath);
+      if (!data) throw new Error(`attachments/${storagePath}: download failed`);
       return {
         ...row,
-        storage_base64: Buffer.from(await data.arrayBuffer()).toString("base64"),
+        storage_base64: data.toString("base64"),
       };
     }),
   );
 }
 
 async function includeProjectIcons(
-  service: ReturnType<typeof getServiceClient>,
+  _service: ReturnType<typeof getServiceClient>,
   projects: Row[],
 ): Promise<Row[]> {
-  const paths = await projectIconPaths(
-    service,
-    projects.map((project) => project.id as string),
-  );
   return Promise.all(
     projects.map(async (project) => {
       const id = project.id as string;
-      const path = paths.find((candidate) => candidate.startsWith(`${id}.`));
-      if (!path) return project;
-      const { data, error } = await service.storage.from("project-icons").download(path);
-      if (error || !data) {
-        throw new Error(`project-icons/${path}: ${error?.message ?? "download failed"}`);
-      }
+      const data = await downloadProjectIcon(id);
+      if (!data) return project;
       return {
         ...project,
-        project_icon_base64: Buffer.from(await data.arrayBuffer()).toString("base64"),
-        project_icon_mime_type: data.type || "image/webp",
+        project_icon_base64: data.bytes.toString("base64"),
+        project_icon_mime_type: data.mimeType,
       };
     }),
   );
@@ -123,7 +147,9 @@ async function includeProjectIcons(
 // without giving a line.
 const PAGE_COLUMNS =
   "id, project_id, parent_id, title, icon, content, position, favorite, version, " +
-  "created_by, updated_by, created_at, updated_at, deleted_at, deleted_by";
+  "created_by, updated_by, created_at, updated_at, deleted_at, deleted_by, " +
+  "database_schema, database_revision, database_title_name, property_values, " +
+  "encrypted_content, encryption_version";
 
 const ISSUE_COLUMNS =
   "id, project_id, number, title, description, plan, status, priority, effort, " +
@@ -152,6 +178,8 @@ export interface AccountExport {
   categories: Row[];
   issue_categories: Row[];
   views: Row[];
+  saved_views: Row[];
+  agent_routines: Row[];
   cycles: Row[];
   scratchpad: Row | null;
   assistant_conversations: Row[];
@@ -184,16 +212,31 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
 
   // Owned projects — the export gives the entire content, since their
   // suppression suivra celle du compte.
-  const ownedProjects = list(
+  const ownedProjectRows = list(
     "projects",
     await service
       .from("projects")
-      .select("id, name, key, color, created_at, updated_at, deleted_at")
+      .select("*")
       .eq("owner_id", userId)
       .order("created_at")
   );
+  const projectFields = ["id", "name", "key", "color", "created_at",
+    "updated_at", "deleted_at", "smart_assign_enabled", "smart_assign_rules",
+    "auto_assign_enabled", "feedback_review_enabled",
+    "feedback_review_skip_over_budget", "automations_enabled", "automations",
+    "feedback_translate_enabled", "feedback_team_language",
+    "feedback_no_translate_languages", "orb_seed"];
+  const ownedProjects = await Promise.all(ownedProjectRows.map(async (row) => {
+    const plain = await decodeProject(row, userId);
+    return Object.fromEntries(projectFields.map((field) => [field, plain[field]]));
+  }));
   const exportedProjects = await includeProjectIcons(service, ownedProjects);
   const ownedIds = exportedProjects.map((p) => p.id as string);
+  const membershipsResult = await service.from("project_members")
+    .select("project_id, role, created_at").eq("user_id", userId);
+  const memberIds = list("project_members", membershipsResult)
+    .map((membership) => membership.project_id as string);
+  const readableIssueProjectIds = [...new Set([...ownedIds, ...memberIds])];
 
   const [
     preferences,
@@ -207,6 +250,8 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
     objectives,
     categories,
     views,
+    savedViews,
+    routines,
     cycles,
     scratchpad,
     conversations,
@@ -222,16 +267,16 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
     modelKeys,
   ] = await Promise.all([
     service.from("user_agent_preferences").select("*").eq("user_id", userId).maybeSingle(),
-    service.from("project_members").select("project_id, role, created_at").eq("user_id", userId),
+    Promise.resolve(membershipsResult),
     ownedIds.length
-      ? service.from("issues").select(ISSUE_COLUMNS).in("project_id", ownedIds)
+      ? issueStore(service).select(ISSUE_COLUMNS).in("project_id", ownedIds)
       : Promise.resolve({ data: [] as Row[], error: null }),
-    service
-      .from("issues")
-      .select(ISSUE_COLUMNS)
-      .or(`created_by.eq.${userId},assignee_id.eq.${userId}`),
-    service
-      .from("comments")
+    readableIssueProjectIds.length
+      ? issueStore(service).select(ISSUE_COLUMNS)
+          .in("project_id", readableIssueProjectIds)
+          .or(`created_by.eq.${userId},assignee_id.eq.${userId}`)
+      : Promise.resolve({ data: [] as Row[], error: null }),
+    commentStore(service, "comments", userId)
       .select(
         "id, issue_id, parent_id, body, via_assistant, via_mcp, created_at, updated_at"
       )
@@ -267,22 +312,21 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
           .order("created_at")
       : Promise.resolve({ data: [] as Row[], error: null }),
     ownedIds.length
-      ? service.from("objectives").select("*").in("project_id", ownedIds)
+      ? objectiveStore(service).select("*").in("project_id", ownedIds)
       : Promise.resolve({ data: [] as Row[], error: null }),
     ownedIds.length
-      ? service
-          .from("categories")
+      ? categoryStore(service)
           .select("id, project_id, name, color, created_at")
           .in("project_id", ownedIds)
           .order("created_at")
       : Promise.resolve({ data: [] as Row[], error: null }),
     service.from("views").select("*").eq("user_id", userId),
+    service.from("saved_views").select("*").eq("user_id", userId),
+    ownedIds.length
+      ? service.from("agent_routines").select("*").in("project_id", ownedIds)
+      : Promise.resolve({ data: [] as Row[], error: null }),
     service.from("cycles").select("*").eq("user_id", userId).order("start_date"),
-    service
-      .from("user_scratchpad")
-      .select("content, updated_at")
-      .eq("user_id", userId)
-      .maybeSingle(),
+    getScratchpadRow(service, userId),
     service
       .from("conversations")
       .select("id, project_id, title, created_at, updated_at")
@@ -302,18 +346,14 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
     // the label already says what device it is.
     service
       .from("push_subscriptions")
-      .select("transport, native_installation_id, device_label, enabled, created_at, last_push_at")
+      .select("*")
       .eq("user_id", userId)
       .order("created_at"),
-    service
-      .from("stat_events")
-      .select("kind, occurred_at, project_name, issue_number, issue_title")
-      .eq("user_id", userId)
-      .order("occurred_at"),
+    readStatEvents(service, userId),
     service
       .from("billing_accounts")
       .select(
-        "email, stripe_plan_id, stripe_subscription_status, stripe_current_period_start, " +
+        "user_id, email, stripe_plan_id, stripe_subscription_status, stripe_current_period_start, " +
           "stripe_current_period_end, stripe_cancel_at_period_end, created_at"
       )
       .eq("user_id", userId)
@@ -332,7 +372,7 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
     // NEVER comes out — that's the secret, even in the form of a print.
     service
       .from("api_keys")
-      .select("name, key_prefix, created_at, last_used_at, revoked_at")
+      .select("*")
       .eq("user_id", userId)
       .order("created_at"),
     service
@@ -354,7 +394,7 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
       .order("created_at"),
     service
       .from("user_ai_keys")
-      .select("provider, key_prefix, base_url, created_at, last_used_at")
+      .select("id, user_id, provider, key_encrypted, key_prefix, base_url, feature_models, encrypted_content, encryption_version, created_at, last_used_at")
       .eq("user_id", userId)
       .order("created_at"),
   ]);
@@ -362,14 +402,19 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
   const conversationRows = list("conversations", conversations);
   const conversationIds = conversationRows.map((c) => c.id as string);
   const messages = conversationIds.length
-    ? list(
+    ? (await hydrateWorkerParentCopies(service, await hydrateNumoToolMessages(service,
+      await hydrateNumoFinalMessages(service,
+        await hydrateNumoUserMessages(service, list(
         "assistant_messages",
         await service
           .from("assistant_messages")
-          .select("conversation_id, role, content, tool_name, created_at")
+          .select("id, conversation_id, role, content, context, metadata, tool_calls, tool_call_id, tool_name, created_at")
           .in("conversation_id", conversationIds)
           .order("created_at")
-      )
+      ), userId), userId), userId), userId)).map(({ conversation_id, role, content,
+        context, metadata, tool_calls, tool_call_id, tool_name, created_at }) =>
+        ({ conversation_id, role, content, context, metadata, tool_calls,
+          tool_call_id, tool_name, created_at }))
     : [];
 
   const messagesByConversation = new Map<string, Row[]>();
@@ -380,34 +425,52 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
     else messagesByConversation.set(key, [message]);
   }
 
-  const codeConversationRows = list(
-    "agent_conversations",
-    await service
-      .from("agent_conversations")
-      .select("id, project_id, title, visibility, archived_at, created_at, updated_at")
-      .eq("owner_id", userId)
-      .order("created_at"),
+  const { decodeAgentTitle, legacyAgentTitleSchema } = await import(
+    "@/lib/server/agent/run-title-content"
   );
+  const { decodeTurnSummaryValue } = await import(
+    "@/lib/server/agent/run-summary-content"
+  );
+  const codeConversationQuery = await service.from("agent_conversations")
+    .select("id, project_id, title, title_ciphertext, title_encryption_version, visibility, archived_at, created_at, updated_at")
+    .eq("owner_id", userId).order("created_at");
+  const codeConversationRaw = legacyAgentTitleSchema(codeConversationQuery.error)
+    ? list("agent_conversations", await service.from("agent_conversations")
+      .select("id, project_id, title, visibility, archived_at, created_at, updated_at")
+      .eq("owner_id", userId).order("created_at"))
+    : list("agent_conversations", codeConversationQuery);
+  const codeConversationRows = await Promise.all(codeConversationRaw.map(async (row) => {
+    const decoded = await decodeAgentTitle(row as { id: string; project_id: string;
+      title: string | null; title_ciphertext?: string | null;
+      title_encryption_version?: number }, userId);
+    const { title_ciphertext: _cipher, title_encryption_version: _version, ...exported } = decoded;
+    return exported;
+  }));
   const codeConversationIds = codeConversationRows.map((c) => c.id as string);
   const [codeMessages, codeTurns, codeContexts] = codeConversationIds.length
     ? await Promise.all([
         service
           .from("agent_messages")
-          .select("conversation_id, turn_id, role, content, source, created_at")
+          .select("id, conversation_id, turn_id, run_id, role, content, source, legacy_event_id, legacy_queue_message_id, created_at")
           .in("conversation_id", codeConversationIds)
           .order("created_at"),
         service
           .from("agent_turns")
           .select(
-            "id, conversation_id, status, model, reasoning_level, cost_usd, outcome, error_message, started_at, completed_at, created_at",
+            "id, conversation_id, run_id, status, model, reasoning_level, cost_usd, outcome, error_message, started_at, completed_at, created_at",
           )
           .in("conversation_id", codeConversationIds)
           .order("created_at"),
-        service
-          .from("agent_conversation_contexts")
-          .select("conversation_id, kind, resource_id, role, snapshot, created_at")
-          .in("conversation_id", codeConversationIds)
-          .order("created_at"),
+        (async () => {
+          const first = await service.from("agent_conversation_contexts")
+            .select("conversation_id, kind, resource_id, role, snapshot, snapshot_ciphertext, snapshot_encryption_version, created_at")
+            .in("conversation_id", codeConversationIds).order("created_at");
+          return legacyAgentContextSchema(first.error)
+            ? service.from("agent_conversation_contexts")
+                .select("conversation_id, kind, resource_id, role, snapshot, created_at")
+                .in("conversation_id", codeConversationIds).order("created_at")
+            : first;
+        })(),
       ])
     : [
         { data: [] as Row[], error: null },
@@ -417,6 +480,46 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
 
   const codeRowsFor = (table: string, result: QueryResult, id: string): Row[] =>
     list(table, result).filter((row) => row.conversation_id === id);
+  const exportedCodeConversations = await Promise.all(codeConversationRows.map(async (c) => ({
+    ...c,
+    contexts: await Promise.all(codeRowsFor("agent_conversation_contexts", codeContexts,
+      c.id as string).map(async (row) => {
+      const decoded = await decodeAgentContextSnapshot(c.project_id as string,
+        row as { conversation_id: string; kind: string; resource_id: string;
+          snapshot: Record<string, unknown>; snapshot_ciphertext?: string | null;
+          snapshot_encryption_version?: number }, userId);
+      const { snapshot_ciphertext: _cipher, snapshot_encryption_version: _version,
+        ...exported } = decoded;
+      return exported;
+    })),
+    turns: await Promise.all(codeRowsFor("agent_turns", codeTurns, c.id as string)
+      .map(async (turn) => {
+        const [outcome, error] = await Promise.all([
+          decodeTurnSummaryValue(c.project_id as string, turn.id as string,
+            turn.run_id as string | null, "outcome", turn.outcome as string | null, userId),
+          decodeTurnSummaryValue(c.project_id as string, turn.id as string,
+            turn.run_id as string | null, "error_message",
+            turn.error_message as string | null, userId),
+        ]);
+        const { run_id: _runId, ...exported } = turn;
+        return { ...exported, outcome, error_message: error };
+      })),
+    messages: (await hydrateImportedAgentMessages(service,
+      await hydrateAgentQueueCopies(service,
+        await hydrateAgentLaunchCopies(service,
+          await hydrateAgentSummaryCopies(service, c.project_id as string,
+            codeRowsFor("agent_messages", codeMessages, c.id as string), userId),
+          userId, c.project_id as string),
+        userId, c.project_id as string),
+      userId, c.project_id as string)).map((row) => {
+      const exported = { ...row };
+      delete exported.id;
+      delete exported.legacy_event_id;
+      delete exported.legacy_queue_message_id;
+      delete exported.run_id;
+      return exported;
+    }),
+  })));
 
   // A ticket from an owned project can also have been created by the person:
   // deduplicated so as not to output it twice.
@@ -438,9 +541,25 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
   const exportedAttachments = await includeStorageBytes(
     service,
     list("attachments", attachments),
+    "attachments", userId,
   );
-  const exportedPageFiles = await includeStorageBytes(service, list("page_files", pageFiles));
+  const exportedPageFiles = await includeStorageBytes(service,
+    list("page_files", pageFiles), "page_files", userId);
 
+  const storedPreferences = one("user_agent_preferences", preferences);
+  const exportedPreferences = storedPreferences ? {
+    ...storedPreferences,
+    branch_prefix: await decodeAgentBranchPrefix(userId,
+      storedPreferences.branch_prefix as string | null),
+  } : null;
+  if (exportedPreferences) {
+    delete (exportedPreferences as Row).branch_prefix_encryption_checked_at;
+    delete (exportedPreferences as Row).branch_prefix_encryption_attempted_at;
+  }
+  const billingRow = one("billing_accounts", billing);
+  const exportedBilling = billingRow
+    ? await decodeBillingAccount(userId, billingRow as Row & {
+      user_id: string; email: string | null }) : null;
   return {
     transfer_format: ACCOUNT_TRANSFER_FORMAT,
     transfer_version: ACCOUNT_TRANSFER_VERSION,
@@ -489,39 +608,59 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
       email_confirmed_at: user.email_confirmed_at ?? null,
       user_metadata: user.user_metadata ?? {},
     },
-    preferences: one("user_agent_preferences", preferences),
+    preferences: exportedPreferences,
     owned_projects: exportedProjects,
     memberships: list("project_members", memberships),
     issues: [...issuesById.values()],
     comments: list("comments", comments),
     attachments: exportedAttachments,
     page_files: exportedPageFiles,
-    pages: list("pages", pages),
+    pages: await Promise.all(list("pages", pages).map((row) =>
+      decodePageProjection(row, userId))),
     objectives: list("objectives", objectives),
     categories: list("categories", categories),
     issue_categories: issueCategories,
-    views: list("views", views),
+    views: await Promise.all(list("views", views).map((row) =>
+      decodeView(row, userId))),
+    saved_views: await Promise.all(list("saved_views", savedViews).map((row) =>
+      decodeSavedView(row, userId))),
+    agent_routines: await Promise.all(list("agent_routines", routines).map((row) =>
+      decodeRoutine(row, userId))),
     cycles: list("cycles", cycles),
-    scratchpad: one("user_scratchpad", scratchpad),
-    assistant_conversations: conversationRows.map((c) => ({
+    scratchpad: scratchpad ? { content: scratchpad.content, updated_at: scratchpad.updated_at } : null,
+    assistant_conversations: await Promise.all(conversationRows.map(async (c) => ({
       ...c,
+      title: await decodeConversationTitle(userId, c.id as string,
+        c.title as string | null, userId),
       messages: messagesByConversation.get(c.id as string) ?? [],
-    })),
-    code_agent_conversations: codeConversationRows.map((c) => ({
-      ...c,
-      contexts: codeRowsFor("agent_conversation_contexts", codeContexts, c.id as string),
-      turns: codeRowsFor("agent_turns", codeTurns, c.id as string),
-      messages: codeRowsFor("agent_messages", codeMessages, c.id as string),
-    })),
+    }))),
+    code_agent_conversations: exportedCodeConversations,
     notifications: list("notifications", notifications),
-    push_devices: list("push_subscriptions", pushDevices),
-    statistics: list("stat_events", statistics),
-    billing: one("billing_accounts", billing),
+    push_devices: await Promise.all(list("push_subscriptions", pushDevices)
+      .map(async (row) => {
+        const device = await openPush(row as StoredPush & Record<string, unknown>);
+        return { transport: device.transport, device_label: device.device_label,
+          enabled: device.enabled, created_at: device.created_at,
+          last_push_at: device.last_push_at };
+      })),
+    statistics,
+    billing: exportedBilling,
     ai_usage: list("ai_usage", aiUsage),
-    api_keys: list("api_keys", apiKeys),
+    api_keys: await Promise.all(list("api_keys", apiKeys).map(async (row) => {
+      const content = await decodeApiKeyContent(row as StoredApiKey);
+      return { name: content.name, key_prefix: row.key_prefix,
+        created_at: row.created_at, last_used_at: row.last_used_at,
+        revoked_at: row.revoked_at };
+    })),
     connected_apps: list("oauth_grants", grants),
     git_connections: list("git_connections", gitConnections),
     git_user_identities: list("git_user_identities", gitIdentities),
-    model_keys: list("user_ai_keys", modelKeys),
+    model_keys: await Promise.all(list("user_ai_keys", modelKeys).map(
+      async (row) => {
+        const plain = await decodeUserAiKeyRow(row as UserAiKeyRow, userId);
+        return { provider: plain.provider, key_prefix: plain.key_prefix,
+          base_url: plain.base_url, created_at: plain.created_at,
+          last_used_at: plain.last_used_at };
+      })),
   };
 }

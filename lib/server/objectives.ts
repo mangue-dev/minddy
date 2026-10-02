@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
+import { decodeObjective, encodeObjective } from "@/lib/server/objective-store";
 import { getProjectAccess } from "@/lib/server/project-access";
 import { userInProject } from "@/lib/server/tenancy";
 import { OBJECTIVE_STATUS_VALUES } from "@/lib/objective-constants";
@@ -88,6 +89,7 @@ export async function createObjective({
 
   const row: Record<string, unknown> = {
     name: name.slice(0, MAX_NAME_LENGTH),
+    description: null,
   };
   if (typeof input.description === "string") {
     row.description = input.description.slice(0, MAX_DESCRIPTION_LENGTH);
@@ -153,10 +155,17 @@ export async function createObjective({
   // The service role bypasses RLS. The RPC locks the project, re-checks the
   // actor and lead membership, and inserts before that authorization can be
   // revoked by a concurrent membership write.
+  let stored: Record<string, unknown>;
+  try {
+    stored = await encodeObjective({ ...row, project_id: projectId });
+  } catch {
+    return { ok: false, status: 500, errorKey: "databaseError" };
+  }
+  const { project_id: _projectId, ...values } = stored;
   const { data, error } = await service.rpc("create_objective_guarded", {
     p_project_id: projectId,
     p_actor_id: actorId,
-    p_values: row,
+    p_values: values,
   });
 
   if (error) {
@@ -174,7 +183,12 @@ export async function createObjective({
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
 
-  const createdObjective = data as Record<string, unknown>;
+  let createdObjective: Record<string, unknown>;
+  try {
+    createdObjective = await decodeObjective(data as Record<string, unknown>, actorId);
+  } catch {
+    return { ok: false, status: 500, errorKey: "databaseError" };
+  }
 
   // Resource rows — the objective exists from here on, so a failure must not
   // fail the request (the resources just don't get registered).
@@ -305,6 +319,12 @@ export async function updateObjective({
   if (!access) {
     return { ok: false, status: 404, errorKey: "objectiveNotFound" };
   }
+  let previousObjective: Record<string, unknown>;
+  try {
+    previousObjective = await decodeObjective(objective, actorId);
+  } catch {
+    return { ok: false, status: 500, errorKey: "databaseError" };
+  }
 
   // Same guard as at creation (MIN-339).
   if (typeof updates.lead_user_id === "string") {
@@ -322,10 +342,28 @@ export async function updateObjective({
   // The snapshot and write come back from one database transaction. The RPC
   // locks the project before re-checking membership, so a concurrent revocation
   // is ordered entirely before or after this mutation.
+  const protectedEdit = Object.hasOwn(updates, "name") || Object.hasOwn(updates, "description");
+  const guardedUpdates: Record<string, unknown> = {
+    ...updates, encryption_revision: objective.encryption_revision ?? 0,
+  };
+  if (protectedEdit) {
+    try {
+      const encoded = await encodeObjective({ ...previousObjective, ...updates },
+        Number(objective.encryption_version ?? 0));
+      guardedUpdates.name = encoded.name;
+      guardedUpdates.description = encoded.description;
+      if (encoded.encrypted_content) {
+        guardedUpdates.encrypted_content = encoded.encrypted_content;
+        guardedUpdates.encryption_version = encoded.encryption_version;
+      }
+    } catch {
+      return { ok: false, status: 500, errorKey: "databaseError" };
+    }
+  }
   const { data, error } = await service.rpc("update_objective_guarded", {
     p_objective_id: objectiveId,
     p_actor_id: actorId,
-    p_updates: updates,
+    p_updates: guardedUpdates,
   });
 
   if (error) {
@@ -335,6 +373,9 @@ export async function updateObjective({
     }
     if (guard === "leadForbidden") {
       return { ok: false, status: 400, errorKey: "notAProjectMember" };
+    }
+    if (error.message.includes("objective_revision_conflict")) {
+      return { ok: false, status: 409, errorKey: "databaseError" };
     }
     console.error("[objectives] update failed:", error.message);
     return { ok: false, status: 500, errorKey: "databaseError" };
@@ -350,8 +391,14 @@ export async function updateObjective({
   if (!mutation.previous || !mutation.objective) {
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
-  const previous = mutation.previous;
-  const updatedObjective = mutation.objective;
+  let previous: Record<string, unknown>;
+  let updatedObjective: Record<string, unknown>;
+  try {
+    previous = await decodeObjective(mutation.previous, actorId);
+    updatedObjective = await decodeObjective(mutation.objective, actorId);
+  } catch {
+    return { ok: false, status: 500, errorKey: "databaseError" };
+  }
 
   const events = buildObjectiveFieldChangeEvents(
     objectiveId,

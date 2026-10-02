@@ -1,8 +1,9 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Add01Icon, Delete02Icon } from "@hugeicons/core-free-icons";
 import {useCallback, useEffect, useMemo, useState} from "react";
 import {useLocale, useTranslations} from "next-intl";
-import {Plus, Trash2} from "lucide-react";
 import {Button, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Skeleton, Spinner, Switch, Textarea, toast} from "mangue-ui";
 import type { MessageKey } from "@/lib/i18n-keys";
 import {SettingsGroup, SettingsRow} from "@/components/settings/settings-ui";
@@ -82,6 +83,7 @@ export function AdminModelsDashboard() {
       byok: [],
       voice: [],
       feedback: [],
+      site: [],
     };
     for (const f of AI_MODEL_CONFIG_FIELDS) map[f.group].push(f);
     return map;
@@ -193,6 +195,7 @@ const MODEL_GROUP_SECTIONS: Record<AiConfigGroup, AdminSectionId> = {
   byok: ADMIN_SECTIONS.modelsByok,
   voice: ADMIN_SECTIONS.modelsVoice,
   feedback: ADMIN_SECTIONS.modelsFeedback,
+  site: ADMIN_SECTIONS.modelsSite,
 };
 
 /**
@@ -846,7 +849,7 @@ function FavoritesRow({
                 aria-label={t("favorites.remove")}
                 onClick={() => setList((prev) => prev.filter((_, i) => i !== index))}
               >
-                <Trash2 className="size-4" />
+                <HugeiconsIcon icon={Delete02Icon} className="size-4" />
               </Button>
             </div>
             <Textarea
@@ -872,7 +875,7 @@ function FavoritesRow({
             disabled={busy}
             onClick={() => setList((prev) => [...prev, { id: "", label: "", use_case: "" }])}
           >
-            <Plus className="size-4" />
+            <HugeiconsIcon icon={Add01Icon} className="size-4" />
             {t("favorites.add")}
           </Button>
           {dirty ? (
@@ -1064,7 +1067,7 @@ function RecommendedRow({
                 })
               }
             >
-              <Trash2 className="size-4" />
+              <HugeiconsIcon icon={Delete02Icon} className="size-4" />
             </Button>
           </div>
         ))}
@@ -1084,7 +1087,7 @@ function RecommendedRow({
             disabled={busy || incomplete}
             onClick={() => setList((prev) => [...prev, ""])}
           >
-            <Plus className="size-4" />
+            <HugeiconsIcon icon={Add01Icon} className="size-4" />
             {t("recommended.add")}
           </Button>
           {dirty ? (

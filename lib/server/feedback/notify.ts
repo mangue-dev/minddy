@@ -60,10 +60,7 @@ export async function notifyFeedbackTransition(
         actor_id: null,
       })),
     );
-  } catch (error) {
-    console.error(
-      "[feedback-notifications] insert failed:",
-      (error as Error).message,
-    );
+  } catch {
+    console.error("[feedback-notifications] insert_failed");
   }
 }

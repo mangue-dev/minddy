@@ -1,9 +1,10 @@
 "use client";
 
+import { RelationObjectiveLabel } from "@/components/relation-objective-label";
 import { useTranslations } from "next-intl";
 import { CommandGroup, CommandItem } from "mangue-ui";
 import { CommandAnchor } from "@/components/command-anchor";
-import { ObjectiveStatusIndicator, StatusIndicator } from "@/components/issue-indicators";
+import { StatusIndicator } from "@/components/issue-indicators";
 import { issueIdentifier } from "@/lib/issue-constants";
 import type { Issue, IssueRelationType, Objective, RelationEndpointType } from "@/lib/types";
 
@@ -43,7 +44,7 @@ export function RelationTargetPicker({
               }}
             >
               <StatusIndicator status={issue.status} className="size-4" />
-              <span className="shrink-0 font-mono text-xs text-muted-foreground">
+              <span className="shrink-0 whitespace-nowrap font-mono text-xs text-muted-foreground">
                 {id}
               </span>
               <span className="truncate">{issue.title}</span>
@@ -63,8 +64,7 @@ export function RelationTargetPicker({
                 onSelect(objective.id, "objective");
               }}
             >
-              <ObjectiveStatusIndicator status={objective.status} className="size-4" />
-              <span className="truncate">{objective.name}</span>
+              <RelationObjectiveLabel objective={objective} />
             </CommandItem>
           ))}
         </CommandGroup>

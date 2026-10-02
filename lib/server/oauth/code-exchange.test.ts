@@ -1,9 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { randomBytes } from "node:crypto";
+import { EncryptedStore } from "@/lib/server/encryption/store";
 
 interface CodeRow extends Record<string, unknown> {
   code_hash: string;
   client_id: string;
-  redirect_uri: string;
+  redirect_uri: string | null;
+  resource?: string | null;
+  encrypted_content?: string | null;
+  encryption_version?: number;
   code_challenge: string;
   used_at: string | null;
   expires_at: string;
@@ -51,11 +56,18 @@ function makeQuery() {
 vi.mock("@/lib/supabase-service", () => ({
   getServiceClient: () => ({ from: () => makeQuery() }),
 }));
+const material = randomBytes(32);
+const store = new EncryptedStore({
+  current: async () => ({ version: 2, bytes: Buffer.from(material) }),
+  byVersion: async (_scope, version) => ({ version, bytes: Buffer.from(material) }),
+});
+vi.mock("@/lib/server/encryption/registry", () => ({ getEncryptedStore: () => store }));
 
 const { claimAuthorizationCode, findReplayedCode } = await import(
   "@/lib/server/oauth/codes"
 );
 const { pkceS256Challenge, sha256Hex } = await import("@/lib/server/oauth/crypto");
+const { encodeOAuthCodeContent } = await import("@/lib/server/oauth/code-content");
 
 const CODE = "mdyac_authorization-code";
 const VERIFIER = "v".repeat(43);
@@ -100,6 +112,22 @@ describe("OAuth authorization-code exchange binding", () => {
     expect(
       await findReplayedCode(CODE, { ...EXCHANGE, codeChallenge: "wrong-challenge" })
     ).toBeNull();
+    expect(await findReplayedCode(CODE, EXCHANGE)).toBe("grant-1");
+  });
+
+  it("consumes a sealed code with the same atomic exchange checks", async () => {
+    const row = rows[0];
+    const encoded = await encodeOAuthCodeContent({ code_hash: row.code_hash,
+      user_id: row.user_id as string }, { redirect_uri: EXCHANGE.redirectUri,
+      resource: "https://private.example/resource" });
+    Object.assign(row, encoded, { redirect_uri: null, resource: null });
+    expect(JSON.stringify(row)).not.toContain("private.example");
+    expect(await claimAuthorizationCode(CODE, { ...EXCHANGE,
+      redirectUri: "https://client.example.test/wrong" })).toBeNull();
+    expect(row.used_at).toBeNull();
+    expect((await claimAuthorizationCode(CODE, EXCHANGE))?.resource)
+      .toBe("https://private.example/resource");
+    expect(row.used_at).toEqual(expect.any(String));
     expect(await findReplayedCode(CODE, EXCHANGE)).toBe("grant-1");
   });
 });

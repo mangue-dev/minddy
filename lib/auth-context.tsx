@@ -171,6 +171,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const supabase = getSupabase();
     let resolved = false;
+    let snapshotOwner: string | null | undefined;
 
     const timeoutId = window.setTimeout(() => {
       if (resolved) return;
@@ -182,6 +183,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } = supabase.auth.onAuthStateChange((event, s) => {
       resolved = true;
       window.clearTimeout(timeoutId);
+      const nextOwner = s?.user.id ?? null;
+      if (snapshotOwner !== undefined && snapshotOwner !== nextOwner && event !== "SIGNED_OUT") {
+        clearPersistedQueryCache();
+        clearAppTabsWindowState();
+      }
+      snapshotOwner = nextOwner;
       // ⚠ Bail-out on the TOKEN, not on the item (MIN-315). supabase-js re-issues
       // `SIGNED_IN` / `TOKEN_REFRESHED` when returning to the foreground and each time
       // token refresh, ALWAYS with new objects. Gold
@@ -221,6 +228,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         );
       } else if (event === "SIGNED_OUT") {
+        clearPersistedQueryCache();
         clearAppTabsWindowState();
         track("user_signed_out", {});
         reset();

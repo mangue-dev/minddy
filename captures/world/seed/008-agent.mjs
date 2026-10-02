@@ -1,9 +1,13 @@
 /**
- * 008 — a code agent run on a ticket.
+ * 008 — a code agent run on a ticket, delegated by Numo.
  *
- * For which capture: `workflowAgent` — “an agent run: execution thread
- * with tool calls (reading files, editing), and the associated outcome in
- * header”.
+ * For which capture: `workflowAgent` — “Numo gathers the project context and
+ * delegates repository work to a code worker… Follow the work in the
+ * conversation”. The dedicated `/agents` page is RETIRED: a run now lives in
+ * a Numo conversation as delegated work — a `launch_code_agent` tool call in
+ * the parent thread renders the delegated-work card, and the worker's own
+ * thread stays one "View" click away. The seed therefore builds both halves:
+ * the run (below), and the parent conversation that delegates to it.
  *
  * THE STATUS IS NOT FREE. The run is seeded in `completed` + `awaiting_input`,
  * that is to say “the agent has finished his turn and is waiting for the continuation” — the thread is
@@ -20,7 +24,16 @@
  * read LIVE at GitHub/GitLab (app/api/agent-runs/[runId]/pr) — none
  * given in base cannot manufacture it.
  *
- * Idempotent: an existing run on the targeted ticket is left as is.
+ * The parent conversation's tool result is NOT free either: the
+ * `numo_work_origins` view (migration 20270106670000) only links a worker to
+ * its parent when the `launch_code_agent` tool row carries
+ * `metadata.success = "true"`, a `launched: true` result and the run id —
+ * and `run.created_by` must equal the conversation's user. Without that link
+ * the run keeps a standalone conversation in the list and the card never
+ * appears.
+ *
+ * Idempotent: an existing run on the targeted ticket is left as is, and an
+ * existing delegation conversation is left as is.
  *
  *   node captures/world/seed/008-agent.mjs --dry-run
  *   node captures/world/seed/008-agent.mjs
@@ -39,6 +52,23 @@ const RUN = {
   base_branch: "main",
   branch_name: "numo/aur-2-palette-shortcuts",
   prompt: "Start with the global listener, and keep the sequence handling out of the row component.",
+  /** Stamped on the run like the real titler does; the delegated-work card
+      prefers it over the raw launch objective. */
+  title: "Add keyboard shortcuts to the command palette",
+};
+
+/**
+ * The parent Numo conversation that delegates to the run. Same title as the
+ * run it carries: once the origin link exists, the worker's standalone
+ * conversation leaves the list and this one carries the topic.
+ */
+const DELEGATION = {
+  title: "Add keyboard shortcuts to the command palette",
+  user:
+    "Implement AUR-2 for me — add the keyboard shortcuts on the command palette, following the issue's plan.",
+  narration: "Reading the issue, its plan and the palette sources first.",
+  objective:
+    "Implement the keyboard shortcuts on the command palette (AUR-2), following the issue's plan: declare the shortcut on each action, render the hint on the right of every row, and bind the global listener.",
 };
 
 /**
@@ -183,12 +213,14 @@ async function main() {
 
   const { data: runs, error: runError } = await world.admin
     .from("agent_runs")
-    .select("id, status")
+    .select("id, status, title, conversation_id, started_at, last_activity_at")
     .eq("issue_id", issue.id);
   if (runError) throw new Error(`captures: lecture des runs — ${runError.message}`);
 
   if ((runs || []).length > 0) {
+    const run = runs[0];
     console.log(`  → un run existe déjà sur ${TARGET.project}-${TARGET.number}, laissé tel quel`);
+    await seedDelegation(world, people, project, issue, run);
     return;
   }
 
@@ -206,6 +238,7 @@ async function main() {
       awaiting_input: true,
       triggered_by: "button",
       prompt: RUN.prompt,
+      title: RUN.title,
       model: RUN.model,
       key_mode: "platform",
       base_branch: RUN.base_branch,
@@ -247,6 +280,116 @@ async function main() {
   console.log(
     `  → run créé sur ${TARGET.project}-${TARGET.number} « ${issue.title} » avec ${EVENTS.length} événements`,
   );
+
+  await seedDelegation(world, people, project, issue, run);
+}
+
+/**
+ * The parent Numo conversation that delegates to the run: a user request, the
+ * assistant's `launch_code_agent` narration with the delegated-work card, and
+ * the tool result that binds the run. The worker's own thread (prompt +
+ * summary, anchored on the run's agent conversation) projects into this same
+ * conversation and closes the exchange — no Numo answer of its own: the
+ * worker's report is the one that asks the follow-up question.
+ */
+async function seedDelegation(world, people, project, issue, run) {
+  // The titler stamps this title on real runs; stamp it here when missing so
+  // the card and its detail sheet carry the topic, not the raw objective.
+  if (!run.title) {
+    const stamp = createPlan(world);
+    stamp.update("agent_runs", { id: run.id }, { title: RUN.title }, "titre du run");
+    console.log(stamp.describe());
+    await stamp.apply({ confirmed: true });
+    console.log(`  → run renommé « ${RUN.title} »`);
+  }
+
+  const { data: existing, error } = await world.admin
+    .from("conversations")
+    .select("id")
+    .eq("user_id", people.camille)
+    .eq("project_id", project.id)
+    .eq("title", DELEGATION.title);
+  if (error) throw new Error(`captures: lecture des conversations — ${error.message}`);
+  if ((existing || []).length > 0) {
+    console.log(`  → conversation « ${DELEGATION.title} » déjà là, contenu laissé tel quel`);
+    return;
+  }
+
+  const base = Date.parse(run.started_at ?? run.created_at);
+  const toolCallId = "call_launch_aur2";
+
+  const conversationPlan = createPlan(world);
+  conversationPlan.insert(
+    "conversations",
+    [{
+      project_id: project.id,
+      user_id: people.camille,
+      title: DELEGATION.title,
+      status: "idle",
+      created_at: new Date(base - 2 * 60_000).toISOString(),
+      updated_at: new Date(base - 30_000).toISOString(),
+    }],
+    "conversation",
+  );
+  console.log(conversationPlan.describe());
+  const insertedConversation = await conversationPlan.apply({ confirmed: true });
+  const conversation = insertedConversation.conversations[0];
+
+  const messagePlan = createPlan(world);
+  messagePlan.insert(
+    "assistant_messages",
+    [
+      {
+        conversation_id: conversation.id,
+        role: "user",
+        content: DELEGATION.user,
+        metadata: {},
+        created_at: new Date(base - 2 * 60_000).toISOString(),
+      },
+      {
+        conversation_id: conversation.id,
+        role: "assistant",
+        content: DELEGATION.narration,
+        tool_calls: [{
+          id: toolCallId,
+          type: "function",
+          function: {
+            name: "launch_code_agent",
+            arguments: JSON.stringify({
+              issue_id: issue.id,
+              mode: "implement",
+              objective: DELEGATION.objective,
+            }),
+          },
+        }],
+        metadata: {},
+        created_at: new Date(base - 60_000).toISOString(),
+      },
+      {
+        conversation_id: conversation.id,
+        role: "tool",
+        tool_call_id: toolCallId,
+        tool_name: "launch_code_agent",
+        // The exact shape the loop writes (lib/server/assistant/execute-tool.ts);
+        // `numo_work_origins` matches `run_id` and `launched` on it, and
+        // `metadata.success` opens the link.
+        content: JSON.stringify({
+          launched: true,
+          mode: "implement",
+          run_id: run.id,
+          conversation_id: run.conversation_id,
+          status: "completed",
+          model: RUN.model,
+        }),
+        metadata: { success: true },
+        created_at: new Date(base - 30_000).toISOString(),
+      },
+    ],
+    "message",
+  );
+  console.log(messagePlan.describe());
+  await messagePlan.apply({ confirmed: true });
+  console.log(`  → conversation « ${DELEGATION.title} » créée : délégation liée au run`);
 }
 
 await main();

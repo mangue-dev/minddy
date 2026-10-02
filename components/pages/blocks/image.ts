@@ -1,5 +1,5 @@
 import { Node } from "@tiptap/core";
-import { ImageIcon } from "lucide-react";
+import { ImageIcon } from "@hugeicons/core-free-icons";
 import { normalizePageFileSrc } from "@/lib/page-files";
 import { markdownLinkDestination } from "@/components/pages/blocks/escape";
 import type {

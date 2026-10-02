@@ -1,3 +1,7 @@
+import { issueStore } from "@/lib/server/issue-store";
+import { objectiveStore } from "@/lib/server/objective-store";
+import { commentStore } from "@/lib/server/comment-store";
+import { feedbackPostStore } from "@/lib/server/feedback-post-store";
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -11,6 +15,7 @@ import { displayName } from "@/lib/display-name";
 import { issueIdentifier } from "@/lib/issue-constants";
 import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
 import { getProjectAccess } from "@/lib/server/project-access";
+import { decodePageProjection } from "@/lib/server/page-content";
 import { hasUsageBudget } from "@/lib/server/usage";
 import type { PromptAttachment } from "./attachment-parts";
 import {
@@ -57,8 +62,7 @@ async function replyTargetsNumoInTable(input: {
   comment: { id: string; parent_id: string | null } & Record<string, unknown>;
 }): Promise<boolean> {
   if (!input.comment.parent_id) return false;
-  const { data: last } = await input.service
-    .from(input.table)
+  const { data: last } = await commentStore(input.service, input.table)
     .select("via_assistant, assistant_status")
     .eq(input.scopeColumn, input.comment[input.scopeColumn])
     .or(`id.eq.${input.comment.parent_id},parent_id.eq.${input.comment.parent_id}`)
@@ -273,8 +277,8 @@ async function runSharedSurfaceMention(input: {
       turnId: started.turnId,
       readClient: input.supabase,
     });
-  } catch (error) {
-    console.error(`[numo-surface] ${input.surface} failed:`, error);
+  } catch {
+    console.error("[numo-surface] execution_failed");
     await display?.fail();
     if (eventId) await failNumoSurfaceEvent(input.service, eventId);
   }
@@ -290,26 +294,28 @@ export async function runCommentMention(input: {
   trigger?: "mention" | "reply";
 }): Promise<void> {
   const { service, actorId, issueId, triggerCommentId } = input;
-  const { data: triggerRow } = await service
-    .from("comments")
-    .select("id, parent_id, body, author_id")
-    .eq("id", triggerCommentId)
-    .maybeSingle();
-  if (!triggerRow) return;
-  const rootId = (triggerRow.parent_id as string | null) ?? triggerRow.id as string;
-  const { data: issue } = await service
-    .from("issues")
-    .select("id, project_id, number, title, created_by, assignee_id")
+  const { data: parent } = await service.from("issues").select("id, project_id")
     .eq("id", issueId)
     .is("deleted_at", null)
     .maybeSingle();
-  const access = issue
-    ? await getProjectAccess(actorId, issue.project_id as string)
+  const access = parent
+    ? await getProjectAccess(actorId, parent.project_id as string)
     : null;
-  if (!issue || !access || !await hasUsageBudget(actorId, "assistant", "assistant_model")) return;
+  if (!parent || !access || !await hasUsageBudget(actorId, "assistant", "assistant_model")) return;
+  const { data: issue } = await issueStore(service, actorId)
+    .select("id, project_id, number, title, created_by, assignee_id")
+    .eq("id", issueId).eq("project_id", parent.project_id).is("deleted_at", null).maybeSingle();
+  if (!issue) return;
 
-  const [{ data: comments }, { data: attachments }, { data: root }] = await Promise.all([
-    service.from("comments")
+  const { data: triggerRow } = await commentStore(service, "comments", actorId)
+    .select("id, parent_id, body, author_id")
+    .eq("id", triggerCommentId).eq("issue_id", issueId)
+    .maybeSingle();
+  if (!triggerRow) return;
+  const rootId = (triggerRow.parent_id as string | null) ?? triggerRow.id as string;
+
+  const [{ data: comments, error: commentsError }, { data: attachments }, { data: root, error: rootError }] = await Promise.all([
+    commentStore(service, "comments", actorId)
       .select("id, author_id, body, via_assistant, created_at")
       .eq("issue_id", issueId)
       .or(`id.eq.${rootId},parent_id.eq.${rootId}`)
@@ -319,8 +325,9 @@ export async function runCommentMention(input: {
       .select(PROMPT_ATTACHMENT_COLUMNS)
       .eq("issue_id", issueId)
       .order("created_at", { ascending: true }),
-    service.from("comments").select("author_id").eq("id", rootId).maybeSingle(),
+    commentStore(service, "comments", actorId).select("author_id").eq("id", rootId).eq("issue_id", issueId).maybeSingle(),
   ]);
+  if (commentsError || rootError) throw new Error("Unable to read assistant comment context");
   const rows = [...(comments ?? [])].reverse();
   const names = await actorNames(service, actorId, rows);
   const grouped = groupPromptAttachments(attachments);
@@ -369,7 +376,7 @@ export async function runCommentMention(input: {
     ].slice(0, 5),
     destination,
     createResponse: async () => {
-      const { data, error } = await service.from("comments").insert({
+      const { data, error } = await commentStore(service, "comments", actorId).insert({
         issue_id: issueId,
         author_id: actorId,
         parent_id: rootId,
@@ -393,26 +400,33 @@ export async function runObjectiveCommentMention(input: {
   trigger?: "mention" | "reply";
 }): Promise<void> {
   const { service, actorId, objectiveId, triggerCommentId } = input;
-  const { data: triggerRow } = await service.from("comments")
-    .select("id, parent_id, body, author_id").eq("id", triggerCommentId).maybeSingle();
-  if (!triggerRow) return;
-  const rootId = (triggerRow.parent_id as string | null) ?? triggerRow.id as string;
-  const { data: objective } = await service.from("objectives")
-    .select("id, project_id, name, lead_user_id").eq("id", objectiveId)
+  const { data: target } = await objectiveStore(service)
+    .select("id, project_id, lead_user_id").eq("id", objectiveId)
     .is("deleted_at", null).maybeSingle();
   if (
-    !objective
-    || !await getProjectAccess(actorId, objective.project_id as string)
+    !target
+    || !await getProjectAccess(actorId, target.project_id as string)
     || !await hasUsageBudget(actorId, "assistant", "assistant_model")
   ) return;
-  const [{ data: comments }, { data: attachments }, { data: root }] = await Promise.all([
-    service.from("comments").select("id, author_id, body, via_assistant, created_at")
+  const { data: objective, error: objectiveError } = await objectiveStore(service, actorId)
+    .select("id, project_id, name, lead_user_id").eq("id", objectiveId)
+    .eq("project_id", target.project_id as string).is("deleted_at", null).maybeSingle();
+  if (objectiveError) throw new Error("Unable to read objective context");
+  if (!objective) return;
+  const { data: triggerRow } = await commentStore(service, "comments", actorId)
+    .select("id, parent_id, body, author_id").eq("id", triggerCommentId).eq("objective_id", objectiveId).maybeSingle();
+  if (!triggerRow) return;
+  const rootId = (triggerRow.parent_id as string | null) ?? triggerRow.id as string;
+
+  const [{ data: comments, error: commentsError }, { data: attachments }, { data: root, error: rootError }] = await Promise.all([
+    commentStore(service, "comments", actorId).select("id, author_id, body, via_assistant, created_at")
       .eq("objective_id", objectiveId).or(`id.eq.${rootId},parent_id.eq.${rootId}`)
       .order("created_at", { ascending: false }).limit(20),
     service.from("attachments").select(PROMPT_ATTACHMENT_COLUMNS)
       .eq("objective_id", objectiveId).order("created_at", { ascending: true }),
-    service.from("comments").select("author_id").eq("id", rootId).maybeSingle(),
+    commentStore(service, "comments", actorId).select("author_id").eq("id", rootId).eq("objective_id", objectiveId).maybeSingle(),
   ]);
+  if (commentsError || rootError) throw new Error("Unable to read assistant comment context");
   const rows = [...(comments ?? [])].reverse();
   const names = await actorNames(service, actorId, rows);
   const grouped = groupPromptAttachments(attachments);
@@ -458,7 +472,7 @@ export async function runObjectiveCommentMention(input: {
       },
     },
     createResponse: async () => {
-      const { data, error } = await service.from("comments").insert({
+      const { data, error } = await commentStore(service, "comments", actorId).insert({
         objective_id: objectiveId,
         author_id: actorId,
         parent_id: rootId,
@@ -482,25 +496,28 @@ export async function runPageCommentMention(input: {
   trigger?: "mention" | "reply";
 }): Promise<void> {
   const { service, actorId, pageId, triggerCommentId } = input;
-  const { data: triggerRow } = await service.from("page_comments")
-    .select("id, parent_id, body, author_id, block_id")
-    .eq("id", triggerCommentId).maybeSingle();
-  if (!triggerRow) return;
-  const rootId = (triggerRow.parent_id as string | null) ?? triggerRow.id as string;
   const { data: page } = await service.from("pages")
-    .select("id, project_id, title, created_by").eq("id", pageId)
+    .select("id, project_id, title, created_by, encrypted_content, encryption_version").eq("id", pageId)
     .is("deleted_at", null).maybeSingle();
   if (
     !page
     || !await getProjectAccess(actorId, page.project_id as string)
     || !await hasUsageBudget(actorId, "assistant", "assistant_model")
   ) return;
-  const [{ data: comments }, { data: root }] = await Promise.all([
-    service.from("page_comments").select("id, author_id, body, via_assistant, created_at")
+  const clearPage = await decodePageProjection(page, actorId);
+  const { data: triggerRow } = await commentStore(service, "page_comments", actorId)
+    .select("id, parent_id, body, author_id, block_id")
+    .eq("id", triggerCommentId).eq("page_id", pageId).maybeSingle();
+  if (!triggerRow) return;
+  const rootId = (triggerRow.parent_id as string | null) ?? triggerRow.id as string;
+
+  const [{ data: comments, error: commentsError }, { data: root, error: rootError }] = await Promise.all([
+    commentStore(service, "page_comments", actorId).select("id, author_id, body, via_assistant, created_at")
       .eq("page_id", pageId).or(`id.eq.${rootId},parent_id.eq.${rootId}`)
       .order("created_at", { ascending: false }).limit(20),
-    service.from("page_comments").select("author_id, quote").eq("id", rootId).maybeSingle(),
+    commentStore(service, "page_comments", actorId).select("author_id, quote").eq("id", rootId).eq("page_id", pageId).maybeSingle(),
   ]);
+  if (commentsError || rootError) throw new Error("Unable to read assistant comment context");
   const rows = [...(comments ?? [])].reverse();
   const names = await actorNames(service, actorId, rows);
   const thread = rows.map((row) => ({
@@ -517,11 +534,11 @@ export async function runPageCommentMention(input: {
     sourceEventId: triggerCommentId,
     actorMetadata: names.users.get(actorId)?.user_metadata,
     projectId: page.project_id as string,
-    title: `Page: ${page.title as string}`,
+    title: `Page: ${clearPage.title as string}`,
     prompt: sharedSurfacePrompt({
       author: names.name(actorId),
       trigger: input.trigger ?? "mention",
-      target: `the page “${page.title as string}”${quote}`,
+      target: `the page “${clearPage.title as string}”${quote}`,
       body: triggerRow.body as string,
       thread,
     }),
@@ -530,7 +547,7 @@ export async function runPageCommentMention(input: {
     context: {
       projectId: page.project_id as string,
       pageId,
-      pageTitle: page.title as string,
+      pageTitle: clearPage.title as string,
     },
     destination: {
       kind: "comment",
@@ -544,7 +561,7 @@ export async function runPageCommentMention(input: {
       },
     },
     createResponse: async () => {
-      const { data, error } = await service.from("page_comments").insert({
+      const { data, error } = await commentStore(service, "page_comments", actorId).insert({
         page_id: pageId,
         project_id: page.project_id,
         block_id: (triggerRow.block_id as string | null) ?? null,
@@ -574,27 +591,33 @@ export async function runFeedbackCommentMention(input: {
   trigger?: "mention" | "reply";
 }): Promise<void> {
   const { service, actorId, postId, triggerCommentId } = input;
-  const { data: triggerRow } = await service.from("comments")
-    .select("id, parent_id, body, author_id").eq("id", triggerCommentId).maybeSingle();
-  if (!triggerRow) return;
-  const rootId = (triggerRow.parent_id as string | null) ?? triggerRow.id as string;
-  const { data: post } = await service.from("feedback_posts")
-    .select("id, project_id, title").eq("id", postId)
+  const { data: postScope } = await service.from("feedback_posts")
+    .select("id, project_id").eq("id", postId)
     .is("deleted_at", null).maybeSingle();
   if (
-    !post
-    || !await getProjectAccess(actorId, post.project_id as string)
+    !postScope
+    || !await getProjectAccess(actorId, postScope.project_id as string)
     || !await hasUsageBudget(actorId, "assistant", "assistant_model")
   ) return;
-  const [{ data: comments }, { data: attachments }, { data: root }] = await Promise.all([
-    service.from("comments").select(
-      "id, author_id, body, via_assistant, created_at, visibility, feedback_users!feedback_user_id (name, email, pseudonym)",
+  const { data: post } = await feedbackPostStore(service, actorId)
+    .select("id, project_id, title").eq("id", postId)
+    .eq("project_id", postScope.project_id).is("deleted_at", null).maybeSingle();
+  if (!post) throw new Error("Unable to read feedback post content");
+  const { data: triggerRow } = await commentStore(service, "comments", actorId)
+    .select("id, parent_id, body, author_id").eq("id", triggerCommentId).eq("feedback_post_id", postId).maybeSingle();
+  if (!triggerRow) return;
+  const rootId = (triggerRow.parent_id as string | null) ?? triggerRow.id as string;
+
+  const [{ data: comments, error: commentsError }, { data: attachments }, { data: root, error: rootError }] = await Promise.all([
+    commentStore(service, "comments", actorId).select(
+      "id, author_id, body, via_assistant, created_at, visibility, feedback_users!feedback_user_id (id, name, email, pseudonym)",
     ).eq("feedback_post_id", postId).or(`id.eq.${rootId},parent_id.eq.${rootId}`)
       .order("created_at", { ascending: false }).limit(20),
     service.from("attachments").select(PROMPT_ATTACHMENT_COLUMNS)
       .eq("feedback_post_id", postId).order("created_at", { ascending: true }),
-    service.from("comments").select("author_id").eq("id", rootId).maybeSingle(),
+    commentStore(service, "comments", actorId).select("author_id").eq("id", rootId).eq("feedback_post_id", postId).maybeSingle(),
   ]);
+  if (commentsError || rootError) throw new Error("Unable to read assistant comment context");
   const rows = [...(comments ?? [])].reverse();
   const names = await actorNames(service, actorId, rows);
   const grouped = groupPromptAttachments(attachments);
@@ -653,7 +676,7 @@ export async function runFeedbackCommentMention(input: {
       },
     },
     createResponse: async () => {
-      const { data, error } = await service.from("comments").insert({
+      const { data, error } = await commentStore(service, "comments", actorId).insert({
         feedback_post_id: postId,
         author_id: actorId,
         parent_id: rootId,

@@ -1,6 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { AppIcon } from "@/components/icon";
+import { Add01Icon, CancelCircleIcon as CircleSlash, RepeatIcon, UserIcon } from "@hugeicons/core-free-icons";
+import { useCallback, useEffect, useState, type SVGProps } from "react";
 import Link from "next/link";
 import { useFormatter, useLocale, useTranslations } from "next-intl";
 import {
@@ -14,7 +17,6 @@ import {
   Skeleton,
   toast,
 } from "mangue-ui";
-import { CircleSlash, Plus, Repeat, User } from "lucide-react";
 import { EmptyScene } from "@/components/empty-scene";
 import { SettingsGroup, SettingsListRow } from "@/components/settings/settings-ui";
 import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
@@ -29,6 +31,21 @@ import { useMembersQuery } from "@/lib/use-members-query";
 import { useCreate } from "@/lib/create-context";
 import type { RecurringIssue } from "@/lib/types";
 import { AppTooltip } from "@/components/ui/app-tooltip";
+
+const RepeatSceneIcon = ({
+  className,
+  style,
+  strokeWidth,
+  ref,
+}: SVGProps<SVGSVGElement>) => (
+  <HugeiconsIcon
+    icon={RepeatIcon}
+    ref={ref}
+    className={className}
+    style={style}
+    strokeWidth={strokeWidth as number | undefined}
+  />
+);
 
 /**
  * The recurrences of a project, gathered in one place (MIN-136): what the
@@ -117,9 +134,9 @@ export function ProjectRecurrencesSection({
       ) : rows.length === 0 ? (
         /* A recurrence is not created here: it is born from a ticket to which on
  gives a cadence. The gesture offered is therefore “new ticket”. */
-        <EmptyScene size="compact" icon={Repeat} title={t("empty")}>
+        <EmptyScene size="compact" icon={RepeatSceneIcon} title={t("empty")}>
           <Button type="button" size="sm" onClick={() => openCreateIssue()}>
-            <Plus />
+            <HugeiconsIcon icon={Add01Icon} />
             {tBoard("newIssue")}
           </Button>
         </EmptyScene>
@@ -168,7 +185,7 @@ export function ProjectRecurrencesSection({
                   ) : (
                     <AppTooltip label={tField("unassigned")}>
                       <span className="flex size-6 shrink-0 items-center justify-center rounded-full border border-dashed border-muted-foreground/40 text-muted-foreground/60">
-                        <User className="size-3.5" />
+                        <HugeiconsIcon icon={UserIcon} className="size-3.5" />
                       </span>
                     </AppTooltip>
                   )}
@@ -204,7 +221,7 @@ export function ProjectRecurrencesSection({
                         aria-label={t("stopAria", { ref })}
                         onClick={() => void stop(row)}
                       >
-                        <CircleSlash />
+                        <AppIcon icon={CircleSlash} />
                       </Button>
                     </span>
                   </AppTooltip>

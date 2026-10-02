@@ -38,6 +38,6 @@ export async function isReplayedForgeDelivery(
     .insert({ provider, delivery_id: id });
   if (!error) return false;
   if (error.code === "23505") return true;
-  console.error("[webhook-dedup] delivery insert failed:", error.message);
+  console.error("[webhook-dedup] delivery_insert_failed", error.code);
   return false;
 }

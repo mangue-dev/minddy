@@ -1,5 +1,7 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Copy01Icon, CheckIcon } from "@hugeicons/core-free-icons";
 import {
   memo,
   useCallback,
@@ -8,7 +10,6 @@ import {
   type ReactNode,
 } from "react";
 import { useTranslations } from "next-intl";
-import { Copy, Check } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import remarkBreaks from "remark-breaks";
@@ -105,9 +106,9 @@ function CopyButton({ text }: { text: string }) {
         className="size-5 rounded-md bg-transparent p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-accent group-hover:opacity-100"
       >
         {copied ? (
-          <Check className="size-3 text-brand" />
+          <HugeiconsIcon icon={CheckIcon} className="size-3 text-brand" />
         ) : (
-          <Copy className="size-3" />
+          <HugeiconsIcon icon={Copy01Icon} className="size-3" />
         )}
       </IconButton>
     </AppTooltip>

@@ -1,6 +1,7 @@
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowRight01Icon, DatabaseIcon, Download01Icon, Globe02Icon as Globe2, HardDriveIcon, Refresh01Icon, ServerIcon as Server, ShieldCheckIcon as ShieldCheck, CheckIcon, Upload01Icon, Wrench01Icon } from "@hugeicons/core-free-icons";
 import type { Metadata } from "next";
 import { getLocale, getTranslations } from "next-intl/server";
-import { ArrowRight, Check, Database, Download, Globe2, HardDrive, RefreshCw, Server, ShieldCheck, Upload, Wrench } from "lucide-react";
 import { Button } from "mangue-ui/components/ui/button";
 import { cn } from "mangue-ui/lib/utils";
 import packageJson from "@/package.json";
@@ -9,6 +10,7 @@ import type { Locale } from "@/i18n/config";
 import { localizedHref } from "@/lib/locale-href";
 import { MINDDY_REPOSITORY_URL } from "@/lib/site";
 import { Github } from "@/components/git/provider-icons";
+import { AppIcon } from "@/components/icon";
 import { CARD_TONES } from "@/components/marketing/card-tones";
 import { SectionHeading } from "@/components/marketing/section-heading";
 import { ScreenshotSlot } from "@/components/marketing/screenshot-slot";
@@ -19,13 +21,13 @@ export async function generateMetadata(): Promise<Metadata> {
 
 const FOUNDATIONS = [
   { key: "app", icon: Server, tone: CARD_TONES.sky },
-  { key: "supabase", icon: Database, tone: CARD_TONES.lavender },
-  { key: "data", icon: HardDrive, tone: CARD_TONES.sage },
+  { key: "supabase", icon: DatabaseIcon, tone: CARD_TONES.lavender },
+  { key: "data", icon: HardDriveIcon, tone: CARD_TONES.sage },
 ] as const;
 const OPERATIONS = [
-  { key: "backup", icon: Database },
-  { key: "update", icon: RefreshCw },
-  { key: "diagnose", icon: Wrench },
+  { key: "backup", icon: DatabaseIcon },
+  { key: "update", icon: Refresh01Icon },
+  { key: "diagnose", icon: Wrench01Icon },
 ] as const;
 
 export default async function SelfHostingPage() {
@@ -43,7 +45,7 @@ export default async function SelfHostingPage() {
             <p className="mt-7 max-w-2xl text-base leading-relaxed text-pretty text-muted-foreground sm:text-lg">{t("heroSubtitle")}</p>
             <div className="mt-7 flex flex-wrap items-center gap-3">
               <Button asChild size="lg" className="rounded-full">
-                <a href={installHref}>{t("heroCtaPrimary")}<ArrowRight data-icon="inline-end" /></a>
+                <a href={installHref}>{t("heroCtaPrimary")}<HugeiconsIcon icon={ArrowRight01Icon} data-icon="inline-end" /></a>
               </Button>
               <a href={MINDDY_REPOSITORY_URL} target="_blank" rel="noopener noreferrer"
                 className="inline-flex min-h-11 items-center gap-2 rounded-full px-3 text-sm font-medium transition-colors hover:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring">
@@ -56,12 +58,12 @@ export default async function SelfHostingPage() {
               <ScreenshotSlot id="heroBoard" expandable sizes="(min-width: 1024px) 710px, 100vw" className="w-full shadow-lg shadow-black/5" />
             </div>
             <div className={cn("rounded-2xl p-6 sm:p-8", CARD_TONES.butter)}>
-              <ShieldCheck className="mb-5 size-6" strokeWidth={1.5} aria-hidden />
+              <AppIcon icon={ShieldCheck} className="mb-5 size-6" strokeWidth={1.5} aria-hidden />
               <h2 className="text-2xl font-medium tracking-tight">{t("promiseTitle")}</h2>
               <p className="mt-3 text-sm leading-relaxed opacity-80">{t("promiseBody")}</p>
               <ul className="mt-7 space-y-4">
                 {(["promiseOne", "promiseTwo", "promiseThree"] as const).map(key => (
-                  <li key={key} className="flex gap-3 text-sm leading-relaxed"><Check className="mt-0.5 size-4 shrink-0" aria-hidden />{t(key)}</li>
+                  <li key={key} className="flex gap-3 text-sm leading-relaxed"><HugeiconsIcon icon={CheckIcon} className="mt-0.5 size-4 shrink-0" aria-hidden />{t(key)}</li>
                 ))}
               </ul>
             </div>
@@ -74,23 +76,23 @@ export default async function SelfHostingPage() {
           <SectionHeading title={t("routesTitle")} description={t("routesBody")} />
           <div className="grid gap-4 lg:grid-cols-2">
             {[
-              { key: "local", icon: HardDrive, tone: CARD_TONES.sky, title: t("localTitle"), body: t("localBody"), time: t("localTime"), facts: [t("localFactUsers"), t("localFactNetwork"), t("localFactMemory")], cta: t("routeCtaLocal") },
+              { key: "local", icon: HardDriveIcon, tone: CARD_TONES.sky, title: t("localTitle"), body: t("localBody"), time: t("localTime"), facts: [t("localFactUsers"), t("localFactNetwork"), t("localFactMemory")], cta: t("routeCtaLocal") },
               { key: "team", icon: Globe2, tone: CARD_TONES.lavender, title: t("teamTitle"), body: t("teamBody"), time: t("teamTime"), facts: [t("teamFactUsers"), t("teamFactNetwork"), t("teamFactMemory")], cta: t("routeCtaTeam") },
             ].map(route => (
               <article key={route.key} className={cn("flex flex-col rounded-2xl p-6 sm:p-8", route.tone)}>
                 <div className="flex items-center justify-between gap-4">
-                  <route.icon className="size-6 shrink-0" strokeWidth={1.5} aria-hidden />
+                  <AppIcon icon={route.icon} className="size-6 shrink-0" strokeWidth={1.5} aria-hidden />
                   <span className="text-right text-xs font-medium opacity-75">{route.time}</span>
                 </div>
                 <h3 className="mt-7 text-3xl leading-tight font-medium tracking-[-0.035em]">{route.title}</h3>
                 <p className="mt-4 max-w-xl text-sm leading-relaxed opacity-80">{route.body}</p>
                 <ul className="mt-6 flex flex-wrap gap-x-5 gap-y-3">
-                  {route.facts.map(fact => <li key={fact} className="flex items-center gap-2 text-sm"><Check className="size-4 shrink-0" aria-hidden />{fact}</li>)}
+                  {route.facts.map(fact => <li key={fact} className="flex items-center gap-2 text-sm"><HugeiconsIcon icon={CheckIcon} className="size-4 shrink-0" aria-hidden />{fact}</li>)}
                 </ul>
                 <div className="mt-auto pt-8">
                   <a href={`${installHref}?route=${route.key}`}
                     className="inline-flex min-h-11 items-center gap-3 rounded-full bg-background/70 px-5 py-2.5 text-sm font-medium transition-colors hover:bg-background focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-current">
-                    {route.cta}<ArrowRight className="size-4 shrink-0" aria-hidden />
+                    {route.cta}<HugeiconsIcon icon={ArrowRight01Icon} className="size-4 shrink-0" aria-hidden />
                   </a>
                 </div>
               </article>
@@ -105,13 +107,17 @@ export default async function SelfHostingPage() {
           <div className="grid gap-4 md:grid-cols-3">
             {FOUNDATIONS.map(point => (
               <article key={point.key} className={cn("rounded-2xl p-6 sm:p-8", point.tone)}>
-                <point.icon className="mb-5 size-6" strokeWidth={1.5} aria-hidden />
+                <AppIcon icon={point.icon} className="mb-5 size-6" strokeWidth={1.5} aria-hidden />
                 <h3 className="text-xl font-medium tracking-tight">{t(`foundation_${point.key}_title`)}</h3>
                 <p className="mt-3 text-sm leading-relaxed opacity-80">{t(`foundation_${point.key}_body`)}</p>
               </article>
             ))}
           </div>
           <p className="mt-5 max-w-3xl text-sm leading-relaxed text-muted-foreground">{t("howBoundary")}</p>
+          <article className={cn("mt-8 rounded-2xl p-6 sm:p-8", CARD_TONES.sage)}>
+            <h3 className="text-2xl font-medium tracking-tight">{t("encryptionTitle")}</h3>
+            <p className="mt-4 max-w-3xl text-sm leading-relaxed opacity-80">{t("encryptionBody")}</p>
+          </article>
           <article className={cn("mt-8 rounded-2xl p-6 sm:p-8", CARD_TONES.peach)}>
             <h3 className="text-2xl font-medium tracking-tight">{t("limitsTitle")}</h3>
             <div className="mt-4 grid gap-5 text-sm leading-relaxed opacity-80 md:grid-cols-2 md:gap-10">
@@ -126,18 +132,18 @@ export default async function SelfHostingPage() {
           <SectionHeading title={t("migrationTitle")} description={t("migrationBody")} />
           <div className="grid gap-4 md:grid-cols-2">
             {[
-              { icon: Download, title: t("migrationExportTitle"), body: t("migrationExportBody"), tone: CARD_TONES.lavender },
-              { icon: Upload, title: t("migrationImportTitle"), body: t("migrationImportBody"), tone: CARD_TONES.sage },
+              { icon: Download01Icon, title: t("migrationExportTitle"), body: t("migrationExportBody"), tone: CARD_TONES.lavender },
+              { icon: Upload01Icon, title: t("migrationImportTitle"), body: t("migrationImportBody"), tone: CARD_TONES.sage },
             ].map(point => (
               <article key={point.title} className={cn("rounded-2xl p-6 sm:p-8", point.tone)}>
-                <point.icon className="mb-5 size-6" strokeWidth={1.5} aria-hidden />
+                <HugeiconsIcon icon={point.icon} className="mb-5 size-6" strokeWidth={1.5} aria-hidden />
                 <h3 className="text-2xl font-medium tracking-tight">{point.title}</h3>
                 <p className="mt-4 text-sm leading-relaxed opacity-80">{point.body}</p>
               </article>
             ))}
           </div>
           <p className="mt-5 flex max-w-3xl items-start gap-3 text-sm leading-relaxed text-muted-foreground">
-            <ShieldCheck className="mt-0.5 size-4 shrink-0" aria-hidden />{t("migrationNote")}
+            <AppIcon icon={ShieldCheck} className="mt-0.5 size-4 shrink-0" aria-hidden />{t("migrationNote")}
           </p>
         </div>
       </section>
@@ -149,7 +155,7 @@ export default async function SelfHostingPage() {
           <ul className="mt-10 grid gap-8 md:grid-cols-3">
             {OPERATIONS.map(point => (
               <li key={point.key}>
-                <point.icon className="mb-4 size-5" strokeWidth={1.5} aria-hidden />
+                <HugeiconsIcon icon={point.icon} className="mb-4 size-5" strokeWidth={1.5} aria-hidden />
                 <h3 className="text-lg font-medium tracking-tight">{t(`operation_${point.key}_title`)}</h3>
                 <p className="mt-3 text-sm leading-relaxed opacity-80">{t(`operation_${point.key}_body`)}</p>
               </li>
@@ -157,7 +163,7 @@ export default async function SelfHostingPage() {
           </ul>
           <a href={`${releaseBase}/docs/self-hosting-operations.md`} target="_blank" rel="noopener noreferrer"
             className="mt-10 inline-flex min-h-11 items-center gap-3 rounded-full bg-background/70 px-5 py-3 text-sm font-medium transition-colors hover:bg-background focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-current">
-            {t("openOperationsGuide")}<ArrowRight className="size-4 shrink-0" aria-hidden />
+            {t("openOperationsGuide")}<HugeiconsIcon icon={ArrowRight01Icon} className="size-4 shrink-0" aria-hidden />
           </a>
         </div>
       </section>

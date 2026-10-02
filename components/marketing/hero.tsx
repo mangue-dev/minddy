@@ -1,6 +1,7 @@
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowUpRight01Icon, Download01Icon } from "@hugeicons/core-free-icons";
 import { getLocale, getTranslations } from "next-intl/server";
 import { Button } from "mangue-ui/components/ui/button";
-import { Download, ArrowUpRight } from "lucide-react";
 import { Github } from "@/components/git/provider-icons";
 import { TrackedCta } from "./tracked-cta";
 import { ScreenshotSlot } from "./screenshot-slot";
@@ -31,7 +32,7 @@ export async function Hero() {
                 <Button asChild size="lg" className="rounded-full">
                   <TrackedCta href={localizedHref("/download", locale)} location="hero">
                     {t("downloadMinddy")}
-                    <Download data-icon="inline-end" />
+                    <HugeiconsIcon icon={Download01Icon} data-icon="inline-end" />
                   </TrackedCta>
                 </Button>
                 <a
@@ -42,7 +43,7 @@ export async function Hero() {
                 >
                   <Github className="size-4" aria-hidden />
                   {t("heroCtaSecondary")}
-                  <ArrowUpRight className="size-3.5" aria-hidden />
+                  <HugeiconsIcon icon={ArrowUpRight01Icon} className="size-3.5" aria-hidden />
                 </a>
               </div>
             </div>

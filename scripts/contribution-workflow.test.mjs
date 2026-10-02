@@ -103,7 +103,9 @@ test("the shortcut workflow creates, publishes, and cleans up a work branch", ()
     writeFileSync(
       fakeGh,
       `#!/usr/bin/env node
+const { appendFileSync, existsSync, readFileSync, writeFileSync } = await import("node:fs");
 const args = process.argv.slice(2);
+const statePath = process.env.FAKE_PR_STATE;
 if (args[0] === "auth" && args[1] === "status") process.exit(0);
 if (args[0] === "pr" && args[1] === "list") {
   if (args.includes("merged") && process.env.FAKE_PR_MERGED === "1") {
@@ -118,22 +120,28 @@ if (args[0] === "pr" && args[1] === "list") {
       { url: "https://example.test/pull/old", headRefOid: "1111111111111111111111111111111111111111" },
     ]));
   } else if (args.includes("open")) {
-    const { existsSync, readFileSync } = await import("node:fs");
-    const log = process.env.FAKE_GH_LOG ?? "";
-    if (existsSync(log) && readFileSync(log, "utf8").includes("create")) {
-      console.log(JSON.stringify([{ url: "https://example.test/pull/1" }]));
+    if (existsSync(statePath)) {
+      console.log(JSON.parse(readFileSync(statePath, "utf8")).url);
     }
   }
   process.exit(0);
 }
 if (args[0] === "pr" && args[1] === "create") {
-  const { appendFileSync } = await import("node:fs");
+  const state = {
+    url: "https://example.test/pull/1",
+    title: args[args.indexOf("--title") + 1],
+    body: args[args.indexOf("--body") + 1],
+  };
+  writeFileSync(statePath, JSON.stringify(state));
   appendFileSync(process.env.FAKE_GH_LOG ?? "", JSON.stringify(args) + "\\n");
   console.log("https://example.test/pull/1");
   process.exit(0);
 }
 if (args[0] === "pr" && args[1] === "edit") {
-  const { appendFileSync } = await import("node:fs");
+  const state = JSON.parse(readFileSync(statePath, "utf8"));
+  if (args.includes("--title")) state.title = args[args.indexOf("--title") + 1];
+  if (args.includes("--body")) state.body = args[args.indexOf("--body") + 1];
+  writeFileSync(statePath, JSON.stringify(state));
   appendFileSync(process.env.FAKE_GH_LOG ?? "", JSON.stringify(args) + "\\n");
   console.log("https://example.test/pull/1");
   process.exit(0);
@@ -146,7 +154,12 @@ process.exit(2);
 `,
     );
     chmodSync(fakeGh, 0o755);
-    const env = { ...process.env, PATH: `${bin}${delimiter}${process.env.PATH}` };
+    const prState = join(fixtureRoot, "pr.json");
+    const env = {
+      ...process.env,
+      PATH: `${bin}${delimiter}${process.env.PATH}`,
+      FAKE_PR_STATE: prState,
+    };
 
     writeFileSync(join(repository, "change.txt"), "change\n");
     run(process.execPath, [workflow, "start", "Helpful fix"], repository, env);
@@ -198,6 +211,15 @@ process.exit(2);
       /Signed-off-by: Contributing Author <author@example\.com>/u,
     );
 
+    // Simulate a maintainer editing the PR after its initial publication.
+    run(
+      "gh",
+      ["pr", "edit", "work/helpful-fix", "--title", "Reviewed title", "--body", "Reviewed body."],
+      repository,
+      { ...env, FAKE_GH_LOG: ghLog },
+    );
+    const reviewedState = readFileSync(prState, "utf8");
+
     writeFileSync(join(repository, "change.txt"), "change\nmore\n");
     run("git", ["add", "change.txt"], repository);
     run(
@@ -216,6 +238,7 @@ process.exit(2);
     const ghLogOffset = readFileSync(ghLog, "utf8").length;
     run(process.execPath, [workflow, "pr"], repository, { ...env, FAKE_GH_LOG: ghLog });
     assert.equal(readFileSync(ghLog, "utf8").slice(ghLogOffset), "");
+    assert.equal(readFileSync(prState, "utf8"), reviewedState);
     assert.equal(
       run("git", ["ls-remote", "--heads", "origin", "refs/heads/work/helpful-fix"], repository)
         .trim()
@@ -223,17 +246,25 @@ process.exit(2);
       true,
     );
 
-    // A later run never rewrites the title or description of the EXISTING
-    // pull request: without --replace the command refuses, with it the edit
-    // goes out deliberately.
-    const rewriteAttempt = spawnSync(
-      process.execPath,
-      [workflow, "pr", "New title", "-m", "New body."],
-      { cwd: repository, encoding: "utf8", env: { ...env, FAKE_GH_LOG: ghLog } },
-    );
-    assert.notEqual(rewriteAttempt.status, 0);
-    assert.match(rewriteAttempt.stderr, /already exists.*--replace/su);
-    assert.equal(readFileSync(ghLog, "utf8").slice(ghLogOffset), "");
+    // Repeated fix commits publish successfully even with fresh metadata.
+    const followUpMetadata = [["New title"], ["-m", "New body."], ["New title", "-m", "New body."]];
+    for (const metadata of followUpMetadata) {
+      run("git", ["commit", "--allow-empty", "--signoff", "-m", "fix: follow up review"], repository);
+      const result = run(process.execPath, [workflow, "pr", ...metadata], repository, {
+        ...env,
+        FAKE_GH_LOG: ghLog,
+      });
+      assert.match(result, /title and description kept/u);
+      assert.ok(result.includes("Pull request updated: https://example.test/pull/1"));
+      assert.equal(readFileSync(ghLog, "utf8").slice(ghLogOffset), "");
+      assert.equal(readFileSync(prState, "utf8"), reviewedState);
+      assert.equal(
+        run("git", ["ls-remote", "--heads", "origin", "refs/heads/work/helpful-fix"], repository)
+          .trim()
+          .split("\t")[0],
+        run("git", ["rev-parse", "HEAD"], repository).trim(),
+      );
+    }
     run(
       process.execPath,
       [workflow, "pr", "New title", "-m", "New body.", "--replace"],
@@ -249,6 +280,29 @@ process.exit(2);
       ghCallsAfterReplace.find((call) => call[1] === "edit"),
       ["pr", "edit", "work/helpful-fix", "--title", "New title", "--body", "New body."],
     );
+    assert.deepEqual(JSON.parse(readFileSync(prState, "utf8")), {
+      url: "https://example.test/pull/1",
+      title: "New title",
+      body: "New body.",
+    });
+    run(process.execPath, [workflow, "pr", "Final title", "--replace"], repository, {
+      ...env,
+      FAKE_GH_LOG: ghLog,
+    });
+    assert.deepEqual(JSON.parse(readFileSync(prState, "utf8")), {
+      url: "https://example.test/pull/1",
+      title: "Final title",
+      body: "New body.",
+    });
+    run(process.execPath, [workflow, "pr", "-m", "Final body.", "--replace"], repository, {
+      ...env,
+      FAKE_GH_LOG: ghLog,
+    });
+    assert.deepEqual(JSON.parse(readFileSync(prState, "utf8")), {
+      url: "https://example.test/pull/1",
+      title: "Final title",
+      body: "Final body.",
+    });
 
     const historicalDone = spawnSync(process.execPath, [workflow, "done"], {
       cwd: repository,

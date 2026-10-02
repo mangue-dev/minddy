@@ -12,9 +12,12 @@ import { commandPaletteShortcut } from "@/lib/command-palette-shortcut";
 export function useCommandPaletteLauncher({
   open,
   onOpenChange,
+  onNewTab,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** ⌘T: open the palette in new-tab (destination) mode, like the tab-bar button. */
+  onNewTab?: () => void;
 }) {
   const { track } = useAnalytics();
   const { openSignal } = useBulkActions();
@@ -29,6 +32,13 @@ export function useCommandPaletteLauncher({
       const shortcut = commandPaletteShortcut(event);
       if (!shortcut) return;
       event.preventDefault();
+      if (shortcut === "newTab") {
+        if (onNewTab) {
+          track("command_palette_opened", { source: "new_tab_shortcut" });
+          onNewTab();
+        }
+        return;
+      }
       if (!openRef.current) {
         track("command_palette_opened", { source: "shortcut" });
       }
@@ -36,7 +46,7 @@ export function useCommandPaletteLauncher({
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [onOpenChange, track]);
+  }, [onOpenChange, onNewTab, track]);
 
   useEffect(() => {
     if (openSignal > 0) onOpenChange(true);

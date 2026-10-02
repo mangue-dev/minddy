@@ -1,5 +1,7 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { CheckIcon } from "@hugeicons/core-free-icons";
 import { createUuid } from "@/lib/create-uuid";
 
 import { useEffect, useRef, useState } from "react";
@@ -10,6 +12,7 @@ import {
   DialogContent,
   DialogTitle,
   DropdownMenuItem,
+  DropdownMenuLabel,
   Popover,
   PopoverContent,
   PopoverTrigger,
@@ -18,8 +21,8 @@ import {
   cn,
   toast,
 } from "mangue-ui";
-import { Check } from "lucide-react";
 import { AutoTextarea } from "@/components/auto-textarea";
+import { CreationRelationPills, CreationRelationsCompact } from "@/components/creation-relations";
 // Deferred editor: keeps tiptap (~1.5 MB) out of the objectives route —
 // see markdown-editor-lazy.tsx. The dialog mounts with the page, which warms
 // the chunk from idle time (hook below).
@@ -65,6 +68,7 @@ import type {
   Objective,
   ObjectiveDraftPatch,
   ObjectiveUpdateInput,
+  PendingRelationInput,
   Project,
 } from "@/lib/types";
 
@@ -160,7 +164,7 @@ function ColorCompact({
               )}
               style={{ backgroundColor: c }}
             >
-              {value === c && <Check className="size-3.5 text-white" />}
+              {value === c && <HugeiconsIcon icon={CheckIcon} className="size-3.5 text-white" />}
             </button>
           ))}
         </div>
@@ -187,6 +191,7 @@ export function ObjectiveDialog({
   onUpdate,
   projects = [],
   projectId,
+  projectKey,
   initialName,
   onCreateInProject,
 }: {
@@ -204,6 +209,8 @@ export function ObjectiveDialog({
   projects?: Project[];
   /** The project `onCreate` targets — labels the split button's primary action. */
   projectId?: string;
+  /** Identifier prefix when this dialog is mounted without a project menu. */
+  projectKey?: string;
   /** Create in an arbitrary project (the split-button dropdown targets). */
   onCreateInProject?: (
     targetProjectId: string,
@@ -212,10 +219,13 @@ export function ObjectiveDialog({
 }) {
   const t = useTranslations("Objectives");
   const tCommon = useTranslations("Common");
+  const tDrafts = useTranslations("Drafts");
+  const tRelations = useTranslations("Relations");
   const { track } = useAnalytics();
   // Mounts with the objectives page: warm the editor chunk once painted.
   useIdleMarkdownEditorPreload();
   const [form, setForm] = useState(EMPTY);
+  const [relations, setRelations] = useState<PendingRelationInput[]>([]);
   const [submitting, setSubmitting] = useState(false);
   // Id of the draft loaded in the form (MIN-41), so re-closing updates it in
   // place and a successful create removes exactly the draft it came from.
@@ -271,12 +281,14 @@ export function ObjectiveDialog({
         : { ...EMPTY, name: initialName ?? "" }
     );
     editorNonEmptyRef.current = false;
+    setRelations([]);
     setActiveDraftId(null);
     setEditorKey((k) => k + 1);
-  }, [open, objective, initialName]);
+  }, [open, objective, initialName, projectId]);
 
   const closeAndReset = () => {
     setForm(EMPTY);
+    setRelations([]);
     editorNonEmptyRef.current = false;
     setActiveDraftId(null);
     uploads.clear();
@@ -290,12 +302,13 @@ export function ObjectiveDialog({
     form.name.trim() !== "" ||
     form.description.trim() !== "" ||
     editorNonEmptyRef.current ||
-    uploads.inputs.length > 0;
+    uploads.inputs.length > 0 ||
+    relations.length > 0;
 
   // Snapshot the form as a local draft (MIN-41), reusing the active id.
-  const saveDraft = () => {
+  const saveDraft = async () => {
     if (!projectId) return;
-    drafts.save({
+    await drafts.save({
       id: activeDraftId ?? createUuid(),
       projectId,
       updatedAt: Date.now(),
@@ -306,21 +319,22 @@ export function ObjectiveDialog({
       target_date: form.target_date,
       color: form.color,
       resources: uploads.inputs,
+      relations,
     });
   };
 
   // Stash the draft and close (the confirmation's "Save" action).
-  const saveDraftAndClose = () => {
-    saveDraft();
-    closeAndReset();
+  const saveDraftAndClose = async () => {
+    try { await saveDraft(); closeAndReset(); }
+    catch { toast.error(tDrafts("saveFailed")); }
   };
 
   // “Abandon”: we close WITHOUT keeping, and the original draft goes away
   // with — otherwise we would find in the repeat row the one we thought
   // have given up. Same gesture as successful creation, which also consumes the
   // draft it came from.
-  const discardDraftAndClose = () => {
-    if (activeDraftId) drafts.remove(activeDraftId);
+  const discardDraftAndClose = async () => {
+    if (activeDraftId && !await drafts.remove(activeDraftId)) return;
     closeAndReset();
   };
 
@@ -371,13 +385,18 @@ export function ObjectiveDialog({
     editorNonEmptyRef.current = draft.description.trim() !== "";
     setEditorKey((k) => k + 1); // remount the editor with the draft's content
     uploads.restore(draft.resources ?? []);
+    setRelations(draft.relations ?? []);
     setActiveDraftId(draft.id);
   };
 
   // `target` is set only when creating in a different project (dropdown item).
   const submit = async (target?: Project) => {
     const name = form.name.trim();
-    if (!name) return;
+    if (!name || submitting) return;
+    if (target && target.id !== projectId && relations.length > 0) {
+      toast.info(tRelations("crossProjectUnavailable"));
+      return;
+    }
     setSubmitting(true);
     const payload = {
       name,
@@ -408,7 +427,7 @@ export function ObjectiveDialog({
         });
         toast.success(t("createdInProjectToast", { project: other.name }));
       } else {
-        await onCreate({ ...payload, resources: uploads.inputs });
+        await onCreate({ ...payload, resources: uploads.inputs, relations });
         toast.success(t("createdToast"));
       }
       // The draft became a real objective — drop it from the local store.
@@ -486,6 +505,10 @@ export function ObjectiveDialog({
               : {})}
           >
             {composerEnabled && <DropOverlay show={drop.dragging} />}
+            {composerEnabled && drafts.legacyAvailable && <div className="mb-3 text-sm">
+              <p>{tDrafts("legacyWarning")}</p>
+              <Button type="button" variant="ghost" onClick={() => void drafts.recoverLegacy()}>{tDrafts("recoverLegacy")}</Button>
+            </div>}
             {/* Recent drafts — a row above the name to restore or delete an
               abandoned draft (MIN-41). Hidden once the form has content. */}
             {composerEnabled &&
@@ -514,6 +537,16 @@ export function ObjectiveDialog({
                 }}
                 onRemovePending={uploads.remove}
                 className="mb-3"
+              />
+            )}
+            {composerEnabled && (
+              <CreationRelationPills
+                projectId={projectId!}
+                projectKey={currentProject?.key ?? projectKey ?? ""}
+                active={open}
+                value={relations}
+                onChange={setRelations}
+                disabled={submitting}
               />
             )}
             <AutoTextarea
@@ -565,6 +598,16 @@ export function ObjectiveDialog({
                 value={form.color}
                 onChange={(color) => setForm((f) => ({ ...f, color }))}
               />
+              {composerEnabled && (
+                <CreationRelationsCompact
+                  projectId={projectId!}
+                  projectKey={currentProject?.key ?? projectKey ?? ""}
+                  active={open}
+                  value={relations}
+                  onChange={setRelations}
+                  disabled={submitting}
+                />
+              )}
             </div>
 
             {/* Bottom bar — voice dictation at left, create controls at right,
@@ -611,15 +654,9 @@ export function ObjectiveDialog({
                   disabled={submitting}
                 />
               )}
+              {/* No Cancel button: the dialog's own close X already does
+                  that job. */}
               <div className="ml-auto flex items-center justify-end gap-2 max-sm:w-full">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  disabled={submitting || numoBusy}
-                  onClick={() => handleOpenChange(false)}
-                >
-                  {tCommon("cancel")}
-                </Button>
                 {showSplit ? (
                   /* The tooltip attaches to the action, not the chevron: its
  props pass through `SplitButton` to the left button,
@@ -637,15 +674,17 @@ export function ObjectiveDialog({
                         uploads.uploading
                       }
                       className="max-sm:w-full"
-                      actionClassName="rounded-l-full pl-4 max-sm:flex-1"
-                      triggerClassName="rounded-r-full"
+                      actionClassName="max-sm:flex-1"
                       menuLabel={t("createInOtherProject")}
-                      menu={otherProjects.map((p) => (
-                        <DropdownMenuItem key={p.id} onSelect={() => void submit(p)}>
+                      menu={<>
+                        {relations.length > 0 && <DropdownMenuLabel className="max-w-60 whitespace-normal">{tRelations("crossProjectUnavailable")}</DropdownMenuLabel>}
+                        {otherProjects.map((p) => (
+                        <DropdownMenuItem key={p.id} onSelect={() => void submit(p)}
+                          disabled={relations.length > 0}>
                           <ProjectOrb seed={projectOrbSeed(p)} iconUrl={p.icon_url} className="size-4" />
                           <span className="truncate">{p.name}</span>
                         </DropdownMenuItem>
-                      ))}
+                      ))}</>}
                     >
                       {submitting && <Spinner />}
                       <span className="max-w-[14rem] truncate">

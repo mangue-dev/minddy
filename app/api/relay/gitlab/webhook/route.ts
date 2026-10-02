@@ -5,6 +5,7 @@ import { enqueueRelayDeliveryForProvider } from "@/lib/server/forge-relay/fanout
 import { gitlabHookTokenDigest } from "@/lib/server/forge-relay/gitlab-broker";
 import { readBoundedRequestBody } from "@/lib/server/forge-relay/request-body";
 import { getServiceClient } from "@/lib/supabase-service";
+import { repositoryStorageName } from "@/lib/server/git/repository-name-content";
 
 export const RELAY_GITLAB_WEBHOOK_MAX_BODY_BYTES = 2 * 1024 * 1024;
 
@@ -74,9 +75,10 @@ export async function POST(request: NextRequest) {
   if (!repoId || !repo) {
     return NextResponse.json({ error: "invalid payload" }, { status: 400 });
   }
+  const storedName = await repositoryStorageName("gitlab",repo,false,supabase);
 
   const authorized = authenticated.filter(
-    (row) => row.external_repo_id === repoId && row.repo_full_name === repo,
+    (row) => row.external_repo_id === repoId && row.repo_full_name === storedName,
   );
   if (authorized.length === 0) {
     return NextResponse.json({ error: "invalid token" }, { status: 401 });

@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { hasRecentPageActivity } from "./issue-event-store";
 import { insertEvents } from "@/lib/server/issue-events";
 import { insertNotifications } from "@/lib/server/notifications";
 import { PAGE_WATCH_FRESH_MS, type PageWriteKind } from "@/lib/pages";
@@ -78,19 +79,8 @@ export async function recordPageEvent(
   const { pageId, actorId, kind, type, mcpKeyId } = params;
 
   if (COALESCED.includes(type)) {
-    const { data } = await service
-      .from("issue_events")
-      .select("id")
-      .eq("page_id", pageId)
-      .eq("type", type)
-      .eq("field", kind)
-      // `actor_id` can be null (no page gestures are null today,
-      // but the column allows it): `eq` does not match NULL in SQL, hence the
-      // branche — sans elle, deux gestes anonymes ne se coalesceraient jamais.
-      .filter("actor_id", actorId ? "eq" : "is", actorId ?? null)
-      .gte("created_at", new Date(Date.now() - EVENT_COALESCE_MS).toISOString())
-      .limit(1);
-    if (data && data.length > 0) return;
+    if (await hasRecentPageActivity(service, pageId, type, kind, actorId,
+      new Date(Date.now() - EVENT_COALESCE_MS).toISOString())) return;
   }
 
   await insertEvents(service, [

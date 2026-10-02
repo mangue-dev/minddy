@@ -1,11 +1,12 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Add01Icon, Alert01Icon, MoreHorizontalIcon, CheckIcon } from "@hugeicons/core-free-icons";
 import {useCallback, useEffect, useId, useState} from "react";
 import {useQueryClient} from "@tanstack/react-query";
 import {useSearchParams} from "next/navigation";
 import {useTranslations} from "next-intl";
 import {Button, Input, Textarea, Checkbox, Select, SelectTrigger, SelectValue, SelectContent, SelectItem, Accordion, AccordionItem, AccordionTrigger, AccordionContent, toast, Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem} from "mangue-ui";
-import {Check, Ellipsis, Plus, TriangleAlert} from "lucide-react";
 import {Tooltip, TooltipContent, TooltipTrigger} from "@/components/ui/tooltip";
 import {Field, FieldLabel} from "@/components/ui/field";
 import {McpServiceLogo} from "@/components/mcp-service-logo";
@@ -344,7 +345,7 @@ export function AccountMcpClients() {
                       aria-label={t("unauthenticated")}
                       className="size-5 shrink-0 text-orange-500 hover:text-orange-500"
                     >
-                      <TriangleAlert className="size-4" aria-hidden />
+                      <HugeiconsIcon icon={Alert01Icon} className="size-4" aria-hidden />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>{t("unauthenticated")}</TooltipContent>
@@ -376,7 +377,7 @@ export function AccountMcpClients() {
                 disabled={busy}
                 aria-label={t("manage", { name: connection.name })}
               >
-                <Ellipsis className="size-4" />
+                <HugeiconsIcon icon={MoreHorizontalIcon} className="size-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
@@ -463,10 +464,7 @@ export function AccountMcpClients() {
                           aria-label={t("unauthenticated")}
                           className="text-orange-500"
                         >
-                          <TriangleAlert
-                            className="size-4 shrink-0"
-                            aria-hidden
-                          />
+                          <HugeiconsIcon icon={Alert01Icon} className="size-4 shrink-0" aria-hidden />
                         </span>
                       </TooltipTrigger>
                       <TooltipContent>{t("unauthenticated")}</TooltipContent>
@@ -478,17 +476,14 @@ export function AccountMcpClients() {
                           aria-label={t("configured")}
                           className="text-emerald-600 dark:text-emerald-400"
                         >
-                          <Check className="size-4 shrink-0" aria-hidden />
+                          <HugeiconsIcon icon={CheckIcon} className="size-4 shrink-0" aria-hidden />
                         </span>
                       </TooltipTrigger>
                       <TooltipContent>{t("configured")}</TooltipContent>
                     </Tooltip>
                   )
                 ) : (
-                  <Plus
-                    className="size-4 shrink-0 text-muted-foreground"
-                    aria-hidden
-                  />
+                  <HugeiconsIcon icon={Add01Icon} className="size-4 shrink-0 text-muted-foreground" aria-hidden />
                 )}
               </Button>
             );
@@ -545,10 +540,7 @@ export function AccountMcpClients() {
                         </span>
                       )}
                     </span>
-                    <Plus
-                      className="size-4 shrink-0 text-muted-foreground"
-                      aria-hidden
-                    />
+                    <HugeiconsIcon icon={Add01Icon} className="size-4 shrink-0 text-muted-foreground" aria-hidden />
                   </Button>
                 ))}
               </div>
@@ -886,7 +878,7 @@ export function AccountMcpClients() {
               disabled={busy || isPending || isError}
               onClick={() => edit("new")}
             >
-              <Plus className="size-4" aria-hidden />
+              <HugeiconsIcon icon={Add01Icon} className="size-4" aria-hidden />
               <span className="hidden sm:inline">{t("custom")}</span>
             </Button>
           </TooltipTrigger>

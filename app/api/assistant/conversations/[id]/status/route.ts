@@ -1,6 +1,11 @@
+import { isContentEncryptionEnabled } from "@/lib/server/encryption/content-config";
 import { NextRequest } from "next/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { NUMO_UUID } from "@/lib/server/numo/conversations";
+import { decodeRunEvent } from "@/lib/server/agent/run-event-store";
+import { decodeWorkerEventPayload } from "@/lib/server/numo/worker-event-content";
+import { decodeNumoTurnEvent } from "@/lib/server/numo/turn-event-content";
+import { decodeNumoError } from "@/lib/server/numo/error-content";
 
 export async function GET(
   request: NextRequest,
@@ -17,7 +22,7 @@ export async function GET(
 
   const { data: conversation } = await supabase
     .from("numo_conversation_history")
-    .select("status, error_message, source")
+    .select("status, error_message, source, legacy_id")
     .eq("id", conversationId)
     .single();
 
@@ -31,6 +36,8 @@ export async function GET(
     .from("numo_assistant_turns")
     .select("id, status, error_message, last_event_seq, active_run_id, updated_at")
     .eq("conversation_id", conversationId)
+    // A pre-admission Stop receipt must not mask a newer admitted request.
+    .or("status.neq.stopped,model.not.is.null,attempts.gt.0")
     .order("created_at", { ascending: false })
     .order("id", { ascending: false })
     .limit(1)
@@ -46,24 +53,82 @@ export async function GET(
         .order("seq", { ascending: true })
         .limit(200)
     : { data: [] };
-  const { data: pendingInput } = turn
-    ? await supabase
-        .from("agent_run_input_requests")
-        .select("run_id, parent_numo_turn_id, question_id, call_id, questions, created_at")
-        .eq("parent_numo_turn_id", turn.id)
-        .eq("status", "pending")
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle()
-    : { data: null };
+  const readPending = (columns: string) => supabase
+    .from("agent_run_input_requests").select(columns)
+    .eq("parent_numo_turn_id", turn!.id).eq("status", "pending")
+    .order("created_at", { ascending: false }).limit(1).maybeSingle();
+  let pendingResult = turn ? await readPending(
+    "run_id,parent_numo_turn_id,question_id,call_id,questions,created_at,source_event_id,encrypted_questions,questions_encryption_version"
+  ) : null;
+  if (pendingResult?.error &&
+      !isContentEncryptionEnabled() &&
+      ["42703", "PGRST204"].includes(pendingResult.error.code)) {
+    pendingResult = await readPending(
+      "run_id,parent_numo_turn_id,question_id,call_id,questions,created_at");
+  }
+  if (pendingResult?.error) {
+    return Response.json({ error: "Unable to read pending input" }, { status: 503 });
+  }
+  const pendingInput = pendingResult?.data as null | {
+    run_id: string; parent_numo_turn_id: string; question_id: string; call_id: string;
+    questions: unknown; created_at: string; source_event_id?: string | null;
+    encrypted_questions?: string | null; questions_encryption_version?: number;
+  };
 
+  let readableInput: Record<string, unknown> | null = pendingInput;
+  if (pendingInput && (pendingInput.questions_encryption_version ?? 0) > 0) {
+    const { data: run, error } = await supabase.from("agent_runs")
+      .select("project_id").eq("id", pendingInput.run_id).maybeSingle();
+    if (error || !run?.project_id || !pendingInput.source_event_id ||
+        !pendingInput.encrypted_questions) {
+      return Response.json({ error: "Unable to read pending input" }, { status: 503 });
+    }
+    try {
+      const event = await decodeRunEvent(run.project_id, {
+        id: pendingInput.source_event_id, run_id: pendingInput.run_id,
+        seq: 0, type: "question", payload: null, created_at: pendingInput.created_at,
+        encrypted_content: pendingInput.encrypted_questions,
+        encryption_version: pendingInput.questions_encryption_version ?? 0,
+      }, auth.user.id);
+      if (!Array.isArray(event.payload?.questions)) throw new Error("Invalid pending input");
+      readableInput = { ...pendingInput, questions: event.payload.questions };
+    } catch {
+      return Response.json({ error: "Unable to read pending input" }, { status: 503 });
+    }
+  }
+  if (readableInput) {
+    delete readableInput.source_event_id;
+    delete readableInput.encrypted_questions;
+    delete readableInput.questions_encryption_version;
+  }
+
+  let readableActivity;
+  try {
+    readableActivity = await Promise.all((activity ?? []).map(async (event) => ({
+      ...event,
+      payload: event.type === "worker_completed" || event.type === "worker_failed" ||
+        event.type === "worker_input"
+        ? await decodeWorkerEventPayload(event.payload, auth.user.id,
+            event.id as string)
+        : await decodeNumoTurnEvent(event.payload, {
+            userId: auth.user.id, turnId: turn!.id as string,
+            eventId: event.id as string,
+          }),
+    })));
+  } catch {
+    return Response.json({ error: "Unable to read activity" }, { status: 503 });
+  }
   return Response.json({
     status: turn?.status ?? conversation.status,
-    error_message: turn?.error_message ?? conversation.error_message,
+    error_message: turn?.error_message
+      ? await decodeNumoError(auth.user.id, "numo_assistant_turns",
+          turn.id, turn.error_message, auth.user.id)
+      : await decodeNumoError(auth.user.id, "conversations",
+          conversation.legacy_id, conversation.error_message, auth.user.id),
     turn_id: turn?.id ?? null,
     last_event_seq: turn?.last_event_seq ?? -1,
     active_run_id: turn?.active_run_id ?? null,
-    pending_input: pendingInput ?? null,
-    activity: activity ?? [],
+    pending_input: readableInput ?? null,
+    activity: readableActivity,
   });
 }

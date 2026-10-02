@@ -1,18 +1,13 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowLeft01Icon, BotIcon, DashboardCircleIcon, DollarCircleIcon as CircleDollarSign, UserGroupIcon } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useReducedMotion } from "framer-motion";
 import { Button, cn } from "mangue-ui";
 import { useTranslations } from "next-intl";
-import {
-  Bot,
-  ChevronLeft,
-  CircleDollarSign,
-  LayoutDashboard,
-  Users,
-  type LucideIcon,
-} from "lucide-react";
+import { AppIcon } from "@/components/icon";
 import { SecondarySidebar } from "@/components/secondary-sidebar";
 import { AppContentHeader } from "@/components/app-content-header";
 import { SidebarNavRail } from "@/components/sidebar-nav-rail";
@@ -69,11 +64,11 @@ import { AdminFinanceDashboard } from "./admin-finance-dashboard";
 type AdminTab = AdminTabId;
 
 const DEFAULT_TAB: AdminTab = "overview";
-const ICONS: Record<AdminTab, LucideIcon> = {
-  overview: LayoutDashboard,
-  users: Users,
+const ICONS: Record<AdminTab, AppIcon> = {
+  overview: DashboardCircleIcon,
+  users: UserGroupIcon,
   finances: CircleDollarSign,
-  models: Bot,
+  models: BotIcon,
 };
 
 /** The content column is wider than the settings column (`max-w-3xl`):
@@ -269,7 +264,7 @@ export function AdminDashboard() {
                       onClick={() => openSection(section)}
                       className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left outline-none transition-colors hover:bg-muted/60 focus-visible:bg-muted/60"
                     >
-                      <Icon className="size-4 shrink-0 text-muted-foreground" />
+                      <AppIcon icon={Icon} className="size-4 shrink-0 text-muted-foreground" />
                       <span className="min-w-0 flex-1 truncate text-sm">
                         {section.title}
                       </span>
@@ -314,7 +309,7 @@ export function AdminDashboard() {
             aria-label={tCommon("back")}
             onClick={() => setMobileDetail(false)}
           >
-            <ChevronLeft />
+            <HugeiconsIcon icon={ArrowLeft01Icon} />
           </Button>
           <span className="truncate text-sm font-medium md:hidden">
             {t(`tabs.${active}`)}

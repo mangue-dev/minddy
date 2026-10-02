@@ -127,7 +127,9 @@ export async function fakeRpc(
     if (row.token_expires_at !== args.p_expected_expires_at) {
       return { data: false, error: null };
     }
-    if (row.refresh_token_encrypted !== args.p_expected_refresh_token_encrypted) {
+    const compared = Number(row.encryption_version ?? 0)>0
+      ? row.encrypted_content : row.refresh_token_encrypted;
+    if (compared !== args.p_expected_refresh_token_encrypted) {
       return { data: false, error: null };
     }
     row.oauth_refresh_claim = args.p_claim_id;

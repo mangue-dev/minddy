@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { AppIcon } from "@/components/icon";
+import { Cancel01Icon as X, CancelCircleIcon as CircleSlash, CheckIcon as Check } from "@hugeicons/core-free-icons";
 import { useFormatter, useNow, useTranslations } from "next-intl";
-import { Check, CircleSlash, X } from "lucide-react";
 import { cn } from "mangue-ui";
 import { AuthorNames, AuthorStack } from "@/components/git/author-stack";
 import { GitLogin } from "@/components/git/git-login";
@@ -262,7 +263,7 @@ export function PrTimelineReview({
               className="text-sm font-medium text-foreground"
             />
             <span className={cn("flex shrink-0 items-center gap-1 text-xs", state.className)}>
-              {Icon ? <Icon className="size-3.5" /> : null}
+              {Icon ? <AppIcon icon={Icon} className="size-3.5" /> : null}
               {t(state.label)}
             </span>
             {when ? (

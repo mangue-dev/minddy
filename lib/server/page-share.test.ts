@@ -22,6 +22,18 @@ const db = {
 };
 let access: unknown = { isOwner: true };
 const writes: Array<{ kind: "insert" | "update"; values: Row }> = [];
+const encryption = vi.hoisted(() => ({ enabled: false }));
+
+vi.mock("@/lib/server/encryption/share-token-content", () => ({
+  shouldProtectShareTokens: async () => encryption.enabled,
+  encodeShareToken: async (id: string, token: string) =>
+    `mdys3:1:${Buffer.from(`${id}:${token}`).toString("base64url")}`,
+  decodeShareToken: async (_id: string, stored: string) => stored.startsWith("mdys3:")
+    ? Buffer.from(stored.split(":")[2], "base64url").toString("utf8").split(":")[1]
+    : stored,
+  shareTokenLookup: async (token: string) =>
+    Buffer.from(token).toString("hex").padStart(64, "0"),
+}));
 
 vi.mock("@/lib/server/project-access", () => ({
   getProjectAccess: async () => access,
@@ -73,6 +85,7 @@ beforeEach(() => {
   db.share = null;
   access = { isOwner: true };
   writes.length = 0;
+  encryption.enabled = false;
 });
 
 describe("upsertPageShare", () => {
@@ -170,6 +183,23 @@ describe("upsertPageShare", () => {
     });
     expect(second.ok && second.share?.token).toBe(token);
     expect(second.ok && second.share?.include_children).toBe(true);
+  });
+
+  it("stores an encrypted token and returns the URL token to its owner", async () => {
+    encryption.enabled = true;
+    const first = await upsertPageShare({ pageId: "page-1", actorId: "u",
+      level: "public" });
+    expect(first.ok).toBe(true);
+    if (!first.ok || !first.share) return;
+    expect(db.share?.token).toMatch(/^mdys3:1:/);
+    expect(JSON.stringify(db.share)).not.toContain(first.share.token);
+    expect(db.share?.token_lookup).toBeTruthy();
+    const ownerRead = await getPageShare("page-1", "u");
+    expect(ownerRead.ok && ownerRead.share?.token).toBe(first.share.token);
+    const second = await upsertPageShare({ pageId: "page-1", actorId: "u",
+      level: "public", includeChildren: true });
+    expect(second.ok && second.share?.token).toBe(first.share.token);
+    expect(db.share?.token).toMatch(/^mdys3:1:/);
   });
 });
 

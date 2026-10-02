@@ -1,4 +1,6 @@
 import "server-only";
+import { decodeAttachmentRow } from "@/lib/server/attachment-content";
+import { decodePageProjection } from "@/lib/server/page-content";
 
 import { pageDatabaseDocument, type DatabaseDocumentPage } from "@/lib/page-database-document";
 import { databaseDocumentNames } from "./page-database-document";
@@ -99,32 +101,46 @@ export async function getPublicPageBundle(
   let pages: PublicPageNode[] = [root];
   let databasePages: DatabaseDocumentPage[] = [ctx.page];
   if (ctx.share.include_children) {
-    const { data } = await service
-      .from("pages")
-      .select("id, parent_id, title, icon, position, database_schema, property_values, created_at")
-      .eq("project_id", ctx.project.id)
-      .is("deleted_at", null);
-    const all = (data ?? []) as Array<PublicPageNode & { position: string }>;
-    const inBranch = descendantIds(all, root.id);
-    databasePages = all.filter((page) => page.id === root.id || inBranch.includes(page.id));
+    const hierarchy: { id: string; parent_id: string | null }[] = [];
+    for (let offset = 0; ; offset += 200) {
+      const { data, error } = await service.from("pages")
+        .select("id,parent_id").eq("project_id", ctx.project.id)
+        .is("deleted_at", null).order("id", { ascending: true })
+        .range(offset, offset + 199);
+      if (error) return null;
+      hierarchy.push(...(data ?? []));
+      if (!data || data.length < 200) break;
+    }
+    const inBranch = descendantIds(hierarchy, root.id);
+    const all: Array<PublicPageNode & { position: string }> = [];
+    for (let offset = 0; offset < inBranch.length; offset += 100) {
+      const { data, error } = await service.from("pages")
+        .select("id, project_id, parent_id, title, icon, position, database_schema, property_values, created_at, encrypted_content, encryption_version")
+        .eq("project_id", ctx.project.id).is("deleted_at", null)
+        .in("id", inBranch.slice(offset, offset + 100));
+      if (error) return null;
+      all.push(...await Promise.all((data ?? []).map((row) =>
+        decodePageProjection(row))) as Array<PublicPageNode & { position: string }>);
+    }
+    databasePages = [ctx.page, ...all];
     pages = [
       root,
-      ...all
-        .filter((p) => inBranch.includes(p.id))
-        .map((p) => ({ id: p.id, parent_id: p.parent_id, title: p.title, icon: p.icon })),
+      ...all.map((p) => ({ id: p.id, parent_id: p.parent_id,
+        title: p.title, icon: p.icon })),
     ];
   }
 
   const targetId = pageId ?? root.id;
   if (!pages.some((p) => p.id === targetId)) return null;
 
-  const { data: pageRow } = await service
+  const { data: storedPage } = await service
     .from("pages")
-    .select("id, parent_id, title, icon, content, updated_at, database_schema, property_values, created_at")
+    .select("id, project_id, parent_id, title, icon, content, updated_at, database_schema, property_values, created_at, encrypted_content, encryption_version")
     .eq("id", targetId)
     .is("deleted_at", null)
     .maybeSingle();
-  if (!pageRow) return null;
+  if (!storedPage) return null;
+  const pageRow = await decodePageProjection(storedPage);
 
   databasePages = databasePages.map((page) => page.id === targetId ? pageRow as DatabaseDocumentPage : page);
   if (
@@ -134,18 +150,19 @@ export async function getPublicPageBundle(
   ) {
     const { data: parent } = await service
       .from("pages")
-      .select("id, database_schema")
+      .select("id, project_id, database_schema, encrypted_content, encryption_version")
       .eq("id", pageRow.parent_id)
       .eq("project_id", ctx.project.id)
       .is("deleted_at", null)
       .maybeSingle();
-    if (parent?.database_schema != null) {
+    const clearParent = parent ? await decodePageProjection(parent) : null;
+    if (clearParent?.database_schema != null) {
       // The parent provides column definitions only; it is not a published page.
       databasePages.push({
-        id: parent.id,
+        id: clearParent.id,
         parent_id: null,
         title: "",
-        database_schema: parent.database_schema,
+        database_schema: clearParent.database_schema,
       });
     }
   }
@@ -222,19 +239,21 @@ export async function signPublicFileUrls(
   const service = getServiceClient();
   const { data } = await service
     .from("page_files")
-    .select("id, page_id, storage_path, file_name, mime_type")
+    .select("id, project_id, page_id, storage_path, file_name, mime_type")
     .in("id", [...ids]);
 
   const signed = new Map<string, string>();
   type FileRow = {
     id: string;
+    project_id: string;
     page_id: string;
     storage_path: string;
     file_name: string;
     mime_type: string | null;
   };
   await Promise.all(
-    ((data ?? []) as FileRow[]).map(async (row) => {
+    ((data ?? []) as FileRow[]).map(async (stored) => {
+      const row = await decodeAttachmentRow("page_files", stored);
       if (!publishedPageIds.has(row.page_id)) return;
       const url = await signedAttachmentUrl(service, row.storage_path, {
         expiresIn: PUBLIC_FILE_URL_TTL_SECONDS,

@@ -1,21 +1,10 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Add01Icon, Copy01Icon, Delete02Icon, Download01Icon, File02Icon, FileDownloadIcon, GlobeIcon, PrinterIcon, StarIcon, StarOffIcon } from "@hugeicons/core-free-icons";
 import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "mangue-ui";
-import {
-  ClipboardCopy,
-  Download,
-  FileDown,
-  FileText,
-  Globe,
-  Plus,
-  Printer,
-  Star,
-  StarOff,
-  Trash2,
-} from "lucide-react";
-
 import type { ContextMenuAction } from "@/components/issue-context-menu";
 import { PagePublishDialog } from "@/components/pages/page-publish-dialog";
 import { PageAgentCopyDialog } from "@/components/pages/page-agent-copy-dialog";
@@ -178,13 +167,13 @@ export function usePageDocumentMenu({
         {
           id: "export-md",
           label: isDatabase ? tDatabase("exportArchive") : t("exportMarkdown"),
-          icon: <FileText className="size-4" />,
+          icon: <HugeiconsIcon icon={File02Icon} className="size-4" />,
           onSelect: () => download(page.id, false),
         },
         {
           id: "export-pdf",
           label: t("exportPdf"),
-          icon: <Printer className="size-4" />,
+          icon: <HugeiconsIcon icon={PrinterIcon} className="size-4" />,
           onSelect: () => print(page.id, false),
         },
       ];
@@ -194,7 +183,7 @@ export function usePageDocumentMenu({
           {
             id: "export-md-branch",
             label: t("exportMarkdownBranch", { count }),
-            icon: <FileDown className="size-4" />,
+            icon: <HugeiconsIcon icon={FileDownloadIcon} className="size-4" />,
             separatorBefore: true,
             onSelect: () => download(page.id, true),
           },
@@ -203,7 +192,7 @@ export function usePageDocumentMenu({
           {
             id: "export-pdf-branch",
             label: t("exportPdfBranch", { count }),
-            icon: <Printer className="size-4" />,
+            icon: <HugeiconsIcon icon={PrinterIcon} className="size-4" />,
             onSelect: () => print(page.id, true),
           }
         );
@@ -213,16 +202,16 @@ export function usePageDocumentMenu({
         {
           id: "new-subpage",
           label: t("newSubpage"),
-          icon: <Plus className="size-4" />,
+          icon: <HugeiconsIcon icon={Add01Icon} className="size-4" />,
           onSelect: () => onCreateChild(page.id),
         },
         {
           id: "favorite",
           label: page.favorite ? t("unfavorite") : t("favorite"),
           icon: page.favorite ? (
-            <StarOff className="size-4" />
+            <HugeiconsIcon icon={StarOffIcon} className="size-4" />
           ) : (
-            <Star className="size-4" />
+            <HugeiconsIcon icon={StarIcon} className="size-4" />
           ),
           onSelect: () => onToggleFavorite(page),
         },
@@ -233,7 +222,7 @@ export function usePageDocumentMenu({
           // wording: the protocol, the name of the agent we have in mind, or the
           // word that we use for this on a ticket (“prompt”, “link”).
           keywords: ["mcp", "agent", "link", "lien", "prompt", "claude", "cursor"],
-          icon: <ClipboardCopy className="size-4" />,
+          icon: <HugeiconsIcon icon={Copy01Icon} className="size-4" />,
           shortcut: options?.shortcut ? modShortcut : undefined,
           separatorBefore: true,
           onSelect: () => openAgentCopy(page, "menu"),
@@ -241,7 +230,7 @@ export function usePageDocumentMenu({
         {
           id: "publish",
           label: t("publish"),
-          icon: <Globe className="size-4" />,
+          icon: <HugeiconsIcon icon={GlobeIcon} className="size-4" />,
           onSelect: () => {
             setTarget(page);
             setPublishOpen(true);
@@ -250,13 +239,13 @@ export function usePageDocumentMenu({
         {
           id: "export",
           label: t("export"),
-          icon: <Download className="size-4" />,
+          icon: <HugeiconsIcon icon={Download01Icon} className="size-4" />,
           children: exportChildren,
         },
         {
           id: "trash",
           label: t("deletePage"),
-          icon: <Trash2 className="size-4" />,
+          icon: <HugeiconsIcon icon={Delete02Icon} className="size-4" />,
           variant: "destructive",
           separatorBefore: true,
           onSelect: () => onTrash(page),

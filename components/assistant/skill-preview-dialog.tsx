@@ -1,5 +1,7 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Cancel01Icon, Layers01Icon, LoaderCircleIcon } from "@hugeicons/core-free-icons";
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
@@ -9,8 +11,6 @@ import {
   DialogDescription,
   DialogTitle,
 } from "mangue-ui";
-import { Layers, LoaderCircle, X } from "lucide-react";
-
 import { Markdown } from "@/components/markdown";
 import { useScrollFade } from "@/lib/use-scroll-fade";
 import type {
@@ -75,7 +75,7 @@ export function SkillPreviewDialog({
             onClick={() => onOpenChange(false)}
             className="rounded-full text-muted-foreground hover:text-foreground"
           >
-            <X className="size-4" />
+            <HugeiconsIcon icon={Cancel01Icon} className="size-4" />
           </Button>
         </div>
 
@@ -86,7 +86,7 @@ export function SkillPreviewDialog({
         >
           <div className="mx-auto w-full max-w-2xl">
             <div className="mb-4 flex size-10 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-700 dark:text-emerald-400">
-              <Layers className="size-5" aria-hidden />
+              <HugeiconsIcon icon={Layers01Icon} className="size-5" aria-hidden />
             </div>
             <DialogTitle className="text-3xl leading-[1.05] font-semibold tracking-tighter text-balance">
               {skill.name}
@@ -97,7 +97,7 @@ export function SkillPreviewDialog({
 
             {loading ? (
               <div className="mt-10 flex items-center gap-2 text-sm text-muted-foreground">
-                <LoaderCircle className="size-4 animate-spin" aria-hidden />
+                <HugeiconsIcon icon={LoaderCircleIcon} className="size-4 animate-spin" aria-hidden />
                 <span>{t("skillPreviewLoading")}</span>
               </div>
             ) : failed || !loaded ? (

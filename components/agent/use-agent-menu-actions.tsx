@@ -1,15 +1,10 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { AppIcon } from "@/components/icon";
+import { Add01Icon, CodeSimpleIcon as Code2, Copy01Icon, Edit01Icon, Search01Icon, TaskDone01Icon } from "@hugeicons/core-free-icons";
 import { useMemo } from "react";
 import { useTranslations } from "next-intl";
-import {
-  ClipboardCopy,
-  Code2,
-  ListChecks,
-  PenLine,
-  Plus,
-  SearchCheck,
-} from "lucide-react";
 import { NumoIcon } from "@/components/numo-icon";
 import type { ContextMenuAction } from "@/components/issue-context-menu";
 
@@ -106,11 +101,12 @@ export function useAgentMenuActions({
       "implementation",
     ];
 
-    const verifyAction = (id: string, onSelect: () => void): ContextMenuAction => ({
+    const verifyAction = (id: string, onSelect: () => void, transfersFocus = false): ContextMenuAction => ({
       id,
       label: t("actionVerifyImplementation"),
       keywords: verifyKeywords,
-      icon: <SearchCheck className="size-4" />,
+      icon: <HugeiconsIcon icon={Search01Icon} className="size-4" />,
+      transfersFocus,
       onSelect,
     });
 
@@ -129,7 +125,8 @@ export function useAgentMenuActions({
         "autre",
         "own",
       ],
-      icon: <PenLine className="size-4" />,
+      icon: <HugeiconsIcon icon={Edit01Icon} className="size-4" />,
+      transfersFocus: true,
       onSelect,
     });
 
@@ -137,20 +134,20 @@ export function useAgentMenuActions({
       id: "copy-prompt",
       label: t("copyAsPrompt"),
       keywords: ["copy", "prompt", "agent", "copier", ...planKeywords],
-      icon: <ClipboardCopy className="size-4" />,
+      icon: <HugeiconsIcon icon={Copy01Icon} className="size-4" />,
       children: [
         {
           id: "copy-prompt-plan",
           label: planLabel,
           keywords: planKeywords,
-          icon: <ListChecks className="size-4" />,
+          icon: <HugeiconsIcon icon={TaskDone01Icon} className="size-4" />,
           onSelect: onCopyPlanPrompt,
         },
         {
           id: "copy-prompt-implement",
           label: t("actionImplement"),
           keywords: implementKeywords,
-          icon: <Code2 className="size-4" />,
+          icon: <AppIcon icon={Code2} className="size-4" />,
           shortcut: "⇧P",
           onSelect: onCopyPrompt,
         },
@@ -169,18 +166,20 @@ export function useAgentMenuActions({
         id: "agent-plan",
         label: planLabel,
         keywords: planKeywords,
-        icon: <ListChecks className="size-4" />,
+        icon: <HugeiconsIcon icon={TaskDone01Icon} className="size-4" />,
+        transfersFocus: true,
         onSelect: onWritePlanWithAgent,
       },
       {
         id: "agent-implement",
         label: t("actionImplement"),
         keywords: implementKeywords,
-        icon: <Code2 className="size-4" />,
+        icon: <AppIcon icon={Code2} className="size-4" />,
         shortcut: "⇧A",
+        transfersFocus: true,
         onSelect: onImplementWithAgent,
       },
-      verifyAction("agent-verify", onVerifyWithAgent),
+      verifyAction("agent-verify", onVerifyWithAgent, true),
       customAction("agent-custom", onCustomWithAgent),
     ];
 
@@ -192,13 +191,14 @@ export function useAgentMenuActions({
             label: tAgent("openAgent"),
             keywords: ["agent", "open", "ouvrir", "session", "code", "ai", "numo"],
             icon: <NumoIcon className="size-4" />,
+            transfersFocus: true,
             onSelect: onOpenSession,
           },
           {
             id: "new-agent-session",
             label: tAgent("newSession"),
             keywords: ["agent", "new", "nouvelle", "session", "launch", "lancer", "numo"],
-            icon: <Plus className="size-4" />,
+            icon: <HugeiconsIcon icon={Add01Icon} className="size-4" />,
             children: launchChildren,
           },
         ]

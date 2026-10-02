@@ -1,5 +1,5 @@
-import { Code2 } from "lucide-react";
 import { HighlightedCodeBlock } from "@/components/code-block-lowlight";
+import { CodeSimpleIcon as Code2 } from "@hugeicons/core-free-icons";
 import type { PageBlock } from "@/components/pages/blocks/types";
 
 /** Syntax highlighting comes from lowlight (see components/code-block-lowlight):

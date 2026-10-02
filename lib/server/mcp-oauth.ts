@@ -10,6 +10,8 @@ import { getServiceClient } from "@/lib/supabase-service";
 import { oauthAppOrigin } from "./app-origin";
 import { assertPublicHttpUrl } from "./safe-fetch";
 import { encryptMcpToken, decryptMcpToken } from "./mcp-credentials";
+import { decodeMcpAttempt, decodeMcpConnection, mcpAttemptWrite,
+  mcpOAuthWrite, mcpSecret } from "./mcp-content";
 import { mcpFetch, MCP_TIMEOUT_MS } from "./mcp-http";
 import type { McpConnectionRow } from "./mcp-client";
 
@@ -25,17 +27,20 @@ type OAuthData = {
 export const mcpOAuthCallback = () =>
   `${oauthAppOrigin()}/api/account/mcp-connections/oauth/callback`;
 
-function readData(encrypted: string | null): OAuthData {
+function readData(encrypted: string | null, version = 0): OAuthData {
   return encrypted
-    ? (JSON.parse(decryptMcpToken(encrypted)!) as OAuthData)
+    ? (JSON.parse(version ? encrypted : decryptMcpToken(encrypted)!) as OAuthData)
     : {};
 }
 export function initialMcpOAuth(
   clientId?: string,
   clientSecret?: string,
 ): string {
-  return encryptMcpToken(
-    JSON.stringify(
+  return encryptMcpToken(initialMcpOAuthData(clientId, clientSecret))!;
+}
+
+export function initialMcpOAuthData(clientId?: string, clientSecret?: string): string {
+  return JSON.stringify(
       clientId
         ? {
             client: {
@@ -47,8 +52,7 @@ export function initialMcpOAuth(
             },
           }
         : {},
-    ),
-  )!;
+    );
 }
 
 /** The SDK owns discovery, issuer validation, PKCE, token exchange and refresh. */
@@ -112,7 +116,7 @@ export async function openMcpOAuth(connection: McpConnectionRow) {
   const service = getServiceClient();
   const lease = randomUUID();
   const now = new Date();
-  const { data: claimed, error } = await service
+  let claim = service
     .from("user_mcp_connections")
     .update({
       oauth_lock_token: lease,
@@ -122,11 +126,12 @@ export async function openMcpOAuth(connection: McpConnectionRow) {
     })
     .eq("id", connection.id)
     .eq("user_id", connection.user_id)
-    .eq("url", connection.url)
     .eq("auth_mode", "oauth")
-    .or(`oauth_lock_until.is.null,oauth_lock_until.lt.${now.toISOString()}`)
-    .select("oauth_encrypted")
-    .maybeSingle();
+    .or(`oauth_lock_until.is.null,oauth_lock_until.lt.${now.toISOString()}`);
+  claim = connection.content_revision === undefined
+    ? claim.eq("url", connection.url)
+    : claim.eq("content_revision", connection.content_revision);
+  const { data: claimed, error } = await claim.select("*").maybeSingle();
   if (error || !claimed)
     throw new Error("MCP authorization is busy or changed");
   const release = async () => {
@@ -138,20 +143,21 @@ export async function openMcpOAuth(connection: McpConnectionRow) {
       .eq("oauth_lock_token", lease);
   };
   try {
-    const data = readData(claimed.oauth_encrypted);
+    let current = await decodeMcpConnection(claimed as McpConnectionRow);
+    const data = readData(current.oauth_encrypted, current.encryption_version);
     const persist = async () => {
-      const { data: saved, error: saveError } = await service
+      let save = service
         .from("user_mcp_connections")
-        .update({
-          oauth_encrypted: encryptMcpToken(JSON.stringify(data)),
-          oauth_connected: !!data.tokens,
-        })
+        .update({ ...await mcpOAuthWrite(current, JSON.stringify(data)),
+          oauth_connected: !!data.tokens })
         .eq("id", connection.id)
         .eq("user_id", connection.user_id)
-        .eq("oauth_lock_token", lease)
-        .select("id")
-        .maybeSingle();
+        .eq("oauth_lock_token", lease);
+      if (current.content_revision !== undefined)
+        save = save.eq("content_revision", current.content_revision);
+      const { data: saved, error: saveError } = await save.select("*").maybeSingle();
       if (saveError || !saved) throw new Error("MCP connection changed");
+      current = await decodeMcpConnection(saved as McpConnectionRow);
     };
     const provider = providerFor(data, persist, async () => {
       throw new Error("Reconnect MCP from account settings");
@@ -177,7 +183,7 @@ export async function startMcpOAuth(
 ): Promise<string> {
   if (connection.auth_mode !== "oauth") throw new Error("OAuth is not enabled");
   const state = randomBytes(32).toString("hex");
-  const data = readData(connection.oauth_encrypted);
+  const data = readData(connection.oauth_encrypted, connection.encryption_version);
   delete data.tokens;
   delete data.verifier;
   delete data.discovery;
@@ -199,7 +205,7 @@ export async function startMcpOAuth(
   const fetchFn = mcpFetch(AbortSignal.timeout(MCP_TIMEOUT_MS));
   const headers = new Headers(
     connection.headers_encrypted
-      ? JSON.parse(decryptMcpToken(connection.headers_encrypted)!)
+      ? JSON.parse(mcpSecret(connection, "headers_encrypted")!)
       : undefined,
   );
   headers.set("Accept", "application/json, text/event-stream");
@@ -276,13 +282,15 @@ export async function startMcpOAuth(
     .delete()
     .eq("user_id", connection.user_id);
   if (cleanupError) throw new Error("Could not replace OAuth transaction");
-  const { error } = await service.from("user_mcp_oauth_attempts").insert({
+  const attemptValues = await mcpAttemptWrite({
     state,
     user_id: connection.user_id,
     connection_id: connection.id,
     endpoint: connection.url,
-    payload_encrypted: encryptMcpToken(JSON.stringify(data)),
+    payload_encrypted: JSON.stringify(data),
   });
+  const { error } = await service.from("user_mcp_oauth_attempts")
+    .insert(attemptValues as Parameters<ReturnType<typeof service.from>["insert"]>[0]);
   if (error) throw new Error("Could not save OAuth transaction");
   return authorizationUrl;
 }
@@ -303,22 +311,25 @@ export async function completeMcpOAuth(
     .eq("state", state)
     .eq("user_id", userId)
     .gt("expires_at", new Date().toISOString())
-    .select("connection_id,endpoint,payload_encrypted")
+    .select("*")
     .maybeSingle();
   if (error || !attempt)
     throw new Error("OAuth transaction expired or already used");
+  const decodedAttempt = await decodeMcpAttempt(attempt);
   const { data: current } = await service
     .from("user_mcp_connections")
     .select("*")
-    .eq("id", attempt.connection_id)
+    .eq("id", decodedAttempt.connection_id)
     .eq("user_id", userId)
-    .eq("url", attempt.endpoint)
     .eq("auth_mode", "oauth")
     .maybeSingle();
   if (!current) throw new Error("MCP connection changed");
-  const oauth = await openMcpOAuth(current);
+  const decodedCurrent = await decodeMcpConnection(current as McpConnectionRow);
+  if (decodedCurrent.url !== decodedAttempt.endpoint)
+    throw new Error("MCP connection changed");
+  const oauth = await openMcpOAuth(decodedCurrent);
   try {
-    const data = readData(attempt.payload_encrypted);
+    const data = JSON.parse(decodedAttempt.payload_encrypted) as OAuthData;
     const provider = providerFor(
       data,
       async () => {},
@@ -327,7 +338,7 @@ export async function completeMcpOAuth(
       },
     );
     const result = await auth(provider, {
-      serverUrl: attempt.endpoint,
+      serverUrl: decodedAttempt.endpoint,
       authorizationCode: code,
       iss,
       scope: data.scope,

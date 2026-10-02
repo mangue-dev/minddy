@@ -14,6 +14,8 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { spawnSync } from "node:child_process";
 import { prepareFunctionsBundle } from "./prepare-self-hosted-functions.mjs";
 
+import { encryptionChoice, encryptionEnvironment } from "./self-hosting-encryption.mjs";
+
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 export const ROOT_DIR = resolve(SCRIPT_DIR, "..");
 export const DEFAULT_DEPLOY_DIR = resolve(ROOT_DIR, "deploy/self-hosted");
@@ -43,6 +45,7 @@ export function parseArgs(argv) {
     };
     if (arg === "--") continue;
     if (arg === "--mode") options.mode = value();
+    else if (arg === "--encryption") options.encryption = encryptionChoice(value());
     else if (arg === "--domain") options.domain = value();
     else if (arg === "--app-url") options.appUrl = value();
     else if (arg === "--admin-email") options.adminEmail = value();
@@ -95,6 +98,7 @@ Options:
   --image <oci-reference>   Verified immutable minddy OCI digest to deploy.
   --enable <feature>         Enable application-email or web-push.
                               Repeat for multiple features. Routines are included.
+  --encryption enabled|disabled  Encrypt workspace content (default: enabled).
   --no-forge-relay           Opt out of the managed forge relay: GitHub/GitLab
                               then require operator-owned app credentials, and
                               nothing ever contacts minddy infrastructure.
@@ -174,6 +178,7 @@ export function generatedValues(capabilities = new Set()) {
   const values = {
     AI_KEY_ENCRYPTION_SECRET: secret(),
     FEEDBACK_SSO_ENCRYPTION_SECRET: secret(),
+    MINDDY_DATA_ROOT_KEY: secret(),
     POSTGRES_PASSWORD: secret(),
     JWT_SECRET: jwtSecret,
     ANON_KEY: createSupabaseJwt(jwtSecret, "anon"),
@@ -296,8 +301,11 @@ export function environmentValues(options, generated = generatedValues(options.c
     ? { MINDDY_PUBLIC_SUPABASE_ANON_KEY: generated.ANON_KEY, SUPABASE_SERVICE_ROLE_KEY: generated.SERVICE_ROLE_KEY }
     : { MINDDY_PUBLIC_SUPABASE_ANON_KEY: options.anonKey, SUPABASE_SERVICE_ROLE_KEY: options.serviceRoleKey };
   const capabilities = options.capabilities ?? new Set();
+  const encryption = encryptionEnvironment({}, options.encryption);
   return {
     ...generated,
+    ...encryption,
+    MINDDY_DATA_ROOT_KEY: generated.MINDDY_DATA_ROOT_KEY ?? encryption.MINDDY_DATA_ROOT_KEY,
     MINDDY_DEPLOY_DIR: options.deployDir,
     MINDDY_ENV_FILE: options.envFile,
     ...(options.image ? { MINDDY_IMAGE: options.image } : {}),
@@ -426,6 +434,9 @@ export async function collectOptions(options) {
     if (!value) fail("a PostgreSQL URL is required unless --skip-bootstrap is used.");
     return value;
   });
+  if (options.encryption === undefined) {
+    options.encryption = await ask("Workspace encryption (enabled/disabled)", "enabled", encryptionChoice);
+  }
   if (options.capabilities.size === 0) {
     const selected = await ask(
       "Optional features (comma-separated: application-email, web-push; blank for none)",
@@ -493,6 +504,7 @@ export async function main(argv = process.argv.slice(2)) {
   if (hasExistingEnvironment) {
     values = parseEnvironment(readFileSync(options.envFile, "utf8"));
     assertCompleteEnvironment(values);
+    encryptionEnvironment(values, options.encryption, { readOnly: true });
     assertRequestedImage(options, values);
     options.appUrl ||= values.MINDDY_PUBLIC_APP_URL;
     options.adminEmail ||= values.ADMIN_EMAILS?.split(",")[0];

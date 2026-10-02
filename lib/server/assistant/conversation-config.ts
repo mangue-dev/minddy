@@ -7,7 +7,8 @@ import {
   reasoningLevelsFor,
   type ReasoningLevel,
 } from "@/lib/agent-reasoning";
-import { getAssistantModelsForUser, type AgentModelEntry } from "@/lib/server/agent/models-catalog";
+import { getAssistantModelsForUser, getOpenRouterConversationModels, type AgentModelEntry } from "@/lib/server/agent/models-catalog";
+import type { ResolvedBilling } from "@/lib/server/billing-accounts";
 import { ensureModelInPlan } from "@/lib/server/agent/model-plan";
 import {
   resolveAiRuntime,
@@ -87,6 +88,7 @@ export async function resolveNumoTurnConfiguration(input: {
   userId: string;
   model?: unknown;
   reasoningLevel?: unknown;
+  admittedBilling?: ResolvedBilling;
 }): Promise<ResolvedNumoTurnConfiguration> {
   const persistedModel = normalizeModel(input.model);
   const persistedReasoningLevel = normalizeReasoning(input.reasoningLevel);
@@ -100,15 +102,21 @@ export async function resolveNumoTurnConfiguration(input: {
     modelOverride: persistedModel,
   });
 
-  let modelEntry: AgentModelEntry | undefined;
+  // Inherited settings must use the same model capabilities as the picker.
+  // Otherwise a generic default such as medium can be sent while the UI
+  // correctly displays the nearest supported GLM level, low.
+  const [models, configuredReasoning] = await Promise.all([
+    runtime.provider === "openrouter"
+      ? getOpenRouterConversationModels(runtime.apiKey)
+      : getAssistantModelsForUser(input.userId).then(catalog => catalog.models),
+    getAssistantReasoningLevel(),
+  ]);
+  const modelEntry = findModel(models, runtime.model);
   if (hasExplicitModel || hasExplicitReasoning) {
-    const catalog = await getAssistantModelsForUser(input.userId);
-    modelEntry = findModel(catalog.models, runtime.model);
-
     // A generic endpoint owns its model namespace and may not expose a model
     // list. Every catalog-backed provider must prove that the selected id is
     // currently available instead of silently falling back to another model.
-    const catalogUnavailable = catalog.models.length === 0 &&
+    const catalogUnavailable = models.length === 0 &&
       runtime.provider !== "generic" && !isLocalAgentProvider(runtime.provider);
     if (hasExplicitModel && catalogUnavailable) {
       throw new NumoConversationConfigError(
@@ -117,7 +125,7 @@ export async function resolveNumoTurnConfiguration(input: {
         503,
       );
     }
-    if (hasExplicitModel && catalog.models.length > 0 && !modelEntry) {
+    if (hasExplicitModel && models.length > 0 && !modelEntry) {
       throw new NumoConversationConfigError(
         "model_unavailable",
         `The model “${runtime.model}” is unavailable for the active provider. Choose another model.`,
@@ -128,6 +136,7 @@ export async function resolveNumoTurnConfiguration(input: {
         userId: input.userId,
         model: runtime.model,
         mode: runtime.mode,
+        ...(input.admittedBilling ? { admittedBilling: input.admittedBilling } : {}),
       });
     }
   }
@@ -135,7 +144,6 @@ export async function resolveNumoTurnConfiguration(input: {
   const allowedReasoning = conversationReasoningLevels(
     reasoningLevelsFor(modelEntry?.reasoning),
   );
-  const configuredReasoning = await getAssistantReasoningLevel();
   if (hasExplicitReasoning && !allowedReasoning.includes(persistedReasoningLevel)) {
     throw new NumoConversationConfigError(
       "reasoning_unsupported",

@@ -12,7 +12,8 @@
  * - Conditions determine action visibility
  */
 
-import type { PaletteItem, IconComponent } from "../types";
+import type { PaletteItem } from "../types";
+import type { AppIcon } from "@/components/icon";
 import type { TranslateFn } from "../i18n";
 
 // =============================================================================
@@ -137,8 +138,8 @@ export interface ContextualAction {
   /** Display label. */
   label: string;
 
-  /** Icon component. */
-  icon?: IconComponent;
+  /** Icon — Hugeicons data or a React SVG component. */
+  icon?: AppIcon;
 
   /** Keyboard shortcut hint (e.g. ["⌘", "↵"]). */
   shortcut?: string[];

@@ -1,6 +1,9 @@
 import "server-only";
 
+import { randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { decodeSavedView, encodeSavedView, savedViewNameIndex,
+  savedViewValues, shouldProtectSavedViews } from "./saved-view-bookmark";
 import {
   isSavedViewHref,
   normalizeViewName,
@@ -45,8 +48,45 @@ export async function createSavedView(
     return { ok: false, status: 400, errorKey: "invalidViewHref" };
   }
 
-  // `onConflict` on unique index (user_id, name): resave under a name
-  // known moves the view, `updated_at` follows with the trigger.
+  if (await shouldProtectSavedViews()) {
+    const nameIndex = await savedViewNameIndex(userId, name);
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const indexed = await supabase.from("saved_views").select("*")
+        .eq("user_id", userId).eq("name_index", nameIndex).maybeSingle();
+      if (indexed.error) break;
+      let existing = indexed.data;
+      if (!existing) {
+        const legacy = await supabase.from("saved_views").select("*")
+          .eq("user_id", userId).eq("name", name).maybeSingle();
+        if (legacy.error) break;
+        existing = legacy.data;
+      }
+      if (existing) {
+        const plain = await decodeSavedView(existing, userId);
+        const encoded = await encodeSavedView({ ...plain, href: input.href,
+          encryption_version: existing.encryption_version });
+        const write = await supabase.from("saved_views")
+          .update(savedViewValues(encoded)).eq("id", existing.id)
+          .eq("content_revision", existing.content_revision ?? 0)
+          .select("*").maybeSingle();
+        if (write.error) break;
+        if (write.data) return { ok: true,
+          view: await decodeSavedView(write.data, userId) };
+        continue;
+      }
+      const encoded = await encodeSavedView({ id: randomUUID(), user_id: userId,
+        name, href: input.href }, { force: true });
+      const write = await supabase.from("saved_views").insert(encoded)
+        .select("*").single();
+      if (!write.error && write.data) return { ok: true,
+        view: await decodeSavedView(write.data, userId) };
+      if (write.error?.code === UNIQUE_VIOLATION) continue;
+      break;
+    }
+    return { ok: false, status: 500, errorKey: "databaseError" };
+  }
+
+  // Legacy equality remains available until all rows have been converted.
   const { data, error } = await supabase
     .from("saved_views")
     .upsert(
@@ -60,7 +100,7 @@ export async function createSavedView(
     console.error("[saved-views] create failed:", error.message);
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
-  return { ok: true, view: data };
+  return { ok: true, view: await decodeSavedView(data, userId) };
 }
 
 export async function updateSavedView(
@@ -85,14 +125,25 @@ export async function updateSavedView(
     return { ok: false, status: 400, errorKey: "nameRequired" };
   }
 
-  const { data, error } = await supabase
-    .from("saved_views")
-    .update(updates)
-    .eq("id", id)
-    .select()
-    .maybeSingle();
-
-  if (error) {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const read = await supabase.from("saved_views").select("*")
+      .eq("id", id).maybeSingle();
+    if (read.error) return { ok: false, status: 500, errorKey: "databaseError" };
+    if (!read.data) return { ok: false, status: 404,
+      errorKey: "viewNotFound" };
+    const userId = read.data.user_id as string;
+    const plain = await decodeSavedView(read.data, userId);
+    const encoded = await encodeSavedView({ ...plain, ...updates,
+      encryption_version: read.data.encryption_version });
+    let write = supabase.from("saved_views")
+      .update(savedViewValues(encoded)).eq("id", id);
+    if (read.data.content_revision !== undefined) {
+      write = write.eq("content_revision", read.data.content_revision);
+    }
+    const { data, error } = await write.select("*").maybeSingle();
+    if (!error && data) return { ok: true,
+      view: await decodeSavedView(data, userId) };
+    if (!error) continue;
     // Renaming to a name already taken is not a problem: it's a question
     // asked to the user. Creation decides on its own (the upsert
     // moves the homonymous view) — but a RENAMING which would overwrite another view
@@ -103,7 +154,5 @@ export async function updateSavedView(
     console.error("[saved-views] update failed:", error.message);
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
-  // Invisible by RLS (the view of another account) → same signal as non-existent.
-  if (!data) return { ok: false, status: 404, errorKey: "viewNotFound" };
-  return { ok: true, view: data };
+  return { ok: false, status: 500, errorKey: "databaseError" };
 }

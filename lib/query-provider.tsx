@@ -4,9 +4,13 @@ import { IsRestoringProvider, QueryClient, QueryClientProvider, type Query } fro
 import { persistQueryClientRestore } from "@tanstack/react-query-persist-client";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createQueryStorage, subscribeToQueryPersistence } from "./query-persistence";
+import { invalidateLocalSnapshotWrites } from "./local-snapshots";
+import { clearErrorHistory } from "./status-history";
 
 /**
- * The cache is PERSISTED in localStorage (MIN-89).
+ * The cache is persisted as a server-sealed account envelope in localStorage.
+ * The device retains no decryption key. Reload recovery needs an authenticated
+ * server round trip; plaintext stays in memory. Legacy clear caches are purged.
  *
  * The app is fully rendered client-side: a full reload would start
  * from scratch — bundle, session restore, then a dozen requests before
@@ -89,6 +93,7 @@ const persistenceStops = new Set<() => void>();
  * a repeat of this list.**
  */
 const NON_PERSISTED_KEY_PREFIXES: string[][] = [
+  ["project-icon"], // Authorized image bytes belong only to the current account's memory cache.
   ["app-tabs"], // Unbounded account collection; only local activation uses sessionStorage.
   ["me", "search-index"],
   ["me", "pages", "search"], // Per-keystroke snippets are bounded in memory, never restored from disk.
@@ -143,6 +148,8 @@ export function wasRestoredBeforeMount(
  * account which is leaving, and the machine can be shared.
  */
 export function clearPersistedQueryCache() {
+  invalidateLocalSnapshotWrites();
+  clearErrorHistory();
   // Cancel queued snapshots before removing storage. Otherwise a delayed write
   // or pagehide flush could restore the departing account's data after logout.
   for (const stop of persistenceStops) stop();
@@ -150,6 +157,13 @@ export function clearPersistedQueryCache() {
   if (typeof window === "undefined") return;
   try {
     window.localStorage.removeItem(QUERY_CACHE_STORAGE_KEY);
+    window.localStorage.removeItem("minddy:drafts:issue");
+    window.localStorage.removeItem("minddy:drafts:objective");
+    for (const key of Object.keys(window.localStorage)) {
+      if (key.startsWith("minddy:database-list:") || key === "minddy-cp:history" || key === "minddy-cp-destinations:history") {
+        window.localStorage.removeItem(key);
+      }
+    }
   } catch {
     // Storage unavailable (private browsing, quota) — nothing to purge.
   }
@@ -198,7 +212,11 @@ export function AppQueryProvider({ children }: { children: ReactNode }) {
       stopped = true;
       persistence?.stop();
     };
-    persistenceStops.add(stop);
+    const retire = () => {
+      stop();
+      queryClient.clear();
+    };
+    persistenceStops.add(retire);
     if (!restorePromise.current) {
       restorePromise.current = persistQueryClientRestore(persistOptions);
     }
@@ -236,7 +254,7 @@ export function AppQueryProvider({ children }: { children: ReactNode }) {
     document.addEventListener("visibilitychange", onVisibility);
     return () => {
       stop();
-      persistenceStops.delete(stop);
+      persistenceStops.delete(retire);
       window.removeEventListener("pagehide", flush);
       document.removeEventListener("visibilitychange", onVisibility);
     };

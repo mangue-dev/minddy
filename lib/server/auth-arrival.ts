@@ -109,8 +109,8 @@ export async function claimInvitations(user: User | null): Promise<void> {
   if (!user) return;
   try {
     await attachPendingInvitations(user);
-  } catch (err) {
-    console.error("[auth/callback] claim invitations failed:", err);
+  } catch {
+    console.error("[auth/callback] invitation_claim_failed");
   }
 }
 
@@ -153,8 +153,8 @@ export async function claimAvatarChoice(user: User | null): Promise<void> {
       );
     }
     if (seed) await claimAvatarSeed(service, user.id, seed);
-  } catch (err) {
-    console.error("[auth/callback] claim avatar choice failed:", err);
+  } catch {
+    console.error("[auth/callback] avatar_claim_failed");
   }
 }
 

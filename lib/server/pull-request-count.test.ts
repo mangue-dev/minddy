@@ -1,5 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 
+vi.mock("@/lib/supabase-service",() => ({
+  getServiceClient:() => ({ from:() => {
+    const query = { select:() => query,eq:() => query,
+      maybeSingle:async () => ({ data:null,error:null }) };
+    return query;
+  } }),
+}));
+
 import { countPullRequestsForUser } from "./agent/pull-requests";
 
 const project = {

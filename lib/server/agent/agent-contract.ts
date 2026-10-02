@@ -216,6 +216,18 @@ export type RecordAgentUsage = (line: AgentUsageLine) => Promise<void>;
 /** Current wire/storage version for a Numo-owned code-worker handoff. */
 export const AGENT_DELEGATION_CONTRACT_VERSION = 1 as const;
 
+/**
+ * The honest handoff of an INTERRUPTED worker (MIN-599). The executor stamps
+ * an interrupted run at rest as `completed`, so a delegation result built
+ * from the bare row would read "completed" and Numo would proceed as if the
+ * objective succeeded. Every executor rest path that ends an interrupted run
+ * of a Numo worker stamps this marker on `agent_runs.error_message` instead:
+ * `buildAgentDelegationResult` then derives status `partial`, and the marker
+ * doubles as the summary when the worker had written no outcome yet.
+ */
+export const INTERRUPTED_DELEGATION_NOTE =
+  "Stopped before completing the delegated objective.";
+
 export const AGENT_DELEGATION_SOURCE_KINDS = [
   "issue",
   "plan",

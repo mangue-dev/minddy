@@ -1,5 +1,7 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowLeft01Icon, Cancel01Icon, CircleDotDashedIcon as CircleDotDashed, Copy01Icon, CheckIcon } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -16,7 +18,6 @@ import {
   cn,
   toast,
 } from "mangue-ui";
-import { Check, ChevronLeft, CircleDotDashed, Copy, X } from "lucide-react";
 import { EmptyScene } from "@/components/empty-scene";
 import { AppContentHeader } from "@/components/app-content-header";
 import { SecondarySidebar } from "@/components/secondary-sidebar";
@@ -420,21 +421,11 @@ export default function TriagePage() {
     else if (!trimmed) setTitle(selected.title);
   };
 
-  if (!loading && triageIssues.length === 0) {
-    return (
-      /* Empty yard: the same shape as the board and the objectives — a scene,
- a sentence, and here nothing to do. No button: the sorting fills
- by itself, it's not a place where you create. The page title
- goes INTO the block, it doesn't have to be said twice. */
-      <div className="flex h-full flex-col">
-        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8">
-          <div className="mx-auto max-w-5xl">
-            <EmptyScene icon={CircleDotDashed} title={t("emptyTitle")} />
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // Empty yard handled INSIDE the layout: the sidebar keeps its search
+  // input and carries a compact scene (the isometric block), the pane says
+  // there is nothing to triage — the bar never reads as a dead strip
+  // (MIN-548 review). No button: the sorting fills by itself, it's not a
+  // place where you create.
 
   return (
     /* “@” on hover over a line (or on selection) opens Numo — even
@@ -460,6 +451,16 @@ export default function TriagePage() {
               <Skeleton key={i} className="h-14 rounded-lg" />
             ))}
           </div>
+        ) : triageIssues.length === 0 ? (
+          // Nothing in the yard at all: the same compact scene as the
+          // feedback column, so the bar fills its frame — and the search
+          // input above stays where it is, even if it filters nothing.
+          <EmptyScene
+            size="compact"
+            icon={CircleDotDashed}
+            title={t("emptyTitle")}
+            className="py-10"
+          />
         ) : visibleIssues.length === 0 ? (
           // An empty sort is handled above, before rendering the column:
           // here, it must have been the filter that emptied it.
@@ -509,7 +510,7 @@ export default function TriagePage() {
                 className="md:hidden"
                 onClick={() => setMobileDetail(false)}
               >
-                <ChevronLeft />
+                <HugeiconsIcon icon={ArrowLeft01Icon} />
               </Button>
               <span className="font-mono text-sm text-muted-foreground">
                 {issueIdentifier(project.key, selected.number)}
@@ -527,7 +528,7 @@ export default function TriagePage() {
                   align="end"
                   trigger={
                     <Button variant="outline" size="sm">
-                      <Copy className="text-muted-foreground" />
+                      <HugeiconsIcon icon={Copy01Icon} className="text-muted-foreground" />
                       {t("markDuplicate")}
                     </Button>
                   }
@@ -537,11 +538,11 @@ export default function TriagePage() {
                   size="sm"
                   onClick={() => openConfirm("decline", selected)}
                 >
-                  <X />
+                  <HugeiconsIcon icon={Cancel01Icon} />
                   {t("decline")}
                 </Button>
                 <Button size="sm" onClick={() => openConfirm("accept", selected)}>
-                  <Check />
+                  <HugeiconsIcon icon={CheckIcon} />
                   {t("accept")}
                 </Button>
               </div>
@@ -670,6 +671,16 @@ export default function TriagePage() {
               </div>
             </div>
           </>
+        ) : triageIssues.length === 0 ? (
+          /* Nothing in the yard: the same scene the whole page used to show,
+             kept in the pane now that the sidebar stays up. */
+          <div className="flex h-full flex-col">
+            <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8">
+              <div className="mx-auto max-w-5xl">
+                <EmptyScene icon={CircleDotDashed} title={t("emptyTitle")} />
+              </div>
+            </div>
+          </div>
         ) : (
           <div className="flex flex-1 items-center justify-center p-6">
             <p className="text-sm text-muted-foreground">{t("noSelection")}</p>
@@ -713,7 +724,7 @@ export default function TriagePage() {
             rows={3}
             autoFocus
             includeNumo
-            className="w-full rounded-lg border border-input bg-control px-3 py-2 text-sm outline-none [&:empty]:before:text-muted-foreground/60 focus-visible:border-ring"
+            className="w-full rounded-lg bg-control px-3 py-2 text-sm outline-none [&:empty]:before:text-muted-foreground/60 focus-visible:bg-control-hover"
             onSubmit={() => void runConfirm()}
           />
           <DialogFooter>

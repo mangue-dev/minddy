@@ -1,5 +1,5 @@
 import { Paragraph } from "@tiptap/extension-paragraph";
-import { Pilcrow } from "lucide-react";
+import { PilcrowIcon as Pilcrow } from "@hugeicons/core-free-icons";
 import type { PageBlock } from "@/components/pages/blocks/types";
 
 /** The default block: this is what `Enter` creates, and it is this that

@@ -186,7 +186,7 @@ function wireDb() {
     if (table === "feedback_merge_rejections")
       return fakeQuery(() => ({ data: [], error: null }));
     if (table === "categories")
-      return fakeQuery(() => ({ data: [{ id: "cat-a", name: "UI" }], error: null }));
+      return fakeQuery(() => ({ data: [{ id: "cat-a", project_id: "project-1", name: "UI" }], error: null }));
     if (table === "feedback_posts") {
       const resolve = feedbackPostsReads.shift() ?? (() => ({ data: FRESH_ROW, error: null }));
       return fakeQuery(resolve);

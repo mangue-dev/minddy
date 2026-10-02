@@ -1,3 +1,4 @@
+import { issueStore } from "@/lib/server/issue-store";
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
@@ -57,9 +58,7 @@ export async function setIssueCategories({
 
   const service = getServiceClient();
 
-  const { data: issue, error: issueError } = await service
-    .from("issues")
-    .select("id, project_id")
+  const { data: issue, error: issueError } = await issueStore(service).select("id, project_id")
     .is("deleted_at", null)
     .eq("id", issueId)
     .maybeSingle();

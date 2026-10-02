@@ -1,3 +1,4 @@
+import { commentStore } from "@/lib/server/comment-store";
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -109,8 +110,7 @@ export async function addPageComment({
   let rootBlockId: string | null = null;
   const threadAuthorIds: (string | null)[] = [];
   if (parentId) {
-    const { data: parent } = await service
-      .from("page_comments")
+    const { data: parent } = await commentStore(service, "page_comments", actorId)
       .select("id, parent_id, page_id, author_id, block_id")
       .eq("id", parentId)
       .maybeSingle();
@@ -121,8 +121,7 @@ export async function addPageComment({
     threadAuthorIds.push(parent.author_id as string | null);
     rootBlockId = (parent.block_id as string | null) ?? null;
     if (parent.parent_id) {
-      const { data: root } = await service
-        .from("page_comments")
+      const { data: root } = await commentStore(service, "page_comments", actorId)
         .select("author_id, block_id")
         .eq("id", rootId)
         .maybeSingle();
@@ -136,8 +135,7 @@ export async function addPageComment({
   // would anchor the answer on an OTHER block than the question.
   const anchor = rootId ? rootBlockId : (blockId || null);
 
-  const { data, error } = await service
-    .from("page_comments")
+  const { data, error } = await commentStore(service, "page_comments", actorId)
     .insert({
       ...(commentId ? { id: commentId } : {}),
       page_id: pageId,
@@ -159,8 +157,7 @@ export async function addPageComment({
     // recreates attachments, or repeats notification/assistant side effects.
     // Access has already been checked; additionally scope the replay to its
     // original author and parent entity before returning any content.
-    const { data: existing } = await service
-      .from("page_comments")
+    const { data: existing } = await commentStore(service, "page_comments", actorId)
       .select("*")
       .eq("id", commentId)
       .eq("page_id", pageId)
@@ -234,7 +231,8 @@ export async function addPageComment({
 export async function openPageThreadsForAgent(
   client: SupabaseClient,
   pageId: string,
-  names: (userId: string | null) => string
+  names: (userId: string | null) => string,
+  actorId: string | null = null,
 ): Promise<
   {
     thread_id: string;
@@ -243,12 +241,12 @@ export async function openPageThreadsForAgent(
     messages: { author: string; body: string; at: string }[];
   }[]
 > {
-  const { data } = await client
-    .from("page_comments")
+  const { data, error } = await commentStore(client, "page_comments", actorId)
     .select("id, parent_id, block_id, quote, body, author_id, created_at")
     .eq("page_id", pageId)
     .order("created_at", { ascending: true });
 
+  if (error) throw new Error("Unable to read page comment threads");
   const rows = data ?? [];
   const roots = rows.filter((r) => !r.parent_id);
   return roots.map((root) => ({

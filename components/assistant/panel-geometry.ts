@@ -2,8 +2,9 @@ import { cn } from "mangue-ui";
 
 /**
  * Shared geometry of Numo's floating panel: compact widget style
- * anchored at the corner, or extended modal centered, with the transition `.assistant-
- * panel-morph` (voir globals.css) qui interpole right/bottom/width/height/radius.
+ * anchored at the corner, or a centered expanded modal. The
+ * `.assistant-panel-morph` transition in globals.css interpolates the position,
+ * size and corner radius.
  * Reused by Numo chat (AssistantPanel) AND the conversational modal of
  * the code agent (AgentChatModal, MIN-46) to guarantee an identical shell.
  */

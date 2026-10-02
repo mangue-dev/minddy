@@ -1,13 +1,10 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { AppIcon } from "@/components/icon";
+import { AlertCircleIcon, ArrowDown01Icon, Clock01Icon, CheckIcon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import {
-  AlertCircle,
-  Check,
-  ChevronDown,
-  Clock,
-} from "lucide-react";
 import {
   Badge,
   Button,
@@ -138,7 +135,7 @@ export function PrReadinessBadge({
         variant="secondary"
         className={cn("shrink-0 gap-1.5 text-muted-foreground", className)}
       >
-        <Clock className="size-3" />
+        <HugeiconsIcon icon={Clock01Icon} className="size-3" />
         {t("readinessLoading")}
       </Badge>
     );
@@ -155,20 +152,20 @@ export function PrReadinessBadge({
         "shrink-0 gap-1.5",
         className,
         ready &&
-          "border-emerald-600/20 bg-emerald-600/10 text-emerald-700 dark:text-emerald-400",
+          "bg-emerald-600/10 text-emerald-700 dark:text-emerald-400",
         pending &&
-          "border-amber-600/20 bg-amber-600/10 text-amber-700 dark:text-amber-400",
+          "bg-amber-600/10 text-amber-700 dark:text-amber-400",
         !ready &&
           !pending &&
-          "border-destructive/20 bg-destructive/10 text-destructive",
+          "bg-destructive/10 text-destructive",
       )}
     >
       {ready ? (
-        <Check className="size-3" />
+        <HugeiconsIcon icon={CheckIcon} className="size-3" />
       ) : pending ? (
-        <Clock className="size-3" />
+        <HugeiconsIcon icon={Clock01Icon} className="size-3" />
       ) : (
-        <AlertCircle className="size-3" />
+        <HugeiconsIcon icon={AlertCircleIcon} className="size-3" />
       )}
       {t(STATE_KEYS[readiness.state])}
     </Badge>
@@ -197,7 +194,7 @@ export function PrReadinessIcon({
       readiness.state === "review_requested" ||
       readiness.state === "checks_running" ||
       readiness.state === "status_unavailable");
-  const Icon = unavailable ? AlertCircle : ready ? Check : pending ? Clock : AlertCircle;
+  const Icon = unavailable ? AlertCircleIcon : ready ? CheckIcon : pending ? Clock01Icon : AlertCircleIcon;
   return (
     <AppTooltip label={label}>
       <span
@@ -211,7 +208,7 @@ export function PrReadinessIcon({
           className,
         )}
       >
-        <Icon className="size-3.5" aria-hidden />
+        <AppIcon icon={Icon} className="size-3.5" aria-hidden />
       </span>
     </AppTooltip>
   );
@@ -266,11 +263,11 @@ export function PrReadinessControl({
     readiness.state === "checks_running" ||
     readiness.state === "status_unavailable";
   const statusIcon = ready ? (
-    <Check className="size-3.5" />
+    <HugeiconsIcon icon={CheckIcon} className="size-3.5" />
   ) : pending ? (
-    <Clock className="size-3.5" />
+    <HugeiconsIcon icon={Clock01Icon} className="size-3.5" />
   ) : (
-    <AlertCircle className="size-3.5" />
+    <HugeiconsIcon icon={AlertCircleIcon} className="size-3.5" />
   );
 
   return (
@@ -294,7 +291,7 @@ export function PrReadinessControl({
         >
           {statusIcon}
           {t(STATE_KEYS[readiness.state])}
-          <ChevronDown className="size-3.5" />
+          <HugeiconsIcon icon={ArrowDown01Icon} className="size-3.5" />
         </Button>
       </PopoverTrigger>
       <PopoverContent
@@ -309,7 +306,7 @@ export function PrReadinessControl({
               data-testid="pr-readiness-condition-passed"
               className="flex items-start gap-2.5 rounded-md bg-emerald-500/10 px-2.5 py-2"
             >
-              <Check className="mt-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+              <HugeiconsIcon icon={CheckIcon} className="mt-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
               <div className="min-w-0 flex-1">
                 <p className="text-sm text-emerald-700 dark:text-emerald-400">
                   {t(PASSED_KEYS[condition.kind], {
@@ -353,9 +350,9 @@ export function PrReadinessControl({
                 {blocker.kind === "checks" && checks && checks.total > 0 ? (
                   <ChecksDonut parts={checks.checks.map((check) => check.state)} />
                 ) : blocker.status === "pending" ? (
-                  <Clock className="size-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                  <HugeiconsIcon icon={Clock01Icon} className="size-4 shrink-0 text-amber-600 dark:text-amber-400" />
                 ) : (
-                  <AlertCircle className="size-4 shrink-0 text-destructive" />
+                  <HugeiconsIcon icon={AlertCircleIcon} className="size-4 shrink-0 text-destructive" />
                 )}
                 <div className="min-w-40 flex-1">
                   <p
@@ -391,7 +388,7 @@ export function PrReadinessControl({
                   // cards' popover, one gesture away — this button opens it.
                   <Button
                     data-testid="pr-readiness-view-checks"
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
                     onClick={() => {
                       setOpen(false);
@@ -403,7 +400,7 @@ export function PrReadinessControl({
                 ) : available ? (
                   <Button
                     data-testid={`pr-readiness-action-${blocker.action}`}
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
                     disabled={acting !== null}
                     onClick={() => {
@@ -418,90 +415,96 @@ export function PrReadinessControl({
             );
           })}
         </ul>
-        {canMerge && autoMergeAllowed !== false && !readiness.mergeAllowed ? (
-          // Waiting is optional (MIN-548): while any condition is still
-          // running, the viewer can register the merge NOW and let the forge
-          // fire it the moment everything clears. One-way is not an option —
-          // the checkbox reads the forge state and unregisters too.
-          <label
-            data-testid="pr-auto-merge-toggle"
-            className="flex items-start gap-2.5 border-t border-border px-3.5 py-3"
-          >
-            <Checkbox
-              checked={mergeFlowActive}
-              disabled={autoMerging}
-              onCheckedChange={(checked) => onToggleAutoMerge(checked === true)}
-              className="mt-0.5"
-            />
-            <span className="min-w-0 flex-1">
-              <span className="block text-sm">
-                {mergeFlowActive
-                  ? t("autoMergeOn")
-                  : t("autoMergeWhenReady")}
+        {/* ONE row for both gestures (MIN-548 review): the auto-merge
+            checkbox rides the same line as the merge button — they are two
+            ways to reach the same merge, not two stacked steps. Checkbox and
+            title only: what the registration does is what the title says,
+            and the spinner next to it carries the write in flight. */}
+        <div
+          className={cn(
+            "flex items-center justify-between gap-3 px-3.5 py-3",
+            canMerge &&
+              autoMergeAllowed !== false &&
+              !readiness.mergeAllowed &&
+              "border-t border-border",
+          )}
+        >
+          {canMerge && autoMergeAllowed !== false && !readiness.mergeAllowed ? (
+            <label
+              data-testid="pr-auto-merge-toggle"
+              className="flex min-w-0 flex-1 items-center gap-2.5"
+            >
+              <Checkbox
+                checked={mergeFlowActive}
+                disabled={autoMerging}
+                onCheckedChange={(checked) => onToggleAutoMerge(checked === true)}
+              />
+              <span className="inline-flex min-w-0 items-center gap-1.5 text-sm">
+                {mergeFlowActive ? t("autoMergeOn") : t("autoMergeWhenReady")}
+                {autoMerging ? <Spinner className="size-3 shrink-0" /> : null}
               </span>
-              <span className="block text-xs text-muted-foreground">
-                {autoMerging ? (
-                  <span className="inline-flex items-center gap-1.5">
-                    <Spinner className="size-3 shrink-0" />
-                    {t("autoMergeUpdating")}
-                  </span>
-                ) : mergeFlowActive ? (
-                  t("autoMergeOnHint")
-                ) : (
-                  t("autoMergeWhenReadyHint")
-                )}
-              </span>
-            </span>
-          </label>
-        ) : null}
-        <div className="flex items-center justify-between gap-3 px-3.5 py-3">
-          <p className="min-w-0 text-xs text-muted-foreground">
-            {readiness.mergeAllowed && canMerge
-              ? t("readinessMergeAvailable")
-              : t("readinessMergeUnavailable")}
-          </p>
+            </label>
+          ) : null}
           {preferredMethod ? (
-            <div className="flex shrink-0 items-center">
-              <Button
-                data-testid="pr-readiness-merge"
-                size="sm"
-                className={cn(otherMethods.length > 0 && "rounded-r-none")}
-                disabled={!readiness.mergeAllowed || !canMerge || merging}
-                onClick={() => {
-                  setOpen(false);
-                  onMerge(preferredMethod);
-                }}
+            // ml-auto keeps the merge pinned to the right edge of the row
+            // even when the auto-merge checkbox is not shown — `justify-
+            // between` alone would park a single child on the left.
+            <div className="ml-auto flex shrink-0 items-center">
+              {/* Why the merge is (not yet) available used to sit as a
+                  sentence to the left of the button; it is now a tooltip ON
+                  the button — the information belongs to the gesture. The
+                  span keeps the hover alive on a DISABLED button, which is
+                  exactly when the explanation matters. */}
+              <AppTooltip
+                label={
+                  readiness.mergeAllowed && canMerge
+                    ? t("readinessMergeAvailable")
+                    : t("readinessMergeUnavailable")
+                }
               >
-                {merging ? <Spinner /> : <Check />}
-                {t(mergeMethodKey(preferredMethod))}
-              </Button>
-              {otherMethods.length > 0 ? (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      size="sm"
-                      className="rounded-l-none border-l border-primary-foreground/20 px-2"
-                      disabled={!readiness.mergeAllowed || !canMerge || merging}
-                      aria-label={t("mergeMethodMenu")}
-                    >
-                      <ChevronDown className="size-3.5" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    {otherMethods.map((method) => (
-                      <DropdownMenuItem
-                        key={method}
-                        onSelect={() => {
-                          setOpen(false);
-                          onMerge(method);
-                        }}
-                      >
-                        {t(mergeMethodKey(method))}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              ) : null}
+                <span className="flex items-center">
+                  <Button
+                    data-testid="pr-readiness-merge"
+                    size="sm"
+                    className={cn(otherMethods.length > 0 && "rounded-r-none")}
+                    disabled={!readiness.mergeAllowed || !canMerge || merging}
+                    onClick={() => {
+                      setOpen(false);
+                      onMerge(preferredMethod);
+                    }}
+                  >
+                    {merging ? <Spinner /> : <HugeiconsIcon icon={CheckIcon} />}
+                    {t(mergeMethodKey(preferredMethod))}
+                  </Button>
+                  {otherMethods.length > 0 ? (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          size="sm"
+                          className="rounded-l-none border-l border-primary-foreground/20 px-2"
+                          disabled={!readiness.mergeAllowed || !canMerge || merging}
+                          aria-label={t("mergeMethodMenu")}
+                        >
+                          <HugeiconsIcon icon={ArrowDown01Icon} className="size-3.5" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {otherMethods.map((method) => (
+                          <DropdownMenuItem
+                            key={method}
+                            onSelect={() => {
+                              setOpen(false);
+                              onMerge(method);
+                            }}
+                          >
+                            {t(mergeMethodKey(method))}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  ) : null}
+                </span>
+              </AppTooltip>
             </div>
           ) : null}
         </div>

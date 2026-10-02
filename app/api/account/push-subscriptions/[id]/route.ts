@@ -1,7 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
-import { PUSH_DEVICE_COLUMNS } from "@/lib/server/push/columns";
+import { getServiceClient } from "@/lib/supabase-service";
+import { openPush, pushDevice } from "@/lib/server/push/content";
 import type { PushDevice } from "@/lib/types";
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -42,21 +43,22 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: t("invalidRequest") }, { status: 400 });
   }
 
-  const { data, error } = await auth.supabase
+  const { data, error } = await getServiceClient()
     .from("push_subscriptions")
     .update({ enabled, failure_count: 0 })
     .eq("id", id)
-    .select(PUSH_DEVICE_COLUMNS)
+    .eq("user_id", auth.user.id)
+    .select("*")
     .maybeSingle();
 
   if (error) {
-    console.error("[api/push-subscriptions] update failed:", error.message);
+    console.error("[api/push-subscriptions] update_failed");
     return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
   if (!data) {
     return NextResponse.json({ error: t("pushDeviceNotFound") }, { status: 404 });
   }
-  return NextResponse.json({ device: data as unknown as PushDevice });
+  return NextResponse.json({ device: pushDevice(await openPush(data)) as PushDevice });
 }
 
 export async function DELETE(request: NextRequest, { params }: RouteContext) {
@@ -65,13 +67,14 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
   if (!auth.ok) return auth.response;
   const t = await getTranslations("ApiErrors");
 
-  const { count, error } = await auth.supabase
+  const { count, error } = await getServiceClient()
     .from("push_subscriptions")
     .delete({ count: "exact" })
-    .eq("id", id);
+    .eq("id", id)
+    .eq("user_id", auth.user.id);
 
   if (error) {
-    console.error("[api/push-subscriptions] delete failed:", error.message);
+    console.error("[api/push-subscriptions] delete_failed");
     return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
   if (!count) {

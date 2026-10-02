@@ -1,41 +1,6 @@
-import {
-  AppWindow,
-  BarChart3,
-  BellRing,
-  Bot,
-  CalendarClock,
-  Code2,
-  Download,
-  FolderKanban,
-  GitBranch,
-  Import as ImportIcon,
-  Inbox,
-  IterationCw,
-  Keyboard,
-  KeyRound,
-  Languages,
-  ListPlus,
-  ListOrdered,
-  Lock,
-  LogOut,
-  MessagesSquare,
-  Palette,
-  Plug,
-  Repeat,
-  Settings2,
-  ShieldOff,
-  Sparkles,
-  Tags,
-  Ticket,
-  Trash2,
-  TriangleAlert,
-  User,
-  Upload,
-  Users,
-  Workflow,
-  type LucideIcon,
-} from "lucide-react";
+import type { AppIcon } from "@/components/icon";
 import { useMemo } from "react";
+import { AppWindowIcon as AppWindow, AiAutoRotateIcon as CycleIcon, BarChartIcon, BellRingIcon as BellRing, BotIcon as Bot, CalendarClockIcon, CodeSimpleIcon as Code2, Download, FlowIcon as Workflow, FolderKanbanIcon, GitBranchIcon as GitBranch, ImportIcon, InboxIcon as Inbox, Keyboard, KeyRoundIcon as KeyRound, Languages, ListOrderedIcon as ListOrdered, ListPlus, LockIcon, LogOut, MessageMultiple01Icon as MessagesSquare, Palette, PlugIcon as Plug, RepeatIcon as Repeat, Settings02Icon as Settings2, ShieldOff, Sparkles, TagsIcon as Tags, TicketIcon as Ticket, Trash2, TriangleAlertIcon, Upload04Icon as Upload, UserGroupIcon as Users, UserIcon as User } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
 import { SmartAssignIcon } from "@/components/smart-icons";
 
@@ -150,7 +115,7 @@ export type SettingsSection = {
   /** Account (`/settings`) or project (`/projects/<id>/settings`). */
   scope: "account" | "project";
   tab: AccountSettingsTab | ProjectSettingsTab;
-  icon: LucideIcon;
+  icon: AppIcon;
   /** The title of the card, WORD FOR WORD — the paddle line announces what it lands on. */
   title: string;
   /** The tab that contains it, displayed in dim context next to the title. */
@@ -258,7 +223,7 @@ export function useSettingsSections(): SettingsSection[] {
       account({
         id: SETTINGS_SECTIONS.accountSecurity,
         tab: "security",
-        icon: Lock,
+        icon: LockIcon,
         title: tSecurity("title"),
         keywords: [
           "sécurité", "securite", "security", "2fa", "mfa", "totp", "otp",
@@ -309,7 +274,7 @@ export function useSettingsSections(): SettingsSection[] {
       account({
         id: SETTINGS_SECTIONS.accountCyclesEnable,
         tab: "cycles",
-        icon: IterationCw,
+        icon: CycleIcon,
         title: tCycles("enableTitle"),
         keywords: [
           "cycle", "cycles", "sprint", "quinzaine", "fortnight",
@@ -319,7 +284,7 @@ export function useSettingsSections(): SettingsSection[] {
       account({
         id: SETTINGS_SECTIONS.accountCyclesCadence,
         tab: "cycles",
-        icon: CalendarClock,
+        icon: CalendarClockIcon,
         title: tCycles("cadenceTitle"),
         keywords: [
           "cadence", "cycle", "durée", "duree", "duration", "semaine",
@@ -351,7 +316,7 @@ export function useSettingsSections(): SettingsSection[] {
       account({
         id: SETTINGS_SECTIONS.accountAutomationsProjects,
         tab: "automations",
-        icon: FolderKanban,
+        icon: FolderKanbanIcon,
         title: tAutomations("projectsTitle"),
         keywords: [
           "automatisations", "automations", "projets", "projects",
@@ -468,7 +433,7 @@ export function useSettingsSections(): SettingsSection[] {
       account({
         id: SETTINGS_SECTIONS.accountAnalytics,
         tab: "data",
-        icon: BarChart3,
+        icon: BarChartIcon,
         title: tAnalytics("title"),
         keywords: [
           "audience", "analytics", "mesure", "statistiques", "posthog",
@@ -533,7 +498,7 @@ export function useSettingsSections(): SettingsSection[] {
       project({
         id: SETTINGS_SECTIONS.projectDanger,
         tab: "general",
-        icon: TriangleAlert,
+        icon: TriangleAlertIcon,
         audience: "owner",
         title: tSettings("dangerZoneTitle"),
         keywords: [

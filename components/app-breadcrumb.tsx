@@ -1,5 +1,7 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowLeft01Icon, ArrowUpDownIcon, Home01Icon } from "@hugeicons/core-free-icons";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
@@ -12,7 +14,6 @@ import {
   DropdownMenuItem,
   cn,
 } from "mangue-ui";
-import { ChevronsUpDown, ChevronLeft, Home } from "lucide-react";
 import { useProjects } from "@/lib/projects-context";
 import { ProjectOrb } from "@/components/project-orb";
 import { projectOrbSeed } from "@/lib/project-orb-colors";
@@ -81,7 +82,7 @@ function ProjectSwitcher({ project }: { project: Project }) {
             aria-label={t("switchProject")}
             className="flex h-full items-center self-stretch border-l border-border px-1.5 text-muted-foreground transition-colors hover:bg-accent/50"
           >
-            <ChevronsUpDown className="size-3.5" />
+            <HugeiconsIcon icon={ArrowUpDownIcon} className="size-3.5" />
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-56">
@@ -185,7 +186,7 @@ function MobileBreadcrumb({
 
   // Resolve the two beats: the parent (back target, shown as its icon — home or
   // the project orb, like AutoKap) and the current level (centred).
-  const homeIcon = <Home className="size-[18px] shrink-0" />;
+  const homeIcon = <HugeiconsIcon icon={Home01Icon} className="size-[18px] shrink-0" />;
   let backHref: string | null = null;
   let backIcon: React.ReactNode = null;
   let current: React.ReactNode;
@@ -273,7 +274,7 @@ function MobileBreadcrumb({
             aria-label={tc("back")}
           >
             <Link href={backHref}>
-              <ChevronLeft className="size-4 shrink-0" />
+              <HugeiconsIcon icon={ArrowLeft01Icon} className="size-4 shrink-0" />
               {backIcon}
             </Link>
           </Button>

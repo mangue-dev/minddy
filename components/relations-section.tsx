@@ -13,23 +13,31 @@
 // the menu chains two overlays instead, which it can afford — there's no Dialog
 // around a card.)
 
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { HugeiconsIcon } from "@hugeicons/react";
+import {
+  Cancel01Icon,
+  Link02Icon,
+  MessageMultiple01Icon,
+  Target01Icon,
+} from "@hugeicons/core-free-icons";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
+import { RelationObjectiveLabel } from "@/components/relation-objective-label";
 import { useTranslations } from "next-intl";
 import { Button, CommandGroup, CommandItem, cn, toast } from "mangue-ui";
-import { Link2, MessagesSquare, X } from "lucide-react";
 import { isClosedStatus, issueIdentifier } from "@/lib/issue-constants";
 import { RELATION_PRIORITY, RELATION_TYPES } from "@/lib/relation-constants";
 import {
   FEEDBACK_TO_ISSUE_STATUS,
   type IssueLinkedFeedback,
 } from "@/lib/feedback/types";
-import {
-  ObjectiveStatusIndicator,
-  RelationIcon,
-  StatusIndicator,
-} from "@/components/issue-indicators";
+import { RelationIcon, StatusIndicator } from "@/components/issue-indicators";
 import { PropertyRow, TRIGGER } from "@/components/issue-property-fields";
 import { SearchMenu } from "@/components/search-menu";
 import type { ChipRelation } from "@/components/relation-chips";
@@ -62,7 +70,10 @@ export function RelationsSection({
     sourceId: string,
     type: IssueRelationType,
     targetId: string,
-    kinds?: { sourceType?: RelationEndpointType; targetType?: RelationEndpointType }
+    kinds?: {
+      sourceType?: RelationEndpointType;
+      targetType?: RelationEndpointType;
+    },
   ) => void;
   onRemoveRelation: (relationId: string) => void;
 }) {
@@ -93,24 +104,34 @@ export function RelationsSection({
 
   const issueById = useMemo(
     () => new Map(allIssues.map((i) => [i.id, i])),
-    [allIssues]
+    [allIssues],
   );
 
   // Candidates: other OPEN ends not already linked here — relating to
   // done/canceled work is pointless (a closed blocker doesn't block, and the
   // resolver would mark it spent immediately). Issues first, objectives after.
   const candidates = useMemo<Issue[]>(() => {
-    const linked = new Set(relations.map((r) => r.otherId));
+    const linked = new Set(
+      relations
+        .filter((r) => !r.inheritedObjectiveId && r.relation === step)
+        .map((r) => r.otherId),
+    );
     return allIssues.filter(
-      (i) => i.id !== issue.id && !linked.has(i.id) && !isClosedStatus(i.status)
+      (i) =>
+        i.id !== issue.id && !linked.has(i.id) && !isClosedStatus(i.status),
     );
-  }, [allIssues, relations, issue.id]);
+  }, [allIssues, relations, issue.id, step]);
   const objectiveCandidates = useMemo<Objective[]>(() => {
-    const linked = new Set(relations.map((r) => r.otherId));
-    return objectives.filter(
-      (o) => !linked.has(o.id) && o.status !== "done" && o.status !== "canceled"
+    const linked = new Set(
+      relations
+        .filter((r) => !r.inheritedObjectiveId && r.relation === step)
+        .map((r) => r.otherId),
     );
-  }, [objectives, relations]);
+    return objectives.filter(
+      (o) =>
+        !linked.has(o.id) && o.status !== "done" && o.status !== "canceled",
+    );
+  }, [objectives, relations, step]);
 
   const grouped = useMemo(
     () =>
@@ -118,7 +139,7 @@ export function RelationsSection({
         type,
         items: relations.filter((r) => r.relation === type),
       })).filter((g) => g.items.length > 0),
-    [relations]
+    [relations],
   );
 
   const close = () => {
@@ -153,7 +174,7 @@ export function RelationsSection({
               aria-label={t("addRelationAria")}
               className={cn(TRIGGER, "text-muted-foreground")}
             >
-              <Link2 className="size-4" />
+              <HugeiconsIcon icon={Link02Icon} className="size-4" />
             </button>
           }
         >
@@ -195,8 +216,11 @@ export function RelationsSection({
                         close();
                       }}
                     >
-                      <StatusIndicator status={candidate.status} className="size-4" />
-                      <span className="shrink-0 font-mono text-xs text-muted-foreground">
+                      <StatusIndicator
+                        status={candidate.status}
+                        className="size-4"
+                      />
+                      <span className="shrink-0 whitespace-nowrap font-mono text-xs text-muted-foreground">
                         {id}
                       </span>
                       <span className="truncate">{candidate.title}</span>
@@ -218,11 +242,7 @@ export function RelationsSection({
                         close();
                       }}
                     >
-                      <ObjectiveStatusIndicator
-                        status={objective.status}
-                        className="size-4"
-                      />
-                      <span className="truncate">{objective.name}</span>
+                      <RelationObjectiveLabel objective={objective} />
                     </CommandItem>
                   ))}
                 </CommandGroup>
@@ -238,7 +258,8 @@ export function RelationsSection({
             <div key={group.type}>
               <div className="mb-1 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
                 <RelationIcon relation={group.type} className="size-3.5" />
-                {t(group.type)}
+                {t(group.type)}{" "}
+                <span className="tabular-nums">{group.items.length}</span>
               </div>
               <div className="flex flex-col">
                 {group.items.map((r) => {
@@ -260,61 +281,109 @@ export function RelationsSection({
                         onClick={() =>
                           isObjective
                             ? router.push(
-                                `/projects/${issue.project_id}/objectives?open=${r.otherId}`
+                                `/projects/${issue.project_id}/objectives?open=${r.otherId}`,
                               )
                             : onOpenIssue(r.otherId)
                         }
                         className="flex min-w-0 flex-1 items-center gap-2 text-left"
                       >
-                        {isObjective ? (
-                          objective && (
-                            <ObjectiveStatusIndicator
-                              status={objective.status}
-                              className="size-4 shrink-0"
-                            />
-                          )
+                        {isObjective && objective ? (
+                          <span className="flex min-w-0 flex-1 flex-col">
+                            <span className="flex min-w-0 items-center gap-2">
+                              <RelationObjectiveLabel objective={objective} />
+                            </span>
+                            {r.inheritedObjectiveName && (
+                              <span className="mt-0.5 block truncate text-xs text-muted-foreground">
+                                {t("viaObjective", {
+                                  name: r.inheritedObjectiveName,
+                                })}
+                              </span>
+                            )}
+                          </span>
                         ) : (
-                          other && (
-                            <StatusIndicator
-                              status={other.status}
-                              className="size-4 shrink-0"
-                            />
-                          )
+                          <>
+                            {other && (
+                              <StatusIndicator
+                                status={other.status}
+                                className="size-4 shrink-0"
+                              />
+                            )}
+                            {id && (
+                              <span className="shrink-0 whitespace-nowrap font-mono text-xs text-muted-foreground">
+                                {id}
+                              </span>
+                            )}
+                            <span className="min-w-0 flex-1">
+                              <span
+                                className={cn(
+                                  "block truncate text-sm",
+                                  other?.status === "done" &&
+                                    "text-muted-foreground line-through",
+                                )}
+                              >
+                                {isObjective
+                                  ? r.otherName
+                                  : (other?.title ?? id)}
+                              </span>
+                              {r.inheritedObjectiveName && (
+                                <span className="block truncate text-xs text-muted-foreground">
+                                  {t("viaObjective", {
+                                    name: r.inheritedObjectiveName,
+                                  })}
+                                </span>
+                              )}
+                            </span>
+                          </>
                         )}
-                        <span className="w-14 shrink-0 font-mono text-xs text-muted-foreground">
-                          {id ?? ""}
-                        </span>
-                        <span
-                          className={cn(
-                            "min-w-0 flex-1 truncate text-sm",
-                            !isObjective &&
-                              other?.status === "done" &&
-                              "text-muted-foreground line-through"
-                          )}
-                        >
-                          {isObjective
-                            ? (objective?.name ?? r.otherName ?? "")
-                            : (other?.title ?? id)}
-                        </span>
                         {r.resolved && (
                           <span className="shrink-0 rounded-sm bg-muted px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground">
                             {t("resolved")}
                           </span>
                         )}
                       </button>
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        aria-label={tCommon("remove")}
-                        className="size-6 shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover/relrow:opacity-100 focus-visible:opacity-100"
-                        onClick={() =>
-                          void Promise.resolve(onRemoveRelation(r.id)).catch(
-                            (err) => toast.error((err as Error).message)
-                          )
-                        }
-                      >
-                        <X />
-                      </Button>
+                      {r.inheritedObjectiveId ? (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              type="button"
+                              className="shrink-0 rounded-md p-1 text-muted-foreground hover:bg-muted"
+                              onClick={() =>
+                                router.push(
+                                  `/projects/${issue.project_id}/objectives?open=${r.inheritedObjectiveId}`,
+                                )
+                              }
+                              aria-label={t("viaObjective", {
+                                name: r.inheritedObjectiveName ?? "",
+                              })}
+                            >
+                              <HugeiconsIcon
+                                icon={Target01Icon}
+                                className="size-3.5"
+                                aria-hidden
+                              />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {t("viaObjective", {
+                              name: r.inheritedObjectiveName ?? "",
+                            })}
+                          </TooltipContent>
+                        </Tooltip>
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          aria-label={tCommon("remove")}
+                          className="size-6 shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover/relrow:opacity-100 focus-visible:opacity-100"
+                          onClick={() =>
+                            void Promise.resolve(onRemoveRelation(r.id)).catch(
+                              (err) => toast.error((err as Error).message),
+                            )
+                          }
+                        >
+                          <HugeiconsIcon icon={Cancel01Icon} />
+                        </Button>
+                      )}
                     </div>
                   );
                 })}
@@ -331,7 +400,7 @@ export function RelationsSection({
       {feedback.length > 0 && (
         <div className="flex flex-col pb-2">
           <div className="mb-1 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-            <MessagesSquare className="size-3.5" />
+            <HugeiconsIcon icon={MessageMultiple01Icon} className="size-3.5" />
             {t("linkedFeedback")}
           </div>
           <div className="flex flex-col">
@@ -344,7 +413,7 @@ export function RelationsSection({
                   // panel: this is where his thread, his moderation and his
                   // promotion. The sign says it exists and leads to it.
                   router.push(
-                    `/projects/${issue.project_id}/feedback?post=${post.id}`
+                    `/projects/${issue.project_id}/feedback?post=${post.id}`,
                   )
                 }
                 className="flex items-center gap-2 rounded-md px-1.5 py-1.5 text-left hover:bg-muted/60"
@@ -355,13 +424,18 @@ export function RelationsSection({
                 />
                 {/* The voices in place of the identifier: a return does not have one,
  and it is its weight which determines whether it should be read. */}
-                <span className="w-14 shrink-0 font-mono text-xs text-muted-foreground">
+                <span className="w-14 shrink-0 whitespace-nowrap font-mono text-xs text-muted-foreground">
                   {t("votes", { count: post.vote_count })}
                 </span>
-                <span className="min-w-0 flex-1 truncate text-sm">{post.title}</span>
+                <span className="min-w-0 flex-1 truncate text-sm">
+                  {post.title}
+                </span>
                 {post.comment_count > 0 && (
                   <span className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground">
-                    <MessagesSquare className="size-3" />
+                    <HugeiconsIcon
+                      icon={MessageMultiple01Icon}
+                      className="size-3"
+                    />
                     {post.comment_count}
                   </span>
                 )}

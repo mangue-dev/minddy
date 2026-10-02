@@ -1,8 +1,9 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { GitPullRequestIcon } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
 import { cn } from "mangue-ui";
-import { GitPullRequest } from "lucide-react";
 import { NumoIcon } from "@/components/numo-icon";
 import { isPrWorthShowing, type IssuePr } from "@/lib/agent-api";
 import {
@@ -59,6 +60,7 @@ export function IssueAgentChip({
   // leads anyway — that's what happened on this ticket.
   if (!isPrWorthShowing(pr)) return null;
   const merged = pr?.state === "merged";
+  const draft = pr?.state === "draft";
 
   return (
     <Tooltip>
@@ -74,8 +76,10 @@ export function IssueAgentChip({
               : "text-emerald-600 hover:bg-emerald-500/10 focus-visible:bg-emerald-500/10 dark:text-emerald-500"
           )}
         >
-          <GitPullRequest className="size-3.5 shrink-0" />
-          <span className="truncate">{merged ? t("prMerged") : t("prBadge")}</span>
+          <HugeiconsIcon icon={GitPullRequestIcon} className="size-3.5 shrink-0" />
+          <span className="truncate">
+            {merged ? t("prMerged") : draft ? t("prBadge") : t("prOpen")}
+          </span>
         </button>
       </TooltipTrigger>
       <TooltipContent>{t("viewPullRequest")}</TooltipContent>

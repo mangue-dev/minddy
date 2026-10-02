@@ -1,3 +1,4 @@
+import { commentStore } from "@/lib/server/comment-store";
 import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getServiceClient } from "@/lib/supabase-service";
@@ -60,10 +61,12 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: t("commentNotFound") }, { status: own.status });
   }
 
-  const { data, error } = await service
-    .from("comments")
+  const { data, error } = await commentStore(service, "comments", guard.userId)
     .update({ body: text })
     .eq("id", commentId)
+    .eq("feedback_post_id", postId)
+    .eq("author_id", guard.userId)
+    .eq("via_assistant", false)
     .select("*")
     .maybeSingle();
   if (error) {

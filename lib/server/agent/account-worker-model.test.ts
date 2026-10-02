@@ -41,7 +41,10 @@ vi.mock("@/lib/supabase-service", () => ({
                 ? h.byok
                   ? { ai_key_id: "key-1" }
                   : null
-                : h.providerByok ?? h.byok,
+                : (h.providerByok ?? h.byok)
+                  ? { id: "key-1", user_id: "user-1",
+                      ...(h.providerByok ?? h.byok) }
+                  : null,
         }),
       };
       return query;

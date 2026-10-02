@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { AppIcon } from "@/components/icon";
+import { GaugeIcon as CircleGauge } from "@hugeicons/core-free-icons";
 import { useFormatter, useTranslations } from "next-intl";
 import { Button } from "mangue-ui";
-import { CircleGauge } from "lucide-react";
 import { getBillingPlan, type BillingPlanId } from "@/lib/billing-plans";
 
 /**
@@ -47,12 +48,21 @@ export function QuotaExhaustedCard({
   /** The user is already running on his own key (so the budget does not concern him). */
   byok: boolean;
   /** Which border has bitten. Absent = the count (the runs before the cap). */
-  cause?: "account" | "run_cap";
+  cause?: "account" | "run_cap" | "operation_allocation";
   /** The ceiling of the passage, as a % of the monthly budget. */
   capPercent?: number | null;
 }) {
   const t = useTranslations("Agent");
   const format = useFormatter();
+
+  if (cause === "operation_allocation") {
+    return (
+      <div className="rounded-xl border border-border bg-muted/30 p-4 text-sm">
+        <p className="font-medium">{t("allocationTitle")}</p>
+        <p className="mt-2 text-muted-foreground">{t("allocationBody")}</p>
+      </div>
+    );
+  }
 
   const resetDate = resetsAt ? new Date(resetsAt) : null;
   const resetLabel =
@@ -69,7 +79,7 @@ export function QuotaExhaustedCard({
     return (
       <div className="rounded-xl border border-border bg-muted/30 p-4 text-sm">
         <div className="flex items-center gap-2 font-medium">
-          <CircleGauge className="size-4 shrink-0 text-muted-foreground" />
+          <AppIcon icon={CircleGauge} className="size-4 shrink-0 text-muted-foreground" />
           {t("runCapTitle")}
         </div>
         <p className="mt-2 text-muted-foreground">
@@ -83,7 +93,7 @@ export function QuotaExhaustedCard({
   return (
     <div className="rounded-xl border border-border bg-muted/30 p-4 text-sm">
       <div className="flex items-center gap-2 font-medium">
-        <CircleGauge className="size-4 shrink-0 text-muted-foreground" />
+        <AppIcon icon={CircleGauge} className="size-4 shrink-0 text-muted-foreground" />
         {t("quotaTitle")}
       </div>
 

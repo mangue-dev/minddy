@@ -25,6 +25,7 @@ import {
   addIssueRelationApi,
   removeIssueRelationApi,
 } from "./issue-relations-api";
+import { addRelationOptimistically, persistedRelationId } from "./optimistic/relation-writes";
 import { buildOptimisticIssue } from "./optimistic-issue";
 import { leavesCycleOnStatus } from "./cycle";
 import type { RelationKinds } from "./use-issue-relations-query";
@@ -371,13 +372,14 @@ export function useGlobalBoardQuery() {
       targetId: string,
       kinds?: RelationKinds
     ) => {
-      const created = await addIssueRelationApi(projectId, {
+      const input = {
         source_id: sourceId,
         target_id: targetId,
         type,
         source_type: kinds?.sourceType,
         target_type: kinds?.targetType,
-      });
+      };
+      const created = await addRelationOptimistically(queryClient, projectId, input, () => addIssueRelationApi(projectId, input));
       // Record the server-normalized row (blocked_by is stored as an inverted
       // blocks), so a redo replays exactly what was persisted.
       record({
@@ -392,17 +394,6 @@ export function useGlobalBoardQuery() {
           target_type: created.target_type,
         },
       });
-      queryClient.setQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY, (old) =>
-        old
-          ? {
-              ...old,
-              relations: [
-                ...old.relations.filter((r) => r.id !== created.id),
-                created,
-              ],
-            }
-          : old
-      );
       void queryClient.invalidateQueries({ queryKey: GLOBAL_BOARD_KEY });
       void queryClient.invalidateQueries({ queryKey: ["issue-relations", projectId] });
     },
@@ -411,6 +402,7 @@ export function useGlobalBoardQuery() {
 
   const removeRelation = useCallback(
     async (projectId: string, relationId: string) => {
+      relationId = await persistedRelationId(queryClient, relationId);
       const previous = queryClient.getQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY);
       const removed = previous?.relations.find((r) => r.id === relationId);
       queryClient.setQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY, (old) =>
