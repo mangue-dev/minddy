@@ -4,18 +4,34 @@ import { useQuery } from "@tanstack/react-query";
 import {
   fetchBillingStatusApi,
   fetchBillingUsageApi,
+  fetchUsageAnalyticsApi,
 } from "@/lib/billing-api";
+import type { UsageSummaryResponse } from "@/lib/billing-types";
 
 export const billingStatusQueryKey = ["billing", "status"] as const;
 export const billingUsageQueryKey = ["billing", "usage"] as const;
+export const billingAnalyticsQueryKey = ["billing", "analytics"] as const;
+
+/** Analytics are fetched only on the billing page, with a distinct cache per window. */
+export function useBillingUsageAnalytics(usage: UsageSummaryResponse | null) {
+  return useQuery({
+    queryKey: [
+      ...billingAnalyticsQueryKey,
+      usage?.periodStart,
+      usage?.nextResetAt,
+    ],
+    queryFn: fetchUsageAnalyticsApi,
+    enabled: !!usage?.managedAi,
+    staleTime: 60_000,
+    refetchInterval: 60_000,
+  });
+}
 
 export type UsageState = "normal" | "warning" | "low" | "exhausted";
 
 /**
- * Unique view-model of client-side billing (MIN-72), shared by the tablet
- * of the header and the billing tab of the settings so that the two surfaces do not
- * never diverge: plan, budget, spent, % consumed, alert status and
- * ventilation par segment.
+ * Shared billing state for the page and usage popover: plan, included budget,
+ * consumption, remaining percentage, alert state, and segment breakdown.
  */
 export function useBillingSummary() {
   const status = useQuery({
@@ -39,8 +55,7 @@ export function useBillingSummary() {
   const percent =
     includedUsd > 0 ? Math.min((usedUsd / includedUsd) * 100, 100) : 0;
   const remainingRatio = includedUsd > 0 ? 1 - usedUsd / includedUsd : 1;
-  // The gauge reads REMAINING (100 → 0); `percent` (consumed) is no longer used
-  // qu'aux calculs internes — ventilation par type, largeur des segments.
+  // Remaining usage is clamped, while consumption can slightly exceed the budget.
   const remainingPercent = 100 - percent;
 
   const state: UsageState =
@@ -54,6 +69,9 @@ export function useBillingSummary() {
 
   return {
     loading: status.isPending || usage.isPending,
+    usageLoading: usage.isPending,
+    usageError: usage.isError,
+    retryUsage: usage.refetch,
     status: status.data ?? null,
     usage: usage.data ?? null,
     planId: usage.data?.planId ?? status.data?.planId ?? "free",
@@ -105,10 +123,17 @@ export function usePlanGates() {
  * USD (the internal cost is not the user's business), always in
  * percentage of the plan budget. Floor “<0.1” for micro-actions.
  */
-export function formatBudgetPercent(usd: number, includedUsd: number): string {
+export function formatBudgetPercent(
+  usd: number,
+  includedUsd: number,
+  locale = "en",
+): string {
   if (includedUsd <= 0 || usd <= 0) return "—";
   const percent = (usd / includedUsd) * 100;
-  if (percent < 0.1) return "<0.1%";
-  if (percent < 1) return `${percent.toFixed(1)}%`;
-  return `${Math.round(percent)}%`;
+  const format = new Intl.NumberFormat(locale, {
+    style: "percent",
+    maximumFractionDigits: 1,
+  });
+  if (percent < 0.1) return `<${format.format(0.001)}`;
+  return format.format(usd / includedUsd);
 }
