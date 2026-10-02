@@ -5,6 +5,7 @@ import { QueryClient, dehydrate, useIsRestoring, useQueryClient } from "@tanstac
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AppQueryProvider, clearPersistedQueryCache, QUERY_CACHE_STORAGE_KEY } from "./query-provider";
 import { AccountQueryProvider } from "./account-query-provider";
+import { projectIconQueryKey } from "./use-project-icon";
 const account = vi.hoisted(() => ({ id: "account-a" }));
 vi.mock("./auth-context", () => ({ useAuth: () => ({ user: { id: account.id } }) }));
 vi.mock("./local-snapshots", () => ({
@@ -55,11 +56,15 @@ describe("query provider persistence lifecycle", () => {
     await act(async () => render());
     const departing = client;
     client.setQueryData(["projects"], [{ id: "private-a" }]);
+    const iconKey = projectIconQueryKey("/api/projects/private-a/icon/content?v=1");
+    client.setQueryData(iconKey, "data:image/webp;base64,cHJpdmF0ZQ==");
     clearPersistedQueryCache();
+    expect(departing.getQueryData(iconKey)).toBeUndefined();
     account.id = "account-b";
     await act(async () => render());
     expect(client).not.toBe(departing);
     expect(client.getQueryData(["projects"])).toBeUndefined();
+    expect(client.getQueryData(iconKey)).toBeUndefined();
     expect(restoring.at(-1)).toBe(false);
     client.setQueryData(["projects"], [{ id: "private-b" }]);
     window.dispatchEvent(new Event("pagehide"));
@@ -100,6 +105,7 @@ describe("query provider persistence lifecycle", () => {
     client.setQueryData(["page-comments", "page-1"], [{ id: "failed", delivery: { state: "error", retry: () => {} } }]);
     client.setQueryData(["me", "pages", "search", "text"], [{ id: "snippet" }]);
     client.setQueryData(["comments", "issue-2"], [{ id: "confirmed" }]);
+    client.setQueryData(projectIconQueryKey("/api/projects/private/icon/content?v=1"), "data:image/webp;base64,cHJpdmF0ZQ==");
     window.dispatchEvent(new Event("pagehide"));
     const snapshot = JSON.parse(window.localStorage.getItem(QUERY_CACHE_STORAGE_KEY)!).value;
     expect(snapshot.clientState.queries.map((query: { queryKey: string[] }) => query.queryKey))
