@@ -4009,6 +4009,8 @@
     "unlinkIssueDone": "{identifier} è stato scollegato da questa pull request.",
     "linkedIssue": "Apri il ticket collegato",
     "linkIssue": "Collega un ticket",
+    "linkAnotherIssue": "Collega un altro ticket",
+    "linkedIssues": "{count, plural, one {# ticket collegato} other {# ticket collegati}}",
     "linkIssueSearchPlaceholder": "Cerca un ticket…",
     "linkIssueLoading": "Caricamento dei ticket…",
     "linkIssueEmpty": "Nessun ticket in questo progetto.",

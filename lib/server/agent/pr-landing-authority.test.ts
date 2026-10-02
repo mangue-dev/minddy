@@ -4,7 +4,22 @@ const h = vi.hoisted(() => ({
   member: true,
   binding: true,
   run: null as Record<string, unknown> | null,
+  issueIds: [] as string[],
+  syncStatus: vi.fn(async (_input: { issueId: string; actorId: string; prState: string }) => {}),
+  events: vi.fn(async () => {}),
+  comments: vi.fn(async () => ({})),
 }));
+
+vi.mock("./pull-requests", async (original) => ({
+  ...(await original<typeof import("./pull-requests")>()),
+  upsertPullRequest: vi.fn(async () => ({ id: "pr-1" })),
+  pullRequestIssueIds: vi.fn(async () => h.issueIds),
+}));
+vi.mock("./issue-status-sync", () => ({ syncIssueStatusFromPr: h.syncStatus }));
+vi.mock("./pr-opened-notify", () => ({ notifyPullRequestOpened: vi.fn(async () => {}) }));
+vi.mock("@/lib/server/issue-events", () => ({ insertEvents: h.events }));
+vi.mock("@/lib/server/comment-store", () => ({ commentStore: () => ({ insert: h.comments }) }));
+vi.mock("@/lib/supabase-service", () => ({ getServiceClient: () => ({}) }));
 
 vi.mock("@/lib/server/project-access", () => ({
   getProjectAccess: vi.fn(async () =>
@@ -22,6 +37,7 @@ import {
   assertPrLandingAuthority,
   openPullRequestAfterPush,
   PrLandingAuthorityError,
+  registerPr,
   type PrLandingContext,
 } from "./pr-landing";
 
@@ -59,6 +75,8 @@ function context() {
 }
 
 beforeEach(() => {
+  vi.clearAllMocks();
+  h.issueIds = [];
   h.member = true;
   h.binding = true;
   h.run = {
@@ -73,6 +91,49 @@ beforeEach(() => {
     branch_name: null,
     issue_id: null,
   };
+});
+
+describe("PR landing issue status synchronization", () => {
+  it.each(["opened", "reopened"] as const)("updates all linked issues for a notebook PR that is %s", async (kind) => {
+    h.issueIds = ["issue-a", "issue-b", "issue-c"];
+    const { ctx } = context();
+    await registerPr(ctx, { number: 1, url: "https://github.test/acme/app/pull/1", state: "open" }, kind);
+    expect(h.syncStatus.mock.calls).toEqual(h.issueIds.map((issueId) => [{
+      issueId, actorId: "user-1", prState: "open",
+    }]));
+    expect(h.events).not.toHaveBeenCalled();
+    expect(h.comments).not.toHaveBeenCalled();
+  });
+
+  it("synchronizes draft state without reviving a detached run issue", async () => {
+    h.run!.issue_id = "issue-detached";
+    h.issueIds = ["issue-b", "issue-c"];
+    const { ctx } = context();
+    ctx.issue = { identifier: "MIN-1" };
+    await registerPr(ctx, { number: 1, url: "https://github.test/acme/app/pull/1", state: "open", draft: true }, "reopened");
+    expect(h.syncStatus.mock.calls).toEqual(h.issueIds.map((issueId) => [{
+      issueId, actorId: "user-1", prState: "draft",
+    }]));
+    expect(h.events).not.toHaveBeenCalled();
+    expect(h.comments).not.toHaveBeenCalled();
+  });
+
+  it("preserves anchor activity and comments while synchronizing additional issues", async () => {
+    h.run!.issue_id = "issue-a";
+    h.issueIds = ["issue-a", "issue-b"];
+    const { ctx } = context();
+    ctx.issue = { identifier: "MIN-1" };
+    await registerPr(ctx, { number: 1, url: "https://github.test/acme/app/pull/1", state: "open" }, "reopened");
+    expect(h.syncStatus).toHaveBeenCalledTimes(2);
+    expect(h.events).toHaveBeenCalledTimes(1);
+    expect(h.comments).toHaveBeenCalledTimes(1);
+  });
+
+  it("skips synchronization when the PR has no linked issues", async () => {
+    const { ctx } = context();
+    await registerPr(ctx, { number: 1, url: "https://github.test/acme/app/pull/1", state: "open" }, "opened");
+    expect(h.syncStatus).not.toHaveBeenCalled();
+  });
 });
 
 describe("PR landing authority", () => {

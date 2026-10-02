@@ -4009,6 +4009,8 @@
     "unlinkIssueDone": "{identifier} est délié de cette pull request.",
     "linkedIssue": "Ouvrir le ticket lié",
     "linkIssue": "Lier un ticket",
+    "linkAnotherIssue": "Lier un autre ticket",
+    "linkedIssues": "{count, plural, one {# ticket lié} other {# tickets liés}}",
     "linkIssueSearchPlaceholder": "Chercher un ticket…",
     "linkIssueLoading": "Chargement des tickets…",
     "linkIssueEmpty": "Aucun ticket dans ce projet.",
