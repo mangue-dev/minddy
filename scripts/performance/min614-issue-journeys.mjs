@@ -42,19 +42,23 @@ export async function measureIssueJourneys({ page, context, fixture, boardTab, p
     }, { activeSelector, spec: boardTab, count, title }, { timeout: 45000 });
   }
   async function ready(expected = issue, expectedComments = comments) {
-    await page.waitForFunction(({ title, description, issueId, commentIds, boardTabId }) => {
+    await page.waitForFunction(({ title, description, issueId, expectedComments, boardTabId }) => {
       const panels = [...document.querySelectorAll('[role="dialog"][data-state="open"]')].filter((node) => node.checkVisibility() && !node.inert);
       const root = panels[0];
       if (panels.length !== 1 || root.querySelector('textarea')?.value !== title ||
           document.querySelector(`[data-app-tab-id="${boardTabId}"]`)?.getAttribute('aria-selected') !== 'true') return false;
       const editor = root.querySelector('.tiptap');
-      return editor?.checkVisibility() && editor.textContent.includes(description.slice(0, 60)) &&
-        commentIds.every((id) => root.querySelector(`[data-comment-id="${id}"][data-comment-state="confirmed"]`)) &&
+      const normalize = (text) => text.replace(/\s+/g, '');
+      return editor?.checkVisibility() && normalize(editor.textContent) === normalize(description) &&
+        expectedComments.every(({ id, body }) => {
+          const comment = root.querySelector(`[data-comment-id="${id}"][data-comment-state="confirmed"]`);
+          return comment && normalize(comment.textContent).includes(normalize(body));
+        }) &&
         ['comments', 'events', 'agent', 'automation', 'feedback', 'resources'].every((route) => {
           const state = window.__min614.apiStates[`/api/issues/${issueId}/${route}`];
           return state && state.pending === 0 && state.status === 200;
         }) && root.textContent.includes('Activity') && root.textContent.includes('Resources');
-    }, { title: expected.title, description: expected.description ?? "", issueId: expected.id, commentIds: expectedComments.map((entry) => entry.id), boardTabId: boardTab.id }, { timeout: 45000 });
+    }, { title: expected.title, description: expected.description ?? "", issueId: expected.id, expectedComments: expectedComments.map(({ id, body }) => ({ id, body })), boardTabId: boardTab.id }, { timeout: 45000 });
   }
   async function input() {
     await panel().getByRole('button', { name: 'Issue actions', exact: true }).click();
@@ -97,13 +101,16 @@ export async function measureIssueJourneys({ page, context, fixture, boardTab, p
     }
     await close();
     if (process.argv.includes('--correctness')) {
-      await verifyIssueJourneys({ page, api, issue, other, fixture, panel, ready, open, close, boardReady, pages, tab, boardTab, checks });
+      await verifyIssueJourneys({ page, api, other, fixture, panel, ready, open, close, boardReady, checks });
       return;
     }
     for (let run = 0; run < repetitions; run++) {
       await measure(`issue-warm-complete-${run}`, () => active().locator(`[data-issue-id="${issue.id}"]`).click(), () => ready(), input);
       await measure(`activity-expand-${run}`, () => panel().getByRole('button', { name: /^\d+ events$/ }).last().click(),
-        () => panel().locator('button[aria-expanded="true"]').waitFor(), input);
+        () => page.waitForFunction(({ count }) => {
+          const root = [...document.querySelectorAll('[role="dialog"][data-state="open"]')].find((node) => node.checkVisibility());
+          return root?.querySelector('button[aria-expanded="true"]') && root.querySelectorAll('ol ol li').length >= count - 1;
+        }, { count: events.length }), input);
       assert.ok(await panel().locator('ol ol li').count() >= events.length - 1, 'Activity group has not rendered every event');
       await panel().getByRole('button', { name: /^\d+ events$/ }).last().click();
       await measure(`issue-return-${run}`, () => panel().getByRole('button', { name: 'Close', exact: true }).click(), () => boardReady());

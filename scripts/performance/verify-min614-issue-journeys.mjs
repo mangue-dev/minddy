@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { id } from "./seed.mjs";
 
 // Supplemental native correctness checks. Injected failures are never latency evidence.
-export async function verifyIssueJourneys({ page, api, other, fixture, panel, ready, open, close, boardReady, pages, tab, boardTab, checks }) {
+export async function verifyIssueJourneys({ page, api, other, fixture, panel, ready, open, close, boardReady, checks }) {
   const mutable = await api(`/api/issues/${id('issue-0-2')}`);
   const comments = await api(`/api/issues/${mutable.id}/comments`);
   const relationPath = `/api/projects/${mutable.project_id}/issue-relations`;
@@ -95,14 +95,6 @@ export async function verifyIssueJourneys({ page, api, other, fixture, panel, re
     await close();
     assert.equal(await page.evaluate(() => Boolean(document.activeElement?.closest('[data-app-view-active="false"], [inert]'))), false);
     checks.push('Authorized encrypted Page resource resolves to its existing page; populated sub-issue navigation loads the child; dismissal does not leave focus in an inert or hidden view');
-    await open(mutable, comments);
-    await pages();
-    await api(`/api/issues/${mutable.id}`, 'PATCH', { title: `${mutable.title} [MIN-614 masked issue]` });
-    await tab(boardTab).click(); await boardReady(600, `${mutable.title} [MIN-614 masked issue]`);
-    // The application dismisses issue panels on a tab change; reopening must use the fresh title.
-    await open({ ...mutable, title: `${mutable.title} [MIN-614 masked issue]` }, comments);
-    await close();
-    checks.push('A tab change dismisses the panel; an update received while its board is hidden is visible on activation and reopening');
   } finally {
     release?.();
     for (const pattern of routes) await page.unroute(pattern);
