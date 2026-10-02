@@ -46,6 +46,8 @@ import { useNavigationContextActions } from "@/components/navigation-context-act
 import { useAuth } from "@/lib/auth-context";
 import { authDisplayName, type AuthNameMeta } from "@/lib/display-name";
 import { useIsAdmin } from "@/lib/use-is-admin";
+import { useBillingSummary } from "@/lib/use-billing-query";
+import { type BillingPlanId } from "@/lib/billing-plans";
 import { useMyAvatarSource } from "@/lib/use-my-avatar";
 import { ProjectOrb } from "@/components/project-orb";
 import { UserAvatar } from "@/components/user-avatar";
@@ -499,6 +501,11 @@ function AccountButton({
   const { user, signOut } = useAuth();
   const { capabilities } = useRuntimeConfig();
   const hasManagedService = capabilities.managedBilling?.configured || capabilities.managedAi?.configured;
+  const { status } = useBillingSummary();
+  const tBilling = useTranslations("Billing");
+  const planLabels: Record<BillingPlanId, "planFree" | "planGo" | "planPro"> = { free: "planFree", go: "planGo", pro: "planPro" };
+  const planName = hasManagedService && status && (status.managedBilling || status.managedAi)
+    ? tBilling(planLabels[status.planId]) : null;
   const isAdmin = useIsAdmin();
   const confirmationId = useId();
   const confirmationTitleId = `${confirmationId}-title`;
@@ -561,9 +568,10 @@ function AccountButton({
             >
               <DropdownMenuItem asChild>
                 <Link href="/settings?tab=profile">
-                  <UserAvatar seed={seed} className="size-4" />
-                  <span className="min-w-0 flex-1 truncate font-medium">
-                    {name}
+                  <UserAvatar seed={seed} className={planName ? "size-6" : "size-4"} />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-medium">{name}</span>
+                    {planName && <span className="block truncate text-xs text-muted-foreground">{planName}</span>}
                   </span>
                 </Link>
               </DropdownMenuItem>
@@ -758,7 +766,7 @@ function ChangelogButton({
               setDialogMounted(true);
               setDialogOpen(true);
             }}
-            className="h-8 gap-1.5 py-0 max-[1199px]:py-0"
+            className="h-8 gap-1.5 px-2.5 py-0 max-[1199px]:py-0"
           >
             <ChangelogTimelineMarker position="last" />
             <span className="min-w-0 flex-1 truncate">

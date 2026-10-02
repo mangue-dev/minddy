@@ -9,7 +9,6 @@ import { SearchMenu } from "@/components/search-menu";
 import { RelationIcon, StatusIndicator } from "@/components/issue-indicators";
 import { RelationObjectiveLabel } from "@/components/relation-objective-label";
 import { AppTooltip } from "@/components/ui/app-tooltip";
-import { EntityPill, PillIcon } from "@/components/entity-pill";
 import { isClosedStatus, issueIdentifier } from "@/lib/issue-constants";
 import { RELATION_TYPES } from "@/lib/relation-constants";
 import { useIssuesQuery } from "@/lib/use-issues-query";
@@ -196,27 +195,37 @@ export function CreationRelationPills({
           : objective?.name ?? relation.target_label;
         const fullLabel = `${t(relation.type)}: ${label}`;
         return (
-          <EntityPill
+          <span
             key={`${relation.type}:${relation.target_type}:${relation.target_id}`}
-            highlight
-            ariaLabel={fullLabel}
-            action={disabled ? undefined : {
-              label: `${tCommon("remove")}: ${fullLabel}`,
-              icon: <HugeiconsIcon icon={Cancel01Icon} className="size-3" />,
-              onClick: () => onChange(value.filter((_, i) => i !== index)),
-            }}
+            aria-label={fullLabel}
+            className={cn(
+              "inline-flex max-w-full items-center gap-1 rounded-md px-1.5 py-0.5 text-xs",
+              relation.type === "blocked_by"
+                ? "bg-red-500/10 text-red-600 dark:text-red-400"
+                : relation.type === "blocks"
+                  ? "bg-amber-500/10 text-amber-700 dark:text-amber-400"
+                  : "text-muted-foreground",
+            )}
           >
             <AppTooltip label={fullLabel}>
-              <span className="flex min-w-0 items-center gap-1.5">
-                <PillIcon tint="bg-transparent">
-                  <RelationIcon relation={relation.type} className="size-4" />
-                </PillIcon>
-                <span className="min-w-0 truncate font-medium text-foreground/80">
-                  <span className="text-muted-foreground">{t(relation.type)} · </span>{label}
-                </span>
+              <span className="flex min-w-0 items-center gap-1">
+                <RelationIcon relation={relation.type} className="size-3" />
+                <span className="truncate">{label}</span>
               </span>
             </AppTooltip>
-          </EntityPill>
+            {!disabled && (
+              <AppTooltip label={`${tCommon("remove")}: ${fullLabel}`}>
+                <button
+                  type="button"
+                  aria-label={`${tCommon("remove")}: ${fullLabel}`}
+                  onClick={() => onChange(value.filter((_, i) => i !== index))}
+                  className="flex size-4 shrink-0 items-center justify-center rounded-sm hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <HugeiconsIcon icon={Cancel01Icon} className="size-3" />
+                </button>
+              </AppTooltip>
+            )}
+          </span>
         );
       })}
     </div>

@@ -50,7 +50,12 @@ export function RelationChips({
       {RELATION_PRIORITY.map((type) => {
         const items = active.filter((r) => r.relation === type);
         if (!items.length) return null;
-        const label = `${t(type)} · ${items.length}`;
+        const targets = items.slice(0, 3).map((r) =>
+          r.otherType === "objective"
+            ? r.otherName ?? t("objectives")
+            : issueIdentifier(projectKey, r.otherNumber ?? 0),
+        ).join(", ");
+        const label = `${t(type)} ${targets}${items.length > 3 ? ` +${items.length - 3}` : ""}`;
         return (
           <Popover
             key={type}

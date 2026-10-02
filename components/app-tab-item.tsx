@@ -95,7 +95,7 @@ export function AppTabItem({ tab, label, icon, active, focusable, busy, last, co
     {!tab.pinned && <Tooltip delayDuration={500} disableHoverableContent><TooltipTrigger asChild><button type="button" aria-label={t("closeNamed", { name: label })} disabled={last || busy}
       tabIndex={-1} onPointerDown={(event) => event.stopPropagation()} onClick={onClose} className="absolute right-1 flex size-5 items-center justify-center rounded-full opacity-0 hover:bg-background/60 focus-visible:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100 disabled:opacity-0">
       <HugeiconsIcon icon={Cancel01Icon} className="size-3" aria-hidden />
-    </button></TooltipTrigger><TooltipContent side="bottom">{t("close")}</TooltipContent></Tooltip>}
+    </button></TooltipTrigger>{!last && <TooltipContent side="bottom">{t("close")}</TooltipContent>}</Tooltip>}
     <IssueContextMenu position={menu} searchable={false} onClose={() => { setMenu(null); ref.current?.focus(); }} actions={[
       { id: "pin", label: t(tab.pinned ? "unpin" : "pin"), icon: tab.pinned ? <HugeiconsIcon icon={PinOffIcon} /> : <HugeiconsIcon icon={PinIcon} />, onSelect: onPin, disabled: busy },
       { id: "rename", label: t("rename"), icon: <HugeiconsIcon icon={Edit04Icon} />, onSelect: onRename, disabled: busy },

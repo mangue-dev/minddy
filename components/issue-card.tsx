@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { AiAutoRotateIcon, ArrowRight01Icon, Calendar01Icon, GitMergeIcon, GitPullRequestDraftIcon, GitPullRequestIcon, RepeatIcon, TaskDone01Icon, TriangleIcon, UserIcon } from "@hugeicons/core-free-icons";
+import { AiAutoRotateIcon, HierarchySquare01Icon, Calendar01Icon, GitMergeIcon, GitPullRequestDraftIcon, GitPullRequestIcon, RepeatIcon, TaskDone01Icon, TriangleIcon, UserIcon } from "@hugeicons/core-free-icons";
 import {
   memo,
   useCallback,
@@ -675,13 +675,13 @@ export const IssueCardBody = memo(function IssueCardBody({
   categoryMap: Map<string, IssueCardCategory>;
   /** Objectives by id — the linked one shows as a bottom-line indicator. */
   objectiveMap?: Map<string, IssueCardObjective>;
-  /** Parent issue's number — when set, the card is a sub-issue and shows the
-      parent identifier + chevron before its own identifier. */
+  /** Parent issue's number — when set, the card is a sub-issue and shows
+      a hierarchy icon before its own identifier. */
   parentNumber?: number;
   /** This issue's relations (blocks/blocked-by/related), pre-sorted by priority —
       the highest-signal one shows as a chip after the identifier. */
   relations?: ChipRelation[];
-  /** Opens the parent's side panel (clicking the parent identifier). */
+  /** Opens the parent's side panel (clicking the hierarchy icon). */
   onOpenParent?: () => void;
   /** Opens a related issue's side panel (clicking a relation chip). */
   onOpenRelated?: (issueId: string) => void;
@@ -803,7 +803,7 @@ export const IssueCardBody = memo(function IssueCardBody({
                   aria-label={t("openParentAria", { id: issueIdentifier(projectKey, parentNumber) })}
                   className="shrink-0 rounded-sm hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
                 >
-                  <HugeiconsIcon icon={ArrowRight01Icon} className="size-3" aria-hidden />
+                  <HugeiconsIcon icon={HierarchySquare01Icon} className="size-3" aria-hidden />
                 </button>
               </TooltipTrigger>
               <TooltipContent>{t("subIssueOf", { id: issueIdentifier(projectKey, parentNumber) })}</TooltipContent>
@@ -1402,7 +1402,7 @@ const IssueCardContent = memo(function IssueCardContent({
       // No touch-action override: drag-and-drop is mouse-only (MouseSensor), so
       // touch is free to scroll the board/columns natively. The grab cursor is
       // a DRAG signal, not an affordance: the card reads as a normal surface on
-      // hover (see the pressing state in `IssueCard`).
+      // hover; `IssueCard` changes it only after the drag sensor activates.
       className="relative rounded-xl"
     >
       <DropOverlay
@@ -1527,16 +1527,7 @@ export const IssueCard = memo(function IssueCard(props: IssueCardProps) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: props.issue.id,
   });
-  // The grab cursor marks the ACTIVE drag gesture, not a hover affordance:
-  // while the primary button is held down on the card — the exact gesture a
-  // drag starts from — the pointer reads "grabbing"; the moment it is released
-  // (or leaves the card) the card goes back to the default arrow. Mouse-only,
-  // like the MouseSensor driving the drag itself.
-  const [pressing, setPressing] = useState(false);
-  const onPointerDown = useCallback((e: React.PointerEvent) => {
-    if (e.button === 0) setPressing(true);
-  }, []);
-  const releasePress = useCallback(() => setPressing(false), []);
+  // The drag sensor activates only after pointer movement crosses its threshold.
 
   return (
     <div
@@ -1546,17 +1537,13 @@ export const IssueCard = memo(function IssueCard(props: IssueCardProps) {
       data-board-landing-source={landingOutOfFlow ? "" : undefined}
       {...attributes}
       {...listeners}
-      onPointerDown={onPointerDown}
-      onPointerUp={releasePress}
-      onPointerCancel={releasePress}
-      onPointerLeave={releasePress}
       className={cn(
         "rounded-xl transition-opacity duration-150 ease-out motion-reduce:transition-none",
         landingOutOfFlow
           ? "invisible absolute pointer-events-none"
           : "relative",
         (isDragging || props.dragging) && "opacity-40",
-        pressing && "cursor-grabbing",
+        (isDragging || props.dragging) && "cursor-grabbing",
       )}
     >
       <IssueCardContent {...contentProps} />
