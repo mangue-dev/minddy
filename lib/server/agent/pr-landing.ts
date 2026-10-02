@@ -53,8 +53,7 @@ export interface PrLandingContext {
   run: AgentRun;
   target: RepoCloneTarget;
   forge: Forge;
-  /** ANCHOR ticket of the run, when there is one. Null = run notebook or reread:
-   * no tickets to synchronize, comment or trace. */
+  /** Anchor issue for run comments and activity. PR status sync uses current associations. */
   issue: { identifier: string } | null;
   workBranch: string;
   baseBranch: string;
@@ -399,17 +398,18 @@ export async function registerPr(
   // by Numo carries the account of the App, which the receivers dismiss as
   // echo. The reopening is not announced: the PR was already known.
   if (kind === "opened") await notifyPullRequestOpened(prRow);
-  // Run NOTEBOOK: no tickets to synchronize or comment on — PR lives in
-  // the session conversation (and on the Pull requests page).
-  if (issue && run.issue_id && prRow &&
-      (await pullRequestIssueIds(prRow.id)).includes(run.issue_id)) {
-    if (run.created_by) {
+  // A notebook run can also reopen a PR with manually linked issues.
+  const issueIds = prRow ? await pullRequestIssueIds(prRow.id) : [];
+  if (run.created_by) {
+    for (const issueId of issueIds) {
       await syncIssueStatusFromPr({
-        issueId: run.issue_id,
+        issueId,
         actorId: run.created_by,
         prState: prState.state,
       });
     }
+  }
+  if (issue && run.issue_id && issueIds.includes(run.issue_id)) {
     // “Numo opened pull request #12” in the activity log. Issued
     // HERE and not through the webhook: the PR starts from the App token (GitHub) or from the
     // account that linked the repository (GitLab), so the echo carries an identity of

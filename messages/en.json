@@ -4009,6 +4009,8 @@
     "unlinkIssueDone": "{identifier} is unlinked from this pull request.",
     "linkedIssue": "Open the linked issue",
     "linkIssue": "Link an issue",
+    "linkAnotherIssue": "Link another issue",
+    "linkedIssues": "{count, plural, one {# linked issue} other {# linked issues}}",
     "linkIssueSearchPlaceholder": "Search for an issue…",
     "linkIssueLoading": "Loading issues…",
     "linkIssueEmpty": "No issue in this project.",

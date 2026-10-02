@@ -4009,6 +4009,8 @@
     "unlinkIssueDone": "{identifier} ist nicht mehr mit diesem Pull Request verknüpft.",
     "linkedIssue": "Das verlinkte Problem öffnen",
     "linkIssue": "Ein Problem verknüpfen",
+    "linkAnotherIssue": "Ein weiteres Problem verknüpfen",
+    "linkedIssues": "{count, plural, one {# verknüpftes Problem} other {# verknüpfte Probleme}}",
     "linkIssueSearchPlaceholder": "Nach einem Problem suchen…",
     "linkIssueLoading": "Probleme werden geladen…",
     "linkIssueEmpty": "Kein Problem in diesem Projekt.",

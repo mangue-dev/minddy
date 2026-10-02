@@ -4009,6 +4009,8 @@
     "unlinkIssueDone": "{identifier} se ha desvinculado de esta pull request.",
     "linkedIssue": "Abrir la incidencia vinculada",
     "linkIssue": "Vincular una incidencia",
+    "linkAnotherIssue": "Vincular otra incidencia",
+    "linkedIssues": "{count, plural, one {# incidencia vinculada} other {# incidencias vinculadas}}",
     "linkIssueSearchPlaceholder": "Busca una incidencia...",
     "linkIssueLoading": "Cargando incidencias...",
     "linkIssueEmpty": "No hay incidencia en este proyecto.",
