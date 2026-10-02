@@ -496,6 +496,25 @@ function tornEventStream(): typeof fetch {
   }) as typeof fetch;
 }
 
+/** Replay an exact sequence, including a normal EOF with no terminal event. */
+function closedStream(frames: string[]): Partial<SupervisorDeps> {
+  const base = fakeFetch();
+  return {
+    client: (baseUrl) => new OpencodeClient({
+      baseUrl,
+      directory: "/vercel/sandbox/repo",
+      fetchImpl: (async (input: RequestInfo | URL, init?: RequestInit) => {
+        if (String(input).includes("/event")) {
+          return new Response(frames.map((frame) => `data: ${frame}\n\n`).join(""), {
+            headers: { "content-type": "text/event-stream" },
+          });
+        }
+        return base(input, init);
+      }) as typeof fetch,
+    }),
+  };
+}
+
 /** Keep the SSE connection open after optionally publishing a few frames. */
 function silentStream(frames: string[] = []): Partial<SupervisorDeps> {
   return {
@@ -1101,6 +1120,131 @@ describe("le tour", () => {
     expect(h.events.filter((event) => event.type === "summary")).toEqual([
       { type: "summary", payload: { text: result } },
     ]);
+    expect(report.reply).toBe(result);
+  });
+
+  // These French replies reproduce the October 1 and 2 incidents.
+  it.each([
+    "La ligne 37 : « Objectives » non traduit en allemand. Je génère les diffs de avec contexte de namespace.",
+    "La section des relations du panel possède déjà un flux d'ajout. Laissez-moi vérifier les deux dernières briques.",
+  ])("continues the recorded premature stop and executes the next tool: %s", async (text) => {
+    h.extraFrames = [
+      parentText("prt_incident", "msg_incident", text),
+      parentRound("msg_incident", "stop"),
+      idleFrame(),
+      toolFrame("bash", "call_verified_after_repair", {
+        status: "completed", input: { command: "git diff --check" }, output: "", metadata: { exit: 0 },
+      }),
+      parentRound("msg_repair_tool", "tool-calls"),
+      parentText("prt_completed", "msg_completed", "The review is complete and verification passed."),
+      parentRound("msg_completed", "stop"),
+    ];
+    const report = await run();
+    expect(h.prompts).toHaveLength(2);
+    expect(h.events.some((event) => event.type === "tool_result" &&
+      event.payload.id === "call_verified_after_repair")).toBe(true);
+    expect(h.events.filter((event) => event.type === "summary")).toEqual([
+      { type: "summary", payload: { text: "The review is complete and verification passed." } },
+    ]);
+    expect(report.status).toBe("completed");
+  });
+
+  it.each(["length", "max_tokens", "tool-calls", "unknown", "stop"])(
+    "repairs an incomplete %s finish without reusing the preceding answer",
+    async (finish) => {
+      h.extraFrames = [
+        parentText("prt_incomplete", "msg_incomplete", finish === "stop" ? "" : "Partial results."),
+        parentRound("msg_incomplete", finish),
+        idleFrame(),
+        parentText("prt_complete", "msg_complete", "The requested checks passed."),
+        parentRound("msg_complete", "stop"),
+      ];
+      const report = await run();
+      expect(h.prompts).toHaveLength(2);
+      expect(report.status).toBe("completed");
+      expect(report.reply).toBe("The requested checks passed.");
+    },
+  );
+
+  it("corrects serialized tool text before accepting a final answer", async () => {
+    h.extraFrames = [
+      parentText("prt_xml", "msg_xml", "Continuing.<tool_call>read<arg_key>path</arg_key>package.json</tool_call>"),
+      parentRound("msg_xml", "stop"),
+      idleFrame(),
+      toolFrame("read", "call_native_after_xml", {
+        status: "completed", input: { filePath: "package.json" }, output: "{}",
+      }),
+      parentRound("msg_native", "tool-calls"),
+      parentText("prt_complete", "msg_complete", "The repository review is complete."),
+      parentRound("msg_complete", "stop"),
+    ];
+    const report = await run();
+    expect(h.prompts).toHaveLength(2);
+    expect(h.events.some((event) => event.type === "tool_result" &&
+      event.payload.id === "call_native_after_xml")).toBe(true);
+    expect(report.reply).toBe("The repository review is complete.");
+    expect(h.events.filter((event) => event.type === "summary")).toEqual([
+      { type: "summary", payload: { text: report.reply } },
+    ]);
+  });
+
+  it("fails after two corrective rounds, preserves history and never commits partial work", async () => {
+    const pending = "The key is untranslated. I am checking the remaining catalogs.";
+    h.extraFrames = [0, 1, 2].flatMap((index) => [
+      parentText(`prt_pending_${index}`, `msg_pending_${index}`, pending),
+      parentRound(`msg_pending_${index}`, "stop"),
+      idleFrame(),
+    ]);
+    const report = await run();
+    expect(h.prompts).toHaveLength(3);
+    expect(report.status).toBe("error");
+    expect(report.errorCode).toBe("replyIncomplete");
+    expect(report.reply).toBeUndefined();
+    expect(report.checkpoint?.opencode?.sessionId).toBe(PARENT);
+    expect(report.pushed).toBeNull();
+    expect(h.events.some((event) => event.type === "summary")).toBe(false);
+    expect(h.exec.some((command) => /git (?:add|commit|push)\b/.test(command))).toBe(false);
+    expect(h.usage).toHaveLength(5);
+  });
+
+  it.each([false, true])("rejects clean EOF before parent idle (finished round: %s)", async (finished) => {
+    const frames = [parentText("prt_eof", "msg_eof", "I am checking the remaining catalogs.")];
+    if (finished) frames.push(parentRound("msg_eof", "stop"));
+    const report = await run({}, closedStream(frames));
+    expect(report.status).toBe("error");
+    expect(report.errorCode).toBe("replyIncomplete");
+    expect(report.errorMessage).toContain("event stream closed");
+    expect(report.reply).toBeUndefined();
+    expect(report.checkpoint?.opencode?.sessionId).toBe(PARENT);
+    expect(report.pushed).toBeNull();
+    expect(h.events.some((event) => event.type === "summary")).toBe(false);
+    expect(h.events).toContainEqual({ type: "error", payload: {
+      code: "replyIncomplete", message: report.errorMessage,
+    } });
+    expect(h.aborts).toBe(1);
+    expect(h.routes.indexOf(`POST /session/${PARENT}/abort`)).toBeLessThan(
+      h.routes.indexOf("POST /sync/history"),
+    );
+  });
+
+  it("keeps the last durable cursor when an EOF cannot be stopped cleanly", async () => {
+    h.abortFails = true;
+    const report = await run({}, closedStream([
+      parentText("prt_eof", "msg_eof", "I am checking the remaining catalogs."),
+    ]));
+    expect(report.status).toBe("error");
+    expect(report.errorCode).toBe("replyIncomplete");
+    expect(h.serverStops).toBeGreaterThan(1);
+    expect(h.routes).not.toContain("POST /sync/history");
+    expect(report.checkpoint?.opencode).toEqual({ sessionId: PARENT, seq: {} });
+  });
+
+  it("does not restart completed findings or optional follow-up offers", async () => {
+    const result = "All six catalogs passed. I will inspect the remaining pages if you want another review.";
+    h.extraFrames = [parentText("prt_findings", "msg_findings", result), parentRound("msg_findings", "stop")];
+    const report = await run();
+    expect(h.prompts).toHaveLength(1);
+    expect(report.status).toBe("completed");
     expect(report.reply).toBe(result);
   });
 
@@ -2678,6 +2822,32 @@ function steeringAfterFirstPrompt(text: string): Partial<ControlPlaneClient> {
 }
 
 describe("le steering et le « Stop »", () => {
+  it("does not reuse an earlier stop when an empty steered round becomes idle", async () => {
+    h.tick = 3_000;
+    h.extraFrames = [
+      idleFrame(),
+      idleFrame(),
+      parentText("prt_steered_final", "msg_steered_final", "The additional verification passed."),
+      parentRound("msg_steered_final", "stop"),
+    ];
+    let given = false;
+    const ready = () => h.usage.length >= 2 && h.prompts.length === 1 && !given;
+    const report = await runOpencodeTurn(job(),
+      { prompt: "Review the repository", anchorInstructions: "# Context" },
+      { ...cp(), hasPendingMessages: async () => ready(), pullSteering: async () => {
+        if (!ready()) return [];
+        given = true;
+        return [{ text: "Run an additional verification." }];
+      } }, host(), deps());
+    expect(h.prompts).toHaveLength(3);
+    expect(h.prompts[1]).toBe("Run an additional verification.");
+    expect(report.status).toBe("completed");
+    expect(report.reply).toBe("The additional verification passed.");
+    expect(h.events.filter((event) => event.type === "summary")).toEqual([
+      { type: "summary", payload: { text: report.reply } },
+    ]);
+  });
+
   it("poste la file avec le prompt du tour, et le dit au fil", async () => {
     h.steering = ["et regarde aussi les tests"];
     await run();
@@ -2714,7 +2884,8 @@ describe("le steering et le « Stop »", () => {
     expect(report.pushed).toBeNull();
   });
 
-  it("coupe le round et repose la consigne à la frontière suivante", async () => {
+  it("cuts the round and posts steering at the next idle boundary", async () => {
+    h.extraFrames = [idleFrame(), parentText("prt_steered", "msg_steered", "The requested test passed."), parentRound("msg_steered", "stop")];
     // Time advances: this is what causes the poll to fall during the round. And
     // the message only arrives AFTER the first prompt — otherwise it would leave with
     // him, and the test would say nothing about the injection during the turn.
@@ -2781,7 +2952,7 @@ describe("le steering et le « Stop »", () => {
    * accepted on screen, lost forever, and the run didn't even wake up,
    * since it is the queue which re-queues it.
    */
-  it("un tour REPARTI après une erreur de session ne se range plus en erreur", async () => {
+  it("completes a genuinely finished continuation after a session error", async () => {
     /**
      * MIN-286 — `sessionError` never reset.
      *
@@ -2799,6 +2970,9 @@ describe("le steering et le « Stop »", () => {
           error: { name: "ProviderError", message: "429" },
         },
       }),
+      idleFrame(),
+      parentText("prt_resumed", "msg_resumed", "The resumed work is complete."),
+      parentRound("msg_resumed", "stop"),
     ];
     const report = await runOpencodeTurn(
       job(),
@@ -2951,6 +3125,7 @@ describe("le battement du tour", () => {
   });
 
   it("leaves Stop with queued steering to the lifecycle while an event is uploading", async () => {
+    h.extraFrames = [idleFrame(), parentText("prt_queued", "msg_queued", "The focused test passed."), parentRound("msg_queued", "stop")];
     h.tick = 3_000;
     let queued = false;
     const report = await run({}, { stopPollIntervalMs: 5 }, {
@@ -3095,6 +3270,8 @@ describe("le battement du tour", () => {
           input: { url: "https://example.com" },
         }),
         ...elapsed,
+        parentText("prt_non_shell", "msg_non_shell", "The requested page was checked."),
+        parentRound("msg_non_shell", "stop"),
         idleFrame(),
       ]),
     );

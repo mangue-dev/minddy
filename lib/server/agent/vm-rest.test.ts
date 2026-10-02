@@ -547,6 +547,27 @@ describe("un tour arrêté se raconte, et une panne de fournisseur se re-queue",
     expect(h.notifications).toEqual(["agent_failed"]);
   });
 
+  it("retains incomplete work without claiming success or automatically requeuing", async () => {
+    const checkpoint = report().checkpoint;
+    h.run = { ...RUN, outcome: "The preceding review passed." };
+    await landVmTurn(run(), report({
+      status: "error", errorCode: "replyIncomplete", reply: undefined,
+      errorMessage: "The model repeatedly ended before completing its work.",
+      checkpoint,
+    }));
+    expect(h.stamped.some((fields) => fields.status === "queued")).toBe(false);
+    expect(h.stamped.find((fields) => fields.status === "completed")).toMatchObject({
+      checkpoint,
+      outcome: null,
+      error_message: "The model repeatedly ended before completing its work.",
+    });
+    expect(h.events.find((event) => event.type === "error")?.payload).toMatchObject({
+      code: "replyIncomplete",
+    });
+    expect(h.events.some((event) => event.type === "summary")).toBe(false);
+    expect(h.notifications).toEqual(["agent_failed"]);
+  });
+
   it("une erreur ORDINAIRE n'invente pas de code — la boucle l'a déjà dite", async () => {
     await landVmTurn(run(), report({ status: "error", errorMessage: "402 Payment Required" }));
     expect(h.events.some((e) => e.type === "error")).toBe(false);

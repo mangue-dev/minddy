@@ -206,6 +206,7 @@ vi.mock("@/lib/server/agent/runs", async (importOriginal) => ({
 }));
 
 const { createDurableNumoEmitter, drainNumoTurns, executeNumoTurn } = await import("./turns");
+const { NumoCompletionError } = await import("@/lib/server/assistant/loop");
 
 const runtime = {
   apiKey: "key",
@@ -729,6 +730,29 @@ describe("durable Numo execution", () => {
       p_status: "retryable",
       p_checkpoint: { phase: "tools", completedToolCallIds: ["call-1"] },
     });
+  });
+
+  it("reports exhausted completion repairs as failure while preserving the durable checkpoint", async () => {
+    const checkpoint = { phase: "model", roundCount: 3, completionRepairs: 2,
+      completionRepairPending: false, completionRepairExhausted: true };
+    h.processChat.mockImplementation(async (...args: unknown[]) => {
+      const context = args[3] as {
+        persistCheckpoint: (checkpoint: Record<string, unknown>) => Promise<void>;
+      };
+      await context.persistCheckpoint(checkpoint);
+      throw new NumoCompletionError("a tool call was returned as text");
+    });
+
+    const result = await executeNumoTurn({
+      turnId: h.turn!.id as string, readClient: service, aiRuntime: runtime,
+    });
+
+    expect(result.status).toBe("failed");
+    expect(h.checkpoints.at(-1)).toMatchObject({ p_status: "failed",
+      p_checkpoint: checkpoint,
+      p_error_message: expect.stringContaining("a tool call was returned as text") });
+    expect(h.messages.filter((message) => message.role === "assistant")).toEqual([]);
+    expect(h.events).toContainEqual(expect.objectContaining({ p_type: "error" }));
   });
 
   it("persists the assistant tool round through the atomic checkpoint RPC", async () => {
