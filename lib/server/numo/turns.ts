@@ -46,6 +46,7 @@ import type { WorkerInputCorrelation } from "@/lib/server/numo/worker-mediation"
 import { cancelStoppedTurnWorkerInputs } from "@/lib/server/numo/worker-mediation";
 import {
   AmbiguousToolExecutionError,
+  NumoCompletionError,
   getModelInputModalities,
   modelSupportsCaching,
   processChat,
@@ -1212,6 +1213,7 @@ async function executeClaimedNumoTurn(input: {
             assistantMessageId: messageId,
             pendingToolCalls: toolRound.pendingToolCalls,
             completedToolCallIds: [], roundCount: toolRound.roundCount,
+            completionRepairs: toolRound.completionRepairs ?? 0,
           }) : null;
         const { data, error } = protect
           ? await service.rpc("checkpoint_numo_tool_round_protected", {
@@ -1465,8 +1467,9 @@ async function executeClaimedNumoTurn(input: {
       return { status: current.status, turn: current };
     }
 
-    const message = "Numo turn failed";
-    const status: "retryable" | "failed" = claimed.attempts < 3 ? "retryable" : "failed";
+    const message = error instanceof NumoCompletionError ? error.message : "Numo turn failed";
+    const status: "retryable" | "failed" = error instanceof NumoCompletionError
+      ? "failed" : claimed.attempts < 3 ? "retryable" : "failed";
     const { data: currentClaim, error: currentClaimError } = await service
       .from("numo_assistant_turns")
       .select("checkpoint, active_run_id")

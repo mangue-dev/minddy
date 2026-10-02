@@ -377,11 +377,14 @@ export async function landVmTurn(run: AgentRun, report: VmTurnReport): Promise<v
         message:
           report.errorCode === "providerUnavailable"
             ? "The model provider kept failing, so this turn was paused. Send a message to carry on."
+            : report.errorCode === "replyIncomplete"
+              ? "The model ended before completing its work. Its checkpoint was kept and nothing was committed. Send a message to carry on."
             : "This turn reached its time limit. Send a message to carry on.",
       });
     }
     const pending = await restStamp({
       error_message: report.errorMessage ? cap(report.errorMessage, 1000) : null,
+      ...(report.errorCode === "replyIncomplete" ? { outcome: null } : {}),
     });
     if (!pending) await notifyAgentRun(run, "agent_failed");
     await revokeKey(run);

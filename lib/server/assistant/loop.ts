@@ -1,5 +1,6 @@
 import "server-only";
 import { visibleAssistantContent } from "./visible-content";
+import { hasSerializedToolCall, looksLikePendingAction } from "@/lib/ai-completion";
 import { randomUUID } from "node:crypto";
 import { encodeNumoToolMessage,
   shouldProtectNumoToolContent } from "@/lib/server/numo/tool-content";
@@ -79,6 +80,42 @@ export interface ProcessChatCheckpoint {
   pendingToolCalls?: AssistantToolCall[];
   completedToolCallIds?: string[];
   roundCount?: number;
+  /** Keep correction attempts bounded across durable resumes. */
+  completionRepairs?: number;
+  completionRepairPending?: boolean;
+  completionRepairExhausted?: boolean;
+}
+
+export class NumoCompletionError extends Error {
+  constructor(readonly reason: string) {
+    super(`The model did not complete the requested work: ${reason}. No completion was recorded.`);
+    this.name = "NumoCompletionError";
+  }
+}
+
+const MAX_COMPLETION_REPAIRS = 2;
+const SUCCESSFUL_FINISH_REASONS = new Set(["stop", "tool_calls", "function_call", "end_turn", "stop_sequence"]);
+const COMPLETION_REPAIR_PROMPT =
+  "Your previous response did not complete the requested work. " +
+  "If work remains, use the advertised native tool calls now; never serialize tool calls as XML or prose. " +
+  "Complete the task and return the actual outcome, or state the concrete blocker. " +
+  "Do not finish with an announcement of an action you have not performed.";
+
+function malformedNativeCalls(calls: Iterable<{ id: string; name: string; arguments: string }>): boolean {
+  const ids = new Set<string>();
+  for (const call of calls) {
+    if (typeof call.id !== "string" || !call.id.trim()
+      || typeof call.name !== "string" || !call.name.trim()
+      || typeof call.arguments !== "string" || ids.has(call.id)) return true;
+    ids.add(call.id);
+    try {
+      const args: unknown = JSON.parse(call.arguments);
+      if (!args || typeof args !== "object" || Array.isArray(args)) return true;
+    } catch {
+      return true;
+    }
+  }
+  return false;
 }
 
 export interface ToolLedgerClaim {
@@ -178,6 +215,7 @@ export interface ProcessChatContext extends ToolContext {
     assistantReasoning: AssistantReasoning | null;
     pendingToolCalls: AssistantToolCall[];
     roundCount: number;
+    completionRepairs?: number;
   }) => Promise<string>;
   registerActiveRun?: (runId: string) => void;
   toolLedger?: ToolExecutionLedger;
@@ -308,6 +346,11 @@ export async function processChat(
   const redactor = new SecretRedactor();
   let suspension: ProcessChatSuspension | null = null;
   let resumeCheckpoint = context.resumeCheckpoint ?? null;
+  let completionRepairs = Math.min(MAX_COMPLETION_REPAIRS,
+    Math.max(0, Math.floor(resumeCheckpoint?.completionRepairs ?? 0)));
+  if (resumeCheckpoint?.phase === "model" && resumeCheckpoint.completionRepairPending) {
+    messages.push({ role: "user", content: COMPLETION_REPAIR_PROMPT });
+  }
   // True as soon as a stop was observed anywhere in the round (mid-stream or
   // between tools): the loop stops handing the turn back with no persisted
   // work beyond the durable checkpoints already written.
@@ -340,6 +383,9 @@ export async function processChat(
     continueLoop = false;
     if (await context.shouldStop?.()) observeStop();
     if (stopObserved) break;
+    if (resumeCheckpoint?.completionRepairExhausted) {
+      throw new NumoCompletionError("the bounded correction attempts were exhausted");
+    }
     const resumingTools = resumeCheckpoint?.phase === "tools";
     roundCount = resumingTools
       ? Math.max(roundCount, resumeCheckpoint?.roundCount ?? 1)
@@ -360,6 +406,9 @@ export async function processChat(
       cost?: number;
     } | null = null;
     let modelUsed: string | null = null;
+    let terminalFinish: string | null = null;
+    let receivedDone = false;
+    let malformedToolDelta = false;
     const toolCallAccumulators: Map<
       number,
       { id: string; name: string; arguments: string }
@@ -369,12 +418,16 @@ export async function processChat(
       : null;
 
     if (resumingTools) {
+      if (forceConclusion) throw new NumoCompletionError("a resumed tool round exceeded the execution round limit");
       for (const [index, call] of (resumeCheckpoint?.pendingToolCalls ?? []).entries()) {
         toolCallAccumulators.set(index, {
-          id: call.id,
-          name: call.function.name,
-          arguments: call.function.arguments,
+          id: call?.id,
+          name: call?.function?.name,
+          arguments: call?.function?.arguments,
         });
+      }
+      if (!toolCallAccumulators.size || malformedNativeCalls(toolCallAccumulators.values())) {
+        throw new NumoCompletionError("the resumed native tool checkpoint was malformed");
       }
     } else {
       // One controller per generation round: it carries both the idle watchdog
@@ -489,15 +542,20 @@ export async function processChat(
             throw readError;
           }
           const { done, value } = chunk;
-          if (done || stopObserved) break;
-          armIdleTimer();
-          buffer += decoder.decode(value, { stream: true });
+          if (stopObserved) break;
+          if (!done) armIdleTimer();
+          // A provider can close directly after its final data line. Flush the
+          // decoder and that line instead of discarding its terminal/tool data.
+          buffer += done ? `${decoder.decode()}\n` : decoder.decode(value, { stream: true });
           const lines = buffer.split("\n");
           buffer = lines.pop() || "";
           for (const line of lines) {
-            if (!line.startsWith("data: ")) continue;
-            const data = line.slice(6).trim();
-            if (data === "[DONE]") continue;
+            if (!line.startsWith("data:")) continue;
+            const data = line.slice(5).trim();
+            if (data === "[DONE]") {
+              receivedDone = true;
+              continue;
+            }
             let parsed;
             try {
               parsed = JSON.parse(data);
@@ -507,12 +565,15 @@ export async function processChat(
             if (parsed.id && !generationId) generationId = parsed.id;
             if (parsed.model) modelUsed = parsed.model;
             if (parsed.usage) usageInfo = parsed.usage;
+            const choice = parsed.choices?.[0];
+            const finish = choice?.finish_reason ?? choice?.native_finish_reason;
+            if (typeof finish === "string" && finish) terminalFinish = finish;
             // OpenRouter reports mid-stream provider failures in-band: a
             // top-level `error` beside the choice, with `finish_reason:
             // "error"` and no usable content. Swallowing it would surface a
             // silently truncated reply, so it goes through the durable retry
             // path like any other generation failure.
-            const streamError = parsed.error
+            const streamError = parsed.error ?? choice?.error
               ?? (parsed.choices?.[0]?.finish_reason === "error"
                 ? { message: "The provider disconnected mid-stream" }
                 : null);
@@ -534,9 +595,21 @@ export async function processChat(
               fullContent = visible;
               if (visibleDelta) emitter.emit("content_delta", { delta: visibleDelta });
             }
-            if (delta.tool_calls) {
+            if (delta.tool_calls != null && !Array.isArray(delta.tool_calls)) {
+              malformedToolDelta = true;
+            } else if (Array.isArray(delta.tool_calls)) {
               roundReasoning = reasoningStream.finish();
               for (const tc of delta.tool_calls) {
+                if (!tc || typeof tc !== "object" || Array.isArray(tc)
+                  || (tc.index != null && (!Number.isInteger(tc.index) || tc.index < 0))
+                  || (tc.id != null && typeof tc.id !== "string")
+                  || (tc.type != null && tc.type !== "function")
+                  || (tc.function != null && (typeof tc.function !== "object" || Array.isArray(tc.function)))
+                  || (tc.function?.name != null && typeof tc.function.name !== "string")
+                  || (tc.function?.arguments != null && typeof tc.function.arguments !== "string")) {
+                  malformedToolDelta = true;
+                  continue;
+                }
                 const idx = tc.index ?? 0;
                 if (!toolCallAccumulators.has(idx)) {
                   toolCallAccumulators.set(idx, {
@@ -558,6 +631,7 @@ export async function processChat(
               }
             }
           }
+          if (done) break;
         }
       } finally {
         closeRound();
@@ -579,6 +653,48 @@ export async function processChat(
         // the pending stop, interrupts any active worker and checkpoints
         // `stopped`.
         break;
+      }
+
+      const serializedCall = hasSerializedToolCall(rawContent);
+      const pendingAction = toolCallAccumulators.size === 0 && looksLikePendingAction(fullContent);
+      const truncated = terminalFinish === "length" || terminalFinish === "max_tokens";
+      const invalidFinish = terminalFinish !== null && !SUCCESSFUL_FINISH_REASONS.has(terminalFinish);
+      const incompleteTransport = !receivedDone && !terminalFinish;
+      const emptyAnswer = toolCallAccumulators.size === 0 && !fullContent.trim();
+      const missingNativeCalls = (terminalFinish === "tool_calls" || terminalFinish === "function_call")
+        && toolCallAccumulators.size === 0;
+      const invalidNativeCall = malformedToolDelta || malformedNativeCalls(toolCallAccumulators.values());
+      const toolCapExceeded = forceConclusion && toolCallAccumulators.size > 0;
+      const completionProblem = toolCapExceeded ? "a tool call exceeded the execution round limit"
+        : serializedCall ? "a tool call was returned as text"
+        : truncated ? "the response reached its token limit"
+        : invalidFinish ? "the provider did not report a successful finish"
+        : incompleteTransport ? "the stream closed before a terminal response"
+        : invalidNativeCall ? "the native tool call was malformed"
+        : missingNativeCalls ? "the native tool call was missing"
+        : pendingAction ? "the response only announced unfinished work"
+        : emptyAnswer ? "the response was empty"
+        : null;
+      if (completionProblem) {
+        if (await context.shouldStop?.()) observeStop();
+        if (stopObserved) break;
+        // Action/protocol correction needs real tools. Do not silently turn a
+        // repair into a text-only conclusion when the existing round cap is hit.
+        const actionRepairUnavailable = toolCapExceeded || (
+          (serializedCall || pendingAction || missingNativeCalls || invalidNativeCall)
+          && tools.length > 0 && roundCount >= MAX_TOOL_EXECUTION_ROUNDS
+        );
+        const exhausted = completionRepairs >= MAX_COMPLETION_REPAIRS || actionRepairUnavailable;
+        if (!exhausted) completionRepairs++;
+        await context.persistCheckpoint?.({
+          phase: "model", roundCount, completionRepairs,
+          completionRepairPending: !exhausted,
+          completionRepairExhausted: exhausted,
+        });
+        if (exhausted) throw new NumoCompletionError(completionProblem);
+        messages.push({ role: "user", content: COMPLETION_REPAIR_PROMPT });
+        continueLoop = true;
+        continue;
       }
     }
 
@@ -625,6 +741,7 @@ export async function processChat(
             assistantReasoning: roundReasoning,
             pendingToolCalls: assistantToolCalls,
             roundCount,
+            completionRepairs,
           }),
         };
       } else {
@@ -670,6 +787,7 @@ export async function processChat(
           pendingToolCalls: assistantToolCalls,
           completedToolCallIds: [...completedToolCallIds],
           roundCount,
+          completionRepairs,
         });
       }
       resumeCheckpoint = null;
@@ -745,6 +863,7 @@ export async function processChat(
             pendingToolCalls: assistantToolCalls,
             completedToolCallIds: [...completedToolCallIds],
             roundCount,
+            completionRepairs,
           });
           continue;
         }
@@ -880,6 +999,7 @@ export async function processChat(
           pendingToolCalls: assistantToolCalls,
           completedToolCallIds: [...completedToolCallIds],
           roundCount,
+          completionRepairs,
         });
       }
 
@@ -888,7 +1008,7 @@ export async function processChat(
       // - other tools: continue normally with tools enabled (round cap only —
       //   minddy tools chain legitimately: create issue → set categories → comment)
       if (!hasAskUser && !pausedByTool && !stopObserved && roundCount <= MAX_TOOL_EXECUTION_ROUNDS) {
-        await context.persistCheckpoint?.({ phase: "model", roundCount });
+        await context.persistCheckpoint?.({ phase: "model", roundCount, completionRepairs });
         continueLoop = true;
       }
       fullContent = "";

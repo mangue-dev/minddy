@@ -59,8 +59,10 @@ import {
 } from "./opencode-events";
 import {
   looksLikeUnexecutedPreamble,
+  MAX_COMPLETION_REPAIRS,
   OPENCODE_CONTINUATION_REPAIR,
 } from "./opencode-continuation";
+import { hasSerializedToolCall } from "../../../ai-completion";
 import {
   opencodeAnchorFile,
   opencodeDbPath,
@@ -1298,8 +1300,10 @@ export async function runOpencodeTurn(
     let toolsSeen = 0;
     /** The end of the mother's last round — `idle` does not carry this information. */
     let lastParentFinish: string | null = null;
-    /** A text action announcement only repairs once: never loops. */
-    let repairedPreamble = false;
+    let lastParentReply = "";
+    let completionRepairs = 0;
+    let completionRejected = false;
+    let completionRepairPending = false;
     let repairedPermissionCascade = false;
     let rejectedPermissionThisRound = false;
     /**
@@ -1760,6 +1764,12 @@ export async function runOpencodeTurn(
      * by composing it), while a steering message has no other trace.
      * Emitting both would cause the user to read the same sentence twice.
      */
+    const promptParent = async (prompt: string): Promise<void> => {
+      // A new prompt cannot inherit completion evidence from the previous one.
+      lastParentFinish = null;
+      lastParentReply = "";
+      await client.promptAsync(sessionId, prompt);
+    };
     const postPending = async (): Promise<void> => {
       if (interrupted) return;
       const parts = pendingPrompt.splice(0);
@@ -1804,8 +1814,7 @@ export async function runOpencodeTurn(
         pendingPrompt.unshift(...parts.filter((part) => part.steered));
         return;
       }
-      await client.promptAsync(
-        sessionId,
+      await promptParent(
         parts
           .map((part) =>
             promptWithMentions(part.message.text, part.message.mentions),
@@ -2124,8 +2133,29 @@ export async function runOpencodeTurn(
           await stoppingTurn;
           break;
         }
-        if (winner.done) break;
+        if (winner.done) {
+          // EOF is a transport boundary, never evidence of a completed task.
+          if (!budgetExhausted && !interrupted && !sessionError && !timedOut && !askedUser) {
+            completionRejected = true;
+            sessionError = "The event stream closed before the parent session confirmed completion. Its checkpoint was kept.";
+            // The event connection can close while the engine still executes.
+            // Stabilize tools and the journal before exporting a resume cursor.
+            validationAbort.abort();
+            proxy.cancel();
+            const acknowledged = await abortSession();
+            if (!acknowledged || !(await client.waitIdle())) {
+              forcedStop = true;
+              await server?.stop();
+            }
+            await Promise.allSettled(validationCommands);
+            await cp.emit("error", { code: "replyIncomplete", message: sessionError });
+          }
+          break;
+        }
         const raw = winner.value;
+        // The translator clears the round's parts on finish. Keep the actual
+        // terminal text, including an empty reply, instead of an earlier result.
+        const roundTextBeforeEvent = liveTextOf(state, sessionId);
         const out = translateEvent(raw, state);
         // `/event` is server-wide. Activity from an unrelated session must not
         // keep this turn alive, while registered child sessions legitimately do.
@@ -2542,7 +2572,10 @@ export async function runOpencodeTurn(
               ...liveEdits.payload(),
             });
           }
-          if (!child) lastParentFinish = out.usage.finish;
+          if (!child) {
+            lastParentFinish = out.usage.finish;
+            lastParentReply = roundTextBeforeEvent.trim();
+          }
           // The round is closed, whatever its end: the tool counter
           // start from scratch for the next one.
           if (!child) toolsSeen = 0;
@@ -2696,7 +2729,7 @@ export async function runOpencodeTurn(
             abortsRequested = 0;
             awaitingFirstModelSignal = true;
             timing("shell-timeout-recovery");
-            await client.promptAsync(sessionId, recovery.prompt);
+            await promptParent(recovery.prompt);
             lastEventAt = now();
             continue;
           }
@@ -2726,34 +2759,28 @@ export async function runOpencodeTurn(
             rejectedPermissionThisRound = false;
             awaitingFirstModelSignal = true;
             timing("permission-cascade-retry");
-            await client.promptAsync(
-              sessionId,
+            await promptParent(
               "One or more tool permissions were refused and OpenCode cancelled the other parallel tool calls. Read the tool errors, continue with a safe alternative, and do not repeat the refused action.",
             );
             continue;
           }
-          /**
-           * GPT-5.6 Luna has been observed ending a `stop` round with "I'm going
-           * inventory… then check…”, without any call to tool. One layer
-           * OpenAI-compatible had flattened what was semantically a
-           * commentary in wizard text: for opencode, `stop` + `idle` is
-           * a perfectly valid conclusion, while the sentence promises
-           * still all the work.
-           *
-           * We repair the contradiction ONCE, in the same session: the text
-           * becomes the intermediate narration that it should have been, then a
-           * internal instruction requires action without announcing again. Detection is
-           * deliberately narrow (`opencode-continuation.ts`) so as never to
-           * relaunch a real answer that would simply speak to the future.
-           */
-          const stranded = outward(replyOf(state, sessionId));
+          // A normal stop can still contain an action announcement. Conversely,
+          // idle after a truncated, empty or malformed round is not completion.
+          const stranded = outward(lastParentReply);
           if (
-            !repairedPreamble &&
-            lastParentFinish === "stop" &&
-            looksLikeUnexecutedPreamble(stranded)
+            !sessionError &&
+            (lastParentFinish !== "stop" || !stranded.trim() ||
+              hasSerializedToolCall(stranded) || looksLikeUnexecutedPreamble(stranded))
           ) {
-            repairedPreamble = true;
-            await cp.emit("thinking", { text: cap(stranded, 2000) });
+            if (completionRepairs >= MAX_COMPLETION_REPAIRS) {
+              completionRejected = true;
+              sessionError = "The model repeatedly ended before completing its work. Its checkpoint was kept and nothing was committed.";
+              await cp.emit("error", { code: "replyIncomplete", message: sessionError });
+              break;
+            }
+            completionRepairs++;
+            completionRepairPending = true;
+            if (stranded) await cp.emit("thinking", { text: cap(stranded, 2000) });
             if (interrupted) {
               await stoppingTurn;
               break;
@@ -2761,6 +2788,7 @@ export async function runOpencodeTurn(
             reasoningSince = null;
             lastLiveAt = 0;
             toolsSeen = 0;
+            awaitingFirstModelSignal = true;
             publishLive({
               text: "",
               tools: 0,
@@ -2768,9 +2796,10 @@ export async function runOpencodeTurn(
               reasoningMs: 0,
               ...liveEdits.payload(),
             });
-            await client.promptAsync(sessionId, OPENCODE_CONTINUATION_REPAIR);
+            await promptParent(OPENCODE_CONTINUATION_REPAIR);
             continue;
           }
+          if (!sessionError) completionRepairPending = false;
           break;
         }
 
@@ -2885,7 +2914,11 @@ export async function runOpencodeTurn(
      * therefore, on a machine, the paths that he had just mentioned, even in a
      * commit message pushed to the forge.
      */
-    const reply = askedUser ? "" : outward(replyOf(state, sessionId));
+    // A failed correction must retain partial work until a valid final answer.
+    if (completionRepairPending && (sessionError || timedOut || interrupted || budgetExhausted)) {
+      completionRejected = true;
+    }
+    const reply = askedUser || completionRejected ? "" : outward(replyOf(state, sessionId));
     /**
      * THE FINAL WORD, SAID TO THE WIRE — and this is what ENDS the round on the screen.
      *
@@ -2963,7 +2996,7 @@ export async function runOpencodeTurn(
         stat.untracked > 0
       );
     };
-    if (job.writesToRepo && !current && (await pendingCloneWork())) {
+    if (job.writesToRepo && !current && !completionRejected && (await pendingCloneWork())) {
       try {
         pushed = await pushWork(commitMessageFromReply(reply, job.commitRef));
       } catch (err) {
@@ -3044,6 +3077,7 @@ export async function runOpencodeTurn(
       // `agent_question` rather than `agent_done` ([vm-rest.ts](../vm-rest.ts)).
       ...(askedUser ? { askedUser: true } : {}),
       ...(timedOut ? { errorCode: "turnTooLong" as const } : {}),
+      ...(completionRejected ? { errorCode: "replyIncomplete" as const } : {}),
       ...(sessionError
         ? { errorMessage: cap(outward(sessionError), 1000) }
         : {}),
