@@ -1,5 +1,7 @@
 "use client";
 
+import type { QueryClient } from "@tanstack/react-query";
+import { applyPendingRelations } from "./optimistic/relation-writes";
 import type { CreateIssueRelationInput, IssueRelation } from "./types";
 import { trackEvent } from "./analytics";
 
@@ -21,11 +23,14 @@ async function parseJson<T>(response: Response): Promise<T> {
 }
 
 export async function fetchIssueRelationsApi(
-  projectId: string
+  projectId: string,
+  client?: QueryClient
 ): Promise<IssueRelation[]> {
-  return parseJson<IssueRelation[]>(
+  const startedAt = Date.now();
+  const rows = await parseJson<IssueRelation[]>(
     await fetch(`/api/projects/${projectId}/issue-relations`)
   );
+  return applyPendingRelations(client, rows, startedAt, projectId);
 }
 
 export async function addIssueRelationApi(

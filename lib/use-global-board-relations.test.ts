@@ -62,15 +62,32 @@ beforeEach(() => {
 afterEach(() => client.clear());
 
 describe("global relation mutations", () => {
+  it("shows an addition in both caches before confirmation and rolls back a failed POST", async () => {
+    let reject!: (error: Error) => void;
+    mocks.add.mockReturnValue(new Promise<IssueRelation>((_resolve, rej) => { reject = rej; }));
+    const result = hook.addRelation("project", "other-issue", "related", "objective", { targetType: "objective" });
+    const rows = client.getQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY)!.relations;
+    expect(rows).toHaveLength(2);
+    expect(rows[1]).toMatchObject({ source_id: "objective", source_type: "objective", target_id: "other-issue", target_type: "issue", type: "related" });
+    expect(client.getQueryData(["issue-relations", "project"])).toEqual([rows[1]]);
+    expect(mocks.record).not.toHaveBeenCalled();
+    const rejected = expect(result).rejects.toThrow("Failed");
+    reject(new Error("Failed"));
+    await rejected;
+    expect(client.getQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY)!.relations).toEqual([existing]);
+    expect(client.getQueryData(["issue-relations", "project"])).toEqual([]);
+    expect(mocks.record).not.toHaveBeenCalled();
+  });
+
   it.each<IssueRelationType>(["blocks", "blocked_by", "related"])(
     "preserves objective kinds in %s requests, cache rows, and redo snapshots",
     async (type) => {
       const kinds: RelationKinds = { targetType: "objective" };
-      const created = { id: "created", ...normalizeRelation("issue", type, { id: "objective", type: "objective" }) };
+      const created = { id: "created", ...normalizeRelation("other-issue", type, { id: "objective", type: "objective" }) };
       mocks.add.mockResolvedValue(created);
-      await hook.addRelation("project", "issue", type, "objective", kinds);
+      await hook.addRelation("project", "other-issue", type, "objective", kinds);
       expect(mocks.add).toHaveBeenCalledWith("project", {
-        source_id: "issue", target_id: "objective", type,
+        source_id: "other-issue", target_id: "objective", type,
         source_type: undefined, target_type: "objective",
       });
       const { id, ...snapshot } = created;

@@ -47,6 +47,7 @@ import {
   patchIssueEverywhere,
   removeIssueEverywhere,
 } from "@/lib/optimistic/issue-writes";
+import { forgetRelationWrite } from "@/lib/optimistic/relation-writes";
 import { isTypingTarget } from "@/lib/keyboard/keyboard-context";
 import { eventKey } from "@/lib/keyboard/event-key";
 import {
@@ -152,6 +153,7 @@ export function UndoProvider({ children }: { children: ReactNode }) {
 
   const removeRelationFromCaches = useCallback(
     (projectId: string, relationId: string) => {
+      forgetRelationWrite(queryClient, relationId);
       queryClient.setQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY, (old) =>
         old
           ? {

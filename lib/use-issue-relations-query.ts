@@ -14,7 +14,7 @@ import type {
   RelationEndpointType,
 } from "./types";
 
-const relationsKey = (projectId: string) => ["issue-relations", projectId] as const;
+import { addRelationOptimistically, persistedRelationId, relationsKey } from "./optimistic/relation-writes";
 
 /** Endpoint kinds of a relation being added (MIN-513) — default `issue` both. */
 export interface RelationKinds {
@@ -35,7 +35,7 @@ export function useIssueRelationsQuery(projectId: string | null) {
   const enabled = !!projectId;
   const { data, isPending } = useQuery({
     queryKey: relationsKey(projectId ?? ""),
-    queryFn: () => fetchIssueRelationsApi(projectId as string),
+    queryFn: () => fetchIssueRelationsApi(projectId as string, queryClient),
     enabled,
   });
 
@@ -53,13 +53,14 @@ export function useIssueRelationsQuery(projectId: string | null) {
       kinds?: RelationKinds
     ) => {
       if (!projectId) return;
-      const created = await addIssueRelationApi(projectId, {
+      const input = {
         source_id: sourceId,
         target_id: targetId,
         type,
         source_type: kinds?.sourceType,
         target_type: kinds?.targetType,
-      });
+      };
+      const created = await addRelationOptimistically(queryClient, projectId, input, () => addIssueRelationApi(projectId, input));
       // Record the server-normalized row (blocked_by → inverted blocks).
       record({
         kind: "relation-add",
@@ -73,12 +74,6 @@ export function useIssueRelationsQuery(projectId: string | null) {
           target_type: created.target_type,
         },
       });
-      // Merge the created (or already-existing) row in immediately; realtime +
-      // invalidate reconcile across clients.
-      queryClient.setQueryData<IssueRelation[]>(relationsKey(projectId), (old) => {
-        const rest = (old ?? []).filter((r) => r.id !== created.id);
-        return [...rest, created];
-      });
       invalidate();
     },
     [projectId, queryClient, invalidate, record]
@@ -87,6 +82,7 @@ export function useIssueRelationsQuery(projectId: string | null) {
   const removeRelation = useCallback(
     async (relationId: string) => {
       if (!projectId) return;
+      relationId = await persistedRelationId(queryClient, relationId);
       const key = relationsKey(projectId);
       const previous = queryClient.getQueryData<IssueRelation[]>(key);
       const removed = previous?.find((r) => r.id === relationId);
