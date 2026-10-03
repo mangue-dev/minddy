@@ -46,3 +46,43 @@ it("does not restore a snapshot removed while its open request is in flight", as
   expect(await pending).toBeUndefined();
   expect(window.localStorage.getItem("cleared")).toBeNull();
 });
+
+it("shares identical in-flight opens but reauthorizes every later read", async () => {
+  let release!: (value: Response) => void;
+  const fetch = vi.fn(() => new Promise<Response>((resolve) => { release = resolve; }));
+  vi.stubGlobal("fetch", fetch);
+  const envelope = JSON.stringify({ format: "minddy-local-v1", expiresAt: Date.now() + 10000, ciphertext: "sealed" });
+  window.localStorage.setItem("shared", envelope);
+  const first = restoreLocalSnapshot(window.localStorage, "shared", "window-tabs");
+  const second = restoreLocalSnapshot(window.localStorage, "shared", "window-tabs");
+  expect(fetch).toHaveBeenCalledTimes(1);
+  release(new Response(JSON.stringify({ value: { id: "tab" } })));
+  expect(await first).toEqual({ id: "tab" });
+  expect(await second).toEqual({ id: "tab" });
+  const later = restoreLocalSnapshot(window.localStorage, "shared", "window-tabs");
+  expect(fetch).toHaveBeenCalledTimes(2);
+  release(new Response(JSON.stringify({ value: { id: "later" } })));
+  expect(await later).toEqual({ id: "later" });
+});
+
+it("never shares open results across changed ciphertext, storage or account generation", async () => {
+  const releases: ((value: Response) => void)[] = [];
+  const fetch = vi.fn(() => new Promise<Response>((resolve) => { releases.push(resolve); }));
+  vi.stubGlobal("fetch", fetch);
+  const envelope = (ciphertext: string) => JSON.stringify({ format: "minddy-local-v1", expiresAt: Date.now() + 10000, ciphertext });
+  window.localStorage.setItem("isolated", envelope("one"));
+  const old = restoreLocalSnapshot(window.localStorage, "isolated", "window-tabs");
+  window.localStorage.setItem("isolated", envelope("two"));
+  const changed = restoreLocalSnapshot(window.localStorage, "isolated", "window-tabs");
+  window.sessionStorage.setItem("isolated", envelope("two"));
+  const otherStorage = restoreLocalSnapshot(window.sessionStorage, "isolated", "window-tabs");
+  invalidateLocalSnapshotWrites();
+  const otherAccount = restoreLocalSnapshot(window.localStorage, "isolated", "window-tabs");
+  expect(fetch).toHaveBeenCalledTimes(4);
+  releases.forEach((release) => release(new Response(JSON.stringify({ value: "private" }))));
+  expect(await old).toBeUndefined();
+  expect(await changed).toBeUndefined();
+  expect(await otherStorage).toBeUndefined();
+  expect(await otherAccount).toBe("private");
+  window.sessionStorage.clear();
+});

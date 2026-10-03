@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AppTabViewHost } from "@/components/app-tab-view-host";
-import { retainAppView } from "./retained-app-views";
+import { isRetainedDestination, retainAppView } from "./retained-app-views";
 import { useAppTabRoute } from "./app-tab-route-context";
 
 const state = vi.hoisted(() => ({
@@ -112,14 +112,13 @@ describe("bounded retained board views", () => {
     expect(liveEffects).toBe(1);
   });
 
-  it("evicts the least recent board at the fixed bound and releases closed tabs", async () => {
+  it("bounds retained weight and releases closed tabs", async () => {
     await render();
     for (const [id, path] of [["other", "/projects/p2"], ["fourth", "/projects/p3"], ["pages", "/projects/p4"]]) {
       Object.assign(state, { activeId: id, path, activeHref: path });
       await render();
     }
-    expect(container.querySelectorAll("[data-retained-app-view]")).toHaveLength(2);
-    expect(container.querySelector('[data-board-path="/all"]')).toBeNull();
+    expect(container.querySelectorAll("[data-retained-app-view]")).toHaveLength(4);
     expect(liveEffects).toBe(1);
     state.tabs = [{ id: "pages" }];
     await render();
@@ -165,5 +164,49 @@ describe("bounded retained board views", () => {
     expect(restored).toHaveLength(1);
     expect(restored[0].key).toBe(startup[0].key);
     expect(restored[0].tabId).toBe("board");
+  });
+
+  it("qualifies only the exact retained tab and repeatable selection for local navigation", () => {
+    const route = { pathname: "/all", search: "view=first", projectId: null };
+    const views = retainAppView([], route, "board", new Set(["board"]));
+    expect(isRetainedDestination(views, "board", "/all?view=first")).toBe(true);
+    expect(isRetainedDestination(views, "other", "/all?view=first")).toBe(false);
+    expect(isRetainedDestination(views, "board", "/all?view=second")).toBe(false);
+    expect(isRetainedDestination(views, "board", "/projects/p/pages")).toBe(false);
+    expect(isRetainedDestination(views, "board", "https://external.test/all")).toBe(false);
+  });
+
+  it.each([2, 4, 6])("adapts to late frequent visits across twelve tabs under budget %s", (budget) => {
+    const open = new Set(Array.from({ length: 12 }, (_, i) => `t${i}`));
+    let views: ReturnType<typeof retainAppView> = [];
+    let visits: string[] = [];
+    const sequence = [...Array.from({ length: 12 }, (_, i) => i), ...Array.from({ length: 10 }, (_, i) => [10, 11, i % 3]).flat()];
+    let misses = 0;
+    for (const index of sequence) {
+      const tabId = `t${index}`;
+      const route = { pathname: `/projects/p${index}`, search: "", projectId: `p${index}` };
+      if (!views.some((view) => view.tabId === tabId)) misses++;
+      visits = [...visits, tabId].slice(-32);
+      views = retainAppView(views, route, tabId, open, { budget, limit: 6, visits, cost: () => 1 });
+      expect(views.length).toBeLessThanOrEqual(budget);
+      expect(views.at(-1)?.tabId).toBe(tabId);
+    }
+    if (budget >= 4) {
+      expect(views.map((view) => view.tabId)).toContain("t10");
+      expect(views.map((view) => view.tabId)).toContain("t11");
+      // Twelve compulsory first visits plus fewer misses than the 30 returns
+      // that a two-slot LRU would miss in this three-destination pattern.
+      expect(misses).toBeLessThan(30);
+    }
+    // A new visit pattern replaces formerly frequent tabs rather than pinning them.
+    for (let i = 0; i < 40; i++) {
+      const tabId = `t${i % 3}`;
+      visits = [...visits, tabId].slice(-32);
+      views = retainAppView(views, { pathname: `/projects/p${i % 3}`, search: "", projectId: `p${i % 3}` }, tabId, open, { budget, limit: 6, visits, cost: () => 1 });
+    }
+    // An unused spare slot may retain one older view; neither old favourite can
+    // displace the three newly frequent destinations when the budget fits them.
+    if (budget === 4) expect(views.filter((view) => ["t10", "t11"].includes(view.tabId!)).length).toBeLessThanOrEqual(1);
+    if (budget === 2) expect(views.filter((view) => ["t10", "t11"].includes(view.tabId!))).toHaveLength(0);
   });
 });

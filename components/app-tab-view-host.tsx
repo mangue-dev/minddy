@@ -1,15 +1,17 @@
 "use client";
 
-import { Activity, memo, useState, type ReactNode } from "react";
+import { Activity, memo, useEffect, useLayoutEffect, useState, type ReactNode } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
 import { usePathname, useSearchParams } from "next/navigation";
 import { AppTabNavigationScope, useAppTabs } from "@/lib/app-tabs-context";
 import { AppTabRouteProvider } from "@/lib/app-tab-route-context";
 import { normalizeAppTabLocation } from "@/lib/app-tab-location";
-import { retainAppView, retainedAppViewKind, type RetainedAppView } from "@/lib/retained-app-views";
+import { isRetainedDestination, retainAppView, retainedAppViewKind, type RetainedAppView } from "@/lib/retained-app-views";
 import { BoardLoadingSkeleton } from "./board-loading-skeleton";
 import { useRetainedBoardScroll } from "@/lib/use-retained-board-scroll";
 import { useColdBoardPrefetch } from "@/lib/use-cold-board-prefetch";
+import { observeRetainedBoardData } from "@/lib/retained-board-data";
 
 const GlobalBoard = dynamic(() => import("./global-board").then((module) => module.GlobalBoard), { loading: () => <BoardLoadingSkeleton /> });
 const ProjectBoard = dynamic(() => import("@/app/(app)/projects/[id]/page"), { loading: () => <BoardLoadingSkeleton /> });
@@ -31,9 +33,10 @@ const RetainedBoard = memo(function RetainedBoard({ view, active }: { view: Reta
 /** Retain rich boards with React-managed effect suspension and a strict LRU bound. */
 export function AppTabViewHost({ children }: { children: ReactNode }) {
   const { tabs, activeId, session } = useAppTabs();
+  const client = useQueryClient();
   const pathname = usePathname();
   const search = useSearchParams().toString();
-  const [state, setState] = useState<{ location: string; tabId: string | null; tabIds: string; views: RetainedAppView[] }>({ location: "", tabId: null, tabIds: "", views: [] });
+  const [state, setState] = useState<{ location: string; tabId: string | null; tabIds: string; views: RetainedAppView[]; visits: string[] }>({ location: "", tabId: null, tabIds: "", views: [], visits: [] });
   const location = `${pathname}?${search}`;
   const tabIds = tabs.map((tab) => tab.id).join(",");
   const expectedLocation = normalizeAppTabLocation(session.getActiveHref());
@@ -43,13 +46,35 @@ export function AppTabViewHost({ children }: { children: ReactNode }) {
   const tabId = pendingActivation ? state.tabId : activeId;
   useColdBoardPrefetch(pathname === "/all" && !pendingActivation);
   let views = state.views;
+  let visits = state.visits;
   if (state.location !== location || state.tabId !== tabId || state.tabIds !== tabIds) {
     // Closing the outgoing tab must not tear down and recreate its board during
     // the short interval before the replacement route commits.
-    if (!pendingActivation) views = retainAppView(views, { pathname, search, projectId: pathname.match(/^\/projects\/([^/]+)/)?.[1] ?? null }, tabId, new Set(tabs.map((tab) => tab.id)));
-    setState({ location, tabId, tabIds, views });
+    if (!pendingActivation) {
+      if (tabId && state.tabId !== tabId) visits = [...visits, tabId].slice(-32);
+      const memory = (performance as Performance & { memory?: { usedJSHeapSize: number; jsHeapSizeLimit: number } }).memory;
+      const pressured = !!memory && memory.usedJSHeapSize > memory.jsHeapSizeLimit * 0.7;
+      views = retainAppView(views, { pathname, search, projectId: pathname.match(/^\/projects\/([^/]+)/)?.[1] ?? null }, tabId, new Set(tabs.map((tab) => tab.id)), {
+        budget: pressured ? 3 : 6, limit: 6, visits,
+        cost: (view) => {
+          const data = view.kind === "global-board"
+            ? client.getQueryData<{ issues: unknown[] }>(["me", "board"])?.issues
+            : client.getQueryData<unknown[]>(["issues", view.route.projectId]);
+          return Math.max(1, Math.ceil((data?.length ?? (view.kind === "global-board" ? 600 : 200)) / 200));
+        },
+      });
+    }
+    setState({ location, tabId, tabIds, views, visits });
   }
   const kind = retainedAppViewKind(pathname);
+  useLayoutEffect(() => {
+    const qualifies = (id: string | null, href: string) => isRetainedDestination(views, id, href);
+    session.isRetainedDestination = qualifies;
+    return () => {
+      if (session.isRetainedDestination === qualifies) session.isRetainedDestination = () => false;
+    };
+  }, [session, views]);
+  useEffect(() => observeRetainedBoardData(client, views), [client, views]);
   return <>
     {views.map((view) => {
       const active = !!kind && view.tabId === tabId && view.route.pathname === pathname;

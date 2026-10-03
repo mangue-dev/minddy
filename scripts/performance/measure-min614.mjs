@@ -12,6 +12,7 @@ import { EMAIL, MARKER, id } from "./seed.mjs";
 import { measureRetainedReturns } from "./min614-retained-returns.mjs";
 import { measureIssueJourneys } from "./min614-issue-journeys.mjs";
 import { measureMutationJourneys } from "./min614-mutation-journeys.mjs";
+import { measureHotJourneys } from "./min614-hot-journeys.mjs";
 
 loadEnv();
 const base = process.env.MINDDY_PERF_BASE_URL ?? "http://localhost:3111";
@@ -50,6 +51,7 @@ const cpuProfile = process.argv.includes("--profile");
 const pass2 = process.argv.includes("--retained-returns");
 const pass3 = process.argv.includes("--issue-journeys");
 const pass3b = process.argv.includes("--mutation-journeys");
+const pass3d = process.argv.includes("--hot-journeys");
 const buildSha = process.env.MINDDY_PERF_BUILD_SHA;
 if (buildSha) assert.match(buildSha, /^[a-f0-9]{40}$/);
 let runtime, profile, browser, context, page;
@@ -132,12 +134,17 @@ try {
     if (!request.url().startsWith(`${base}/api/`)) return;
     const url = new URL(request.url());
     const record = { path: url.pathname, method: request.method(), at: Date.now(),
+      ...(pass3d && url.pathname === '/api/me/local-snapshots' ? { operation: JSON.parse(request.postData() ?? '{}').operation } : {}),
+      ...(pass3d && url.pathname.endsWith('/icon/content') ? { version: url.searchParams.get('v') } : {}),
       ...(url.searchParams.get('view') === 'chain' ? { variant: 'chain' } : {}) };
     requestRecords.set(request, record); requests.push(record);
   });
-  page.on("requestfinished", (request) => {
+  page.on("requestfinished", async (request) => {
     const record = requestRecords.get(request);
     if (record) record.duration = request.timing().responseEnd;
+    if (record && pass3d) {
+      try { record.bytes = await request.sizes(); } catch {}
+    }
   });
   page.on("requestfailed", (request) => {
     const record = requestRecords.get(request);
@@ -204,12 +211,19 @@ try {
   await page.goto(`${base}${boardTab.href}`, { waitUntil: "domcontentloaded" });
   await board().waitFor({ timeout: 90000 });
   measurements.push({ name: "cold-board", readyMs: Date.now() - start });
+  if (pass3d) {
+    await page.waitForFunction(() => document.querySelector('[data-retained-app-view][data-app-view-active="true"]')?.querySelectorAll('[data-issue-id]').length === 600, null, { timeout: 10000 });
+    await frames();
+    measurements.push({ name: "cold-exact-board", readyMs: Date.now() - start });
+  }
   await page.waitForTimeout(1800);
   runtime.renderer = await page.evaluate(() => ({ userAgent: navigator.userAgent, nativeBridge: Boolean(window.minddy),
     width: innerWidth, height: innerHeight, theme: document.documentElement.classList.contains("dark") ? "dark" : "light" }));
   assert.equal(runtime.renderer.nativeBridge, native);
   const pagesHref = `/projects/${fixture.projects[0]}/pages`;
-  if (pass3b) {
+  if (pass3d) {
+    await measureHotJourneys({ page, context, fixture, boardTab, pagesTab, tabs, base, measure, frames, diagnostic: diagnostic || cpuProfile, output, label, cdp });
+  } else if (pass3b) {
     await measureMutationJourneys({ page, context, fixture, boardTab, pagesTab, base, measure, frames, diagnostic: diagnostic || cpuProfile, output, label, recordRequest: (record) => requests.push(record), cdp });
   } else if (pass3) {
     await measureIssueJourneys({ page, context, fixture, boardTab, pagesTab, tabs, base, measure, frames, diagnostic: diagnostic || cpuProfile, output, label, recordRequest: (record) => requests.push(record) });
@@ -232,7 +246,7 @@ try {
     await frames();
     await page.screenshot({ path: `${output}/${label}-issue-light.png` });
   }
-  if (!process.argv.includes("--short") && !pass3) {
+  if (!process.argv.includes("--short") && !pass3 && !pass3d) {
   // Read the stored PR list through its real authenticated route; no diff or forge is fabricated.
   for (let run = 0; run < 3; run++) {
     const started = performance.now();

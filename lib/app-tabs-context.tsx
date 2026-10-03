@@ -76,7 +76,8 @@ function AccountTabs({ owner, children }: { owner: string; children: ReactNode }
       const current = window.location.pathname;
       const next = href.split(/[?#]/)[0];
       const wikiRoot = current.match(/^\/projects\/[^/]+\/pages(?:\/|$)/)?.[0].replace(/\/$/, "");
-      if (wikiRoot && (next === wikiRoot || next.startsWith(`${wikiRoot}/`))) window.history.pushState(null, "", href);
+      if (session.isRetainedDestination(session.getSnapshot().activeId, href) ||
+          (wikiRoot && (next === wikiRoot || next.startsWith(`${wikiRoot}/`)))) window.history.pushState(null, "", href);
       else router.push(href, { scroll: false });
     };
     session.remember = (id, href) => {
@@ -86,6 +87,10 @@ function AccountTabs({ owner, children }: { owner: string; children: ReactNode }
   useEffect(() => {
     if (!query.data) return;
     session.receive(query.data);
+    // Server tab reconciliation is ongoing; the window snapshot is startup-only.
+    // Reopening it after each location PATCH repeats authorization/decryption
+    // even though initialize already has an active destination and does nothing.
+    if (session.getSnapshot().activeId) return;
     let cancelled = false;
     void (async () => {
       let restored: { id: string; href: string } | undefined;
