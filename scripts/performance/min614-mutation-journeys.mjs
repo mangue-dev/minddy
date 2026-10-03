@@ -110,7 +110,7 @@ export async function measureMutationJourneys({ page, context, fixture, boardTab
     state.fixture.loadedComments = expected.length; state.fixture.loadedReplies = 6;
     await page.reload({ waitUntil: 'domcontentloaded' }); await boardReady();
     await measure('loaded-cold-open', () => active().locator(`[data-issue-id="${original.id}"]`).click(), () => ready(expected));
-    const repeat = diagnostic || process.argv.includes('--mutation-correctness') ? 1 : 10;
+    const repeat = diagnostic || process.argv.includes('--mutation-correctness') || process.argv.includes('--property-correctness') ? 1 : 10;
     for (let run = 0; run < repeat; run++) {
       // The old full menu clock is preserved; the new clock stops at first visibility.
       await measure(`menu-first-visible-${run}`, () => panel().getByRole('button', { name: 'Issue actions', exact: true }).click(), () => page.getByRole('menu').waitFor());
@@ -176,6 +176,21 @@ export async function measureMutationJourneys({ page, context, fixture, boardTab
       expected = await verifyMutationJourneys({ page, api, original, fixture, panel, composer, row, state, save, close, boardReady, open, ready });
       await open(expected);
     }
+    if (process.argv.includes('--property-correctness')) {
+      state.propertyChecks = [];
+      for (let run = 0; run < 10; run++) {
+        for (const effort of ['l', original.effort]) {
+          await panel().getByRole('button', { name: 'Change effort', exact: true }).click();
+          const ack = acknowledgement(`/api/issues/${original.id}`, 'PATCH');
+          await page.getByRole('option', { name: effort.toUpperCase(), exact: true }).click();
+          assert.equal((await ack).status, 200);
+          const persisted = await api(`/api/issues/${original.id}`); assert.equal(persisted.effort, effort);
+          await panel().getByRole('button', { name: 'Change effort', exact: true }).getByText(effort.toUpperCase(), { exact: true }).waitFor();
+          state.propertyChecks.push({ run, id: original.id, persistedEffort: persisted.effort, visibleEffort: effort, at: Date.now() }); await save();
+        }
+      }
+      state.checks.push('Ten native effort cycles verify the selected visible value again after server acknowledgement and persisted GET, then restore and verify the original visible/persisted value.');
+    }
     if (process.argv.includes('--freshness-check')) {
       await api(`/api/comments/${loaded[12].id}`, 'DELETE');
       expected = await api(`/api/issues/${original.id}/comments`);
@@ -212,13 +227,30 @@ export async function measureMutationJourneys({ page, context, fixture, boardTab
       await open(expected); await cdp.send('Page.setWebLifecycleState', { state: 'frozen' });
       await api(`/api/comments/${loaded[0].id}`, 'PATCH', { body: 'MIN-614 3b frozen remote edit' });
       expected = await api(`/api/issues/${original.id}/comments`);
-      await cdp.send('Page.setWebLifecycleState', { state: 'active' }); await ready(expected); state.checks.push('Real CDP renderer freeze/resume reconciles a remote edit.'); await close();
+      await cdp.send('Page.setWebLifecycleState', { state: 'active' });
+    await cdp.send('Network.emulateNetworkConditions', { offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1 }); await ready(expected); state.checks.push('Real CDP renderer freeze/resume reconciles a remote edit.'); await close();
     }
-  } catch (error) { state.journeyError = error.message.split('\n')[0]; throw error; }
+    if (process.argv.includes('--reconnect')) {
+      await open(expected);
+      await cdp.send('Network.enable');
+      await cdp.send('Network.emulateNetworkConditions', { offline: true, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
+      assert.equal(await page.evaluate(() => navigator.onLine), false);
+      await api(`/api/comments/${loaded[0].id}`, 'PATCH', { body: 'MIN-614 3b real offline remote edit' });
+      await api(`/api/comments/${loaded[16].id}`, 'DELETE'); expected = await api(`/api/issues/${original.id}/comments`);
+      await cdp.send('Network.emulateNetworkConditions', { offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
+      assert.equal(await page.evaluate(() => navigator.onLine), true);
+      await ready(expected); state.checks.push('Real native CDP offline/online transition reconciles a persisted remote edit and deletion with exact visible IDs/content.'); await close();
+    }
+  } catch (error) {
+    state.journeyError = error.message.split('\n')[0];
+    state.availabilityFailure = { at: Date.now(), expected: expected?.map(({ id, body }) => ({ id, body })), visible: await panel().locator('[data-comment-id]').evaluateAll((nodes) => nodes.map((node) => ({ id: node.dataset.commentId, text: node.textContent }))).catch(() => null), apiStates: await page.evaluate(() => window.__min614.apiStates).catch(() => null) };
+    throw error;
+  }
   finally {
     page.off('request', capture);
     await Promise.allSettled(pendingWrites);
     await cdp.send('Page.setWebLifecycleState', { state: 'active' });
+    await cdp.send('Network.emulateNetworkConditions', { offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
     await save();
     async function restoreFixture() {
     try {
@@ -226,7 +258,7 @@ export async function measureMutationJourneys({ page, context, fixture, boardTab
       if (original) {
         if (state.relationScope) {
           const scope = state.relationScope;
-          for (const relation of (await api(scope.path)).filter((relation) => !scope.originalIds.includes(relation.id) && relation.source_id === scope.source && relation.target_id === scope.target)) await api(`/api/issue-relations/${relation.id}`, 'DELETE');
+          for (const relation of (await api(scope.path)).filter((relation) => !scope.originalIds.includes(relation.id) && relation.type === 'related' && ((relation.source_id === scope.source && relation.target_id === scope.target) || (relation.source_id === scope.target && relation.target_id === scope.source)))) await api(`/api/issue-relations/${relation.id}`, 'DELETE');
           assert.deepEqual((await api(scope.path)).map((relation) => relation.id).sort(), scope.originalIds.slice().sort());
         }
         if (state.resourceScope) {

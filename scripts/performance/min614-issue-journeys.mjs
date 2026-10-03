@@ -161,6 +161,7 @@ export async function measureIssueJourneys({ page, context, fixture, boardTab, p
     }
     await toggleFilter();
     checks.push('Scroll offsets and filtered counts preserved after every dismissal');
+    if (process.argv.includes('--openings-only')) return;
     const relation = await api(`/api/projects/${issue.project_id}/issue-relations`, 'POST', { source_id: issue.id, target_id: other.id, type: 'related' });
     createdRelations.add(relation.id);
     // Reload outside timings so setup is consumed even when realtime delivery is delayed.

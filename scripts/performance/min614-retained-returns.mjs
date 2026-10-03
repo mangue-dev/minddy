@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
+import { writeFile } from "node:fs/promises";
 import { id } from "./seed.mjs";
 
 // Run only against the authenticated, marked fixture validated by the parent.
-export async function measureRetainedReturns({ page, context, fixture, boardTab, pagesTab, tabs, base, measure, frames, diagnostic }) {
+export async function measureRetainedReturns({ page, context, fixture, boardTab, pagesTab, tabs, base, measure, frames, diagnostic, output, label }) {
   const selector = '[data-retained-app-view][data-app-view-active="true"]';
   const active = () => page.locator(selector);
   const tab = (spec) => page.locator(`[data-app-tab-id="${spec.id}"]`);
@@ -20,6 +21,9 @@ export async function measureRetainedReturns({ page, context, fixture, boardTab,
   let created = false;
   let filtered = false;
   const repetitions = diagnostic ? 1 : 10;
+  const journal = { temporaryTab: project, cleanup: false };
+  const save = () => writeFile(`${output}/${label}-checks.json`, JSON.stringify(journal, null, 2));
+  await save();
   async function ready(spec, count, title) {
     await page.waitForFunction(({ spec, count, title, selector }) => {
       const roots = document.querySelectorAll(selector);
@@ -67,8 +71,8 @@ export async function measureRetainedReturns({ page, context, fixture, boardTab,
       await measure(`issue-return-${run}`, () => page.keyboard.press("Escape"), () => ready(boardTab, 600), input);
     }
     await returns("page-return", pages);
+    created = true; await save();
     await api("/api/me/app-tabs", "POST", { id: project.id });
-    created = true;
     const row = (await api("/api/me/app-tabs")).find((entry) => entry.id === project.id);
     await api(`/api/me/app-tabs/${project.id}`, "PATCH", { revision: row.revision, patch: { href: project.href, custom_name: project.custom_name, pinned: true } });
     // Load the new tab list through a normal document load, outside warm timings.
@@ -93,6 +97,8 @@ export async function measureRetainedReturns({ page, context, fixture, boardTab,
     await returns("filtered-return", pages, boardTab, 480);
     await toggleFilter();
     original = await api(`/api/issues/${fixture.firstIssue}`);
+    journal.originalIssue = { id: original.id, title: original.title };
+    journal.eventsBefore = (await api(`/api/issues/${original.id}/events`)).length; await save();
     assert.equal(original.project_id, fixture.projects[0]);
     assert.match(original.title, /^Performance task 1\.1:/);
     for (let run = 0; run < repetitions; run++) {
@@ -107,7 +113,9 @@ export async function measureRetainedReturns({ page, context, fixture, boardTab,
       changed = false;
       await ready(boardTab, 600, original.title);
     }
-  } finally {
+  } catch (error) { journal.journeyError = error.message.split("\n")[0]; throw error; } finally {
+    const restore = async () => {
+    try {
     if (changed && original) await api(`/api/issues/${fixture.firstIssue}`, "PATCH", { title: original.title });
     if (filtered && await active().count()) await toggleFilter();
     if (created) {
@@ -122,5 +130,11 @@ export async function measureRetainedReturns({ page, context, fixture, boardTab,
       await page.goto(`${base}${boardTab.href}`, { waitUntil: "domcontentloaded" });
       await ready(boardTab, 600);
     }
+    assert.ok(!(await api("/api/me/app-tabs")).some((entry) => entry.id === project.id));
+    if (original) { assert.equal((await api(`/api/issues/${original.id}`)).title, original.title); journal.eventsAfter = (await api(`/api/issues/${original.id}/events`)).length; }
+    journal.cleanup = true;
+    } catch (error) { journal.cleanupError = error.message.split("\n")[0]; throw error; } finally { await save(); }
+    };
+    await restore();
   }
 }

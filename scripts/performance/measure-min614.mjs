@@ -214,7 +214,7 @@ try {
   } else if (pass3) {
     await measureIssueJourneys({ page, context, fixture, boardTab, pagesTab, tabs, base, measure, frames, diagnostic: diagnostic || cpuProfile, output, label, recordRequest: (record) => requests.push(record) });
   } else if (pass2) {
-    await measureRetainedReturns({ page, context, fixture, boardTab, pagesTab, tabs, base, measure, frames, diagnostic: diagnostic || cpuProfile });
+    await measureRetainedReturns({ page, context, fixture, boardTab, pagesTab, tabs, base, measure, frames, diagnostic: diagnostic || cpuProfile, output, label });
   } else for (let run = 0; run < 3; run++) {
     await measure(`issue-open-${run}`, () => board().click(), () => page.locator('[role="dialog"]').first().waitFor());
     if (process.argv.includes("--short")) break;

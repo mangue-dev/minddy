@@ -22,6 +22,24 @@ export async function verifyMutationJourneys({ page, api, original, fixture, pan
     assert.equal(await composer().textContent(), 'MIN-614 3b newer unsent draft'); await composer().fill(''); await ready(expected);
     state.checks.push('Injected pre-write 503 retains the failed UUID/body; explicit retry persists exactly one row and preserves a newer unsent draft.'); await save();
 
+    const failedCommentPath = `/api/comments/${failedId}`;
+    const failedMutationRoute = await intercept(failedCommentPath, (route) => ['PATCH', 'DELETE'].includes(route.request().method())
+      ? route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: 'MIN-614 injected existing-comment mutation failure' }) }) : route.continue());
+    const failedComment = panel().locator(`[data-comment-id="${failedId}"]`);
+    await failedComment.getByRole('button', { name: 'Comment actions', exact: true }).click(); await page.getByRole('menuitem', { name: 'Edit', exact: true }).click();
+    const editDraft = failedComment.locator('[role="textbox"][contenteditable="true"]'); await editDraft.fill('MIN-614 3b retained edit draft');
+    const rejectedEdit = page.waitForResponse((response) => new URL(response.url()).pathname === failedCommentPath && response.request().method() === 'PATCH');
+    await failedComment.getByRole('button', { name: 'Save', exact: true }).click(); assert.equal((await rejectedEdit).status(), 503);
+    assert.equal(await editDraft.textContent(), 'MIN-614 3b retained edit draft'); assert.equal((await api(path)).find((comment) => comment.id === failedId)?.body, failedText);
+    await failedComment.getByRole('button', { name: 'Cancel', exact: true }).click();
+    await failedComment.getByRole('button', { name: 'Comment actions', exact: true }).click(); await page.getByRole('menuitem', { name: 'Delete', exact: true }).click();
+    const rejectedDelete = page.waitForResponse((response) => new URL(response.url()).pathname === failedCommentPath && response.request().method() === 'DELETE');
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Delete', exact: true }).click(); assert.equal((await rejectedDelete).status(), 503);
+    await failedComment.waitFor(); assert.equal((await api(path)).find((comment) => comment.id === failedId)?.body, failedText);
+    if (await page.getByRole('alertdialog').count()) await page.keyboard.press('Escape');
+    await page.unroute(failedMutationRoute); await ready(expected);
+    state.checks.push('Injected edit/delete 503 keeps the edit draft, original confirmed row and persisted body; no successful obsolete UI is accepted.'); await save();
+
     // Commit once, then replace the acknowledgement: inspect persistence before any retry.
     const ambiguousText = 'MIN-614 3b ambiguous acknowledgement';
     const ambiguousRoute = await intercept(path, async (route) => {
@@ -67,8 +85,9 @@ export async function verifyMutationJourneys({ page, api, original, fixture, pan
     state.checks.push('Injected property PATCH restores original visible and persisted effort.'); await close();
 
     const other = await api(`/api/issues/${id('issue-0-1')}`), relationPath = `/api/projects/${original.project_id}/issue-relations`;
+    const matchesRelation = (relation) => relation.type === 'related' && ((relation.source_id === original.id && relation.target_id === other.id) || (relation.source_id === other.id && relation.target_id === original.id));
     const beforeRelations = await api(relationPath);
-    assert.ok(!beforeRelations.some((relation) => relation.source_id === original.id && relation.target_id === other.id));
+    assert.ok(!beforeRelations.some((relation) => matchesRelation(relation)));
     state.relationScope = { path: relationPath, source: original.id, target: other.id, originalIds: beforeRelations.map((relation) => relation.id) };
     state.childOriginal = { id: other.id, parent_id: other.parent_id }; await save(); await open(expected);
     const relations = [];
@@ -83,17 +102,17 @@ export async function verifyMutationJourneys({ page, api, original, fixture, pan
       await page.getByRole('option', { name: 'Related', exact: true }).click(); await page.getByRole('option').filter({ hasText: other.title }).click();
     };
     await addRelation(); await panel().getByRole('button').filter({ hasText: other.title }).waitFor();
-    await relationArrival; assert.equal(relations.length, 1); assert.ok(!(await api(relationPath)).some((relation) => relation.source_id === original.id && relation.target_id === other.id));
+    await relationArrival; assert.equal(relations.length, 1); assert.ok(!(await api(relationPath)).some((relation) => matchesRelation(relation)));
     const relationAck = page.waitForResponse((response) => new URL(response.url()).pathname === relationPath && response.request().method() === 'POST');
     relations[0](); const acknowledged = await relationAck; assert.equal(acknowledged.status(), 201);
-    const persistedRelations = await api(relationPath); const saved = persistedRelations.find((relation) => relation.source_id === original.id && relation.target_id === other.id);
+    const persistedRelations = await api(relationPath); const saved = persistedRelations.find((relation) => matchesRelation(relation));
     assert.ok(saved?.id); state.relationPersistedId = saved.id; await save(); await page.unroute(relationRoute);
     await api(`/api/issue-relations/${saved.id}`, 'DELETE');
     await close(); await page.reload({ waitUntil: 'domcontentloaded' }); await boardReady(); await open(expected);
     const rejectedRoute = await intercept(relationPath, (route) => route.request().method() === 'POST'
       ? route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: 'MIN-614 injected relation failure' }) }) : route.continue());
     await addRelation(); await panel().getByRole('button').filter({ hasText: other.title }).waitFor({ state: 'detached' });
-    assert.ok(!(await api(relationPath)).some((relation) => relation.source_id === original.id && relation.target_id === other.id)); await page.unroute(rejectedRoute);
+    assert.ok(!(await api(relationPath)).some((relation) => matchesRelation(relation))); await page.unroute(rejectedRoute);
     state.checks.push('MIN-630 native revalidation: relation visible before held POST, canonical persisted ID, failed POST rollback; its implementation is unchanged.'); await save(); await close();
 
     state.resourceScope = { issue: original.id, originalIds: (await api(`/api/issues/${original.id}/resources`)).map((resource) => resource.id), marker: 'MIN-614 3b linked synthetic Page' }; await save();
