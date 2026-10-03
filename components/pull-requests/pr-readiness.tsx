@@ -221,6 +221,7 @@ export function PrReadinessControl({
   acting,
   onAction,
   canMerge,
+  authorityReady = true,
   merging,
   onMerge,
   mergeFlowActive,
@@ -236,6 +237,8 @@ export function PrReadinessControl({
   acting: ReadinessAction | null;
   onAction: (blocker: ReadinessBlocker) => void;
   canMerge: boolean;
+  /** Keep controls mounted while activation authority is being checked. */
+  authorityReady?: boolean;
   merging: boolean;
   onMerge: (method: MergeMethod) => void;
   /** Auto-merge (or merge queue entry) already registered at the forge. */
@@ -402,7 +405,7 @@ export function PrReadinessControl({
                     data-testid={`pr-readiness-action-${blocker.action}`}
                     variant="ghost"
                     size="sm"
-                    disabled={acting !== null}
+                    disabled={!authorityReady || acting !== null}
                     onClick={() => {
                       setOpen(false);
                       onAction(blocker);
@@ -436,7 +439,7 @@ export function PrReadinessControl({
             >
               <Checkbox
                 checked={mergeFlowActive}
-                disabled={autoMerging}
+                disabled={!authorityReady || autoMerging}
                 onCheckedChange={(checked) => onToggleAutoMerge(checked === true)}
               />
               <span className="inline-flex min-w-0 items-center gap-1.5 text-sm">
@@ -457,7 +460,7 @@ export function PrReadinessControl({
                   exactly when the explanation matters. */}
               <AppTooltip
                 label={
-                  readiness.mergeAllowed && canMerge
+                  readiness.mergeAllowed && canMerge && authorityReady
                     ? t("readinessMergeAvailable")
                     : t("readinessMergeUnavailable")
                 }
@@ -467,7 +470,7 @@ export function PrReadinessControl({
                     data-testid="pr-readiness-merge"
                     size="sm"
                     className={cn(otherMethods.length > 0 && "rounded-r-none")}
-                    disabled={!readiness.mergeAllowed || !canMerge || merging}
+                    disabled={!readiness.mergeAllowed || !canMerge || !authorityReady || merging}
                     onClick={() => {
                       setOpen(false);
                       onMerge(preferredMethod);
@@ -482,7 +485,7 @@ export function PrReadinessControl({
                         <Button
                           size="sm"
                           className="rounded-l-none border-l border-primary-foreground/20 px-2"
-                          disabled={!readiness.mergeAllowed || !canMerge || merging}
+                          disabled={!readiness.mergeAllowed || !canMerge || !authorityReady || merging}
                           aria-label={t("mergeMethodMenu")}
                         >
                           <HugeiconsIcon icon={ArrowDown01Icon} className="size-3.5" />

@@ -15,6 +15,28 @@ function heldFetch() {
 }
 
 describe("authorized GitHub reads in flight", () => {
+  it("joins concurrent request barriers but never validates a later activation with an older flight", async () => {
+    let clock = 100;
+    vi.stubGlobal("performance", { now: () => clock });
+    const { fetch, releases } = heldFetch();
+    const read = (barrier: number) => withGithubReadScope(identity,
+      () => githubResponseText(url, "token", options, true), barrier);
+    const first = read(80), concurrent = read(90);
+    expect(fetch).toHaveBeenCalledOnce();
+    // A remote change just before the later request must not be hidden by
+    // an operation whose headers/body are still in flight from the old visit.
+    clock = 120;
+    const later = read(110);
+    expect(fetch).toHaveBeenCalledTimes(2);
+    releases[0](Response.json({ head: "before-click" }));
+    expect(JSON.parse((await first).text).head).toBe("before-click"); await concurrent;
+    const joinedLater = read(115);
+    expect(fetch).toHaveBeenCalledTimes(2);
+    releases[1](Response.json({ head: "after-click" }));
+    expect(JSON.parse((await later).text).head).toBe("after-click");
+    expect(JSON.parse((await joinedLater).text).head).toBe("after-click");
+  });
+
   it("shares identical reads only until settlement and gives consumers independent objects", async () => {
     const { fetch, releases } = heldFetch();
     const call = { token: "token-1", repoFullName: "acme/app", number: 1 };

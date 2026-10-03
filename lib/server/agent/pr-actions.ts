@@ -148,6 +148,7 @@ export async function resolvePrScope(
   userId: string,
   pr: PullRequestRow,
   shareReads = false,
+  readNotBefore = performance.now(),
 ): Promise<PrScope | null> {
   const provider = rowProvider(pr);
   const target = await resolveRepoCloneTargetForRepo({
@@ -172,7 +173,7 @@ export async function resolvePrScope(
     for (const name of methods) {
       const method = forge[name] as (...args: unknown[]) => unknown;
       Object.assign(scopedForge, { [name]: (...args: unknown[]) =>
-        withGithubReadScope(identity, () => method.apply(forge, args)) });
+        withGithubReadScope(identity, () => method.apply(forge, args), readNotBefore) });
     }
   }
 
@@ -273,13 +274,14 @@ export async function authorizePrRequest(
   request: NextRequest,
   prId: string,
 ): Promise<PrRequestAuth> {
+  const readNotBefore = performance.now();
   const auth = await getAuthedUser(request);
   if (!auth.ok) return { ok: false, response: auth.response };
 
   const pr = await findPullRequest(prId);
   if (!pr) return { ok: false, response: prNotFound() };
 
-  const scope = await resolvePrScope(auth.user.id, pr, request.method === "GET");
+  const scope = await resolvePrScope(auth.user.id, pr, request.method === "GET", readNotBefore);
   if (!scope) return { ok: false, response: prNotFound() };
   // Keep the authenticated client: its RLS is the guard when an action touches a
   // table beyond the PR. Manual ticket linking (MIN-163) rereads the ticket with
@@ -304,6 +306,7 @@ export async function authorizeRunPrRequest(
   request: NextRequest,
   runId: string,
 ): Promise<PrRequestAuth | { ok: false; noPr: true; response: NextResponse }> {
+  const readNotBefore = performance.now();
   const auth = await getAuthedUser(request);
   if (!auth.ok) return { ok: false, response: auth.response };
 
@@ -321,7 +324,7 @@ export async function authorizeRunPrRequest(
     };
   }
 
-  const scope = await resolvePrScope(auth.user.id, pr, request.method === "GET");
+  const scope = await resolvePrScope(auth.user.id, pr, request.method === "GET", readNotBefore);
   if (!scope) return { ok: false, response: prNotFound() };
   return { ok: true, scope, userId: auth.user.id, supabase: auth.supabase };
 }
@@ -616,6 +619,7 @@ export async function prReadinessBatchResponse(
   userId: string,
   prIds: readonly string[],
 ): Promise<NextResponse> {
+  const readNotBefore = performance.now();
   const readiness: Record<string, PullRequestReadiness> = {};
   const unavailablePrIds: string[] = [];
   let nextIndex = 0;
@@ -625,7 +629,7 @@ export async function prReadinessBatchResponse(
       const prId = prIds[nextIndex++];
       try {
         const pr = await findPullRequest(prId);
-        const scope = pr ? await resolvePrScope(userId, pr, true) : null;
+        const scope = pr ? await resolvePrScope(userId, pr, true, readNotBefore) : null;
         if (!pr || !scope) {
           unavailablePrIds.push(prId);
           continue;

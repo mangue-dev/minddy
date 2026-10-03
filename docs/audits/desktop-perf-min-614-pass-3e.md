@@ -20,6 +20,11 @@ BUILD_ID `sii2TG6an7DIIeXDU7nBR` is the previously verified 3d product
 `05c69168e39aa8369cf4fcbc83dd5e3a41abf3f2`, rather than a claim that it was rebuilt
 at the audit-only checkout HEAD. Candidate product is
 `061615eaea1e815c4b29d4cb842816a4c7a64ee2`, BUILD_ID `rPgiALpOXXHtBUJ0_uuPj`.
+The baseline server was reused after exploration; the candidate server was restarted
+for its new build. Installation tokens and managed-key process caches are not cold
+on every native launch. Each launch starts a fresh desktop profile/account query
+cache, while normal forge ingestion/list sweeps can update stored metadata. This
+background variance limits causal attribution of database and latency changes.
 Both use the same local production server port, desktop runtime, sealed window
 navigation, GitHub installation and authenticated account. Cookies remain in
 process memory and temporary native profiles; none are published in evidence.
@@ -203,6 +208,32 @@ owned response body. Adding a new private plaintext persistent cache would viola
 scope. All observed conditional flags and 304 counts are retained (zero is a valid
 observation). Guidance: [GitHub REST best practices](https://docs.github.com/en/enterprise-cloud%40latest/rest/using-the-rest-api/best-practices-for-using-the-rest-api),
 [rate limits](https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api).
+
+## Final request-start barrier
+
+A final unit scenario exposed a boundary that client read timestamps alone cannot
+certify: a post-click HTTP request could join a server flight started before the
+request, whose old response arrives afterward. GET authorization now records a
+monotonic request-start barrier before auth/database work. Its authorized forge
+scope joins only transport started at or after that barrier. Request consumers
+that both arrived before a shared GitHub operation still coalesce; a later
+activation performs a new read. Old operation settlement cannot remove a newer
+replacement flight. Mutations remain unshared and fenced.
+
+The focused test holds old/new head responses and independently proves concurrent
+sharing and rejection of an older operation, including replacement settlement.
+Readiness controls also keep stable permission-based mounting during refresh and
+receive a separate authority flag that disables sensitive gestures. This avoids
+removing the auto-merge checkbox solely because a detail read is running; it is not
+a claim that every browser focus case was revalidated natively.
+
+**The final barrier changes successful read sharing and was not remeasured in a
+native authenticated cohort.** The tables describe measured product `061615eae`;
+final product guarantees have focused tests and a separate production build, not a
+new measured speed claim. No launch resumed after the quota stop. Cancellation
+aborts the client query/HTTP transport; propagation through all upstream GitHub
+operations is not established, and some server work may finish afterward. Server
+RSS, sustained background traffic and live mutation-race acceptance remain open.
 
 ## Safeguards, remaining acceptance and cumulative matrix
 

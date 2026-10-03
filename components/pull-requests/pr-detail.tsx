@@ -1981,7 +1981,8 @@ export function PrDetail({
                 canAct={canActOnBlocker}
                 acting={maintenanceAction}
                 onAction={(blocker) => void handleReadinessAction(blocker)}
-                canMerge={readState === "fresh" && !!canWrite}
+                canMerge={!!canWrite}
+                authorityReady={readState === "fresh"}
                 merging={acting === "merge" || isWorking}
                 onMerge={openMergeConfirmation}
                 mergeFlowActive={mergeFlowOverride ?? !!pr?.mergeFlowActive}
