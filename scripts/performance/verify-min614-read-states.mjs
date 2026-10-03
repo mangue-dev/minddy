@@ -73,6 +73,7 @@ export async function verifyReadStates({ page, api, original, panel, composer, c
     await close(); await page.waitForTimeout(100); await releaseReads(); await page.waitForTimeout(500);
     page.off('requestfailed', failedRequest);
     state.readChecks.push({ name: 'closed-pending-read', at: Date.now(), canceled });
+    if (process.argv.includes('--require-read-states')) assert.ok(canceled.length > 0, 'Closing must abort the real pending comments read');
     await api(`/api/comments/${target.id}`, 'PATCH', { body: target.body }); expected = await api(path);
     await page.reload({ waitUntil: 'domcontentloaded' }); await boardReady(); await open(expected);
     await snapshot('reopen-after-canceled-read');

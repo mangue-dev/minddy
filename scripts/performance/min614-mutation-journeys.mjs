@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { writeFile } from 'node:fs/promises';
 import { rankProperties } from './min614-property-ranking.mjs';
 import { verifyReadStates } from './verify-min614-read-states.mjs';
+import { verifyColdReadStates } from './verify-min614-cold-reads.mjs';
 import { armDomProbe, finishDomProbe } from './min614-dom-probe.mjs';
 import { id } from './seed.mjs';
 import { verifyMutationJourneys } from './verify-min614-mutations.mjs';
@@ -119,7 +120,7 @@ export async function measureMutationJourneys({ page, context, fixture, boardTab
     state.fixture.loadedComments = expected.length; state.fixture.loadedReplies = 6;
     await page.reload({ waitUntil: 'domcontentloaded' }); await boardReady();
     await measure('loaded-cold-open', () => active().locator(`[data-issue-id="${original.id}"]`).click(), () => ready(expected));
-    const repeat = diagnostic || process.argv.includes('--mutation-correctness') || process.argv.includes('--property-correctness') || process.argv.includes('--read-correctness') || process.argv.includes('--property-ranking') ? 1 : 10;
+    const repeat = diagnostic || process.argv.includes('--mutation-correctness') || process.argv.includes('--property-correctness') || process.argv.includes('--read-correctness') || process.argv.includes('--cold-read-correctness') || process.argv.includes('--property-ranking') ? 1 : 10;
     for (let run = 0; run < repeat; run++) {
       // The old full menu clock is preserved; the new clock stops at first visibility.
       await probe('menu-first-visible', run, { kind: 'menu' }, () => panel().getByRole('button', { name: 'Issue actions', exact: true }).click(), () => page.getByRole('menu').waitFor());
@@ -186,7 +187,7 @@ export async function measureMutationJourneys({ page, context, fixture, boardTab
       await close(); await page.reload({ waitUntil: 'domcontentloaded' }); await boardReady(); await open(expected);
     }
     if (process.argv.includes('--mutation-correctness')) {
-      expected = await verifyMutationJourneys({ page, api, original, fixture, panel, composer, row, state, save, close, boardReady, open, ready });
+      expected = await verifyMutationJourneys({ page, api, original, fixture, panel, composer, row, state, save, close, boardReady, open, ready, output, label });
       await open(expected);
     }
     if (process.argv.includes('--property-ranking')) {
@@ -202,6 +203,7 @@ export async function measureMutationJourneys({ page, context, fixture, boardTab
         objectiveAssigned: original.objective_id !== null, planBytes: original.plan?.length ?? 0 };
       await rankProperties({ page, panel, measure, state, save });
     }
+    if (process.argv.includes('--cold-read-correctness')) await verifyColdReadStates({ page, api, original, panel, close, open, expected, state, save });
     if (process.argv.includes('--read-correctness')) expected = await verifyReadStates({ page, api, original, panel, composer, close, open, ready, boardReady, state, save });
     if (process.argv.includes('--property-correctness')) {
       state.propertyChecks = [];

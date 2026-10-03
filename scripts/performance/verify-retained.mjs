@@ -182,6 +182,8 @@ try {
   }
   const initialTabs = await listTabs();
   preservedTabs = initialTabs.filter((tab) => !tempTabs.some((spec) => spec.id === tab.id)).map(selectFields);
+  results.restoration = { ownedTabIds: tempTabs.map(({ id }) => id), preservedTabs };
+  await writeFile(`${output}/${label}.json`, JSON.stringify(results, null, 2));
   for (const name of ["Performance board", "Performance pages"]) assert.ok(preservedTabs.some((tab) => tab.custom_name === name), `Missing protected benchmark tab: ${name}`);
   for (const spec of tempTabs) {
     await removeTemporaryTab(spec);
@@ -195,6 +197,8 @@ try {
     if (location.origin === base) sessionStorage.setItem(`minddy.app-tabs.${owner}`, JSON.stringify(snapshot));
   }, { owner: fixture.userId, snapshot, base });
   originalIssue = await api(`/api/issues/${fixture.firstIssue}`);
+  results.restoration.issue = Object.fromEntries(["id", "status", "position", "assignee_id", "cycle_id"].map((key) => [key, originalIssue[key]]));
+  await writeFile(`${output}/${label}.json`, JSON.stringify(results, null, 2));
   assertScope("issues", originalIssue, fixture.userId);
   assert.equal(originalIssue.project_id, fixture.projects[0]);
   assert.match(originalIssue.title, /^Performance task 1\.1:/);
@@ -332,6 +336,11 @@ try {
     if (issueMayHaveMoved && originalIssue) {
       await api(`/api/issues/${fixture.firstIssue}`, "PATCH", { status: originalIssue.status, position: originalIssue.position, assignee_id: originalIssue.assignee_id, cycle_id: originalIssue.cycle_id });
       results.cleanup.push("Restored fixture issue fields");
+    }
+    if (originalIssue) {
+      const restored = await api(`/api/issues/${fixture.firstIssue}`);
+      for (const key of ["status", "position", "assignee_id", "cycle_id"]) assert.equal(restored[key], originalIssue[key], `Unrestored issue ${key}`);
+      results.restoration.issueVerified = true;
     }
     for (const spec of tempTabs) await removeTemporaryTab(spec);
     const remaining = await listTabs();

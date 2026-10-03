@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { id } from './seed.mjs';
 
 // Real native UI failure/concurrency checks, kept outside ordinary latency samples.
-export async function verifyMutationJourneys({ page, api, original, fixture, panel, composer, state, save, close, boardReady, open, ready }) {
+export async function verifyMutationJourneys({ page, api, original, fixture, panel, composer, state, save, close, boardReady, open, ready, output, label }) {
   const path = `/api/issues/${original.id}/comments`;
   const routes = [], releases = [];
   const intercept = async (routePath, handler) => { const pattern = `**${routePath}`; await page.route(pattern, handler); routes.push(pattern); return pattern; };
@@ -43,9 +43,13 @@ export async function verifyMutationJourneys({ page, api, original, fixture, pan
     if (process.argv.includes('--phase3c')) {
       const committedBody = 'MIN-614 3c edit with ambiguous acknowledgement';
       let patchCount = 0;
+      let releaseEdit, editArrived;
+      const editGate = new Promise((resolve) => { releaseEdit = resolve; releases.push(resolve); });
+      const editArrival = new Promise((resolve) => { editArrived = resolve; });
       const ambiguousEdit = await intercept(failedCommentPath, async (route) => {
         if (route.request().method() !== 'PATCH') return route.continue();
         patchCount++;
+        editArrived(); await editGate;
         const response = await route.fetch(); assert.equal(response.status(), 200);
         await route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: 'MIN-614 injected lost edit acknowledgement' }) });
       });
@@ -53,7 +57,16 @@ export async function verifyMutationJourneys({ page, api, original, fixture, pan
       await page.getByRole('menuitem', { name: 'Edit', exact: true }).click();
       await editDraft.fill(committedBody);
       const lostAck = page.waitForResponse((response) => new URL(response.url()).pathname === failedCommentPath && response.request().method() === 'PATCH');
-      await failedComment.getByRole('button', { name: 'Save', exact: true }).click(); assert.equal((await lostAck).status(), 503);
+      await failedComment.getByRole('button', { name: 'Save', exact: true }).click(); await editArrival;
+      if (process.argv.includes('--require-read-states')) {
+        await panel().locator(`[data-comment-id="${failedId}"][data-comment-state="editing"]`).waitFor();
+        assert.equal(await editDraft.count(), 0);
+        assert.ok((await failedComment.textContent()).includes(committedBody));
+        assert.equal((await api(path)).find((row) => row.id === failedId)?.body, failedText);
+        await failedComment.scrollIntoViewIfNeeded();
+        await page.screenshot({ path: `${output}/${label}-edit-pending.png` });
+      }
+      releaseEdit(); assert.equal((await lostAck).status(), 503);
       await editDraft.waitFor(); assert.equal(await editDraft.textContent(), committedBody);
       expected = await api(path); assert.equal(expected.filter((row) => row.id === failedId && row.body === committedBody).length, 1);
       await failedComment.getByRole('button', { name: 'Cancel', exact: true }).click();
