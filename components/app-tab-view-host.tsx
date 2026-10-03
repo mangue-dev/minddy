@@ -8,6 +8,7 @@ import { AppTabNavigationScope, useAppTabs } from "@/lib/app-tabs-context";
 import { AppTabRouteProvider } from "@/lib/app-tab-route-context";
 import { normalizeAppTabLocation } from "@/lib/app-tab-location";
 import { isRetainedDestination, retainAppView, retainedAppViewKind, type RetainedAppView } from "@/lib/retained-app-views";
+import { RetainedBoardTitle } from "./retained-board-title";
 import { BoardLoadingSkeleton } from "./board-loading-skeleton";
 import { useRetainedBoardScroll } from "@/lib/use-retained-board-scroll";
 import { useColdBoardPrefetch } from "@/lib/use-cold-board-prefetch";
@@ -29,6 +30,7 @@ const RetainedBoard = memo(function RetainedBoard({ view, active }: { view: Reta
     data-board-read-state={readState} aria-busy={active && readState !== "fresh"}
     inert={!active} aria-hidden={!active || undefined} style={{ display: active ? undefined : "none" }}>
     <Activity mode={active ? "visible" : "hidden"}>
+    <RetainedBoardTitle view={view} />
     <AppTabNavigationScope activeId={view.tabId}>
       <AppTabRouteProvider route={view.route}>
         {view.kind === "global-board" ? <GlobalBoard /> : <ProjectBoard />}

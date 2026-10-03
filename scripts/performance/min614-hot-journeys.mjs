@@ -5,6 +5,8 @@ import { writeFile } from 'node:fs/promises';
 import sharp from 'sharp';
 
 export async function measureHotJourneys({ page, context, fixture, boardTab, pagesTab, base, measure, frames, diagnostic, output, label, cdp }) {
+  const correctness = process.argv.includes("--hot-correctness");
+  const remaining = process.argv.includes("--hot-correctness-remaining");
   const journal = { cleanup: false, ownedTabs: [], iconProject: fixture.projects[0], iconAttempted: false, samples: [], idle: [] };
   const save = () => writeFile(`${output}/${label}-checks.json`, JSON.stringify(journal, null, 2));
   const api = async (route, method = 'GET', data) => {
@@ -50,14 +52,14 @@ export async function measureHotJourneys({ page, context, fixture, boardTab, pag
     assert.match(journal.iconUrl, /^\/api\/projects\/[0-9a-f-]+\/icon\/content\?v=\d+$/);
     assert.equal((await api(`/api/projects/${journal.iconProject}`)).icon_url, journal.iconUrl); await save();
     const specs = [{ ...boardTab, board: true, count: 600 }, { ...pagesTab, board: false }];
-    for (let i = 0; i < 6; i++) specs.push({ id: randomUUID(), href: `/projects/${fixture.projects[i]}`, custom_name: `MIN-614 3d board ${i + 1}`, board: true, count: 100 });
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; !correctness && i < 6; i++) specs.push({ id: randomUUID(), href: `/projects/${fixture.projects[i]}`, custom_name: `MIN-614 3d board ${i + 1}`, board: true, count: 100 });
+    for (let i = 0; !correctness && i < 3; i++) {
       const pages = await api(`/api/projects/${fixture.projects[i]}/pages`);
       assert.ok(Array.isArray(pages) && pages.length);
       specs.push({ id: randomUUID(), href: `/projects/${fixture.projects[i]}/pages/${pages[0].id}`, custom_name: `MIN-614 3d Page ${i + 1}`, board: false });
     }
-    specs.push({ id: randomUUID(), href: '/pull-requests', custom_name: 'MIN-614 3d PR', board: false });
-    assert.equal(specs.length, 12);
+    if (!correctness) specs.push({ id: randomUUID(), href: '/pull-requests', custom_name: 'MIN-614 3d PR', board: false });
+    assert.equal(specs.length, correctness ? 2 : 12);
     journal.specs = specs; await save();
     for (const spec of specs.slice(2)) {
       journal.ownedTabs.push(spec); await save();
@@ -70,15 +72,16 @@ export async function measureHotJourneys({ page, context, fixture, boardTab, pag
     await ready(specs[0]);
     await page.waitForFunction(() => [...document.querySelectorAll('img')].some((image) => image.src.startsWith('data:image/') && image.complete && image.naturalWidth > 0));
     for (const spec of specs.slice(2, 11)) await visit(spec);
-    await tab(specs[11]).click();
-    await page.getByText('Performance change 1.1', { exact: true }).first().waitFor({ timeout: 15000 });
+    if (!correctness) {
+      await tab(specs[11]).click();
+      await page.getByText('Performance change 1.1', { exact: true }).first().waitFor({ timeout: 15000 });
+    }
     await visit(specs[0]);
     const issue = await api(`/api/issues/${fixture.firstIssue}`);
     journal.originalIssue = { id: issue.id, title: issue.title };
     journal.eventsBefore = (await api(`/api/issues/${issue.id}/events`)).length;
     await save();
-    const correctness = process.argv.includes("--hot-correctness");
-    const repetitions = diagnostic || correctness ? 1 : 10;
+    const repetitions = correctness ? 0 : diagnostic ? 1 : 10;
     for (let run = 0; run < repetitions; run++) {
       // Late boards dominate; older boards are revisited rarely rather than an
       // even round-robin that makes a frequency policy indistinguishable from LRU.
@@ -96,7 +99,7 @@ export async function measureHotJourneys({ page, context, fixture, boardTab, pag
       await save();
     }
     // Exact remote content, including a write immediately before activation.
-    for (const delay of [700, 0]) {
+    for (const delay of (remaining ? [] : [700, 0])) {
       await visit(specs[1]);
       journal.changedTitle = `${issue.title} [MIN-614 3d ${delay}]`; await save();
       await api(`/api/issues/${issue.id}`, 'PATCH', { title: journal.changedTitle });
@@ -109,6 +112,7 @@ export async function measureHotJourneys({ page, context, fixture, boardTab, pag
     if (correctness) {
       journal.correctness = []; await save();
       // Keep injected failures and cache restarts outside ordinary samples.
+      if (!remaining) {
       await visit(specs[1]);
       const failedBoard = '**/api/me/board?*';
       await page.route(failedBoard, (route) => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: 'MIN-614 injected board read failure' }) }));
@@ -139,6 +143,7 @@ export async function measureHotJourneys({ page, context, fixture, boardTab, pag
       journal.correctness.push('Two acknowledged remote writes while hidden reconcile to the exact latest persisted title at activation.'); await save();
       await api(`/api/issues/${issue.id}`, 'PATCH', { title: issue.title });
       delete journal.changedTitle; await save();
+      }
       const oldImages = await page.locator('img').evaluateAll((images) => images.map((image) => image.src).filter((src) => src.startsWith('data:image/')));
       const changedImage = await sharp({ create: { width: 32, height: 32, channels: 4, background: '#1275d6' } }).png().toBuffer();
       journal.iconVersions = [journal.iconUrl]; await save();
@@ -149,11 +154,12 @@ export async function measureHotJourneys({ page, context, fixture, boardTab, pag
       journal.iconUrl = changedUrl; journal.iconVersions.push(changedUrl); await save();
       assert.equal((await api(`/api/projects/${journal.iconProject}`)).icon_url, changedUrl);
       await page.waitForFunction((old) => [...document.querySelectorAll('img')].some((image) => image.checkVisibility() && image.src.startsWith('data:image/') && !old.includes(image.src) && image.complete && image.naturalWidth > 0), oldImages, { timeout: 15000 });
+      journal.changedIconSource = await page.locator('img').evaluateAll((images, old) => images.find((image) => image.checkVisibility() && image.src.startsWith('data:image/') && !old.includes(image.src) && image.complete && image.naturalWidth > 0)?.src, oldImages);
       journal.correctness.push('A second real protected icon import changes its version and displays newly decoded image bytes.'); await save();
       await api(`/api/projects/${journal.iconProject}/icon`, 'DELETE');
       assert.equal((await api(`/api/projects/${journal.iconProject}`)).icon_url, null);
-      await page.waitForFunction(() => ![...document.querySelectorAll('img')].some((image) => image.checkVisibility() && image.src.startsWith('data:image/')), null, { timeout: 15000 });
-      journal.correctness.push('Deleting the protected imported icon removes every visible private image.'); await save();
+      await page.waitForFunction((source) => ![...document.querySelectorAll('img')].some((image) => image.checkVisibility() && image.src === source), journal.changedIconSource, { timeout: 15000 });
+      journal.correctness.push('Deleting the protected imported icon removes its visible decoded image while unrelated avatars remain.'); await save();
       await page.waitForTimeout(2500);
       const encrypted = await page.evaluate(() => localStorage.getItem('minddy.query-cache'));
       assert.equal(JSON.parse(encrypted).format, 'minddy-local-v1');

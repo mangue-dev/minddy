@@ -71,6 +71,27 @@ afterEach(async () => {
 });
 
 describe("bounded retained board views", () => {
+  it("updates document metadata on retained returns and reads project names from the owner cache", async () => {
+    client.setQueryData(["projects"], [{ id: "p", name: "Project P" }]);
+    await render();
+    expect(document.title).toContain("all");
+    state.path = "/projects/p"; state.activeHref = state.path; state.activeId = "other";
+    await render();
+    expect(document.title).toContain("Project P");
+    state.path = "/all"; state.activeHref = state.path; state.activeId = "board";
+    await render();
+    expect(document.title).toContain("all");
+    state.path = "/projects/p"; state.activeHref = state.path; state.activeId = "other";
+    await render();
+    expect(document.title).toContain("Project P");
+    const oldTitle = document.title;
+    document.title = "Issue panel title";
+    await act(() => { client.setQueryData(["projects"], [{ id: "p", name: "Renamed P" }]); });
+    expect(document.title).toBe("Issue panel title");
+    await act(async () => { document.title = oldTitle; await Promise.resolve(); });
+    expect(document.title).toContain("Renamed P");
+  });
+
   it("preserves the exact DOM and input draft, suspends hidden effects and hides portals", async () => {
     await render();
     const input = container.querySelector("input")!;
