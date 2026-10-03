@@ -3694,6 +3694,11 @@
     "sessionDeleted": "Conversation deleted"
   },
   "PullRequests": {
+    "readLoading": "Loading pull request…",
+    "readRefreshing": "Showing previous data. Checking for updates…",
+    "readFailed": "Could not refresh this pull request. Try again.",
+    "readPaused": "You’re offline. Showing previous data.",
+    "readRetry": "Try again",
     "title": "Code reviews",
     "emptyState": "No pull request matches these filters",
     "emptyOpen": "No open pull request",

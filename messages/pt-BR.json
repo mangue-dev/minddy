@@ -3694,6 +3694,11 @@
     "sessionDeleted": "Conversa excluída"
   },
   "PullRequests": {
+    "readLoading": "Carregando pull request…",
+    "readRefreshing": "Mostrando dados anteriores. Buscando atualizações…",
+    "readFailed": "Não foi possível atualizar esta pull request. Tente novamente.",
+    "readPaused": "Você está offline. Mostrando dados anteriores.",
+    "readRetry": "Tentar novamente",
     "title": "Revisões de código",
     "emptyState": "Nenhum pull request corresponde a esses filtros",
     "emptyOpen": "Nenhum pull request aberto",

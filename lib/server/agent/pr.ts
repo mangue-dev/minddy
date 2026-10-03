@@ -1,4 +1,5 @@
 import "server-only";
+import { githubResponseText } from "./github-read-flight";
 
 import { aiReviewProviderForLogin } from "@/lib/pr-ai-review/providers";
 
@@ -270,10 +271,12 @@ export type { CommitAuthor } from "@/lib/commit-authors";
 /** GitHub API error with HTTP status (allows you to distinguish 422 “no commits”). */
 export class GithubApiError extends Error {
   status: number;
-  constructor(message: string, status: number) {
+  retryAfter?: string | null;
+  constructor(message: string, status: number, retryAfter?: string | null) {
     super(message);
     this.name = "GithubApiError";
     this.status = status;
+    this.retryAfter = retryAfter;
   }
 }
 
@@ -310,18 +313,18 @@ async function ghJson<T>(
   token: string,
   init?: RequestInit & { accept?: string },
 ): Promise<T> {
-  const res = await fetch(url, {
+  const res = await githubResponseText(url, token, {
     ...init,
     headers: { ...githubHeaders(token, init?.accept), ...init?.headers },
-  });
-  const text = await res.text();
+  }, !init?.method || init.method === "GET");
+  const text = res.text;
   let data: unknown = null;
   try {
     data = text ? JSON.parse(text) as unknown : null;
   } catch {
     throw new GithubApiError("GitHub response was not valid JSON", res.status);
   }
-  if (!res.ok) throw new GithubApiError(githubErrorMessage(data, res.status), res.status);
+  if (!res.ok) throw new GithubApiError(githubErrorMessage(data, res.status), res.status, res.retryAfter);
   return data as T;
 }
 
@@ -545,11 +548,11 @@ export async function getRepositoryMergePolicy(opts: {
   base: string;
 }): Promise<RepositoryMergePolicy> {
   const { owner, repo } = splitRepo(opts.repoFullName);
-  const repository = await ghJson<GithubRepositoryPolicyInput>(
-    `${GITHUB_API_BASE}/repos/${owner}/${repo}`,
-    opts.token,
-  );
-  const [branchResult, rules] = await Promise.all([
+  const [repository, branchResult, rules] = await Promise.all([
+    ghJson<GithubRepositoryPolicyInput>(
+      `${GITHUB_API_BASE}/repos/${owner}/${repo}`,
+      opts.token,
+    ),
     ghJson<GithubBranchPolicyInput>(
       `${GITHUB_API_BASE}/repos/${owner}/${repo}/branches/${encodeURIComponent(opts.base)}/protection`,
       opts.token,
@@ -1440,7 +1443,7 @@ export async function listPullRequestReviewMessages(opts: {
 }): Promise<PullRequestReviewMessage[]> {
   const { owner, repo } = splitRepo(opts.repoFullName);
   const reviews = await ghJson<RawReview[]>(
-    `${GITHUB_API_BASE}/repos/${owner}/${repo}/pulls/${opts.number}/reviews?per_page=100`,
+      `${GITHUB_API_BASE}/repos/${owner}/${repo}/pulls/${opts.number}/reviews?per_page=100&page=1`,
     opts.token,
   );
   return reviews
@@ -1467,12 +1470,12 @@ async function ghGraphql<T>(
   query: string,
   variables: Record<string, unknown>,
 ): Promise<T> {
-  const res = await fetch(`${GITHUB_API_BASE}/graphql`, {
+  const res = await githubResponseText(`${GITHUB_API_BASE}/graphql`, token, {
     method: "POST",
     headers: { ...githubHeaders(token), "Content-Type": "application/json" },
     body: JSON.stringify({ query, variables }),
-  });
-  const text = await res.text();
+  }, /^\s*query\b/.test(query));
+  const text = res.text;
   type GraphqlBody = { data?: T; errors?: Array<{ message?: string }> };
   let data: GraphqlBody | null = null;
   try {
@@ -1484,6 +1487,7 @@ async function ghGraphql<T>(
     throw new GithubApiError(
       data?.errors?.[0]?.message ?? `GitHub API error (${res.status})`,
       res.status,
+      res.retryAfter,
     );
   }
   if (data?.errors?.length) {
@@ -1786,15 +1790,15 @@ export async function getPullRequestDeployment(opts: {
   sha: string;
 }): Promise<DeploymentOutcome> {
   const { owner, repo } = splitRepo(opts.repoFullName);
-  const vercelBranchOutcome = opts.branch
-    ? await getVercelBranchPreviewUrl(opts)
-    : null;
   // The push that produced the head is fetched ON DEMAND and at most once:
   // only a story worth dating (running or settled) ever pays for it.
   let pushAt: Promise<string | null> | null = null;
   const resolvePushAt = () =>
     (pushAt ??= headPushStartedAt(opts, owner, repo));
-  const walked = await walkGithubDeployments(opts, owner, repo, resolvePushAt);
+  const [vercelBranchOutcome, walked] = await Promise.all([
+    opts.branch ? getVercelBranchPreviewUrl(opts) : Promise.resolve(null),
+    walkGithubDeployments(opts, owner, repo, resolvePushAt),
+  ]);
 
   // The stable Vercel branch URL stays the destination — but the walk, not
   // the ready comment, tells the lifecycle and dates the settle: without it

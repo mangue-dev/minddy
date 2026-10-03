@@ -33,6 +33,7 @@ import { forcedToolCall } from "@/lib/server/feedback/forced-tool-call";
 import { getAppConfigValues } from "@/lib/server/app-config";
 import { modelConfigKeys, resolveFromValues } from "@/lib/server/model-config";
 import { forgeFor, isForgeApiError, type Forge, type MergeMethod } from "./forge";
+import { withGithubReadScope } from "./github-read-flight";
 import { encodePullRequestContent, shouldEncryptPullRequestContent } from
   "./pull-request-content";
 import {
@@ -146,6 +147,7 @@ export interface PrScope {
 export async function resolvePrScope(
   userId: string,
   pr: PullRequestRow,
+  shareReads = false,
 ): Promise<PrScope | null> {
   const provider = rowProvider(pr);
   const target = await resolveRepoCloneTargetForRepo({
@@ -155,11 +157,30 @@ export async function resolvePrScope(
   });
   if (!target) return null;
 
+  const forge = forgeFor(target.provider);
+  const scopedForge = { ...forge };
+  // Only GET routes share reads. Sensitive mutation decisions use the original
+  // forge and perform fresh reads even when a display request is in flight.
+  if (shareReads && target.provider === "github") {
+    const identity = [userId, target.provider, target.linkId, target.connectionId,
+      target.externalRepoId, target.repoFullName];
+    const methods = ["getPullRequest", "getRepositoryMergePolicy", "listPullRequestFiles",
+      "listReviews", "listReviewThreads", "listChecks", "getPullRequestDeployment",
+      "listPullRequestComments", "listTimeline", "listPullRequestCommits",
+      "listPullRequestCommitExtras", "listPullRequestReviewComments",
+      "listReviewCommentReactions", "listConversationReactions"] as const;
+    for (const name of methods) {
+      const method = forge[name] as (...args: unknown[]) => unknown;
+      Object.assign(scopedForge, { [name]: (...args: unknown[]) =>
+        withGithubReadScope(identity, () => method.apply(forge, args)) });
+    }
+  }
+
   let pending: Promise<ForgeActor> | null = null;
   return {
     pr,
     target,
-    forge: forgeFor(target.provider),
+    forge: shareReads ? scopedForge : forge,
     call: { token: target.token, repoFullName: target.repoFullName, number: pr.number },
     // NEVER rejects: a resolution failure is worth “no account” (so
     // a 403 which invites you to reconnect, or a banner), never a 500 which
@@ -258,7 +279,7 @@ export async function authorizePrRequest(
   const pr = await findPullRequest(prId);
   if (!pr) return { ok: false, response: prNotFound() };
 
-  const scope = await resolvePrScope(auth.user.id, pr);
+  const scope = await resolvePrScope(auth.user.id, pr, request.method === "GET");
   if (!scope) return { ok: false, response: prNotFound() };
   // Keep the authenticated client: its RLS is the guard when an action touches a
   // table beyond the PR. Manual ticket linking (MIN-163) rereads the ticket with
@@ -300,7 +321,7 @@ export async function authorizeRunPrRequest(
     };
   }
 
-  const scope = await resolvePrScope(auth.user.id, pr);
+  const scope = await resolvePrScope(auth.user.id, pr, request.method === "GET");
   if (!scope) return { ok: false, response: prNotFound() };
   return { ok: true, scope, userId: auth.user.id, supabase: auth.supabase };
 }
@@ -325,10 +346,12 @@ export function forgeErrorResponse(err: unknown): NextResponse {
             : err.status === 422
               ? "forgeRejected"
               : "forgeUnavailable";
-  const status = err.status === 401 || err.status === 403 || err.status === 404 || err.status === 409
+  const status = err.status === 401 || err.status === 403 || err.status === 404 || err.status === 409 || err.status === 429
     ? err.status
     : 502;
-  return NextResponse.json({ error: err.message, code }, { status });
+  const retryAfter = "retryAfter" in err && typeof err.retryAfter === "string" ? err.retryAfter : null;
+  return NextResponse.json({ error: err.message, code }, { status,
+    ...(retryAfter ? { headers: { "Retry-After": retryAfter } } : {}) });
 }
 
 // ── Detail ───────────────────────────────── ──────────────────────────────────
@@ -602,7 +625,7 @@ export async function prReadinessBatchResponse(
       const prId = prIds[nextIndex++];
       try {
         const pr = await findPullRequest(prId);
-        const scope = pr ? await resolvePrScope(userId, pr) : null;
+        const scope = pr ? await resolvePrScope(userId, pr, true) : null;
         if (!pr || !scope) {
           unavailablePrIds.push(prId);
           continue;
@@ -642,17 +665,19 @@ export async function prReadinessBatchResponse(
  */
 export async function prCommitsResponse(scope: PrScope): Promise<NextResponse> {
   try {
-    const { commits, truncated } = await scope.forge.listPullRequestCommits(scope.call);
     // The weight of each commit AND its authors come from a second call (no
     // forge does not serve them with the list). Best effort: without it, the list is displayed
     // as is, only the +/− flag is missing — the diff of a commit remains
     // openable, and it bears its own numbers.
-    const extras = await scope.forge
+    const [{ commits, truncated }, extras] = await Promise.all([
+      scope.forge.listPullRequestCommits(scope.call),
+      scope.forge
       .listPullRequestCommitExtras(scope.call)
       .catch(() => {
         console.error("[pr-actions] commit_extras_unreadable");
         return new Map<string, CommitExtras>();
-      });
+      }),
+    ]);
     return NextResponse.json({
       commits: commits.map((c) => {
         const e = extras.get(c.sha);

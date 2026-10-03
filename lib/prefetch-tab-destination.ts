@@ -10,7 +10,8 @@ import {
   PULL_REQUESTS_PAGE,
   allPullRequestsQueryKey,
 } from "./use-agent-runs";
-import { fetchAllPullRequestsApi, fetchPullRequestApi } from "./agent-api";
+import { fetchAllPullRequestsApi } from "./agent-api";
+import { pullRequestAccountRetryAt, pullRequestQueryOptions } from "./pull-request-query";
 import { globalBoardQueryFn } from "./global-board-api";
 import { GLOBAL_BOARD_KEY } from "./optimistic/issue-writes";
 import { fetchViewsApi } from "./views-api";
@@ -18,6 +19,22 @@ import { fetchStatsApi } from "./stats-api";
 import { statsTimeZone } from "./use-stats-query";
 
 const pullRequestWarmups = new WeakMap<QueryClient, Promise<void>>();
+
+export function prefetchPullRequestDetail(queryClient: QueryClient, prId: string): Promise<void> | null {
+  if (pullRequestWarmups.has(queryClient) || pullRequestAccountRetryAt(queryClient) > Date.now()) return null;
+  const pending = queryClient.prefetchQuery({
+    ...pullRequestQueryOptions(prId),
+    // Intent preparation is only a display optimization. Activation validates
+    // after the click through the foreground options, regardless of this age.
+    staleTime: 5_000,
+    retry: false,
+  });
+  pullRequestWarmups.set(queryClient, pending);
+  void pending.finally(() => {
+    if (pullRequestWarmups.get(queryClient) === pending) pullRequestWarmups.delete(queryClient);
+  });
+  return pending;
+}
 
 /**
  * Preheats the client caches a tab destination needs (fourth pass, MIN-540).
@@ -67,14 +84,10 @@ export function prefetchAppTabDestination(
       if (route.prId) {
         // One speculative detail per account client; the foreground can join
         // its normal query. No polling or additional plaintext cache.
-        if (pullRequestWarmups.has(queryClient)) { attempted.delete(href); return; }
-        const pending = queryClient.prefetchQuery({
-          queryKey: ["pull-request", route.prId],
-          queryFn: ({ signal }) => fetchPullRequestApi(route.prId!, signal),
-        });
-        pullRequestWarmups.set(queryClient, pending);
+        const pending = prefetchPullRequestDetail(queryClient, route.prId);
+        if (!pending) { attempted.delete(href); return; }
         void pending.finally(() => {
-          if (pullRequestWarmups.get(queryClient) === pending) pullRequestWarmups.delete(queryClient);
+          attempted.delete(href);
         });
       }
       void queryClient.prefetchQuery({

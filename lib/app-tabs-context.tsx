@@ -9,6 +9,7 @@ import { appTabsQueryKey, useAppTabsQuery } from "./use-app-tabs-query";
 import { AppTabRouteSync } from "@/components/app-tab-route-sync";
 import { appTabsStorageKey } from "./app-tabs-storage";
 import { prefetchAppTabDestination } from "./prefetch-tab-destination";
+import { createPrTabPreparation } from "./pr-tab-preparation";
 import { NavigationContext, useOptionalAppTabNavigation } from "./app-tab-navigation-context";
 import { removeLocalSnapshot, restoreLocalSnapshot, saveLocalSnapshot } from "./local-snapshots";
 
@@ -55,6 +56,22 @@ function AccountTabs({ owner, children }: { owner: string; children: ReactNode }
   }, [owner, client]);
   const snapshot = useSyncExternalStore(session.subscribe, session.getSnapshot, session.getSnapshot);
   const mounted = useRef(false);
+  useEffect(() => {
+    const preparation = createPrTabPreparation(client);
+    let previous = "";
+    const visit = () => {
+      const state = session.getSnapshot();
+      const active = state.tabs.find((tab) => tab.id === state.activeId);
+      if (!active) return;
+      const identity = `${active.id}:${active.href}`;
+      if (identity === previous) return;
+      previous = identity;
+      preparation.visit(active.href, state.tabs.map((tab) => tab.href));
+    };
+    const stop = session.subscribe(visit);
+    visit();
+    return () => { stop(); preparation.dispose(); };
+  }, [client, session]);
   useEffect(() => {
     mounted.current = true;
     return () => {
