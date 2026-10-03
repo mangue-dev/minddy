@@ -219,6 +219,7 @@ export const ATTACHMENT_PREVIEW_CSP = [
  */
 export const PRIVATE_API_NO_STORE_EXEMPT_PREFIXES = [
   "avatars",
+  "changelog",
   "self-hosting/email-templates",
 ];
 
@@ -323,7 +324,7 @@ const nextConfig = {
    */
   outputFileTracingIncludes: {
     "/api/**": [".agent-vm/**", "content/knowledge/**"],
-    "/**": [".pages-md/**"],
+    "/**": [".pages-md/**", "content/changelog/releases/*.json"],
   },
   // Bridge Vercel's server-only VERCEL_ENV into a public var so client
   // components (e.g. the sidebar env badge) can tell prod/preview/local apart.
@@ -501,11 +502,15 @@ const nextConfig = {
         headers: [
           {
             key: "Cache-Control",
-            value: "public, max-age=0, s-maxage=300, stale-while-revalidate=86400",
+            value: /(?:changelog|nouveautes|neuigkeiten|novidades|novita|novedades)$/.test(source)
+              ? "public, max-age=0, s-maxage=60, stale-while-revalidate=300"
+              : "public, max-age=0, s-maxage=300, stale-while-revalidate=86400",
           },
           {
             key: "Vercel-CDN-Cache-Control",
-            value: "max-age=300, stale-while-revalidate=86400",
+            value: /(?:changelog|nouveautes|neuigkeiten|novidades|novita|novedades)$/.test(source)
+              ? "max-age=60, stale-while-revalidate=300"
+              : "max-age=300, stale-while-revalidate=86400",
           },
         ],
       })),

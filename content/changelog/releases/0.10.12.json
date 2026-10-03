@@ -1,0 +1,92 @@
+{
+  "version": "0.10.12",
+  "layout": "compact",
+  "publishedAt": "2026-08-19T01:43:11Z",
+  "sha": "aed73b412352ba0428bd03d33bf2c0c5071c994d",
+  "deploymentId": 5974410238,
+  "copy": {
+    "en": {
+      "title": "Notifications you can actually keep up with",
+      "summary": "Notifications are now grouped by issue so you can follow a conversation without reading each event separately."
+    },
+    "fr": {
+      "title": "Des notifications qu'on arrive à suivre",
+      "summary": "Les notifications sont maintenant regroupées par ticket pour suivre une discussion sans lire chaque événement séparément."
+    },
+    "de": {
+      "title": "Behalte deine Benachrichtigungen im Überblick",
+      "summary": "Benachrichtigungen werden jetzt nach Ticket gruppiert, damit du Gespräche verfolgen kannst, ohne jedes Ereignis einzeln zu lesen."
+    },
+    "pt-BR": {
+      "title": "Notificações que você pode realmente acompanhar",
+      "summary": "As notificações agora são agrupadas por ticket para acompanhar uma conversa sem ler cada evento separadamente."
+    },
+    "it": {
+      "title": "Notifiche che puoi effettivamente tenere al passo",
+      "summary": "Le notifiche sono raggruppate per ticket per seguire una conversazione senza leggere ogni evento separatamente."
+    },
+    "es": {
+      "title": "Notificaciones que realmente puedes seguir",
+      "summary": "Las notificaciones se agrupan por ticket para seguir una conversación sin leer cada evento por separado."
+    }
+  },
+  "features": [
+    {
+      "id": "notifications",
+      "illustration": {
+        "kind": "code",
+        "name": "board"
+      },
+      "copy": {
+        "en": {
+          "title": "Notifications you can actually keep up with",
+          "summary": "Notifications are now grouped by issue so you can follow a conversation without reading each event separately.",
+          "details": [
+            "Notifications are now grouped by issue so you can follow a conversation without reading each event separately. Choose which types of activity appear in your inbox from your notification settings."
+          ]
+        },
+        "fr": {
+          "title": "Des notifications qu'on arrive à suivre",
+          "summary": "Les notifications sont maintenant regroupées par ticket pour suivre une discussion sans lire chaque événement séparément.",
+          "details": [
+            "Les notifications sont maintenant regroupées par ticket pour suivre une discussion sans lire chaque événement séparément. Choisissez les types d’activité à recevoir depuis vos paramètres de notifications."
+          ]
+        },
+        "de": {
+          "title": "Behalte deine Benachrichtigungen im Überblick",
+          "summary": "Benachrichtigungen werden jetzt nach Ticket gruppiert, damit du Gespräche verfolgen kannst, ohne jedes Ereignis einzeln zu lesen.",
+          "details": [
+            "Benachrichtigungen werden jetzt nach Ticket gruppiert, damit du Gespräche verfolgen kannst, ohne jedes Ereignis einzeln zu lesen. Wähle in den Benachrichtigungseinstellungen, welche Aktivitäten im Posteingang erscheinen."
+          ]
+        },
+        "pt-BR": {
+          "title": "Notificações que você pode realmente acompanhar",
+          "summary": "As notificações agora são agrupadas por ticket para acompanhar uma conversa sem ler cada evento separadamente.",
+          "details": [
+            "As notificações agora são agrupadas por ticket para acompanhar uma conversa sem ler cada evento separadamente. Escolha quais atividades aparecem na caixa de entrada nas configurações de notificações."
+          ]
+        },
+        "it": {
+          "title": "Notifiche che puoi effettivamente tenere al passo",
+          "summary": "Le notifiche sono raggruppate per ticket per seguire una conversazione senza leggere ogni evento separatamente.",
+          "details": [
+            "Le notifiche sono raggruppate per ticket per seguire una conversazione senza leggere ogni evento separatamente. Scegli quali attività ricevere nelle impostazioni delle notifiche."
+          ]
+        },
+        "es": {
+          "title": "Notificaciones que realmente puedes seguir",
+          "summary": "Las notificaciones se agrupan por ticket para seguir una conversación sin leer cada evento por separado.",
+          "details": [
+            "Las notificaciones se agrupan por ticket para seguir una conversación sin leer cada evento por separado. Elige qué actividades aparecen en tu bandeja de entrada desde los ajustes de notificaciones."
+          ]
+        }
+      }
+    }
+  ],
+  "evidence": {
+    "commits": [
+      "67ef370d568277fc5b2fdd69d6f2e733af1bd683"
+    ],
+    "issues": []
+  }
+}

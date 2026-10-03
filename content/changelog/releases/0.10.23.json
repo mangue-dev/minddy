@@ -1,0 +1,92 @@
+{
+  "version": "0.10.23",
+  "layout": "compact",
+  "publishedAt": "2026-08-28T00:17:18Z",
+  "sha": "a6e3290d2ca10a9202bbbc657c72a83cc3031e44",
+  "deploymentId": 6133272156,
+  "copy": {
+    "en": {
+      "title": "Preview attachments without leaving minddy",
+      "summary": "Open images, PDFs, text files, audio and video in a large viewer."
+    },
+    "fr": {
+      "title": "Consultez vos pièces jointes sans quitter minddy",
+      "summary": "Ouvrez vos images, PDF, fichiers texte, sons et vidéos dans un aperçu grand format."
+    },
+    "de": {
+      "title": "Anhänge direkt in minddy ansehen",
+      "summary": "Öffne Bilder, PDFs, Textdateien, Audio und Video in einer großen Vorschau."
+    },
+    "pt-BR": {
+      "title": "Visualize anexos sem sair do minddy",
+      "summary": "Abra imagens, PDFs, arquivos de texto, áudio e vídeo em um visualizador amplo."
+    },
+    "it": {
+      "title": "Consulta gli allegati senza uscire da minddy",
+      "summary": "Apri immagini, PDF, file di testo, audio e video in un visualizzatore ampio."
+    },
+    "es": {
+      "title": "Consulta los archivos adjuntos sin salir de minddy",
+      "summary": "Abre imágenes, PDF, archivos de texto, audio y vídeo en un visor amplio."
+    }
+  },
+  "features": [
+    {
+      "id": "attachment-viewer",
+      "illustration": {
+        "kind": "code",
+        "name": "pages"
+      },
+      "copy": {
+        "en": {
+          "title": "Preview attachments without leaving minddy",
+          "summary": "Open images, PDFs, text files, audio and video in a large viewer.",
+          "details": [
+            "Open images, PDFs, text files, audio and video in a large viewer. You can read, watch or listen without downloading each file first."
+          ]
+        },
+        "fr": {
+          "title": "Consultez vos pièces jointes sans quitter minddy",
+          "summary": "Ouvrez vos images, PDF, fichiers texte, sons et vidéos dans un aperçu grand format.",
+          "details": [
+            "Ouvrez vos images, PDF, fichiers texte, sons et vidéos dans un aperçu grand format. Vous pouvez les consulter sans télécharger chaque fichier au préalable."
+          ]
+        },
+        "de": {
+          "title": "Anhänge direkt in minddy ansehen",
+          "summary": "Öffne Bilder, PDFs, Textdateien, Audio und Video in einer großen Vorschau.",
+          "details": [
+            "Öffne Bilder, PDFs, Textdateien, Audio und Video in einer großen Vorschau. Du kannst lesen, ansehen oder zuhören, ohne jede Datei vorher herunterzuladen."
+          ]
+        },
+        "pt-BR": {
+          "title": "Visualize anexos sem sair do minddy",
+          "summary": "Abra imagens, PDFs, arquivos de texto, áudio e vídeo em um visualizador amplo.",
+          "details": [
+            "Abra imagens, PDFs, arquivos de texto, áudio e vídeo em um visualizador amplo. Você pode ler, assistir ou ouvir sem precisar baixar cada arquivo antes."
+          ]
+        },
+        "it": {
+          "title": "Consulta gli allegati senza uscire da minddy",
+          "summary": "Apri immagini, PDF, file di testo, audio e video in un visualizzatore ampio.",
+          "details": [
+            "Apri immagini, PDF, file di testo, audio e video in un visualizzatore ampio. Puoi leggere, guardare o ascoltare senza scaricare prima ogni file."
+          ]
+        },
+        "es": {
+          "title": "Consulta los archivos adjuntos sin salir de minddy",
+          "summary": "Abre imágenes, PDF, archivos de texto, audio y vídeo en un visor amplio.",
+          "details": [
+            "Abre imágenes, PDF, archivos de texto, audio y vídeo en un visor amplio. Puedes leer, ver o escuchar sin descargar antes cada archivo."
+          ]
+        }
+      }
+    }
+  ],
+  "evidence": {
+    "commits": [
+      "5bfac233cadd6dfdabc4442629ed9f9c2a004e8b"
+    ],
+    "issues": []
+  }
+}

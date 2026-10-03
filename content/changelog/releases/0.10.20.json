@@ -1,0 +1,352 @@
+{
+  "version": "0.10.20",
+  "layout": "bento",
+  "publishedAt": "2026-08-22T21:18:36Z",
+  "sha": "0cbc4357c04b28737d12e0a723298fe568b7e6b8",
+  "deploymentId": 6041385777,
+  "copy": {
+    "en": {
+      "title": "Use minddy on macOS, Windows and Linux",
+      "summary": "minddy now has its own desktop app on all three platforms, with automatic updates and a server picker for Cloud or self-hosted instances."
+    },
+    "fr": {
+      "title": "Utilisez minddy sur macOS, Windows et Linux",
+      "summary": "minddy a désormais son application de bureau sur les trois plateformes, avec mises à jour automatiques et choix du serveur, Cloud ou auto-hébergé."
+    },
+    "de": {
+      "title": "Verwende minddy auf macOS, Windows und Linux",
+      "summary": "minddy verfügt jetzt auf allen drei Plattformen über eine eigene Desktop-App mit automatischen Updates und einer Serverauswahl für Cloud- oder…"
+    },
+    "pt-BR": {
+      "title": "Use o minddy no macOS, Windows e Linux",
+      "summary": "O minddy agora tem seu próprio aplicativo de desktop em todas as três plataformas, com atualizações automáticas e um seletor de servidor para nuvem ou…"
+    },
+    "it": {
+      "title": "Usare minddy su macOS, Windows e Linux",
+      "summary": "minddy ora dispone di un'app desktop per tutte e tre le piattaforme, con aggiornamenti automatici e un selettore del server per le istanze Cloud o self-hosted."
+    },
+    "es": {
+      "title": "Usa minddy en macOS, Windows y Linux",
+      "summary": "minddy ya tiene su propia aplicación de escritorio en las tres plataformas, con actualizaciones automáticas y un selector de servidores para Cloud o…"
+    }
+  },
+  "features": [
+    {
+      "id": "desktop-app",
+      "illustration": {
+        "kind": "code",
+        "name": "desktop"
+      },
+      "copy": {
+        "en": {
+          "title": "Use minddy on macOS, Windows and Linux",
+          "summary": "minddy now has its own desktop app on all three platforms, with automatic updates and a server picker for Cloud or self-hosted instances.",
+          "details": [
+            "minddy now has its own desktop app on all three platforms, with automatic updates and a server picker for Cloud or self-hosted instances. Download the build made for your system and work outside the browser."
+          ]
+        },
+        "fr": {
+          "title": "Utilisez minddy sur macOS, Windows et Linux",
+          "summary": "minddy a désormais son application de bureau sur les trois plateformes, avec mises à jour automatiques et choix du serveur, Cloud ou auto-hébergé.",
+          "details": [
+            "minddy a désormais son application de bureau sur les trois plateformes, avec mises à jour automatiques et choix du serveur, Cloud ou auto-hébergé. Téléchargez la version adaptée à votre système et travaillez sans passer par le navigateur."
+          ]
+        },
+        "de": {
+          "title": "Verwende minddy auf macOS, Windows und Linux",
+          "summary": "minddy verfügt jetzt auf allen drei Plattformen über eine eigene Desktop-App mit automatischen Updates und einer Serverauswahl für Cloud- oder…",
+          "details": [
+            "minddy verfügt jetzt auf allen drei Plattformen über eine eigene Desktop-App mit automatischen Updates und einer Serverauswahl für Cloud- oder selbstgehostete Instanzen. Lade den für dein System erstellten Build herunter und arbeite außerhalb des Browsers."
+          ]
+        },
+        "pt-BR": {
+          "title": "Use o minddy no macOS, Windows e Linux",
+          "summary": "O minddy agora tem seu próprio aplicativo de desktop em todas as três plataformas, com atualizações automáticas e um seletor de servidor para nuvem ou…",
+          "details": [
+            "O minddy agora tem seu próprio aplicativo de desktop em todas as três plataformas, com atualizações automáticas e um seletor de servidor para nuvem ou instâncias auto-hospedadas. Baixe a versão feita para o seu sistema e trabalhe fora do navegador."
+          ]
+        },
+        "it": {
+          "title": "Usare minddy su macOS, Windows e Linux",
+          "summary": "minddy ora dispone di un'app desktop per tutte e tre le piattaforme, con aggiornamenti automatici e un selettore del server per le istanze Cloud o self-hosted.",
+          "details": [
+            "minddy ora dispone di un'app desktop per tutte e tre le piattaforme, con aggiornamenti automatici e un selettore del server per le istanze Cloud o self-hosted. Scarica la versione per il tuo sistema e lavora fuori dal browser."
+          ]
+        },
+        "es": {
+          "title": "Usa minddy en macOS, Windows y Linux",
+          "summary": "minddy ya tiene su propia aplicación de escritorio en las tres plataformas, con actualizaciones automáticas y un selector de servidores para Cloud o…",
+          "details": [
+            "minddy ya tiene su propia aplicación de escritorio en las tres plataformas, con actualizaciones automáticas y un selector de servidores para Cloud o instancias autoalojadas. Descarga la compilación correspondiente a tu sistema y trabaja fuera del navegador."
+          ]
+        }
+      }
+    },
+    {
+      "id": "feedback-page-tabs",
+      "illustration": {
+        "kind": "code",
+        "name": "pages"
+      },
+      "copy": {
+        "en": {
+          "title": "Add documentation to your public feedback page",
+          "summary": "Published project pages can now appear as tabs on your public feedback page.",
+          "details": [
+            "Published project pages can now appear as tabs on your public feedback page. Add a roadmap, documentation or community rules for visitors to read alongside suggestions."
+          ]
+        },
+        "fr": {
+          "title": "Ajoutez de la documentation à votre page de retours",
+          "summary": "Les pages publiées d’un projet peuvent maintenant apparaître sous forme d’onglets sur votre page publique de retours.",
+          "details": [
+            "Les pages publiées d’un projet peuvent maintenant apparaître sous forme d’onglets sur votre page publique de retours. Ajoutez une feuille de route, de la documentation ou des règles à consulter à côté des suggestions."
+          ]
+        },
+        "de": {
+          "title": "Dokumentation zur öffentlichen Feedback-Seite hinzufügen",
+          "summary": "Veröffentlichte Projektseiten können jetzt als Tabs auf deiner öffentlichen Feedback-Seite erscheinen.",
+          "details": [
+            "Veröffentlichte Projektseiten können jetzt als Tabs auf deiner öffentlichen Feedback-Seite erscheinen. Ergänze eine Roadmap, Dokumentation oder Regeln, die Besucher neben den Vorschlägen lesen können."
+          ]
+        },
+        "pt-BR": {
+          "title": "Adicione documentação à página de feedback",
+          "summary": "As páginas publicadas do projeto agora podem aparecer como abas na página pública de feedback.",
+          "details": [
+            "As páginas publicadas do projeto agora podem aparecer como abas na página pública de feedback. Adicione um roteiro de desenvolvimento, documentação ou regras junto às sugestões."
+          ]
+        },
+        "it": {
+          "title": "Aggiungi documentazione alla pagina dei feedback",
+          "summary": "Le pagine pubblicate del progetto possono ora apparire come schede nella pagina pubblica dei feedback.",
+          "details": [
+            "Le pagine pubblicate del progetto possono ora apparire come schede nella pagina pubblica dei feedback. Aggiungi una roadmap, documentazione o regole da leggere accanto ai suggerimenti."
+          ]
+        },
+        "es": {
+          "title": "Añade documentación a tu página de comentarios",
+          "summary": "Las páginas publicadas del proyecto pueden aparecer como pestañas en tu página pública de comentarios.",
+          "details": [
+            "Las páginas publicadas del proyecto pueden aparecer como pestañas en tu página pública de comentarios. Añade una hoja de ruta, documentación o normas junto a las sugerencias."
+          ]
+        }
+      }
+    },
+    {
+      "id": "account-transfer",
+      "illustration": {
+        "kind": "code",
+        "name": "board"
+      },
+      "copy": {
+        "en": {
+          "title": "Move your account to another minddy instance",
+          "summary": "Export your account, then import it into another minddy instance.",
+          "details": [
+            "Export your account, then import it into another minddy instance. Projects, issues, pages, settings and personal history come with you; passwords, provider keys and subscriptions stay behind."
+          ]
+        },
+        "fr": {
+          "title": "Déplacez votre compte vers une autre instance minddy",
+          "summary": "Exportez votre compte, puis importez-le dans une autre instance minddy.",
+          "details": [
+            "Exportez votre compte, puis importez-le dans une autre instance minddy. Projets, tickets, pages, réglages et historique personnel vous suivent ; mots de passe, clés de fournisseurs et abonnements restent de côté."
+          ]
+        },
+        "de": {
+          "title": "Verschiebe dein Konto in eine andere minddy-Instanz",
+          "summary": "Exportiere dein Konto und importiere es dann in eine andere minddy-Instanz.",
+          "details": [
+            "Exportiere dein Konto und importiere es dann in eine andere minddy-Instanz. Projekte, Tickets, Seiten, Einstellungen und dein persönlicher Verlauf werden übertragen; Passwörter, Anbieterschlüssel und Abonnements bleiben zurück."
+          ]
+        },
+        "pt-BR": {
+          "title": "Mova sua conta para outra instância da minddy",
+          "summary": "Exporte sua conta e importe-a para outra instância da minddy.",
+          "details": [
+            "Exporte sua conta e importe-a para outra instância da minddy. Projetos, problemas, páginas, configurações e histórico pessoal acompanham você; senhas, chaves de provedor e assinaturas ficam para trás."
+          ]
+        },
+        "it": {
+          "title": "Sposta il tuo account in un'altra istanza di minddy",
+          "summary": "Esporta il tuo account e importalo in un'altra istanza di minddy.",
+          "details": [
+            "Esporta il tuo account e importalo in un'altra istanza di minddy. Progetti, ticket, pagine, impostazioni e cronologia personale vengono trasferiti; password, chiavi dei provider e abbonamenti restano esclusi."
+          ]
+        },
+        "es": {
+          "title": "Traslada tu cuenta a otra instancia de minddy",
+          "summary": "Exporta tu cuenta e impórtala después en otra instancia de minddy.",
+          "details": [
+            "Exporta tu cuenta e impórtala después en otra instancia de minddy. Tus proyectos, incidencias, páginas, ajustes e historial personal se trasladan contigo; las contraseñas, claves de proveedores y suscripciones se quedan atrás."
+          ]
+        }
+      }
+    },
+    {
+      "id": "own-ai-everywhere",
+      "illustration": {
+        "kind": "code",
+        "name": "connections"
+      },
+      "copy": {
+        "en": {
+          "title": "Use your own AI provider across minddy",
+          "summary": "One key can now power Numo, Smart-fill, transcription, feedback review and the rest of minddy’s AI.",
+          "details": [
+            "One key can now power Numo, Smart-fill, transcription, feedback review and the rest of minddy’s AI. Compatible local models work too, so supported tasks can stay on your computer."
+          ]
+        },
+        "fr": {
+          "title": "Utilisez votre propre fournisseur d’IA partout dans minddy",
+          "summary": "Une clé peut désormais alimenter Numo, Smart-fill, la transcription, la revue du feedback et le reste de l’IA de minddy.",
+          "details": [
+            "Une clé peut désormais alimenter Numo, Smart-fill, la transcription, la revue du feedback et le reste de l’IA de minddy. Les modèles locaux compatibles fonctionnent aussi, pour garder les tâches prises en charge sur votre ordinateur."
+          ]
+        },
+        "de": {
+          "title": "Verwende deinen eigenen KI-Anbieter für minddy",
+          "summary": "Ein Schlüssel kann jetzt Numo, Smart-Fill, Transkription, Feedback-Überprüfung und den Rest der KI von minddy unterstützen.",
+          "details": [
+            "Ein Schlüssel kann jetzt Numo, Smart-Fill, Transkription, Feedback-Überprüfung und den Rest der KI von minddy unterstützen. Kompatible lokale Modelle funktionieren ebenfalls, sodass unterstützte Aufgaben auf deinem Computer verbleiben können."
+          ]
+        },
+        "pt-BR": {
+          "title": "Use seu próprio provedor de IA em minddy",
+          "summary": "Uma chave agora pode alimentar o Numo, o preenchimento inteligente, a transcrição, a revisão de feedback e os demais recursos de IA do minddy.",
+          "details": [
+            "Uma chave agora pode alimentar o Numo, o preenchimento inteligente, a transcrição, a revisão de feedback e os demais recursos de IA do minddy. Modelos locais compatíveis também funcionam, portanto, as tarefas suportadas podem permanecer no seu computador."
+          ]
+        },
+        "it": {
+          "title": "Utilizzare il proprio provider di IA in tutto minddy",
+          "summary": "Una sola chiave può ora alimentare Numo, Smart-fill, la trascrizione, la revisione dei feedback e tutte le altre funzioni AI di minddy.",
+          "details": [
+            "Una sola chiave può ora alimentare Numo, Smart-fill, la trascrizione, la revisione dei feedback e tutte le altre funzioni AI di minddy. Sono supportati anche i modelli locali compatibili, così le attività previste possono restare sul tuo computer."
+          ]
+        },
+        "es": {
+          "title": "Usa tu propio proveedor de IA en todo minddy",
+          "summary": "Una sola clave puede alimentar Numo, el relleno inteligente, la transcripción, la revisión de sugerencias y el resto de la IA de minddy.",
+          "details": [
+            "Una sola clave puede alimentar Numo, el relleno inteligente, la transcripción, la revisión de sugerencias y el resto de la IA de minddy. También funcionan los modelos locales compatibles, para que las tareas admitidas permanezcan en tu ordenador."
+          ]
+        }
+      }
+    },
+    {
+      "id": "github-dependencies",
+      "illustration": {
+        "kind": "code",
+        "name": "connections"
+      },
+      "copy": {
+        "en": {
+          "title": "Keep GitHub issue dependencies in sync",
+          "summary": "When a GitHub issue blocks another one, the linked minddy issues now show the same relationship.",
+          "details": [
+            "When a GitHub issue blocks another one, the linked minddy issues now show the same relationship. Changes made on GitHub continue to update the issue panel automatically."
+          ]
+        },
+        "fr": {
+          "title": "Gardez les dépendances des issues GitHub synchronisées",
+          "summary": "Lorsqu’une issue GitHub en bloque une autre, les tickets minddy liés affichent la même relation.",
+          "details": [
+            "Lorsqu’une issue GitHub en bloque une autre, les tickets minddy liés affichent la même relation. Les changements faits sur GitHub continuent de mettre à jour le panneau du ticket automatiquement."
+          ]
+        },
+        "de": {
+          "title": "Halte die Abhängigkeiten von GitHub-Vorgängen synchron",
+          "summary": "Wenn ein GitHub-Vorgang einen anderen blockiert, zeigen die verknüpften minddy-Vorgänge jetzt dieselbe Beziehung.",
+          "details": [
+            "Wenn ein GitHub-Vorgang einen anderen blockiert, zeigen die verknüpften minddy-Vorgänge jetzt dieselbe Beziehung. Änderungen, die am GitHub vorgenommen werden, aktualisieren das Problemfenster weiterhin automatisch."
+          ]
+        },
+        "pt-BR": {
+          "title": "Mantenha as dependências do problema GitHub sincronizadas",
+          "summary": "Quando um problema GitHub bloqueia outro, os problemas vinculados do minddy agora mostram o mesmo relacionamento.",
+          "details": [
+            "Quando um problema GitHub bloqueia outro, os problemas vinculados do minddy agora mostram o mesmo relacionamento. As alterações feitas em GitHub continuam a atualizar o painel de problemas automaticamente."
+          ]
+        },
+        "it": {
+          "title": "Mantenere sincronizzate le dipendenze dei ticket di GitHub",
+          "summary": "Quando un ticket di GitHub blocca un altro, i ticket di minddy collegati mostrano ora la stessa relazione.",
+          "details": [
+            "Quando un ticket di GitHub blocca un altro, i ticket di minddy collegati mostrano ora la stessa relazione. Le modifiche apportate su GitHub continuano ad aggiornare automaticamente il pannello ticket."
+          ]
+        },
+        "es": {
+          "title": "Mantén sincronizadas las dependencias entre incidencias de GitHub",
+          "summary": "Cuando una incidencia de GitHub bloquea otra, las incidencias vinculadas de minddy muestran ahora la misma relación.",
+          "details": [
+            "Cuando una incidencia de GitHub bloquea otra, las incidencias vinculadas de minddy muestran ahora la misma relación. Los cambios realizados en GitHub siguen actualizando automáticamente el panel de la incidencia."
+          ]
+        }
+      }
+    },
+    {
+      "id": "live-page-edits",
+      "illustration": {
+        "kind": "code",
+        "name": "pages"
+      },
+      "copy": {
+        "en": {
+          "title": "See page edits as they happen",
+          "summary": "When someone else edits a project page, their changes now appear while you have it open.",
+          "details": [
+            "When someone else edits a project page, their changes now appear while you have it open. Autosave keeps your own work in step instead of leaving two tabs to overwrite each other."
+          ]
+        },
+        "fr": {
+          "title": "Voyez les pages évoluer en direct",
+          "summary": "Quand quelqu’un modifie une page du projet, ses changements apparaissent pendant que vous l’avez ouverte.",
+          "details": [
+            "Quand quelqu’un modifie une page du projet, ses changements apparaissent pendant que vous l’avez ouverte. La sauvegarde automatique garde votre travail aligné au lieu de laisser deux onglets s’écraser."
+          ]
+        },
+        "de": {
+          "title": "Sieh Seitenänderungen, sobald sie erfolgen",
+          "summary": "Wenn jemand anderes eine Projektseite bearbeitet, erscheinen die Änderungen, während du sie geöffnet hast.",
+          "details": [
+            "Wenn jemand anderes eine Projektseite bearbeitet, erscheinen die Änderungen, während du sie geöffnet hast. Die automatische Speicherung hält deine Arbeit mit den Änderungen in anderen Tabs im Einklang."
+          ]
+        },
+        "pt-BR": {
+          "title": "Veja as edições da página conforme elas acontecem",
+          "summary": "Quando alguém edita uma página do projeto, as alterações agora aparecem enquanto você a mantém aberta.",
+          "details": [
+            "Quando alguém edita uma página do projeto, as alterações agora aparecem enquanto você a mantém aberta. O salvamento automático mantém seu próprio trabalho em andamento, em vez de deixar duas guias sobrescrevendo uma à outra."
+          ]
+        },
+        "it": {
+          "title": "Vedi le modifiche di pagina come accade",
+          "summary": "Quando qualcun altro modifica una pagina del progetto, le loro modifiche appaiono ora mentre la hai aperta.",
+          "details": [
+            "Quando qualcun altro modifica una pagina del progetto, le loro modifiche appaiono ora mentre la hai aperta. Salvare automaticamente mantiene il tuo lavoro a passo invece di lasciare due schede per sovrascriversi."
+          ]
+        },
+        "es": {
+          "title": "Ve las ediciones de las páginas en tiempo real",
+          "summary": "Cuando otra persona edita una página del proyecto, sus cambios aparecen mientras la tienes abierta.",
+          "details": [
+            "Cuando otra persona edita una página del proyecto, sus cambios aparecen mientras la tienes abierta. El guardado automático mantiene sincronizado tu trabajo y evita que dos pestañas se sobrescriban."
+          ]
+        }
+      }
+    }
+  ],
+  "evidence": {
+    "commits": [
+      "cd3a374237c23b6090f445ee5e7cb5752fd0289d",
+      "cd80f2283ff3b7fb64bda8ac3547d9adac791409",
+      "7048bb72651c0d8c34ca7cc565a406ba4adac28d",
+      "6462090b546dfbf3d7d325152ad95cf18afb2d58",
+      "55a6db47195b039f4e19dd2fc2d8dd20c612da4b",
+      "e18fe7cfed24e69443d62d5feaffa0bf4258b744"
+    ],
+    "issues": []
+  }
+}

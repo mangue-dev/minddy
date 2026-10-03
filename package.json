@@ -56,7 +56,8 @@
     "test:squashed-migrations": "node --test scripts/repair-squashed-migration-history.test.mjs",
     "clean": "node scripts/clean.mjs",
     "captures:timeline": "node captures/timeline/index.mjs",
-    "deploy": "bash deploy.sh"
+    "deploy": "bash deploy.sh",
+    "test:changelog": "node --test scripts/changelog.test.mjs && vitest run lib/changelog.test.ts lib/server/changelog.test.ts"
   },
   "overrides": {
     "@tiptap/extension-bubble-menu": "3.31.3",

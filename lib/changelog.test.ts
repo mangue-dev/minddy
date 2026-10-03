@@ -1,83 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
-  CHANGELOG_ENTRIES,
   CHANGELOG_LAST_MODIFIED,
   RECENT_CHANGELOG_DAYS,
   formatChangelogAge,
   hasRecentChangelog,
 } from "./changelog";
-import en from "../messages/en.json";
-import fr from "../messages/fr.json";
-import de from "../messages/de.json";
-import ptBR from "../messages/pt-BR.json";
-import itMessages from "../messages/it.json";
-import es from "../messages/es.json";
 import type { Locale } from "@/i18n/config";
-
-/**
- * The changelog is the only page whose content grows with each delivery, and
- * whose date drives the sitemap. What can go wrong when feeding it is
- * so always the same thing: an entry without text, a poorly written date, or
- * a list that has been completed from the bottom.
- */
-
-const catalogues = { en: en.Changelog, fr: fr.Changelog,
-  de: de.Changelog,
-  "pt-BR": ptBR.Changelog,
-  it: itMessages.Changelog,
-  es: es.Changelog,
-} as Record<
-  string,
-  Record<string, string>
->;
-
-describe("changelog entries", () => {
-  it("has at least one entry", () => {
-    expect(CHANGELOG_ENTRIES.length).toBeGreaterThan(0);
-  });
-
-  it("gives every entry a title and a body in every language", () => {
-    for (const entry of CHANGELOG_ENTRIES) {
-      for (const [locale, messages] of Object.entries(catalogues)) {
-        expect(
-          messages[`entry_${entry.id}_title`],
-          `${locale}.Changelog.entry_${entry.id}_title`,
-        ).toBeTruthy();
-        expect(
-          messages[`entry_${entry.id}_body`],
-          `${locale}.Changelog.entry_${entry.id}_body`,
-        ).toBeTruthy();
-      }
-    }
-  });
-
-  it("writes dates as YYYY-MM-DD, and real ones", () => {
-    for (const entry of CHANGELOG_ENTRIES) {
-      expect(entry.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-      // `2026-07-32` passes the regex but not this.
-      expect(
-        new Date(`${entry.date}T00:00:00Z`).toISOString().slice(0, 10),
-      ).toBe(entry.date);
-    }
-  });
-
-  it("keeps ids unique — they are i18n keys, anchors and RSS guids", () => {
-    const ids = CHANGELOG_ENTRIES.map((entry) => entry.id);
-    expect(new Set(ids).size).toBe(ids.length);
-  });
-
-  /**
-   * The list is rendered as is, and its first entry becomes the page's
-   * `lastModified` in the sitemap. An entry added at the bottom
-   * would therefore go unnoticed by the engines, which is exactly the opposite of
-   * but.
-   */
-  it("stays sorted newest first", () => {
-    const dates = CHANGELOG_ENTRIES.map((entry) => entry.date);
-    expect(dates).toEqual([...dates].sort().reverse());
-    expect(CHANGELOG_LAST_MODIFIED).toBe(dates[0]);
-  });
-});
 
 /**
  * The blue dot in the account menu. The terminals are tested relative to

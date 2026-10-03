@@ -1,0 +1,40 @@
+{
+  "version": "0.10.27",
+  "layout": "compact",
+  "publishedAt": "2026-09-08T15:17:34Z",
+  "sha": "ad27ea3afbb214f4d16ae1fbe4d9d1e5f6e0fed1",
+  "deploymentId": 6330873946,
+  "copy": {
+    "en": {
+      "title": "Maintenance update",
+      "summary": "A small maintenance release."
+    },
+    "fr": {
+      "title": "Mise à jour de maintenance",
+      "summary": "Une petite mise à jour de maintenance."
+    },
+    "de": {
+      "title": "Wartungsupdate",
+      "summary": "Ein kleines Wartungsupdate."
+    },
+    "pt-BR": {
+      "title": "Atualização de manutenção",
+      "summary": "Uma pequena atualização de manutenção."
+    },
+    "it": {
+      "title": "Aggiornamento di manutenzione",
+      "summary": "Un piccolo aggiornamento di manutenzione."
+    },
+    "es": {
+      "title": "Actualización de mantenimiento",
+      "summary": "Una pequeña actualización de mantenimiento."
+    }
+  },
+  "features": [],
+  "evidence": {
+    "commits": [
+      "ad27ea3afbb214f4d16ae1fbe4d9d1e5f6e0fed1"
+    ],
+    "issues": []
+  }
+}

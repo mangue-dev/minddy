@@ -1,0 +1,40 @@
+{
+  "version": "0.10.26",
+  "layout": "compact",
+  "publishedAt": "2026-09-07T22:56:14Z",
+  "sha": "19cd2868e9611eacabc5e333dd3b4b6573936999",
+  "deploymentId": 6317412703,
+  "copy": {
+    "en": {
+      "title": "Maintenance update",
+      "summary": "A small maintenance release."
+    },
+    "fr": {
+      "title": "Mise à jour de maintenance",
+      "summary": "Une petite mise à jour de maintenance."
+    },
+    "de": {
+      "title": "Wartungsupdate",
+      "summary": "Ein kleines Wartungsupdate."
+    },
+    "pt-BR": {
+      "title": "Atualização de manutenção",
+      "summary": "Uma pequena atualização de manutenção."
+    },
+    "it": {
+      "title": "Aggiornamento di manutenzione",
+      "summary": "Un piccolo aggiornamento di manutenzione."
+    },
+    "es": {
+      "title": "Actualización de mantenimiento",
+      "summary": "Una pequeña actualización de mantenimiento."
+    }
+  },
+  "features": [],
+  "evidence": {
+    "commits": [
+      "19cd2868e9611eacabc5e333dd3b4b6573936999"
+    ],
+    "issues": []
+  }
+}

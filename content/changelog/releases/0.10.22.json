@@ -1,0 +1,144 @@
+{
+  "version": "0.10.22",
+  "layout": "compact",
+  "publishedAt": "2026-08-26T15:49:21Z",
+  "sha": "22f265c8ae94c5351541cb006ed9cfce1f21ee9d",
+  "deploymentId": 6107009022,
+  "copy": {
+    "en": {
+      "title": "Take stock of what you have accomplished",
+      "summary": "Your personal statistics now give you a clearer view of completed issues, pace and time spent."
+    },
+    "fr": {
+      "title": "Faites le point sur ce que vous avez accompli",
+      "summary": "Vos statistiques personnelles donnent maintenant une vue plus claire des tickets terminés, de votre rythme et du temps passé."
+    },
+    "de": {
+      "title": "Sieh, was du geschafft hast",
+      "summary": "Deine persönlichen Statistiken geben dir jetzt einen klareren Überblick über abgeschlossene Tickets, dein Arbeitstempo und die aufgewendete Zeit."
+    },
+    "pt-BR": {
+      "title": "Faça um balanço do que você realizou",
+      "summary": "Suas estatísticas pessoais agora oferecem uma visão mais clara dos problemas concluídos, do ritmo e do tempo gasto."
+    },
+    "it": {
+      "title": "Fai il punto di quello che hai fatto",
+      "summary": "Le vostre statistiche personali ora vi forniscono una visione più chiara dei ticket completati, il ritmo e il tempo speso."
+    },
+    "es": {
+      "title": "Haz balance de lo que has conseguido",
+      "summary": "Tus estadísticas personales ofrecen ahora una visión más clara de las incidencias completadas, el ritmo y el tiempo invertido."
+    }
+  },
+  "features": [
+    {
+      "id": "activity-breakdowns",
+      "illustration": {
+        "kind": "code",
+        "name": "activity"
+      },
+      "copy": {
+        "en": {
+          "title": "Take stock of what you have accomplished",
+          "summary": "Your personal statistics now give you a clearer view of completed issues, pace and time spent.",
+          "details": [
+            "Your personal statistics now give you a clearer view of completed issues, pace and time spent. Breakdowns by project, category and objective help you understand what you have accomplished across all your work."
+          ]
+        },
+        "fr": {
+          "title": "Faites le point sur ce que vous avez accompli",
+          "summary": "Vos statistiques personnelles donnent maintenant une vue plus claire des tickets terminés, de votre rythme et du temps passé.",
+          "details": [
+            "Vos statistiques personnelles donnent maintenant une vue plus claire des tickets terminés, de votre rythme et du temps passé. Les répartitions par projet, catégorie et objectif résument ce que vous avez accompli."
+          ]
+        },
+        "de": {
+          "title": "Sieh, was du geschafft hast",
+          "summary": "Deine persönlichen Statistiken geben dir jetzt einen klareren Überblick über abgeschlossene Tickets, dein Arbeitstempo und die aufgewendete Zeit.",
+          "details": [
+            "Deine persönlichen Statistiken geben dir jetzt einen klareren Überblick über abgeschlossene Tickets, dein Arbeitstempo und die aufgewendete Zeit. Die Aufschlüsselungen nach Projekt, Kategorie und Ziel zeigen, was du geschafft hast."
+          ]
+        },
+        "pt-BR": {
+          "title": "Faça um balanço do que você realizou",
+          "summary": "Suas estatísticas pessoais agora oferecem uma visão mais clara dos problemas concluídos, do ritmo e do tempo gasto.",
+          "details": [
+            "Suas estatísticas pessoais agora oferecem uma visão mais clara dos problemas concluídos, do ritmo e do tempo gasto. Divisões por projeto, categoria e objetivo ajudam você a entender o que você realizou em todo o seu trabalho."
+          ]
+        },
+        "it": {
+          "title": "Fai il punto di quello che hai fatto",
+          "summary": "Le vostre statistiche personali ora vi forniscono una visione più chiara dei ticket completati, il ritmo e il tempo speso.",
+          "details": [
+            "Le vostre statistiche personali ora vi forniscono una visione più chiara dei ticket completati, il ritmo e il tempo speso. Le ripartizioni per progetto, categoria e obiettivo vi aiutano a capire cosa avete realizzato in tutto il vostro lavoro."
+          ]
+        },
+        "es": {
+          "title": "Haz balance de lo que has conseguido",
+          "summary": "Tus estadísticas personales ofrecen ahora una visión más clara de las incidencias completadas, el ritmo y el tiempo invertido.",
+          "details": [
+            "Tus estadísticas personales ofrecen ahora una visión más clara de las incidencias completadas, el ritmo y el tiempo invertido. Los desgloses por proyecto, categoría y objetivo te ayudan a entender lo que has conseguido en todo tu trabajo."
+          ]
+        }
+      }
+    },
+    {
+      "id": "custom-avatar",
+      "illustration": {
+        "kind": "code",
+        "name": "board"
+      },
+      "copy": {
+        "en": {
+          "title": "Choose the face you show in minddy",
+          "summary": "Pick a generated Lorelei avatar or upload your own image from your profile.",
+          "details": [
+            "Pick a generated Lorelei avatar or upload your own image from your profile. The same avatar follows you through projects, comments and conversations."
+          ]
+        },
+        "fr": {
+          "title": "Choisissez le visage que vous montrez dans minddy",
+          "summary": "Choisissez un avatar Lorelei généré ou importez votre propre image depuis votre profil.",
+          "details": [
+            "Choisissez un avatar Lorelei généré ou importez votre propre image depuis votre profil. Le même avatar vous suit dans les projets, les commentaires et les conversations."
+          ]
+        },
+        "de": {
+          "title": "Wähle dein Profilbild für minddy",
+          "summary": "Wähle einen generierten Lorelei-Avatar oder lade dein eigenes Bild aus deinem Profil hoch.",
+          "details": [
+            "Wähle einen generierten Lorelei-Avatar oder lade dein eigenes Bild aus deinem Profil hoch. Derselbe Avatar folgt dir durch Projekte, Kommentare und Gespräche."
+          ]
+        },
+        "pt-BR": {
+          "title": "Escolha o rosto que você mostra em minddy",
+          "summary": "Escolha um avatar Lorelei gerado ou carregue sua própria imagem do seu perfil.",
+          "details": [
+            "Escolha um avatar Lorelei gerado ou carregue sua própria imagem do seu perfil. O mesmo avatar acompanha você em projetos, comentários e conversas."
+          ]
+        },
+        "it": {
+          "title": "Scegli il volto che mostra in minddy",
+          "summary": "Scegli un avatar generato da Lorelei o carica la tua immagine dal tuo profilo.",
+          "details": [
+            "Scegli un avatar generato da Lorelei o carica la tua immagine dal tuo profilo. Lo stesso avatar ti segue attraverso progetti, commenti e conversazioni."
+          ]
+        },
+        "es": {
+          "title": "Elige la imagen que muestras en minddy",
+          "summary": "Elige un avatar Lorelei generado o sube tu propia imagen desde el perfil.",
+          "details": [
+            "Elige un avatar Lorelei generado o sube tu propia imagen desde el perfil. El mismo avatar te acompaña en proyectos, comentarios y conversaciones."
+          ]
+        }
+      }
+    }
+  ],
+  "evidence": {
+    "commits": [
+      "2af956e43ef701fba555180ead5e6549a600b3ec",
+      "de3f5dac01ca08df1eae3693478956038676aaad"
+    ],
+    "issues": []
+  }
+}

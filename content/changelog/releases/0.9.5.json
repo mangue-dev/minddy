@@ -1,0 +1,1600 @@
+{
+  "version": "0.9.5",
+  "layout": "bento",
+  "publishedAt": "2026-08-16T17:46:29Z",
+  "sha": "2a496059160ef38d8107b1b5471abaf8593c4815",
+  "deploymentId": 5933697554,
+  "copy": {
+    "en": {
+      "title": "Earlier features, together",
+      "summary": "Features already available in this version. Their first production dates could not be recovered."
+    },
+    "fr": {
+      "title": "Les nouveautés précédentes, réunies",
+      "summary": "Ces fonctionnalités étaient déjà disponibles dans cette version. Leurs premières dates de mise en production n’ont pas pu être retrouvées."
+    },
+    "de": {
+      "title": "Frühere Funktionen im Überblick",
+      "summary": "Diese Funktionen waren in dieser Version bereits verfügbar. Ihre ersten Produktionsdaten konnten nicht ermittelt werden."
+    },
+    "pt-BR": {
+      "title": "Novidades anteriores, reunidas",
+      "summary": "Estas funcionalidades já estavam disponíveis nesta versão. As primeiras datas de publicação não puderam ser recuperadas."
+    },
+    "it": {
+      "title": "Le novità precedenti, riunite",
+      "summary": "Queste funzionalità erano già disponibili in questa versione. Non è stato possibile recuperare le prime date di pubblicazione."
+    },
+    "es": {
+      "title": "Las novedades anteriores, reunidas",
+      "summary": "Estas funciones ya estaban disponibles en esta versión. No se pudieron recuperar sus primeras fechas de publicación."
+    }
+  },
+  "features": [
+    {
+      "id": "local-agent",
+      "illustration": {
+        "kind": "code",
+        "name": "desktop"
+      },
+      "copy": {
+        "en": {
+          "title": "Run the coding agent on your own computer",
+          "summary": "The desktop app can attach a project to a local folder and run Numo there.",
+          "details": [
+            "The desktop app can attach a project to a local folder and run Numo there. You see file changes as it works, and they stay in your working copy until you decide what to do with them."
+          ]
+        },
+        "fr": {
+          "title": "Faites tourner l’agent de code sur votre ordinateur",
+          "summary": "L’application de bureau peut relier un projet à un dossier local et y faire travailler Numo.",
+          "details": [
+            "L’application de bureau peut relier un projet à un dossier local et y faire travailler Numo. Vous voyez les fichiers changer pendant son travail, et rien n’est poussé automatiquement depuis votre copie."
+          ]
+        },
+        "de": {
+          "title": "Führe den Codierungsagenten auf deinem eigenen Computer aus.",
+          "summary": "Die Desktop-App kann ein Projekt mit einem lokalen Ordner verbinden und dort Numo ausführen.",
+          "details": [
+            "Die Desktop-App kann ein Projekt mit einem lokalen Ordner verbinden und dort Numo ausführen. Du siehst die Dateiänderungen während der Arbeit. Sie bleiben in deiner Arbeitskopie, bis du entscheidest, was du damit machen möchtest."
+          ]
+        },
+        "pt-BR": {
+          "title": "Execute o agente de codificação em seu próprio computador",
+          "summary": "O aplicativo de desktop pode vincular um projeto a uma pasta local e executar Numo nela.",
+          "details": [
+            "O aplicativo de desktop pode vincular um projeto a uma pasta local e executar Numo nela. Você vê as alterações nos arquivos enquanto ele trabalha, e elas permanecem na sua cópia de trabalho até que você decida o que fazer com elas."
+          ]
+        },
+        "it": {
+          "title": "Eseguire l'agente di codifica sul proprio computer",
+          "summary": "L'app desktop può collegare un progetto a una cartella locale ed eseguire Numo al suo interno.",
+          "details": [
+            "L'app desktop può collegare un progetto a una cartella locale ed eseguire Numo al suo interno. Puoi vedere le modifiche ai file mentre lavora; restano nella tua copia di lavoro finché non decidi cosa farne."
+          ]
+        },
+        "es": {
+          "title": "Ejecuta el agente de programación en tu propio ordenador",
+          "summary": "La aplicación de escritorio puede vincular un proyecto a una carpeta local y ejecutar Numo allí.",
+          "details": [
+            "La aplicación de escritorio puede vincular un proyecto a una carpeta local y ejecutar Numo allí. Verás los cambios de los archivos mientras trabaja y estos permanecerán en tu copia de trabajo hasta que decidas qué hacer con ellos."
+          ]
+        }
+      }
+    },
+    {
+      "id": "pages",
+      "illustration": {
+        "kind": "code",
+        "name": "pages"
+      },
+      "copy": {
+        "en": {
+          "title": "Keep your project's notes and specs in pages",
+          "summary": "Create project documents and organize them into pages and subpages in the sidebar.",
+          "details": [
+            "Create project documents and organize them into pages and subpages in the sidebar. Add text blocks and notebook tasks, then link a page to an issue as a resource. Numo, minddy’s AI assistant, can read and edit these pages too."
+          ]
+        },
+        "fr": {
+          "title": "Rangez les notes et les specs de votre projet dans des pages",
+          "summary": "Créez des documents de projet et organisez-les en pages et sous-pages dans la barre latérale.",
+          "details": [
+            "Créez des documents de projet et organisez-les en pages et sous-pages dans la barre latérale. Ajoutez des blocs de texte et des tâches du bloc-notes, puis liez une page à un ticket comme ressource. Numo, l’assistant IA de minddy, peut aussi lire et modifier ces pages."
+          ]
+        },
+        "de": {
+          "title": "Organisiere Projektnotizen und Spezifikationen in Seiten",
+          "summary": "Erstelle Projektdokumente und ordne sie als Seiten und Unterseiten in der Seitenleiste.",
+          "details": [
+            "Erstelle Projektdokumente und ordne sie als Seiten und Unterseiten in der Seitenleiste. Füge Textblöcke und Notizbuchaufgaben hinzu und verknüpfe Seiten mit Tickets. Numo, Minddys KI-Assistent, kann diese Seiten ebenfalls lesen und bearbeiten."
+          ]
+        },
+        "pt-BR": {
+          "title": "Mantenha as notas e especificações do seu projeto em páginas",
+          "summary": "Crie documentos do projeto e organize-os em páginas e subpáginas na barra lateral.",
+          "details": [
+            "Crie documentos do projeto e organize-os em páginas e subpáginas na barra lateral. Adicione blocos de texto e tarefas do bloco de notas e vincule uma página a um ticket como recurso. O Numo, assistente de IA do minddy, também pode ler e editar essas páginas."
+          ]
+        },
+        "it": {
+          "title": "Tenete le note e le specifiche del vostro progetto nelle pagine",
+          "summary": "Crea documenti di progetto e organizzali in pagine e sottopagine nella barra laterale.",
+          "details": [
+            "Crea documenti di progetto e organizzali in pagine e sottopagine nella barra laterale. Aggiungi blocchi di testo e attività del taccuino, poi collega una pagina a un ticket come risorsa. Anche Numo, l’assistente IA di minddy, può leggere e modificare queste pagine."
+          ]
+        },
+        "es": {
+          "title": "Guarda las notas y especificaciones del proyecto en páginas",
+          "summary": "Crea documentos de proyecto y organízalos en páginas y subpáginas en la barra lateral.",
+          "details": [
+            "Crea documentos de proyecto y organízalos en páginas y subpáginas en la barra lateral. Añade bloques de texto y tareas del bloc de notas, y vincula una página a un ticket como recurso. Numo, el asistente de IA de minddy, también puede leer y editar estas páginas."
+          ]
+        }
+      }
+    },
+    {
+      "id": "smart-fill",
+      "illustration": {
+        "kind": "code",
+        "name": "assistant"
+      },
+      "copy": {
+        "en": {
+          "title": "AI suggests details for your new issues",
+          "summary": "Smart-fill uses AI to read an issue’s title and description and fill in its priority, effort, categories and objective.",
+          "details": [
+            "Smart-fill uses AI to read an issue’s title and description and fill in its priority, effort, categories and objective. You can turn it off for one issue or for all issues in your account settings."
+          ]
+        },
+        "fr": {
+          "title": "L’IA propose les détails de vos nouveaux tickets",
+          "summary": "Smart-fill utilise l’IA pour lire le titre et la description d’un ticket, puis renseigner sa priorité, l’effort estimé, les catégories et l’objectif.",
+          "details": [
+            "Smart-fill utilise l’IA pour lire le titre et la description d’un ticket, puis renseigner sa priorité, l’effort estimé, les catégories et l’objectif. Vous pouvez le désactiver pour un ticket ou pour tous depuis les paramètres de votre compte."
+          ]
+        },
+        "de": {
+          "title": "KI schlägt Details für neue Tickets vor",
+          "summary": "Smart-fill liest Titel und Beschreibung eines Tickets mithilfe von KI und füllt Priorität, Aufwand, Kategorien und Ziel aus.",
+          "details": [
+            "Smart-fill liest Titel und Beschreibung eines Tickets mithilfe von KI und füllt Priorität, Aufwand, Kategorien und Ziel aus. Du kannst es für ein Ticket oder in den Kontoeinstellungen für alle Tickets ausschalten."
+          ]
+        },
+        "pt-BR": {
+          "title": "A IA sugere detalhes para seus novos tickets",
+          "summary": "O Smart-fill usa IA para ler o título e a descrição de um ticket e preencher prioridade, esforço, categorias e objetivo.",
+          "details": [
+            "O Smart-fill usa IA para ler o título e a descrição de um ticket e preencher prioridade, esforço, categorias e objetivo. Você pode desativá-lo para um ticket ou para todos nas configurações da conta."
+          ]
+        },
+        "it": {
+          "title": "L’IA propone i dettagli dei nuovi ticket",
+          "summary": "Smart-fill usa l’IA per leggere titolo e descrizione di un ticket e compilare priorità, impegno, categorie e obiettivo.",
+          "details": [
+            "Smart-fill usa l’IA per leggere titolo e descrizione di un ticket e compilare priorità, impegno, categorie e obiettivo. Puoi disattivarlo per un ticket o per tutti nelle impostazioni del tuo account."
+          ]
+        },
+        "es": {
+          "title": "La IA propone detalles para tus nuevos tickets",
+          "summary": "Smart-fill usa IA para leer el título y la descripción de un ticket y completar su prioridad, esfuerzo, categorías y objetivo.",
+          "details": [
+            "Smart-fill usa IA para leer el título y la descripción de un ticket y completar su prioridad, esfuerzo, categorías y objetivo. Puedes desactivarlo para un ticket o para todos desde los ajustes de tu cuenta."
+          ]
+        }
+      }
+    },
+    {
+      "id": "board-multi-select",
+      "illustration": {
+        "kind": "code",
+        "name": "board"
+      },
+      "copy": {
+        "en": {
+          "title": "Select several cards on the board and move them together",
+          "summary": "Draw a rectangle across the board to select the cards it covers.",
+          "details": [
+            "Draw a rectangle across the board to select the cards it covers. Dragging one of them carries the whole selection to another column, in the order you see them."
+          ]
+        },
+        "fr": {
+          "title": "Sélectionnez plusieurs cartes du board et déplacez-les ensemble",
+          "summary": "Tracez un rectangle sur le board pour sélectionner les cartes qu'il couvre.",
+          "details": [
+            "Tracez un rectangle sur le board pour sélectionner les cartes qu'il couvre. En glisser une emporte toute la sélection vers une autre colonne, dans l'ordre où vous les voyez."
+          ]
+        },
+        "de": {
+          "title": "Wähle mehrere Karten im Board aus und verschiebe sie zusammen",
+          "summary": "Ziehe im Board ein Auswahlrechteck um mehrere Karten.",
+          "details": [
+            "Ziehe im Board ein Auswahlrechteck um mehrere Karten. Wenn du eine davon verschiebst, wandert die gesamte Auswahl in derselben Reihenfolge in die neue Spalte."
+          ]
+        },
+        "pt-BR": {
+          "title": "Selecione vários cartões no quadro e mova-os juntos",
+          "summary": "Desenhe um retângulo no quadro para selecionar os cartões abrangidos.",
+          "details": [
+            "Desenhe um retângulo no quadro para selecionar os cartões abrangidos. Ao arrastar um deles, toda a seleção é levada para outra coluna, mantendo a ordem exibida."
+          ]
+        },
+        "it": {
+          "title": "Seleziona più schede sulla bacheca e spostale insieme",
+          "summary": "Traccia un rettangolo sulla bacheca per selezionare le schede incluse.",
+          "details": [
+            "Traccia un rettangolo sulla bacheca per selezionare le schede incluse. Trascinandone una, l'intera selezione passa a un'altra colonna mantenendo l'ordine visualizzato."
+          ]
+        },
+        "es": {
+          "title": "Selecciona varias tarjetas del tablero y muévelas juntas",
+          "summary": "Dibuja un rectángulo sobre el tablero para seleccionar las tarjetas que abarque.",
+          "details": [
+            "Dibuja un rectángulo sobre el tablero para seleccionar las tarjetas que abarque. Al arrastrar una de ellas, toda la selección se desplaza a otra columna en el orden en que la ves."
+          ]
+        }
+      }
+    },
+    {
+      "id": "issue-sync",
+      "illustration": {
+        "kind": "code",
+        "name": "connections"
+      },
+      "copy": {
+        "en": {
+          "title": "Repository issues and minddy issues stay in step",
+          "summary": "Issues imported from GitHub or GitLab arrive with their labels, their priority and their assignee, and keep following the remote one.",
+          "details": [
+            "Issues imported from GitHub or GitLab arrive with their labels, their priority and their assignee, and keep following the remote one. Closing an issue in minddy now closes it on the repository too."
+          ]
+        },
+        "fr": {
+          "title": "Vos tickets et les issues du dépôt restent alignés",
+          "summary": "Les issues importées depuis GitHub ou GitLab arrivent avec leurs labels, leur priorité et leur assigné, et continuent de suivre l'issue distante.",
+          "details": [
+            "Les issues importées depuis GitHub ou GitLab arrivent avec leurs labels, leur priorité et leur assigné, et continuent de suivre l'issue distante. Fermer un ticket dans minddy la ferme désormais aussi sur le dépôt."
+          ]
+        },
+        "de": {
+          "title": "Repository-Issues und minddy-Probleme bleiben synchron",
+          "summary": "Issues, die aus GitHub oder GitLab importiert wurden, kommen mit ihren Bezeichnungen, ihrer Priorität und ihrem Beauftragten an und folgen weiterhin dem…",
+          "details": [
+            "Issues, die aus GitHub oder GitLab importiert wurden, kommen mit ihren Bezeichnungen, ihrer Priorität und ihrem Beauftragten an und folgen weiterhin dem Remote-Problem. Durch das Schließen eines Problems in minddy wird es jetzt auch im Repository geschlossen."
+          ]
+        },
+        "pt-BR": {
+          "title": "Problemas de repositório e problemas de minddy permanecem na etapa",
+          "summary": "Issues importados de GitHub ou GitLab chegam com seus rótulos, sua prioridade e seu responsável, e continuam seguindo o remoto.",
+          "details": [
+            "Issues importados de GitHub ou GitLab chegam com seus rótulos, sua prioridade e seu responsável, e continuam seguindo o remoto. Fechar um problema em minddy agora também o fecha no repositório."
+          ]
+        },
+        "it": {
+          "title": "I ticket di archivio e i ticket di minddy restano al passo",
+          "summary": "I ticket importati da GitHub o GitLab arrivano con le etichette, la priorità e il assegnato, e continuano a seguire quello remoto.",
+          "details": [
+            "I ticket importati da GitHub o GitLab arrivano con le etichette, la priorità e il assegnato, e continuano a seguire quello remoto. Chiudere un ticket in minddy lo chiude ora anche sul repository."
+          ]
+        },
+        "es": {
+          "title": "Las incidencias del repositorio y de minddy se mantienen sincronizadas",
+          "summary": "Las incidencias importadas de GitHub o GitLab llegan con sus etiquetas, prioridad y persona asignada, y siguen los cambios de la incidencia remota.",
+          "details": [
+            "Las incidencias importadas de GitHub o GitLab llegan con sus etiquetas, prioridad y persona asignada, y siguen los cambios de la incidencia remota. Ahora, al cerrar una incidencia en minddy también se cierra en el repositorio."
+          ]
+        }
+      }
+    },
+    {
+      "id": "invite-by-email",
+      "illustration": {
+        "kind": "code",
+        "name": "board"
+      },
+      "copy": {
+        "en": {
+          "title": "Invite someone who doesn't have an account yet",
+          "summary": "Add them by email address, and they get an invitation to join the project.",
+          "details": [
+            "Add them by email address, and they get an invitation to join the project. They create their account from that email and land straight in the project. Pending invitations expire on their own."
+          ]
+        },
+        "fr": {
+          "title": "Invitez quelqu'un qui n'a pas encore de compte",
+          "summary": "Ajoutez son adresse e-mail : la personne reçoit une invitation à rejoindre le projet.",
+          "details": [
+            "Ajoutez son adresse e-mail : la personne reçoit une invitation à rejoindre le projet. Elle crée son compte depuis cet e-mail et arrive directement dans le projet. Les invitations en attente expirent d'elles-mêmes."
+          ]
+        },
+        "de": {
+          "title": "Jemanden einladen, der noch kein Konto hat",
+          "summary": "Füge sie per E-Mail-Adresse hinzu und sie erhalten eine Einladung, dem Projekt beizutreten.",
+          "details": [
+            "Füge sie per E-Mail-Adresse hinzu und sie erhalten eine Einladung, dem Projekt beizutreten. Sie erstellen ihr Konto aus dieser E-Mail und landen direkt im Projekt. Ausstehende Einladungen verfallen von selbst."
+          ]
+        },
+        "pt-BR": {
+          "title": "Convide alguém que ainda não tem uma conta",
+          "summary": "Adicione-os por endereço de e-mail e eles receberão um convite para participar do projeto.",
+          "details": [
+            "Adicione-os por endereço de e-mail e eles receberão um convite para participar do projeto. Eles criam sua conta a partir desse e-mail e vão direto para o projeto. Os convites pendentes expiram por conta própria."
+          ]
+        },
+        "it": {
+          "title": "Invita qualcuno che non ha ancora un account",
+          "summary": "Aggiungili tramite email e riceveranno un invito a partecipare al progetto.",
+          "details": [
+            "Aggiungili tramite email e riceveranno un invito a partecipare al progetto. Creando l'account con quell'indirizzo accederanno direttamente al progetto. Gli inviti in sospeso scadono automaticamente."
+          ]
+        },
+        "es": {
+          "title": "Invita a quien todavía no tenga una cuenta",
+          "summary": "Añade su dirección de correo electrónico y recibirá una invitación para unirse al proyecto.",
+          "details": [
+            "Añade su dirección de correo electrónico y recibirá una invitación para unirse al proyecto. Creará su cuenta con esa dirección y accederá directamente al proyecto. Las invitaciones pendientes caducan automáticamente."
+          ]
+        }
+      }
+    },
+    {
+      "id": "routines",
+      "illustration": {
+        "kind": "code",
+        "name": "assistant"
+      },
+      "copy": {
+        "en": {
+          "title": "Schedule recurring work for your coding agent",
+          "summary": "Give the coding agent instructions for a repository and choose a schedule, such as a security review every Monday.",
+          "details": [
+            "Give the coding agent instructions for a repository and choose a schedule, such as a security review every Monday. Each routine runs automatically, proposes fixes in a pull request and reports its findings. Review past runs in the Routines tab."
+          ]
+        },
+        "fr": {
+          "title": "Planifiez les tâches récurrentes de votre agent de code",
+          "summary": "Donnez une consigne à l’agent de code pour un dépôt et choisissez une fréquence, par exemple une revue de sécurité chaque lundi.",
+          "details": [
+            "Donnez une consigne à l’agent de code pour un dépôt et choisissez une fréquence, par exemple une revue de sécurité chaque lundi. La routine s’exécute automatiquement, propose ses corrections dans une pull request et rapporte ses observations. Retrouvez les exécutions passées dans l’onglet Routines."
+          ]
+        },
+        "de": {
+          "title": "Wiederkehrende Arbeit für den Programmierassistenten planen",
+          "summary": "Gib dem Programmierassistenten Anweisungen für ein Repository und lege einen Zeitplan fest, etwa eine Sicherheitsprüfung jeden Montag.",
+          "details": [
+            "Gib dem Programmierassistenten Anweisungen für ein Repository und lege einen Zeitplan fest, etwa eine Sicherheitsprüfung jeden Montag. Die Routine läuft automatisch, schlägt Korrekturen in einem Pull Request vor und meldet Ergebnisse. Frühere Ausführungen findest du im Tab Routinen."
+          ]
+        },
+        "pt-BR": {
+          "title": "Agende tarefas recorrentes para seu agente de código",
+          "summary": "Dê instruções ao agente de código para um repositório e escolha uma frequência, como uma revisão de segurança toda segunda-feira.",
+          "details": [
+            "Dê instruções ao agente de código para um repositório e escolha uma frequência, como uma revisão de segurança toda segunda-feira. A rotina roda automaticamente, propõe correções em uma pull request e apresenta os resultados. Consulte as execuções anteriores na aba Rotinas."
+          ]
+        },
+        "it": {
+          "title": "Pianifica attività ricorrenti per l’agente di codice",
+          "summary": "Dai istruzioni all’agente di codice per un repository e scegli una frequenza, ad esempio una revisione di sicurezza ogni lunedì.",
+          "details": [
+            "Dai istruzioni all’agente di codice per un repository e scegli una frequenza, ad esempio una revisione di sicurezza ogni lunedì. La routine viene eseguita automaticamente, propone correzioni in una pull request e riporta i risultati. Consulta le esecuzioni precedenti nella scheda Routine."
+          ]
+        },
+        "es": {
+          "title": "Programa tareas recurrentes para tu agente de código",
+          "summary": "Da instrucciones al agente de código para un repositorio y elige una frecuencia, como una revisión de seguridad cada lunes.",
+          "details": [
+            "Da instrucciones al agente de código para un repositorio y elige una frecuencia, como una revisión de seguridad cada lunes. La rutina se ejecuta automáticamente, propone correcciones en una pull request y presenta sus resultados. Consulta las ejecuciones anteriores en la pestaña Rutinas."
+          ]
+        }
+      }
+    },
+    {
+      "id": "push-notifications",
+      "illustration": {
+        "kind": "code",
+        "name": "board"
+      },
+      "copy": {
+        "en": {
+          "title": "Get a notification when something lands in your inbox",
+          "summary": "Notifications turn on device by device, from the device itself.",
+          "details": [
+            "Notifications turn on device by device, from the device itself. Each one is listed in your account settings, with when it was added and its last notification, and can be switched off or removed. On iPhone, add minddy to your home screen first."
+          ]
+        },
+        "fr": {
+          "title": "Être prévenu quand quelque chose arrive dans votre inbox",
+          "summary": "Les notifications s'activent appareil par appareil, depuis l'appareil lui-même.",
+          "details": [
+            "Les notifications s'activent appareil par appareil, depuis l'appareil lui-même. Chacun est listé dans vos réglages de compte, avec sa date d'ajout et sa dernière notification, et peut être coupé ou retiré. Sur iPhone, ajoutez d'abord minddy à votre écran d'accueil."
+          ]
+        },
+        "de": {
+          "title": "Erhalte eine Benachrichtigung, wenn etwas in deinem Posteingang landet",
+          "summary": "Benachrichtigungen werden von Gerät zu Gerät aktiviert, vom Gerät selbst aus.",
+          "details": [
+            "Benachrichtigungen werden von Gerät zu Gerät aktiviert, vom Gerät selbst aus. Jedes wird in deinen Kontoeinstellungen aufgeführt, mit dem Zeitpunkt des Hinzufügens und der letzten Benachrichtigung und kann deaktiviert oder entfernt werden. Füge auf dem iPhone zuerst minddy zu deinem Startbildschirm hinzu."
+          ]
+        },
+        "pt-BR": {
+          "title": "Receba uma notificação quando algo chegar à sua caixa de entrada",
+          "summary": "As notificações são ativadas dispositivo por dispositivo, no próprio dispositivo.",
+          "details": [
+            "As notificações são ativadas dispositivo por dispositivo, no próprio dispositivo. Cada um deles está listado nas configurações da sua conta, com quando foi adicionado e sua última notificação, e pode ser desativado ou removido. No iPhone, adicione minddy à sua tela inicial primeiro."
+          ]
+        },
+        "it": {
+          "title": "Ricevi una notifica quando qualcosa atterra nella tua casella di posta",
+          "summary": "Le notifiche accendono dispositivo per dispositivo, dal dispositivo stesso.",
+          "details": [
+            "Le notifiche accendono dispositivo per dispositivo, dal dispositivo stesso. Ciascuna è elencata nelle impostazioni dell'account, con quando è stata aggiunta e la sua ultima notifica, e può essere spenta o rimossa. Su iPhone, aggiungere minddy prima alla schermata iniziale."
+          ]
+        },
+        "es": {
+          "title": "Recibe una notificación cuando llegue algo a tu bandeja de entrada",
+          "summary": "Las notificaciones se activan por separado desde cada dispositivo.",
+          "details": [
+            "Las notificaciones se activan por separado desde cada dispositivo. Todos aparecen en la configuración de tu cuenta con su fecha de alta y su última notificación, y puedes desactivarlos o eliminarlos. En iPhone, añade primero minddy a la pantalla de inicio."
+          ]
+        }
+      }
+    },
+    {
+      "id": "project-start",
+      "illustration": {
+        "kind": "code",
+        "name": "board"
+      },
+      "copy": {
+        "en": {
+          "title": "Start a project from a brief, and get your first issues",
+          "summary": "Creating a project now asks where you are starting from.",
+          "details": [
+            "Creating a project now asks where you are starting from. Coming from another tool, you drop your CSV export. Starting from nothing, you describe the project in a few lines: Numo asks what is missing, then proposes the issues and objectives, which you review before they exist."
+          ]
+        },
+        "fr": {
+          "title": "Démarrer un projet à partir d'un brief, tickets compris",
+          "summary": "La création d'un projet demande maintenant d'où vous partez.",
+          "details": [
+            "La création d'un projet demande maintenant d'où vous partez. Vous venez d'un autre outil : vous déposez votre export CSV. Vous partez de rien : vous décrivez le projet en quelques lignes, Numo demande ce qui manque, puis propose les tickets et objectifs, que vous relisez avant leur création."
+          ]
+        },
+        "de": {
+          "title": "Beschreibe ein Projekt und erhalte die ersten Tickets",
+          "summary": "Beim Erstellen eines Projekts wählst du jetzt deinen Ausgangspunkt.",
+          "details": [
+            "Beim Erstellen eines Projekts wählst du jetzt deinen Ausgangspunkt. Du kannst einen CSV-Export aus einem anderen Tool importieren oder ein neues Projekt in wenigen Sätzen beschreiben. Numo fragt nach fehlenden Angaben und schlägt Tickets und Ziele vor, die du vor der Erstellung prüfst."
+          ]
+        },
+        "pt-BR": {
+          "title": "Inicie um projeto a partir de um briefing e obtenha seus primeiros problemas",
+          "summary": "Ao criar um projeto, o minddy agora pergunta de onde você está começando.",
+          "details": [
+            "Ao criar um projeto, o minddy agora pergunta de onde você está começando. Se vier de outra ferramenta, envie a exportação CSV. Se começar do zero, descreva o projeto em poucas linhas: Numo pergunta o que está faltando e propõe problemas e objetivos para você revisar antes que sejam criados."
+          ]
+        },
+        "it": {
+          "title": "Avvia un progetto da un breve, e ottenere i tuoi primi ticket",
+          "summary": "Creazione di un progetto ora chiede da dove si sta partendo.",
+          "details": [
+            "Creazione di un progetto ora chiede da dove si sta partendo. Venendo da un altro strumento, si lascia cadere l'esportazione di CSV. A partire da niente, si descrive il progetto in poche linee: Numo chiede cosa manca, poi propone i ticket e gli obiettivi, che si rivedere prima che esistano."
+          ]
+        },
+        "es": {
+          "title": "Empieza un proyecto a partir de un brief y obtén tus primeras incidencias",
+          "summary": "Al crear un proyecto, ahora se te pregunta desde dónde empiezas.",
+          "details": [
+            "Al crear un proyecto, ahora se te pregunta desde dónde empiezas. Si vienes de otra herramienta, puedes soltar su exportación CSV. Si partes de cero, describe el proyecto en unas líneas: Numo preguntará qué falta y propondrá incidencias y objetivos para que los revises antes de crearlos."
+          ]
+        }
+      }
+    },
+    {
+      "id": "smart-assign",
+      "illustration": {
+        "kind": "code",
+        "name": "assistant"
+      },
+      "copy": {
+        "en": {
+          "title": "Issues find their assignee on their own",
+          "summary": "Describe in plain words the kind of work each member takes on, and any issue leaving triage without an assignee gets one.",
+          "details": [
+            "Describe in plain words the kind of work each member takes on, and any issue leaving triage without an assignee gets one. It switches on in the project settings. Alone on a project, the issues simply come to you."
+          ]
+        },
+        "fr": {
+          "title": "Les tickets trouvent leur assigné tout seuls",
+          "summary": "Décrivez en clair le type de tâches qui revient à chaque membre, et tout ticket qui sort du triage sans assigné en reçoit un.",
+          "details": [
+            "Décrivez en clair le type de tâches qui revient à chaque membre, et tout ticket qui sort du triage sans assigné en reçoit un. Cela s'active dans les paramètres du projet. Seul sur un projet, les tickets vous reviennent."
+          ]
+        },
+        "de": {
+          "title": "Probleme finden ihren Beauftragten von selbst",
+          "summary": "Beschreibe, welche Aufgaben die einzelnen Mitglieder übernehmen.",
+          "details": [
+            "Beschreibe, welche Aufgaben die einzelnen Mitglieder übernehmen. Verlässt ein Ticket die Eingangsprüfung ohne zugewiesene Person, wird automatisch eine passende Person ausgewählt. Aktiviere die Funktion in den Projekteinstellungen. Arbeitest du allein im Projekt, werden die Tickets dir zugewiesen."
+          ]
+        },
+        "pt-BR": {
+          "title": "Os problemas encontram seu responsável por conta própria",
+          "summary": "Descreva em palavras simples o tipo de trabalho que cada membro assume, e todo problema que sair da triagem sem responsável receberá um automaticamente.",
+          "details": [
+            "Descreva em palavras simples o tipo de trabalho que cada membro assume, e todo problema que sair da triagem sem responsável receberá um automaticamente. O recurso é ativado nas configurações do projeto. Se você estiver sozinho no projeto, os problemas serão atribuídos diretamente a você."
+          ]
+        },
+        "it": {
+          "title": "I ticket trovano automaticamente il proprio assegnatario",
+          "summary": "Descrivete con parole semplici il tipo di lavoro che ogni membro prende, e qualsiasi ticket che lascia triage senza un assegnato ne ottiene uno.",
+          "details": [
+            "Descrivete con parole semplici il tipo di lavoro che ogni membro prende, e qualsiasi ticket che lascia triage senza un assegnato ne ottiene uno. Si accende nelle impostazioni del progetto. Da solo su un progetto, i ticket vengono semplicemente a voi."
+          ]
+        },
+        "es": {
+          "title": "Las incidencias encuentran automáticamente a quién asignarse",
+          "summary": "Describe con palabras sencillas el tipo de trabajo que asume cada miembro y toda incidencia que salga de Clasificación sin persona asignada recibirá una.",
+          "details": [
+            "Describe con palabras sencillas el tipo de trabajo que asume cada miembro y toda incidencia que salga de Clasificación sin persona asignada recibirá una. Se activa desde la configuración del proyecto. Si estás solo en el proyecto, las incidencias se te asignan directamente."
+          ]
+        }
+      }
+    },
+    {
+      "id": "feedback-comments",
+      "illustration": {
+        "kind": "code",
+        "name": "board"
+      },
+      "copy": {
+        "en": {
+          "title": "Your feedback board now takes comments",
+          "summary": "Visitors can now comment on a suggestion and reply to other comments on your public feedback page.",
+          "details": [
+            "Visitors can now comment on a suggestion and reply to other comments on your public feedback page. They verify their email before their first comment; only an avatar is shown beside it. You can disable comments at any time."
+          ]
+        },
+        "fr": {
+          "title": "Le board de feedback accepte les commentaires",
+          "summary": "Les visiteurs peuvent maintenant commenter une suggestion et répondre aux autres commentaires sur votre page publique de retours.",
+          "details": [
+            "Les visiteurs peuvent maintenant commenter une suggestion et répondre aux autres commentaires sur votre page publique de retours. Ils vérifient leur email avant le premier commentaire ; seul un avatar apparaît à côté. Vous pouvez désactiver les commentaires à tout moment."
+          ]
+        },
+        "de": {
+          "title": "Dein Feedback-Board nimmt jetzt Kommentare entgegen",
+          "summary": "Besucher können jetzt Vorschläge auf deiner öffentlichen Feedback-Seite kommentieren und auf Kommentare antworten.",
+          "details": [
+            "Besucher können jetzt Vorschläge auf deiner öffentlichen Feedback-Seite kommentieren und auf Kommentare antworten. Vor dem ersten Kommentar bestätigen sie ihre E-Mail-Adresse; neben dem Beitrag erscheint nur ein Avatar. Du kannst Kommentare jederzeit deaktivieren."
+          ]
+        },
+        "pt-BR": {
+          "title": "Seu quadro de feedback agora aceita comentários",
+          "summary": "Os visitantes podem comentar uma sugestão e responder a outros comentários na sua página pública de feedback.",
+          "details": [
+            "Os visitantes podem comentar uma sugestão e responder a outros comentários na sua página pública de feedback. Eles verificam o email antes do primeiro comentário; apenas um avatar aparece ao lado. Você pode desativar os comentários a qualquer momento."
+          ]
+        },
+        "it": {
+          "title": "Il tuo feedback ora prende commenti",
+          "summary": "I visitatori possono commentare un suggerimento e rispondere ad altri commenti nella pagina pubblica dei feedback.",
+          "details": [
+            "I visitatori possono commentare un suggerimento e rispondere ad altri commenti nella pagina pubblica dei feedback. Verificano l’email prima del primo commento; accanto compare solo un avatar. Puoi disattivare i commenti in qualsiasi momento."
+          ]
+        },
+        "es": {
+          "title": "Tu tablero de sugerencias ahora admite comentarios",
+          "summary": "Los visitantes pueden comentar una sugerencia y responder a otros comentarios en tu página pública.",
+          "details": [
+            "Los visitantes pueden comentar una sugerencia y responder a otros comentarios en tu página pública. Verifican su correo antes del primer comentario y solo se muestra un avatar junto a él. Puedes desactivar los comentarios cuando quieras."
+          ]
+        }
+      }
+    },
+    {
+      "id": "resources",
+      "illustration": {
+        "kind": "code",
+        "name": "pages"
+      },
+      "copy": {
+        "en": {
+          "title": "Attach a link to an issue, not just a file",
+          "summary": "Issues and objectives now hold resources: files as before, and web addresses.",
+          "details": [
+            "Issues and objectives now hold resources: files as before, and web addresses. Drop a file straight onto an issue to attach it. Everything sits in one place, ready to open or download."
+          ]
+        },
+        "fr": {
+          "title": "Joindre un lien à un ticket, pas seulement un fichier",
+          "summary": "Les tickets et les objectifs portent désormais des ressources : des fichiers comme avant, et des adresses web.",
+          "details": [
+            "Les tickets et les objectifs portent désormais des ressources : des fichiers comme avant, et des adresses web. Déposez un fichier directement sur un ticket pour le joindre. Le tout se retrouve au même endroit, à ouvrir ou à télécharger."
+          ]
+        },
+        "de": {
+          "title": "Füge einen Link zu einem Ticket hinzu, nicht nur zu einer Datei",
+          "summary": "Tickets und Ziele enthalten jetzt Ressourcen: Dateien wie zuvor und Webadressen.",
+          "details": [
+            "Tickets und Ziele enthalten jetzt Ressourcen: Dateien wie zuvor und Webadressen. Lege eine Datei direkt auf einem Ticket ab, um sie anzuhängen. Alles befindet sich an einem Ort und kann geöffnet oder heruntergeladen werden."
+          ]
+        },
+        "pt-BR": {
+          "title": "Anexar um link para um problema, não apenas um arquivo",
+          "summary": "Problemas e objetivos agora contêm recursos: arquivos como antes e endereços da web.",
+          "details": [
+            "Problemas e objetivos agora contêm recursos: arquivos como antes e endereços da web. Solte um arquivo diretamente em um problema para anexá-lo. Tudo fica em um só lugar, pronto para abrir ou fazer download."
+          ]
+        },
+        "it": {
+          "title": "Allegare un link a un ticket, non solo un file",
+          "summary": "Ticket e obiettivi ora tengono le risorse: file come prima, e indirizzi web.",
+          "details": [
+            "Ticket e obiettivi ora tengono le risorse: file come prima, e indirizzi web. Spostare un file direttamente su un ticket per allegare. Tutto si trova in un unico luogo, pronto per aprire o scaricare."
+          ]
+        },
+        "es": {
+          "title": "Adjunta un enlace a una incidencia, no solo un archivo",
+          "summary": "Ahora las incidencias y los objetivos admiten recursos: archivos, como antes, y direcciones web.",
+          "details": [
+            "Ahora las incidencias y los objetivos admiten recursos: archivos, como antes, y direcciones web. Suelta un archivo directamente sobre una incidencia para adjuntarlo. Todo queda en un mismo lugar, listo para abrir o descargar."
+          ]
+        }
+      }
+    },
+    {
+      "id": "feedback-setup",
+      "illustration": {
+        "kind": "code",
+        "name": "board"
+      },
+      "copy": {
+        "en": {
+          "title": "Add a feedback button to your app with guided setup",
+          "summary": "Choose how to collect suggestions, whether users are already signed in and where the button should appear in your app.",
+          "details": [
+            "Choose how to collect suggestions, whether users are already signed in and where the button should appear in your app. The guide prepares instructions for your coding assistant. You can also give them to Numo to implement the change and open a pull request."
+          ]
+        },
+        "fr": {
+          "title": "Ajoutez un bouton de retour à votre app avec le guide",
+          "summary": "Choisissez comment recueillir les suggestions, si les utilisateurs sont déjà connectés et où afficher le bouton dans votre app.",
+          "details": [
+            "Choisissez comment recueillir les suggestions, si les utilisateurs sont déjà connectés et où afficher le bouton dans votre app. Le guide prépare les instructions pour votre assistant de code. Vous pouvez aussi les confier à Numo pour réaliser la modification et ouvrir une pull request."
+          ]
+        },
+        "de": {
+          "title": "Feedback-Schaltfläche mit Anleitung in deine App einbauen",
+          "summary": "Wähle, wie du Vorschläge sammeln möchtest, ob Benutzer bereits angemeldet sind und wo die Schaltfläche erscheinen soll.",
+          "details": [
+            "Wähle, wie du Vorschläge sammeln möchtest, ob Benutzer bereits angemeldet sind und wo die Schaltfläche erscheinen soll. Die Anleitung erstellt Anweisungen für deinen Programmierassistenten. Du kannst sie auch Numo geben, um die Änderung umzusetzen und einen Pull Request zu öffnen."
+          ]
+        },
+        "pt-BR": {
+          "title": "Adicione um botão de feedback ao seu app com o guia",
+          "summary": "Escolha como coletar sugestões, se os usuários já estão conectados e onde o botão aparecerá.",
+          "details": [
+            "Escolha como coletar sugestões, se os usuários já estão conectados e onde o botão aparecerá. O guia prepara instruções para seu assistente de programação. Você também pode entregá-las ao Numo para implementar a mudança e abrir uma pull request."
+          ]
+        },
+        "it": {
+          "title": "Aggiungi un pulsante per i feedback con la guida",
+          "summary": "Scegli come raccogliere suggerimenti, se gli utenti hanno già effettuato l’accesso e dove mostrare il pulsante.",
+          "details": [
+            "Scegli come raccogliere suggerimenti, se gli utenti hanno già effettuato l’accesso e dove mostrare il pulsante. La guida prepara istruzioni per il tuo assistente di programmazione. Puoi anche affidarle a Numo per implementare la modifica e aprire una pull request."
+          ]
+        },
+        "es": {
+          "title": "Añade un botón de comentarios a tu app con la guía",
+          "summary": "Elige cómo recoger sugerencias, si los usuarios ya han iniciado sesión y dónde aparecerá el botón.",
+          "details": [
+            "Elige cómo recoger sugerencias, si los usuarios ya han iniciado sesión y dónde aparecerá el botón. La guía prepara instrucciones para tu asistente de programación. También puedes dárselas a Numo para que implemente el cambio y abra una pull request."
+          ]
+        }
+      }
+    },
+    {
+      "id": "feedback-translation",
+      "illustration": {
+        "kind": "code",
+        "name": "board"
+      },
+      "copy": {
+        "en": {
+          "title": "Feedback written in another language arrives translated",
+          "summary": "Numo, which already reads every submission before it goes live, now translates the ones written in a language other than yours.",
+          "details": [
+            "Numo, which already reads every submission before it goes live, now translates the ones written in a language other than yours. The original stays one click away. It works on feedback from the board and from your own app alike."
+          ]
+        },
+        "fr": {
+          "title": "Le feedback écrit dans une autre langue arrive traduit",
+          "summary": "Numo, qui lit déjà chaque envoi avant publication, traduit désormais ceux écrits dans une autre langue que la vôtre.",
+          "details": [
+            "Numo, qui lit déjà chaque envoi avant publication, traduit désormais ceux écrits dans une autre langue que la vôtre. L'original reste à un clic. Cela vaut pour le feedback du board comme pour celui de votre propre app."
+          ]
+        },
+        "de": {
+          "title": "In einer anderen Sprache verfasstes Feedback kommt übersetzt an",
+          "summary": "Numo prüft Einreichungen vor der Veröffentlichung und übersetzt jetzt auch Feedback, das in einer anderen Sprache als deiner verfasst ist.",
+          "details": [
+            "Numo prüft Einreichungen vor der Veröffentlichung und übersetzt jetzt auch Feedback, das in einer anderen Sprache als deiner verfasst ist. Das Original bleibt mit einem Klick erreichbar. Das gilt für Feedback aus dem öffentlichen Board und aus deiner eigenen App."
+          ]
+        },
+        "pt-BR": {
+          "title": "O feedback escrito em outro idioma chega traduzido",
+          "summary": "Numo, que já lê todos os envios antes da publicação, agora traduz os que estão em um idioma diferente do seu.",
+          "details": [
+            "Numo, que já lê todos os envios antes da publicação, agora traduz os que estão em um idioma diferente do seu. O original continua a um clique de distância. O recurso funciona tanto com feedbacks do quadro quanto do seu próprio aplicativo."
+          ]
+        },
+        "it": {
+          "title": "Feedback scritto in un'altra lingua arriva tradotto",
+          "summary": "Numo, che legge già ogni richiesta prima della pubblicazione, ora traduce quelle scritte in una lingua diversa dalla tua.",
+          "details": [
+            "Numo, che legge già ogni richiesta prima della pubblicazione, ora traduce quelle scritte in una lingua diversa dalla tua. L'originale resta a portata di clic. Funziona sia per i feedback della bacheca sia per quelli della tua app."
+          ]
+        },
+        "es": {
+          "title": "Las sugerencias escritas en otro idioma llegan traducidas",
+          "summary": "Numo, que ya lee todos los envíos antes de publicarlos, ahora traduce los que están escritos en un idioma distinto al tuyo.",
+          "details": [
+            "Numo, que ya lee todos los envíos antes de publicarlos, ahora traduce los que están escritos en un idioma distinto al tuyo. El original sigue disponible con un clic. Funciona igual con las sugerencias del tablero y las de tu propia aplicación."
+          ]
+        }
+      }
+    },
+    {
+      "id": "export-issues",
+      "illustration": {
+        "kind": "code",
+        "name": "board"
+      },
+      "copy": {
+        "en": {
+          "title": "Export your issues as a CSV file",
+          "summary": "Pick the projects and the statuses to include, and get a file.",
+          "details": [
+            "Pick the projects and the statuses to include, and get a file. It follows minddy's own import format, so it can be dropped straight back into another project."
+          ]
+        },
+        "fr": {
+          "title": "Exporter ses tickets dans un fichier CSV",
+          "summary": "Choisissez les projets et les statuts à inclure, et récupérez un fichier.",
+          "details": [
+            "Choisissez les projets et les statuts à inclure, et récupérez un fichier. Il suit le format d'import de minddy : il peut être redéposé tel quel dans un autre projet."
+          ]
+        },
+        "de": {
+          "title": "Exportiere deine Tickets als CSV-Datei",
+          "summary": "Wähle die Projekte und Status aus, die du exportieren möchtest.",
+          "details": [
+            "Wähle die Projekte und Status aus, die du exportieren möchtest. Du erhältst eine CSV-Datei im Importformat von minddy, die du in ein anderes Projekt importieren kannst."
+          ]
+        },
+        "pt-BR": {
+          "title": "Exporte seus problemas como um arquivo CSV",
+          "summary": "Escolha os projetos e os status a serem incluídos e obtenha um arquivo.",
+          "details": [
+            "Escolha os projetos e os status a serem incluídos e obtenha um arquivo. Ele segue o próprio formato de importação de minddy, para que possa ser colocado de volta em outro projeto."
+          ]
+        },
+        "it": {
+          "title": "Esporta i tuoi ticket come file CSV",
+          "summary": "Scegliere i progetti e gli stati da includere e ottenere un file.",
+          "details": [
+            "Scegliere i progetti e gli stati da includere e ottenere un file. Si segue il formato di importazione di minddy, in modo che possa essere scaricato direttamente in un altro progetto."
+          ]
+        },
+        "es": {
+          "title": "Exporta tus incidencias a un archivo CSV",
+          "summary": "Elige los proyectos y estados que quieras incluir y obtendrás un archivo.",
+          "details": [
+            "Elige los proyectos y estados que quieras incluir y obtendrás un archivo. Sigue el formato de importación de minddy, así que puedes importarlo directamente en otro proyecto."
+          ]
+        }
+      }
+    },
+    {
+      "id": "pull-requests",
+      "illustration": {
+        "kind": "code",
+        "name": "board"
+      },
+      "copy": {
+        "en": {
+          "title": "Review and merge your pull requests without leaving minddy",
+          "summary": "Every pull request on a linked repository now opens inside minddy: the changes line by line, the commits, the checks and the whole conversation.",
+          "details": [
+            "Every pull request on a linked repository now opens inside minddy: the changes line by line, the commits, the checks and the whole conversation. You comment, approve, resolve a thread or merge, under your own GitHub or GitLab account."
+          ]
+        },
+        "fr": {
+          "title": "Relisez et fusionnez vos pull requests sans quitter minddy",
+          "summary": "Chaque pull request d'un dépôt lié s'ouvre désormais dans minddy : les modifications ligne à ligne, les commits, les checks et toute la discussion.",
+          "details": [
+            "Chaque pull request d'un dépôt lié s'ouvre désormais dans minddy : les modifications ligne à ligne, les commits, les checks et toute la discussion. Vous commentez, approuvez, résolvez un fil ou fusionnez, sous votre propre compte GitHub ou GitLab."
+          ]
+        },
+        "de": {
+          "title": "Prüfe und merge Pull Requests direkt in minddy",
+          "summary": "Pull Requests aus einem verknüpften Repository lassen sich jetzt in minddy öffnen: mit Änderungen pro Zeile, Commits, Prüfungen und Diskussion.",
+          "details": [
+            "Pull Requests aus einem verknüpften Repository lassen sich jetzt in minddy öffnen: mit Änderungen pro Zeile, Commits, Prüfungen und Diskussion. Du kannst kommentieren, zustimmen, Diskussionen auflösen oder den Pull Request mit deinem GitHub- oder GitLab-Konto mergen."
+          ]
+        },
+        "pt-BR": {
+          "title": "Revise e mescle seus pull requests sem sair de minddy",
+          "summary": "Cado pull request em um repositório vinculado agora abre dentro de minddy: as alterações linha por linha, os commits, as verificações e toda a conversa.",
+          "details": [
+            "Cado pull request em um repositório vinculado agora abre dentro de minddy: as alterações linha por linha, os commits, as verificações e toda a conversa. Você comenta, aprova, resolve um tópico ou mescla, em sua própria conta GitHub ou GitLab."
+          ]
+        },
+        "it": {
+          "title": "Esamina e unisci le pull request senza lasciare minddy",
+          "summary": "Ora ogni pull request di un repository collegato si apre direttamente in minddy, con modifiche riga per riga, commit, controlli e l'intera conversazione.",
+          "details": [
+            "Ora ogni pull request di un repository collegato si apre direttamente in minddy, con modifiche riga per riga, commit, controlli e l'intera conversazione. Puoi commentare, approvare, risolvere una conversazione o unire usando il tuo account GitHub o GitLab."
+          ]
+        },
+        "es": {
+          "title": "Revisa y fusiona tus pull requests sin salir de minddy",
+          "summary": "Ahora puedes abrir dentro de minddy todas las pull requests de un repositorio vinculado: los cambios línea por línea, los commits, las comprobaciones y toda…",
+          "details": [
+            "Ahora puedes abrir dentro de minddy todas las pull requests de un repositorio vinculado: los cambios línea por línea, los commits, las comprobaciones y toda la conversación. Comenta, aprueba, resuelve un hilo o fusiona desde tu propia cuenta de GitHub o GitLab."
+          ]
+        }
+      }
+    },
+    {
+      "id": "pr-review",
+      "illustration": {
+        "kind": "code",
+        "name": "board"
+      },
+      "copy": {
+        "en": {
+          "title": "Ask Numo to review a pull request",
+          "summary": "Numo reads the changes, the issue and the discussion, then posts a summary and its comments on the lines concerned.",
+          "details": [
+            "Numo reads the changes, the issue and the discussion, then posts a summary and its comments on the lines concerned. You reply to them like any other review. And when you are the one requesting changes, Numo can go back and make them."
+          ]
+        },
+        "fr": {
+          "title": "Demandez à Numo de relire une pull request",
+          "summary": "Numo lit les modifications, le ticket et la discussion, puis publie une synthèse et ses commentaires sur les lignes concernées.",
+          "details": [
+            "Numo lit les modifications, le ticket et la discussion, puis publie une synthèse et ses commentaires sur les lignes concernées. Vous lui répondez comme à n'importe quelle relecture. Et quand c'est vous qui demandez des changements, Numo peut repartir les faire."
+          ]
+        },
+        "de": {
+          "title": "Bitte Numo, einen Pull-Request zu überprüfen",
+          "summary": "Numo liest Änderungen, Ticket und Diskussion und veröffentlicht eine Zusammenfassung sowie Kommentare an den betroffenen Zeilen.",
+          "details": [
+            "Numo liest Änderungen, Ticket und Diskussion und veröffentlicht eine Zusammenfassung sowie Kommentare an den betroffenen Zeilen. Du kannst darauf antworten wie bei anderen Code-Reviews. Wenn du Änderungen anforderst, kann Numo sie anschließend umsetzen."
+          ]
+        },
+        "pt-BR": {
+          "title": "Peça a Numo para revisar um pull request.",
+          "summary": "Numo lê as alterações, o problema e a discussão e, em seguida, publica um resumo e seus comentários nas linhas em questão.",
+          "details": [
+            "Numo lê as alterações, o problema e a discussão e, em seguida, publica um resumo e seus comentários nas linhas em questão. Você responde a eles como qualquer outro comentário. E quando for você quem estiver solicitando alterações, Numo poderá voltar atrás e realizá-las."
+          ]
+        },
+        "it": {
+          "title": "Chiedi a Numo di esaminare una pull request",
+          "summary": "Numo legge le modifiche, il ticket e la discussione, poi pubblica un sommario e i suoi commenti sulle righe interessate.",
+          "details": [
+            "Numo legge le modifiche, il ticket e la discussione, poi pubblica un sommario e i suoi commenti sulle righe interessate. Rispondi a loro come qualsiasi altra recensione. E quando sei quello che richiede modifiche, Numo può tornare indietro e farlo."
+          ]
+        },
+        "es": {
+          "title": "Pide a Numo que revise una pull request",
+          "summary": "Numo lee los cambios, la incidencia y la conversación, y después publica un resumen y comentarios en las líneas afectadas.",
+          "details": [
+            "Numo lee los cambios, la incidencia y la conversación, y después publica un resumen y comentarios en las líneas afectadas. Puedes responderle como en cualquier otra revisión. Si eres tú quien solicita cambios, Numo puede volver para realizarlos."
+          ]
+        }
+      }
+    },
+    {
+      "id": "automations",
+      "illustration": {
+        "kind": "code",
+        "name": "assistant"
+      },
+      "copy": {
+        "en": {
+          "title": "Let the agent chain plan, code and checks on its own",
+          "summary": "Pick an automation preset, the projects and the efforts it runs on, and an issue reaching To do starts the loop by itself: the plan, the implementation,…",
+          "details": [
+            "Pick an automation preset, the projects and the efforts it runs on, and an issue reaching To do starts the loop by itself: the plan, the implementation, then a check of the work. On the biggest ones, it waits for your go-ahead before writing any code."
+          ]
+        },
+        "fr": {
+          "title": "Laissez l'agent enchaîner plan, code et vérification",
+          "summary": "Choisissez un préréglage d'automatisation, les projets et les efforts concernés, et un ticket qui passe en À faire lance la boucle tout seul : le plan,…",
+          "details": [
+            "Choisissez un préréglage d'automatisation, les projets et les efforts concernés, et un ticket qui passe en À faire lance la boucle tout seul : le plan, l'implémentation, puis la vérification du travail. Sur les plus gros, il attend votre feu vert avant d'écrire la moindre ligne."
+          ]
+        },
+        "de": {
+          "title": "Lass den Agenten planen, programmieren und prüfen",
+          "summary": "Wähle eine Automatisierungsvorlage sowie die betroffenen Projekte und Aufwandsstufen.",
+          "details": [
+            "Wähle eine Automatisierungsvorlage sowie die betroffenen Projekte und Aufwandsstufen. Wechselt ein passendes Ticket zu „Zu erledigen“, startet der Agent mit Planung, Umsetzung und Prüfung. Bei umfangreichen Aufgaben wartet er vor der Umsetzung auf deine Zustimmung."
+          ]
+        },
+        "pt-BR": {
+          "title": "Deixe a cadeia de agentes planejar, codificar e verificar por conta própria",
+          "summary": "Escolha uma predefinição de automação, os projetos e os esforços em que ela é executada, e um problema que atinge o Afazer inicia o ciclo por si só: o…",
+          "details": [
+            "Escolha uma predefinição de automação, os projetos e os esforços em que ela é executada, e um problema que atinge o Afazer inicia o ciclo por si só: o plano, a implementação e, em seguida, uma verificação do trabalho. Nos maiores, ele aguarda sua aprovação antes de escrever qualquer código."
+          ]
+        },
+        "it": {
+          "title": "Lascia che l'agente pianifici, codifica e controlli da solo",
+          "summary": "Scegliere un preset di automazione, i progetti e gli sforzi che esegue, e un ticket che raggiunge Per fare inizia il loop da solo: il piano,…",
+          "details": [
+            "Scegliere un preset di automazione, i progetti e gli sforzi che esegue, e un ticket che raggiunge Per fare inizia il loop da solo: il piano, l'implementazione, poi un controllo del lavoro. Su quelli più grandi, attende il tuo avviso prima di scrivere qualsiasi codice."
+          ]
+        },
+        "es": {
+          "title": "Deja que el agente encadene el plan, el código y las comprobaciones",
+          "summary": "Elige un preajuste de automatización, los proyectos y los esfuerzos en los que se ejecutará.",
+          "details": [
+            "Elige un preajuste de automatización, los proyectos y los esfuerzos en los que se ejecutará. Cuando una incidencia llega a Pendiente, el ciclo empieza solo: plan, implementación y comprobación del trabajo. En las incidencias más grandes espera tu aprobación antes de escribir código."
+          ]
+        }
+      }
+    },
+    {
+      "id": "recurring-issues",
+      "illustration": {
+        "kind": "code",
+        "name": "board"
+      },
+      "copy": {
+        "en": {
+          "title": "Issues that come back on their own",
+          "summary": "An issue can now repeat every day, week, month or year.",
+          "details": [
+            "An issue can now repeat every day, week, month or year. Close it, and the next one is already waiting in the backlog, at the right date. The project settings list every recurring issue, to change a rhythm or stop one."
+          ]
+        },
+        "fr": {
+          "title": "Des tickets qui reviennent tout seuls",
+          "summary": "Un ticket peut désormais se répéter chaque jour, chaque semaine, chaque mois ou chaque année.",
+          "details": [
+            "Un ticket peut désormais se répéter chaque jour, chaque semaine, chaque mois ou chaque année. Vous le terminez, le suivant vous attend déjà dans le backlog, à la bonne date. Les réglages du projet les listent tous, pour changer un rythme ou l'arrêter."
+          ]
+        },
+        "de": {
+          "title": "Probleme, die von selbst wieder auftreten",
+          "summary": "Ein Ticket kann sich jetzt jeden Tag, jede Woche, jeden Monat oder jedes Jahr wiederholen.",
+          "details": [
+            "Ein Ticket kann sich jetzt jeden Tag, jede Woche, jeden Monat oder jedes Jahr wiederholen. Schließe es und das nächste wartet bereits zum richtigen Zeitpunkt im Backlog. In den Projekteinstellungen werden alle wiederkehrenden Tickets aufgeführt, um einen Rhythmus zu ändern oder zu stoppen."
+          ]
+        },
+        "pt-BR": {
+          "title": "Problemas que reaparecem por conta própria",
+          "summary": "Um problema agora pode se repetir todos os dias, semanas, meses ou anos.",
+          "details": [
+            "Um problema agora pode se repetir todos os dias, semanas, meses ou anos. Feche, e o próximo já fica aguardando no backlog, na data certa. As configurações do projeto listam todos os problemas recorrentes, para alterar um ritmo ou interromper um."
+          ]
+        },
+        "it": {
+          "title": "Ticket che tornano da soli",
+          "summary": "Un ticket può ora ripetersi ogni giorno, settimana, mese o anno.",
+          "details": [
+            "Un ticket può ora ripetersi ogni giorno, settimana, mese o anno. Chiudetelo, e il prossimo sta già aspettando nel ritardo, alla data giusta. Le impostazioni del progetto elencano ogni ticket ricorrente, per cambiare un ritmo o fermarne uno."
+          ]
+        },
+        "es": {
+          "title": "Incidencias que vuelven automáticamente",
+          "summary": "Ahora una incidencia puede repetirse cada día, semana, mes o año.",
+          "details": [
+            "Ahora una incidencia puede repetirse cada día, semana, mes o año. Al cerrarla, la siguiente ya estará esperando en el backlog con la fecha correcta. La configuración del proyecto enumera todas las incidencias recurrentes para que puedas cambiar su frecuencia o detenerlas."
+          ]
+        }
+      }
+    },
+    {
+      "id": "own-api-key",
+      "illustration": {
+        "kind": "code",
+        "name": "connections"
+      },
+      "copy": {
+        "en": {
+          "title": "Run the coding agent on your own API key",
+          "summary": "Add an Anthropic, OpenAI, Google, OpenRouter or compatible key, at signup or later from your account.",
+          "details": [
+            "Add an Anthropic, OpenAI, Google, OpenRouter or compatible key, at signup or later from your account. The agent's runs are uncapped; your provider bills them on whichever model you want. The key is encrypted and removable in one click."
+          ]
+        },
+        "fr": {
+          "title": "Faites tourner l'agent de code sur votre propre clé",
+          "summary": "Ajoutez une clé Anthropic, OpenAI, Google, OpenRouter ou compatible, à l'inscription ou plus tard depuis votre compte.",
+          "details": [
+            "Ajoutez une clé Anthropic, OpenAI, Google, OpenRouter ou compatible, à l'inscription ou plus tard depuis votre compte. Les runs de l'agent sont sans plafond ; votre fournisseur les facture sur le modèle de votre choix. La clé est chiffrée et se retire en un clic."
+          ]
+        },
+        "de": {
+          "title": "Führe den Codierungsagenten mit deinem eigenen API-Schlüssel aus.",
+          "summary": "Füge bei der Anmeldung oder später in deinem Konto einen Schlüssel von Anthropic, OpenAI, Google, OpenRouter oder einem kompatiblen Anbieter hinzu.",
+          "details": [
+            "Füge bei der Anmeldung oder später in deinem Konto einen Schlüssel von Anthropic, OpenAI, Google, OpenRouter oder einem kompatiblen Anbieter hinzu. Die Agentenläufe sind unbegrenzt; dein Anbieter rechnet die Nutzung des gewählten Modells ab. Der Schlüssel wird verschlüsselt und lässt sich mit einem Klick entfernen."
+          ]
+        },
+        "pt-BR": {
+          "title": "Execute o agente de codificação em sua própria chave API",
+          "summary": "Adicione uma chave da Anthropic, OpenAI, Google, OpenRouter ou de um provedor compatível durante o cadastro ou depois, nas configurações da conta.",
+          "details": [
+            "Adicione uma chave da Anthropic, OpenAI, Google, OpenRouter ou de um provedor compatível durante o cadastro ou depois, nas configurações da conta. As execuções do agente não são limitadas; o provedor cobra pelo modelo escolhido. A chave é criptografada e pode ser removida com um clique."
+          ]
+        },
+        "it": {
+          "title": "Eseguire l'agente di codifica sulla propria chiave API",
+          "summary": "Aggiungi una chiave Anthropic, OpenAI, Google, OpenRouter o compatibile durante la registrazione o in seguito dal tuo account.",
+          "details": [
+            "Aggiungi una chiave Anthropic, OpenAI, Google, OpenRouter o compatibile durante la registrazione o in seguito dal tuo account. Le esecuzioni dell'agente non hanno limiti e vengono fatturate dal provider sul modello che preferisci. La chiave è crittografata e può essere rimossa con un clic."
+          ]
+        },
+        "es": {
+          "title": "Ejecuta el agente de programación con tu propia clave de API",
+          "summary": "Añade una clave de Anthropic, OpenAI, Google u OpenRouter, o una clave compatible, durante el registro o más adelante desde tu cuenta.",
+          "details": [
+            "Añade una clave de Anthropic, OpenAI, Google u OpenRouter, o una clave compatible, durante el registro o más adelante desde tu cuenta. Las ejecuciones del agente no tienen límite; tu proveedor las factura según el modelo que elijas. La clave está cifrada y puedes eliminarla con un solo clic."
+          ]
+        }
+      }
+    },
+    {
+      "id": "mentions",
+      "illustration": {
+        "kind": "code",
+        "name": "board"
+      },
+      "copy": {
+        "en": {
+          "title": "Mention a person, an issue or an objective as you write",
+          "summary": "In a description or a comment, typing an at sign now suggests the people on the project, its issues, its objectives and your projects.",
+          "details": [
+            "In a description or a comment, typing an at sign now suggests the people on the project, its issues, its objectives and your projects. What you pick becomes a link others can follow, and anyone you name is notified."
+          ]
+        },
+        "fr": {
+          "title": "Mentionnez une personne, un ticket ou un objectif en écrivant",
+          "summary": "Dans une description ou un commentaire, l'arobase propose désormais les membres du projet, ses tickets, ses objectifs et vos projets.",
+          "details": [
+            "Dans une description ou un commentaire, l'arobase propose désormais les membres du projet, ses tickets, ses objectifs et vos projets. Ce que vous choisissez devient un lien à suivre, et la personne citée reçoit une notification."
+          ]
+        },
+        "de": {
+          "title": "Erwähne beim Schreiben eine Person, ein Ticket oder ein Ziel.",
+          "summary": "In einer Beschreibung oder einem Kommentar werden durch die Eingabe eines At-Zeichens jetzt die Personen vorgeschlagen, die am Projekt, seinen Tickets,…",
+          "details": [
+            "In einer Beschreibung oder einem Kommentar werden durch die Eingabe eines At-Zeichens jetzt die Personen vorgeschlagen, die am Projekt, seinen Tickets, seinen Zielen und deinen Projekten beteiligt sind. Was du auswählst, wird zu einem Link, dem andere folgen können, und jeder, den du nennst, wird benachrichtigt."
+          ]
+        },
+        "pt-BR": {
+          "title": "Mencione uma pessoa, um problema ou um objetivo enquanto você escreve",
+          "summary": "Em uma descrição ou comentário, digitar uma arroba agora sugere as pessoas no projeto, seus problemas, seus objetivos e seus projetos.",
+          "details": [
+            "Em uma descrição ou comentário, digitar uma arroba agora sugere as pessoas no projeto, seus problemas, seus objetivos e seus projetos. O que você escolhe se torna um link que outras pessoas podem seguir, e qualquer pessoa que você nomear será notificada."
+          ]
+        },
+        "it": {
+          "title": "Menzione di una persona, un ticket o un obiettivo come si scrive",
+          "summary": "In una descrizione o in un commento, digitare un at sign suggerisce ora le persone sul progetto, i suoi ticket, i suoi obiettivi e i vostri progetti.",
+          "details": [
+            "In una descrizione o in un commento, digitare un at sign suggerisce ora le persone sul progetto, i suoi ticket, i suoi obiettivi e i vostri progetti. Quello che si sceglie diventa un link che gli altri possono seguire, e chiunque si chiama viene notificato."
+          ]
+        },
+        "es": {
+          "title": "Menciona a una persona, una incidencia o un objetivo mientras escribes",
+          "summary": "Al escribir una arroba en una descripción o comentario, ahora se sugieren las personas del proyecto, sus incidencias, sus objetivos y tus proyectos.",
+          "details": [
+            "Al escribir una arroba en una descripción o comentario, ahora se sugieren las personas del proyecto, sus incidencias, sus objetivos y tus proyectos. Lo que elijas se convierte en un enlace que otros pueden abrir, y toda persona mencionada recibe una notificación."
+          ]
+        }
+      }
+    },
+    {
+      "id": "trash",
+      "illustration": {
+        "kind": "code",
+        "name": "board"
+      },
+      "copy": {
+        "en": {
+          "title": "Deleted issues wait in the trash",
+          "summary": "Issues, objectives, feedback and projects you delete land in the trash for 30 days, with who removed them and when.",
+          "details": [
+            "Issues, objectives, feedback and projects you delete land in the trash for 30 days, with who removed them and when. Restore one in a click, or empty the trash yourself."
+          ]
+        },
+        "fr": {
+          "title": "Ce que vous supprimez passe par la corbeille",
+          "summary": "Tickets, objectifs, retours et projets supprimés attendent 30 jours dans la corbeille, avec la date et l'auteur de la suppression.",
+          "details": [
+            "Tickets, objectifs, retours et projets supprimés attendent 30 jours dans la corbeille, avec la date et l'auteur de la suppression. Vous restaurez en un clic, ou vous videz la corbeille vous-même."
+          ]
+        },
+        "de": {
+          "title": "Gelöschte Probleme bleiben im Papierkorb",
+          "summary": "Tickets, Ziele, Feedback und Projekte, die du löschst, landen 30 Tage lang im Papierkorb, mit Angabe, wer sie wann entfernt hat.",
+          "details": [
+            "Tickets, Ziele, Feedback und Projekte, die du löschst, landen 30 Tage lang im Papierkorb, mit Angabe, wer sie wann entfernt hat. Stelle eines mit einem Klick wieder her oder leere den Papierkorb selbst."
+          ]
+        },
+        "pt-BR": {
+          "title": "Problemas excluídos aguardam na lixeira",
+          "summary": "Problemas, objetivos, comentários e projetos que você excluiu vão para a lixeira por 30 dias, com quem os removeu e quando.",
+          "details": [
+            "Problemas, objetivos, comentários e projetos que você excluiu vão para a lixeira por 30 dias, com quem os removeu e quando. Restaure um com um clique ou esvazie a lixeira você mesmo."
+          ]
+        },
+        "it": {
+          "title": "I ticket eliminati aspettano nel cestino",
+          "summary": "Ticket, obiettivi, feedback e progetti si elimina la terra nel cestino per 30 giorni, con chi li ha rimossi e quando.",
+          "details": [
+            "Ticket, obiettivi, feedback e progetti si elimina la terra nel cestino per 30 giorni, con chi li ha rimossi e quando. Ripristinare uno in un clic, o svuotare il cestino da soli."
+          ]
+        },
+        "es": {
+          "title": "Las incidencias eliminadas esperan en la papelera",
+          "summary": "Las incidencias, objetivos, sugerencias y proyectos que elimines permanecerán 30 días en la papelera, con información sobre quién los eliminó y cuándo.",
+          "details": [
+            "Las incidencias, objetivos, sugerencias y proyectos que elimines permanecerán 30 días en la papelera, con información sobre quién los eliminó y cuándo. Restáuralos con un clic o vacía tú mismo la papelera."
+          ]
+        }
+      }
+    },
+    {
+      "id": "import-issues",
+      "illustration": {
+        "kind": "code",
+        "name": "board"
+      },
+      "copy": {
+        "en": {
+          "title": "Bring in the issues you already have",
+          "summary": "minddy reads a Linear, Jira or Trello CSV export, at signup or later from the project settings.",
+          "details": [
+            "minddy reads a Linear, Jira or Trello CSV export, at signup or later from the project settings. And when a project is linked to a GitHub or GitLab repository, every issue opened there arrives here, its status following the remote one."
+          ]
+        },
+        "fr": {
+          "title": "Faites entrer les tickets que vous avez déjà",
+          "summary": "minddy lit un export CSV de Linear, Jira ou Trello, à l'inscription ou plus tard depuis les réglages du projet.",
+          "details": [
+            "minddy lit un export CSV de Linear, Jira ou Trello, à l'inscription ou plus tard depuis les réglages du projet. Et si un projet est lié à un dépôt GitHub ou GitLab, chaque ticket ouvert là-bas arrive ici, son statut suivant celui d'origine."
+          ]
+        },
+        "de": {
+          "title": "Importiere deine vorhandenen Tickets",
+          "summary": "minddy liest einen Linear, Jira oder Trello CSV-Export, bei der Anmeldung oder später aus den Projekteinstellungen.",
+          "details": [
+            "minddy liest einen Linear, Jira oder Trello CSV-Export, bei der Anmeldung oder später aus den Projekteinstellungen. Und wenn ein Projekt mit einem GitHub- oder GitLab-Repository verknüpft ist, kommt jedes dort geöffnete Problem hier an, sein Status folgt dem Remote-Problem."
+          ]
+        },
+        "pt-BR": {
+          "title": "Traga os problemas que você já tem",
+          "summary": "O minddy lê exportações CSV do Linear, Jira ou Trello durante o cadastro ou depois, nas configurações do projeto.",
+          "details": [
+            "O minddy lê exportações CSV do Linear, Jira ou Trello durante o cadastro ou depois, nas configurações do projeto. Quando um projeto é vinculado a um repositório do GitHub ou GitLab, cada problema aberto no repositório aparece aqui e seu status acompanha o remoto."
+          ]
+        },
+        "it": {
+          "title": "Porta in gioco i ticket che hai già",
+          "summary": "minddy legge un'esportazione di Linear, Jira o Trello CSV, all'iscrizione o successivamente dalle impostazioni del progetto.",
+          "details": [
+            "minddy legge un'esportazione di Linear, Jira o Trello CSV, all'iscrizione o successivamente dalle impostazioni del progetto. E quando un progetto è collegato a un repository di GitHub o GitLab, ogni ticket aperto arriva qui, il suo stato segue quello remoto."
+          ]
+        },
+        "es": {
+          "title": "Importa las incidencias que ya tienes",
+          "summary": "minddy lee exportaciones CSV de Linear, Jira o Trello durante el registro o más adelante desde la configuración del proyecto.",
+          "details": [
+            "minddy lee exportaciones CSV de Linear, Jira o Trello durante el registro o más adelante desde la configuración del proyecto. Cuando vinculas un proyecto a un repositorio de GitHub o GitLab, todas sus incidencias abiertas llegan aquí y su estado sigue el de la incidencia remota."
+          ]
+        }
+      }
+    },
+    {
+      "id": "home-attention",
+      "illustration": {
+        "kind": "code",
+        "name": "board"
+      },
+      "copy": {
+        "en": {
+          "title": "The home page shows what needs you now",
+          "summary": "The home page now lists issues with approaching deadlines, with overdue work first.",
+          "details": [
+            "The home page now lists issues with approaching deadlines, with overdue work first. A second section brings together incoming issues and feedback waiting for review across your projects. Each item shows which project it belongs to."
+          ]
+        },
+        "fr": {
+          "title": "L'accueil montre ce qui vous attend",
+          "summary": "L’accueil affiche maintenant les tickets dont l’échéance approche, avec les retards en premier.",
+          "details": [
+            "L’accueil affiche maintenant les tickets dont l’échéance approche, avec les retards en premier. Une seconde section rassemble les nouveaux tickets et les retours à examiner dans vos projets. Chaque élément indique le projet concerné."
+          ]
+        },
+        "de": {
+          "title": "Die Startseite zeigt, was deine Aufmerksamkeit braucht",
+          "summary": "Die Startseite zeigt jetzt Tickets mit bevorstehenden Fristen an, überfällige zuerst.",
+          "details": [
+            "Die Startseite zeigt jetzt Tickets mit bevorstehenden Fristen an, überfällige zuerst. Ein zweiter Bereich sammelt eingehende Tickets und Feedback, die in deinen Projekten auf Prüfung warten. Jeder Eintrag nennt das zugehörige Projekt."
+          ]
+        },
+        "pt-BR": {
+          "title": "A página inicial mostra o que precisa de você agora",
+          "summary": "A página inicial mostra os tickets com prazos próximos, começando pelos atrasados.",
+          "details": [
+            "A página inicial mostra os tickets com prazos próximos, começando pelos atrasados. Outra seção reúne os tickets e feedbacks pendentes de revisão nos projetos. Cada item informa a qual projeto pertence."
+          ]
+        },
+        "it": {
+          "title": "La home page mostra cosa ha bisogno di te ora",
+          "summary": "La pagina iniziale mostra i ticket con scadenze vicine, dando precedenza a quelli in ritardo.",
+          "details": [
+            "La pagina iniziale mostra i ticket con scadenze vicine, dando precedenza a quelli in ritardo. Una seconda sezione raccoglie ticket e feedback in attesa di revisione nei progetti. Ogni elemento indica il progetto a cui appartiene."
+          ]
+        },
+        "es": {
+          "title": "La página de inicio muestra lo que requiere tu atención",
+          "summary": "La página de inicio muestra los tickets con fechas próximas, primero los atrasados.",
+          "details": [
+            "La página de inicio muestra los tickets con fechas próximas, primero los atrasados. Otra sección reúne los tickets y comentarios pendientes de revisión de tus proyectos. Cada elemento indica a qué proyecto pertenece."
+          ]
+        }
+      }
+    },
+    {
+      "id": "zen-mode",
+      "illustration": {
+        "kind": "code",
+        "name": "board"
+      },
+      "copy": {
+        "en": {
+          "title": "Keep the board, hide the rest",
+          "summary": "Zen mode puts away the sidebar and the header, leaving your work alone on screen.",
+          "details": [
+            "Zen mode puts away the sidebar and the header, leaving your work alone on screen. It turns on from the command palette, and off the same way."
+          ]
+        },
+        "fr": {
+          "title": "Garder le board, cacher le reste",
+          "summary": "Le mode zen range la barre latérale et l'en-tête : il ne reste que votre travail à l'écran.",
+          "details": [
+            "Le mode zen range la barre latérale et l'en-tête : il ne reste que votre travail à l'écran. Il s'active depuis la palette de commandes, et se quitte au même endroit."
+          ]
+        },
+        "de": {
+          "title": "Behalte das Board im Blick und blende den Rest aus",
+          "summary": "Der Zen-Modus entfernt die Seitenleiste und die Kopfzeile, sodass deine Arbeit allein auf dem Bildschirm bleibt.",
+          "details": [
+            "Der Zen-Modus entfernt die Seitenleiste und die Kopfzeile, sodass deine Arbeit allein auf dem Bildschirm bleibt. Es wird über die Befehlspalette aktiviert und auf die gleiche Weise deaktiviert."
+          ]
+        },
+        "pt-BR": {
+          "title": "Mantenha o quadro, oculte o resto",
+          "summary": "O modo Zen guarda a barra lateral e o cabeçalho, deixando seu trabalho sozinho na tela.",
+          "details": [
+            "O modo Zen guarda a barra lateral e o cabeçalho, deixando seu trabalho sozinho na tela. Ele é ativado na paleta de comandos e desativado da mesma maneira."
+          ]
+        },
+        "it": {
+          "title": "Mantieni la bacheca, nascondi il resto",
+          "summary": "La modalità Zen nasconde la barra laterale e l'intestazione, lasciando sullo schermo solo il lavoro.",
+          "details": [
+            "La modalità Zen nasconde la barra laterale e l'intestazione, lasciando sullo schermo solo il lavoro. Si attiva e si disattiva dalla tavolozza dei comandi."
+          ]
+        },
+        "es": {
+          "title": "Conserva el tablero y oculta el resto",
+          "summary": "El modo Zen oculta la barra lateral y la cabecera para dejar solo tu trabajo en pantalla.",
+          "details": [
+            "El modo Zen oculta la barra lateral y la cabecera para dejar solo tu trabajo en pantalla. Se activa desde la paleta de comandos y se desactiva del mismo modo."
+          ]
+        }
+      }
+    },
+    {
+      "id": "account-data",
+      "illustration": {
+        "kind": "code",
+        "name": "board"
+      },
+      "copy": {
+        "en": {
+          "title": "Take everything with you, or delete it all",
+          "summary": "The account settings now export a JSON file holding your account, projects, issues, comments and conversations.",
+          "details": [
+            "The account settings now export a JSON file holding your account, projects, issues, comments and conversations. The same page deletes your account for good, after telling you exactly what goes with it."
+          ]
+        },
+        "fr": {
+          "title": "Tout emporter, ou tout supprimer",
+          "summary": "Les réglages du compte exportent un fichier JSON : votre compte, vos projets, vos tickets, vos commentaires et vos conversations.",
+          "details": [
+            "Les réglages du compte exportent un fichier JSON : votre compte, vos projets, vos tickets, vos commentaires et vos conversations. La même page supprime définitivement votre compte, en vous disant d'abord ce qui part avec lui."
+          ]
+        },
+        "de": {
+          "title": "Nimm alles mit oder lösche alles",
+          "summary": "Die Kontoeinstellungen exportieren jetzt eine JSON-Datei mit deinem Konto, Projekten, Tickets, Kommentaren und Konversationen.",
+          "details": [
+            "Die Kontoeinstellungen exportieren jetzt eine JSON-Datei mit deinem Konto, Projekten, Tickets, Kommentaren und Konversationen. Auf derselben Seite wird dein Konto endgültig gelöscht, nachdem du genau erfahren hast, was damit zusammenhängt."
+          ]
+        },
+        "pt-BR": {
+          "title": "Leve tudo com você ou exclua tudo",
+          "summary": "As configurações da conta agora exportam um arquivo JSON contendo sua conta, projetos, problemas, comentários e conversas.",
+          "details": [
+            "As configurações da conta agora exportam um arquivo JSON contendo sua conta, projetos, problemas, comentários e conversas. A mesma página exclui sua conta definitivamente, depois de informar exatamente o que acontece com ela."
+          ]
+        },
+        "it": {
+          "title": "Porta tutto con te, o cancella tutto",
+          "summary": "Le impostazioni dell'account ora esportano un file JSON che contiene il tuo account, progetti, ticket, commenti e conversazioni.",
+          "details": [
+            "Le impostazioni dell'account ora esportano un file JSON che contiene il tuo account, progetti, ticket, commenti e conversazioni. La stessa pagina cancella il tuo account per bene, dopo avervi detto esattamente cosa ci va con esso."
+          ]
+        },
+        "es": {
+          "title": "Llévatelo todo o elimínalo todo",
+          "summary": "La configuración de la cuenta ahora permite exportar un archivo JSON con tu cuenta, proyectos, incidencias, comentarios y conversaciones.",
+          "details": [
+            "La configuración de la cuenta ahora permite exportar un archivo JSON con tu cuenta, proyectos, incidencias, comentarios y conversaciones. Desde la misma página puedes eliminar tu cuenta definitivamente, después de ver exactamente qué se borrará."
+          ]
+        }
+      }
+    },
+    {
+      "id": "agent-brief",
+      "illustration": {
+        "kind": "code",
+        "name": "assistant"
+      },
+      "copy": {
+        "en": {
+          "title": "Brief the agent before it starts",
+          "summary": "Launching the coding agent on an issue now takes an instruction of your own, on top of what the issue already says.",
+          "details": [
+            "Launching the coding agent on an issue now takes an instruction of your own, on top of what the issue already says. You also pick how long it thinks before acting, from a short pass to the deepest reasoning."
+          ]
+        },
+        "fr": {
+          "title": "Briefer l'agent avant qu'il démarre",
+          "summary": "Au lancement de l'agent sur un ticket, vous ajoutez votre propre consigne, en plus de ce que le ticket dit déjà.",
+          "details": [
+            "Au lancement de l'agent sur un ticket, vous ajoutez votre propre consigne, en plus de ce que le ticket dit déjà. Vous choisissez aussi le temps qu'il passe à réfléchir avant d'agir, de la passe courte au raisonnement le plus poussé."
+          ]
+        },
+        "de": {
+          "title": "Informiere den Agenten, bevor er beginnt",
+          "summary": "Das Starten des Codierungsagenten für ein Ticket erfordert jetzt zusätzlich zu dem, was in dem Ticket bereits steht, eine eigene Anweisung.",
+          "details": [
+            "Das Starten des Codierungsagenten für ein Ticket erfordert jetzt zusätzlich zu dem, was in dem Ticket bereits steht, eine eigene Anweisung. Du legst außerdem fest, wie lange er nachdenkt, bevor er handelt, von einem kurzen Durchgang bis zur tiefsten Überlegung."
+          ]
+        },
+        "pt-BR": {
+          "title": "Informe o agente antes de começar",
+          "summary": "Iniciar o agente de codificação sobre um problema agora requer uma instrução própria, além do que o problema já diz.",
+          "details": [
+            "Iniciar o agente de codificação sobre um problema agora requer uma instrução própria, além do que o problema já diz. Você também escolhe quanto tempo ele pensa antes de agir, desde uma passagem curta até o raciocínio mais profundo."
+          ]
+        },
+        "it": {
+          "title": "Fate sapere all'agente prima che cominci",
+          "summary": "Lanciare l'agente di codifica su un ticket ora prende una istruzione propria, oltre a ciò che il ticket già dice.",
+          "details": [
+            "Lanciare l'agente di codifica su un ticket ora prende una istruzione propria, oltre a ciò che il ticket già dice. Si sceglie anche quanto tempo pensa prima di agire, da un breve passaggio al ragionamento più profondo."
+          ]
+        },
+        "es": {
+          "title": "Da instrucciones al agente antes de que empiece",
+          "summary": "Al iniciar el agente de programación en una incidencia, ahora puedes añadir una instrucción propia además de lo que ya indique la incidencia.",
+          "details": [
+            "Al iniciar el agente de programación en una incidencia, ahora puedes añadir una instrucción propia además de lo que ya indique la incidencia. También eliges cuánto tiempo razona antes de actuar, desde una pasada breve hasta el nivel más profundo."
+          ]
+        }
+      }
+    },
+    {
+      "id": "localised-site",
+      "illustration": {
+        "kind": "code",
+        "name": "board"
+      },
+      "copy": {
+        "en": {
+          "title": "The public site now speaks French at its own address",
+          "summary": "Pricing, legal pages and the home page each exist at a French URL of their own, instead of switching language behind one address.",
+          "details": [
+            "Pricing, legal pages and the home page each exist at a French URL of their own, instead of switching language behind one address. The pages also got noticeably lighter, so they open faster on a phone."
+          ]
+        },
+        "fr": {
+          "title": "Le site public parle français à sa propre adresse",
+          "summary": "Les tarifs, les pages légales et l'accueil existent chacun à une adresse française, au lieu de changer de langue derrière une seule URL.",
+          "details": [
+            "Les tarifs, les pages légales et l'accueil existent chacun à une adresse française, au lieu de changer de langue derrière une seule URL. Les pages se sont aussi nettement allégées : elles s'ouvrent plus vite sur un téléphone."
+          ]
+        },
+        "de": {
+          "title": "Die öffentliche Website spricht jetzt Französisch unter ihrer eigenen Adresse.",
+          "summary": "Preise, rechtliche Seiten und die Startseite liegen jeweils unter einer eigenen französischen URL vor, anstatt die Sprache hinter einer Adresse zu wechseln.",
+          "details": [
+            "Preise, rechtliche Seiten und die Startseite liegen jeweils unter einer eigenen französischen URL vor, anstatt die Sprache hinter einer Adresse zu wechseln. Außerdem sind die Seiten deutlich übersichtlicher geworden, sodass sie auf einem Telefon schneller geöffnet werden können."
+          ]
+        },
+        "pt-BR": {
+          "title": "O site público agora fala francês em seu próprio endereço",
+          "summary": "Os preços, as páginas jurídicas e a página inicial existem em um URL próprio em francês, em vez de alternar o idioma atrás de um endereço.",
+          "details": [
+            "Os preços, as páginas jurídicas e a página inicial existem em um URL próprio em francês, em vez de alternar o idioma atrás de um endereço. As páginas também ficaram visivelmente mais leves, por isso abrem mais rápido em um telefone."
+          ]
+        },
+        "it": {
+          "title": "Il sito pubblico ora parla francese al suo indirizzo",
+          "summary": "Prezzi, pagine legali e la home page esistono ciascuno a un URL francese di loro, invece di cambiare lingua dietro un indirizzo.",
+          "details": [
+            "Prezzi, pagine legali e la home page esistono ciascuno a un URL francese di loro, invece di cambiare lingua dietro un indirizzo. Le pagine sono diventate notevolmente più leggere, così si aprono più velocemente su un telefono."
+          ]
+        },
+        "es": {
+          "title": "El sitio público ya habla francés en su propia dirección",
+          "summary": "Los precios, las páginas legales y la página de inicio tienen ahora sus propias URL en francés, en vez de cambiar de idioma bajo una única dirección.",
+          "details": [
+            "Los precios, las páginas legales y la página de inicio tienen ahora sus propias URL en francés, en vez de cambiar de idioma bajo una única dirección. Las páginas también son mucho más ligeras, por lo que se abren más rápido en el móvil."
+          ]
+        }
+      }
+    },
+    {
+      "id": "search-everywhere",
+      "illustration": {
+        "kind": "code",
+        "name": "board"
+      },
+      "copy": {
+        "en": {
+          "title": "Search issues and objectives from anywhere",
+          "summary": "The command palette now searches every issue and objective you have access to, across projects, and no longer just the ones on screen.",
+          "details": [
+            "The command palette now searches every issue and objective you have access to, across projects, and no longer just the ones on screen. Results come back as you type."
+          ]
+        },
+        "fr": {
+          "title": "Chercher tickets et objectifs depuis n'importe où",
+          "summary": "La palette de commandes cherche désormais dans tous les tickets et objectifs auxquels vous avez accès, tous projets confondus, et plus seulement dans ceux…",
+          "details": [
+            "La palette de commandes cherche désormais dans tous les tickets et objectifs auxquels vous avez accès, tous projets confondus, et plus seulement dans ceux affichés. Les résultats arrivent à la frappe."
+          ]
+        },
+        "de": {
+          "title": "Probleme und Ziele von überall aus durchsuchen",
+          "summary": "Die Befehlspalette durchsucht jetzt alle Tickets und Ziele, auf die du Zugriff hast, projektübergreifend und nicht mehr nur die auf dem Bildschirm.",
+          "details": [
+            "Die Befehlspalette durchsucht jetzt alle Tickets und Ziele, auf die du Zugriff hast, projektübergreifend und nicht mehr nur die auf dem Bildschirm. Die Ergebnisse werden während der Eingabe angezeigt."
+          ]
+        },
+        "pt-BR": {
+          "title": "Pesquise problemas e objetivos de qualquer lugar",
+          "summary": "A paleta de comandos agora pesquisa todos os problemas e objetivos aos quais você tem acesso, em todos os projetos, e não mais apenas aqueles na tela.",
+          "details": [
+            "A paleta de comandos agora pesquisa todos os problemas e objetivos aos quais você tem acesso, em todos os projetos, e não mais apenas aqueles na tela. Os resultados aparecem conforme você digita."
+          ]
+        },
+        "it": {
+          "title": "Ticket di ricerca e obiettivi da qualsiasi parte",
+          "summary": "La tavolozza dei comandi ora cerca ogni ticket e obiettivo a cui hai accesso, attraverso i progetti, e non più solo quelli sullo schermo.",
+          "details": [
+            "La tavolozza dei comandi ora cerca ogni ticket e obiettivo a cui hai accesso, attraverso i progetti, e non più solo quelli sullo schermo. I risultati tornano come digitare."
+          ]
+        },
+        "es": {
+          "title": "Busca incidencias y objetivos desde cualquier lugar",
+          "summary": "La paleta de comandos ahora busca todas las incidencias y objetivos a los que tienes acceso en todos los proyectos, no solo los que aparecen en pantalla.",
+          "details": [
+            "La paleta de comandos ahora busca todas las incidencias y objetivos a los que tienes acceso en todos los proyectos, no solo los que aparecen en pantalla. Los resultados llegan a medida que escribes."
+          ]
+        }
+      }
+    },
+    {
+      "id": "notebook-agent",
+      "illustration": {
+        "kind": "code",
+        "name": "pages"
+      },
+      "copy": {
+        "en": {
+          "title": "Launch an agent from the task notebook",
+          "summary": "Ask the coding agent to work on a task from your personal notebook.",
+          "details": [
+            "Ask the coding agent to work on a task from your personal notebook. You can launch it directly from the task, without creating a project issue first."
+          ]
+        },
+        "fr": {
+          "title": "Lancer un agent depuis le bloc-notes",
+          "summary": "Confiez une tâche de votre bloc-notes personnel à l’agent de code.",
+          "details": [
+            "Confiez une tâche de votre bloc-notes personnel à l’agent de code. Lancez-le directement depuis la tâche, sans créer d’abord un ticket de projet."
+          ]
+        },
+        "de": {
+          "title": "Starte einen Agenten über das Aufgabennotizbuch",
+          "summary": "Lass den Programmierassistenten eine Aufgabe aus deinem persönlichen Notizbuch bearbeiten.",
+          "details": [
+            "Lass den Programmierassistenten eine Aufgabe aus deinem persönlichen Notizbuch bearbeiten. Starte ihn direkt von der Aufgabe aus, ohne vorher ein Projektticket anzulegen."
+          ]
+        },
+        "pt-BR": {
+          "title": "Iniciar um agente a partir do bloco de notas de tarefas",
+          "summary": "Peça ao agente de código para trabalhar em uma tarefa do seu bloco de notas pessoal.",
+          "details": [
+            "Peça ao agente de código para trabalhar em uma tarefa do seu bloco de notas pessoal. Inicie-o diretamente pela tarefa, sem criar antes um ticket de projeto."
+          ]
+        },
+        "it": {
+          "title": "Avviare un agente dal task notebook",
+          "summary": "Affida all’agente di codice un’attività del tuo taccuino personale.",
+          "details": [
+            "Affida all’agente di codice un’attività del tuo taccuino personale. Puoi avviarlo direttamente dall’attività, senza creare prima un ticket di progetto."
+          ]
+        },
+        "es": {
+          "title": "Inicia un agente desde el cuaderno de tareas",
+          "summary": "Pide al agente de código que trabaje en una tarea de tu bloc de notas personal.",
+          "details": [
+            "Pide al agente de código que trabaje en una tarea de tu bloc de notas personal. Puedes iniciarlo desde la tarea, sin crear antes un ticket del proyecto."
+          ]
+        }
+      }
+    }
+  ],
+  "evidence": {
+    "commits": [
+      "aa389dba6c8d13f31ca25252841abc76ff487956",
+      "e579f7b4638761f521067aa500ae5f869cbafbad",
+      "c2e3c20ca89a1fa3dc27bd0ada9d738eb056b033",
+      "ebeae4be0c194131e1b0f816f790c4de97733d45",
+      "507a83da06fda9108039698640bb406bdc2ebd0e",
+      "f1756756d074dd9a7d302977bc7b9e4b3545f4ff",
+      "4c0cd45dd9f13c6631423ce460c39a19599a71c6",
+      "de345d10da012111bc6461ccfc87a34ab6f06437",
+      "266a8e7bd721bab9cd728081d70a72f273a4fbb8",
+      "402d944041918c62e30379ce43ad094013aa2d05",
+      "c971c751d441e9b0cb0768ebad40358e2a40d5f1",
+      "bd08a3d660e47c6d89cf3e3101f9df27e8dc73d6",
+      "9f877a1a90e160924bb19063843d033592c8e1ba",
+      "a724f10674ca222246598f58d3b96695ec886110",
+      "06e7c3ffcfa3c6ece0fab8840c3aedb9885dfabf",
+      "b39ff5d01ee6d5919742a731a9d3fc04645acf47",
+      "8b054ccf6174005b5fffb06101785045d4df2725",
+      "38f2032af4227eb099387f00149f2259d419f235",
+      "c1af4577acf954bb7b6344c3ad78922e726e764e",
+      "f7ddbbaf873fcd63bceb56e01c739ace7c06185b",
+      "ae371ea16a6c74d4b31f0f9d52b2674a90b60da7",
+      "3b662bfe3dfcb16a346588ff9d9e6df4f8cab7fa",
+      "6552cfd3fa7a16117849bd618f76f07c51356176",
+      "b9565fe5280a7ba7f69731b12a7dcc9a28bf8b16",
+      "1eb85d877473ca1c542e5e596b033988d43e4c18",
+      "2a8591b515310d5a208590dbd5a76d2fa9ba7f55",
+      "fb3ac24d703ad32922d3323c19603409117b6281",
+      "54686a68a5920c19d3db95ead257fa891d5fe324",
+      "ccef3d628feb37a1e6052605fc02fd5c85d01689",
+      "4f0d00113e1f2bd797cd1a4a5ca5cc2ba7907774"
+    ],
+    "issues": []
+  }
+}

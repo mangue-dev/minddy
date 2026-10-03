@@ -1,0 +1,40 @@
+{
+  "version": "0.10.21",
+  "layout": "compact",
+  "publishedAt": "2026-08-22T22:43:49Z",
+  "sha": "62302b281885f6ac3d7f6d8b422143bce23d304a",
+  "deploymentId": 6042091201,
+  "copy": {
+    "en": {
+      "title": "Maintenance update",
+      "summary": "A small maintenance release."
+    },
+    "fr": {
+      "title": "Mise à jour de maintenance",
+      "summary": "Une petite mise à jour de maintenance."
+    },
+    "de": {
+      "title": "Wartungsupdate",
+      "summary": "Ein kleines Wartungsupdate."
+    },
+    "pt-BR": {
+      "title": "Atualização de manutenção",
+      "summary": "Uma pequena atualização de manutenção."
+    },
+    "it": {
+      "title": "Aggiornamento di manutenzione",
+      "summary": "Un piccolo aggiornamento di manutenzione."
+    },
+    "es": {
+      "title": "Actualización de mantenimiento",
+      "summary": "Una pequeña actualización de mantenimiento."
+    }
+  },
+  "features": [],
+  "evidence": {
+    "commits": [
+      "62302b281885f6ac3d7f6d8b422143bce23d304a"
+    ],
+    "issues": []
+  }
+}

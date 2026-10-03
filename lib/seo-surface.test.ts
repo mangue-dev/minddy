@@ -69,8 +69,8 @@ describe("public SEO surface", () => {
     }
   });
 
-  it("lists every locale variant once with reciprocal sitemap alternates", () => {
-    const entries = sitemap();
+  it("lists every locale variant once with reciprocal sitemap alternates", async () => {
+    const entries = await sitemap();
     expect(entries).toHaveLength(PUBLIC_ROUTES.length * locales.length);
     expect(new Set(entries.map(({ url }) => url)).size).toBe(entries.length);
 

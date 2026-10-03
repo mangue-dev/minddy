@@ -1,0 +1,196 @@
+{
+  "version": "0.10.24",
+  "layout": "bento",
+  "publishedAt": "2026-08-31T16:43:40Z",
+  "sha": "226b095ec97a8b5a94e90f354f789f21a523f03f",
+  "deploymentId": 6185398966,
+  "copy": {
+    "en": {
+      "title": "Highlight important notes in your pages",
+      "summary": "Add a colored callout to draw attention to a decision, tip or warning."
+    },
+    "fr": {
+      "title": "Mettez en évidence les notes importantes dans vos pages",
+      "summary": "Ajoutez un encadré coloré pour faire ressortir une décision, un conseil ou un avertissement."
+    },
+    "de": {
+      "title": "Hebe wichtige Hinweise auf deinen Seiten hervor",
+      "summary": "Füge einen farbigen Hinweisblock ein, um eine Entscheidung, einen Tipp oder eine Warnung hervorzuheben."
+    },
+    "pt-BR": {
+      "title": "Destaque notas importantes nas suas páginas",
+      "summary": "Adicione um bloco colorido para destacar uma decisão, dica ou aviso."
+    },
+    "it": {
+      "title": "Metti in risalto le note importanti nelle tue pagine",
+      "summary": "Aggiungi un riquadro colorato per evidenziare una decisione, un consiglio o un avviso."
+    },
+    "es": {
+      "title": "Destaca las notas importantes en tus páginas",
+      "summary": "Añade un recuadro de color para destacar una decisión, un consejo o una advertencia."
+    }
+  },
+  "features": [
+    {
+      "id": "page-callouts",
+      "illustration": {
+        "kind": "code",
+        "name": "pages"
+      },
+      "copy": {
+        "en": {
+          "title": "Highlight important notes in your pages",
+          "summary": "Add a colored callout to draw attention to a decision, tip or warning.",
+          "details": [
+            "Add a colored callout to draw attention to a decision, tip or warning. Choose its color and icon, or paste an existing callout from Notion."
+          ]
+        },
+        "fr": {
+          "title": "Mettez en évidence les notes importantes dans vos pages",
+          "summary": "Ajoutez un encadré coloré pour faire ressortir une décision, un conseil ou un avertissement.",
+          "details": [
+            "Ajoutez un encadré coloré pour faire ressortir une décision, un conseil ou un avertissement. Choisissez sa couleur et son icône, ou collez un encadré existant depuis Notion."
+          ]
+        },
+        "de": {
+          "title": "Hebe wichtige Hinweise auf deinen Seiten hervor",
+          "summary": "Füge einen farbigen Hinweisblock ein, um eine Entscheidung, einen Tipp oder eine Warnung hervorzuheben.",
+          "details": [
+            "Füge einen farbigen Hinweisblock ein, um eine Entscheidung, einen Tipp oder eine Warnung hervorzuheben. Wähle Farbe und Symbol oder füge einen vorhandenen Hinweisblock aus Notion ein."
+          ]
+        },
+        "pt-BR": {
+          "title": "Destaque notas importantes nas suas páginas",
+          "summary": "Adicione um bloco colorido para destacar uma decisão, dica ou aviso.",
+          "details": [
+            "Adicione um bloco colorido para destacar uma decisão, dica ou aviso. Escolha a cor e o ícone ou cole um bloco de destaque existente do Notion."
+          ]
+        },
+        "it": {
+          "title": "Metti in risalto le note importanti nelle tue pagine",
+          "summary": "Aggiungi un riquadro colorato per evidenziare una decisione, un consiglio o un avviso.",
+          "details": [
+            "Aggiungi un riquadro colorato per evidenziare una decisione, un consiglio o un avviso. Scegli il colore e l’icona, oppure incolla un riquadro esistente da Notion."
+          ]
+        },
+        "es": {
+          "title": "Destaca las notas importantes en tus páginas",
+          "summary": "Añade un recuadro de color para destacar una decisión, un consejo o una advertencia.",
+          "details": [
+            "Añade un recuadro de color para destacar una decisión, un consejo o una advertencia. Elige su color e icono, o pega un recuadro existente desde Notion."
+          ]
+        }
+      }
+    },
+    {
+      "id": "page-comment-numo",
+      "illustration": {
+        "kind": "code",
+        "name": "pages"
+      },
+      "copy": {
+        "en": {
+          "title": "Ask Numo about a passage in a page",
+          "summary": "Mention Numo in a page comment to ask a question about the selected passage.",
+          "details": [
+            "Mention Numo in a page comment to ask a question about the selected passage. Its reply stays in the same thread, beside the text you are discussing."
+          ]
+        },
+        "fr": {
+          "title": "Interrogez Numo sur un passage de vos pages",
+          "summary": "Mentionnez Numo dans un commentaire de page pour lui poser une question sur le passage sélectionné.",
+          "details": [
+            "Mentionnez Numo dans un commentaire de page pour lui poser une question sur le passage sélectionné. Sa réponse reste dans le même fil, à côté du texte dont vous discutez."
+          ]
+        },
+        "de": {
+          "title": "Frage Numo zu einer Textstelle auf einer Seite",
+          "summary": "Erwähne Numo in einem Seitenkommentar, um eine Frage zur ausgewählten Textstelle zu stellen.",
+          "details": [
+            "Erwähne Numo in einem Seitenkommentar, um eine Frage zur ausgewählten Textstelle zu stellen. Die Antwort bleibt im selben Kommentarverlauf, direkt neben dem besprochenen Text."
+          ]
+        },
+        "pt-BR": {
+          "title": "Pergunte ao Numo sobre um trecho de uma página",
+          "summary": "Mencione o Numo em um comentário da página para fazer uma pergunta sobre o trecho selecionado.",
+          "details": [
+            "Mencione o Numo em um comentário da página para fazer uma pergunta sobre o trecho selecionado. A resposta fica na mesma conversa, ao lado do texto em discussão."
+          ]
+        },
+        "it": {
+          "title": "Chiedi a Numo informazioni su un passaggio di una pagina",
+          "summary": "Menziona Numo in un commento della pagina per fare una domanda sul passaggio selezionato.",
+          "details": [
+            "Menziona Numo in un commento della pagina per fare una domanda sul passaggio selezionato. La risposta resta nella stessa discussione, accanto al testo di cui state parlando."
+          ]
+        },
+        "es": {
+          "title": "Pregunta a Numo sobre un pasaje de una página",
+          "summary": "Menciona a Numo en un comentario de página para preguntar sobre el pasaje seleccionado.",
+          "details": [
+            "Menciona a Numo en un comentario de página para preguntar sobre el pasaje seleccionado. Su respuesta permanece en el mismo hilo, junto al texto que estáis comentando."
+          ]
+        }
+      }
+    },
+    {
+      "id": "mcp-page",
+      "illustration": {
+        "kind": "code",
+        "name": "pages"
+      },
+      "copy": {
+        "en": {
+          "title": "A setup guide for connecting AI assistants",
+          "summary": "Connect an AI assistant to read and update your minddy projects through MCP.",
+          "details": [
+            "Connect an AI assistant to read and update your minddy projects through MCP. The new guide provides the server address, setup instructions for each supported assistant and examples to try. It also includes instructions you can copy to your assistant to help set up the connection."
+          ]
+        },
+        "fr": {
+          "title": "Un guide pour connecter vos assistants IA",
+          "summary": "Connectez un assistant IA pour consulter et modifier vos projets minddy via MCP.",
+          "details": [
+            "Connectez un assistant IA pour consulter et modifier vos projets minddy via MCP. Le nouveau guide fournit l’adresse du serveur, les instructions pour chaque assistant pris en charge et des exemples à essayer. Vous pouvez aussi copier les instructions dans votre assistant pour lui confier la connexion."
+          ]
+        },
+        "de": {
+          "title": "Eine Anleitung zum Verbinden von KI-Assistenten",
+          "summary": "Verbinde einen KI-Assistenten über MCP, um deine minddy-Projekte zu lesen und zu aktualisieren.",
+          "details": [
+            "Verbinde einen KI-Assistenten über MCP, um deine minddy-Projekte zu lesen und zu aktualisieren. Die neue Anleitung enthält Serveradresse, Einrichtungsschritte für unterstützte Assistenten und Beispiele. Du kannst die Anweisungen auch in deinen Assistenten kopieren, damit er die Verbindung einrichtet."
+          ]
+        },
+        "pt-BR": {
+          "title": "Um guia para conectar assistentes de IA",
+          "summary": "Conecte um assistente de IA pelo MCP para consultar e atualizar seus projetos do minddy.",
+          "details": [
+            "Conecte um assistente de IA pelo MCP para consultar e atualizar seus projetos do minddy. O novo guia inclui o endereço do servidor, instruções para cada assistente compatível e exemplos. Você também pode copiar as instruções para seu assistente ajudar a configurar a conexão."
+          ]
+        },
+        "it": {
+          "title": "Una guida per collegare gli assistenti IA",
+          "summary": "Collega un assistente IA tramite MCP per leggere e aggiornare i progetti minddy.",
+          "details": [
+            "Collega un assistente IA tramite MCP per leggere e aggiornare i progetti minddy. La nuova guida include indirizzo del server, istruzioni per gli assistenti supportati ed esempi. Puoi anche copiare le istruzioni nel tuo assistente per affidargli la configurazione della connessione."
+          ]
+        },
+        "es": {
+          "title": "Una guía para conectar asistentes de IA",
+          "summary": "Conecta un asistente de IA mediante MCP para consultar y actualizar tus proyectos de minddy.",
+          "details": [
+            "Conecta un asistente de IA mediante MCP para consultar y actualizar tus proyectos de minddy. La nueva guía incluye la dirección del servidor, instrucciones para cada asistente compatible y ejemplos. También puedes copiar las instrucciones en tu asistente para que te ayude a configurar la conexión."
+          ]
+        }
+      }
+    }
+  ],
+  "evidence": {
+    "commits": [
+      "962dd50b9853e188189ec8c0e4d85294fe3666b9",
+      "3102130fc970a273351f00f4f036eb091361da05",
+      "efcbed94e5b5c672181ed7b30fa61fac8ee4ff8a"
+    ],
+    "issues": []
+  }
+}

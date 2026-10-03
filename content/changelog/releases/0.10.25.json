@@ -1,0 +1,404 @@
+{
+  "version": "0.10.25",
+  "layout": "bento",
+  "publishedAt": "2026-09-07T20:13:48Z",
+  "sha": "a233e7fb07a881dcdf4ba01c228ecb1448b4cb10",
+  "deploymentId": 6315545426,
+  "copy": {
+    "en": {
+      "title": "Pages that work like databases",
+      "summary": "Organize your pages, connect Numo to your services, and give your routines more context."
+    },
+    "fr": {
+      "title": "Vos pages deviennent des bases de données",
+      "summary": "Organisez vos pages, connectez Numo à vos services et donnez plus de contexte à vos routines."
+    },
+    "de": {
+      "title": "Seiten als Datenbanken",
+      "summary": "Organisiere deine Seiten, verbinde Numo mit deinen Diensten und gib deinen Routinen mehr Kontext."
+    },
+    "pt-BR": {
+      "title": "Páginas que funcionam como bancos de dados",
+      "summary": "Organize suas páginas, conecte o Numo aos seus serviços e dê mais contexto às rotinas."
+    },
+    "it": {
+      "title": "Pagine che diventano database",
+      "summary": "Organizza le pagine, collega Numo ai tuoi servizi e dai più contesto alle routine."
+    },
+    "es": {
+      "title": "Páginas que funcionan como bases de datos",
+      "summary": "Organiza tus páginas, conecta Numo a tus servicios y da más contexto a tus rutinas."
+    }
+  },
+  "features": [
+    {
+      "id": "page-databases",
+      "illustration": {
+        "kind": "code",
+        "name": "pages"
+      },
+      "copy": {
+        "en": {
+          "title": "Organize your pages in databases",
+          "summary": "Create databases in Pages to organize journals, reports and logs.",
+          "details": [
+            "Create databases in Pages to organize journals, reports and logs. Add text, number, date, people, selection and checkbox columns, then search, filter and sort your entries. Each entry opens as a full page. Numo and MCP-connected agents can read and update your databases too."
+          ]
+        },
+        "fr": {
+          "title": "Organisez vos pages en bases de données",
+          "summary": "Créez des bases de données dans Pages pour organiser vos journaux, comptes rendus et suivis.",
+          "details": [
+            "Créez des bases de données dans Pages pour organiser vos journaux, comptes rendus et suivis. Ajoutez des colonnes de texte, nombres, dates, personnes, sélections et cases à cocher, puis recherchez, filtrez et triez vos entrées. Chaque entrée s’ouvre comme une page complète. Numo et les agents connectés par MCP peuvent aussi lire et modifier vos bases."
+          ]
+        },
+        "de": {
+          "title": "Organisieren Sie Ihre Seiten in Datenbanken",
+          "summary": "Erstellen Sie Datenbanken in Pages für Journale, Berichte und Protokolle.",
+          "details": [
+            "Erstellen Sie Datenbanken in Pages für Journale, Berichte und Protokolle. Fügen Sie Spalten für Text, Zahlen, Daten, Personen, Auswahlfelder und Kontrollkästchen hinzu. Durchsuchen, filtern und sortieren Sie Ihre Einträge. Jeder Eintrag öffnet sich als vollständige Seite. Auch Numo und über MCP verbundene Agenten können Ihre Datenbanken lesen und bearbeiten."
+          ]
+        },
+        "pt-BR": {
+          "title": "Organize suas páginas em bancos de dados",
+          "summary": "Crie bancos de dados em Pages para organizar diários, relatórios e registros.",
+          "details": [
+            "Crie bancos de dados em Pages para organizar diários, relatórios e registros. Adicione colunas de texto, números, datas, pessoas, seleções e caixas de seleção. Pesquise, filtre e ordene suas entradas. Cada entrada abre como uma página completa. O Numo e os agentes conectados via MCP também podem ler e editar seus bancos de dados."
+          ]
+        },
+        "it": {
+          "title": "Organizza le tue pagine in database",
+          "summary": "Crea database in Pages per organizzare diari, resoconti e registri.",
+          "details": [
+            "Crea database in Pages per organizzare diari, resoconti e registri. Aggiungi colonne di testo, numeri, date, persone, selezioni e caselle di controllo, poi cerca, filtra e ordina le voci. Ogni voce si apre come una pagina completa. Anche Numo e gli agenti connessi tramite MCP possono leggere e modificare i tuoi database."
+          ]
+        },
+        "es": {
+          "title": "Organiza tus páginas en bases de datos",
+          "summary": "Crea bases de datos en Pages para organizar diarios, informes y registros.",
+          "details": [
+            "Crea bases de datos en Pages para organizar diarios, informes y registros. Añade columnas de texto, números, fechas, personas, selecciones y casillas de verificación. Busca, filtra y ordena tus entradas. Cada entrada se abre como una página completa. Numo y los agentes conectados mediante MCP también pueden leer y editar tus bases de datos."
+          ]
+        }
+      }
+    },
+    {
+      "id": "numo-connected-services",
+      "illustration": {
+        "kind": "code",
+        "name": "connections"
+      },
+      "copy": {
+        "en": {
+          "title": "Connect your services to Numo",
+          "summary": "Add a personal MCP connection in your account settings so Numo can use your other services in chats and coding tasks.",
+          "details": [
+            "Add a personal MCP connection in your account settings so Numo can use your other services in chats and coding tasks. Scheduled routines use the project owner's connections."
+          ]
+        },
+        "fr": {
+          "title": "Connectez vos services à Numo",
+          "summary": "Ajoutez une connexion MCP personnelle dans les paramètres de votre compte pour que Numo utilise vos autres services dans ses conversations et ses tâches de…",
+          "details": [
+            "Ajoutez une connexion MCP personnelle dans les paramètres de votre compte pour que Numo utilise vos autres services dans ses conversations et ses tâches de code. Les routines utilisent les connexions du propriétaire du projet."
+          ]
+        },
+        "de": {
+          "title": "Verbinde deine Dienste mit Numo",
+          "summary": "Füge in deinen Kontoeinstellungen eine persönliche MCP-Verbindung hinzu, damit Numo deine anderen Dienste in Gesprächen und Programmieraufgaben nutzen kann.",
+          "details": [
+            "Füge in deinen Kontoeinstellungen eine persönliche MCP-Verbindung hinzu, damit Numo deine anderen Dienste in Gesprächen und Programmieraufgaben nutzen kann. Geplante Routinen verwenden die Verbindungen des Projektinhabers."
+          ]
+        },
+        "pt-BR": {
+          "title": "Conecte seus serviços ao Numo",
+          "summary": "Adicione uma conexão MCP pessoal nas configurações da conta para que o Numo use seus outros serviços em conversas e tarefas de programação.",
+          "details": [
+            "Adicione uma conexão MCP pessoal nas configurações da conta para que o Numo use seus outros serviços em conversas e tarefas de programação. As rotinas agendadas usam as conexões do proprietário do projeto."
+          ]
+        },
+        "it": {
+          "title": "Collega i tuoi servizi a Numo",
+          "summary": "Aggiungi una connessione MCP personale nelle impostazioni dell’account per consentire a Numo di usare gli altri tuoi servizi nelle conversazioni e nelle…",
+          "details": [
+            "Aggiungi una connessione MCP personale nelle impostazioni dell’account per consentire a Numo di usare gli altri tuoi servizi nelle conversazioni e nelle attività di programmazione. Le routine programmate usano le connessioni del proprietario del progetto."
+          ]
+        },
+        "es": {
+          "title": "Conecta tus servicios a Numo",
+          "summary": "Añade una conexión MCP personal en los ajustes de tu cuenta para que Numo use tus otros servicios en conversaciones y tareas de programación.",
+          "details": [
+            "Añade una conexión MCP personal en los ajustes de tu cuenta para que Numo use tus otros servicios en conversaciones y tareas de programación. Las rutinas programadas usan las conexiones del propietario del proyecto."
+          ]
+        }
+      }
+    },
+    {
+      "id": "numo-cross-project",
+      "illustration": {
+        "kind": "code",
+        "name": "assistant"
+      },
+      "copy": {
+        "en": {
+          "title": "Ask Numo to work in another project",
+          "summary": "Create or update an issue in another project without leaving your conversation.",
+          "details": [
+            "Create or update an issue in another project without leaving your conversation. Tell Numo which project to use; otherwise, it keeps working in the current one."
+          ]
+        },
+        "fr": {
+          "title": "Demandez à Numo d’agir dans un autre projet",
+          "summary": "Créez ou modifiez un ticket dans un autre projet sans quitter votre conversation.",
+          "details": [
+            "Créez ou modifiez un ticket dans un autre projet sans quitter votre conversation. Précisez à Numo le projet à utiliser ; sinon, il continue de travailler dans le projet courant."
+          ]
+        },
+        "de": {
+          "title": "Bitte Numo, in einem anderen Projekt zu arbeiten",
+          "summary": "Erstelle oder bearbeite ein Ticket in einem anderen Projekt, ohne dein Gespräch zu verlassen.",
+          "details": [
+            "Erstelle oder bearbeite ein Ticket in einem anderen Projekt, ohne dein Gespräch zu verlassen. Sage Numo, welches Projekt gemeint ist; andernfalls arbeitet es im aktuellen Projekt weiter."
+          ]
+        },
+        "pt-BR": {
+          "title": "Peça ao Numo para trabalhar em outro projeto",
+          "summary": "Crie ou edite uma tarefa em outro projeto sem sair da conversa.",
+          "details": [
+            "Crie ou edite uma tarefa em outro projeto sem sair da conversa. Diga ao Numo qual projeto usar; caso contrário, ele continuará trabalhando no projeto atual."
+          ]
+        },
+        "it": {
+          "title": "Chiedi a Numo di lavorare in un altro progetto",
+          "summary": "Crea o modifica un ticket in un altro progetto senza lasciare la conversazione.",
+          "details": [
+            "Crea o modifica un ticket in un altro progetto senza lasciare la conversazione. Indica a Numo quale progetto usare; altrimenti continuerà a lavorare in quello attuale."
+          ]
+        },
+        "es": {
+          "title": "Pide a Numo que trabaje en otro proyecto",
+          "summary": "Crea o modifica una incidencia en otro proyecto sin salir de tu conversación.",
+          "details": [
+            "Crea o modifica una incidencia en otro proyecto sin salir de tu conversación. Indica a Numo qué proyecto debe usar; de lo contrario, seguirá trabajando en el actual."
+          ]
+        }
+      }
+    },
+    {
+      "id": "routine-context",
+      "illustration": {
+        "kind": "code",
+        "name": "assistant"
+      },
+      "copy": {
+        "en": {
+          "title": "Give your routines skills and project context",
+          "summary": "Mention issues, pages, or objectives in a routine's instructions, and select repository skills to guide the work.",
+          "details": [
+            "Mention issues, pages, or objectives in a routine's instructions, and select repository skills to guide the work. Numo receives that context whenever the routine runs."
+          ]
+        },
+        "fr": {
+          "title": "Ajoutez des skills et du contexte à vos routines",
+          "summary": "Mentionnez des tickets, pages ou objectifs dans les instructions d’une routine et sélectionnez des skills du dépôt.",
+          "details": [
+            "Mentionnez des tickets, pages ou objectifs dans les instructions d’une routine et sélectionnez des skills du dépôt. Numo reçoit ce contexte à chaque occurrence."
+          ]
+        },
+        "de": {
+          "title": "Ergänze deine Routinen um Skills und Projektkontext",
+          "summary": "Erwähne Aufgaben, Seiten oder Ziele in den Anweisungen einer Routine und wähle Repository-Skills für die Arbeit.",
+          "details": [
+            "Erwähne Aufgaben, Seiten oder Ziele in den Anweisungen einer Routine und wähle Repository-Skills für die Arbeit. Numo erhält diesen Kontext bei jeder Ausführung."
+          ]
+        },
+        "pt-BR": {
+          "title": "Adicione skills e contexto do projeto às suas rotinas",
+          "summary": "Mencione tarefas, páginas ou objetivos nas instruções de uma rotina e selecione skills do repositório.",
+          "details": [
+            "Mencione tarefas, páginas ou objetivos nas instruções de uma rotina e selecione skills do repositório. O Numo recebe esse contexto em cada execução."
+          ]
+        },
+        "it": {
+          "title": "Aggiungi skill e contesto del progetto alle tue routine",
+          "summary": "Menziona attività, pagine o obiettivi nelle istruzioni di una routine e seleziona skill del repository.",
+          "details": [
+            "Menziona attività, pagine o obiettivi nelle istruzioni di una routine e seleziona skill del repository. Numo riceve il contesto a ogni esecuzione."
+          ]
+        },
+        "es": {
+          "title": "Añade skills y contexto del proyecto a tus rutinas",
+          "summary": "Menciona incidencias, páginas u objetivos en las instrucciones de una rutina y selecciona habilidades del repositorio.",
+          "details": [
+            "Menciona incidencias, páginas u objetivos en las instrucciones de una rutina y selecciona habilidades del repositorio. Numo recibe ese contexto en cada ejecución."
+          ]
+        }
+      }
+    },
+    {
+      "id": "repository-skills",
+      "illustration": {
+        "kind": "code",
+        "name": "board"
+      },
+      "copy": {
+        "en": {
+          "title": "Give Numo your project's reusable instructions",
+          "summary": "Select a skill from your repository when writing to Numo.",
+          "details": [
+            "Select a skill from your repository when writing to Numo. You can preview its instructions before sending them and use skills from a local checkout in the desktop app too."
+          ]
+        },
+        "fr": {
+          "title": "Donnez à Numo les consignes réutilisables de votre projet",
+          "summary": "Sélectionnez un skill de votre dépôt lorsque vous écrivez à Numo.",
+          "details": [
+            "Sélectionnez un skill de votre dépôt lorsque vous écrivez à Numo. Vous pouvez consulter ses consignes avant l’envoi et utiliser aussi les skills d’un dossier local dans l’application desktop."
+          ]
+        },
+        "de": {
+          "title": "Gib Numo die wiederverwendbaren Anweisungen deines Projekts",
+          "summary": "Wähle beim Schreiben an Numo einen Skill aus deinem Repository.",
+          "details": [
+            "Wähle beim Schreiben an Numo einen Skill aus deinem Repository. Du kannst seine Anweisungen vor dem Senden ansehen und in der Desktop-App auch Skills aus einem lokalen Projektordner nutzen."
+          ]
+        },
+        "pt-BR": {
+          "title": "Dê ao Numo as instruções reutilizáveis do seu projeto",
+          "summary": "Selecione um skill do repositório ao escrever para o Numo.",
+          "details": [
+            "Selecione um skill do repositório ao escrever para o Numo. Você pode consultar as instruções antes de enviá-las e usar também skills de uma cópia local no aplicativo de desktop."
+          ]
+        },
+        "it": {
+          "title": "Dai a Numo le istruzioni riutilizzabili del tuo progetto",
+          "summary": "Seleziona uno skill del repository quando scrivi a Numo.",
+          "details": [
+            "Seleziona uno skill del repository quando scrivi a Numo. Puoi consultarne le istruzioni prima di inviarle e usare anche gli skill di una copia locale nell’app desktop."
+          ]
+        },
+        "es": {
+          "title": "Dale a Numo las instrucciones reutilizables de tu proyecto",
+          "summary": "Selecciona un skill de tu repositorio al escribir a Numo.",
+          "details": [
+            "Selecciona un skill de tu repositorio al escribir a Numo. Puedes consultar sus instrucciones antes de enviarlas y usar también skills de una copia local en la aplicación de escritorio."
+          ]
+        }
+      }
+    },
+    {
+      "id": "objective-momentum",
+      "illustration": {
+        "kind": "code",
+        "name": "activity"
+      },
+      "copy": {
+        "en": {
+          "title": "See whether an objective is on track",
+          "summary": "Each objective now shows its recent pace and eight weeks of completed issues.",
+          "details": [
+            "Each objective now shows its recent pace and eight weeks of completed issues. When there is enough activity, an estimated finish date helps you spot a deadline at risk."
+          ]
+        },
+        "fr": {
+          "title": "Voyez si un objectif avance au bon rythme",
+          "summary": "Chaque objectif affiche désormais son rythme récent et huit semaines de tickets terminés.",
+          "details": [
+            "Chaque objectif affiche désormais son rythme récent et huit semaines de tickets terminés. Lorsque l’activité est suffisante, une date de fin estimée vous aide à repérer une échéance menacée."
+          ]
+        },
+        "de": {
+          "title": "Sieh, ob ein Ziel im Zeitplan liegt",
+          "summary": "Jedes Ziel zeigt jetzt das aktuelle Arbeitstempo und acht Wochen abgeschlossener Tickets.",
+          "details": [
+            "Jedes Ziel zeigt jetzt das aktuelle Arbeitstempo und acht Wochen abgeschlossener Tickets. Bei ausreichender Aktivität hilft dir ein geschätztes Abschlussdatum, gefährdete Fristen zu erkennen."
+          ]
+        },
+        "pt-BR": {
+          "title": "Veja se um objetivo está no ritmo previsto",
+          "summary": "Cada objetivo agora mostra o ritmo recente e oito semanas de tarefas concluídas.",
+          "details": [
+            "Cada objetivo agora mostra o ritmo recente e oito semanas de tarefas concluídas. Quando há atividade suficiente, uma data estimada de conclusão ajuda você a identificar prazos em risco."
+          ]
+        },
+        "it": {
+          "title": "Verifica se un obiettivo procede al ritmo previsto",
+          "summary": "Ogni obiettivo mostra ora il ritmo recente e otto settimane di ticket completati.",
+          "details": [
+            "Ogni obiettivo mostra ora il ritmo recente e otto settimane di ticket completati. Quando l’attività è sufficiente, una data di completamento stimata ti aiuta a individuare le scadenze a rischio."
+          ]
+        },
+        "es": {
+          "title": "Comprueba si un objetivo avanza al ritmo previsto",
+          "summary": "Cada objetivo muestra ahora su ritmo reciente y ocho semanas de incidencias completadas.",
+          "details": [
+            "Cada objetivo muestra ahora su ritmo reciente y ocho semanas de incidencias completadas. Cuando hay actividad suficiente, una fecha de finalización estimada te ayuda a detectar plazos en riesgo."
+          ]
+        }
+      }
+    },
+    {
+      "id": "resume-failed-agent",
+      "illustration": {
+        "kind": "code",
+        "name": "assistant"
+      },
+      "copy": {
+        "en": {
+          "title": "Resume an agent after a failed run",
+          "summary": "When a failed run has saved progress, you can send Numo a follow-up and continue in the same conversation.",
+          "details": [
+            "When a failed run has saved progress, you can send Numo a follow-up and continue in the same conversation. The work already done remains available."
+          ]
+        },
+        "fr": {
+          "title": "Reprenez le travail de l’agent après un échec",
+          "summary": "Lorsqu’une exécution en échec a conservé sa progression, vous pouvez envoyer une nouvelle instruction à Numo et poursuivre la même conversation.",
+          "details": [
+            "Lorsqu’une exécution en échec a conservé sa progression, vous pouvez envoyer une nouvelle instruction à Numo et poursuivre la même conversation. Le travail déjà réalisé reste disponible."
+          ]
+        },
+        "de": {
+          "title": "Setze die Arbeit des Agenten nach einem Fehler fort",
+          "summary": "Wenn ein fehlgeschlagener Lauf seinen Fortschritt gespeichert hat, kannst du Numo eine weitere Anweisung senden und dasselbe Gespräch fortsetzen.",
+          "details": [
+            "Wenn ein fehlgeschlagener Lauf seinen Fortschritt gespeichert hat, kannst du Numo eine weitere Anweisung senden und dasselbe Gespräch fortsetzen. Die bisherige Arbeit bleibt verfügbar."
+          ]
+        },
+        "pt-BR": {
+          "title": "Retome o trabalho do agente após uma falha",
+          "summary": "Quando uma execução com falha tiver salvo o progresso, você poderá enviar uma nova instrução ao Numo e continuar na mesma conversa.",
+          "details": [
+            "Quando uma execução com falha tiver salvo o progresso, você poderá enviar uma nova instrução ao Numo e continuar na mesma conversa. O trabalho já realizado continua disponível."
+          ]
+        },
+        "it": {
+          "title": "Riprendi il lavoro dell’agente dopo un errore",
+          "summary": "Se un’esecuzione non riuscita ha salvato i progressi, puoi inviare una nuova istruzione a Numo e continuare nella stessa conversazione.",
+          "details": [
+            "Se un’esecuzione non riuscita ha salvato i progressi, puoi inviare una nuova istruzione a Numo e continuare nella stessa conversazione. Il lavoro già svolto resta disponibile."
+          ]
+        },
+        "es": {
+          "title": "Retoma el trabajo del agente tras un fallo",
+          "summary": "Si una ejecución fallida ha guardado su progreso, puedes enviar otra instrucción a Numo y continuar en la misma conversación.",
+          "details": [
+            "Si una ejecución fallida ha guardado su progreso, puedes enviar otra instrucción a Numo y continuar en la misma conversación. El trabajo ya realizado sigue disponible."
+          ]
+        }
+      }
+    }
+  ],
+  "evidence": {
+    "commits": [
+      "ce9ed305d31f0a5dc959b7a6f125098492346897",
+      "a1ea001df340b8106dd0021e51bc12daa59533e0",
+      "aa8edecc44cde449195ba58c31bb6fb6e0979d95",
+      "fbe0d275d3925257afeb30fd4bbc99d8cfb7c035",
+      "696b2918c96672759f8d131ef1b52c5c3db59998",
+      "6834a80408ed246824657362a632a88c3015f57f",
+      "0f312e8e9696cf5aee42c095c178412fda950544"
+    ],
+    "issues": []
+  }
+}
