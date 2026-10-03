@@ -1,8 +1,9 @@
 "use client";
 
-import { Activity, memo, useCallback, useEffect, useLayoutEffect, useState, useSyncExternalStore, type ReactNode } from "react";
+import { Activity, memo, useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
+import { appTabSurfaceLoaders } from "@/lib/app-tab-surfaces";
 import { usePathname, useSearchParams } from "next/navigation";
 import { AppTabNavigationScope, useAppTabs } from "@/lib/app-tabs-context";
 import { AppTabRouteProvider } from "@/lib/app-tab-route-context";
@@ -16,24 +17,35 @@ import { observeRetainedBoardData } from "@/lib/retained-board-data";
 import { retainedBoardKeys, retainedBoardReadState } from "@/lib/retained-board-read-state";
 import { useTranslations } from "next-intl";
 
-const GlobalBoard = dynamic(() => import("./global-board").then((module) => module.GlobalBoard), { loading: () => <BoardLoadingSkeleton /> });
-const ProjectBoard = dynamic(() => import("@/app/(app)/projects/[id]/page"), { loading: () => <BoardLoadingSkeleton /> });
+const GlobalBoard = dynamic(() => appTabSurfaceLoaders["global-board"]().then((module) => module.GlobalBoard), { loading: () => <BoardLoadingSkeleton /> });
+const ProjectBoard = dynamic(appTabSurfaceLoaders["project-board"], { loading: () => <BoardLoadingSkeleton /> });
+
+const Pages = dynamic(() => appTabSurfaceLoaders.pages().then((module) => module.PagesShell));
+const PullRequests = dynamic(appTabSurfaceLoaders["pull-requests"]);
+const Feedback = dynamic(() => appTabSurfaceLoaders.feedback().then((module) => module.FeedbackTeamPage));
+const Triage = dynamic(appTabSurfaceLoaders.triage);
 
 const RetainedBoard = memo(function RetainedBoard({ view, active }: { view: RetainedAppView; active: boolean }) {
+  const activation = useRef({ active, at: Date.now() });
+  if (active && !activation.current.active) activation.current.at = Date.now();
+  activation.current.active = active;
   const scroll = useRetainedBoardScroll(active);
   const client = useQueryClient();
   const t = useTranslations("Board");
   const subscribe = useCallback((notify: () => void) => client.getQueryCache().subscribe(notify), [client]);
-  const snapshot = useCallback(() => retainedBoardReadState(client, view), [client, view]);
+  const isBoard = view.kind === "global-board" || view.kind === "project-board";
+  const snapshot = useCallback(() => isBoard ? retainedBoardReadState(client, view) : "fresh", [client, view, isBoard]);
   const readState = useSyncExternalStore(subscribe, snapshot, () => "fresh");
   return <div {...scroll} className="relative h-full min-h-0" data-retained-app-view={view.key} data-app-view-active={active ? "true" : "false"}
-    data-board-read-state={readState} aria-busy={active && readState !== "fresh"}
+    data-board-read-state={isBoard ? readState : undefined} aria-busy={active && readState !== "fresh"}
     inert={!active} aria-hidden={!active || undefined} style={{ display: active ? undefined : "none" }}>
     <Activity mode={active ? "visible" : "hidden"}>
     <RetainedBoardTitle view={view} />
     <AppTabNavigationScope activeId={view.tabId}>
-      <AppTabRouteProvider route={view.route}>
-        {view.kind === "global-board" ? <GlobalBoard /> : <ProjectBoard />}
+      <AppTabRouteProvider route={view.route} active={active} activatedAt={activation.current.at}>
+        {view.kind === "global-board" ? <GlobalBoard /> : view.kind === "project-board" ? <ProjectBoard />
+          : view.kind === "pages" ? <Pages /> : view.kind === "pull-requests" ? <PullRequests />
+          : view.kind === "feedback" ? <Feedback /> : <Triage />}
       </AppTabRouteProvider>
     </AppTabNavigationScope>
     </Activity>
@@ -46,7 +58,7 @@ const RetainedBoard = memo(function RetainedBoard({ view, active }: { view: Reta
   </div>;
 });
 
-/** Retain rich boards with React-managed effect suspension and a weighted retention bound. */
+/** One bounded host retains recent destinations while React suspends hidden effects. */
 export function AppTabViewHost({ children }: { children: ReactNode }) {
   const { tabs, activeId, session } = useAppTabs();
   const client = useQueryClient();
@@ -74,6 +86,11 @@ export function AppTabViewHost({ children }: { children: ReactNode }) {
         budget: pressured ? 3 : 6, limit: 6, visits,
         href: tabs.find((tab) => tab.id === tabId)?.href,
         cost: (view) => {
+          if (view.kind === "pull-requests") {
+            const pr = new URLSearchParams(view.route.search).get("pr");
+            return Math.max(1, Math.ceil((client.getQueryData<{ files: unknown[] }>(["pull-request", pr])?.files.length ?? 400) / 200));
+          }
+          if (view.kind !== "global-board" && view.kind !== "project-board") return view.kind === "pages" ? 2 : 1;
           const data = view.kind === "global-board"
             ? client.getQueryData<{ issues: unknown[] }>(["me", "board"])?.issues
             : client.getQueryData<unknown[]>(["issues", view.route.projectId]);

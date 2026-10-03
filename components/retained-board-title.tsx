@@ -18,7 +18,9 @@ export function RetainedBoardTitle({ view }: { view: RetainedAppView }) {
   }), [client]);
   const read = useCallback(() => client.getQueryData<{ id: string; name: string }[]>(["projects"])?.find((project) => project.id === view.route.projectId)?.name ?? null, [client, view.route.projectId]);
   const name = useSyncExternalStore(subscribe, read, () => null);
-  const title = `${view.kind === "global-board" ? t("all") : name ?? t("project")} · ${siteName}`;
+  const label = view.kind === "global-board" ? t("all") : view.kind === "project-board" ? name ?? t("project")
+    : view.kind === "pull-requests" ? t("pullRequests") : t(view.kind);
+  const title = `${label}${name && view.kind !== "project-board" ? ` · ${name}` : ""} · ${siteName}`;
   const applied = useRef<string | null>(null);
   useEffect(() => {
     const apply = () => {

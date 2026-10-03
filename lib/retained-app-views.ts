@@ -7,7 +7,7 @@ export const RETAINED_APP_VIEW_BUDGET = 6;
 export interface RetainedAppView {
   key: string;
   tabId: string | null;
-  kind: "global-board" | "project-board";
+  kind: "global-board" | "project-board" | "pages" | "pull-requests" | "feedback" | "triage";
   route: AppTabRouteSnapshot;
   /** Published selection may outlive a consumed ?view= URL instruction. */
   href?: string;
@@ -23,7 +23,10 @@ export interface RetainedViewPolicy {
 
 export function retainedAppViewKind(pathname: string): RetainedAppView["kind"] | null {
   if (pathname === "/all") return "global-board";
-  return /^\/projects\/[^/]+$/.test(pathname) ? "project-board" : null;
+  if (/^\/projects\/[^/]+$/.test(pathname)) return "project-board";
+  if (pathname === "/pull-requests") return "pull-requests";
+  const section = pathname.match(/^\/projects\/[^/]+\/(pages|feedback|triage)(?:\/[^/]+)?$/)?.[1];
+  return (section as RetainedAppView["kind"] | undefined) ?? null;
 }
 
 export function isRetainedDestination(views: readonly RetainedAppView[], tabId: string | null, href: string): boolean {
@@ -42,7 +45,7 @@ export function retainAppView(
   const retained = previous.filter((view) => view.tabId === null || openTabs.has(view.tabId));
   const kind = retainedAppViewKind(route.pathname);
   if (!kind) return retained;
-  const existing = retained.find((view) => view.route.pathname === route.pathname && (view.tabId === tabId || view.tabId === null));
+  const existing = retained.find((view) => (view.route.pathname === route.pathname || (kind === "pages" && view.kind === kind && view.route.projectId === route.projectId)) && (view.tabId === tabId || view.tabId === null));
   const active: RetainedAppView = {
     key: existing?.key ?? `${tabId ?? "startup"}:${route.pathname}`,
     tabId,

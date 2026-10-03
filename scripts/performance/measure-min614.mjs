@@ -13,6 +13,7 @@ import { EMAIL, MARKER, id } from "./seed.mjs";
 import { measureRetainedReturns } from "./min614-retained-returns.mjs";
 import { measureIssueJourneys } from "./min614-issue-journeys.mjs";
 import { measureMutationJourneys } from "./min614-mutation-journeys.mjs";
+import { measureNavigationJourneys } from "./min614-navigation-journeys.mjs";
 import { measureHotJourneys } from "./min614-hot-journeys.mjs";
 
 loadEnv();
@@ -52,6 +53,7 @@ const cpuProfile = process.argv.includes("--profile");
 const pass2 = process.argv.includes("--retained-returns");
 const pass3 = process.argv.includes("--issue-journeys");
 const pass3b = process.argv.includes("--mutation-journeys");
+const pass3f = process.argv.includes("--navigation-journeys");
 const pass3d = process.argv.includes("--hot-journeys");
 const buildSha = process.env.MINDDY_PERF_BUILD_SHA;
 if (buildSha) assert.match(buildSha, /^[a-f0-9]{40}$/);
@@ -231,7 +233,9 @@ try {
     width: innerWidth, height: innerHeight, theme: document.documentElement.classList.contains("dark") ? "dark" : "light" }));
   assert.equal(runtime.renderer.nativeBridge, native);
   const pagesHref = `/projects/${fixture.projects[0]}/pages`;
-  if (pass3d) {
+  if (pass3f) {
+    await measureNavigationJourneys({ page, context, fixture, boardTab, pagesTab, tabs, base, measure, frames, diagnostic: diagnostic || cpuProfile, output, label, cdp });
+  } else if (pass3d) {
     await measureHotJourneys({ page, context, fixture, boardTab, pagesTab, tabs, base, measure, frames, diagnostic: diagnostic || cpuProfile, output, label, cdp });
   } else if (pass3b) {
     await measureMutationJourneys({ page, context, fixture, boardTab, pagesTab, base, measure, frames, diagnostic: diagnostic || cpuProfile, output, label, recordRequest: (record) => requests.push(record), cdp });
@@ -256,7 +260,7 @@ try {
     await frames();
     await page.screenshot({ path: `${output}/${label}-issue-light.png` });
   }
-  if (!process.argv.includes("--short") && !pass3 && !pass3d) {
+  if (!process.argv.includes("--short") && !pass3 && !pass3d && !pass3f) {
   // Read the stored PR list through its real authenticated route; no diff or forge is fabricated.
   for (let run = 0; run < 3; run++) {
     const started = performance.now();
@@ -323,7 +327,7 @@ try {
     }
     await writeFile(`${output}/${label}-navigation-tabs.json`, JSON.stringify(navigationTabs, null, 2));
   }
-  await writeFile(`${output}/${label}.json`, JSON.stringify({ label, native, diagnostic, cpuProfile, pass2, pass3, pass3b, timestamp: new Date().toISOString(), buildSha, sha: execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(), dirty: Boolean(execFileSync("git", ["status", "--porcelain"], { encoding: "utf8" }).trim()), runtime, buildId: (await readFile(path.join(process.env.MINDDY_PERF_REFERENCE_ROOT ?? process.cwd(), ".next/BUILD_ID"), "utf8")).trim(), measurements, errors, responses, requests, desktopTrace }, null, 2));
+  await writeFile(`${output}/${label}.json`, JSON.stringify({ label, native, diagnostic, cpuProfile, pass2, pass3, pass3b, pass3f, timestamp: new Date().toISOString(), buildSha, sha: execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(), dirty: Boolean(execFileSync("git", ["status", "--porcelain"], { encoding: "utf8" }).trim()), runtime, buildId: (await readFile(path.join(process.env.MINDDY_PERF_REFERENCE_ROOT ?? process.cwd(), ".next/BUILD_ID"), "utf8")).trim(), measurements, errors, responses, requests, desktopTrace }, null, 2));
 
   await browser?.close();
   if (launchServices && profile) {

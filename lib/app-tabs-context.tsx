@@ -8,7 +8,7 @@ import { AppTabsSession, type AppTabsSnapshot } from "./app-tabs-session";
 import { appTabsQueryKey, useAppTabsQuery } from "./use-app-tabs-query";
 import { AppTabRouteSync } from "@/components/app-tab-route-sync";
 import { appTabsStorageKey } from "./app-tabs-storage";
-import { prefetchAppTabDestination } from "./prefetch-tab-destination";
+import { prefetchAppTabDestination, isPreparedAppTabDestination } from "./prefetch-tab-destination";
 import { createPrTabPreparation } from "./pr-tab-preparation";
 import { NavigationContext, useOptionalAppTabNavigation } from "./app-tab-navigation-context";
 import { removeLocalSnapshot, restoreLocalSnapshot, saveLocalSnapshot } from "./local-snapshots";
@@ -93,7 +93,7 @@ function AccountTabs({ owner, children }: { owner: string; children: ReactNode }
       const current = window.location.pathname;
       const next = href.split(/[?#]/)[0];
       const wikiRoot = current.match(/^\/projects\/[^/]+\/pages(?:\/|$)/)?.[0].replace(/\/$/, "");
-      if (session.isRetainedDestination(session.getSnapshot().activeId, href) ||
+      if (session.isRetainedDestination(session.getSnapshot().activeId, href) || isPreparedAppTabDestination(client, href) ||
           (wikiRoot && (next === wikiRoot || next.startsWith(`${wikiRoot}/`)))) window.history.pushState(null, "", href);
       else router.push(href, { scroll: false });
     };

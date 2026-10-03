@@ -1,8 +1,11 @@
 import type { QueryClient } from "@tanstack/react-query";
+import { prepareAppTabSurface } from "./app-tab-surfaces";
+import { preparePageNavigation } from "./use-pages-query";
 import { appTabRoute } from "./app-tab-location";
-import { prefetchPullRequestDetail } from "./prefetch-tab-destination";
+import { appTabPreparationQuery, prefetchPullRequestDetail } from "./prefetch-tab-destination";
 
-/** One account-owned preparation budget per navigation, with no idle polling. */
+/** The existing account preparation owner ranks all common destinations.
+ * One primary read per navigation, with active-work cancellation and no polling. */
 export function createPrTabPreparation(
   client: QueryClient,
   schedule: (work: () => void) => () => void = (work) => {
@@ -18,23 +21,30 @@ export function createPrTabPreparation(
   let available: readonly string[] = [];
   let active = "", budget = false, disposed = false;
   let cancel: (() => void) | undefined;
-  let preparing: string | undefined;
+  let preparing: readonly unknown[] | undefined;
 
   const prepare = () => {
     cancel = undefined;
     if (disposed || !budget || client.isFetching() > 0) return;
     const counts = new Map<string, number>();
     visits.forEach((href) => counts.set(href, (counts.get(href) ?? 0) + 1));
-    const candidates = [...new Set(visits)].filter((href) => href !== active && available.includes(href) && appTabRoute(href).prId)
+    const candidates = [...new Set(visits)].filter((href) => href !== active && available.includes(href) && appTabPreparationQuery(client, href))
       .sort((a, b) => (counts.get(b)! * 32 + visits.lastIndexOf(b)) - (counts.get(a)! * 32 + visits.lastIndexOf(a)));
     for (const href of candidates) {
-      const prId = appTabRoute(href).prId!;
-      const state = client.getQueryState(["pull-request", prId]);
+      const options = appTabPreparationQuery(client, href)!;
+      const state = client.getQueryState(options.queryKey);
       if (state?.data !== undefined && !state.isInvalidated) continue;
-      const pending = prefetchPullRequestDetail(client, prId);
+      const route = appTabRoute(href);
+      if (route.pageId) preparePageNavigation(route.pageId);
+      // The final consumer owns the data and its reconciliation rules. Only
+      // one missing/invalidated primary read consumes this navigation budget.
+      const pending = route.prId ? prefetchPullRequestDetail(client, route.prId)
+        : client.prefetchQuery<unknown>({ ...options, retry: false });
       if (!pending) return;
-      budget = false; preparing = prId;
-      void pending.finally(() => { if (preparing === prId) preparing = undefined; });
+      void prepareAppTabSurface(href)?.catch(() => {});
+      budget = false; preparing = options.queryKey;
+      const key = preparing;
+      void pending.finally(() => { if (preparing === key) preparing = undefined; });
       break;
     }
   };
@@ -43,7 +53,7 @@ export function createPrTabPreparation(
     // Yield speculative transport to active work, but never cancel a detail
     // whose foreground observer has joined the normal query.
     if (preparing && client.isFetching() > 1) {
-      const key = ["pull-request", preparing];
+      const key = preparing;
       if (client.getQueryCache().find({ queryKey: key, exact: true })?.getObserversCount() === 0) {
         void client.cancelQueries({ queryKey: key, exact: true });
       }
@@ -55,6 +65,10 @@ export function createPrTabPreparation(
       if (disposed) return;
       cancel?.(); cancel = undefined;
       active = href; available = hrefs;
+      if (preparing && client.getQueryCache().find({ queryKey: preparing, exact: true })?.getObserversCount() === 0) {
+        const target = appTabPreparationQuery(client, href)?.queryKey;
+        if (JSON.stringify(target) !== JSON.stringify(preparing)) void client.cancelQueries({ queryKey: preparing, exact: true });
+      }
       visits.push(href); if (visits.length > 32) visits.shift();
       budget = true;
       cancel = schedule(prepare);
@@ -62,7 +76,7 @@ export function createPrTabPreparation(
     dispose() {
       disposed = true; cancel?.(); stop();
       if (preparing) {
-        const key = ["pull-request", preparing];
+        const key = preparing;
         if (client.getQueryCache().find({ queryKey: key, exact: true })?.getObserversCount() === 0) {
           void client.cancelQueries({ queryKey: key, exact: true });
         }

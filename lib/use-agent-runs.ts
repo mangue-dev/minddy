@@ -1,5 +1,7 @@
 "use client";
 
+import { useAppTabActive, useAppTabActivation } from "./app-tab-route-context";
+
 import { useQuery, type QueryClient } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import { assertPullRequestReadBudget, pullRequestReadRetry, pullRequestQueryOptions, pullRequestReadState } from "./pull-request-query";
@@ -186,9 +188,12 @@ export function useAgentRunEventsQuery(runId: string | null, active: boolean) {
  * precisely when the user is looking.
  */
 export function usePullRequestQuery(prId: string, enabled: boolean) {
+  const active = useAppTabActive();
+  const scopeActivation = useAppTabActivation();
+  enabled = enabled && active;
   const activation = useRef({ prId, enabled, at: Date.now() });
-  if (activation.current.prId !== prId || activation.current.enabled !== enabled) {
-    activation.current = { prId, enabled, at: Date.now() };
+  if (activation.current.prId !== prId || activation.current.enabled !== enabled || scopeActivation > activation.current.at) {
+    activation.current = { prId, enabled, at: Math.max(scopeActivation, Date.now()) };
   }
   const query = useQuery({
     ...pullRequestQueryOptions(prId),

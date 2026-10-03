@@ -72,6 +72,40 @@ afterEach(async () => {
 });
 
 describe("bounded retained board views", () => {
+  it("retains mixed late destinations with scoped routes and evicts a closed editor", async () => {
+    state.tabs = Array.from({ length: 12 }, (_, index) => ({ id: `t${index}` }));
+    const routes = ["/pull-requests", "/projects/p/pages/document", "/projects/p/feedback", "/projects/p/triage"];
+    let editor: HTMLInputElement | null = null;
+    for (const index of [8, 9, 10, 11, 8, 11, 10, 9]) {
+      Object.assign(state, { activeId: `t${index}`, path: routes[index - 8], activeHref: routes[index - 8] });
+      await render();
+      const active = container.querySelector('[data-app-view-active="true"]')!;
+      expect(active.querySelector("[data-board-path]")?.getAttribute("data-board-path")).toBe(routes[index - 8]);
+      if (index === 9) {
+        const current = active.querySelector("input")!;
+        if (editor) expect(current).toBe(editor);
+        editor = current; editor.value = "Retained editor draft";
+      }
+      expect(liveEffects).toBe(1);
+      expect(container.querySelectorAll("[data-retained-app-view]").length).toBeLessThanOrEqual(6);
+    }
+    expect(editor!.value).toBe("Retained editor draft");
+    state.tabs = state.tabs.filter((tab) => tab.id !== "t9");
+    Object.assign(state, { activeId: "t11", path: routes[3], activeHref: routes[3] });
+    await render();
+    expect(editor!.isConnected).toBe(false);
+  });
+
+  it("reuses the Pages shell within a tab while keeping other projects isolated", () => {
+    const open = new Set(["pages"]);
+    const first = retainAppView([], { pathname: "/projects/p/pages/a", search: "", projectId: "p" }, "pages", open);
+    const next = retainAppView(first, { pathname: "/projects/p/pages/b", search: "", projectId: "p" }, "pages", open);
+    expect(next).toHaveLength(1); expect(next[0].key).toBe(first[0].key);
+    expect(next[0].route.pathname).toBe("/projects/p/pages/b");
+    const other = retainAppView(next, { pathname: "/projects/q/pages/a", search: "", projectId: "q" }, "pages", open);
+    expect(other).toHaveLength(2); expect(other[0].route.projectId).toBe("p");
+  });
+
   it("updates document metadata on retained returns and reads project names from the owner cache", async () => {
     client.setQueryData(["projects"], [{ id: "p", name: "Project P" }]);
     await render();
@@ -100,7 +134,7 @@ describe("bounded retained board views", () => {
     const board = container.querySelector<HTMLElement>("[data-retained-app-view]")!;
     board.scrollTop = 42;
     expect(liveEffects).toBe(1);
-    state.path = "/projects/p/pages";
+    state.path = "/settings";
     state.activeHref = state.path;
     state.activeId = "pages";
     await render();
@@ -170,7 +204,7 @@ describe("bounded retained board views", () => {
     const input = container.querySelector("input");
     state.tabs = state.tabs.filter((tab) => tab.id !== "board");
     state.activeId = "pages";
-    state.activeHref = "/projects/p/pages";
+    state.activeHref = "/settings";
     await render();
     expect(container.querySelector("input")).toBe(input);
     expect(mounts).toBe(1);

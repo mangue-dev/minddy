@@ -5,7 +5,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, Cancel01Icon, ExpandIcon } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useMemo, useState, useRef } from "react";
-import { useParams, usePathname, useSearchParams } from "next/navigation";
+import { AppTabRouteBoundary, useAppTabRoute } from "@/lib/app-tab-route-context";
 import { useTranslations } from "next-intl";
 import {
   Button,
@@ -37,12 +37,14 @@ import { SIDEBAR_COMPACT_CONTROL_CLASS } from "@/lib/sidebar-control-styles";
 import type { PageMenuTarget } from "@/components/pages/page-document-actions";
 
 export function PagesShell() {
+  return <AppTabRouteBoundary><PagesShellInner /></AppTabRouteBoundary>;
+}
+
+function PagesShellInner() {
   const t = useTranslations("Pages");
   const tCommon = useTranslations("Common");
-  const params = useParams<{ id: string }>();
-  const projectId = params.id;
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
+  const { projectId: routeProjectId, pathname, searchParams } = useAppTabRoute();
+  const projectId = routeProjectId!;
   const tDatabase = useTranslations("PageDatabase");
   const previewFlush = useRef<() => Promise<boolean>>(async () => true);
   const registerPreviewFlush = useCallback((flush: () => Promise<boolean>) => { previewFlush.current = flush; }, []);

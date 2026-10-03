@@ -22,6 +22,17 @@ afterEach(() => {
 const requested = () => fetchMock.mock.calls.map(([url]) => String(url).split("?")[0]);
 
 describe("tab destination prefetch", () => {
+  it("prepares Pages and Feedback through their actual consumer keys without board reads", async () => {
+    fetchMock.mockImplementation(async () => ({ ...response({ posts: [], board_enabled: false }), json: async () => ({ posts: [], board_enabled: false }) }));
+    prefetchAppTabDestination(client, "/projects/p/pages", new Set());
+    prefetchAppTabDestination(client, "/projects/p/feedback", new Set());
+    await vi.waitFor(() => expect(client.isFetching()).toBe(0));
+    expect(requested()).toEqual(["/api/projects/p/pages", "/api/projects/p/feedback"]);
+    expect(client.getQueryData(["feedback", "p"])).toEqual({ posts: [], board_enabled: false });
+    prefetchAppTabDestination(client, "/projects/p/settings", new Set());
+    expect(requested()).toHaveLength(2);
+  });
+
   it("warms the routines list and the agent catalog once per destination", async () => {
     prefetchAppTabDestination(client, "/routines", new Set());
     await vi.waitFor(() => expect(requested()).toEqual(["/api/routines", "/api/agent/models"]));

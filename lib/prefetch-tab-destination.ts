@@ -1,3 +1,8 @@
+import { prepareAppTabSurface, isAppTabSurfaceReady } from "./app-tab-surfaces";
+import { feedbackQueryOptions } from "./feedback-query";
+import { fetchPagesApi, fetchPageApi } from "./pages-api";
+import { pagesKey, pageKey } from "./use-pages-query";
+import { issuesQueryFn } from "./issues-api";
 import type { QueryClient } from "@tanstack/react-query";
 
 import { appTabRoute } from "./app-tab-location";
@@ -60,12 +65,19 @@ export function prefetchAppTabDestination(
 ): void {
   if (attempted.has(href)) return;
   attempted.add(href);
+  void prepareAppTabSurface(href)?.catch(() => {});
 
   const route = appTabRoute(href);
-  if (route.projectId && route.pageId) {
-    prefetchPageNavigation(queryClient, route.projectId, route.pageId);
+  if (route.projectId && route.section === "pages") {
+    void queryClient.prefetchQuery({ queryKey: pagesKey(route.projectId), queryFn: ({ signal }) => fetchPagesApi(route.projectId!, signal) });
+    if (route.pageId) prefetchPageNavigation(queryClient, route.projectId, route.pageId);
     return;
   }
+  if (route.projectId && route.section === "feedback") {
+    void queryClient.prefetchQuery(feedbackQueryOptions(route.projectId));
+    return;
+  }
+  if (route.projectId && route.section !== "tickets" && route.section !== "triage") return;
   if (route.projectId) {
     prefetchProjectQueries(queryClient, route.projectId);
     return;
@@ -118,4 +130,27 @@ export function prefetchAppTabDestination(
     }
     default:
   }
+}
+
+/** A single primary query per ranked destination; no second cache or timer. */
+export function appTabPreparationQuery(client: QueryClient, href: string) {
+  const route = appTabRoute(href);
+  if (route.prId && route.section === "pull-requests") return pullRequestQueryOptions(route.prId);
+  if (route.projectId && route.section === "pages") {
+    if (route.pageId) return { queryKey: pageKey(route.pageId), queryFn: ({ signal }: { signal: AbortSignal }) => fetchPageApi(route.projectId!, route.pageId!, signal) };
+    return { queryKey: pagesKey(route.projectId), queryFn: ({ signal }: { signal: AbortSignal }) => fetchPagesApi(route.projectId!, signal) };
+  }
+  if (route.projectId && route.section === "feedback") return feedbackQueryOptions(route.projectId);
+  if (route.projectId && ["tickets", "triage"].includes(route.section)) return { queryKey: ["issues", route.projectId] as const, queryFn: issuesQueryFn(route.projectId) };
+  if (route.section === "all") return { queryKey: GLOBAL_BOARD_KEY, queryFn: globalBoardQueryFn };
+  return null;
+}
+
+/** Only public prepared code and existing query data permit a local mount.
+ * The mounted consumer retains its ordinary authority/refetch contract. */
+export function isPreparedAppTabDestination(client: QueryClient, href: string): boolean {
+  if (!isAppTabSurfaceReady(href)) return false;
+  const options = appTabPreparationQuery(client, href);
+  const state = options && client.getQueryState(options.queryKey);
+  return !!state && state.data !== undefined && state.status !== "error" && !state.isInvalidated;
 }

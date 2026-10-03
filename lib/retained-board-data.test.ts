@@ -7,6 +7,20 @@ const global: RetainedAppView = { key: "global", tabId: "g", kind: "global-board
 const project: RetainedAppView = { key: "project", tabId: "p", kind: "project-board", route: { pathname: "/projects/p", search: "", projectId: "p" } };
 
 describe("retained board data ownership", () => {
+  it("keeps loaded Pages and Feedback lists current without starting hidden PR polling", async () => {
+    const client = new QueryClient();
+    const read = vi.fn(async () => ["fresh"]);
+    for (const key of [["pages", "p"], ["feedback", "p"], ["pull-request", "pr"]]) await client.fetchQuery({ queryKey: key, queryFn: read });
+    read.mockClear();
+    const stop = observeRetainedBoardData(client, [
+      { ...project, kind: "pages" }, { ...project, kind: "feedback" }, { ...global, kind: "pull-requests" },
+    ]);
+    await client.invalidateQueries();
+    expect(read).toHaveBeenCalledTimes(2);
+    stop(); await client.invalidateQueries(); expect(read).toHaveBeenCalledTimes(2);
+    client.clear();
+  });
+
   it("keeps loaded hidden data current once through the shared query and releases it on eviction", async () => {
     const client = new QueryClient({ defaultOptions: { queries: { staleTime: 300000 } } });
     const read = vi.fn(async () => ({ issues: [{ title: "Changed remotely" }] }));
