@@ -104,4 +104,20 @@ describe("authorized GitHub reads in flight", () => {
     releases[0](Response.json({ errors: [{ message: "Query unavailable" }] }));
     await Promise.all(assertions);
   });
+
+  it("preserves explicit retry advice and derives a pause from an exhausted primary quota", async () => {
+    const reset = Math.ceil(Date.now() / 1000) + 120;
+    const fetch = vi.fn<typeof globalThis.fetch>()
+      .mockResolvedValueOnce(Response.json({ message: "Limited" }, { status: 403, headers: {
+        "x-ratelimit-remaining": "0", "x-ratelimit-reset": String(reset),
+      } }))
+      .mockResolvedValueOnce(Response.json({ message: "Limited" }, { status: 429, headers: {
+        "Retry-After": "180", "x-ratelimit-remaining": "0", "x-ratelimit-reset": String(reset),
+      } }));
+    vi.stubGlobal("fetch", fetch);
+    const exhausted = await githubResponseText(url, "token", options, true);
+    expect(Number(exhausted.retryAfter)).toBeGreaterThanOrEqual(120);
+    expect(Number(exhausted.retryAfter)).toBeLessThanOrEqual(121);
+    expect((await githubResponseText(url, "token", options, true)).retryAfter).toBe("180");
+  });
 });

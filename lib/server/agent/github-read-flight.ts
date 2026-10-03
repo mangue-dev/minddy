@@ -31,7 +31,9 @@ export async function githubResponseText(
     // Explicitly prevent Next or an intermediary from retaining private reads.
     const response = await fetch(url, { ...init, cache: "no-store" });
     return JSON.stringify({ status: response.status, ok: response.ok, text: await response.text(),
-      retryAfter: response.headers.get("retry-after") });
+      retryAfter: response.headers.get("retry-after") ??
+        (response.headers.get("x-ratelimit-remaining") === "0" && Number(response.headers.get("x-ratelimit-reset")) > Date.now() / 1000
+          ? String(Math.ceil(Number(response.headers.get("x-ratelimit-reset")) - Date.now() / 1000)) : null) });
   };
   if (!readOnly) {
     writes++;

@@ -2,7 +2,7 @@
 
 import { useQuery, type QueryClient } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
-import { pullRequestQueryOptions, pullRequestReadState } from "./pull-request-query";
+import { assertPullRequestReadBudget, pullRequestReadRetry, pullRequestQueryOptions, pullRequestReadState } from "./pull-request-query";
 import {
   fetchAgentRunApi,
   fetchAgentRunDiffApi,
@@ -234,7 +234,8 @@ export function usePullRequestReadinessBatchQuery(prIds: readonly string[]) {
   const enabled = sortedPrIds.length > 0;
   const { data, isPending, isError } = useQuery({
     queryKey: ["pull-request-readiness", "batch", sortedPrIds],
-    queryFn: () => fetchPullRequestReadinessBatchApi(sortedPrIds),
+    queryFn: ({ client }) => { assertPullRequestReadBudget(client); return fetchPullRequestReadinessBatchApi(sortedPrIds); },
+    retry: pullRequestReadRetry,
     enabled,
     refetchOnMount: "always",
     refetchInterval: (query) =>
@@ -404,7 +405,8 @@ export function useAllPullRequestsQuery(
 ) {
   const { data, isPending, isFetching, refetch } = useQuery({
     queryKey: allPullRequestsQueryKey(state, limit, pin),
-    queryFn: () => fetchAllPullRequestsApi({ state, limit, pin }),
+    queryFn: ({ client }) => { assertPullRequestReadBudget(client); return fetchAllPullRequestsApi({ state, limit, pin }); },
+    retry: pullRequestReadRetry,
     placeholderData: (previous) => previous,
     refetchOnMount: "always",
     refetchInterval: (query) => {
@@ -513,7 +515,9 @@ export function usePrCommentsQuery(prId: string | null) {
   const enabled = !!prId;
   const { data, isPending, refetch } = useQuery({
     queryKey: ["pr-comments", prId],
+    retry: pullRequestReadRetry,
     queryFn: async ({ client }) => {
+      assertPullRequestReadBudget(client);
       const startedAt = Date.now();
       const data = await fetchPullRequestCommentsApi(prId as string);
       return applyPendingPrReactions(client, ["pr-comments", prId as string], data, startedAt);
@@ -546,7 +550,8 @@ export function usePrCommitsQuery(prId: string | null) {
   const enabled = !!prId;
   const { data, isPending, refetch } = useQuery({
     queryKey: ["pr-commits", prId],
-    queryFn: () => fetchPullRequestCommitsApi(prId as string),
+    queryFn: ({ client }) => { assertPullRequestReadBudget(client); return fetchPullRequestCommitsApi(prId as string); },
+    retry: pullRequestReadRetry,
     enabled,
     refetchOnMount: "always",
     refetchInterval: PULL_REQUEST_SETTLED_POLL_MS,
@@ -568,7 +573,8 @@ export function usePrCommitDiffQuery(prId: string, sha: string | null) {
   const enabled = !!sha;
   const { data, isPending } = useQuery({
     queryKey: ["pr-commit-diff", prId, sha],
-    queryFn: () => fetchPrCommitDiffApi(prId, sha as string),
+    queryFn: ({ client }) => { assertPullRequestReadBudget(client); return fetchPrCommitDiffApi(prId, sha as string); },
+    retry: pullRequestReadRetry,
     enabled,
   });
   return { diff: data ?? null, loading: enabled && isPending };
@@ -583,7 +589,9 @@ export function usePrReviewCommentsQuery(endpoint: PrEndpoint | null) {
   const enabled = !!endpoint;
   const { data, isPending, refetch } = useQuery({
     queryKey: ["pr-review-comments", endpoint],
+    retry: pullRequestReadRetry,
     queryFn: async ({ client }) => {
+      assertPullRequestReadBudget(client);
       const startedAt = Date.now();
       const data = await fetchPrReviewCommentsApi(endpoint as PrEndpoint);
       return applyPendingPrReactions(client, commentReactionsKey(endpoint as PrEndpoint, "review"), data, startedAt);

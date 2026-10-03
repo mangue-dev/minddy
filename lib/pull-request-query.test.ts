@@ -1,6 +1,7 @@
 import { QueryClient, QueryObserver } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { pullRequestQueryOptions, pullRequestReadState } from "./pull-request-query";
+import { assertPullRequestReadBudget, pullRequestQueryOptions, pullRequestReadState, pullRequestReadRetry } from "./pull-request-query";
+import { ApiError } from "./agent-api";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -40,5 +41,18 @@ describe("pull request activation authority", () => {
     expect(pullRequestReadState({ ...previous, isError: true }, 10)).toBe("error");
     expect(pullRequestReadState({ ...previous, fetchStatus: "paused" }, 10)).toBe("paused");
     expect(pullRequestReadState({ ...previous, isPending: true, data: undefined }, 10)).toBe("loading");
+  });
+
+  it.each(["pr-comments", "pr-commits", "pr-review-comments", "pull-request-readiness", "pull-requests"])("shares Retry-After from %s with detail and other foreground surfaces", async (key) => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const error = new ApiError("Quota exhausted"); error.status = 403; error.retryAt = Date.now() + 120_000;
+    await client.fetchQuery({ queryKey: [key, "other"], queryFn: async () => { throw error; } }).catch(() => {});
+    const fetch = vi.fn(); vi.stubGlobal("fetch", fetch);
+    expect(() => assertPullRequestReadBudget(client)).toThrow(error);
+    await expect(client.fetchQuery(pullRequestQueryOptions("pr1"))).rejects.toBe(error);
+    expect(fetch).not.toHaveBeenCalled(); expect(pullRequestReadRetry(0, error)).toBe(false);
+    // A replacement account client never inherits another account's error.
+    const next = new QueryClient(); expect(() => assertPullRequestReadBudget(next)).not.toThrow();
+    next.clear(); client.clear();
   });
 });

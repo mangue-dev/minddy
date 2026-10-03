@@ -81,6 +81,7 @@ export function prefetchAppTabDestination(
       return;
     }
     case "pull-requests": {
+      if (pullRequestAccountRetryAt(queryClient) > Date.now()) { attempted.delete(href); return; }
       if (route.prId) {
         // One speculative detail per account client; the foreground can join
         // its normal query. No polling or additional plaintext cache.

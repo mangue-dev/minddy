@@ -9,8 +9,22 @@ export function pullRequestReadRetryAt(state: { error: unknown; errorUpdatedAt: 
   return [403, 429].includes(state.error.status ?? 0) ? state.errorUpdatedAt + 60_000 : 0;
 }
 
+const PR_READ_KEYS = new Set(["pull-request", "pull-request-readiness", "pull-requests", "pr-comments", "pr-commits", "pr-commit-diff", "pr-review-comments"]);
+const isPullRequestReadKey = (key: readonly unknown[]) => PR_READ_KEYS.has(String(key[0]));
+
+export function assertPullRequestReadBudget(client: QueryClient): void {
+  const blocked = client.getQueryCache().findAll().find((query) =>
+    isPullRequestReadKey(query.queryKey) && pullRequestReadRetryAt(query.state) > Date.now());
+  if (blocked) throw blocked.state.error;
+}
+
+export function pullRequestReadRetry(count: number, error: Error): boolean {
+  if (error instanceof ApiError && (error.retryAt || [401, 403, 404, 429].includes(error.status ?? 0))) return false;
+  return count < 2;
+}
+
 export function pullRequestAccountRetryAt(client: QueryClient): number {
-  return client.getQueryCache().findAll({ queryKey: ["pull-request"] })
+  return client.getQueryCache().findAll().filter((query) => isPullRequestReadKey(query.queryKey))
     .reduce((until, query) => Math.max(until, pullRequestReadRetryAt(query.state)), 0);
 }
 
@@ -19,20 +33,13 @@ export function pullRequestQueryOptions(prId: string) {
   return {
     queryKey: ["pull-request", prId] as const,
     queryFn: async ({ signal, client }: { signal: AbortSignal; client?: QueryClient }) => {
-      if (client && pullRequestAccountRetryAt(client) > Date.now()) {
-        const blocked = client.getQueryCache().findAll({ queryKey: ["pull-request"] })
-          .find((query) => pullRequestReadRetryAt(query.state) > Date.now());
-        throw blocked!.state.error;
-      }
+      if (client) assertPullRequestReadBudget(client);
       const readStartedAt = Date.now();
       const data = await fetchPullRequestApi(prId, signal);
       return { ...data, readStartedAt };
     },
     staleTime: 0,
-    retry: (count: number, error: Error) => {
-      if (error instanceof ApiError && (error.retryAt || [401, 403, 404, 429].includes(error.status ?? 0))) return false;
-      return count < 2;
-    },
+    retry: pullRequestReadRetry,
     refetchOnMount: "always" as const,
     refetchInterval: (query: { state: { data?: Awaited<ReturnType<typeof fetchPullRequestApi>>; error: unknown; errorUpdatedAt: number } }) =>
       pullRequestReadRetryAt(query.state) > Date.now() ? false : pullRequestRefetchInterval(query.state.data),
