@@ -220,7 +220,7 @@ that both arrived before a shared GitHub operation still coalesce; a later
 activation performs a new read. Old operation settlement cannot remove a newer
 replacement flight. Mutations remain unshared and fenced.
 
-Final barrier product `2734cb7b5c64941ad0fa0882b60a6bfc90a40273`, BUILD_ID `h4X35D3t8pBK6qr4oS4wA`,
+Barrier product `2734cb7b5c64941ad0fa0882b60a6bfc90a40273`, BUILD_ID `h4X35D3t8pBK6qr4oS4wA`,
 was production-built without starting an authenticated measurement server.
 The focused test holds old/new head responses and independently proves concurrent
 sharing and rejection of an older operation, including replacement settlement.
@@ -236,6 +236,17 @@ new measured speed claim. No launch resumed after the quota stop. Cancellation
 aborts the client query/HTTP transport; propagation through all upstream GitHub
 operations is not established, and some server work may finish afterward. Server
 RSS, sustained background traffic and live mutation-race acceptance remain open.
+
+The final source product is `06b873619c067886afef21041ae708f39b044e49`,
+BUILD_ID `_PaI3dfDDX_Wd17Z_MV6Z`. Its error-recovery correction materializes a
+headerless 403/429 fallback deadline once on the existing account query error.
+Reusing that error across detail/readiness/comment surfaces cannot extend the pause
+indefinitely. Explicit Retry-After and quota-reset advice remain authoritative,
+including malformed REST responses and GraphQL error/no-data envelopes. Focused
+tests prove the propagated fallback expires and quota advice survives transport
+errors; 47 tests in six affected files, types/lint, encryption/schema/English checks
+and the production build pass. This product was also built without reopening the
+authenticated runtime and has no new native timing or live recovery claim.
 
 ## Safeguards, remaining acceptance and cumulative matrix
 
