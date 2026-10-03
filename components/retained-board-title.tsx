@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useSyncExternalStore } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { SITE_NAME } from "@/lib/site";
+import { useRuntimeConfig } from "@/lib/runtime-config-provider";
 import type { RetainedAppView } from "@/lib/retained-app-views";
 
 /** Local retained navigation does not run the server metadata route again.
@@ -11,13 +11,14 @@ import type { RetainedAppView } from "@/lib/retained-app-views";
  * Activity reconnects this effect before the panel's DocumentTitle effect. */
 export function RetainedBoardTitle({ view }: { view: RetainedAppView }) {
   const client = useQueryClient();
+  const { siteName } = useRuntimeConfig();
   const t = useTranslations("Meta");
   const subscribe = useCallback((notify: () => void) => client.getQueryCache().subscribe((event) => {
     if (event.query.queryKey.length === 1 && event.query.queryKey[0] === "projects") notify();
   }), [client]);
   const read = useCallback(() => client.getQueryData<{ id: string; name: string }[]>(["projects"])?.find((project) => project.id === view.route.projectId)?.name ?? null, [client, view.route.projectId]);
   const name = useSyncExternalStore(subscribe, read, () => null);
-  const title = `${view.kind === "global-board" ? t("all") : name ?? t("project")} · ${SITE_NAME}`;
+  const title = `${view.kind === "global-board" ? t("all") : name ?? t("project")} · ${siteName}`;
   const applied = useRef<string | null>(null);
   useEffect(() => {
     const apply = () => {

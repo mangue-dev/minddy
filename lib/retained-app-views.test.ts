@@ -17,6 +17,7 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(state.search),
   useParams: () => ({ id: state.path.split("/")[2] }),
 }));
+vi.mock("./runtime-config-provider", () => ({ useRuntimeConfig: () => ({ siteName: "minddy" }) }));
 vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key }));
 vi.mock("./app-tabs-context", () => ({
   useAppTabs: () => ({ tabs: state.tabs, activeId: state.activeId, session: state }),
