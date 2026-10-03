@@ -220,6 +220,8 @@ that both arrived before a shared GitHub operation still coalesce; a later
 activation performs a new read. Old operation settlement cannot remove a newer
 replacement flight. Mutations remain unshared and fenced.
 
+Final barrier product `2734cb7b5c64941ad0fa0882b60a6bfc90a40273`, BUILD_ID `h4X35D3t8pBK6qr4oS4wA`,
+was production-built without starting an authenticated measurement server.
 The focused test holds old/new head responses and independently proves concurrent
 sharing and rejection of an older operation, including replacement settlement.
 Readiness controls also keep stable permission-based mounting during refresh and

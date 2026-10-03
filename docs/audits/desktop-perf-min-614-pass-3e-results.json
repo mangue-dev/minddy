@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
   "deliveryProduct": {
-    "sha": "d9d576c0245812ee0b433a3809a1c14f756e60df",
-    "buildId": "dlXYoN5YqnWMLEbN1h2PW",
+    "sha": "2734cb7b5c64941ad0fa0882b60a6bfc90a40273",
+    "buildId": "h4X35D3t8pBK6qr4oS4wA",
     "nativeAuthenticatedRerun": false,
-    "reason": "Error-only quota correction; no restart after quota exhaustion"
+    "reason": "Quota correction and request-start freshness barrier; no native restart or comparative remeasurement after quota exhaustion"
   },
   "baseline": {
     "provenance": {
@@ -3142,6 +3142,16 @@
       "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
     },
     {
+      "localOriginal": "output/playwright/performance/pass3e-build-barrier-final.log",
+      "originalBytes": 12890,
+      "originalSha256": "a8ed11e720bc808ed3dba68f1e5064183deea65da3d24e7396230859ee43d744",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-build-barrier-final.log.gz",
+      "publishedBytes": 2818,
+      "publishedSha256": "e1689e366d51eba2e4ef87a8c1dd6a0d9fdd269fb1eafc76ab944a02acecf5ec",
+      "uncompressedPublishedSha256": "a8ed11e720bc808ed3dba68f1e5064183deea65da3d24e7396230859ee43d744",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
       "localOriginal": "output/playwright/performance/pass3e-build-quota-final.log",
       "originalBytes": 12890,
       "originalSha256": "469cf4f8d675ca80138674279dae599be9bdc438003748b1da3a14638dd00a2c",
@@ -3149,6 +3159,66 @@
       "publishedBytes": 2821,
       "publishedSha256": "9967bf2c3dbaedcb6f22be2119849fdf10b72fbb4b41d1e996159f231d09664e",
       "uncompressedPublishedSha256": "469cf4f8d675ca80138674279dae599be9bdc438003748b1da3a14638dd00a2c",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-checks-watch.log",
+      "originalBytes": 41191,
+      "originalSha256": "16a2ffd0af9b3005bc457e280d3442ead55b7f21001fdd5a11152fbff14c15ab",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-checks-watch.log.gz",
+      "publishedBytes": 713,
+      "publishedSha256": "b4d0b84cc0d8e9a46515d4787128741f0fbe80481ea6e89bdb98975ef51ff85d",
+      "uncompressedPublishedSha256": "16a2ffd0af9b3005bc457e280d3442ead55b7f21001fdd5a11152fbff14c15ab",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-ci-failure-final.log",
+      "originalBytes": 81,
+      "originalSha256": "0215c606353804b0c59f669d961fe0a8a840c2a01e419990c4d71b70166f7876",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-ci-failure-final.log.gz",
+      "publishedBytes": 92,
+      "publishedSha256": "b843f423ef9e2eb2f7f292ad22fdbfa943f30b84a5a91fd066ebe0d24cb74888",
+      "uncompressedPublishedSha256": "0215c606353804b0c59f669d961fe0a8a840c2a01e419990c4d71b70166f7876",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-ci-first-head-audit.log",
+      "originalBytes": 5512,
+      "originalSha256": "77a595cc704cbae8fca1ab2364e9cecc50a38d04735d8494b6f71370195db6a6",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-ci-first-head-audit.log.gz",
+      "publishedBytes": 1182,
+      "publishedSha256": "9a53b5062037b39e6856670dc823206a43c489178b79d37a280fa77486292c2e",
+      "uncompressedPublishedSha256": "77a595cc704cbae8fca1ab2364e9cecc50a38d04735d8494b6f71370195db6a6",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-ci-job-progress.json",
+      "originalBytes": 2191,
+      "originalSha256": "b6393a1b7d9e598d1cae7fb69eed0f00796c36a9cf1ccdce027b4595984e8ac5",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-ci-job-progress.json.gz",
+      "publishedBytes": 563,
+      "publishedSha256": "ace79375e84195617e22e744c08c7a9b25f2cec61abe05cf4bf03ceaa1d1d23b",
+      "uncompressedPublishedSha256": "b6393a1b7d9e598d1cae7fb69eed0f00796c36a9cf1ccdce027b4595984e8ac5",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-ci-progress-latest.json",
+      "originalBytes": 93,
+      "originalSha256": "74db56f9b88859e40ea93c559d18444f74a9e3e552130e1535c29122a6e96e44",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-ci-progress-latest.json.gz",
+      "publishedBytes": 103,
+      "publishedSha256": "41f2bbf6acd7a820959fbacab00c7b4d58567f395eb49084a56beac076d76c94",
+      "uncompressedPublishedSha256": "74db56f9b88859e40ea93c559d18444f74a9e3e552130e1535c29122a6e96e44",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-dco-final.json",
+      "originalBytes": 89,
+      "originalSha256": "7900845e05f1621642ff04ec6ce8c6cd3ec2a8d7d7c6da08a56507005dd7adc0",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-dco-final.json.gz",
+      "publishedBytes": 100,
+      "publishedSha256": "02f8134dd674fccf6129419113f8f151d3707cdcf90af790d289497294e78992",
+      "uncompressedPublishedSha256": "7900845e05f1621642ff04ec6ce8c6cd3ec2a8d7d7c6da08a56507005dd7adc0",
       "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
     },
     {
@@ -3229,6 +3299,16 @@
       "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
     },
     {
+      "localOriginal": "output/playwright/performance/pass3e-encrypted-barrier.log",
+      "originalBytes": 128,
+      "originalSha256": "d72d2e0b164e94fc33948b575ed850e65a488f46e148c3f3352eb4f1a00cafbd",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-encrypted-barrier.log.gz",
+      "publishedBytes": 110,
+      "publishedSha256": "721d4f290cdf13311124bcad9c7d0810753b01064b197227fd739a39ec838ca0",
+      "uncompressedPublishedSha256": "d72d2e0b164e94fc33948b575ed850e65a488f46e148c3f3352eb4f1a00cafbd",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
       "localOriginal": "output/playwright/performance/pass3e-encrypted-delivery.log",
       "originalBytes": 128,
       "originalSha256": "d72d2e0b164e94fc33948b575ed850e65a488f46e148c3f3352eb4f1a00cafbd",
@@ -3246,6 +3326,16 @@
       "publishedBytes": 155,
       "publishedSha256": "f44a2dc9c420ef47d1bc13291dd6dc0f88c685f8319cd2d2ddff2a1cd97824fd",
       "uncompressedPublishedSha256": "ca0be109452d2b8c82957063d9924d6571daa9d9e92707f55602e2df01e7e5d2",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-english-barrier.log",
+      "originalBytes": 155,
+      "originalSha256": "e69eb410834bfcdbfd4ace6775f801f4aada03a2b1ca8db06c40d4e399a1def4",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-english-barrier.log.gz",
+      "publishedBytes": 135,
+      "publishedSha256": "81a3a50f5f6c126207081865acf0ed9f96186ef5d3b83e197231c0a167a67260",
+      "uncompressedPublishedSha256": "e69eb410834bfcdbfd4ace6775f801f4aada03a2b1ca8db06c40d4e399a1def4",
       "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
     },
     {
@@ -3373,6 +3463,26 @@
       "publishedBytes": 130,
       "publishedSha256": "c5e6b1fceacef60ef5e16b0e3443cd54da5c35e2d33deb08772badc2941c0119",
       "uncompressedPublishedSha256": "87178b8c2abf5ac48c7c0d83b4d183cfb7f0b61f3df585f991c1eced8def8c84",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-lint-authority-controls.log",
+      "originalBytes": 549,
+      "originalSha256": "d2f2229b6d9ba8f3038ac2cdf27b96bb675551c7fcb271acc2b47d0dde1f051c",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-lint-authority-controls.log.gz",
+      "publishedBytes": 350,
+      "publishedSha256": "c8e6cbd2d5a7cb3f0eda3493722dd9257b701ab649d8d8ed71a50e124e459767",
+      "uncompressedPublishedSha256": "114f353500511046af81020c376dd187dbec0e670e3d090f152dc75404b44573",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-lint-barrier.log",
+      "originalBytes": 549,
+      "originalSha256": "ed735d10401b5375e24fdbe3f48c2cdb141e7fe4562223c0401202236357e7b5",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-lint-barrier.log.gz",
+      "publishedBytes": 351,
+      "publishedSha256": "8e54a2c0a8f3893addfe868055f049f0eefc677972451604ea4d2ef9b9ae0e18",
+      "uncompressedPublishedSha256": "09d7599f0e61bfc2d34312b443c2a599d67fecb3fa5ed22a43d2394c1effa482",
       "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
     },
     {
@@ -3563,6 +3673,16 @@
       "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
     },
     {
+      "localOriginal": "output/playwright/performance/pass3e-owned-final-index.log",
+      "originalBytes": 155,
+      "originalSha256": "e69eb410834bfcdbfd4ace6775f801f4aada03a2b1ca8db06c40d4e399a1def4",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-owned-final-index.log.gz",
+      "publishedBytes": 135,
+      "publishedSha256": "81a3a50f5f6c126207081865acf0ed9f96186ef5d3b83e197231c0a167a67260",
+      "uncompressedPublishedSha256": "e69eb410834bfcdbfd4ace6775f801f4aada03a2b1ca8db06c40d4e399a1def4",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
       "localOriginal": "output/playwright/performance/pass3e-personal-initial.json",
       "originalBytes": 205563,
       "originalSha256": "5bda813507148f289d717db0ada6ea68adad74913ca7f453daa5366f4860c17d",
@@ -3587,6 +3707,16 @@
       "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
     },
     {
+      "localOriginal": "output/playwright/performance/pass3e-pr-body-current.json",
+      "originalBytes": 32115,
+      "originalSha256": "74e806667c25605f520fe3054d7958a41c2bb470f677b29d3f5385586bd8781d",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-pr-body-current.json.gz",
+      "publishedBytes": 11599,
+      "publishedSha256": "4502b6baa01c3a3a95802cbfe780d246d0ef1a994da41751fec0ec0f45e18baf",
+      "uncompressedPublishedSha256": "74e806667c25605f520fe3054d7958a41c2bb470f677b29d3f5385586bd8781d",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
       "localOriginal": "output/playwright/performance/pass3e-pr-cumulative-before-update.json",
       "originalBytes": 34431,
       "originalSha256": "4dca38da1090e596221221c8a8a869c7ba91fccd1dca64c8bfdd64e862f112d7",
@@ -3594,6 +3724,16 @@
       "publishedBytes": 12003,
       "publishedSha256": "6c672aaeb15e49a8bb8f7c57d5fe6c0504db4d47240e5e833530a0d9fa0a2821",
       "uncompressedPublishedSha256": "4dca38da1090e596221221c8a8a869c7ba91fccd1dca64c8bfdd64e862f112d7",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-pr-final-checks.json",
+      "originalBytes": 2415,
+      "originalSha256": "f12682bf4a4552acac9e1968c3197f87ab1062009350cb81fce29157e8e06804",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-pr-final-checks.json.gz",
+      "publishedBytes": 699,
+      "publishedSha256": "552b89d979614f2abb25dd525469ec48d71ec887d1fcb4aea1e9f5119f64c0e3",
+      "uncompressedPublishedSha256": "f12682bf4a4552acac9e1968c3197f87ab1062009350cb81fce29157e8e06804",
       "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
     },
     {
@@ -3617,6 +3757,16 @@
       "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
     },
     {
+      "localOriginal": "output/playwright/performance/pass3e-public-index-final.log",
+      "originalBytes": 170,
+      "originalSha256": "58f8a672be8b7770be1e0a2e392640fa8fddaa0d63b8a742d065f2d89fcd6b1d",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-public-index-final.log.gz",
+      "publishedBytes": 154,
+      "publishedSha256": "544a26713a9616afd4ade395f4b59111b545f206aa606fe5f261a8e00cac1734",
+      "uncompressedPublishedSha256": "58f8a672be8b7770be1e0a2e392640fa8fddaa0d63b8a742d065f2d89fcd6b1d",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
       "localOriginal": "output/playwright/performance/pass3e-public-repo-product.log",
       "originalBytes": 170,
       "originalSha256": "84e1dc8f440c3c07b5281ed6bd957d3fe591d19c036ca4e361817765793a1c85",
@@ -3634,6 +3784,16 @@
       "publishedBytes": 192,
       "publishedSha256": "325616c1fc0408b1302cf55efec683c7849ccdbe18cfbbd889de7a646604c951",
       "uncompressedPublishedSha256": "3669f26bedf8097ec173982324c016c19b0e323ae55ce7dd59007319c256340f",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-schema-barrier.log",
+      "originalBytes": 198,
+      "originalSha256": "ca0be109452d2b8c82957063d9924d6571daa9d9e92707f55602e2df01e7e5d2",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-schema-barrier.log.gz",
+      "publishedBytes": 155,
+      "publishedSha256": "f44a2dc9c420ef47d1bc13291dd6dc0f88c685f8319cd2d2ddff2a1cd97824fd",
+      "uncompressedPublishedSha256": "ca0be109452d2b8c82957063d9924d6571daa9d9e92707f55602e2df01e7e5d2",
       "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
     },
     {
@@ -3664,6 +3824,26 @@
       "publishedBytes": 2284,
       "publishedSha256": "b078880b2337b1e69a371fa4000335cc367740c3cbdf9f8f54ac0f5fbd0eb6c3",
       "uncompressedPublishedSha256": "27682a0d56ddae321ced4028e42980e32abc27a6fede62924f7712166595d784",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-tests-barrier.log",
+      "originalBytes": 818,
+      "originalSha256": "c82025e151e4a61a2796091c94423eeee0908fcbc6f201c553869f12d3996a0d",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-tests-barrier.log.gz",
+      "publishedBytes": 453,
+      "publishedSha256": "f2601aff13c32e9c62c706fdfe357ed3638835a941659aaddc95989d28179fac",
+      "uncompressedPublishedSha256": "ec4ab8ad99a086f829f835f54bf9b38b0684b3309072c61585dc4780882fc4a9",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-tests-controls-final.log",
+      "originalBytes": 488,
+      "originalSha256": "ed64423348a76fbaab60c72a00a42404293a4c9b3e3a25af711a0a5b49ac8607",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-tests-controls-final.log.gz",
+      "publishedBytes": 299,
+      "publishedSha256": "c4bb8bbee2766a18561d008b2a6ef30af21fef638ce0ca02ec99e4a93465076e",
+      "uncompressedPublishedSha256": "859e0b7bba9d03c742fa4e11ae4d14d70b1f9d0da52a7da8a1e0f369c9936652",
       "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
     },
     {
@@ -3794,6 +3974,36 @@
       "publishedBytes": 63,
       "publishedSha256": "0ee7ede1c111b8bbfce667887d61ac67de187b1691610cd5ea6a72d351ed789c",
       "uncompressedPublishedSha256": "a232218ab0cb56112998296a30550c7d6df45b3d6f5aa5c171b8e1faf5b0340a",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-types-authority-controls.log",
+      "originalBytes": 43,
+      "originalSha256": "a232218ab0cb56112998296a30550c7d6df45b3d6f5aa5c171b8e1faf5b0340a",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-types-authority-controls.log.gz",
+      "publishedBytes": 63,
+      "publishedSha256": "0ee7ede1c111b8bbfce667887d61ac67de187b1691610cd5ea6a72d351ed789c",
+      "uncompressedPublishedSha256": "a232218ab0cb56112998296a30550c7d6df45b3d6f5aa5c171b8e1faf5b0340a",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-types-barrier.log",
+      "originalBytes": 43,
+      "originalSha256": "a232218ab0cb56112998296a30550c7d6df45b3d6f5aa5c171b8e1faf5b0340a",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-types-barrier.log.gz",
+      "publishedBytes": 63,
+      "publishedSha256": "0ee7ede1c111b8bbfce667887d61ac67de187b1691610cd5ea6a72d351ed789c",
+      "uncompressedPublishedSha256": "a232218ab0cb56112998296a30550c7d6df45b3d6f5aa5c171b8e1faf5b0340a",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-work-pr.log",
+      "originalBytes": 491,
+      "originalSha256": "2ac22428958aed814121eb107b3f6fe15d1e4d5e163e7a8ff5ab71344b6b945b",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-work-pr.log.gz",
+      "publishedBytes": 289,
+      "publishedSha256": "e70868de8edf7713217e4c574385d88987a3e018c62b4ae350e33148020a5364",
+      "uncompressedPublishedSha256": "2ac22428958aed814121eb107b3f6fe15d1e4d5e163e7a8ff5ab71344b6b945b",
       "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
     }
   ],
