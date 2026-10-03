@@ -15,7 +15,7 @@ async function load<T>(locale: Locale, query = ""): Promise<T> {
   return response.json();
 }
 
-/** The browser receives one locale and one page; details arrive only on opening. */
+/** Each bounded page includes its locale's details for immediate native disclosure. */
 export function ChangelogEntries({ initial, locale, labels }: {
   initial?: ChangelogPageContent; locale: Locale; labels: ChangelogLabels;
 }) {
@@ -23,7 +23,6 @@ export function ChangelogEntries({ initial, locale, labels }: {
   const [busy, setBusy] = useState(!initial);
   const [error, setError] = useState(false);
   const [reveal, setReveal] = useState<{ id: string; sequence: number } | null>(null);
-  const requests = useRef(new Map<string, Promise<ChangelogFeatureDetail>>());
   const mounted = useRef(true);
   const pageRequest = useRef(0);
 
@@ -38,20 +37,9 @@ export function ChangelogEntries({ initial, locale, labels }: {
     } catch { if (mounted.current && request === pageRequest.current) setError(true); }
     finally { if (mounted.current && request === pageRequest.current) setBusy(false); }
   }, [locale]);
-  const fetchDetail = useCallback((id: string) => {
-    if (!requests.current.has(id)) {
-      const request = load<ChangelogFeatureDetail>(locale, `&feature=${encodeURIComponent(id)}`).catch(error => {
-        if (requests.current.get(id) === request) requests.current.delete(id);
-        throw error;
-      });
-      requests.current.set(id, request);
-    }
-    return requests.current.get(id)!;
-  }, [locale]);
 
   useEffect(() => {
     pageRequest.current++;
-    requests.current.clear();
     setReveal(null); setPage(initial); setError(false); setBusy(!initial);
     if (!initial) void fetchPage();
   }, [initial, fetchPage]);
@@ -74,7 +62,11 @@ export function ChangelogEntries({ initial, locale, labels }: {
             requestAnimationFrame(() => document.getElementById(anchor)?.scrollIntoView());
           }
         } else {
-          const feature = await fetchDetail(anchor);
+          if (document.getElementById(anchor)) {
+            if (active) setReveal(previous => ({ id: anchor, sequence: (previous?.sequence ?? 0) + 1 }));
+            return;
+          }
+          const feature = await load<ChangelogFeatureDetail>(locale, `&feature=${encodeURIComponent(anchor)}`);
           if (!document.getElementById(releaseAnchor(feature.version))) {
             const release = await load<ChangelogReleaseSummary>(locale, `&version=${feature.version}`);
             if (active) appendRelease(release);
@@ -86,7 +78,7 @@ export function ChangelogEntries({ initial, locale, labels }: {
     void followAnchor();
     window.addEventListener("hashchange", followAnchor);
     return () => { active = false; window.removeEventListener("hashchange", followAnchor); };
-  }, [locale, fetchDetail]);
+  }, [locale]);
 
   return (
     <div>
@@ -102,7 +94,7 @@ export function ChangelogEntries({ initial, locale, labels }: {
             <div className={release.layout === "compact" ? "mt-3 border-b border-border pb-4" : styles.masonry}>
               {release.features.map(feature => <ChangelogFeatureCard
                 key={feature.id} feature={feature} labels={labels} compact={release.layout === "compact"}
-                loadDetail={fetchDetail} reveal={reveal?.id === feature.id ? reveal.sequence : undefined}
+                reveal={reveal?.id === feature.id ? reveal.sequence : undefined}
               />)}
             </div>
           </li>

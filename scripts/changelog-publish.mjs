@@ -4,7 +4,7 @@ import { readFile } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { validateDraft, validateIndex, validateRelease, mergeIndex, VERSION_PATTERN } from "./changelog-lib.mjs";
+import { validateDraft, validateIndex, validateRelease, mergeIndex, VERSION_PATTERN, isSupportedChangelogVersion } from "./changelog-lib.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 export function verifyProof(proof, sha) {
@@ -16,7 +16,8 @@ export function verifyProof(proof, sha) {
 /** Immutable release uploads precede the index update, so partial failures remain invisible. */
 export async function publishRelease({ draft, sha, proof, index, upload }) {
   verifyProof(proof, sha);
-  validateIndex(index);
+  index = validateIndex(index).filter(r => isSupportedChangelogVersion(r.version));
+  if (!isSupportedChangelogVersion(draft.version)) throw new Error("Version predates the public changelog");
   const existing = index.find(r => r.version === draft.version);
   if (existing) return { index, published: false };
   validateDraft(draft);
@@ -59,7 +60,7 @@ export function createStorage({ base, token }, fetcher = fetch) {
       const response = await request("object/changelog/index.json");
       if (await isMissing(response)) return null;
       if (!response.ok) throw new Error(`Cannot read publication index (${response.status})`);
-      return validateIndex(await response.json());
+      return validateIndex(await response.json()).filter(r => isSupportedChangelogVersion(r.version));
     },
     async upload(file, value, overwrite) {
       const response = await request(`object/changelog/${file}`, { method: "POST", headers: {

@@ -4,7 +4,7 @@ import { cpSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } f
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
-import { CHANGELOG_LOCALES, validateDraft, validateRelease, validateIndex, toIndexEntry } from "./changelog-lib.mjs";
+import { CHANGELOG_LOCALES, validateDraft, validateRelease, validateIndex, toIndexEntry, isSupportedChangelogVersion } from "./changelog-lib.mjs";
 import { publishRelease, createStorage } from "./changelog-publish.mjs";
 const read = file => JSON.parse(readFileSync(new URL(`../content/changelog/${file}`, import.meta.url), "utf8"));
 const seed = read("releases/0.11.0.json");
@@ -17,21 +17,25 @@ const draft = () => {
 const sha = "a".repeat(40);
 const proof = { sha, deploymentId: 123, state: "success", environment: "Production", publishedAt: "2026-10-03T12:00:00Z" };
 
-test("historical migration preserves every feature and translation exactly once", () => {
+test("historical migration retains every feature since 0.11.0 and preserves its translations", () => {
   const index = validateIndex(read("index.json"));
   const legacy = read("legacy.json");
   const releases = index.map(r => validateRelease(read(`releases/${r.version}.json`)));
   const features = releases.flatMap(r => r.features);
-  assert.equal(features.length, legacy.length);
-  assert.equal(new Set(features.map(f => f.id)).size, legacy.length);
-  for (const original of legacy) {
+  const evidence = read("backfill-evidence.json");
+  const retainedIds = new Set(evidence.mappings.filter(m => isSupportedChangelogVersion(m.version)).map(m => m.id));
+  assert.deepEqual(index.map(r => r.version), ["0.11.0"]);
+  assert.equal(features.length, retainedIds.size);
+  assert.equal(new Set(features.map(f => f.id)).size, retainedIds.size);
+  for (const original of legacy.filter(f => retainedIds.has(f.id))) {
     const feature = features.find(f => f.id === original.id);
     for (const locale of CHANGELOG_LOCALES) {
       assert.equal(feature.copy[locale].title, original.copy[locale].title);
       assert.ok(feature.copy[locale].details.includes(original.copy[locale].body));
     }
   }
-  assert.equal(read("backfill-report.json").uncertainties.length, 30);
+  assert.equal(read("backfill-report.json").excludedCount, legacy.length - retainedIds.size);
+  assert.equal(read("backfill-report.json").uncertainties.length, 0);
 });
 
 test("backfill is deterministic and safe to rerun", () => {
@@ -56,6 +60,12 @@ test("backfill reruns without rewritten Git objects and rejects inconsistent rec
     const run = (...args) => execFileSync(process.execPath, ["scripts/changelog-backfill.mjs", ...args], { cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
     assert.match(run("--dry-run"), /0 changed files/);
     assert.match(run(), /0 changed files/);
+    // A stale local release must be removed by regeneration and stay excluded on reruns.
+    const obsolete = path.join(root, "content/changelog/releases/0.10.0.json");
+    writeFileSync(obsolete, "{}");
+    assert.match(run("--dry-run"), /1 changed files/);
+    assert.match(run(), /1 changed files/);
+    assert.match(run(), /0 changed files/);
     assert.throws(() => run("--verify-git"), /Historical Git objects are unavailable/);
     const file = path.join(root, "content/changelog/backfill-evidence.json");
     const evidence = JSON.parse(readFileSync(file, "utf8"));
@@ -63,6 +73,22 @@ test("backfill reruns without rewritten Git objects and rejects inconsistent rec
     writeFileSync(file, JSON.stringify(evidence));
     assert.throws(run, /Unverified historical mapping/);
   } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test("the public version cutoff uses numeric SemVer components", () => {
+  for (const version of ["0.11.0", "0.11.1", "0.100.0", "1.0.0"]) assert.equal(isSupportedChangelogVersion(version), true);
+  for (const version of ["0.9.99", "0.10.100", "0.11.0-beta", "invalid"]) assert.equal(isSupportedChangelogVersion(version), false);
+});
+
+test("publication removes obsolete index entries and cannot reintroduce old versions", async () => {
+  const old = structuredClone(seed);
+  old.version = "0.10.0"; old.publishedAt = "2026-09-01T12:00:00Z";
+  old.features.forEach(f => { f.id = `old-${f.id}`; });
+  const uploads = [];
+  const result = await publishRelease({ draft: draft(), sha, proof, index: [toIndexEntry(seed), toIndexEntry(old)], upload: async (...args) => uploads.push(args) });
+  assert.deepEqual(result.index.map(r => r.version), ["0.12.0", "0.11.0"]);
+  assert.deepEqual(uploads[1][1], result.index);
+  await assert.rejects(publishRelease({ draft: { ...draft(), version: "0.10.1" }, sha, proof, index: [], upload: async () => {} }), /predates/);
 });
 
 test("drafts reject missing locales, bundled images, invalid dates, and oversized content", () => {

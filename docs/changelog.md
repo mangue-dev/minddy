@@ -6,6 +6,8 @@ each card’s illustration and title with the feature details, using the same
 native disclosure as the landing.
 The public page, in-app dialog, menu preview, RSS, Markdown, and sitemap read the
 same confirmed publication index.
+The public history starts at version 0.11.0, including when a remote catalog
+still contains older announcements.
 
 ## Content and budgets
 
@@ -30,8 +32,9 @@ The validator caps a complete six-locale release at 192 KiB, 64 features,
 90-character titles, 320-character summaries, and six 1200-character detail
 paragraphs. Historical content lives in server files; it is never imported into
 a client bundle. `/api/changelog` returns one locale and at most four releases
-per page, with a 48 KiB JSON budget. Feature details are fetched only when a tile
-opens. The changelog caches details for that mounted session. API and catalog caches
+per page, with a 48 KiB JSON budget. Each page includes its locale's feature
+details, rendered inside native disclosures before opening. Opening a loaded
+tile requires no network request or translation loading. API and catalog caches
 refresh within 60 seconds; publication index replacement uses a 60-second cache.
 RSS and Markdown include the latest 50 versions and their feature details.
 
@@ -103,20 +106,21 @@ node scripts/changelog-backfill.mjs
 node scripts/changelog-backfill.mjs --dry-run
 ```
 
-The deterministic backfill writes 17 confirmed versions, release files, a small
-index, sitemap fallback metadata, and `backfill-report.json`. The final dry run
-must report zero changed files. Every legacy feature occurs once, with its full
-original body preserved in the details.
+The deterministic backfill verifies all 63 archived mappings, then publishes
+only versions from 0.11.0 onward. It retains 13 features in the current release
+and excludes the 50 earlier features. It writes the release files, a small index,
+sitemap fallback metadata, and `backfill-report.json`, and removes generated
+release files below the cutoff. The final dry run must report zero changed files.
+Retained features keep their full original translated bodies in the details.
 
 Thirty early features can only be mapped to the first surviving confirmed
 version, 0.9.5. Earlier deployment SHAs are unavailable after history rewrites;
-the report retains their implementation dates and marks these mappings as
-uncertain. The 0.9.5 release explicitly presents an archive of features already
-available at that time. It does not claim their first release happened then.
+the source archive retains their implementation dates and marks these mappings
+as uncertain. They are excluded from the public changelog.
 The 44 unresolved deployment IDs are recorded for future investigation. Tag
 commit dates are not substituted for production dates.
 
 The new RSS GUID is `minddy:release:<version>`. Feed readers see the migrated
-history once as release announcements. Legacy feature anchors remain usable:
-opening `#<feature-id>` loads its details even outside the initial history page.
-Version anchors use `#v0-11-0`; older versions are also resolved on demand.
+history once as release announcements. Retained feature anchors remain usable:
+opening `#<feature-id>` opens its details, loading its release first if needed.
+Version anchors use `#v0-11-0`; versions below the cutoff are not served.

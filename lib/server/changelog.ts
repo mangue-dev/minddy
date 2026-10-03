@@ -4,7 +4,7 @@ import path from "node:path";
 import { cache } from "react";
 import type { Locale } from "@/i18n/config";
 import type { ChangelogFeatureDetail, ChangelogIndexEntry, ChangelogPageContent, ChangelogRelease, ChangelogReleaseSummary } from "@/lib/changelog-types";
-import { validateIndex, validateRelease, toIndexEntry, MAX_RELEASE_BYTES, MAX_PAGE_BYTES } from "@/scripts/changelog-lib.mjs";
+import { validateIndex, validateRelease, toIndexEntry, isSupportedChangelogVersion, MAX_RELEASE_BYTES, MAX_PAGE_BYTES } from "@/scripts/changelog-lib.mjs";
 import historicalIndex from "@/content/changelog/index.json";
 
 export const CHANGELOG_PAGE_SIZE = 4;
@@ -44,11 +44,11 @@ export const getChangelogIndex = cache(async (): Promise<ChangelogIndexEntry[]> 
   const remote = await remoteJson("index.json", 1024 * 1024);
   if (remote) {
     try {
-      const index = validateIndex(remote);
+      const index = validateIndex(remote).filter(r => isSupportedChangelogVersion(r.version));
       if (index.length) return index;
     } catch { /* Keep verified history during a catalog outage. */ }
   }
-  return validateIndex(historicalIndex);
+  return validateIndex(historicalIndex).filter(r => isSupportedChangelogVersion(r.version));
 });
 
 export const getChangelogRelease = cache(async (version: string): Promise<ChangelogRelease | null> => {
@@ -73,7 +73,7 @@ export function summarizeRelease(release: ChangelogRelease, locale: Locale): Cha
     version: release.version, publishedAt: release.publishedAt, layout: release.layout,
     ...release.copy[locale],
     features: release.features.map(f => ({ id: f.id, illustration: f.illustration,
-      title: f.copy[locale].title })),
+      title: f.copy[locale].title, details: f.copy[locale].details })),
   };
 }
 
@@ -85,11 +85,19 @@ export async function getChangelogPage(locale: Locale, after?: string): Promise<
   const content = await Promise.all(entries.map(r => getChangelogRelease(r.version)));
   // Do not silently skip a published release if its content is temporarily unavailable.
   if (content.some(r => !r)) throw new Error("Changelog content is temporarily unavailable");
-  const page = {
-    releases: content.map(r => summarizeRelease(r!, locale)),
-    next: cursor + 1 + entries.length < index.length ? entries.at(-1)!.version : null,
-  };
-  if (Buffer.byteLength(JSON.stringify(page)) > MAX_PAGE_BYTES) throw new Error("Changelog page exceeds its content budget");
+  const page: ChangelogPageContent = { releases: [], next: null };
+  for (const release of content) {
+    const candidate = {
+      releases: [...page.releases, summarizeRelease(release!, locale)],
+      next: cursor + 2 + page.releases.length < index.length ? release!.version : null,
+    };
+    if (Buffer.byteLength(JSON.stringify(candidate)) > MAX_PAGE_BYTES) {
+      if (!page.releases.length) throw new Error("Changelog page exceeds its content budget");
+      break;
+    }
+    page.releases = candidate.releases;
+    page.next = candidate.next;
+  }
   return page;
 }
 

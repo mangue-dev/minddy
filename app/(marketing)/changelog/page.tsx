@@ -10,7 +10,7 @@ import { Reveal, RevealHeading } from "@/components/marketing/reveal";
 import { SectionCta } from "@/components/marketing/section-cta";
 import { ChangelogEntries } from "@/components/changelog-entries";
 
-/** Public production releases, with feature details loaded on demand. */
+/** Public production releases, with localized details ready before opening. */
 export async function generateMetadata(): Promise<Metadata> {
   const locale = (await getLocale()) as Locale;
   const base = await publicPageMetadata({ routeKey: "changelog", locale });

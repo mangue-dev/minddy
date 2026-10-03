@@ -4,6 +4,18 @@ export const MAX_RELEASE_BYTES = 192 * 1024;
 export const MAX_PAGE_BYTES = 48 * 1024;
 const NAMES = ["shield", "board", "assistant", "pages", "connections", "activity", "desktop"];
 export const VERSION_PATTERN = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
+export const MIN_CHANGELOG_VERSION = "0.11.0";
+
+/** Older announcements remain archived but are excluded from the public catalog. */
+export function isSupportedChangelogVersion(version) {
+  if (!VERSION_PATTERN.test(version)) return false;
+  const parts = version.split(".").map(Number);
+  const minimum = MIN_CHANGELOG_VERSION.split(".").map(Number);
+  for (let i = 0; i < parts.length; i++) {
+    if (parts[i] !== minimum[i]) return parts[i] > minimum[i];
+  }
+  return true;
+}
 
 function assert(condition, message) {
   if (!condition) throw new Error(`Invalid changelog: ${message}`);

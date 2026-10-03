@@ -1,9 +1,9 @@
 #!/usr/bin/env node
-import { readFile, writeFile, mkdir } from "node:fs/promises";
+import { readFile, writeFile, mkdir, readdir, unlink } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { CHANGELOG_LOCALES, validateRelease, validateIndex, toIndexEntry } from "./changelog-lib.mjs";
+import { CHANGELOG_LOCALES, validateRelease, validateIndex, toIndexEntry, MIN_CHANGELOG_VERSION, VERSION_PATTERN, isSupportedChangelogVersion } from "./changelog-lib.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const folder = path.join(root, "content/changelog");
@@ -123,17 +123,20 @@ for (const deployment of evidence.deployments) {
 records.sort((a, b) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt));
 const ids = records.flatMap(r => r.features.map(f => f.id));
 if (new Set(ids).size !== legacy.length || ids.length !== legacy.length) throw new Error("Backfill must cover each legacy entry exactly once");
-const index = validateIndex(records.map(toIndexEntry));
-const uncertainties = evidence.mappings.filter(m => m.firstPublicationUncertain).map(m => ({
+const retained = records.filter(r => isSupportedChangelogVersion(r.version));
+const retainedCount = retained.reduce((count, r) => count + r.features.length, 0);
+const index = validateIndex(retained.map(toIndexEntry));
+const uncertainties = evidence.mappings.filter(m => m.firstPublicationUncertain && isSupportedChangelogVersion(m.version)).map(m => ({
   id: m.id, originalImplementationDate: legacy.find(e => e.id === m.id).implementationDate,
   firstConfirmedVersion: m.version,
   reason: "Earlier deployment SHAs are unavailable after history rewrites. This is a first-confirmed mapping, not a first-publication claim.",
 }));
-const outputs = new Map(records.map(r => [`releases/${r.version}.json`, r]));
+const outputs = new Map(retained.map(r => [`releases/${r.version}.json`, r]));
 outputs.set("index.json", index);
 outputs.set("metadata.json", { lastPublishedDate: records[0].publishedAt.slice(0, 10) });
-outputs.set("backfill-report.json", { legacyCount: legacy.length, migratedCount: ids.length,
-  releaseCount: records.length, uncertainties, unresolvedDeploymentIds: evidence.unresolvedDeploymentIds });
+outputs.set("backfill-report.json", { legacyCount: legacy.length, migratedCount: retainedCount,
+  excludedCount: ids.length - retainedCount, minimumVersion: MIN_CHANGELOG_VERSION,
+  releaseCount: retained.length, uncertainties, unresolvedDeploymentIds: evidence.unresolvedDeploymentIds });
 let changed = 0;
 for (const [file, value] of outputs) {
   const content = `${JSON.stringify(value, null, 2)}\n`;
@@ -145,4 +148,11 @@ for (const [file, value] of outputs) {
     if (!dryRun) { await mkdir(path.dirname(destination), { recursive: true }); await writeFile(destination, content); }
   }
 }
-console.log(`${dryRun ? "Preview" : "Backfill"}: ${ids.length}/${legacy.length} features, ${records.length} confirmed versions, ${uncertainties.length} first-publication uncertainties, ${changed} changed files.`);
+// Remove generated announcements below the cutoff without deleting the source archive.
+for (const file of await readdir(path.join(folder, "releases"))) {
+  const version = file.endsWith(".json") ? file.slice(0, -5) : "";
+  if (!VERSION_PATTERN.test(version) || isSupportedChangelogVersion(version)) continue;
+  changed += 1;
+  if (!dryRun) await unlink(path.join(folder, "releases", file));
+}
+console.log(`${dryRun ? "Preview" : "Backfill"}: ${ids.length}/${legacy.length} features verified, ${retainedCount} retained features, ${retained.length} confirmed versions, ${uncertainties.length} first-publication uncertainties, ${changed} changed files.`);

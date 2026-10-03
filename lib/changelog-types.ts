@@ -33,6 +33,7 @@ export interface ChangelogFeatureSummary {
   id: string;
   title: string;
   illustration: ChangelogIllustration;
+  details: string[];
 }
 export interface ChangelogReleaseSummary {
   version: string;
@@ -48,7 +49,6 @@ export interface ChangelogPageContent {
 }
 export interface ChangelogFeatureDetail extends ChangelogFeatureSummary {
   version: string;
-  details: string[];
 }
 export interface ChangelogLabels {
   more: string;

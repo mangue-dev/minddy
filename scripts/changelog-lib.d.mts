@@ -3,6 +3,8 @@ export const CHANGELOG_LOCALES: string[];
 export const MAX_RELEASE_BYTES: number;
 export const MAX_PAGE_BYTES: number;
 export const VERSION_PATTERN: RegExp;
+export const MIN_CHANGELOG_VERSION: string;
+export function isSupportedChangelogVersion(version: string): boolean;
 export function validateDraft(value: unknown): ChangelogDraft;
 export function validateRelease(value: unknown): ChangelogRelease;
 export function validateIndex(value: unknown): ChangelogIndexEntry[];
