@@ -10,12 +10,14 @@ import {
   PULL_REQUESTS_PAGE,
   allPullRequestsQueryKey,
 } from "./use-agent-runs";
-import { fetchAllPullRequestsApi } from "./agent-api";
+import { fetchAllPullRequestsApi, fetchPullRequestApi } from "./agent-api";
 import { globalBoardQueryFn } from "./global-board-api";
 import { GLOBAL_BOARD_KEY } from "./optimistic/issue-writes";
 import { fetchViewsApi } from "./views-api";
 import { fetchStatsApi } from "./stats-api";
 import { statsTimeZone } from "./use-stats-query";
+
+const pullRequestWarmups = new WeakMap<QueryClient, Promise<void>>();
 
 /**
  * Preheats the client caches a tab destination needs (fourth pass, MIN-540).
@@ -62,10 +64,22 @@ export function prefetchAppTabDestination(
       return;
     }
     case "pull-requests": {
-      if (route.prId) return;
+      if (route.prId) {
+        // One speculative detail per account client; the foreground can join
+        // its normal query. No polling or additional plaintext cache.
+        if (pullRequestWarmups.has(queryClient)) { attempted.delete(href); return; }
+        const pending = queryClient.prefetchQuery({
+          queryKey: ["pull-request", route.prId],
+          queryFn: ({ signal }) => fetchPullRequestApi(route.prId!, signal),
+        });
+        pullRequestWarmups.set(queryClient, pending);
+        void pending.finally(() => {
+          if (pullRequestWarmups.get(queryClient) === pending) pullRequestWarmups.delete(queryClient);
+        });
+      }
       void queryClient.prefetchQuery({
-        queryKey: allPullRequestsQueryKey("open", PULL_REQUESTS_PAGE),
-        queryFn: () => fetchAllPullRequestsApi({ state: "open", limit: PULL_REQUESTS_PAGE }),
+        queryKey: allPullRequestsQueryKey("open", PULL_REQUESTS_PAGE, route.prId ? { pr: route.prId } : undefined),
+        queryFn: () => fetchAllPullRequestsApi({ state: "open", limit: PULL_REQUESTS_PAGE, pin: route.prId ? { pr: route.prId } : undefined }),
       });
       return;
     }

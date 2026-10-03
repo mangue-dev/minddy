@@ -27,6 +27,7 @@ if (signedIn.error) throw signedIn.error;
 assert.equal(signedIn.data.user.id, fixture.userId, "Wrong fixture account");
 assert.equal(signedIn.data.user.user_metadata.performance_fixture, MARKER, "Unmarked fixture account");
 
+const adaptive = process.argv.includes("--adaptive");
 const label = process.env.MINDDY_PERF_LABEL ?? "pass2-retained";
 assert.match(label, /^[a-zA-Z0-9_-]+$/, "Invalid output label");
 const tempTabs = [
@@ -102,9 +103,10 @@ async function removeTemporaryTab(spec) {
 async function retainedInvariant() {
   const state = await page.locator("[data-retained-app-view]").evaluateAll((nodes) => nodes.map((node) => ({
     key: node.dataset.retainedAppView, active: node.dataset.appViewActive === "true", inert: node.inert,
-    visible: node.checkVisibility(), hidden: node.getAttribute("aria-hidden"),
+    visible: node.checkVisibility(), hidden: node.getAttribute("aria-hidden"), cards: node.querySelectorAll("[data-issue-id]").length,
   })));
-  assert.ok(state.length >= 1 && state.length <= 2, `Retained view count ${state.length} exceeds the LRU bound`);
+  assert.ok(state.length >= 1 && state.length <= (adaptive ? 6 : 2), `Retained view count ${state.length} exceeds the configured bound`);
+  if (adaptive) assert.ok(state.reduce((sum, view) => sum + Math.max(1, Math.ceil(view.cards / 200)), 0) <= 6, "Retained card weight exceeds the configured budget");
   assert.equal(state.filter((view) => view.active).length, 1, "Exactly one board must be active");
   for (const view of state) {
     assert.equal(view.visible, view.active, "Retained board visibility differs from activation");
@@ -309,18 +311,18 @@ try {
     await cdp.detach();
     return { roundtrips: 6, retainedViews: await retainedInvariant(), heapBytes: metrics.JSHeapUsedSize, connectedNodes: await page.locator("*").count() };
   });
-  await check("lru-eviction-and-close-eviction", async () => {
+  await check(adaptive ? "weighted-retention-and-close-eviction" : "lru-eviction-and-close-eviction", async () => {
     await activate(thirdTab, { title: "Performance 2" });
-    assert.equal(await page.evaluate(() => window.__retentionGlobal.isConnected), false, "The least recently used board was not evicted");
+    assert.equal(await page.evaluate(() => window.__retentionGlobal.isConnected), adaptive, "The configured retention policy did not preserve or evict the expected board");
     await active().evaluate((node) => { window.__retentionThird = node; });
     await activate(globalTab, { title: "All issues" });
-    assert.equal(await active().evaluate((node) => node === window.__retentionGlobal), false, "Evicted board unexpectedly kept its DOM");
+    assert.equal(await active().evaluate((node) => node === window.__retentionGlobal), adaptive, "The configured retention policy produced unexpected DOM reuse");
     assert.equal(await active().locator("[data-issue-id]").count(), filteredCount, "Eviction lost the tab's working filter");
     await page.locator(`[data-app-tab-id="${thirdTab.id}"]`).click({ button: "right" });
     await page.getByRole("menuitem", { name: "Close tab", exact: true }).click();
     await page.locator(`[data-app-tab-id="${thirdTab.id}"]`).waitFor({ state: "detached" });
     await page.waitForFunction(() => !window.__retentionThird.isConnected);
-    assert.equal(await page.locator("[data-retained-app-view]").count(), 1, "Closing a hidden tab retained its board");
+    assert.equal(await page.locator("[data-retained-app-view]").count(), adaptive ? 2 : 1, "Closing a hidden tab retained its board");
     return { retainedViews: await retainedInvariant(), closedTabRemoved: true };
   });
   results.status = "passed";

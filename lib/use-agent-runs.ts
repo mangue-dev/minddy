@@ -188,7 +188,7 @@ export function useAgentRunEventsQuery(runId: string | null, active: boolean) {
 export function usePullRequestQuery(prId: string, enabled: boolean) {
   const { data, isPending, refetch, dataUpdatedAt } = useQuery({
     queryKey: ["pull-request", prId],
-    queryFn: () => fetchPullRequestApi(prId),
+    queryFn: ({ signal }) => fetchPullRequestApi(prId, signal),
     enabled,
     refetchInterval: (query) => pullRequestRefetchInterval(query.state.data),
   });

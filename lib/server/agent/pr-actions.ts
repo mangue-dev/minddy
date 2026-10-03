@@ -433,38 +433,42 @@ async function readPullRequestReadiness(
   pr: PullRequestRef,
 ): Promise<PullRequestReadinessResult> {
   const { forge, call } = scope;
-  const [reviews, reviewThreads, viewer] = await Promise.all([
+  // Policy and its dependent checks do not depend on reviews or actor lookup.
+  const policyAndChecks = async () => {
+    let mergePolicy: RepositoryMergePolicy;
+    try {
+      mergePolicy = pr.base
+        ? await forge.getRepositoryMergePolicy({ ...call, base: pr.base })
+        : unavailableMergePolicy(scope.target.provider, "unknown");
+    } catch (error) {
+      mergePolicy = unavailableMergePolicy(
+        scope.target.provider,
+        isForgeApiError(error) && error.status === 403 ? "forbidden" : "unknown",
+      );
+    }
+
+    let checks: ChecksSummary | null = null;
+    let checksError: "forbidden" | "unknown" | null = null;
+    if (pr.headSha) {
+      try {
+        checks = await forge.listChecks({
+          ...call,
+          sha: pr.headSha,
+          requiredCheckNames: mergePolicy.requiredCheckNames,
+          checksRequired: mergePolicy.checksMustPass,
+        });
+      } catch (error) {
+        checksError = isForgeApiError(error) && error.status === 403 ? "forbidden" : "unknown";
+      }
+    }
+    return { mergePolicy, checks, checksError };
+  };
+  const [reviews, reviewThreads, viewer, { mergePolicy, checks, checksError }] = await Promise.all([
     forge.listReviews(call).catch(() => null),
     forge.listReviewThreads(call).catch(() => null),
     resolveViewer(scope),
+    policyAndChecks(),
   ]);
-
-  let mergePolicy: RepositoryMergePolicy;
-  try {
-    mergePolicy = pr.base
-      ? await forge.getRepositoryMergePolicy({ ...call, base: pr.base })
-      : unavailableMergePolicy(scope.target.provider, "unknown");
-  } catch (error) {
-    mergePolicy = unavailableMergePolicy(
-      scope.target.provider,
-      isForgeApiError(error) && error.status === 403 ? "forbidden" : "unknown",
-    );
-  }
-
-  let checks: ChecksSummary | null = null;
-  let checksError: "forbidden" | "unknown" | null = null;
-  if (pr.headSha) {
-    try {
-      checks = await forge.listChecks({
-        ...call,
-        sha: pr.headSha,
-        requiredCheckNames: mergePolicy.requiredCheckNames,
-        checksRequired: mergePolicy.checksMustPass,
-      });
-    } catch (error) {
-      checksError = isForgeApiError(error) && error.status === 403 ? "forbidden" : "unknown";
-    }
-  }
 
   const baseReadiness = reducePullRequestReadiness({
     state: pr.state === "closed" ? "closed" : "open",
@@ -511,7 +515,7 @@ async function readPullRequestReadiness(
 /**
  * GET details: PR metadata + files/patches + CI checks + approvals +
  * merge methods offered by the forge, and what the reader has the right to do there
- * faire (`viewer`).
+ * perform (`viewer`).
  *
  * Readings remain on the INSTALLATION token: any member of the project
  * minddy continues to SEE the PR even without a git account connected. Only the
@@ -521,38 +525,31 @@ export async function prDetailResponse(scope: PrScope): Promise<NextResponse> {
   const { forge, call } = scope;
   try {
     const pr = await forge.getPullRequest(call);
-    const [diff, readinessData] = await Promise.all([
+    const [diff, readinessData, outcome] = await Promise.all([
       forge.listPullRequestFiles(call),
       readPullRequestReadiness(scope, pr),
+      // Deployment is tied to the live head, independent of files and checks.
+      pr.headSha ? forge.getPullRequestDeployment({
+        token: call.token,
+        repoFullName: call.repoFullName,
+        number: call.number,
+        branch: pr.headFromBaseRepository ? pr.head : undefined,
+        sha: pr.headSha,
+      }).catch(() => {
+        console.error("[pr-actions] deployment_unreadable");
+        return null;
+      }) : Promise.resolve(null),
     ]);
     const files = diff.files;
     let deploymentUrl = readinessData.checks?.deploymentUrl ?? null;
     let deploymentDurationMs: number | null = null;
     let deploymentStatus: DeploymentOutcome["status"] | null = null;
     let deploymentStartedAt: string | null = null;
-    if (pr.headSha) {
-      try {
-        // One read either way: the lifecycle of the head environment —
-        // settled (its URL and duration), still running, or nothing to show.
-        const outcome = await forge.getPullRequestDeployment({
-          token: call.token,
-          repoFullName: call.repoFullName,
-          number: call.number,
-          branch: pr.headFromBaseRepository ? pr.head : undefined,
-          sha: pr.headSha,
-        });
-        if (outcome.status !== "none") {
-          deploymentUrl ??= outcome.url;
-          deploymentStatus = outcome.status;
-        }
-        if (outcome.status === "success") {
-          deploymentDurationMs = outcome.durationMs;
-        } else if (outcome.status === "in_progress") {
-          deploymentStartedAt = outcome.startedAt;
-        }
-      } catch {
-        console.error("[pr-actions] deployment_unreadable");
-      }
+    if (outcome && outcome.status !== "none") {
+      deploymentUrl ??= outcome.url;
+      deploymentStatus = outcome.status;
+      if (outcome.status === "success") deploymentDurationMs = outcome.durationMs;
+      else if (outcome.status === "in_progress") deploymentStartedAt = outcome.startedAt;
     }
 
     return NextResponse.json({

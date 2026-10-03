@@ -645,8 +645,9 @@ export interface PullRequestFile {
 
 export async function fetchPullRequestApi(
   prId: string,
+  signal?: AbortSignal,
 ): Promise<AgentRunPrResponse> {
-  return parseJson(await fetch(`/api/pull-requests/${prId}`));
+  return parseJson(await fetch(`/api/pull-requests/${prId}`, { signal }));
 }
 
 export interface PullRequestReadinessResponse {

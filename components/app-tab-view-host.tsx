@@ -44,7 +44,7 @@ const RetainedBoard = memo(function RetainedBoard({ view, active }: { view: Reta
   </div>;
 });
 
-/** Retain rich boards with React-managed effect suspension and a strict LRU bound. */
+/** Retain rich boards with React-managed effect suspension and a weighted retention bound. */
 export function AppTabViewHost({ children }: { children: ReactNode }) {
   const { tabs, activeId, session } = useAppTabs();
   const client = useQueryClient();
