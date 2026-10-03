@@ -49,8 +49,10 @@ test("backfill reruns without rewritten Git objects and rejects inconsistent rec
     }
     cpSync(new URL("../content/changelog", import.meta.url), path.join(root, "content/changelog"), { recursive: true });
     execFileSync("git", ["init", "-q"], { cwd: root });
-    const run = () => execFileSync(process.execPath, ["scripts/changelog-backfill.mjs", "--dry-run"], { cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+    const run = (...args) => execFileSync(process.execPath, ["scripts/changelog-backfill.mjs", ...args], { cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+    assert.match(run("--dry-run"), /0 changed files/);
     assert.match(run(), /0 changed files/);
+    assert.throws(() => run("--verify-git"), /Historical Git objects are unavailable/);
     const file = path.join(root, "content/changelog/backfill-evidence.json");
     const evidence = JSON.parse(readFileSync(file, "utf8"));
     evidence.mappings[0].sourceStablePatchId = "0".repeat(40);

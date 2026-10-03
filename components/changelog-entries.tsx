@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Locale } from "@/i18n/config";
-import { formatChangelogDate } from "@/lib/changelog";
+import { formatChangelogDate, mergeChangelogReleases } from "@/lib/changelog";
 import type { ChangelogFeatureDetail, ChangelogLabels, ChangelogPageContent, ChangelogReleaseSummary } from "@/lib/changelog-types";
 import { ChangelogFeatureCard } from "@/components/changelog-feature-card";
 import styles from "./changelog-cards.module.css";
@@ -34,8 +34,7 @@ export function ChangelogEntries({ initial, locale, labels }: {
     try {
       const result = await load<ChangelogPageContent>(locale, after ? `&after=${encodeURIComponent(after)}` : "");
       if (mounted.current && request === pageRequest.current) setPage(previous => ({ ...result, releases: after && previous
-        ? [...previous.releases, ...result.releases.filter(r => !previous.releases.some(p => p.version === r.version))]
-          .sort((a, b) => b.publishedAt.localeCompare(a.publishedAt)) : result.releases }));
+        ? mergeChangelogReleases(previous.releases, result.releases) : result.releases }));
     } catch { if (mounted.current && request === pageRequest.current) setError(true); }
     finally { if (mounted.current && request === pageRequest.current) setBusy(false); }
   }, [locale]);
@@ -61,7 +60,7 @@ export function ChangelogEntries({ initial, locale, labels }: {
   useEffect(() => {
     let active = true;
     const appendRelease = (release: ChangelogReleaseSummary) => setPage(p => p ? ({ ...p,
-      releases: [...p.releases.filter(r => r.version !== release.version), release].sort((a, b) => b.publishedAt.localeCompare(a.publishedAt)),
+      releases: mergeChangelogReleases(p.releases, [release]),
     }) : { releases: [release], next: null });
     const followAnchor = async () => {
       const anchor = window.location.hash.slice(1);

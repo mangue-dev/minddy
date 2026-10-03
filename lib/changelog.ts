@@ -1,4 +1,14 @@
 import { intlLocaleByLocale, type Locale } from "@/i18n/config";
+import type { ChangelogReleaseSummary } from "./changelog-types";
+
+/** Historical anchors and pagination share one chronological, unique release list. */
+export function mergeChangelogReleases(
+  current: ChangelogReleaseSummary[], incoming: ChangelogReleaseSummary[],
+): ChangelogReleaseSummary[] {
+  const releases = new Map(current.map(release => [release.version, release]));
+  for (const release of incoming) releases.set(release.version, release);
+  return [...releases.values()].sort((a, b) => b.publishedAt.localeCompare(a.publishedAt));
+}
 
 /** Latest verified historical publication; live content is loaded on the server. */
 export { lastPublishedDate as CHANGELOG_LAST_MODIFIED } from "@/content/changelog/metadata.json";

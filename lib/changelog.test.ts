@@ -4,8 +4,27 @@ import {
   RECENT_CHANGELOG_DAYS,
   formatChangelogAge,
   hasRecentChangelog,
+  mergeChangelogReleases,
 } from "./changelog";
 import type { Locale } from "@/i18n/config";
+import type { ChangelogReleaseSummary } from "./changelog-types";
+
+it("keeps historical anchors chronological and unique across successive older pages", () => {
+  const release = (version: string, publishedAt: string): ChangelogReleaseSummary => ({
+    version, publishedAt, title: version, summary: "", layout: "compact", features: [],
+  });
+  const latest = release("0.11.0", "2026-10-03T12:00:00Z");
+  const anchor = release("0.9.5", "2026-07-01T12:00:00Z");
+  const middle = release("0.10.0", "2026-09-01T12:00:00Z");
+  const older = release("0.9.0", "2026-06-01T12:00:00Z");
+  const initial = [latest];
+  const anchored = mergeChangelogReleases(initial, [anchor]);
+  const paginated = mergeChangelogReleases(anchored, [middle]);
+  expect(paginated).toEqual([latest, middle, anchor]);
+  expect(mergeChangelogReleases(paginated, [anchor, older])).toEqual([latest, middle, anchor, older]);
+  expect(initial).toEqual([latest]);
+  expect(anchored).toEqual([latest, anchor]);
+});
 
 /**
  * The blue dot in the account menu. The terminals are tested relative to
