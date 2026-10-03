@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AppTabViewHost } from "@/components/app-tab-view-host";
-import { isRetainedDestination, retainAppView } from "./retained-app-views";
+import { isRetainedDestination, retainAppView, retainedAppViewKind } from "./retained-app-views";
 import { useAppTabRoute } from "./app-tab-route-context";
 
 const state = vi.hoisted(() => ({
@@ -72,6 +72,11 @@ afterEach(async () => {
 });
 
 describe("bounded retained board views", () => {
+  it("keeps unknown nested destinations under the ordinary router", () => {
+    expect(retainedAppViewKind("/projects/p/feedback/unknown")).toBeNull();
+    expect(retainedAppViewKind("/projects/p/triage/unknown")).toBeNull();
+    expect(retainedAppViewKind("/projects/p/pages/document")).toBe("pages");
+  });
   it("retains mixed late destinations with scoped routes and evicts a closed editor", async () => {
     state.tabs = Array.from({ length: 12 }, (_, index) => ({ id: `t${index}` }));
     const routes = ["/pull-requests", "/projects/p/pages/document", "/projects/p/feedback", "/projects/p/triage"];

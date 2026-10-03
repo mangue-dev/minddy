@@ -25,7 +25,7 @@ export function retainedAppViewKind(pathname: string): RetainedAppView["kind"] |
   if (pathname === "/all") return "global-board";
   if (/^\/projects\/[^/]+$/.test(pathname)) return "project-board";
   if (pathname === "/pull-requests") return "pull-requests";
-  const section = pathname.match(/^\/projects\/[^/]+\/(pages|feedback|triage)(?:\/[^/]+)?$/)?.[1];
+  const section = pathname.match(/^\/projects\/[^/]+\/(pages(?:\/[^/]+)?|feedback|triage)$/)?.[1]?.split("/")[0];
   return (section as RetainedAppView["kind"] | undefined) ?? null;
 }
 

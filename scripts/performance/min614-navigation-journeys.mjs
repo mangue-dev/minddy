@@ -19,20 +19,22 @@ export async function measureNavigationJourneys({ page, context, fixture, tabs: 
   const issues = await Promise.all([0, 5].map((i) => api(`/api/projects/${fixture.projects[i]}/issues`)));
   const feedback = await Promise.all([0, 5].map((i) => api(`/api/projects/${fixture.projects[i]}/feedback`)));
   report.workload = { pulls: pulls.slice(0, 2), pages: docs.map((doc) => ({ id: doc.id, title: doc.title, content: doc.content })), triage: issues.map((rows) => rows.filter((row) => row.status === 'triage').length), feedback: feedback.map((list) => list.posts.length), forgeFiles: [12, 441] };
+  const textOf = (node) => typeof node === 'object' && node ? (node.text ?? '') + (node.content ?? []).map(textOf).join('') : '';
+  const boardCount = (rows) => rows.filter((row) => !['triage', 'duplicate'].includes(row.status)).length;
   const p0 = `/projects/${fixture.projects[0]}`, p5 = `/projects/${fixture.projects[5]}`;
   const specs = [
-    { href: '/all', kind: 'board', count: 600 },
-    { href: `${p0}/pages`, kind: 'pages', text: docs[0].title },
-    { href: `${p0}/pages/${docs[0].id}`, kind: 'document', text: docs[0].title },
+    { href: '/all', kind: 'board', count: 600 - issues.reduce((count, rows) => count + rows.filter((row) => ['triage', 'duplicate'].includes(row.status)).length, 0) },
+    { href: `${p0}/pages`, kind: 'pages', text: docs[0].title, firstHref: `${p0}/pages/${docs[0].id}` },
+    { href: `${p0}/pages/${docs[0].id}`, kind: 'document', text: docs[0].title, bodyText: textOf(docs[0].content) },
     { href: `/pull-requests?pr=${pulls[0].prId}`, kind: 'pr', text: pulls[0].title },
-    { href: `${p0}/feedback`, kind: 'feedback' },
-    { href: `${p0}/triage`, kind: 'triage' },
-    { href: p0, kind: 'board', count: 100 },
-    { href: `${p5}/pages`, kind: 'pages', text: docs[1].title },
-    { href: p5, kind: 'board', count: 100 },
-    { href: `${p5}/feedback`, kind: 'feedback' },
+    { href: `${p0}/feedback`, kind: 'feedback', titles: feedback[0].posts.map((row) => row.title) },
+    { href: `${p0}/triage`, kind: 'triage', titles: issues[0].filter((row) => row.status === 'triage').map((row) => row.title) },
+    { href: p0, kind: 'board', count: boardCount(issues[0]) },
+    { href: `${p5}/pages`, kind: 'pages', text: docs[1].title, firstHref: `${p5}/pages/${docs[1].id}` },
+    { href: p5, kind: 'board', count: boardCount(issues[1]) },
+    { href: `${p5}/feedback`, kind: 'feedback', titles: feedback[1].posts.map((row) => row.title) },
     { href: `/pull-requests?pr=${pulls[1].prId}`, kind: 'pr', text: pulls[1].title },
-    { href: `${p5}/triage`, kind: 'triage' },
+    { href: `${p5}/triage`, kind: 'triage', titles: issues[1].filter((row) => row.status === 'triage').map((row) => row.title) },
   ].map((spec, position) => ({ ...originalTabs[0], ...spec, id: randomUUID(), position, pinned: true, custom_name: `MIN-614 3f ${position} ${spec.kind}`, revision: 1 }));
   let virtualTabs = specs.map((spec) => ({ ...spec }));
   const readiness = { state: 'ready', blockers: [], passed: [], mergeAllowed: false, methods: [], preferredMethod: null };
@@ -80,14 +82,14 @@ export async function measureNavigationJourneys({ page, context, fixture, tabs: 
       const retained = document.querySelector('[data-retained-app-view][data-app-view-active="true"]');
       const root = retained || document.querySelector('main') || document.body;
       const text = root.textContent;
-      const skeleton = [...root.querySelectorAll('[data-slot="skeleton"]')].some((node) => node.checkVisibility());
+      const skeleton = [...document.querySelectorAll('[data-slot="skeleton"]')].some((node) => node.checkVisibility());
       if (route && skeleton) result.skeletonFrames++;
       let available = route && !skeleton;
       if (spec.kind === 'board') available &&= !!retained && retained.querySelectorAll('[data-issue-id]').length === spec.count;
-      else if (spec.kind === 'document') available &&= !!root.querySelector('.page-editor .tiptap') && text.includes(spec.text);
-      else if (spec.kind === 'pages') available &&= text.includes(spec.text);
+      else if (spec.kind === 'document') available &&= !!root.querySelector('.page-editor .tiptap') && root.querySelector('.page-editor .tiptap').textContent.replace(/\s/g, '') === spec.bodyText.replace(/\s/g, '');
+      else if (spec.kind === 'pages') available &&= [...document.querySelectorAll(`a[href="${spec.firstHref}"]`)].some((node) => node.checkVisibility()) && text.includes('Pick a page');
       else if (spec.kind === 'pr') available &&= !!root.querySelector('[data-testid="pr-activity-timeline"]') && text.includes(spec.text);
-      else available &&= text.includes(spec.kind === 'triage' ? 'Triage' : 'Feedback');
+      else { const rows = [...document.querySelectorAll('[data-sidebar-filter-result]')].filter((node) => node.checkVisibility()); available &&= spec.titles.length ? spec.titles.every((title) => rows.some((row) => row.textContent.includes(title))) : text.includes(spec.kind === 'triage' ? 'Nothing in triage' : 'No feedback yet'); }
       if (available) stamp('availableContent');
       let usable = available;
       if (spec.kind === 'board') usable &&= retained.dataset.boardReadState === 'fresh';
@@ -102,6 +104,7 @@ export async function measureNavigationJourneys({ page, context, fixture, tabs: 
   const checkpoint = async (spec, name, action) => {
     await arm(spec);
     const old = await measure(name, action, () => ready(spec));
+    await page.waitForFunction(() => window.__navigationSample.clocks.usableExactScenario !== undefined, null, { timeout: 15000 });
     const sample = await page.evaluate(() => ({ clocks: window.__navigationSample.clocks, skeletonFrames: window.__navigationSample.skeletonFrames, frames: window.__navigationSample.frames }));
     report.samples.push({ name, index: spec.position, old, ...sample, heap: await page.evaluate(() => performance.memory?.usedJSHeapSize ?? null) }); await save();
   };
@@ -119,7 +122,7 @@ export async function measureNavigationJourneys({ page, context, fixture, tabs: 
     else if (spec.kind === 'document') await page.locator('.page-editor .tiptap').waitFor({ timeout: 15000 });
     else if (spec.kind === 'pages') await page.getByText(spec.text, { exact: true }).first().waitFor({ timeout: 15000 });
     else if (spec.kind === 'pr') { await page.getByTestId('pr-activity-timeline').waitFor({ timeout: 15000 }); await page.waitForFunction(() => !document.querySelector('[data-testid="pr-read-state"]'), null, { timeout: 15000 }); }
-    else { await page.getByText(spec.kind === 'triage' ? 'Triage' : 'Feedback', { exact: true }).first().waitFor({ timeout: 15000 }); await page.waitForTimeout(100); }
+    else { for (const title of spec.titles) await page.getByText(title, { exact: true }).first().waitFor({ timeout: 15000 }); }
   };
   await save();
   try {
