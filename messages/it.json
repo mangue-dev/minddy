@@ -746,6 +746,8 @@
     "deleteConfirm": "{count, plural, one {Spostare # ticket nel cestino?} other {Spostare # ticket nel cestino?}}"
   },
   "Board": {
+    "readLoading": "Caricamento della bacheca…",
+    "readError": "Impossibile caricare la bacheca.",
     "readRefreshing": "Aggiornamento della bacheca… Sono mostrati i dati precedenti.",
     "readPaused": "Aggiornamento della bacheca in pausa. Riconnettiti per aggiornare.",
     "readPreviousError": "Impossibile aggiornare la bacheca. Sono mostrati i dati precedenti.",

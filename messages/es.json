@@ -746,6 +746,8 @@
     "deleteConfirm": "{count, plural, one {¿Mover # incidencia a la papelera?} other {¿Mover # incidencias a la papelera?}}"
   },
   "Board": {
+    "readLoading": "Cargando tablero…",
+    "readError": "No se pudo cargar el tablero.",
     "readRefreshing": "Actualizando tablero… Se muestran los datos anteriores.",
     "readPaused": "Actualización del tablero en pausa. Reconecta para actualizar.",
     "readPreviousError": "No se pudo actualizar el tablero. Se muestran los datos anteriores.",

@@ -746,6 +746,8 @@
     "deleteConfirm": "{count, plural, one {Mover # problema para a lixeira?} other {Mover # problemas para a lixeira?}}"
   },
   "Board": {
+    "readLoading": "Carregando quadro…",
+    "readError": "Não foi possível carregar o quadro.",
     "readRefreshing": "Atualizando quadro… Os dados anteriores são exibidos.",
     "readPaused": "Atualização do quadro pausada. Reconecte para atualizar.",
     "readPreviousError": "Não foi possível atualizar o quadro. Os dados anteriores são exibidos.",

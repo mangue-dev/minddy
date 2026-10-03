@@ -7,6 +7,8 @@ const view: RetainedAppView = { key: "g", tabId: "g", kind: "global-board", rout
 it("labels previous board rows while invalidated, fetching, paused or failed", async () => {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   client.setQueryData(["me", "board"], { issues: ["previous"] });
+  client.setQueryData(["views", "global"], []);
+  client.setQueryData(["projects"], []);
   expect(retainedBoardReadState(client, view)).toBe("fresh");
   await client.invalidateQueries({ queryKey: ["me", "board"], refetchType: "none" });
   expect(retainedBoardReadState(client, view)).toBe("refreshing");

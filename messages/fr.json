@@ -746,6 +746,8 @@
     "deleteConfirm": "{count, plural, one {Déplacer # ticket vers la corbeille ?} other {Déplacer # tickets vers la corbeille ?}}"
   },
   "Board": {
+    "readLoading": "Chargement du tableau…",
+    "readError": "Impossible de charger le tableau.",
     "readRefreshing": "Mise à jour du tableau… Données précédentes affichées.",
     "readPaused": "Mise à jour du tableau en pause. Reconnectez-vous pour actualiser.",
     "readPreviousError": "Impossible de mettre à jour le tableau. Données précédentes affichées.",

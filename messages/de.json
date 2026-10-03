@@ -746,6 +746,8 @@
     "deleteConfirm": "{count, plural, one {# Problem in den Papierkorb verschieben?} other {# Probleme in den Papierkorb verschieben?}}"
   },
   "Board": {
+    "readLoading": "Board wird geladen…",
+    "readError": "Board konnte nicht geladen werden.",
     "readRefreshing": "Board wird aktualisiert… Vorherige Daten werden angezeigt.",
     "readPaused": "Board-Aktualisierung pausiert. Stelle die Verbindung wieder her.",
     "readPreviousError": "Board konnte nicht aktualisiert werden. Vorherige Daten werden angezeigt.",

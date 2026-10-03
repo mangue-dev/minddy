@@ -36,7 +36,7 @@ const RetainedBoard = memo(function RetainedBoard({ view, active }: { view: Reta
     </AppTabNavigationScope>
     </Activity>
     {active && readState !== "fresh" && <div role="status" className="absolute bottom-3 left-3 z-40 flex items-center gap-2 rounded-lg border bg-background px-3 py-2 text-xs text-muted-foreground">
-      {t(readState === "error" ? "readPreviousError" : readState === "paused" ? "readPaused" : "readRefreshing")}
+      {t(readState === "error" ? (client.getQueryData(retainedBoardKeys(view)[0]) === undefined ? "readError" : "readPreviousError") : readState === "paused" ? "readPaused" : readState === "loading" ? "readLoading" : "readRefreshing")}
       {(readState === "error" || readState === "paused") && <button type="button" className="underline" onClick={() => {
         for (const queryKey of retainedBoardKeys(view)) void client.refetchQueries({ queryKey, exact: true });
       }}>{t("readRetry")}</button>}
