@@ -5,8 +5,12 @@ import { pullRequestRefetchInterval } from "./pr-readiness-actions";
 /** Retry-After also gates focus, activation and speculative reads. */
 export function pullRequestReadRetryAt(state: { error: unknown; errorUpdatedAt: number } | undefined): number {
   if (!(state?.error instanceof ApiError)) return 0;
-  if (state.error.retryAt) return state.error.retryAt;
-  return [403, 429].includes(state.error.status ?? 0) ? state.errorUpdatedAt + 60_000 : 0;
+  if (state.error.retryAt !== undefined) return state.error.retryAt;
+  if (![403, 429].includes(state.error.status ?? 0)) return 0;
+  // Propagating the same account error to another query must not restart its
+  // fallback pause and indefinitely prevent recovery without Retry-After.
+  state.error.retryAt = state.errorUpdatedAt + 60_000;
+  return state.error.retryAt;
 }
 
 const PR_READ_KEYS = new Set(["pull-request", "pull-request-readiness", "pull-requests", "pr-comments", "pr-commits", "pr-commit-diff", "pr-review-comments"]);

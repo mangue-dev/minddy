@@ -142,4 +142,15 @@ describe("authorized GitHub reads in flight", () => {
     expect(Number(exhausted.retryAfter)).toBeLessThanOrEqual(121);
     expect((await githubResponseText(url, "token", options, true)).retryAfter).toBe("180");
   });
+
+  it("keeps rate advice on malformed REST bodies and GraphQL errors returned with HTTP 200", async () => {
+    const fetch = vi.fn<typeof globalThis.fetch>()
+      .mockResolvedValueOnce(new Response("Not JSON", { status: 429, headers: { "Retry-After": "90" } }))
+      .mockResolvedValueOnce(Response.json({ errors: [{ message: "Rate limited" }] }, { headers: { "Retry-After": "120" } }));
+    vi.stubGlobal("fetch", fetch);
+    const call = { token: "token", repoFullName: "acme/app", number: 1 };
+    await expect(getPullRequest(call)).rejects.toMatchObject({ status: 429, retryAfter: "90" });
+    await expect(listPullRequestReviewThreads(call)).rejects.toMatchObject({ status: 422, retryAfter: "120" });
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
 });

@@ -1,11 +1,19 @@
 import { QueryClient, QueryObserver } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { assertPullRequestReadBudget, pullRequestQueryOptions, pullRequestReadState, pullRequestReadRetry } from "./pull-request-query";
+import { assertPullRequestReadBudget, pullRequestQueryOptions, pullRequestReadState, pullRequestReadRetry, pullRequestReadRetryAt } from "./pull-request-query";
 import { ApiError } from "./agent-api";
 
 afterEach(() => vi.unstubAllGlobals());
 
 describe("pull request activation authority", () => {
+  it("does not prolong fallback rate pauses when another surface inherits the error", () => {
+    const error = new ApiError("Forbidden"); error.status = 403;
+    const first = pullRequestReadRetryAt({ error, errorUpdatedAt: 1000 });
+    expect(first).toBe(61_000);
+    expect(pullRequestReadRetryAt({ error, errorUpdatedAt: 40_000 })).toBe(first);
+    expect(pullRequestReadRetryAt({ error, errorUpdatedAt: 80_000 })).toBeLessThan(80_000);
+  });
+
   it("refreshes a completed preparation even with a recent account cache", async () => {
     const client = new QueryClient({ defaultOptions: { queries: { staleTime: 300_000, retry: false } } });
     const fetch = vi.fn(async () => Response.json({ pr: { headSha: "new-head" }, files: [] }));

@@ -322,7 +322,7 @@ async function ghJson<T>(
   try {
     data = text ? JSON.parse(text) as unknown : null;
   } catch {
-    throw new GithubApiError("GitHub response was not valid JSON", res.status);
+    throw new GithubApiError("GitHub response was not valid JSON", res.status, res.retryAfter);
   }
   if (!res.ok) throw new GithubApiError(githubErrorMessage(data, res.status), res.status, res.retryAfter);
   return data as T;
@@ -1491,9 +1491,9 @@ async function ghGraphql<T>(
     );
   }
   if (data?.errors?.length) {
-    throw new GithubApiError(data.errors[0].message ?? "GraphQL error", 422);
+    throw new GithubApiError(data.errors[0].message ?? "GraphQL error", 422, res.retryAfter);
   }
-  if (!data?.data) throw new GithubApiError("GitHub returned no data", 502);
+  if (!data?.data) throw new GithubApiError("GitHub returned no data", 502, res.retryAfter);
   return data.data;
 }
 
