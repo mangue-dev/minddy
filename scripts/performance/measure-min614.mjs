@@ -2,6 +2,7 @@
 // No seeding, forge credentials, paid agent work, or account-profile copying.
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
+import { writeFileSync } from "node:fs";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -57,6 +58,7 @@ if (buildSha) assert.match(buildSha, /^[a-f0-9]{40}$/);
 let runtime, profile, browser, context, page;
 let launchServices = false;
 const measurements = [], errors = [], responses = [], requests = [];
+const navigationTabs = { cleanup: false, owned: [] };
 const requestRecords = new WeakMap();
 try {
   if (native) {
@@ -133,6 +135,14 @@ try {
   page.on("request", (request) => {
     if (!request.url().startsWith(`${base}/api/`)) return;
     const url = new URL(request.url());
+    if (url.pathname === "/api/me/app-tabs" && request.method() === "POST") {
+      const payload = JSON.parse(request.postData() ?? "{}");
+      if (!tabs.some((tab) => tab.id === payload.id)) {
+        navigationTabs.owned.push({ id: payload.id, capturedAt: Date.now() });
+        // Record incidental URL-navigation identities before acknowledgement too.
+        writeFileSync(`${output}/${label}-navigation-tabs.json`, JSON.stringify(navigationTabs, null, 2));
+      }
+    }
     const record = { path: url.pathname, method: request.method(), at: Date.now(),
       ...(pass3d && url.pathname === '/api/me/local-snapshots' ? { operation: JSON.parse(request.postData() ?? '{}').operation } : {}),
       ...(pass3d && url.pathname.endsWith('/icon/content') ? { version: url.searchParams.get('v') } : {}),
@@ -288,6 +298,30 @@ try {
         return dump;
       });
     } catch { desktopTrace = null; }
+  }
+  if (navigationTabs.owned.length && context) {
+    try {
+      await page?.goto("about:blank");
+      for (const owned of navigationTabs.owned) {
+        assert.ok(owned.id, "Navigation tab identity was not captured");
+        const response = await context.request.get(`${base}/api/me/app-tabs`);
+        assert.ok(response.ok());
+        const row = (await response.json()).find((tab) => tab.id === owned.id);
+        if (!row) continue;
+        assert.equal(row.user_id, fixture.userId);
+        const deleted = await context.request.delete(`${base}/api/me/app-tabs/${row.id}`, { data: { revision: row.revision } });
+        assert.ok(deleted.ok(), `Navigation tab cleanup: ${deleted.status()}`);
+      }
+      const response = await context.request.get(`${base}/api/me/app-tabs`);
+      assert.ok(response.ok());
+      const rows = await response.json();
+      assert.ok(!rows.some((row) => navigationTabs.owned.some((tab) => tab.id === row.id)));
+      navigationTabs.cleanup = true;
+    } catch (error) {
+      navigationTabs.error = error.message.split("\n")[0];
+      errors.push(navigationTabs.error); process.exitCode = 1;
+    }
+    await writeFile(`${output}/${label}-navigation-tabs.json`, JSON.stringify(navigationTabs, null, 2));
   }
   await writeFile(`${output}/${label}.json`, JSON.stringify({ label, native, diagnostic, cpuProfile, pass2, pass3, pass3b, timestamp: new Date().toISOString(), buildSha, sha: execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(), dirty: Boolean(execFileSync("git", ["status", "--porcelain"], { encoding: "utf8" }).trim()), runtime, buildId: (await readFile(path.join(process.env.MINDDY_PERF_REFERENCE_ROOT ?? process.cwd(), ".next/BUILD_ID"), "utf8")).trim(), measurements, errors, responses, requests, desktopTrace }, null, 2));
 

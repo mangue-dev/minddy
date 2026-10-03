@@ -71,11 +71,23 @@ const candidateAllObserved = await cohort([3, 4, 5, 6].map((n) => `pass3d-after-
 const evidence = [];
 for (const name of (await readdir(input)).filter((name) => name.startsWith('pass3d-')).sort()) {
   const bytes = await readFile(path.join(input, name));
+  // Keep original diagnostics locally; omit only Next's private LAN advertisement
+  // from the published copy, without changing any performance observation.
+  const redactions = [];
+  let published = bytes;
+  if (/^pass3d-server-.*\.log$/.test(name)) {
+    const text = bytes.toString('utf8').replace(/(Network:\s+)https?:\/\/[^\s]+/g, (_, prefix) => {
+      redactions.push('Next startup Network address (private LAN advertisement)');
+      return `${prefix}[private LAN address omitted]`;
+    });
+    published = Buffer.from(text);
+  }
   const destination = name.endsWith('.png') ? name : `${name}.gz`;
-  const saved = name.endsWith('.png') ? bytes : gzipSync(bytes, { level: 9 });
+  const saved = name.endsWith('.png') ? published : gzipSync(published, { level: 9 });
   await writeFile(path.join(output, destination), saved);
   evidence.push({ file: `desktop-perf-min-614-pass-3d-evidence/${destination}`, originalBytes: bytes.length, storedBytes: saved.length,
-    sha256: createHash('sha256').update(saved).digest('hex'), originalSha256: createHash('sha256').update(bytes).digest('hex') });
+    sha256: createHash('sha256').update(saved).digest('hex'), originalSha256: createHash('sha256').update(bytes).digest('hex'),
+    ...(redactions.length ? { publishedBytes: published.length, publishedSha256: createHash('sha256').update(published).digest('hex'), redactions } : {}) });
 }
 await copyFile(path.join(input, 'workload.json'), path.join(output, 'workload.json'));
 const fixture = await readFile(path.join(output, 'workload.json'));
