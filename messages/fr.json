@@ -5994,8 +5994,7 @@
     "loading": "Chargement des nouveautés…",
     "error": "Les nouveautés n’ont pas pu être chargées.",
     "retry": "Réessayer",
-    "details": "Découvrir cette nouveauté",
-    "close": "Fermer"
+    "details": "Découvrir cette nouveauté"
   },
   "Automations": {
     "title": "Automatisations",

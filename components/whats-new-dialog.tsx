@@ -67,7 +67,7 @@ export function WhatsNewDialog({
             <ChangelogEntries
               locale={locale}
               labels={{ more: t("more"), loading: t("loading"), error: t("error"),
-                retry: t("retry"), details: t("details"), close: t("close") }}
+                retry: t("retry"), details: t("details") }}
             />
           </div>
         </div>

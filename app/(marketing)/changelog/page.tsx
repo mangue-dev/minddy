@@ -59,7 +59,7 @@ export default async function ChangelogPage() {
             locale={locale}
             initial={initial}
             labels={{ more: t("more"), loading: t("loading"), error: t("error"),
-              retry: t("retry"), details: t("details"), close: t("close") }}
+              retry: t("retry"), details: t("details") }}
           />
         </div>
       </section>

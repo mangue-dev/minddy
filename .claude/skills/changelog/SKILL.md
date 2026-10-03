@@ -42,7 +42,8 @@ paragraphs; do not pad a minor fix to meet that guideline. Keep historical copy
 when evidence does not support an expansion. Avoid em dashes, emoji, internal
 jargon, keyboard shortcut lists, or unsupported marketing claims.
 
-Put the most useful feature first; it occupies the larger bento tile. Choose a
+Put the most useful feature first. Cards use a Masonry layout with varied
+illustration proportions and the landing’s native in-card disclosure. Choose a
 lightweight code illustration or icon from the supported names. External HTTPS
 images are also supported: pre-optimize them to WebP/AVIF, at most 1600 px per
 side and preferably below 80 KiB, store them outside the app build, and record

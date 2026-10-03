@@ -32,7 +32,6 @@ export type ChangelogIndexEntry = Pick<ChangelogRelease,
 export interface ChangelogFeatureSummary {
   id: string;
   title: string;
-  summary: string;
   illustration: ChangelogIllustration;
 }
 export interface ChangelogReleaseSummary {
@@ -57,5 +56,4 @@ export interface ChangelogLabels {
   error: string;
   retry: string;
   details: string;
-  close: string;
 }

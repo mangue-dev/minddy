@@ -5994,8 +5994,7 @@
     "loading": "Updates werden geladen…",
     "error": "Die Updates konnten nicht geladen werden.",
     "retry": "Erneut versuchen",
-    "details": "Funktion entdecken",
-    "close": "Schließen"
+    "details": "Funktion entdecken"
   },
   "Automations": {
     "title": "Automatisierungen",

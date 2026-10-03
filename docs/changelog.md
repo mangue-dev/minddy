@@ -1,7 +1,9 @@
 # Production release changelog
 
 The changelog announces one version at a time. Small updates use compact text;
-substantial releases use an illustrated bento whose tiles open feature details.
+substantial releases use an illustrated Masonry bento. Its plus controls replace
+each card’s illustration and title with the feature details, using the same
+native disclosure as the landing.
 The public page, in-app dialog, menu preview, RSS, Markdown, and sitemap read the
 same confirmed publication index.
 
@@ -29,7 +31,7 @@ The validator caps a complete six-locale release at 192 KiB, 64 features,
 paragraphs. Historical content lives in server files; it is never imported into
 a client bundle. `/api/changelog` returns one locale and at most four releases
 per page, with a 48 KiB JSON budget. Feature details are fetched only when a tile
-opens. The dialog caches details for that open session. API and catalog caches
+opens. The changelog caches details for that mounted session. API and catalog caches
 refresh within 60 seconds; publication index replacement uses a 60-second cache.
 RSS and Markdown include the latest 50 versions and their feature details.
 

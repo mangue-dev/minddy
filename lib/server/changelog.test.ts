@@ -20,6 +20,7 @@ describe("public changelog content", () => {
     expect(first.releases[0].title).toBe("Un espace plus privé et mieux connecté");
     expect(first.releases[0].features[0]).not.toHaveProperty("copy");
     expect(first.releases[0].features[0]).not.toHaveProperty("details");
+    expect(first.releases[0].features[0]).not.toHaveProperty("summary");
     expect(first.releases[0]).not.toHaveProperty("evidence");
     expect(Buffer.byteLength(JSON.stringify(first))).toBeLessThan(48 * 1024);
     const second = await getChangelogPage("fr", first.next!);

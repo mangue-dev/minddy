@@ -73,7 +73,7 @@ export function summarizeRelease(release: ChangelogRelease, locale: Locale): Cha
     version: release.version, publishedAt: release.publishedAt, layout: release.layout,
     ...release.copy[locale],
     features: release.features.map(f => ({ id: f.id, illustration: f.illustration,
-      title: f.copy[locale].title, summary: f.copy[locale].summary })),
+      title: f.copy[locale].title })),
   };
 }
 
@@ -98,5 +98,6 @@ export async function getChangelogFeature(id: string, locale: Locale): Promise<C
   if (!entry) return null;
   const release = await getChangelogRelease(entry.version);
   const feature = release?.features.find(f => f.id === id);
-  return feature ? { id, version: entry.version, illustration: feature.illustration, ...feature.copy[locale] } : null;
+  return feature ? { id, version: entry.version, illustration: feature.illustration,
+    title: feature.copy[locale].title, details: feature.copy[locale].details } : null;
 }

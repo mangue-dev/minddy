@@ -5994,8 +5994,7 @@
     "loading": "Carregando novidades…",
     "error": "Não foi possível carregar as novidades.",
     "retry": "Tentar novamente",
-    "details": "Explorar esta novidade",
-    "close": "Fechar"
+    "details": "Explorar esta novidade"
   },
   "Automations": {
     "title": "Automações",

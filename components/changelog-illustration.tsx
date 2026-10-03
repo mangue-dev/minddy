@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { cn } from "mangue-ui/lib/utils";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Shield01Icon, DashboardSquare01Icon, SparklesIcon, File01Icon, Link01Icon, ChartLineData01Icon, ComputerIcon } from "@hugeicons/core-free-icons";
 import type { ChangelogIllustration as Illustration } from "@/lib/changelog-types";
@@ -18,11 +19,11 @@ const TONES = {
 };
 
 /** Reusable CSS figures keep historical releases out of the image bundle. */
-export function ChangelogIllustration({ illustration }: { illustration: Illustration }) {
+export function ChangelogIllustration({ illustration, className, aspectRatio }: { illustration: Illustration; className?: string; aspectRatio?: number }) {
   const [failed, setFailed] = useState(false);
   const name = illustration.kind === "image" ? "pages" : illustration.name;
   return (
-    <div aria-hidden className={`relative flex h-full min-h-44 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br ${TONES[name]}`}>
+    <div aria-hidden style={{ aspectRatio }} className={cn("relative flex min-h-44 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br", aspectRatio ? "h-auto" : "h-full", TONES[name], className)}>
       {illustration.kind === "image" && !failed ? (
         // External illustrations are pre-optimized by the release author and never bundled.
         // eslint-disable-next-line @next/next/no-img-element
