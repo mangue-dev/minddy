@@ -11,6 +11,7 @@ import { loadEnv, requireEnv } from "../../captures/lib/env.mjs";
 import { EMAIL, MARKER, id } from "./seed.mjs";
 import { measureRetainedReturns } from "./min614-retained-returns.mjs";
 import { measureIssueJourneys } from "./min614-issue-journeys.mjs";
+import { measureMutationJourneys } from "./min614-mutation-journeys.mjs";
 
 loadEnv();
 const base = process.env.MINDDY_PERF_BASE_URL ?? "http://localhost:3111";
@@ -48,6 +49,7 @@ const diagnostic = process.argv.includes("--trace");
 const cpuProfile = process.argv.includes("--profile");
 const pass2 = process.argv.includes("--retained-returns");
 const pass3 = process.argv.includes("--issue-journeys");
+const pass3b = process.argv.includes("--mutation-journeys");
 const buildSha = process.env.MINDDY_PERF_BUILD_SHA;
 if (buildSha) assert.match(buildSha, /^[a-f0-9]{40}$/);
 let runtime, profile, browser, context, page;
@@ -156,12 +158,14 @@ try {
       await cdp.send("Profiler.start");
     }
     if (diagnostic) await cdp.send("Tracing.start", { categories: "devtools.timeline,v8,disabled-by-default-devtools.timeline.invalidationTracking", transferMode: "ReturnAsStream" });
-    await action();
-    await ready();
+    let failure;
+    try { await action(); await ready(); } catch (error) { failure = error; }
+    const observedAt = await page.evaluate(() => performance.timeOrigin + performance.now());
+    const firstVisibleAt = failure ? null : observedAt;
     await frames();
     const readyAt = await page.evaluate(() => performance.timeOrigin + performance.now());
     let inputMs = null;
-    if (probe) {
+    if (probe && !failure) {
       const inputStart = await page.evaluate(() => performance.now());
       await probe();
       inputMs = await page.evaluate((start) => performance.now() - start, inputStart);
@@ -188,10 +192,11 @@ try {
     }
     const resources = await page.evaluate((since) => performance.getEntriesByType("resource").filter((entry) => entry.startTime >= since - performance.timeOrigin && new URL(entry.name).pathname.startsWith("/api/")).map((entry) => ({ path: new URL(entry.name).pathname, duration: entry.duration, ttfb: entry.responseStart - entry.requestStart })), started);
     const sameDocument = before.NavigationStart === after.NavigationStart;
-    const result = { name, startedAt: started, readyAt, inputMs, readyMs: readyAt - started, ...rendering, scriptMs: sameDocument ? Math.max(0, after.ScriptDuration - before.ScriptDuration) * 1000 : null,
+    const result = { name, startedAt: started, firstVisibleMs: failure ? null : firstVisibleAt - started, readyAt: failure ? null : readyAt, inputMs, readyMs: failure ? null : readyAt - started, ...(failure ? { error: failure.message.split("\n")[0], failedAfterMs: observedAt - started } : {}), ...rendering, scriptMs: sameDocument ? Math.max(0, after.ScriptDuration - before.ScriptDuration) * 1000 : null,
       styleMs: sameDocument ? Math.max(0, after.RecalcStyleDuration - before.RecalcStyleDuration) * 1000 : null, layoutMs: sameDocument ? Math.max(0, after.LayoutDuration - before.LayoutDuration) * 1000 : null, resources, responses: responses.slice(responseStart) };
     measurements.push(result);
     console.log(JSON.stringify(result));
+    if (failure) throw failure;
     return result;
   }
   const board = () => page.locator('[data-retained-app-view][data-app-view-active="true"] [data-issue-id]').first();
@@ -204,7 +209,9 @@ try {
     width: innerWidth, height: innerHeight, theme: document.documentElement.classList.contains("dark") ? "dark" : "light" }));
   assert.equal(runtime.renderer.nativeBridge, native);
   const pagesHref = `/projects/${fixture.projects[0]}/pages`;
-  if (pass3) {
+  if (pass3b) {
+    await measureMutationJourneys({ page, context, fixture, boardTab, pagesTab, base, measure, frames, diagnostic: diagnostic || cpuProfile, output, label, recordRequest: (record) => requests.push(record), cdp });
+  } else if (pass3) {
     await measureIssueJourneys({ page, context, fixture, boardTab, pagesTab, tabs, base, measure, frames, diagnostic: diagnostic || cpuProfile, output, label, recordRequest: (record) => requests.push(record) });
   } else if (pass2) {
     await measureRetainedReturns({ page, context, fixture, boardTab, pagesTab, tabs, base, measure, frames, diagnostic: diagnostic || cpuProfile });
@@ -268,7 +275,7 @@ try {
       });
     } catch { desktopTrace = null; }
   }
-  await writeFile(`${output}/${label}.json`, JSON.stringify({ label, native, diagnostic, cpuProfile, pass2, pass3, timestamp: new Date().toISOString(), buildSha, sha: execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(), dirty: Boolean(execFileSync("git", ["status", "--porcelain"], { encoding: "utf8" }).trim()), runtime, buildId: (await readFile(path.join(process.env.MINDDY_PERF_REFERENCE_ROOT ?? process.cwd(), ".next/BUILD_ID"), "utf8")).trim(), measurements, errors, responses, requests, desktopTrace }, null, 2));
+  await writeFile(`${output}/${label}.json`, JSON.stringify({ label, native, diagnostic, cpuProfile, pass2, pass3, pass3b, timestamp: new Date().toISOString(), buildSha, sha: execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(), dirty: Boolean(execFileSync("git", ["status", "--porcelain"], { encoding: "utf8" }).trim()), runtime, buildId: (await readFile(path.join(process.env.MINDDY_PERF_REFERENCE_ROOT ?? process.cwd(), ".next/BUILD_ID"), "utf8")).trim(), measurements, errors, responses, requests, desktopTrace }, null, 2));
 
   await browser?.close();
   if (launchServices && profile) {

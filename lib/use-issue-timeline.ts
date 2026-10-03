@@ -2,7 +2,8 @@
 
 import { useAuth } from "./auth-context";
 import { createUuid } from "./create-uuid";
-import { deliverComment, reconcileCommentRead } from "./comment-delivery";
+import { deliverComment } from "./comment-delivery";
+import { commentsKey, issueCommentsOptions, issueEventsOptions } from "./issue-timeline-queries";
 import { optimisticAttachments } from "./optimistic-comment-attachments";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo } from "react";
@@ -11,8 +12,6 @@ import {
   addCommentApi,
   deleteResourceApi,
   deleteCommentApi,
-  fetchCommentsApi,
-  fetchEventsApi,
   updateCommentApi,
 } from "./comments-api";
 import type { PageSummary } from "./pages-api";
@@ -21,9 +20,6 @@ import type { Comment, IssueEvent, ResourceInput } from "./types";
 export type TimelineItem =
   | { kind: "comment"; at: string; comment: Comment; replies: Comment[] }
   | { kind: "event"; at: string; event: IssueEvent };
-
-const commentsKey = (issueId: string) => ["comments", issueId] as const;
-const eventsKey = (issueId: string) => ["events", issueId] as const;
 
 /** The birth of the ticket, such as carrying ITS OWN LINE. */
 export interface IssueBirth {
@@ -130,29 +126,8 @@ export function useIssueTimeline(issueId: string | null, birth?: IssueBirth | nu
   const queryClient = useQueryClient();
   const authorId = useAuth().user?.id ?? null;
 
-  const { data: comments } = useQuery({
-    queryKey: commentsKey(issueId ?? ""),
-    queryFn: async () => reconcileCommentRead(
-      await fetchCommentsApi(issueId as string),
-      queryClient.getQueryData<Comment[]>(commentsKey(issueId ?? "")),
-    ),
-    enabled: !!issueId,
-    // While a @Numo reply streams (assistant_status 'working'), poll as a
-    // safety net for the realtime push. Its TEXT rides the comment's own topic
-    // (lib/use-comment-live.ts); this catches the state transitions — the tool
-    // it moved to, the final message, an error — if a broadcast is missed.
-    refetchInterval: (query) =>
-      (query.state.data as Comment[] | undefined)?.some(
-        (c) => c.assistant_status === "working"
-      )
-        ? 1500
-        : false,
-  });
-  const { data: events } = useQuery({
-    queryKey: eventsKey(issueId ?? ""),
-    queryFn: () => fetchEventsApi(issueId as string),
-    enabled: !!issueId,
-  });
+  const { data: comments } = useQuery(issueCommentsOptions(queryClient, issueId));
+  const { data: events } = useQuery(issueEventsOptions(issueId));
 
   const birthAt = birth?.createdAt ?? null;
   const birthBy = birth?.createdBy ?? null;
