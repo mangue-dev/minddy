@@ -410,3 +410,17 @@ closingIssuesReferences is empty. Minddy nevertheless changed MIN-614 to in_revi
 on push; it is explicitly restored to in_progress and rechecked after delivery.
 All fifteen non-merge commits through this checkpoint have exact-author sign-offs;
 the changed-range local Gitleaks scan reports no leaks with unchanged policy.
+
+
+The evidence-only follow-up `5eb88227fb9d0b36a465ca2123d3b3a636991060`
+failed the Public repository check before tests: embedding the complete public CI
+job log grew the JSON manifest beyond that check's unchanged 10 MiB Git-read
+buffer (`ENOBUFS`). This is an evidence-layout failure, separate from native
+scenarios and the inherited dependency audit. CI logs, including this failure,
+are now preserved as compressed checksum-addressed assets; the manifest keeps
+all native samples/requests and CI conclusions without duplicating raw CI logs.
+The publication barrier and its buffer are unchanged. The repaired local publication
+check passes across 4,747 tracked files and 25,137 reachable blobs; lint, English
+and unchanged-policy Gitleaks pass. Primary measurements and attempt accounting
+are deeply equal to the previous evidence. The full remote pipeline is repeated
+after this packaging repair.

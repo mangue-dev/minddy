@@ -93,8 +93,8 @@ for (const phase of ['before', 'after']) {
   upstream[phase].commentCreateWindows = runs.flatMap((run) => run.checks.stages.filter((stage) => stage.name === 'comment-create').map((stage) => ({ label: run.label, run: stage.run, operations: rows.filter((row) => row.at >= stage.start && row.at <= stage.start + stage.serverConfirmationMs) })));
 }
 const logs = [];
-for (const file of files.filter((file) => /^pass3c-.*\.log$/.test(file) && !file.includes('summary'))) { const raw = await readFile(`${root}/${file}`); if (file.includes('server-')) { const zipped = gzipSync(raw), artifact = `${assets}/min-614-${file}.gz`; await writeFile(artifact, zipped); artifacts.push({ file, artifact, bytes: raw.length, sha256: hash(raw), compressedBytes: zipped.length, compressedSha256: hash(zipped) }); }
-  logs.push({ file, bytes: raw.length, sha256: hash(raw), ...(/(?:tests|lint|typecheck|english|access|schema|build|restore|probe|retained-verification|ci-|gitleaks)/.test(file) ? { output: raw.toString() } : {}) }); }
+for (const file of files.filter((file) => /^pass3c-.*\.log$/.test(file) && !file.includes('summary'))) { const raw = await readFile(`${root}/${file}`); if (file.includes('server-') || file.includes('ci-')) { const zipped = gzipSync(raw), artifact = `${assets}/min-614-${file}.gz`; await writeFile(artifact, zipped); artifacts.push({ file, artifact, bytes: raw.length, sha256: hash(raw), compressedBytes: zipped.length, compressedSha256: hash(zipped) }); }
+  logs.push({ file, bytes: raw.length, sha256: hash(raw), ...(file.includes('ci-') ? { artifact: `${assets}/min-614-${file}.gz` } : /(?:tests|lint|typecheck|english|access|schema|build|restore|probe|retained-verification|gitleaks)/.test(file) ? { output: raw.toString() } : {}) }); }
 const screenshots = [];
 for (const file of files.filter((file) => /^pass3c-.*\.png$/.test(file))) {
   const artifact = `${assets}/${file === 'pass3c-after-1-loaded-light.png' ? 'min-614-pass-3c-loaded-light.png' : `min-614-${file}`}`;
@@ -103,5 +103,8 @@ for (const file of files.filter((file) => /^pass3c-.*\.png$/.test(file))) {
 }
 const repositories = await read('min614-repositories-pass3c-after');
 const evidence = { screenshots, repositories, measuredAt: new Date().toISOString(), method: 'Three fresh native production launches and ten warm observations per main scenario in each implementation. Failed/interrupted/profile/injected runs are separate and preserved. No outlier removal. Renderer probes capture trusted dispatch, the first exact visible DOM predicate and the next frame checkpoint; driver preparation is separate. Frame checkpoints alone do not prove pixels painted. Effort requires the expected label after persisted GET in both 3c series. First visibility precedes the historical two frames; legacy menu input also includes closure. Persisted-read verification follows the existing 350 ms observation tail and is not minimum commit latency. Upstream windows may include concurrent background operations and are not request-correlated SQL profiles.', before, after, ordinaryAttempts, supplemental, upstream, artifacts, logs, provenance: await read('pass3c-provenance') };
-await writeFile('docs/audits/desktop-perf-min-614-pass-3c-results.json', `${JSON.stringify(evidence, null, 2)}\n`);
+const serialized = `${JSON.stringify(evidence, null, 2)}\n`;
+// Keep the unchanged publication Git-read limit; externalize logs rather than remove samples.
+assert.ok(Buffer.byteLength(serialized) < 10 * 1024 * 1024, 'Evidence manifest exceeds the publication limit; preserve larger logs as separate assets');
+await writeFile('docs/audits/desktop-perf-min-614-pass-3c-results.json', serialized);
 console.log(JSON.stringify({ before: before.summary, after: after.summary, dom: { before: before.dom, after: after.dom }, stages: { before: before.stages, after: after.stages } }, null, 2));
