@@ -68,6 +68,17 @@ default. Remote origins must use HTTPS, while HTTP is accepted only for loopback
 and private-network IP addresses. This flow works on macOS, Windows, and Linux,
 including **Run local minddy on this computer** for a local clone folder.
 
+## Packaging downloader
+
+`package.json` pins `app-builder-lib`'s `@electron/get` dependency to 5.1.0.
+The older downloader pulls in `http-cache-semantics`, which has an unpatched
+high-severity advisory (GHSA-ch52-4w7c-c8xp). The override uses the same downloader
+as Electron itself and requires Node 22.12 or later; release workflows use Node 24.
+Downloads retain checksum verification and cache reuse. Version 5 uses Fetch:
+Got-specific `agent`, `timeout`, and `https` options are not supported. Any custom
+download configuration must use Fetch options, such as `signal` for timeouts.
+Remove the override when electron-builder adopts this downloader upstream.
+
 ## The selected server
 
 The server picker stores one normalized origin in `userData/server.json` before

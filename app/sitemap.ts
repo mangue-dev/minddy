@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { PUBLIC_ROUTES, publicRouteVariants } from "@/lib/public-routes";
+import { getChangelogIndex } from "@/lib/server/changelog";
 import { SITE_URL } from "@/lib/site";
 
 /**
@@ -17,7 +18,10 @@ import { SITE_URL } from "@/lib/site";
  * Also. `priority` and `changeFrequency` stay because Bing is looking at them
  * a little more; Google has been ignoring them for a long time.
  */
-export default function sitemap(): MetadataRoute.Sitemap {
+export const revalidate = 60;
+
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const latestRelease = (await getChangelogIndex())[0]?.publishedAt;
   return PUBLIC_ROUTES.flatMap((route) => {
     const variants = publicRouteVariants(route);
     const languages = Object.fromEntries(
@@ -27,7 +31,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
     return variants.map(({ path }) => ({
       url: `${SITE_URL}${path}`,
-      lastModified: route.lastModified,
+      lastModified: route.key === "changelog" ? latestRelease ?? route.lastModified : route.lastModified,
       changeFrequency: "monthly" as const,
       priority: route.priority,
       alternates: { languages },

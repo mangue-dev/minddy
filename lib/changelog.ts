@@ -1,131 +1,18 @@
-/**
- * The public changelog (MIN-93) — the list of commits, from newest to
- * oldest.
- *
- * ## Why this file and not the issues `done`
- *
- * The plan proposed to derive the minddy issues page passed to `done` on
- * the project itself: the product would document itself with itself, which is
- * a nice demonstration. Tried, rejected, for three basic reasons:
- *
- * 1. **The language.** Minddy's issues are written in French. The public
- * site is canonical in ENGLISH. An English page filled with "Recast
- * metadata of all pages with i18n" is not an English
- * page, and nothing can translate it on the fly without lying.
- * 2. **The audience.** An issue title is addressed to the person who is going to do it; a
- * changelog entry to whoever uses the product. “Defer import of
- * posthog-js” and “Dashboard admin must trigger breadcrumbs” are
- * real deliveries, and have nothing to do on a public page.
- * 3. **Sorting.** There should be a “public” flag on the outputs, so a
- * migration and one more box in the UI, for a need that a list of
- * fifteen lines covers.
- *
- * Hence: one entry per delivery, written for a reader, in both
- * languages. The action remains the same — when a batch of issues changes to `done`, we
- * adds an entry — but we REWRITE it.
- *
- * ## What this file contains, and what it doesn't contain
- *
- * Only the identifier and the date. The texts live in the namespace
- * `Changelog` of the two catalogs (`entry_<id>_title`, `entry_<id>_body`), with
- * all the rest of the site copy — therefore within the scope of an audit of
- * copy, and translatable like any other string.
- *
- * This is also what allows `lib/public-routes.ts` to import this module to
- * extract the `lastModified` from the page without burdening the middleware: even in
- * five years, this file will only weigh identifiers and dates.
- *
- * ## Add an entry
- *
- * At the top of the list: `{ id: "<slug-court>", date: "AAAA-MM-JJ" }`, the date of
- * DEPLOYMENT, then `entry_<id>_title` and `entry_<id>_body` in `en.json` and
- * `fr.json`. `changelog.test.ts` rejects input without text, a poorly formed date
- *, or a poorly sorted list.
- */
-
 import { intlLocaleByLocale, type Locale } from "@/i18n/config";
+import type { ChangelogReleaseSummary } from "./changelog-types";
 
-export interface ChangelogEntry {
-  /** Stable slug: i18n key, URL anchor and `guid` of the RSS feed. */
-  id: string;
-  /** Deployment date, short ISO. */
-  date: string;
+/** Historical anchors and pagination share one chronological, unique release list. */
+export function mergeChangelogReleases(
+  current: ChangelogReleaseSummary[], incoming: ChangelogReleaseSummary[],
+): ChangelogReleaseSummary[] {
+  const releases = new Map(current.map(release => [release.version, release]));
+  for (const release of incoming) releases.set(release.version, release);
+  return [...releases.values()].sort((a, b) => b.publishedAt.localeCompare(a.publishedAt));
 }
 
-/** Newest to oldest — this is the display order AND the order of the feed. */
-export const CHANGELOG_ENTRIES: ReadonlyArray<ChangelogEntry> = [
-  { id: "encrypted-workspace-content", date: "2026-09-30" },
-  { id: "mcp-catalog", date: "2026-09-21" },
-  { id: "performance", date: "2026-09-20" },
-  { id: "family-boards", date: "2026-09-19" },
-  { id: "smart-triage", date: "2026-09-19" },
-  { id: "smart-fill-everywhere", date: "2026-09-19" },
-  { id: "byok-providers", date: "2026-09-19" },
-  { id: "voice-dictation", date: "2026-09-19" },
-  { id: "objective-relations", date: "2026-09-17" },
-  { id: "pr-page", date: "2026-09-16" },
-  { id: "app-tabs", date: "2026-09-14" },
-  { id: "unified-numo", date: "2026-09-13" },
-  { id: "page-databases", date: "2026-09-06" },
-  { id: "numo-connected-services", date: "2026-09-05" },
-  { id: "numo-cross-project", date: "2026-09-05" },
-  { id: "routine-context", date: "2026-09-05" },
-  { id: "repository-skills", date: "2026-09-05" },
-  { id: "objective-momentum", date: "2026-09-05" },
-  { id: "merge-readiness", date: "2026-09-05" },
-  { id: "resume-failed-agent", date: "2026-09-05" },
-  { id: "page-callouts", date: "2026-08-31" },
-  { id: "page-comment-numo", date: "2026-08-31" },
-  { id: "attachment-viewer", date: "2026-08-28" },
-  { id: "desktop-app", date: "2026-08-26" },
-  { id: "activity-breakdowns", date: "2026-08-25" },
-  { id: "custom-avatar", date: "2026-08-25" },
-  { id: "feedback-page-tabs", date: "2026-08-22" },
-  { id: "account-transfer", date: "2026-08-20" },
-  { id: "own-ai-everywhere", date: "2026-08-20" },
-  { id: "github-dependencies", date: "2026-08-19" },
-  { id: "live-page-edits", date: "2026-08-19" },
-  { id: "local-agent", date: "2026-08-15" },
-  { id: "pages", date: "2026-08-11" },
-  { id: "smart-fill", date: "2026-08-10" },
-  { id: "board-multi-select", date: "2026-08-09" },
-  { id: "issue-sync", date: "2026-08-07" },
-  { id: "invite-by-email", date: "2026-08-07" },
-  { id: "routines", date: "2026-08-06" },
-  { id: "push-notifications", date: "2026-08-06" },
-  { id: "project-start", date: "2026-08-06" },
-  { id: "smart-assign", date: "2026-08-06" },
-  { id: "feedback-comments", date: "2026-08-06" },
-  { id: "resources", date: "2026-08-06" },
-  { id: "feedback-setup", date: "2026-08-06" },
-  { id: "feedback-translation", date: "2026-08-06" },
-  { id: "export-issues", date: "2026-08-06" },
-  { id: "pull-requests", date: "2026-08-03" },
-  { id: "pr-review", date: "2026-08-03" },
-  { id: "automations", date: "2026-08-03" },
-  { id: "recurring-issues", date: "2026-08-03" },
-  { id: "own-api-key", date: "2026-08-03" },
-  { id: "mentions", date: "2026-08-03" },
-  { id: "trash", date: "2026-07-31" },
-  { id: "import-issues", date: "2026-07-31" },
-  { id: "home-attention", date: "2026-07-31" },
-  { id: "zen-mode", date: "2026-07-31" },
-  { id: "account-data", date: "2026-07-31" },
-  { id: "agent-brief", date: "2026-07-31" },
-  { id: "mcp-page", date: "2026-07-27" },
-  { id: "localised-site", date: "2026-07-27" },
-  { id: "search-everywhere", date: "2026-07-26" },
-  { id: "notebook-agent", date: "2026-07-24" },
-  { id: "notifications", date: "2026-07-24" },
-];
-
-/**
- * The date of the last entry, as read by the sitemap and the
- * header of the page. This is the only `lastModified` in the routes table that is not
- * hand-held: on this page, "the content has changed" and "an
- * entry has been added" are exactly the same thing.
- */
-export const CHANGELOG_LAST_MODIFIED: string = CHANGELOG_ENTRIES[0].date;
+/** Latest verified historical publication; live content is loaded on the server. */
+export { lastPublishedDate as CHANGELOG_LAST_MODIFIED } from "@/content/changelog/metadata.json";
+import { lastPublishedDate } from "@/content/changelog/metadata.json";
 
 /** How long does a delivery remain “new” for the menu tab. */
 export const RECENT_CHANGELOG_DAYS = 5;
@@ -143,7 +30,7 @@ export const RECENT_CHANGELOG_DAYS = 5;
  * tablet precisely on the day of release.
  */
 export function hasRecentChangelog(now: number = Date.now()): boolean {
-  const [year, month, day] = CHANGELOG_LAST_MODIFIED.split("-").map(Number);
+  const [year, month, day] = lastPublishedDate.split("-").map(Number);
   const age = now - Date.UTC(year, month - 1, day);
   return age < RECENT_CHANGELOG_DAYS * 24 * 60 * 60 * 1000;
 }

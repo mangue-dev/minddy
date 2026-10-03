@@ -1,0 +1,50 @@
+[
+  {
+    "version": "0.11.0",
+    "layout": "bento",
+    "copy": {
+      "en": {
+        "title": "A more private, connected workspace",
+        "summary": "Encrypted workspace content, one Numo, and more ways to organize your work."
+      },
+      "fr": {
+        "title": "Un espace plus privé et mieux connecté",
+        "summary": "Vos contenus chiffrés, un seul Numo et de nouvelles façons d’organiser votre travail."
+      },
+      "de": {
+        "title": "Ein privaterer, vernetzter Arbeitsbereich",
+        "summary": "Verschlüsselte Inhalte, ein gemeinsamer Numo und neue Möglichkeiten, deine Arbeit zu organisieren."
+      },
+      "pt-BR": {
+        "title": "Um espaço mais privado e conectado",
+        "summary": "Conteúdo criptografado, um único Numo e mais formas de organizar seu trabalho."
+      },
+      "it": {
+        "title": "Uno spazio più riservato e connesso",
+        "summary": "Contenuti crittografati, un solo Numo e nuovi modi per organizzare il lavoro."
+      },
+      "es": {
+        "title": "Un espacio más privado y conectado",
+        "summary": "Contenido cifrado, un solo Numo y más formas de organizar tu trabajo."
+      }
+    },
+    "publishedAt": "2026-09-30T14:59:42Z",
+    "sha": "316e30460d6b8adcf6ae1400c958077195de5245",
+    "deploymentId": 6762664747,
+    "featureIds": [
+      "encrypted-workspace-content",
+      "mcp-catalog",
+      "performance",
+      "family-boards",
+      "smart-triage",
+      "smart-fill-everywhere",
+      "byok-providers",
+      "voice-dictation",
+      "objective-relations",
+      "pr-page",
+      "app-tabs",
+      "unified-numo",
+      "merge-readiness"
+    ]
+  }
+]

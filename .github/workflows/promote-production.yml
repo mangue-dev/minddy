@@ -43,8 +43,7 @@ permissions:
   deployments: read
 
 concurrency:
-  # Shared with core release: production cannot progress for
-  # that a workflow is building and then tagging its SHA.
+  # Serialize promotion, changelog publication, and core release tagging.
   group: production-publication
   cancel-in-progress: false
 
@@ -55,8 +54,7 @@ jobs:
     timeout-minutes: 2
     permissions: {}
     steps:
-      # This validation lives in the workflow itself: it cannot therefore be
-      # be weakened by the candidate SHA before production approval.
+      # Keep security validation in the approved workflow, outside candidate scripts.
       - name: Enforce current checklist and pentest decision
         env:
           CHECKLIST_VERSION: ${{ inputs.checklist_version }}
@@ -143,13 +141,13 @@ jobs:
           {
             echo "### Promotion requested"
             echo "- From: \`$(git rev-parse origin/production)\`"
-            echo "- Vers: \`$TARGET_SHA\` (CI run $CI_RUN)"
+            echo "- To: \`$TARGET_SHA\` (CI run $CI_RUN)"
             echo "- Security review: \`$SECURITY_REVIEW_REF\`"
             echo "- Residual risks: \`$RESIDUAL_RISKS\`"
             echo "- Pentest: \`$PENTEST_STATUS\`"
             echo "- Private test exception: \`$PRIVATE_TEST_RELEASE\`"
             echo ""
-            echo "#### Changements Cloud"
+            echo "#### Cloud changes"
             git log --format='- `%h` %s' "origin/production..$TARGET_SHA"
             echo ""
             echo "#### Marketing"
@@ -163,6 +161,17 @@ jobs:
             echo "Updates and rollback: \`docs/releases.md\` and \`docs/self-hosting-operations.md\`."
           } >> "$GITHUB_STEP_SUMMARY"
 
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24"
+
+      - name: Validate versioned changelog before promotion
+        env:
+          TARGET_SHA: ${{ inputs.sha }}
+          MINDDY_PUBLIC_SUPABASE_URL: ${{ secrets.MINDDY_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: node scripts/changelog-publish.mjs --check "$TARGET_SHA"
+
       - name: Fast-forward production
         env:
           TARGET_SHA: ${{ inputs.sha }}
@@ -170,9 +179,7 @@ jobs:
           git push origin "$TARGET_SHA:refs/heads/production"
           test "$(git ls-remote origin refs/heads/production | cut -f1)" = "$TARGET_SHA"
 
-      # The Git Vercel integration creates a GitHub Deployment named Production.
-      # Waiting for its status makes the Cloud verdict traceable without Vercel token on
-      # the maintainer's position nor in this workflow.
+      # Vercel records a Production deployment. Publish content only after its success.
       - name: Verify Vercel production deployment
         env:
           GH_TOKEN: ${{ github.token }}
@@ -202,3 +209,11 @@ jobs:
             echo "- SHA: \`$TARGET_SHA\`"
             echo "- Vercel deployment: ${deployment_url:-GitHub Deployment $deployment_id}"
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Publish changelog after verified production deployment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_SHA: ${{ inputs.sha }}
+          MINDDY_PUBLIC_SUPABASE_URL: ${{ secrets.MINDDY_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: node scripts/changelog-publish.mjs "$TARGET_SHA"

@@ -1,169 +1,34 @@
 #!/usr/bin/env node
-/**
- * Adds an entry to the public changelog (MIN-93).
- *
- * An entry lives in three places: its ID and date in
- * `lib/changelog.ts`, its title and text in `messages/en.json` and
- * `messages/fr.json`. Three files, four keys, an order to respect — it's
- * exactly the kind of writing that you fail by hand one day out of three, and
- * whose failure is only seen in production.
- *
- * Hence this script. It does all three entries or none, and it refuses anything that would not pass rereading: an identifier already taken, a date back,
- * an em dash, text that is too long.
- *
- * It deploys NOTHING. The entry appears on `/changelog`, in the RSS feed,
- * in the Markdown version, and in the `lastModified` of the sitemap at the next
- * deployment — all of this is derived, there's nothing else to wire up.
- *
- * Usage:
- *
- * node scripts/changelog-add.mjs \
- * --id search-everywhere \
- * --title-en "Search issues and objectives from anywhere" \
- * --body-en "The command palette now searches every issue you have access to." \
- * --title-fr "Search tickets and objectives from anywhere" \
- * --body-fr "The palette now searches in all accessible tickets."
- *
- * `--date` is today by default. `--dry-run` displays without writing.
- */
-
-import { readFileSync, writeFileSync } from "node:fs";
+/** Prepare or preview one localized release; this command never publishes it. */
+import { readFile, mkdir, writeFile, rename } from "node:fs/promises";
+import { execFileSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const ENTRIES_FILE = path.join(ROOT, "lib", "changelog.ts");
-const CATALOGUES = { en: path.join(ROOT, "messages", "en.json"), fr: path.join(ROOT, "messages", "fr.json") };
-
-/** Beyond that, it is no longer a changelog entry but an article. */
-const MAX_TITLE = 70;
-const MAX_BODY = 320;
-
-/** The anchor after which entry keys begin, in catalogs. */
-const KEYS_ANCHOR = "feedBannerBody";
-
-function fail(message) {
-  console.error(`✗ ${message}`);
-  process.exit(1);
+import { validateDraft, CHANGELOG_LOCALES } from "./changelog-lib.mjs";
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const args = process.argv.slice(2);
+const fileIndex = args.indexOf("--file");
+const file = args[fileIndex + 1];
+if (fileIndex < 0 || !file || args.some((a, i) => a !== "--file" && a !== "--dry-run" && i !== fileIndex + 1)) {
+  throw new Error("Usage: node scripts/changelog-add.mjs --file release.json [--dry-run]");
 }
-
-function parseArgs(argv) {
-  const args = {};
-  for (let i = 0; i < argv.length; i += 1) {
-    const token = argv[i];
-    if (!token.startsWith("--")) continue;
-    const name = token.slice(2);
-    if (name === "dry-run") {
-      args.dryRun = true;
-      continue;
-    }
-    const value = argv[i + 1];
-    if (value === undefined || value.startsWith("--")) fail(`--${name} expects a value.`);
-    args[name] = value;
-    i += 1;
-  }
-  return args;
+const input = JSON.parse(await readFile(path.resolve(file), "utf8"));
+if (["publishedAt", "sha", "deploymentId"].some(key => key in input)) throw new Error("Drafts cannot claim production publication");
+const draft = validateDraft(input);
+for (const sha of draft.evidence.commits) execFileSync("git", ["merge-base", "--is-ancestor", sha, "HEAD"], { cwd: root });
+const index = JSON.parse(await readFile(path.join(root, "content/changelog/index.json"), "utf8"));
+if (index.some(r => r.version === draft.version)) throw new Error("This version is already published");
+console.log(`Preview: v${draft.version}, ${draft.layout}, ${draft.features.length} feature tiles`);
+for (const locale of CHANGELOG_LOCALES) {
+  console.log(`\n${locale}: ${draft.copy[locale].title}\n${draft.copy[locale].summary}`);
+  for (const [i, f] of draft.features.entries()) console.log(`  ${i + 1}. ${f.copy[locale].title} (${f.illustration.kind})\n     ${f.copy[locale].summary}\n     ${f.copy[locale].details.join("\n     ")}`);
 }
-
-/** Today's date in short ISO, in the local zone — this is the delivery date. */
-function today() {
-  const now = new Date();
-  const pad = (n) => String(n).padStart(2, "0");
-  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+if (!args.includes("--dry-run")) {
+  const folder = path.join(root, "content/changelog/drafts");
+  await mkdir(folder, { recursive: true });
+  const destination = path.join(folder, `${draft.version}.json`);
+  const temp = `${destination}.${process.pid}.tmp`;
+  await writeFile(temp, `${JSON.stringify(draft, null, 2)}\n`);
+  await rename(temp, destination);
+  console.log(`\nPrepared ${path.relative(root, destination)}. Publication follows a verified production deployment.`);
 }
-
-function validate({ id, date, texts }) {
-  if (!id || !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(id)) {
-    fail(`--id must use lowercase kebab-case; received: ${JSON.stringify(id ?? null)}`);
-  }
-  // The format THEN the validity: `2026-13-45` passes the form, and builds the
-  // date before checking it raises `toISOString()` on an invalid date
-  // — the script would die on a trace instead of saying what's wrong.
-  const parsed = new Date(`${date}T00:00:00Z`);
-  const wellFormed = /^\d{4}-\d{2}-\d{2}$/.test(date);
-  const real = !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === date;
-  if (!wellFormed || !real) fail(`--date must be a real YYYY-MM-DD date; received: "${date}"`);
-  for (const [field, value] of Object.entries(texts)) {
-    if (!value?.trim()) fail(`--${field} is required.`);
-    // The public site no longer has a single em-dash, and it's not here
-    // that we are going to reintroduce one.
-    if (value.includes("—")) fail(`--${field} contains an em dash. Use a colon, period, or comma.`);
-    const max = field.startsWith("title") ? MAX_TITLE : MAX_BODY;
-    if (value.length > max) fail(`--${field} is ${value.length} characters long; the maximum is ${max}.`);
-  }
-}
-
-const args = parseArgs(process.argv.slice(2));
-const id = args.id;
-const date = args.date ?? today();
-const texts = {
-  "title-en": args["title-en"],
-  "body-en": args["body-en"],
-  "title-fr": args["title-fr"],
-  "body-fr": args["body-fr"],
-};
-
-validate({ id, date, texts });
-
-// ── lib/changelog.ts ────────────────────────────────────────────────────────
-
-const entriesSource = readFileSync(ENTRIES_FILE, "utf8");
-const ANCHOR = "export const CHANGELOG_ENTRIES: ReadonlyArray<ChangelogEntry> = [";
-if (!entriesSource.includes(ANCHOR)) fail(`CHANGELOG_ENTRIES declaration not found in ${ENTRIES_FILE}.`);
-if (entriesSource.includes(`id: "${id}"`)) fail(`Identifier "${id}" is already taken.`);
-
-// The list is sorted from newest to oldest, and a test checks it:
-// an entry earlier than the first would break the sorting and `lastModified`.
-const newest = entriesSource.match(/\{ id: "[^"]+", date: "(\d{4}-\d{2}-\d{2})" \}/);
-if (newest && date < newest[1]) {
-  fail(`--date ${date} is earlier than the latest entry (${newest[1]}). The list must remain sorted.`);
-}
-
-const nextEntries = entriesSource.replace(
-  ANCHOR,
-  `${ANCHOR}\n  { id: "${id}", date: "${date}" },`,
-);
-
-// ── messages/{en,fr}.json ───────────────────────────────────────────────────
-
-const catalogues = {};
-for (const [locale, file] of Object.entries(CATALOGUES)) {
-  const raw = readFileSync(file, "utf8");
-  const data = JSON.parse(raw);
-  const block = data.Changelog;
-  if (!block || !(KEYS_ANCHOR in block)) fail(`Changelog namespace or key ${KEYS_ANCHOR} not found in ${file}.`);
-
-  // Rebuild the namespace by inserting both keys immediately after the anchor:
-  // entries stay grouped, with the newest first, like the list.
-  const rebuilt = {};
-  for (const [key, value] of Object.entries(block)) {
-    rebuilt[key] = value;
-    if (key === KEYS_ANCHOR) {
-      rebuilt[`entry_${id}_title`] = texts[`title-${locale}`];
-      rebuilt[`entry_${id}_body`] = texts[`body-${locale}`];
-    }
-  }
-  data.Changelog = rebuilt;
-  catalogues[locale] = { file, content: `${JSON.stringify(data, null, 2)}\n` };
-}
-
-// ── Writing ─────────────────────────────────────────────────────────────────
-
-if (args.dryRun) {
-  console.log(`(dry-run) entry "${id}" dated ${date}`);
-  for (const locale of Object.keys(CATALOGUES)) {
-    console.log(`  ${locale}: ${texts[`title-${locale}`]}`);
-    console.log(`      ${texts[`body-${locale}`]}`);
-  }
-  process.exit(0);
-}
-
-writeFileSync(ENTRIES_FILE, nextEntries);
-for (const { file, content } of Object.values(catalogues)) writeFileSync(file, content);
-
-console.log(`✓ entry "${id}" added, dated ${date}`);
-console.log(`  lib/changelog.ts, messages/en.json, messages/fr.json`);
-console.log("");
-console.log("  Verify:    npx vitest run lib/changelog.test.ts");
-console.log("  Then commit. The entry appears on /changelog, in the RSS feed,");
-console.log("  in the Markdown version, and in the sitemap at the next deployment.");
