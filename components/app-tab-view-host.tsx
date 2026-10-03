@@ -36,7 +36,7 @@ const RetainedBoard = memo(function RetainedBoard({ view, active }: { view: Reta
   const isBoard = view.kind === "global-board" || view.kind === "project-board";
   const snapshot = useCallback(() => isBoard ? retainedBoardReadState(client, view) : "fresh", [client, view, isBoard]);
   const readState = useSyncExternalStore(subscribe, snapshot, () => "fresh");
-  return <div {...scroll} className="relative h-full min-h-0" data-retained-app-view={view.key} data-app-view-active={active ? "true" : "false"}
+  return <div {...scroll} className="relative h-full min-h-0" data-retained-app-view={view.key} data-retained-tab-id={view.tabId ?? undefined} data-app-view-active={active ? "true" : "false"}
     data-board-read-state={isBoard ? readState : undefined} aria-busy={active && readState !== "fresh"}
     inert={!active} aria-hidden={!active || undefined} style={{ display: active ? undefined : "none" }}>
     <Activity mode={active ? "visible" : "hidden"}>
@@ -87,6 +87,11 @@ export function AppTabViewHost({ children }: { children: ReactNode }) {
         href: tabs.find((tab) => tab.id === tabId)?.href,
         cost: (view) => {
           if (view.kind === "pull-requests") {
+            // Query data is already owned by the account client. Charge the
+            // expensive diff only while its DOM exists, rather than evicting
+            // frequent destinations for files an Activity tab has not mounted.
+            const root = document.querySelector(`[data-retained-app-view="${view.key}"]`);
+            if (root && !root.querySelector('[data-testid="pr-diff-view"]')) return 1;
             const pr = new URLSearchParams(view.route.search).get("pr");
             return Math.max(1, Math.ceil((client.getQueryData<{ files: unknown[] }>(["pull-request", pr])?.files.length ?? 400) / 200));
           }

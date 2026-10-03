@@ -72,6 +72,25 @@ afterEach(async () => {
 });
 
 describe("bounded retained board views", () => {
+  it("does not evict frequent boards for an unmounted large PR diff", async () => {
+    state.tabs = Array.from({ length: 12 }, (_, index) => ({ id: `t${index}` }));
+    client.setQueryData(["me", "board"], { issues: Array(600).fill({}) });
+    client.setQueryData(["issues", "p"], Array(100).fill({}));
+    client.setQueryData(["pull-request", "large"], { files: Array(441).fill({}) });
+    const routes = ["/all", "/projects/q/pages", "/projects/p/pages/a", "/pull-requests?pr=small", "/projects/p/feedback", "/projects/p/triage", "/projects/q", "/projects/p/pages", "/projects/p", "/projects/q/feedback", "/pull-requests?pr=large", "/projects/q/triage"];
+    let board: Element | null = null;
+    for (let run = 0; run < 4; run++) for (const index of [0, 10, 11, 9, 8, 2, 3, 5, 10, 7, 8, 0]) {
+      const url = new URL(routes[index], "https://test.invalid");
+      Object.assign(state, { activeId: `t${index}`, path: url.pathname, search: url.search.slice(1), activeHref: routes[index] });
+      await render();
+      if (index === 0 && run >= 2) {
+        const current = container.querySelector('[data-app-view-active="true"] input');
+        if (board) expect(current).toBe(board);
+        board = current;
+      }
+      expect(container.querySelectorAll("[data-retained-app-view]").length).toBeLessThanOrEqual(6);
+    }
+  });
   it("keeps unknown nested destinations under the ordinary router", () => {
     expect(retainedAppViewKind("/projects/p/feedback/unknown")).toBeNull();
     expect(retainedAppViewKind("/projects/p/triage/unknown")).toBeNull();

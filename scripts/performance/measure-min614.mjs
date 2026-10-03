@@ -114,6 +114,15 @@ try {
   }
   await context.addCookies(cookies.map(({ name, value }) => ({ name, value, url: base, sameSite: "Lax" })));
   await context.addCookies([{ name: "NEXT_LOCALE", value: "en", url: base }]);
+  if (cpuProfile) await context.addInitScript(() => {
+    window.__min614ReactCommits = [];
+    window.__REACT_DEVTOOLS_GLOBAL_HOOK__ = {
+      supportsFiber: true, inject: () => 1, onCommitFiberUnmount: () => {},
+      onCommitFiberRoot: (_renderer, _root, _priority, failed) => {
+        window.__min614ReactCommits.push({ at: performance.timeOrigin + performance.now(), failed: !!failed });
+      },
+    };
+  });
   await context.addInitScript(({ owner, snapshot, base }) => {
     if (location.origin !== base) return;
     sessionStorage.setItem(`minddy.app-tabs.${owner}`, JSON.stringify(snapshot));
@@ -213,6 +222,7 @@ try {
     const sameDocument = before.NavigationStart === after.NavigationStart;
     const result = { name, startedAt: started, firstVisibleMs: failure ? null : firstVisibleAt - started, readyAt: failure ? null : readyAt, inputMs, readyMs: failure ? null : readyAt - started, ...(failure ? { error: failure.message.split("\n")[0], failedAfterMs: observedAt - started } : {}), ...rendering, scriptMs: sameDocument ? Math.max(0, after.ScriptDuration - before.ScriptDuration) * 1000 : null,
       styleMs: sameDocument ? Math.max(0, after.RecalcStyleDuration - before.RecalcStyleDuration) * 1000 : null, layoutMs: sameDocument ? Math.max(0, after.LayoutDuration - before.LayoutDuration) * 1000 : null, resources, responses: responses.slice(responseStart) };
+    if (cpuProfile) result.reactCommits = await page.evaluate((since) => (window.__min614ReactCommits ?? []).filter((entry) => entry.at >= since), started);
     measurements.push(result);
     console.log(JSON.stringify(result));
     if (failure) throw failure;

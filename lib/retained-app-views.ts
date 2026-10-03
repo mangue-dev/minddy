@@ -56,7 +56,10 @@ export function retainAppView(
   const candidates = retained.filter((view) => view.key !== active.key);
   const cost = policy?.cost ?? ((view: RetainedAppView) => view.kind === "global-board" ? 3 : 1);
   const visits = policy?.visits ?? [];
-  const score = (view: RetainedAppView) => visits.reduce((sum, id, index) =>
+  // The same bounded weight estimates reconstruction work as well as retained
+  // DOM cost. Frequency alone can evict an expensive frequent board in favor
+  // of several cheap views, repeatedly paying its full mount cost.
+  const score = (view: RetainedAppView) => Math.max(1, cost(view)) * visits.reduce((sum, id, index) =>
     sum + (id === view.tabId ? (index + 1) / visits.length : 0), 0);
   // Stable recency breaks equal-frequency ties. Always reserve the active view,
   // even if that single view exceeds the budget; speculation never displaces it.

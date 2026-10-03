@@ -3,6 +3,7 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { writeFile } from 'node:fs/promises';
+import { verifyNativeNavigation } from './verify-min614-navigation.mjs';
 
 export async function measureNavigationJourneys({ page, context, fixture, tabs: originalTabs, base, measure, diagnostic, output, label, cdp }) {
   const report = { cleanup: false, definition: 'Native navigation with real migrated MIN-540 Minddy reads, virtual tabs and synthetic forge UI responses. No live GitHub latency/freshness claim.', samples: [], workload: {}, idle: [] };
@@ -43,7 +44,7 @@ export async function measureNavigationJourneys({ page, context, fixture, tabs: 
     files: Array.from({ length: index ? 441 : 12 }, (_, i) => ({ filename: `synthetic/file-${i}.ts`, status: 'modified', additions: 24, deletions: 2, patch: `@@ -1,2 +1,24 @@\n-old value\n-old setting\n${Array.from({ length: 24 }, (_, j) => `+export const item${j} = ${j};`).join('\n')}\n` })), checks, reviews: { approvals: 1, changesRequested: 0 }, readiness, reviewThreads: [], viewer: { provider: 'github', configured: false, connected: false, login: null, capability: 'none' } });
   const routeHandler = async (route) => {
     const request = route.request(), url = new URL(request.url()), method = request.method();
-    if (url.pathname === '/api/me/app-tabs/metadata') return route.fulfill({ json: {} });
+    if (url.pathname === '/api/me/app-tabs/metadata') return route.continue();
     if (url.pathname.startsWith('/api/me/app-tabs')) {
       const id = url.pathname.split('/')[4], body = method === 'GET' ? {} : request.postDataJSON();
       if (method === 'GET') return route.fulfill({ json: virtualTabs });
@@ -72,9 +73,10 @@ export async function measureNavigationJourneys({ page, context, fixture, tabs: 
       : spec.kind === 'document' ? `/api/projects/${spec.href.split('/')[2]}/pages/${spec.href.split('/')[4]}`
       : spec.kind === 'board' ? spec.href === '/all' ? '/api/me/board' : `/api/projects/${spec.href.split('/')[2]}/issues`
       : `/api/projects/${spec.href.split('/')[2]}/${spec.kind === 'triage' ? 'issues' : spec.kind === 'pages' ? 'pages' : 'feedback'}`;
-    const hadDOM = [...document.querySelectorAll('[data-retained-app-view]')].some((node) => node.dataset.retainedAppView.startsWith(spec.id + ':'));
+    const hadDOM = [...document.querySelectorAll('[data-retained-app-view]')].some((node) => node.dataset.retainedTabId === spec.id || node.dataset.retainedAppView.startsWith(spec.id + ':'));
     const hadPriorSuccessfulRead = window.__min614.apiStates[primary]?.status === 200;
-    const result = window.__navigationSample = { start, primary, hadDOM, hadPriorSuccessfulRead,
+    const alreadyActive = location.pathname + location.search === spec.href;
+    const result = window.__navigationSample = { start, primary, hadDOM, hadPriorSuccessfulRead, alreadyActive,
       classification: hadDOM ? 'hot-dom' : hadPriorSuccessfulRead ? 'data-available-unmounted' : 'cold', clocks: {}, skeletonFrames: 0, frames: 0 };
     const stamp = (key) => { result.clocks[key] ??= performance.now() - start; };
     const gesture = () => stamp('gesture');
@@ -82,6 +84,7 @@ export async function measureNavigationJourneys({ page, context, fixture, tabs: 
     const tick = () => {
       if (window.__navigationSample !== result) return;
       result.frames++;
+      if (result.clocks.gesture === undefined) { requestAnimationFrame(tick); return; }
       const route = location.pathname + location.search === spec.href;
       const selected = document.querySelector(`[data-app-tab-id="${spec.id}"]`)?.getAttribute('aria-selected') === 'true';
       if (selected) stamp('accepted');
@@ -112,7 +115,7 @@ export async function measureNavigationJourneys({ page, context, fixture, tabs: 
     await arm(spec);
     const old = await measure(name, action, () => ready(spec));
     await page.waitForFunction(() => window.__navigationSample.clocks.usableExactScenario !== undefined, null, { timeout: 15000 });
-    const sample = await page.evaluate(() => ({ classification: window.__navigationSample.classification, hadDOM: window.__navigationSample.hadDOM, hadPriorSuccessfulRead: window.__navigationSample.hadPriorSuccessfulRead, primaryRead: window.__min614.apiStates[window.__navigationSample.primary], clocks: window.__navigationSample.clocks, skeletonFrames: window.__navigationSample.skeletonFrames, frames: window.__navigationSample.frames }));
+    const sample = await page.evaluate(() => ({ classification: window.__navigationSample.classification, hadDOM: window.__navigationSample.hadDOM, hadPriorSuccessfulRead: window.__navigationSample.hadPriorSuccessfulRead, alreadyActive: window.__navigationSample.alreadyActive, primaryRead: window.__min614.apiStates[window.__navigationSample.primary], clocks: window.__navigationSample.clocks, skeletonFrames: window.__navigationSample.skeletonFrames, frames: window.__navigationSample.frames }));
     report.samples.push({ name, index: spec.position, old, ...sample, heap: await page.evaluate(() => performance.memory?.usedJSHeapSize ?? null) }); await save();
   };
   const select = async (spec) => {
@@ -126,9 +129,9 @@ export async function measureNavigationJourneys({ page, context, fixture, tabs: 
       const root = document.querySelector('[data-retained-app-view][data-app-view-active="true"]');
       return root?.checkVisibility() && root.querySelectorAll('[data-issue-id]').length === spec.count;
     }, spec, { timeout: 15000 });
-    else if (spec.kind === 'document') await page.locator('.page-editor .tiptap').waitFor({ timeout: 15000 });
+    else if (spec.kind === 'document') await page.locator('.page-editor .tiptap').filter({ visible: true }).waitFor({ timeout: 15000 });
     else if (spec.kind === 'pages') await page.getByText(spec.text, { exact: true }).first().waitFor({ timeout: 15000 });
-    else if (spec.kind === 'pr') { await page.getByTestId('pr-activity-timeline').waitFor({ timeout: 15000 }); await page.waitForFunction(() => !document.querySelector('[data-testid="pr-read-state"]'), null, { timeout: 15000 }); }
+    else if (spec.kind === 'pr') { await page.getByTestId('pr-activity-timeline').filter({ visible: true }).waitFor({ timeout: 15000 }); await page.waitForFunction(() => ![...document.querySelectorAll('[data-testid="pr-read-state"]')].some((node) => node.checkVisibility()), null, { timeout: 15000 }); }
     else { for (const title of spec.titles) await page.getByText(title, { exact: true }).first().waitFor({ timeout: 15000 }); }
   };
   await save();
@@ -148,8 +151,14 @@ export async function measureNavigationJourneys({ page, context, fixture, tabs: 
         await checkpoint(spec, `navigation-${spec.kind}-${index}-${run}`, () => select(spec));
       }
     }
+    if (process.argv.includes('--navigation-correctness')) {
+      await verifyNativeNavigation({ page, context, specs, select, ready, issues, base, output, label, measure });
+    }
+    // Stop the expensive scenario predicate before the independent idle guard.
+    await page.evaluate(() => { window.__navigationSample = null; });
+    await page.waitForTimeout(1000);
     const before = await cdp.send('Performance.getMetrics'); await page.waitForTimeout(15000);
-    report.idle.push({ durationMs: 15000, before, after: await cdp.send('Performance.getMetrics') });
+    report.idle.push({ durationMs: 15000, scenarioProbeDisabled: true, before, after: await cdp.send('Performance.getMetrics') });
     await page.screenshot({ path: `${output}/${label}-navigation-light.png` });
   } catch (error) { report.error = error.message.split('\n')[0]; report.failureState = await page.locator('body').innerText(); throw error; }
   finally {
