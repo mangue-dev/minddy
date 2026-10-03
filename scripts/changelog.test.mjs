@@ -1,6 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { cpSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { CHANGELOG_LOCALES, validateDraft, validateRelease, validateIndex, toIndexEntry } from "./changelog-lib.mjs";
 import { publishRelease, createStorage } from "./changelog-publish.mjs";
@@ -36,6 +38,25 @@ test("backfill is deterministic and safe to rerun", () => {
   const output = execFileSync(process.execPath, ["scripts/changelog-backfill.mjs", "--dry-run"], { encoding: "utf8" });
   assert.match(output, /63\/63 features/);
   assert.match(output, /0 changed files/);
+});
+
+test("backfill reruns without rewritten Git objects and rejects inconsistent recorded evidence", () => {
+  const root = mkdtempSync(path.join(tmpdir(), "minddy-changelog-"));
+  try {
+    mkdirSync(path.join(root, "scripts"));
+    for (const name of ["changelog-backfill.mjs", "changelog-lib.mjs"]) {
+      cpSync(new URL(name, import.meta.url), path.join(root, "scripts", name));
+    }
+    cpSync(new URL("../content/changelog", import.meta.url), path.join(root, "content/changelog"), { recursive: true });
+    execFileSync("git", ["init", "-q"], { cwd: root });
+    const run = () => execFileSync(process.execPath, ["scripts/changelog-backfill.mjs", "--dry-run"], { cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+    assert.match(run(), /0 changed files/);
+    const file = path.join(root, "content/changelog/backfill-evidence.json");
+    const evidence = JSON.parse(readFileSync(file, "utf8"));
+    evidence.mappings[0].sourceStablePatchId = "0".repeat(40);
+    writeFileSync(file, JSON.stringify(evidence));
+    assert.throws(run, /Unverified historical mapping/);
+  } finally { rmSync(root, { recursive: true, force: true }); }
 });
 
 test("drafts reject missing locales, bundled images, invalid dates, and oversized content", () => {

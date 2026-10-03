@@ -85,8 +85,12 @@ their own storage. No publisher is invoked by a build, ordinary commit, or test.
 `legacy.json` preserves all 63 displayed features and their six translations.
 `backfill-evidence.json` records successful production deployments and the
 implementation commits associated with them. Equivalent patches were checked
-across rewritten histories; the mapped commits are ancestors of the recorded
-production SHA.
+across rewritten histories; the mapped commits were verified as ancestors of the recorded production SHA.
+The evidence freezes that verification and both stable patch fingerprints.
+Reruns validate those records and recheck any Git objects still available. This
+keeps the migration reproducible in fresh clones after history rewrites, without
+fetching vanished commits. Use `--verify-git` with the audited history archive to
+require a complete live ancestry and patch recheck.
 
 ```bash
 node scripts/changelog-backfill.mjs --dry-run

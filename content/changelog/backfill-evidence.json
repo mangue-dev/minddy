@@ -126,441 +126,630 @@
       "commit": "316e30460d6b8adcf6ae1400c958077195de5245",
       "version": "0.11.0",
       "firstPublicationUncertain": false,
-      "sourceCommit": "316e30460d6b8adcf6ae1400c958077195de5245"
+      "sourceCommit": "316e30460d6b8adcf6ae1400c958077195de5245",
+      "ancestryVerified": true,
+      "stablePatchId": "701c822ccbfcae5a60cf576682333166f787ea61",
+      "sourceStablePatchId": "701c822ccbfcae5a60cf576682333166f787ea61"
     },
     {
       "id": "mcp-catalog",
       "commit": "53864fc4b1fd24aa7966a14ac73a4218e4fb69bd",
       "version": "0.11.0",
       "firstPublicationUncertain": false,
-      "sourceCommit": "53864fc4b1fd24aa7966a14ac73a4218e4fb69bd"
+      "sourceCommit": "53864fc4b1fd24aa7966a14ac73a4218e4fb69bd",
+      "ancestryVerified": true,
+      "stablePatchId": "1ab3997f79825935f56786bd62256cae512f799c",
+      "sourceStablePatchId": "1ab3997f79825935f56786bd62256cae512f799c"
     },
     {
       "id": "performance",
       "commit": "dd8c881a19d78f223f3e0d09fdc40dbdff2b93a9",
       "version": "0.11.0",
       "firstPublicationUncertain": false,
-      "sourceCommit": "dd8c881a19d78f223f3e0d09fdc40dbdff2b93a9"
+      "sourceCommit": "dd8c881a19d78f223f3e0d09fdc40dbdff2b93a9",
+      "ancestryVerified": true,
+      "stablePatchId": "71412aec6fab256b0a0a30a7723076e1f23f7b74",
+      "sourceStablePatchId": "71412aec6fab256b0a0a30a7723076e1f23f7b74"
     },
     {
       "id": "family-boards",
       "commit": "acf0d8255ee5e1ec3bd53ea05f8359845930b96b",
       "version": "0.11.0",
       "firstPublicationUncertain": false,
-      "sourceCommit": "acf0d8255ee5e1ec3bd53ea05f8359845930b96b"
+      "sourceCommit": "acf0d8255ee5e1ec3bd53ea05f8359845930b96b",
+      "ancestryVerified": true,
+      "stablePatchId": "dc0b9c54a38c0cf8e602d3a5ca8244bc2e2f0d99",
+      "sourceStablePatchId": "dc0b9c54a38c0cf8e602d3a5ca8244bc2e2f0d99"
     },
     {
       "id": "smart-triage",
       "commit": "a7366efcf729bc42ff0b14531f79f063401ab2ef",
       "version": "0.11.0",
       "firstPublicationUncertain": false,
-      "sourceCommit": "a7366efcf729bc42ff0b14531f79f063401ab2ef"
+      "sourceCommit": "a7366efcf729bc42ff0b14531f79f063401ab2ef",
+      "ancestryVerified": true,
+      "stablePatchId": "6e985433ac7bd11b3a1250c16d20517e1df7e79d",
+      "sourceStablePatchId": "6e985433ac7bd11b3a1250c16d20517e1df7e79d"
     },
     {
       "id": "smart-fill-everywhere",
       "commit": "1a14630e4e9c9d069e7ff88fb05c9669da6babf3",
       "version": "0.11.0",
       "firstPublicationUncertain": false,
-      "sourceCommit": "1a14630e4e9c9d069e7ff88fb05c9669da6babf3"
+      "sourceCommit": "1a14630e4e9c9d069e7ff88fb05c9669da6babf3",
+      "ancestryVerified": true,
+      "stablePatchId": "f8fc4df9dd1bb8997e6ddc68e590d10ffaafdfec",
+      "sourceStablePatchId": "f8fc4df9dd1bb8997e6ddc68e590d10ffaafdfec"
     },
     {
       "id": "byok-providers",
       "commit": "1c6956bb445da861df00abc29e11da1ea0600316",
       "version": "0.11.0",
       "firstPublicationUncertain": false,
-      "sourceCommit": "1c6956bb445da861df00abc29e11da1ea0600316"
+      "sourceCommit": "1c6956bb445da861df00abc29e11da1ea0600316",
+      "ancestryVerified": true,
+      "stablePatchId": "ed25ebf630134e3bdd7653ded68c4933ed76ae99",
+      "sourceStablePatchId": "ed25ebf630134e3bdd7653ded68c4933ed76ae99"
     },
     {
       "id": "voice-dictation",
       "commit": "cbd6980be8510b18fff1178b72ad2f08e5f77738",
       "version": "0.11.0",
       "firstPublicationUncertain": false,
-      "sourceCommit": "cbd6980be8510b18fff1178b72ad2f08e5f77738"
+      "sourceCommit": "cbd6980be8510b18fff1178b72ad2f08e5f77738",
+      "ancestryVerified": true,
+      "stablePatchId": "79451bd4e1d0649dd3c1133861e65bcea9ace7bb",
+      "sourceStablePatchId": "79451bd4e1d0649dd3c1133861e65bcea9ace7bb"
     },
     {
       "id": "objective-relations",
       "commit": "d90158dafacf53f50ab37c342e23cd42d8651c4f",
       "version": "0.11.0",
       "firstPublicationUncertain": false,
-      "sourceCommit": "d90158dafacf53f50ab37c342e23cd42d8651c4f"
+      "sourceCommit": "d90158dafacf53f50ab37c342e23cd42d8651c4f",
+      "ancestryVerified": true,
+      "stablePatchId": "6627e2a9957f943e8b6c6d7fd98509fa92dab667",
+      "sourceStablePatchId": "6627e2a9957f943e8b6c6d7fd98509fa92dab667"
     },
     {
       "id": "pr-page",
       "commit": "32c6dcae079ba7445270a89297a01f5fbf2c2771",
       "version": "0.11.0",
       "firstPublicationUncertain": false,
-      "sourceCommit": "32c6dcae079ba7445270a89297a01f5fbf2c2771"
+      "sourceCommit": "32c6dcae079ba7445270a89297a01f5fbf2c2771",
+      "ancestryVerified": true,
+      "stablePatchId": "3a126027928735b9801c010d7b2886b9d8db6716",
+      "sourceStablePatchId": "3a126027928735b9801c010d7b2886b9d8db6716"
     },
     {
       "id": "app-tabs",
       "commit": "c4bf8194ea3f241d244970dbb133420053ac2f06",
       "version": "0.11.0",
       "firstPublicationUncertain": false,
-      "sourceCommit": "c4bf8194ea3f241d244970dbb133420053ac2f06"
+      "sourceCommit": "c4bf8194ea3f241d244970dbb133420053ac2f06",
+      "ancestryVerified": true,
+      "stablePatchId": "f9723c87d2eab0b31ca62d72505dfaa3b17bb4c4",
+      "sourceStablePatchId": "f9723c87d2eab0b31ca62d72505dfaa3b17bb4c4"
     },
     {
       "id": "unified-numo",
       "commit": "224c11b133b1334459967a59dc2f98ba46293e82",
       "version": "0.11.0",
       "firstPublicationUncertain": false,
-      "sourceCommit": "224c11b133b1334459967a59dc2f98ba46293e82"
+      "sourceCommit": "224c11b133b1334459967a59dc2f98ba46293e82",
+      "ancestryVerified": true,
+      "stablePatchId": "f9753013ff2fd1041007bff5ae7795407e97eb5e",
+      "sourceStablePatchId": "f9753013ff2fd1041007bff5ae7795407e97eb5e"
     },
     {
       "id": "page-databases",
       "commit": "ce9ed305d31f0a5dc959b7a6f125098492346897",
       "version": "0.10.25",
       "firstPublicationUncertain": false,
-      "sourceCommit": "ce9ed305d31f0a5dc959b7a6f125098492346897"
+      "sourceCommit": "ce9ed305d31f0a5dc959b7a6f125098492346897",
+      "ancestryVerified": true,
+      "stablePatchId": "18cd5493f381e96d47caa6cdbf52cfa5a719277c",
+      "sourceStablePatchId": "18cd5493f381e96d47caa6cdbf52cfa5a719277c"
     },
     {
       "id": "numo-connected-services",
       "commit": "a1ea001df340b8106dd0021e51bc12daa59533e0",
       "version": "0.10.25",
       "firstPublicationUncertain": false,
-      "sourceCommit": "a1ea001df340b8106dd0021e51bc12daa59533e0"
+      "sourceCommit": "a1ea001df340b8106dd0021e51bc12daa59533e0",
+      "ancestryVerified": true,
+      "stablePatchId": "2bf6186884fe915ba5a10e27f641a275cc8165c1",
+      "sourceStablePatchId": "2bf6186884fe915ba5a10e27f641a275cc8165c1"
     },
     {
       "id": "numo-cross-project",
       "commit": "aa8edecc44cde449195ba58c31bb6fb6e0979d95",
       "version": "0.10.25",
       "firstPublicationUncertain": false,
-      "sourceCommit": "aa8edecc44cde449195ba58c31bb6fb6e0979d95"
+      "sourceCommit": "aa8edecc44cde449195ba58c31bb6fb6e0979d95",
+      "ancestryVerified": true,
+      "stablePatchId": "c097da6386fdc391ac6661fdf3e39a8cac7ce729",
+      "sourceStablePatchId": "c097da6386fdc391ac6661fdf3e39a8cac7ce729"
     },
     {
       "id": "routine-context",
       "commit": "fbe0d275d3925257afeb30fd4bbc99d8cfb7c035",
       "version": "0.10.25",
       "firstPublicationUncertain": false,
-      "sourceCommit": "fbe0d275d3925257afeb30fd4bbc99d8cfb7c035"
+      "sourceCommit": "fbe0d275d3925257afeb30fd4bbc99d8cfb7c035",
+      "ancestryVerified": true,
+      "stablePatchId": "68f7c5b066034d610b3d411e7c6d708e084577ba",
+      "sourceStablePatchId": "68f7c5b066034d610b3d411e7c6d708e084577ba"
     },
     {
       "id": "repository-skills",
       "commit": "696b2918c96672759f8d131ef1b52c5c3db59998",
       "version": "0.10.25",
       "firstPublicationUncertain": false,
-      "sourceCommit": "696b2918c96672759f8d131ef1b52c5c3db59998"
+      "sourceCommit": "696b2918c96672759f8d131ef1b52c5c3db59998",
+      "ancestryVerified": true,
+      "stablePatchId": "a08b4d5de2c6e0e0ffdd2c1979864ef878981dcd",
+      "sourceStablePatchId": "a08b4d5de2c6e0e0ffdd2c1979864ef878981dcd"
     },
     {
       "id": "objective-momentum",
       "commit": "6834a80408ed246824657362a632a88c3015f57f",
       "version": "0.10.25",
       "firstPublicationUncertain": false,
-      "sourceCommit": "6834a80408ed246824657362a632a88c3015f57f"
+      "sourceCommit": "6834a80408ed246824657362a632a88c3015f57f",
+      "ancestryVerified": true,
+      "stablePatchId": "ba673ca1fd2ba92f3a9f6f65135afe68c7ce47a3",
+      "sourceStablePatchId": "ba673ca1fd2ba92f3a9f6f65135afe68c7ce47a3"
     },
     {
       "id": "merge-readiness",
       "commit": "0b28607589a49b7b470b371d1016bc25a43a6457",
       "version": "0.11.0",
       "firstPublicationUncertain": false,
-      "sourceCommit": "0b28607589a49b7b470b371d1016bc25a43a6457"
+      "sourceCommit": "0b28607589a49b7b470b371d1016bc25a43a6457",
+      "ancestryVerified": true,
+      "stablePatchId": "01706f52485af956223326833a5d961763b8483d",
+      "sourceStablePatchId": "01706f52485af956223326833a5d961763b8483d"
     },
     {
       "id": "resume-failed-agent",
       "commit": "0f312e8e9696cf5aee42c095c178412fda950544",
       "version": "0.10.25",
       "firstPublicationUncertain": false,
-      "sourceCommit": "0f312e8e9696cf5aee42c095c178412fda950544"
+      "sourceCommit": "0f312e8e9696cf5aee42c095c178412fda950544",
+      "ancestryVerified": true,
+      "stablePatchId": "7b77791d1b5a988794ae3598c2c502a462c858a5",
+      "sourceStablePatchId": "7b77791d1b5a988794ae3598c2c502a462c858a5"
     },
     {
       "id": "page-callouts",
       "commit": "962dd50b9853e188189ec8c0e4d85294fe3666b9",
       "version": "0.10.24",
       "firstPublicationUncertain": false,
-      "sourceCommit": "962dd50b9853e188189ec8c0e4d85294fe3666b9"
+      "sourceCommit": "962dd50b9853e188189ec8c0e4d85294fe3666b9",
+      "ancestryVerified": true,
+      "stablePatchId": "10d2e4779b8d039456dba74856c571c1a0e0912b",
+      "sourceStablePatchId": "10d2e4779b8d039456dba74856c571c1a0e0912b"
     },
     {
       "id": "page-comment-numo",
       "commit": "3102130fc970a273351f00f4f036eb091361da05",
       "version": "0.10.24",
       "firstPublicationUncertain": false,
-      "sourceCommit": "3102130fc970a273351f00f4f036eb091361da05"
+      "sourceCommit": "3102130fc970a273351f00f4f036eb091361da05",
+      "ancestryVerified": true,
+      "stablePatchId": "9944d0724738274893c377f5a8c16b916baf2c57",
+      "sourceStablePatchId": "9944d0724738274893c377f5a8c16b916baf2c57"
     },
     {
       "id": "attachment-viewer",
       "commit": "5bfac233cadd6dfdabc4442629ed9f9c2a004e8b",
       "version": "0.10.23",
       "firstPublicationUncertain": false,
-      "sourceCommit": "ee2e71bad223ee27dc30252a78966d2a3f229a9f"
+      "sourceCommit": "ee2e71bad223ee27dc30252a78966d2a3f229a9f",
+      "ancestryVerified": true,
+      "stablePatchId": "f7f2868ea6effb7d961e83eaddc3556da8549a0a",
+      "sourceStablePatchId": "f7f2868ea6effb7d961e83eaddc3556da8549a0a"
     },
     {
       "id": "desktop-app",
       "commit": "cd3a374237c23b6090f445ee5e7cb5752fd0289d",
       "version": "0.10.20",
       "firstPublicationUncertain": false,
-      "sourceCommit": "bbd5b1a833ec5477f8971112e1bf1df0f452d9e4"
+      "sourceCommit": "bbd5b1a833ec5477f8971112e1bf1df0f452d9e4",
+      "ancestryVerified": true,
+      "stablePatchId": "5161236463f4e50dac50aacf345f0fd28aadbf47",
+      "sourceStablePatchId": "5161236463f4e50dac50aacf345f0fd28aadbf47"
     },
     {
       "id": "activity-breakdowns",
       "commit": "2af956e43ef701fba555180ead5e6549a600b3ec",
       "version": "0.10.22",
       "firstPublicationUncertain": false,
-      "sourceCommit": "7b616c7470bd9f1c7c05e4ee619127dcb72a9bc1"
+      "sourceCommit": "7b616c7470bd9f1c7c05e4ee619127dcb72a9bc1",
+      "ancestryVerified": true,
+      "stablePatchId": "ba86998ff723a88ab364e61e311a5239aa023c4a",
+      "sourceStablePatchId": "ba86998ff723a88ab364e61e311a5239aa023c4a"
     },
     {
       "id": "custom-avatar",
       "commit": "de3f5dac01ca08df1eae3693478956038676aaad",
       "version": "0.10.22",
       "firstPublicationUncertain": false,
-      "sourceCommit": "4cb3adbafb41c13cecccfcdc0b349807f03bc66a"
+      "sourceCommit": "4cb3adbafb41c13cecccfcdc0b349807f03bc66a",
+      "ancestryVerified": true,
+      "stablePatchId": "fe68660761139e8e81965f6680615ec3346ee3b3",
+      "sourceStablePatchId": "fe68660761139e8e81965f6680615ec3346ee3b3"
     },
     {
       "id": "feedback-page-tabs",
       "commit": "cd80f2283ff3b7fb64bda8ac3547d9adac791409",
       "version": "0.10.20",
       "firstPublicationUncertain": false,
-      "sourceCommit": "de853b91a262cd0024e3d582c600f9c335d56f71"
+      "sourceCommit": "de853b91a262cd0024e3d582c600f9c335d56f71",
+      "ancestryVerified": true,
+      "stablePatchId": "2ea31223f97ee390d0c0de4840dd60c88cffb70e",
+      "sourceStablePatchId": "2ea31223f97ee390d0c0de4840dd60c88cffb70e"
     },
     {
       "id": "account-transfer",
       "commit": "7048bb72651c0d8c34ca7cc565a406ba4adac28d",
       "version": "0.10.20",
       "firstPublicationUncertain": false,
-      "sourceCommit": "9032f2bc0a691eb4539602d5583f85ad93c273aa"
+      "sourceCommit": "9032f2bc0a691eb4539602d5583f85ad93c273aa",
+      "ancestryVerified": true,
+      "stablePatchId": "74f35cdc5683703ed573e782602b3b6352d93a6c",
+      "sourceStablePatchId": "74f35cdc5683703ed573e782602b3b6352d93a6c"
     },
     {
       "id": "own-ai-everywhere",
       "commit": "6462090b546dfbf3d7d325152ad95cf18afb2d58",
       "version": "0.10.20",
       "firstPublicationUncertain": false,
-      "sourceCommit": "7ea4636a69c9f19f680f333cc0b32ece132615db"
+      "sourceCommit": "7ea4636a69c9f19f680f333cc0b32ece132615db",
+      "ancestryVerified": true,
+      "stablePatchId": "25dd436480a8b22f69aa86903a07bdaf7ecad100",
+      "sourceStablePatchId": "25dd436480a8b22f69aa86903a07bdaf7ecad100"
     },
     {
       "id": "github-dependencies",
       "commit": "55a6db47195b039f4e19dd2fc2d8dd20c612da4b",
       "version": "0.10.20",
       "firstPublicationUncertain": false,
-      "sourceCommit": "1f74f269d94cbab812842604aaa504275fc3c16d"
+      "sourceCommit": "1f74f269d94cbab812842604aaa504275fc3c16d",
+      "ancestryVerified": true,
+      "stablePatchId": "cbc8780201507bce496f812d15806bd7a4235804",
+      "sourceStablePatchId": "cbc8780201507bce496f812d15806bd7a4235804"
     },
     {
       "id": "live-page-edits",
       "commit": "e18fe7cfed24e69443d62d5feaffa0bf4258b744",
       "version": "0.10.20",
       "firstPublicationUncertain": false,
-      "sourceCommit": "574032cf12702ce0057e4508802387f42a3f29f7"
+      "sourceCommit": "574032cf12702ce0057e4508802387f42a3f29f7",
+      "ancestryVerified": true,
+      "stablePatchId": "af0eed9fcdbdac84669ce44d72091c25dbc004af",
+      "sourceStablePatchId": "af0eed9fcdbdac84669ce44d72091c25dbc004af"
     },
     {
       "id": "local-agent",
       "commit": "aa389dba6c8d13f31ca25252841abc76ff487956",
       "version": "0.9.5",
       "firstPublicationUncertain": true,
-      "sourceCommit": "7f3bf5f2faaf8d6b8c9936bb0dcf5211febdd79d"
+      "sourceCommit": "7f3bf5f2faaf8d6b8c9936bb0dcf5211febdd79d",
+      "ancestryVerified": true,
+      "stablePatchId": "39ea05e5f1ea50be02a82431334003ff4bc8a121",
+      "sourceStablePatchId": "39ea05e5f1ea50be02a82431334003ff4bc8a121"
     },
     {
       "id": "pages",
       "commit": "e579f7b4638761f521067aa500ae5f869cbafbad",
       "version": "0.9.5",
       "firstPublicationUncertain": true,
-      "sourceCommit": "ba6eb4fc0b34164cb83a72042503be2ce921ce9b"
+      "sourceCommit": "ba6eb4fc0b34164cb83a72042503be2ce921ce9b",
+      "ancestryVerified": true,
+      "stablePatchId": "bc05c45413abea3faffb9de50660b2e51516ad97",
+      "sourceStablePatchId": "bc05c45413abea3faffb9de50660b2e51516ad97"
     },
     {
       "id": "smart-fill",
       "commit": "c2e3c20ca89a1fa3dc27bd0ada9d738eb056b033",
       "version": "0.9.5",
       "firstPublicationUncertain": true,
-      "sourceCommit": "4500bc1c392ed4a54f4faefd5a2009fc7bf8503c"
+      "sourceCommit": "4500bc1c392ed4a54f4faefd5a2009fc7bf8503c",
+      "ancestryVerified": true,
+      "stablePatchId": "14a143517f946c7fc3274cc699ce008e23989968",
+      "sourceStablePatchId": "14a143517f946c7fc3274cc699ce008e23989968"
     },
     {
       "id": "board-multi-select",
       "commit": "ebeae4be0c194131e1b0f816f790c4de97733d45",
       "version": "0.9.5",
       "firstPublicationUncertain": true,
-      "sourceCommit": "05dd56e22cf93253d9d04d5a1630f1342689b300"
+      "sourceCommit": "05dd56e22cf93253d9d04d5a1630f1342689b300",
+      "ancestryVerified": true,
+      "stablePatchId": "1805c4ce5402cdfb497642dc35f13f46f716a989",
+      "sourceStablePatchId": "1805c4ce5402cdfb497642dc35f13f46f716a989"
     },
     {
       "id": "issue-sync",
       "commit": "507a83da06fda9108039698640bb406bdc2ebd0e",
       "version": "0.9.5",
       "firstPublicationUncertain": true,
-      "sourceCommit": "291281d7e35bbc93a1579862400e3182e9e5421a"
+      "sourceCommit": "291281d7e35bbc93a1579862400e3182e9e5421a",
+      "ancestryVerified": true,
+      "stablePatchId": "08617f05fb981c9b401479f2f6060078657d5186",
+      "sourceStablePatchId": "08617f05fb981c9b401479f2f6060078657d5186"
     },
     {
       "id": "invite-by-email",
       "commit": "f1756756d074dd9a7d302977bc7b9e4b3545f4ff",
       "version": "0.9.5",
       "firstPublicationUncertain": true,
-      "sourceCommit": "8da5ea19e032d841fa23a613624b38a7edf18219"
+      "sourceCommit": "8da5ea19e032d841fa23a613624b38a7edf18219",
+      "ancestryVerified": true,
+      "stablePatchId": "978087f58ce2492b64011d3397dd3004292ad2d9",
+      "sourceStablePatchId": "978087f58ce2492b64011d3397dd3004292ad2d9"
     },
     {
       "id": "routines",
       "commit": "4c0cd45dd9f13c6631423ce460c39a19599a71c6",
       "version": "0.9.5",
       "firstPublicationUncertain": true,
-      "sourceCommit": "5cb9c4401bb4950ef59e4d7b310270c8c02e50a7"
+      "sourceCommit": "5cb9c4401bb4950ef59e4d7b310270c8c02e50a7",
+      "ancestryVerified": true,
+      "stablePatchId": "9db94dcff855c5d40ecdc515a14b900324beee08",
+      "sourceStablePatchId": "9db94dcff855c5d40ecdc515a14b900324beee08"
     },
     {
       "id": "push-notifications",
       "commit": "de345d10da012111bc6461ccfc87a34ab6f06437",
       "version": "0.9.5",
       "firstPublicationUncertain": true,
-      "sourceCommit": "641fc1ef3b41c4cdf64bbb6cfec994379226537b"
+      "sourceCommit": "641fc1ef3b41c4cdf64bbb6cfec994379226537b",
+      "ancestryVerified": true,
+      "stablePatchId": "aa77046d982e0bd206d8dd65697456171f06f3fa",
+      "sourceStablePatchId": "aa77046d982e0bd206d8dd65697456171f06f3fa"
     },
     {
       "id": "project-start",
       "commit": "266a8e7bd721bab9cd728081d70a72f273a4fbb8",
       "version": "0.9.5",
       "firstPublicationUncertain": true,
-      "sourceCommit": "5296a82c0653545c64138a5b5bca9ca68803c61a"
+      "sourceCommit": "5296a82c0653545c64138a5b5bca9ca68803c61a",
+      "ancestryVerified": true,
+      "stablePatchId": "eabb7343e7c217b86c5dbb1fb5f641b68204cde4",
+      "sourceStablePatchId": "eabb7343e7c217b86c5dbb1fb5f641b68204cde4"
     },
     {
       "id": "smart-assign",
       "commit": "402d944041918c62e30379ce43ad094013aa2d05",
       "version": "0.9.5",
       "firstPublicationUncertain": true,
-      "sourceCommit": "29b842bd2886efe02146b2584d8d6edfb0d1a539"
+      "sourceCommit": "29b842bd2886efe02146b2584d8d6edfb0d1a539",
+      "ancestryVerified": true,
+      "stablePatchId": "2624d795d4e101289dc35462283792662f18f423",
+      "sourceStablePatchId": "2624d795d4e101289dc35462283792662f18f423"
     },
     {
       "id": "feedback-comments",
       "commit": "c971c751d441e9b0cb0768ebad40358e2a40d5f1",
       "version": "0.9.5",
       "firstPublicationUncertain": true,
-      "sourceCommit": "dcc4abeafae5fb6cada8ff451ce51ac2d384e5e2"
+      "sourceCommit": "dcc4abeafae5fb6cada8ff451ce51ac2d384e5e2",
+      "ancestryVerified": true,
+      "stablePatchId": "e71b5f5d2f69a8843dd61496a7b5b5c07767d5be",
+      "sourceStablePatchId": "e71b5f5d2f69a8843dd61496a7b5b5c07767d5be"
     },
     {
       "id": "resources",
       "commit": "bd08a3d660e47c6d89cf3e3101f9df27e8dc73d6",
       "version": "0.9.5",
       "firstPublicationUncertain": true,
-      "sourceCommit": "53ff9840507761416cdf050c5a6cd8525309d11a"
+      "sourceCommit": "53ff9840507761416cdf050c5a6cd8525309d11a",
+      "ancestryVerified": true,
+      "stablePatchId": "899db4ecef5155f65924088f58209261992bc116",
+      "sourceStablePatchId": "899db4ecef5155f65924088f58209261992bc116"
     },
     {
       "id": "feedback-setup",
       "commit": "9f877a1a90e160924bb19063843d033592c8e1ba",
       "version": "0.9.5",
       "firstPublicationUncertain": true,
-      "sourceCommit": "4bc771d9dd02fec64de8e7d05e20555a39a1ab61"
+      "sourceCommit": "4bc771d9dd02fec64de8e7d05e20555a39a1ab61",
+      "ancestryVerified": true,
+      "stablePatchId": "c1b17040aa8006bf9063f8afa30a969f96b16120",
+      "sourceStablePatchId": "c1b17040aa8006bf9063f8afa30a969f96b16120"
     },
     {
       "id": "feedback-translation",
       "commit": "a724f10674ca222246598f58d3b96695ec886110",
       "version": "0.9.5",
       "firstPublicationUncertain": true,
-      "sourceCommit": "24d64c937cbfbca7f1146c9bc681f0bf81cd07fe"
+      "sourceCommit": "24d64c937cbfbca7f1146c9bc681f0bf81cd07fe",
+      "ancestryVerified": true,
+      "stablePatchId": "66921685e5a5d5855ac9aff775e649dbe72a37fc",
+      "sourceStablePatchId": "66921685e5a5d5855ac9aff775e649dbe72a37fc"
     },
     {
       "id": "export-issues",
       "commit": "06e7c3ffcfa3c6ece0fab8840c3aedb9885dfabf",
       "version": "0.9.5",
       "firstPublicationUncertain": true,
-      "sourceCommit": "96ed623eea86573b5896511ee7c471c6950da79c"
+      "sourceCommit": "96ed623eea86573b5896511ee7c471c6950da79c",
+      "ancestryVerified": true,
+      "stablePatchId": "a1cc82d11c1fd829116727b809c5a1af31f1800b",
+      "sourceStablePatchId": "a1cc82d11c1fd829116727b809c5a1af31f1800b"
     },
     {
       "id": "pull-requests",
       "commit": "b39ff5d01ee6d5919742a731a9d3fc04645acf47",
       "version": "0.9.5",
       "firstPublicationUncertain": true,
-      "sourceCommit": "5df5286444dcbc4ca5e422187ac43928c419ce36"
+      "sourceCommit": "5df5286444dcbc4ca5e422187ac43928c419ce36",
+      "ancestryVerified": true,
+      "stablePatchId": "e13dbaab50e5424c6cde690be14de349c4bfac08",
+      "sourceStablePatchId": "e13dbaab50e5424c6cde690be14de349c4bfac08"
     },
     {
       "id": "pr-review",
       "commit": "8b054ccf6174005b5fffb06101785045d4df2725",
       "version": "0.9.5",
       "firstPublicationUncertain": true,
-      "sourceCommit": "c039082d1bad27513bb4979244b72e69ba7a9f72"
+      "sourceCommit": "c039082d1bad27513bb4979244b72e69ba7a9f72",
+      "ancestryVerified": true,
+      "stablePatchId": "f534f6d55f054028bca79e711faaa4ffcde4280a",
+      "sourceStablePatchId": "f534f6d55f054028bca79e711faaa4ffcde4280a"
     },
     {
       "id": "automations",
       "commit": "38f2032af4227eb099387f00149f2259d419f235",
       "version": "0.9.5",
       "firstPublicationUncertain": true,
-      "sourceCommit": "30ba61e04064fcf64138898956762302af852331"
+      "sourceCommit": "30ba61e04064fcf64138898956762302af852331",
+      "ancestryVerified": true,
+      "stablePatchId": "826e12abff156b7825980d5bbbfc2def3492250f",
+      "sourceStablePatchId": "826e12abff156b7825980d5bbbfc2def3492250f"
     },
     {
       "id": "recurring-issues",
       "commit": "c1af4577acf954bb7b6344c3ad78922e726e764e",
       "version": "0.9.5",
       "firstPublicationUncertain": true,
-      "sourceCommit": "a77cf3402a1e0880d893cf5b3965313a98936610"
+      "sourceCommit": "a77cf3402a1e0880d893cf5b3965313a98936610",
+      "ancestryVerified": true,
+      "stablePatchId": "9985a4583fc353275945dba08909c6c6f1ba3c93",
+      "sourceStablePatchId": "9985a4583fc353275945dba08909c6c6f1ba3c93"
     },
     {
       "id": "own-api-key",
       "commit": "f7ddbbaf873fcd63bceb56e01c739ace7c06185b",
       "version": "0.9.5",
       "firstPublicationUncertain": true,
-      "sourceCommit": "9a91668f0125e43a0bbe6b5e9efd81760fd6fbd5"
+      "sourceCommit": "9a91668f0125e43a0bbe6b5e9efd81760fd6fbd5",
+      "ancestryVerified": true,
+      "stablePatchId": "d4694558212480ec197a862b374861b9ecf629c7",
+      "sourceStablePatchId": "d4694558212480ec197a862b374861b9ecf629c7"
     },
     {
       "id": "mentions",
       "commit": "ae371ea16a6c74d4b31f0f9d52b2674a90b60da7",
       "version": "0.9.5",
       "firstPublicationUncertain": true,
-      "sourceCommit": "4e16d3f4e4cfa437db81f71be58425ea19871331"
+      "sourceCommit": "4e16d3f4e4cfa437db81f71be58425ea19871331",
+      "ancestryVerified": true,
+      "stablePatchId": "5f4da81c3364eda19af5ecf989f761407b0174e9",
+      "sourceStablePatchId": "5f4da81c3364eda19af5ecf989f761407b0174e9"
     },
     {
       "id": "trash",
       "commit": "3b662bfe3dfcb16a346588ff9d9e6df4f8cab7fa",
       "version": "0.9.5",
       "firstPublicationUncertain": true,
-      "sourceCommit": "574d1d92440996338f7586d7142ce80c0147249d"
+      "sourceCommit": "574d1d92440996338f7586d7142ce80c0147249d",
+      "ancestryVerified": true,
+      "stablePatchId": "9072d7b52a68bd226253d0d4f1625cdee657d3ca",
+      "sourceStablePatchId": "9072d7b52a68bd226253d0d4f1625cdee657d3ca"
     },
     {
       "id": "import-issues",
       "commit": "6552cfd3fa7a16117849bd618f76f07c51356176",
       "version": "0.9.5",
       "firstPublicationUncertain": true,
-      "sourceCommit": "2b11a175a4f97486e74900506bcc59ae18e90a2b"
+      "sourceCommit": "2b11a175a4f97486e74900506bcc59ae18e90a2b",
+      "ancestryVerified": true,
+      "stablePatchId": "c2afabe72677b7274d6fda50737f3f8884b19341",
+      "sourceStablePatchId": "c2afabe72677b7274d6fda50737f3f8884b19341"
     },
     {
       "id": "home-attention",
       "commit": "b9565fe5280a7ba7f69731b12a7dcc9a28bf8b16",
       "version": "0.9.5",
       "firstPublicationUncertain": true,
-      "sourceCommit": "c81dcad45ca95b97bd210ea251b1b0a6f4ce8bd6"
+      "sourceCommit": "c81dcad45ca95b97bd210ea251b1b0a6f4ce8bd6",
+      "ancestryVerified": true,
+      "stablePatchId": "f524544de63a8dd9548fc3418f4b6148838d42cf",
+      "sourceStablePatchId": "f524544de63a8dd9548fc3418f4b6148838d42cf"
     },
     {
       "id": "zen-mode",
       "commit": "1eb85d877473ca1c542e5e596b033988d43e4c18",
       "version": "0.9.5",
       "firstPublicationUncertain": true,
-      "sourceCommit": "cbe9d76ad70f69a3d490b89fbedf0c81216d63d4"
+      "sourceCommit": "cbe9d76ad70f69a3d490b89fbedf0c81216d63d4",
+      "ancestryVerified": true,
+      "stablePatchId": "b1f1df9e12f3b78887ee7666fb8271c7f62f8a96",
+      "sourceStablePatchId": "b1f1df9e12f3b78887ee7666fb8271c7f62f8a96"
     },
     {
       "id": "account-data",
       "commit": "2a8591b515310d5a208590dbd5a76d2fa9ba7f55",
       "version": "0.9.5",
       "firstPublicationUncertain": true,
-      "sourceCommit": "342ecfecf65849c14a81f973ae34a17bf95fc929"
+      "sourceCommit": "342ecfecf65849c14a81f973ae34a17bf95fc929",
+      "ancestryVerified": true,
+      "stablePatchId": "65a9b9cfc92f10504fffd60f22c9367af63617fe",
+      "sourceStablePatchId": "65a9b9cfc92f10504fffd60f22c9367af63617fe"
     },
     {
       "id": "agent-brief",
       "commit": "fb3ac24d703ad32922d3323c19603409117b6281",
       "version": "0.9.5",
       "firstPublicationUncertain": true,
-      "sourceCommit": "2a239b716a6cd3e8c233d2302a516bf0ed45c872"
+      "sourceCommit": "2a239b716a6cd3e8c233d2302a516bf0ed45c872",
+      "ancestryVerified": true,
+      "stablePatchId": "9771cf836986f22b2bec7786b280ea5111a38a3a",
+      "sourceStablePatchId": "9771cf836986f22b2bec7786b280ea5111a38a3a"
     },
     {
       "id": "mcp-page",
       "commit": "efcbed94e5b5c672181ed7b30fa61fac8ee4ff8a",
       "version": "0.10.24",
       "firstPublicationUncertain": false,
-      "sourceCommit": "efcbed94e5b5c672181ed7b30fa61fac8ee4ff8a"
+      "sourceCommit": "efcbed94e5b5c672181ed7b30fa61fac8ee4ff8a",
+      "ancestryVerified": true,
+      "stablePatchId": "f1c013893d59e926db4c47d337ff1ddd9e4dea56",
+      "sourceStablePatchId": "f1c013893d59e926db4c47d337ff1ddd9e4dea56"
     },
     {
       "id": "localised-site",
       "commit": "54686a68a5920c19d3db95ead257fa891d5fe324",
       "version": "0.9.5",
       "firstPublicationUncertain": true,
-      "sourceCommit": "c5a6a709c1871d199021f22b4ca8f8efe244d3c7"
+      "sourceCommit": "c5a6a709c1871d199021f22b4ca8f8efe244d3c7",
+      "ancestryVerified": true,
+      "stablePatchId": "abc8ca04e96378949c32dbb7b9e079ec12244e6f",
+      "sourceStablePatchId": "abc8ca04e96378949c32dbb7b9e079ec12244e6f"
     },
     {
       "id": "search-everywhere",
       "commit": "ccef3d628feb37a1e6052605fc02fd5c85d01689",
       "version": "0.9.5",
       "firstPublicationUncertain": true,
-      "sourceCommit": "d8b62117b27e5534817fba247b16c93e0bb35fb6"
+      "sourceCommit": "d8b62117b27e5534817fba247b16c93e0bb35fb6",
+      "ancestryVerified": true,
+      "stablePatchId": "74d6162ede15849e68c9ed9ee807961cdd02aa7c",
+      "sourceStablePatchId": "74d6162ede15849e68c9ed9ee807961cdd02aa7c"
     },
     {
       "id": "notebook-agent",
       "commit": "4f0d00113e1f2bd797cd1a4a5ca5cc2ba7907774",
       "version": "0.9.5",
       "firstPublicationUncertain": true,
-      "sourceCommit": "b8e958413d4f618e60ec7a6b19d1bfb881c7643c"
+      "sourceCommit": "b8e958413d4f618e60ec7a6b19d1bfb881c7643c",
+      "ancestryVerified": true,
+      "stablePatchId": "88fd8c77e2f396d36fcfd0084051b0fefa0ad95f",
+      "sourceStablePatchId": "88fd8c77e2f396d36fcfd0084051b0fefa0ad95f"
     },
     {
       "id": "notifications",
       "commit": "67ef370d568277fc5b2fdd69d6f2e733af1bd683",
       "version": "0.10.12",
       "firstPublicationUncertain": false,
-      "sourceCommit": "0f3dc639d58ca91820481ec82af5a99a249f6754"
+      "sourceCommit": "0f3dc639d58ca91820481ec82af5a99a249f6754",
+      "ancestryVerified": true,
+      "stablePatchId": "a6dc0b6e1a9a5d66b4b990f2a1f62f5887551a39",
+      "sourceStablePatchId": "a6dc0b6e1a9a5d66b4b990f2a1f62f5887551a39"
     }
   ],
   "unresolvedDeploymentIds": [

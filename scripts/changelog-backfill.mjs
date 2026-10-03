@@ -11,7 +11,27 @@ const read = async file => JSON.parse(await readFile(path.join(folder, file), "u
 const legacy = await read("legacy.json");
 const evidence = await read("backfill-evidence.json");
 const dryRun = process.argv.includes("--dry-run");
-if (process.argv.slice(2).some(a => a !== "--dry-run")) throw new Error("Usage: node scripts/changelog-backfill.mjs [--dry-run]");
+const verifyGit = process.argv.includes("--verify-git");
+if (process.argv.slice(2).some(a => !["--dry-run", "--verify-git"].includes(a))) {
+  throw new Error("Usage: node scripts/changelog-backfill.mjs [--dry-run] [--verify-git]");
+}
+const objects = new Map();
+const patches = new Map();
+function hasCommit(sha) {
+  if (!/^[a-f0-9]{40}$/.test(sha ?? "")) throw new Error("Historical evidence requires full commit SHAs");
+  if (!objects.has(sha)) {
+    try { execFileSync("git", ["cat-file", "-e", `${sha}^{commit}`], { cwd: root, stdio: "ignore" }); objects.set(sha, true); }
+    catch { objects.set(sha, false); }
+  }
+  return objects.get(sha);
+}
+function patchId(sha) {
+  if (!patches.has(sha)) patches.set(sha, execFileSync("git", ["patch-id", "--stable"], {
+    cwd: root, encoding: "utf8", maxBuffer: 64 * 1024 * 1024,
+    input: execFileSync("git", ["show", "--format=", "--first-parent", sha], { cwd: root, maxBuffer: 64 * 1024 * 1024 }),
+  }).split(/\s+/u)[0]);
+  return patches.get(sha);
+}
 const generic = {
   en: ["Maintenance update", "A small maintenance release."],
   fr: ["Mise à jour de maintenance", "Une petite mise à jour de maintenance."],
@@ -59,15 +79,22 @@ const records = [];
 for (const deployment of evidence.deployments) {
   const mappings = evidence.mappings.filter(m => m.version === deployment.version);
   for (const m of mappings) {
-    execFileSync("git", ["merge-base", "--is-ancestor", m.commit, deployment.sha], { cwd: root });
-    if (m.sourceCommit && m.sourceCommit !== m.commit) {
-      const patchId = commit => execFileSync("git", ["patch-id", "--stable"], {
-        cwd: root, encoding: "utf8",
-        input: execFileSync("git", ["show", "--format=", "--first-parent", commit], { cwd: root }),
-      }).split(/\s+/u)[0];
-      if (!patchId(m.commit) || patchId(m.commit) !== patchId(m.sourceCommit)) {
-        throw new Error(`Historical patch does not match its source: ${m.id}`);
-      }
+    // Preserve audited evidence even when rewritten objects disappear from fresh clones.
+    if (m.ancestryVerified !== true || !/^[a-f0-9]{40}$/.test(m.stablePatchId ?? "")
+      || m.stablePatchId !== m.sourceStablePatchId) throw new Error(`Unverified historical mapping: ${m.id}`);
+    const source = m.sourceCommit ?? m.commit;
+    const mappedAvailable = hasCommit(m.commit);
+    const deploymentAvailable = hasCommit(deployment.sha);
+    const sourceAvailable = hasCommit(source);
+    if (verifyGit && (!mappedAvailable || !deploymentAvailable || !sourceAvailable)) {
+      throw new Error(`Historical Git objects are unavailable: ${m.id}. Restore the audited archive to use --verify-git.`);
+    }
+    if (mappedAvailable && deploymentAvailable) {
+      execFileSync("git", ["merge-base", "--is-ancestor", m.commit, deployment.sha], { cwd: root });
+    }
+    if ((mappedAvailable && patchId(m.commit) !== m.stablePatchId)
+      || (sourceAvailable && patchId(source) !== m.sourceStablePatchId)) {
+      throw new Error(`Historical patch does not match its recorded fingerprint: ${m.id}`);
     }
   }
   const features = mappings.map(m => {
