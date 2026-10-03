@@ -147,7 +147,9 @@ when closed. The previous `refetchOnMount: always` guarantee remains.
 `timelineReadState`, `useIssueTimeline` and `IssueActivity` distinguish loading,
 refreshing previous data, paused/offline, failed reads and fresh data. Previous
 rows and composer drafts stay present; a failed read offers explicit GET retry.
-An empty timeline is meaningful only after both reads succeed. Network status
+The new read-state feedback covers comments/events; feedback/resources/agent
+error UI is not validated by these injected timeline failures. An empty timeline
+is meaningful only after both reads succeed. Network status
 also marks an idle cached timeline paused while offline. All six locale catalogs
 include the read feedback. No read failure becomes a successful empty result.
 
@@ -214,6 +216,7 @@ identity and failed POST rollback. Its implementation is unchanged; unit coverag
 continues to exercise canonical endpoint kinds, echoes, cache absence and races.
 The native correctness journey also populates an encrypted Page resource and
 opens an actual child issue with exact title/comments/focus restoration.
+Editing-row deletion/draft recovery lacks a native populated concurrency check.
 Binary upload/download/retry, objective relations and larger resource volumes
 remain explicit gaps, not successful empty-state scenarios.
 
@@ -386,3 +389,24 @@ profiles with request waiting separated. A distinct populated authorized dataset
 is required for active chains, agent streams, long feedback, connected forge,
 objectives and binary attachments. OS suspension/reconnection should be measured
 on a real supported lifecycle path. None of these unresolved items closes MIN-614.
+
+
+## Published CI checkpoint
+
+Evidence commit `9307e52897dcb1b83902690e3be715358f58e0ce` was pushed with
+`npm run work:pr` to the existing #342. Its full Tests & typecheck job passes,
+including the unchanged pinned all-history Gitleaks scan, encrypted checks,
+desktop bundle and complete test/release/self-hosted/edition pipeline. Exact-author
+DCO, all three CodeQL analyses/CodeQL and Vercel preview pass. No check is still
+running at this checkpoint. The CI workflow overall fails because Dependencies
+audit still reports eight high transitive desktop packaging vulnerabilities for
+GHSA-ch52-4w7c-c8xp; its failed job log is retained. The preview is not a production
+deployment. The subsequent evidence-only commit records this exact-head checkpoint;
+its checks are refreshed again before delivery, without changing measured product.
+
+The original PR title and full description prefix are verified unchanged; phase
+3c evidence/screenshots are appended. PR is open, autoMergeRequest is null and
+closingIssuesReferences is empty. Minddy nevertheless changed MIN-614 to in_review
+on push; it is explicitly restored to in_progress and rechecked after delivery.
+All fifteen non-merge commits through this checkpoint have exact-author sign-offs;
+the changed-range local Gitleaks scan reports no leaks with unchanged policy.
