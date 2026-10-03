@@ -174,6 +174,9 @@ describe("bounded retained board views", () => {
     expect(isRetainedDestination(views, "board", "/all?view=second")).toBe(false);
     expect(isRetainedDestination(views, "board", "/projects/p/pages")).toBe(false);
     expect(isRetainedDestination(views, "board", "https://external.test/all")).toBe(false);
+    const consumed = [{ ...views[0], route: { ...route, search: "" }, href: "/all?view=first" }];
+    expect(isRetainedDestination(consumed, "board", "/all?view=first")).toBe(true);
+    expect(isRetainedDestination(consumed, "board", "/all?view=second")).toBe(false);
   });
 
   it.each([2, 4, 6])("adapts to late frequent visits across twelve tabs under budget %s", (budget) => {

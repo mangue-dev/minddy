@@ -56,6 +56,7 @@ export function AppTabViewHost({ children }: { children: ReactNode }) {
       const pressured = !!memory && memory.usedJSHeapSize > memory.jsHeapSizeLimit * 0.7;
       views = retainAppView(views, { pathname, search, projectId: pathname.match(/^\/projects\/([^/]+)/)?.[1] ?? null }, tabId, new Set(tabs.map((tab) => tab.id)), {
         budget: pressured ? 3 : 6, limit: 6, visits,
+        href: tabs.find((tab) => tab.id === tabId)?.href,
         cost: (view) => {
           const data = view.kind === "global-board"
             ? client.getQueryData<{ issues: unknown[] }>(["me", "board"])?.issues

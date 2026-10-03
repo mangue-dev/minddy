@@ -9,6 +9,8 @@ export interface RetainedAppView {
   tabId: string | null;
   kind: "global-board" | "project-board";
   route: AppTabRouteSnapshot;
+  /** Published selection may outlive a consumed ?view= URL instruction. */
+  href?: string;
 }
 export interface RetainedViewPolicy {
   budget: number;
@@ -16,6 +18,7 @@ export interface RetainedViewPolicy {
   /** Recent committed visits, independent of whether a view was evicted. */
   visits: readonly string[];
   cost: (view: RetainedAppView) => number;
+  href?: string;
 }
 
 export function retainedAppViewKind(pathname: string): RetainedAppView["kind"] | null {
@@ -26,7 +29,7 @@ export function retainedAppViewKind(pathname: string): RetainedAppView["kind"] |
 export function isRetainedDestination(views: readonly RetainedAppView[], tabId: string | null, href: string): boolean {
   const normalized = normalizeAppTabLocation(href);
   return normalized !== null && views.some((view) => view.tabId === tabId &&
-    normalized === normalizeAppTabLocation(`${view.route.pathname}?${view.route.search}`));
+    normalized === normalizeAppTabLocation(view.href ?? `${view.route.pathname}?${view.route.search}`));
 }
 
 export function retainAppView(
@@ -44,6 +47,7 @@ export function retainAppView(
     key: existing?.key ?? `${tabId ?? "startup"}:${route.pathname}`,
     tabId,
     kind,
+    href: policy?.href,
     route: existing && existing.route.pathname === route.pathname && existing.route.search === route.search ? existing.route : route,
   };
   const candidates = retained.filter((view) => view.key !== active.key);
