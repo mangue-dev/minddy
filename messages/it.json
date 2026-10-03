@@ -3237,6 +3237,12 @@
     "duplicate": "Riproduzione"
   },
   "Timeline": {
+    "readLoading": "Caricamento attività…",
+    "readRefreshing": "Aggiornamento attività… Sono mostrati i dati precedenti.",
+    "readPaused": "Aggiornamenti in pausa. Riconnettiti per aggiornare l’attività.",
+    "readPreviousError": "Impossibile aggiornare l’attività. Sono mostrati i dati precedenti.",
+    "readError": "Impossibile caricare l’attività.",
+    "readRetry": "Riprova",
     "activity": "Attività",
     "noActivity": "Ancora nessuna attività.",
     "eventsCount": "{count, plural, one {# evento} other {# eventi}}",

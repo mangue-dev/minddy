@@ -21,12 +21,12 @@ async function parseJson<T>(response: Response): Promise<T> {
   return data as T;
 }
 
-export async function fetchCommentsApi(issueId: string): Promise<Comment[]> {
-  return parseJson<Comment[]>(await fetch(`/api/issues/${issueId}/comments`));
+export async function fetchCommentsApi(issueId: string, signal?: AbortSignal): Promise<Comment[]> {
+  return parseJson<Comment[]>(await fetch(`/api/issues/${issueId}/comments`, { signal }));
 }
 
-export async function fetchEventsApi(issueId: string): Promise<IssueEvent[]> {
-  return parseJson<IssueEvent[]>(await fetch(`/api/issues/${issueId}/events`));
+export async function fetchEventsApi(issueId: string, signal?: AbortSignal): Promise<IssueEvent[]> {
+  return parseJson<IssueEvent[]>(await fetch(`/api/issues/${issueId}/events`, { signal }));
 }
 
 export async function addCommentApi(

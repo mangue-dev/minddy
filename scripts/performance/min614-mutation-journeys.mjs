@@ -1,17 +1,25 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { writeFile } from 'node:fs/promises';
+import { rankProperties } from './min614-property-ranking.mjs';
+import { verifyReadStates } from './verify-min614-read-states.mjs';
+import { armDomProbe, finishDomProbe } from './min614-dom-probe.mjs';
 import { id } from './seed.mjs';
 import { verifyMutationJourneys } from './verify-min614-mutations.mjs';
 
 // Native loaded-thread workloads. Writes run once; cleanup inspects ambiguous UUIDs.
 export async function measureMutationJourneys({ page, context, fixture, boardTab, pagesTab, base, measure, frames, diagnostic, output, label, recordRequest, cdp }) {
+  const phase3c = process.argv.includes('--phase3c');
   const activeSelector = '[data-retained-app-view][data-app-view-active="true"]';
   const active = () => page.locator(activeSelector);
   const panel = () => page.locator('[role="dialog"][data-state="open"]');
   const tab = (spec) => page.locator(`[data-app-tab-id="${spec.id}"]`);
   const state = { fixture: {}, stages: [], failures: [], checks: [], ownedComments: [], cleanup: false };
   state.broadcasts = [];
+  state.domProbes = [];
+  const arm = async (spec) => { if (phase3c) await armDomProbe(page, { title: original.title, ...spec }); };
+  const finish = async (name, run) => { if (phase3c) { state.domProbes.push({ name, run, ...await finishDomProbe(page) }); await save(); } };
+  const probe = async (name, run, spec, action, visible) => { await arm(spec); const result = await measure(`${name}-${run}`, action, visible); await finish(name, run); return result; };
   page.on('websocket', (socket) => socket.on('framereceived', ({ payload }) => {
     try {
       const frame = JSON.parse(String(payload));
@@ -84,6 +92,7 @@ export async function measureMutationJourneys({ page, context, fixture, boardTab
   async function pipeline(name, run, action, visible, ack, verify, reconcile) {
     const start = await epoch();
     const observation = await measure(`${name}-${run}`, action, visible);
+    await finish(name, run);
     const acknowledged = await ack;
     assert.ok(acknowledged.status >= 200 && acknowledged.status < 300, `${name}: ${acknowledged.status}`);
     const persisted = await verify(acknowledged.body);
@@ -110,10 +119,10 @@ export async function measureMutationJourneys({ page, context, fixture, boardTab
     state.fixture.loadedComments = expected.length; state.fixture.loadedReplies = 6;
     await page.reload({ waitUntil: 'domcontentloaded' }); await boardReady();
     await measure('loaded-cold-open', () => active().locator(`[data-issue-id="${original.id}"]`).click(), () => ready(expected));
-    const repeat = diagnostic || process.argv.includes('--mutation-correctness') || process.argv.includes('--property-correctness') ? 1 : 10;
+    const repeat = diagnostic || process.argv.includes('--mutation-correctness') || process.argv.includes('--property-correctness') || process.argv.includes('--read-correctness') || process.argv.includes('--property-ranking') ? 1 : 10;
     for (let run = 0; run < repeat; run++) {
       // The old full menu clock is preserved; the new clock stops at first visibility.
-      await measure(`menu-first-visible-${run}`, () => panel().getByRole('button', { name: 'Issue actions', exact: true }).click(), () => page.getByRole('menu').waitFor());
+      await probe('menu-first-visible', run, { kind: 'menu' }, () => panel().getByRole('button', { name: 'Issue actions', exact: true }).click(), () => page.getByRole('menu').waitFor());
       await page.keyboard.press('Escape');
       await close();
       await measure(`loaded-warm-open-${run}`, () => active().locator(`[data-issue-id="${original.id}"]`).click(), () => ready(expected), async () => {
@@ -122,30 +131,34 @@ export async function measureMutationJourneys({ page, context, fixture, boardTab
       const text = `MIN-614 3b measured ${label} ${run}`;
       await composer().fill(text);
       const createAck = acknowledgement(`/api/issues/${original.id}/comments`, 'POST');
+      await arm({ kind: 'comment', text });
       const created = await pipeline('comment-create', run, () => composer().press('ControlOrMeta+Enter'),
         () => panel().locator('[data-comment-id]').filter({ hasText: text }).waitFor(), createAck,
         async (saved) => { const comments = await api(`/api/issues/${original.id}/comments`); assert.equal(comments.filter((c) => c.id === saved.id && c.body === text).length, 1); return comments; },
         async (saved, comments) => { assert.equal(saved.body, text); expected = comments; await ready(expected); });
       const comment = row(created.id);
       await comment.getByRole('button', { name: 'Comment actions', exact: true }).click();
-      await measure(`editor-first-visible-${run}`, () => page.getByRole('menuitem', { name: 'Edit', exact: true }).click(), () => comment.locator('[role="textbox"][contenteditable="true"]').waitFor());
+      await probe('editor-first-visible', run, { kind: 'editor', id: created.id }, () => page.getByRole('menuitem', { name: 'Edit', exact: true }).click(), () => comment.locator('[role="textbox"][contenteditable="true"]').waitFor());
       await comment.locator('[role="textbox"][contenteditable="true"]').fill(`${text} edited`);
       const editAck = acknowledgement(`/api/comments/${created.id}`, 'PATCH');
+      await arm({ kind: 'editor-closed', id: created.id, text: `${text} edited` });
       await pipeline('comment-edit', run, () => comment.getByRole('button', { name: 'Save', exact: true }).click(),
         () => comment.locator('[role="textbox"][contenteditable="true"]').waitFor({ state: 'detached' }), editAck,
         async (saved) => { const comments = await api(`/api/issues/${original.id}/comments`); assert.equal(saved.id, created.id); assert.equal(comments.find((c) => c.id === created.id)?.body, `${text} edited`); return comments; },
         async (_saved, comments) => { expected = comments; await ready(expected); });
       await comment.getByRole('button', { name: 'Comment actions', exact: true }).click(); await page.getByRole('menuitem', { name: 'Delete', exact: true }).click();
       const deleteAck = acknowledgement(`/api/comments/${created.id}`, 'DELETE');
+      await arm({ kind: 'comment-removed', id: created.id });
       await pipeline('comment-delete', run, () => page.getByRole('alertdialog').getByRole('button', { name: 'Delete', exact: true }).click(),
         () => comment.waitFor({ state: 'detached' }), deleteAck,
         async () => { const comments = await api(`/api/issues/${original.id}/comments`); assert.ok(!comments.some((c) => c.id === created.id)); return comments; },
         async (_saved, comments) => { expected = comments; await ready(expected); });
       await panel().getByRole('button', { name: 'Change effort', exact: true }).click();
       const effortAck = acknowledgement(`/api/issues/${original.id}`, 'PATCH');
+      await arm({ kind: 'property', label: 'Change effort', text: 'L' });
       await pipeline('effort', run, () => page.getByRole('option', { name: 'L', exact: true }).click(),
         () => panel().getByRole('button', { name: 'Change effort', exact: true }).getByText('L', { exact: true }).waitFor(), effortAck,
-        async () => { const saved = await api(`/api/issues/${original.id}`); assert.equal(saved.effort, 'l'); return saved; }, async () => {});
+        async () => { const saved = await api(`/api/issues/${original.id}`); assert.equal(saved.effort, 'l'); return saved; }, async () => { if (phase3c) await panel().getByRole('button', { name: 'Change effort', exact: true }).getByText('L', { exact: true }).waitFor(); });
       await api(`/api/issues/${original.id}`, 'PATCH', { effort: original.effort });
       await close();
       await tab(pagesTab).click(); await page.locator('.page-editor .tiptap, a[href*="/pages/"]').first().waitFor(); await frames();
@@ -176,6 +189,20 @@ export async function measureMutationJourneys({ page, context, fixture, boardTab
       expected = await verifyMutationJourneys({ page, api, original, fixture, panel, composer, row, state, save, close, boardReady, open, ready });
       await open(expected);
     }
+    if (process.argv.includes('--property-ranking')) {
+      const objectives = await api(`/api/projects/${original.project_id}/objectives`);
+      const relations = await api(`/api/projects/${original.project_id}/issue-relations`);
+      const resources = await api(`/api/issues/${original.id}/resources`);
+      const automation = await api(`/api/issues/${original.id}/automation`);
+      const agent = await api(`/api/issues/${original.id}/agent`);
+      const feedback = await api(`/api/issues/${original.id}/feedback`);
+      state.capabilityInventory = { objectives: objectives.length, relations: relations.length,
+        resourceKinds: resources.map(({ kind }) => kind), commentAttachments: expected.reduce((n, row) => n + (row.attachments?.length ?? 0), 0),
+        chainPresent: automation.chain != null, agentRuns: agent.runs.length, agentPullRequestPresent: agent.pullRequest != null, feedbackEntries: feedback.feedback.length,
+        objectiveAssigned: original.objective_id !== null, planBytes: original.plan?.length ?? 0 };
+      await rankProperties({ page, panel, measure, state, save });
+    }
+    if (process.argv.includes('--read-correctness')) expected = await verifyReadStates({ page, api, original, panel, composer, close, open, ready, boardReady, state, save });
     if (process.argv.includes('--property-correctness')) {
       state.propertyChecks = [];
       for (let run = 0; run < 10; run++) {
@@ -212,6 +239,13 @@ export async function measureMutationJourneys({ page, context, fixture, boardTab
     await measure(`filtered-loaded-open-${run}`, () => active().locator(`[data-issue-id="${original.id}"]`).click(), () => ready(expected), async () => {
       await panel().getByRole('button', { name: 'Issue actions', exact: true }).click(); await page.getByRole('menu').waitFor(); await frames(); await page.keyboard.press('Escape');
     });
+    if (phase3c) {
+      await probe('filtered-menu-first-visible', run, { kind: 'menu' }, () => panel().getByRole('button', { name: 'Issue actions', exact: true }).click(), () => page.getByRole('menu').waitFor()); await page.keyboard.press('Escape');
+      const target = row(loaded[1].id);
+      await target.getByRole('button', { name: 'Comment actions', exact: true }).click();
+      await probe('filtered-editor-first-visible', run, { kind: 'editor', id: loaded[1].id }, () => page.getByRole('menuitem', { name: 'Edit', exact: true }).click(), () => target.locator('[role="textbox"][contenteditable="true"]').waitFor());
+      await target.getByRole('button', { name: 'Cancel', exact: true }).click();
+    }
     await close();
     }
     await active().getByRole('button', { name: 'Filters', exact: true }).click(); await page.getByRole('menuitem', { name: 'Hide done issues', exact: true }).click(); await page.keyboard.press('Escape'); filtered = false; await boardReady();
@@ -220,6 +254,13 @@ export async function measureMutationJourneys({ page, context, fixture, boardTab
       await measure(`scrolled-loaded-open-${run}`, () => active().locator(`[data-issue-id="${original.id}"]`).click(), () => ready(expected), async () => {
         await panel().getByRole('button', { name: 'Issue actions', exact: true }).click(); await page.getByRole('menu').waitFor(); await frames(); await page.keyboard.press('Escape');
       });
+    if (phase3c) {
+      await probe('scrolled-menu-first-visible', run, { kind: 'menu' }, () => panel().getByRole('button', { name: 'Issue actions', exact: true }).click(), () => page.getByRole('menu').waitFor()); await page.keyboard.press('Escape');
+      const target = row(loaded[1].id);
+      await target.getByRole('button', { name: 'Comment actions', exact: true }).click();
+      await probe('scrolled-editor-first-visible', run, { kind: 'editor', id: loaded[1].id }, () => page.getByRole('menuitem', { name: 'Edit', exact: true }).click(), () => target.locator('[role="textbox"][contenteditable="true"]').waitFor());
+      await target.getByRole('button', { name: 'Cancel', exact: true }).click();
+    }
       await close();
     }
     state.scrolledOffsets = { requested: offsets, restored: await active().locator('[data-board-column-scroller]').evaluateAll((nodes) => nodes.map((node) => node.scrollTop)) };
@@ -235,6 +276,7 @@ export async function measureMutationJourneys({ page, context, fixture, boardTab
       await cdp.send('Network.enable');
       await cdp.send('Network.emulateNetworkConditions', { offline: true, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
       assert.equal(await page.evaluate(() => navigator.onLine), false);
+      if (process.argv.includes('--require-read-states')) await panel().locator('[data-timeline-read-state="paused"]').waitFor();
       await api(`/api/comments/${loaded[0].id}`, 'PATCH', { body: 'MIN-614 3b real offline remote edit' });
       await api(`/api/comments/${loaded[16].id}`, 'DELETE'); expected = await api(`/api/issues/${original.id}/comments`);
       await cdp.send('Network.emulateNetworkConditions', { offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });

@@ -3237,6 +3237,12 @@
     "duplicate": "Doublon"
   },
   "Timeline": {
+    "readLoading": "Chargement de l’activité…",
+    "readRefreshing": "Actualisation de l’activité… Données précédentes affichées.",
+    "readPaused": "Actualisation de l’activité en pause. Reconnectez-vous pour actualiser.",
+    "readPreviousError": "Impossible d’actualiser l’activité. Données précédentes affichées.",
+    "readError": "Impossible de charger l’activité.",
+    "readRetry": "Réessayer",
     "activity": "Activité",
     "noActivity": "Aucune activité pour l'instant.",
     "eventsCount": "{count, plural, one {# événement} other {# événements}}",

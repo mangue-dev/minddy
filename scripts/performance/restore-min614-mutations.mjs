@@ -6,7 +6,7 @@ import { EMAIL, MARKER, id } from './seed.mjs';
 
 // Explicit scoped recovery. Inspect persistence first; never replay timed writes.
 loadEnv();
-const label = process.argv[2]; assert.match(label, /^pass3b-[\w-]+$/);
+const label = process.argv[2]; assert.match(label, /^pass3[bc]-[\w-]+$/);
 const path = `output/playwright/performance/${label}-checks.json`;
 const state = JSON.parse(await readFile(path, 'utf8'));
 const fixture = JSON.parse(await readFile('output/playwright/performance/workload.json', 'utf8'));

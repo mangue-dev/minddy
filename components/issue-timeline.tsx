@@ -78,6 +78,7 @@ import {
  * avoided a fourth copy of the thread.
  */
 export interface ThreadMessage {
+  optimisticEdit?: boolean;
   delivery?: Comment["delivery"];
   id: string;
   author_id: string | null;
@@ -502,7 +503,7 @@ export function CommentBlock({
   };
 
   return (
-    <div className="group/comment flex flex-col gap-1.5" data-comment-id={comment.id} data-comment-state={comment.delivery?.state ?? "confirmed"} aria-busy={comment.delivery?.state === "sending"}>
+    <div className="group/comment flex flex-col gap-1.5" data-comment-id={comment.id} data-comment-state={comment.optimisticEdit ? "editing" : comment.delivery?.state ?? "confirmed"} aria-busy={comment.optimisticEdit || comment.delivery?.state === "sending"}>
       <div className="flex items-center gap-2">
         {viaNumo ? (
           <NumoAvatar />
@@ -533,7 +534,7 @@ export function CommentBlock({
         <span className="shrink-0 text-xs text-muted-foreground/80">
           {timeAgo(comment.created_at, t)}
         </span>
-        {comment.delivery?.state === "sending" && <Spinner className="size-3" aria-label={tCommon("loading")} />}
+        {(comment.optimisticEdit || comment.delivery?.state === "sending") && <Spinner className="size-3" aria-label={tCommon("loading")} />}
         {edited && !viaNumo && !visitor && (
           <span className="shrink-0 text-xs text-muted-foreground/60">{t("edited")}</span>
         )}
@@ -612,7 +613,7 @@ export function CommentBlock({
         <p className="text-sm italic text-muted-foreground">
           {tAssistant("commentError")}
         </p>
-      ) : editing ? (
+      ) : editing && !comment.optimisticEdit ? (
         <div className="flex flex-col gap-2">
           <MentionTextarea
             value={draft}
@@ -1040,6 +1041,8 @@ function groupRows(
 /** Minimalist activity feed, always visible; only long runs of events collapse. */
 export function IssueActivity({
   items,
+  readState,
+  onRetryRead,
   ctx,
   currentUserId,
   projectId,
@@ -1052,6 +1055,8 @@ export function IssueActivity({
   onDeleteAttachment,
 }: {
   items: ActivityItem[];
+  readState?: import("@/lib/timeline-read-state").TimelineReadState;
+  onRetryRead?: () => void;
   ctx: EventContext;
   /**
    * A strip clean to the surface, at the head of the card of a wire (MIN-282).
@@ -1090,7 +1095,16 @@ export function IssueActivity({
     <div className="flex flex-col">
       <span className="py-1 text-sm font-medium">{t("activity")}</span>
 
+      {readState && <div data-timeline-read-state={readState.phase} aria-busy={readState.phase === "loading" || readState.phase === "refreshing"}>
+        {readState.phase !== "fresh" && <div className="flex items-center gap-2 py-2 text-xs text-muted-foreground" role={readState.phase === "error" ? "alert" : "status"}>
+          {(readState.phase === "loading" || readState.phase === "refreshing") && <Spinner className="size-3" />}
+          <span>{t(readState.phase === "loading" ? "readLoading" : readState.phase === "refreshing" ? "readRefreshing"
+            : readState.phase === "paused" ? "readPaused" : readState.hasPreviousData ? "readPreviousError" : "readError")}</span>
+          {readState.phase === "error" && onRetryRead && <Button size="sm" variant="ghost" onClick={onRetryRead}>{t("readRetry")}</Button>}
+        </div>}
+      </div>}
       {rows.length === 0 ? (
+        (!readState || readState.phase === "fresh") &&
         <p className="mt-2 text-xs text-muted-foreground">{t("noActivity")}</p>
       ) : (
         <ol className="mt-2 flex flex-col gap-3">

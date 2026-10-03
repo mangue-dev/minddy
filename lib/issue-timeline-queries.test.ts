@@ -11,6 +11,39 @@ const original = { id: "comment-1", issue_id: "issue-1", body: "Old body", paren
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 describe("timeline activation freshness", () => {
+  it("reads again when a retained panel closes and immediately reopens with a recent cache", async () => {
+    const cache = client(); cache.setQueryData(commentsKey("issue-1"), [original]);
+    api.comments.mockResolvedValue([original]);
+    const observer = new QueryObserver(cache, issueCommentsOptions(cache, "issue-1"));
+    const stop = observer.subscribe(() => {}); await tick();
+    expect(api.comments).toHaveBeenCalledTimes(1);
+    observer.setOptions(issueCommentsOptions(cache, "issue-1", false));
+    const fresh = { ...original, body: "Changed while closed" };
+    api.comments.mockResolvedValue([fresh]);
+    observer.setOptions(issueCommentsOptions(cache, "issue-1", true)); await tick();
+    expect(api.comments).toHaveBeenCalledTimes(2);
+    expect(cache.getQueryData(commentsKey("issue-1"))).toEqual([fresh]);
+    expect(issueEventsOptions("issue-1", false).enabled).toBe(false);
+    stop(); cache.clear();
+  });
+
+  it("aborts an inactive read and retains the previous data without reporting an error", async () => {
+    const cache = client(); cache.setQueryData(commentsKey("issue-1"), [original]);
+    let signal: AbortSignal | undefined;
+    api.comments.mockImplementation((_id: string, next: AbortSignal) => {
+      signal = next;
+      return new Promise((_resolve, reject) => next.addEventListener("abort", () => reject(new DOMException("Closed", "AbortError"))));
+    });
+    const observer = new QueryObserver(cache, issueCommentsOptions(cache, "issue-1"));
+    const stop = observer.subscribe(() => {}); await tick();
+    expect(observer.getCurrentResult().isFetching).toBe(true);
+    stop(); await tick();
+    expect(signal?.aborted).toBe(true);
+    expect(cache.getQueryData(commentsKey("issue-1"))).toEqual([original]);
+    expect(cache.getQueryState(commentsKey("issue-1"))?.status).toBe("success");
+    cache.clear(); api.comments.mockReset();
+  });
+
   it("reconciles a recent cache on each observer activation after hidden remote edits and deletes", async () => {
     const cache = client(); const key = commentsKey("issue-1");
     cache.setQueryData(key, [original]);
@@ -49,7 +82,7 @@ describe("timeline activation freshness", () => {
   it("refreshes audit events on activation and leaves absent issue IDs disabled", async () => {
     const cache = client(); cache.setQueryData(["events", "issue-1"], []); api.events.mockResolvedValue([{ id: "new-event" }]);
     const observer = new QueryObserver(cache, issueEventsOptions("issue-1")); const stop = observer.subscribe(() => {}); await tick();
-    expect(api.events).toHaveBeenCalledWith("issue-1"); expect(cache.getQueryData(["events", "issue-1"])).toEqual([{ id: "new-event" }]);
+    expect(api.events).toHaveBeenCalledWith("issue-1", expect.any(AbortSignal)); expect(cache.getQueryData(["events", "issue-1"])).toEqual([{ id: "new-event" }]);
     expect(issueEventsOptions(null).enabled).toBe(false); expect(issueCommentsOptions(cache, null).enabled).toBe(false); stop(); cache.clear();
   });
 });

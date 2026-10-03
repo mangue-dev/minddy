@@ -40,6 +40,27 @@ export async function verifyMutationJourneys({ page, api, original, fixture, pan
     await page.unroute(failedMutationRoute); await ready(expected);
     state.checks.push('Injected edit/delete 503 keeps the edit draft, original confirmed row and persisted body; no successful obsolete UI is accepted.'); await save();
 
+    if (process.argv.includes('--phase3c')) {
+      const committedBody = 'MIN-614 3c edit with ambiguous acknowledgement';
+      let patchCount = 0;
+      const ambiguousEdit = await intercept(failedCommentPath, async (route) => {
+        if (route.request().method() !== 'PATCH') return route.continue();
+        patchCount++;
+        const response = await route.fetch(); assert.equal(response.status(), 200);
+        await route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: 'MIN-614 injected lost edit acknowledgement' }) });
+      });
+      await failedComment.getByRole('button', { name: 'Comment actions', exact: true }).click();
+      await page.getByRole('menuitem', { name: 'Edit', exact: true }).click();
+      await editDraft.fill(committedBody);
+      const lostAck = page.waitForResponse((response) => new URL(response.url()).pathname === failedCommentPath && response.request().method() === 'PATCH');
+      await failedComment.getByRole('button', { name: 'Save', exact: true }).click(); assert.equal((await lostAck).status(), 503);
+      await editDraft.waitFor(); assert.equal(await editDraft.textContent(), committedBody);
+      expected = await api(path); assert.equal(expected.filter((row) => row.id === failedId && row.body === committedBody).length, 1);
+      await failedComment.getByRole('button', { name: 'Cancel', exact: true }).click();
+      await ready(expected); assert.equal(patchCount, 1); await page.unroute(ambiguousEdit);
+      state.checks.push('Post-commit edit acknowledgement loss retains the submitted draft and reconciles the canonical persisted body by GET; exactly one PATCH and one row, with no replay.'); await save();
+    }
+
     // Commit once, then replace the acknowledgement: inspect persistence before any retry.
     const ambiguousText = 'MIN-614 3b ambiguous acknowledgement';
     const ambiguousRoute = await intercept(path, async (route) => {

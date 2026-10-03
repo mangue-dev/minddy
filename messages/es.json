@@ -3237,6 +3237,12 @@
     "duplicate": "Reproducción"
   },
   "Timeline": {
+    "readLoading": "Cargando actividad…",
+    "readRefreshing": "Actualizando actividad… Se muestran los datos anteriores.",
+    "readPaused": "Actualizaciones en pausa. Vuelve a conectarte para actualizar la actividad.",
+    "readPreviousError": "No se pudo actualizar la actividad. Se muestran los datos anteriores.",
+    "readError": "No se pudo cargar la actividad.",
+    "readRetry": "Reintentar",
     "activity": "Actividad",
     "noActivity": "No hay actividad todavía.",
     "eventsCount": "{count, plural, one {# evento} other {# eventos}}",
