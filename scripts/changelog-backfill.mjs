@@ -28,7 +28,8 @@ function hasCommit(sha) {
 function patchId(sha) {
   if (!patches.has(sha)) patches.set(sha, execFileSync("git", ["patch-id", "--stable"], {
     cwd: root, encoding: "utf8", maxBuffer: 64 * 1024 * 1024,
-    input: execFileSync("git", ["show", "--format=", "--first-parent", sha], { cwd: root, maxBuffer: 64 * 1024 * 1024 }),
+    // Binary patch IDs hash index object IDs; abbreviations vary with clone size.
+    input: execFileSync("git", ["show", "--format=", "--first-parent", "--full-index", "--no-color", sha], { cwd: root, maxBuffer: 64 * 1024 * 1024 }),
   }).split(/\s+/u)[0]);
   return patches.get(sha);
 }

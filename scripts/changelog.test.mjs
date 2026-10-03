@@ -35,7 +35,11 @@ test("historical migration preserves every feature and translation exactly once"
 });
 
 test("backfill is deterministic and safe to rerun", () => {
-  const output = execFileSync(process.execPath, ["scripts/changelog-backfill.mjs", "--dry-run"], { encoding: "utf8" });
+  const output = execFileSync(process.execPath, ["scripts/changelog-backfill.mjs", "--dry-run"], {
+    encoding: "utf8",
+    // A small clone or a developer's preference must not alter binary fingerprints.
+    env: { ...process.env, GIT_CONFIG_COUNT: "1", GIT_CONFIG_KEY_0: "core.abbrev", GIT_CONFIG_VALUE_0: "4" },
+  });
   assert.match(output, /63\/63 features/);
   assert.match(output, /0 changed files/);
 });

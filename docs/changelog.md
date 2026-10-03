@@ -89,6 +89,9 @@ their own storage. No publisher is invoked by a build, ordinary commit, or test.
 implementation commits associated with them. Equivalent patches were checked
 across rewritten histories; the mapped commits were verified as ancestors of the recorded production SHA.
 The evidence freezes that verification and both stable patch fingerprints.
+Fingerprints use `git show --format= --first-parent --full-index --no-color`
+followed by `git patch-id --stable`. Full index IDs keep binary fingerprints
+independent of clone size and `core.abbrev` settings.
 Reruns validate those records and recheck any Git objects still available. This
 keeps the migration reproducible in fresh clones after history rewrites, without
 fetching vanished commits. Use `--verify-git` with the audited history archive to

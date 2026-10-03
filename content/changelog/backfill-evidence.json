@@ -128,8 +128,8 @@
       "firstPublicationUncertain": false,
       "sourceCommit": "316e30460d6b8adcf6ae1400c958077195de5245",
       "ancestryVerified": true,
-      "stablePatchId": "701c822ccbfcae5a60cf576682333166f787ea61",
-      "sourceStablePatchId": "701c822ccbfcae5a60cf576682333166f787ea61"
+      "stablePatchId": "9301a1bedca3ad440804d5758fb3f9926c42bc13",
+      "sourceStablePatchId": "9301a1bedca3ad440804d5758fb3f9926c42bc13"
     },
     {
       "id": "mcp-catalog",
@@ -138,8 +138,8 @@
       "firstPublicationUncertain": false,
       "sourceCommit": "53864fc4b1fd24aa7966a14ac73a4218e4fb69bd",
       "ancestryVerified": true,
-      "stablePatchId": "1ab3997f79825935f56786bd62256cae512f799c",
-      "sourceStablePatchId": "1ab3997f79825935f56786bd62256cae512f799c"
+      "stablePatchId": "5426109edacba4eb45e63cc72ed7cb73bc2d8276",
+      "sourceStablePatchId": "5426109edacba4eb45e63cc72ed7cb73bc2d8276"
     },
     {
       "id": "performance",
@@ -258,8 +258,8 @@
       "firstPublicationUncertain": false,
       "sourceCommit": "a1ea001df340b8106dd0021e51bc12daa59533e0",
       "ancestryVerified": true,
-      "stablePatchId": "2bf6186884fe915ba5a10e27f641a275cc8165c1",
-      "sourceStablePatchId": "2bf6186884fe915ba5a10e27f641a275cc8165c1"
+      "stablePatchId": "18972a23fe538602ee5005f41ad0f0d1e15d344c",
+      "sourceStablePatchId": "18972a23fe538602ee5005f41ad0f0d1e15d344c"
     },
     {
       "id": "numo-cross-project",
@@ -638,8 +638,8 @@
       "firstPublicationUncertain": true,
       "sourceCommit": "4e16d3f4e4cfa437db81f71be58425ea19871331",
       "ancestryVerified": true,
-      "stablePatchId": "5f4da81c3364eda19af5ecf989f761407b0174e9",
-      "sourceStablePatchId": "5f4da81c3364eda19af5ecf989f761407b0174e9"
+      "stablePatchId": "21083174dd39743df6b6793d062130399f3e1df5",
+      "sourceStablePatchId": "21083174dd39743df6b6793d062130399f3e1df5"
     },
     {
       "id": "trash",
