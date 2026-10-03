@@ -1,0 +1,4196 @@
+{
+  "schemaVersion": 1,
+  "deliveryProduct": {
+    "sha": "d9d576c0245812ee0b433a3809a1c14f756e60df",
+    "buildId": "dlXYoN5YqnWMLEbN1h2PW",
+    "nativeAuthenticatedRerun": false,
+    "reason": "Error-only quota correction; no restart after quota exhaustion"
+  },
+  "baseline": {
+    "provenance": {
+      "label": "pass3e-before-complete",
+      "buildSha": "05c69168e39aa8369cf4fcbc83dd5e3a41abf3f2",
+      "buildId": "sii2TG6an7DIIeXDU7nBR",
+      "runtime": {
+        "electron": "43.7.5"
+      },
+      "definition": "Native page-origin live GET cluster; parsed detail/readiness/review surfaces. Separate commits GET. No DOM speedup inference."
+    },
+    "launches": [
+      {
+        "launch": 0,
+        "samples": 20,
+        "coldVisibleMs": 7634,
+        "cleanup": true,
+        "idle": {
+          "ms": 15000,
+          "requests": [
+            {
+              "path": "/api/pull-requests/count",
+              "method": "GET",
+              "at": 1791056415127,
+              "status": 200,
+              "ms": 791.278,
+              "bytes": {
+                "requestBodySize": 0,
+                "requestHeadersSize": 9200,
+                "responseBodySize": 21,
+                "responseHeadersSize": 698
+              }
+            },
+            {
+              "path": "/api/pull-requests",
+              "method": "GET",
+              "at": 1791056415780,
+              "status": 200,
+              "ms": 975.249,
+              "bytes": {
+                "requestBodySize": 0,
+                "requestHeadersSize": 9194,
+                "responseBodySize": 3616,
+                "responseHeadersSize": 698
+              }
+            },
+            {
+              "path": "/api/pull-requests/$identity-3/comments",
+              "method": "GET",
+              "at": 1791056417417,
+              "status": 200,
+              "ms": 1604.38,
+              "bytes": {
+                "requestBodySize": 0,
+                "requestHeadersSize": 9240,
+                "responseBodySize": 16640,
+                "responseHeadersSize": 698
+              }
+            },
+            {
+              "path": "/api/pull-requests/$identity-3/commits",
+              "method": "GET",
+              "at": 1791056418046,
+              "status": 200,
+              "ms": 1684.161,
+              "bytes": {
+                "requestBodySize": 0,
+                "requestHeadersSize": 9239,
+                "responseBodySize": 20620,
+                "responseHeadersSize": 698
+              }
+            },
+            {
+              "path": "/api/pull-requests/readiness",
+              "method": "GET",
+              "at": 1791056419104,
+              "status": 200,
+              "ms": 2991.641,
+              "bytes": {
+                "requestBodySize": 0,
+                "requestHeadersSize": 9204,
+                "responseBodySize": 1334,
+                "responseHeadersSize": 698
+              }
+            },
+            {
+              "path": "/api/me/local-snapshots",
+              "method": "POST",
+              "at": 1791056420834,
+              "status": 200,
+              "ms": 512.208,
+              "bytes": {
+                "requestBodySize": 740953,
+                "requestHeadersSize": 9263,
+                "responseBodySize": 988339,
+                "responseHeadersSize": 698
+              }
+            },
+            {
+              "path": "/api/me/local-snapshots",
+              "method": "POST",
+              "at": 1791056423202,
+              "status": 200,
+              "ms": 517.815,
+              "bytes": {
+                "requestBodySize": 740949,
+                "requestHeadersSize": 9263,
+                "responseBodySize": 988334,
+                "responseHeadersSize": 698
+              }
+            }
+          ],
+          "before": {
+            "metrics": [
+              {
+                "name": "Timestamp",
+                "value": 900883.582174
+              },
+              {
+                "name": "AudioHandlers",
+                "value": 0
+              },
+              {
+                "name": "AudioWorkletProcessors",
+                "value": 0
+              },
+              {
+                "name": "Documents",
+                "value": 2
+              },
+              {
+                "name": "Frames",
+                "value": 2
+              },
+              {
+                "name": "JSEventListeners",
+                "value": 1560
+              },
+              {
+                "name": "LayoutObjects",
+                "value": 1825
+              },
+              {
+                "name": "MediaKeySessions",
+                "value": 0
+              },
+              {
+                "name": "MediaKeys",
+                "value": 0
+              },
+              {
+                "name": "Nodes",
+                "value": 2414
+              },
+              {
+                "name": "Resources",
+                "value": 145
+              },
+              {
+                "name": "ContextLifecycleStateObservers",
+                "value": 22
+              },
+              {
+                "name": "V8PerContextDatas",
+                "value": 3
+              },
+              {
+                "name": "WorkerGlobalScopes",
+                "value": 0
+              },
+              {
+                "name": "UACSSResources",
+                "value": 0
+              },
+              {
+                "name": "RTCPeerConnections",
+                "value": 0
+              },
+              {
+                "name": "ResourceFetchers",
+                "value": 2
+              },
+              {
+                "name": "AdSubframes",
+                "value": 0
+              },
+              {
+                "name": "DetachedScriptStates",
+                "value": 0
+              },
+              {
+                "name": "ArrayBufferContents",
+                "value": 20
+              },
+              {
+                "name": "LayoutCount",
+                "value": 58
+              },
+              {
+                "name": "RecalcStyleCount",
+                "value": 900
+              },
+              {
+                "name": "LayoutDuration",
+                "value": 0.031328
+              },
+              {
+                "name": "RecalcStyleDuration",
+                "value": 0.282625
+              },
+              {
+                "name": "DevToolsCommandDuration",
+                "value": 0.039427
+              },
+              {
+                "name": "ScriptDuration",
+                "value": 1.028249
+              },
+              {
+                "name": "V8CompileDuration",
+                "value": 0.001686
+              },
+              {
+                "name": "TaskDuration",
+                "value": 4.709787
+              },
+              {
+                "name": "TaskOtherDuration",
+                "value": 3.326472
+              },
+              {
+                "name": "ThreadTime",
+                "value": 5.120863
+              },
+              {
+                "name": "ProcessTime",
+                "value": 9.151111
+              },
+              {
+                "name": "JSHeapUsedSize",
+                "value": 35138240
+              },
+              {
+                "name": "JSHeapTotalSize",
+                "value": 39206912
+              },
+              {
+                "name": "FirstMeaningfulPaint",
+                "value": 900760.63736
+              },
+              {
+                "name": "DomContentLoaded",
+                "value": 900760.39544
+              },
+              {
+                "name": "NavigationStart",
+                "value": 900760.314868
+              }
+            ]
+          },
+          "after": {
+            "metrics": [
+              {
+                "name": "Timestamp",
+                "value": 900898.585456
+              },
+              {
+                "name": "AudioHandlers",
+                "value": 0
+              },
+              {
+                "name": "AudioWorkletProcessors",
+                "value": 0
+              },
+              {
+                "name": "Documents",
+                "value": 2
+              },
+              {
+                "name": "Frames",
+                "value": 2
+              },
+              {
+                "name": "JSEventListeners",
+                "value": 1424
+              },
+              {
+                "name": "LayoutObjects",
+                "value": 1825
+              },
+              {
+                "name": "MediaKeySessions",
+                "value": 0
+              },
+              {
+                "name": "MediaKeys",
+                "value": 0
+              },
+              {
+                "name": "Nodes",
+                "value": 2414
+              },
+              {
+                "name": "Resources",
+                "value": 127
+              },
+              {
+                "name": "ContextLifecycleStateObservers",
+                "value": 22
+              },
+              {
+                "name": "V8PerContextDatas",
+                "value": 3
+              },
+              {
+                "name": "WorkerGlobalScopes",
+                "value": 0
+              },
+              {
+                "name": "UACSSResources",
+                "value": 0
+              },
+              {
+                "name": "RTCPeerConnections",
+                "value": 0
+              },
+              {
+                "name": "ResourceFetchers",
+                "value": 2
+              },
+              {
+                "name": "AdSubframes",
+                "value": 0
+              },
+              {
+                "name": "DetachedScriptStates",
+                "value": 0
+              },
+              {
+                "name": "ArrayBufferContents",
+                "value": 3
+              },
+              {
+                "name": "LayoutCount",
+                "value": 60
+              },
+              {
+                "name": "RecalcStyleCount",
+                "value": 902
+              },
+              {
+                "name": "LayoutDuration",
+                "value": 0.031711
+              },
+              {
+                "name": "RecalcStyleDuration",
+                "value": 0.282829
+              },
+              {
+                "name": "DevToolsCommandDuration",
+                "value": 0.039531
+              },
+              {
+                "name": "ScriptDuration",
+                "value": 1.188687
+              },
+              {
+                "name": "V8CompileDuration",
+                "value": 0.001686
+              },
+              {
+                "name": "TaskDuration",
+                "value": 5.228097
+              },
+              {
+                "name": "TaskOtherDuration",
+                "value": 3.683653
+              },
+              {
+                "name": "ThreadTime",
+                "value": 5.705114
+              },
+              {
+                "name": "ProcessTime",
+                "value": 10.227324
+              },
+              {
+                "name": "JSHeapUsedSize",
+                "value": 35011724
+              },
+              {
+                "name": "JSHeapTotalSize",
+                "value": 42614784
+              },
+              {
+                "name": "FirstMeaningfulPaint",
+                "value": 900760.63736
+              },
+              {
+                "name": "DomContentLoaded",
+                "value": 900760.39544
+              },
+              {
+                "name": "NavigationStart",
+                "value": 900760.314868
+              }
+            ]
+          }
+        },
+        "error": null
+      },
+      {
+        "launch": 1,
+        "samples": 20,
+        "coldVisibleMs": 6524,
+        "cleanup": true,
+        "idle": {
+          "ms": 15000,
+          "requests": [
+            {
+              "path": "/api/billing/usage",
+              "method": "GET",
+              "at": 1791056551852,
+              "status": 200,
+              "ms": 509.352,
+              "bytes": {
+                "requestBodySize": 0,
+                "requestHeadersSize": 9194,
+                "responseBodySize": 534,
+                "responseHeadersSize": 698
+              }
+            },
+            {
+              "path": "/api/pull-requests/count",
+              "method": "GET",
+              "at": 1791056555147
+            }
+          ],
+          "before": {
+            "metrics": [
+              {
+                "name": "Timestamp",
+                "value": 901009.852213
+              },
+              {
+                "name": "AudioHandlers",
+                "value": 0
+              },
+              {
+                "name": "AudioWorkletProcessors",
+                "value": 0
+              },
+              {
+                "name": "Documents",
+                "value": 2
+              },
+              {
+                "name": "Frames",
+                "value": 2
+              },
+              {
+                "name": "JSEventListeners",
+                "value": 1400
+              },
+              {
+                "name": "LayoutObjects",
+                "value": 1825
+              },
+              {
+                "name": "MediaKeySessions",
+                "value": 0
+              },
+              {
+                "name": "MediaKeys",
+                "value": 0
+              },
+              {
+                "name": "Nodes",
+                "value": 2414
+              },
+              {
+                "name": "Resources",
+                "value": 128
+              },
+              {
+                "name": "ContextLifecycleStateObservers",
+                "value": 22
+              },
+              {
+                "name": "V8PerContextDatas",
+                "value": 3
+              },
+              {
+                "name": "WorkerGlobalScopes",
+                "value": 0
+              },
+              {
+                "name": "UACSSResources",
+                "value": 0
+              },
+              {
+                "name": "RTCPeerConnections",
+                "value": 0
+              },
+              {
+                "name": "ResourceFetchers",
+                "value": 2
+              },
+              {
+                "name": "AdSubframes",
+                "value": 0
+              },
+              {
+                "name": "DetachedScriptStates",
+                "value": 0
+              },
+              {
+                "name": "ArrayBufferContents",
+                "value": 4
+              },
+              {
+                "name": "LayoutCount",
+                "value": 59
+              },
+              {
+                "name": "RecalcStyleCount",
+                "value": 727
+              },
+              {
+                "name": "LayoutDuration",
+                "value": 0.031907
+              },
+              {
+                "name": "RecalcStyleDuration",
+                "value": 0.259744
+              },
+              {
+                "name": "DevToolsCommandDuration",
+                "value": 0.044149
+              },
+              {
+                "name": "ScriptDuration",
+                "value": 1.096388
+              },
+              {
+                "name": "V8CompileDuration",
+                "value": 0.001628
+              },
+              {
+                "name": "TaskDuration",
+                "value": 4.524409
+              },
+              {
+                "name": "TaskOtherDuration",
+                "value": 3.090593
+              },
+              {
+                "name": "ThreadTime",
+                "value": 4.919189
+              },
+              {
+                "name": "ProcessTime",
+                "value": 9.027603
+              },
+              {
+                "name": "JSHeapUsedSize",
+                "value": 33712860
+              },
+              {
+                "name": "JSHeapTotalSize",
+                "value": 37502976
+              },
+              {
+                "name": "FirstMeaningfulPaint",
+                "value": 900899.578756
+              },
+              {
+                "name": "DomContentLoaded",
+                "value": 900899.53094
+              },
+              {
+                "name": "NavigationStart",
+                "value": 900899.449333
+              }
+            ]
+          },
+          "after": {
+            "metrics": [
+              {
+                "name": "Timestamp",
+                "value": 901024.856171
+              },
+              {
+                "name": "AudioHandlers",
+                "value": 0
+              },
+              {
+                "name": "AudioWorkletProcessors",
+                "value": 0
+              },
+              {
+                "name": "Documents",
+                "value": 2
+              },
+              {
+                "name": "Frames",
+                "value": 2
+              },
+              {
+                "name": "JSEventListeners",
+                "value": 1520
+              },
+              {
+                "name": "LayoutObjects",
+                "value": 1825
+              },
+              {
+                "name": "MediaKeySessions",
+                "value": 0
+              },
+              {
+                "name": "MediaKeys",
+                "value": 0
+              },
+              {
+                "name": "Nodes",
+                "value": 2414
+              },
+              {
+                "name": "Resources",
+                "value": 130
+              },
+              {
+                "name": "ContextLifecycleStateObservers",
+                "value": 22
+              },
+              {
+                "name": "V8PerContextDatas",
+                "value": 3
+              },
+              {
+                "name": "WorkerGlobalScopes",
+                "value": 0
+              },
+              {
+                "name": "UACSSResources",
+                "value": 0
+              },
+              {
+                "name": "RTCPeerConnections",
+                "value": 0
+              },
+              {
+                "name": "ResourceFetchers",
+                "value": 2
+              },
+              {
+                "name": "AdSubframes",
+                "value": 0
+              },
+              {
+                "name": "DetachedScriptStates",
+                "value": 0
+              },
+              {
+                "name": "ArrayBufferContents",
+                "value": 4
+              },
+              {
+                "name": "LayoutCount",
+                "value": 59
+              },
+              {
+                "name": "RecalcStyleCount",
+                "value": 727
+              },
+              {
+                "name": "LayoutDuration",
+                "value": 0.031907
+              },
+              {
+                "name": "RecalcStyleDuration",
+                "value": 0.259744
+              },
+              {
+                "name": "DevToolsCommandDuration",
+                "value": 0.044274
+              },
+              {
+                "name": "ScriptDuration",
+                "value": 1.169445
+              },
+              {
+                "name": "V8CompileDuration",
+                "value": 0.001628
+              },
+              {
+                "name": "TaskDuration",
+                "value": 4.880918
+              },
+              {
+                "name": "TaskOtherDuration",
+                "value": 3.37392
+              },
+              {
+                "name": "ThreadTime",
+                "value": 5.319849
+              },
+              {
+                "name": "ProcessTime",
+                "value": 9.737652
+              },
+              {
+                "name": "JSHeapUsedSize",
+                "value": 33256804
+              },
+              {
+                "name": "JSHeapTotalSize",
+                "value": 36192256
+              },
+              {
+                "name": "FirstMeaningfulPaint",
+                "value": 900899.578756
+              },
+              {
+                "name": "DomContentLoaded",
+                "value": 900899.53094
+              },
+              {
+                "name": "NavigationStart",
+                "value": 900899.449333
+              }
+            ]
+          }
+        },
+        "error": null
+      },
+      {
+        "launch": 2,
+        "samples": 20,
+        "coldVisibleMs": 8534,
+        "cleanup": true,
+        "idle": {
+          "ms": 15000,
+          "requests": [
+            {
+              "path": "/api/billing/usage",
+              "method": "GET",
+              "at": 1791056678372,
+              "status": 200,
+              "ms": 258.661,
+              "bytes": {
+                "requestBodySize": 0,
+                "requestHeadersSize": 9194,
+                "responseBodySize": 534,
+                "responseHeadersSize": 698
+              }
+            }
+          ],
+          "before": {
+            "metrics": [
+              {
+                "name": "Timestamp",
+                "value": 901133.145973
+              },
+              {
+                "name": "AudioHandlers",
+                "value": 0
+              },
+              {
+                "name": "AudioWorkletProcessors",
+                "value": 0
+              },
+              {
+                "name": "Documents",
+                "value": 2
+              },
+              {
+                "name": "Frames",
+                "value": 2
+              },
+              {
+                "name": "JSEventListeners",
+                "value": 1400
+              },
+              {
+                "name": "LayoutObjects",
+                "value": 1825
+              },
+              {
+                "name": "MediaKeySessions",
+                "value": 0
+              },
+              {
+                "name": "MediaKeys",
+                "value": 0
+              },
+              {
+                "name": "Nodes",
+                "value": 2414
+              },
+              {
+                "name": "Resources",
+                "value": 128
+              },
+              {
+                "name": "ContextLifecycleStateObservers",
+                "value": 22
+              },
+              {
+                "name": "V8PerContextDatas",
+                "value": 3
+              },
+              {
+                "name": "WorkerGlobalScopes",
+                "value": 0
+              },
+              {
+                "name": "UACSSResources",
+                "value": 0
+              },
+              {
+                "name": "RTCPeerConnections",
+                "value": 0
+              },
+              {
+                "name": "ResourceFetchers",
+                "value": 2
+              },
+              {
+                "name": "AdSubframes",
+                "value": 0
+              },
+              {
+                "name": "DetachedScriptStates",
+                "value": 0
+              },
+              {
+                "name": "ArrayBufferContents",
+                "value": 4
+              },
+              {
+                "name": "LayoutCount",
+                "value": 61
+              },
+              {
+                "name": "RecalcStyleCount",
+                "value": 978
+              },
+              {
+                "name": "LayoutDuration",
+                "value": 0.031598
+              },
+              {
+                "name": "RecalcStyleDuration",
+                "value": 0.361698
+              },
+              {
+                "name": "DevToolsCommandDuration",
+                "value": 0.049917
+              },
+              {
+                "name": "ScriptDuration",
+                "value": 1.086593
+              },
+              {
+                "name": "V8CompileDuration",
+                "value": 0.001726
+              },
+              {
+                "name": "TaskDuration",
+                "value": 4.637882
+              },
+              {
+                "name": "TaskOtherDuration",
+                "value": 3.10635
+              },
+              {
+                "name": "ThreadTime",
+                "value": 5.018805
+              },
+              {
+                "name": "ProcessTime",
+                "value": 9.099809
+              },
+              {
+                "name": "JSHeapUsedSize",
+                "value": 33639752
+              },
+              {
+                "name": "JSHeapTotalSize",
+                "value": 38551552
+              },
+              {
+                "name": "FirstMeaningfulPaint",
+                "value": 901026.128492
+              },
+              {
+                "name": "DomContentLoaded",
+                "value": 901025.865996
+              },
+              {
+                "name": "NavigationStart",
+                "value": 901025.788327
+              }
+            ]
+          },
+          "after": {
+            "metrics": [
+              {
+                "name": "Timestamp",
+                "value": 901148.148597
+              },
+              {
+                "name": "AudioHandlers",
+                "value": 0
+              },
+              {
+                "name": "AudioWorkletProcessors",
+                "value": 0
+              },
+              {
+                "name": "Documents",
+                "value": 2
+              },
+              {
+                "name": "Frames",
+                "value": 2
+              },
+              {
+                "name": "JSEventListeners",
+                "value": 1520
+              },
+              {
+                "name": "LayoutObjects",
+                "value": 1825
+              },
+              {
+                "name": "MediaKeySessions",
+                "value": 0
+              },
+              {
+                "name": "MediaKeys",
+                "value": 0
+              },
+              {
+                "name": "Nodes",
+                "value": 2414
+              },
+              {
+                "name": "Resources",
+                "value": 129
+              },
+              {
+                "name": "ContextLifecycleStateObservers",
+                "value": 22
+              },
+              {
+                "name": "V8PerContextDatas",
+                "value": 3
+              },
+              {
+                "name": "WorkerGlobalScopes",
+                "value": 0
+              },
+              {
+                "name": "UACSSResources",
+                "value": 0
+              },
+              {
+                "name": "RTCPeerConnections",
+                "value": 0
+              },
+              {
+                "name": "ResourceFetchers",
+                "value": 2
+              },
+              {
+                "name": "AdSubframes",
+                "value": 0
+              },
+              {
+                "name": "DetachedScriptStates",
+                "value": 0
+              },
+              {
+                "name": "ArrayBufferContents",
+                "value": 4
+              },
+              {
+                "name": "LayoutCount",
+                "value": 61
+              },
+              {
+                "name": "RecalcStyleCount",
+                "value": 978
+              },
+              {
+                "name": "LayoutDuration",
+                "value": 0.031598
+              },
+              {
+                "name": "RecalcStyleDuration",
+                "value": 0.361698
+              },
+              {
+                "name": "DevToolsCommandDuration",
+                "value": 0.050045
+              },
+              {
+                "name": "ScriptDuration",
+                "value": 1.168961
+              },
+              {
+                "name": "V8CompileDuration",
+                "value": 0.001726
+              },
+              {
+                "name": "TaskDuration",
+                "value": 5.108505
+              },
+              {
+                "name": "TaskOtherDuration",
+                "value": 3.494477
+              },
+              {
+                "name": "ThreadTime",
+                "value": 5.546246
+              },
+              {
+                "name": "ProcessTime",
+                "value": 10.021579
+              },
+              {
+                "name": "JSHeapUsedSize",
+                "value": 33261916
+              },
+              {
+                "name": "JSHeapTotalSize",
+                "value": 37240832
+              },
+              {
+                "name": "FirstMeaningfulPaint",
+                "value": 901026.128492
+              },
+              {
+                "name": "DomContentLoaded",
+                "value": 901025.865996
+              },
+              {
+                "name": "NavigationStart",
+                "value": 901025.788327
+              }
+            ]
+          }
+        },
+        "error": null
+      }
+    ],
+    "paths": {
+      "339": {
+        "clusterMs": {
+          "n": 30,
+          "median": 2885.75,
+          "p95": 4193.39990234375,
+          "min": 2587.099853515625,
+          "max": 5038.5
+        },
+        "commitsMs": {
+          "n": 30,
+          "median": 1351.8500000238419,
+          "p95": 1980,
+          "min": 1141.3999999761581,
+          "max": 2662.600000023842
+        },
+        "surfaceMs": {
+          "detail": {
+            "n": 30,
+            "median": 2859.050000011921,
+            "p95": 4193.399999976158,
+            "min": 2587,
+            "max": 4484
+          },
+          "readiness": {
+            "n": 30,
+            "median": 2399.449999988079,
+            "p95": 3447.9000000953674,
+            "min": 2136.600000023842,
+            "max": 5038.300000071526
+          },
+          "reviewComments": {
+            "n": 30,
+            "median": 1296.6499999761581,
+            "p95": 1560,
+            "min": 1193.7000000476837,
+            "max": 3044.2000000476837
+          }
+        },
+        "clusterBytes": {
+          "n": 30,
+          "median": 22253.0,
+          "p95": 22253,
+          "min": 22253,
+          "max": 22253
+        },
+        "heads": [
+          "beb79928f2b3a64b9a1a30c053734becb354f1cc"
+        ]
+      },
+      "342": {
+        "clusterMs": {
+          "n": 30,
+          "median": 3871.699951171875,
+          "p95": 6232.5,
+          "min": 3418.699951171875,
+          "max": 7385.5
+        },
+        "commitsMs": {
+          "n": 30,
+          "median": 1800.3999999761581,
+          "p95": 2842.1999999284744,
+          "min": 1516.2000000476837,
+          "max": 3060.7000000476837
+        },
+        "surfaceMs": {
+          "detail": {
+            "n": 30,
+            "median": 3869.449999988079,
+            "p95": 6230.100000023842,
+            "min": 3417,
+            "max": 7383.600000023842
+          },
+          "readiness": {
+            "n": 30,
+            "median": 2881.150000035763,
+            "p95": 4960.899999976158,
+            "min": 2549.100000023842,
+            "max": 5503.899999976158
+          },
+          "reviewComments": {
+            "n": 30,
+            "median": 1306.4500000476837,
+            "p95": 1795.5,
+            "min": 1119.3999999761581,
+            "max": 3674.600000023842
+          }
+        },
+        "clusterBytes": {
+          "n": 30,
+          "median": 670506.0,
+          "p95": 670506,
+          "min": 670506,
+          "max": 670506
+        },
+        "heads": [
+          "4469bb6bda46d16062c0c8274da363d18f646428"
+        ]
+      }
+    },
+    "heapBytes": {
+      "n": 60,
+      "median": 34561310.0,
+      "p95": 48671896,
+      "min": 32491128,
+      "max": 53633808
+    },
+    "rendererCounterDeltas": {
+      "ScriptDuration": {
+        "n": 60,
+        "median": 0.024462499999999998,
+        "p95": 0.060003999999999946,
+        "min": 0.01602999999999999,
+        "max": 0.08843099999999993
+      },
+      "TaskDuration": {
+        "n": 60,
+        "median": 0.15245699999999984,
+        "p95": 0.20230499999999996,
+        "min": 0.10487500000000027,
+        "max": 0.25561599999999984
+      },
+      "ProcessTime": {
+        "n": 60,
+        "median": 0.2975010000000009,
+        "p95": 0.44917399999999974,
+        "min": 0.20323500000000028,
+        "max": 0.5095179999999999
+      },
+      "ThreadTime": {
+        "n": 60,
+        "median": 0.1695184999999999,
+        "p95": 0.22313399999999994,
+        "min": 0.11763499999999993,
+        "max": 0.28384399999999976
+      },
+      "LayoutDuration": {
+        "n": 60,
+        "median": 0.0,
+        "p95": 0.0,
+        "min": 0.0,
+        "max": 0.0005549999999999999
+      },
+      "RecalcStyleDuration": {
+        "n": 60,
+        "median": 0.0,
+        "p95": 0.0003130000000000077,
+        "min": 0.0,
+        "max": 0.0004910000000000192
+      },
+      "LayoutCount": {
+        "n": 60,
+        "median": 0.0,
+        "p95": 0,
+        "min": 0,
+        "max": 2
+      },
+      "RecalcStyleCount": {
+        "n": 60,
+        "median": 0.0,
+        "p95": 2,
+        "min": 0,
+        "max": 5
+      }
+    },
+    "longTasks": null,
+    "slowFrames": null,
+    "errors": []
+  },
+  "candidate": {
+    "provenance": {
+      "label": "pass3e-after-complete",
+      "buildSha": "061615eaea1e815c4b29d4cb842816a4c7a64ee2",
+      "buildId": "rPgiALpOXXHtBUJ0_uuPj",
+      "runtime": {
+        "electron": "43.7.5"
+      },
+      "definition": "Native page-origin live GET cluster; parsed detail/readiness/review surfaces. Separate commits GET. No DOM speedup inference."
+    },
+    "launches": [
+      {
+        "launch": 0,
+        "samples": 20,
+        "coldVisibleMs": 14746,
+        "cleanup": true,
+        "idle": {
+          "ms": 15000,
+          "requests": [
+            {
+              "path": "/api/billing/usage",
+              "method": "GET",
+              "at": 1791057565619,
+              "status": 200,
+              "ms": 457.625,
+              "bytes": {
+                "requestBodySize": 0,
+                "requestHeadersSize": 9194,
+                "responseBodySize": 534,
+                "responseHeadersSize": 698
+              }
+            }
+          ],
+          "before": {
+            "metrics": [
+              {
+                "name": "Timestamp",
+                "value": 902024.021729
+              },
+              {
+                "name": "AudioHandlers",
+                "value": 0
+              },
+              {
+                "name": "AudioWorkletProcessors",
+                "value": 0
+              },
+              {
+                "name": "Documents",
+                "value": 2
+              },
+              {
+                "name": "Frames",
+                "value": 2
+              },
+              {
+                "name": "JSEventListeners",
+                "value": 1592
+              },
+              {
+                "name": "LayoutObjects",
+                "value": 1825
+              },
+              {
+                "name": "MediaKeySessions",
+                "value": 0
+              },
+              {
+                "name": "MediaKeys",
+                "value": 0
+              },
+              {
+                "name": "Nodes",
+                "value": 2414
+              },
+              {
+                "name": "Resources",
+                "value": 148
+              },
+              {
+                "name": "ContextLifecycleStateObservers",
+                "value": 22
+              },
+              {
+                "name": "V8PerContextDatas",
+                "value": 3
+              },
+              {
+                "name": "WorkerGlobalScopes",
+                "value": 0
+              },
+              {
+                "name": "UACSSResources",
+                "value": 0
+              },
+              {
+                "name": "RTCPeerConnections",
+                "value": 0
+              },
+              {
+                "name": "ResourceFetchers",
+                "value": 2
+              },
+              {
+                "name": "AdSubframes",
+                "value": 0
+              },
+              {
+                "name": "DetachedScriptStates",
+                "value": 0
+              },
+              {
+                "name": "ArrayBufferContents",
+                "value": 24
+              },
+              {
+                "name": "LayoutCount",
+                "value": 66
+              },
+              {
+                "name": "RecalcStyleCount",
+                "value": 1774
+              },
+              {
+                "name": "LayoutDuration",
+                "value": 0.043241
+              },
+              {
+                "name": "RecalcStyleDuration",
+                "value": 0.712952
+              },
+              {
+                "name": "DevToolsCommandDuration",
+                "value": 0.048252
+              },
+              {
+                "name": "ScriptDuration",
+                "value": 1.111747
+              },
+              {
+                "name": "V8CompileDuration",
+                "value": 0.001722
+              },
+              {
+                "name": "TaskDuration",
+                "value": 6.257553
+              },
+              {
+                "name": "TaskOtherDuration",
+                "value": 4.339639
+              },
+              {
+                "name": "ThreadTime",
+                "value": 6.617382
+              },
+              {
+                "name": "ProcessTime",
+                "value": 11.638394
+              },
+              {
+                "name": "JSHeapUsedSize",
+                "value": 33956084
+              },
+              {
+                "name": "JSHeapTotalSize",
+                "value": 37502976
+              },
+              {
+                "name": "FirstMeaningfulPaint",
+                "value": 901925.330795
+              },
+              {
+                "name": "DomContentLoaded",
+                "value": 901910.98106
+              },
+              {
+                "name": "NavigationStart",
+                "value": 901910.772792
+              }
+            ]
+          },
+          "after": {
+            "metrics": [
+              {
+                "name": "Timestamp",
+                "value": 902039.024571
+              },
+              {
+                "name": "AudioHandlers",
+                "value": 0
+              },
+              {
+                "name": "AudioWorkletProcessors",
+                "value": 0
+              },
+              {
+                "name": "Documents",
+                "value": 2
+              },
+              {
+                "name": "Frames",
+                "value": 2
+              },
+              {
+                "name": "JSEventListeners",
+                "value": 1448
+              },
+              {
+                "name": "LayoutObjects",
+                "value": 1825
+              },
+              {
+                "name": "MediaKeySessions",
+                "value": 0
+              },
+              {
+                "name": "MediaKeys",
+                "value": 0
+              },
+              {
+                "name": "Nodes",
+                "value": 2414
+              },
+              {
+                "name": "Resources",
+                "value": 128
+              },
+              {
+                "name": "ContextLifecycleStateObservers",
+                "value": 22
+              },
+              {
+                "name": "V8PerContextDatas",
+                "value": 3
+              },
+              {
+                "name": "WorkerGlobalScopes",
+                "value": 0
+              },
+              {
+                "name": "UACSSResources",
+                "value": 0
+              },
+              {
+                "name": "RTCPeerConnections",
+                "value": 0
+              },
+              {
+                "name": "ResourceFetchers",
+                "value": 2
+              },
+              {
+                "name": "AdSubframes",
+                "value": 0
+              },
+              {
+                "name": "DetachedScriptStates",
+                "value": 0
+              },
+              {
+                "name": "ArrayBufferContents",
+                "value": 3
+              },
+              {
+                "name": "LayoutCount",
+                "value": 66
+              },
+              {
+                "name": "RecalcStyleCount",
+                "value": 1774
+              },
+              {
+                "name": "LayoutDuration",
+                "value": 0.043241
+              },
+              {
+                "name": "RecalcStyleDuration",
+                "value": 0.712952
+              },
+              {
+                "name": "DevToolsCommandDuration",
+                "value": 0.048331
+              },
+              {
+                "name": "ScriptDuration",
+                "value": 1.182488
+              },
+              {
+                "name": "V8CompileDuration",
+                "value": 0.001722
+              },
+              {
+                "name": "TaskDuration",
+                "value": 6.615142
+              },
+              {
+                "name": "TaskOtherDuration",
+                "value": 4.626408
+              },
+              {
+                "name": "ThreadTime",
+                "value": 7.016373
+              },
+              {
+                "name": "ProcessTime",
+                "value": 12.381779
+              },
+              {
+                "name": "JSHeapUsedSize",
+                "value": 33696172
+              },
+              {
+                "name": "JSHeapTotalSize",
+                "value": 36716544
+              },
+              {
+                "name": "FirstMeaningfulPaint",
+                "value": 901925.330795
+              },
+              {
+                "name": "DomContentLoaded",
+                "value": 901910.98106
+              },
+              {
+                "name": "NavigationStart",
+                "value": 901910.772792
+              }
+            ]
+          }
+        },
+        "error": null
+      },
+      {
+        "launch": 1,
+        "samples": 20,
+        "coldVisibleMs": 6020,
+        "cleanup": true,
+        "idle": {
+          "ms": 15000,
+          "requests": [],
+          "before": {
+            "metrics": [
+              {
+                "name": "Timestamp",
+                "value": 902139.034849
+              },
+              {
+                "name": "AudioHandlers",
+                "value": 0
+              },
+              {
+                "name": "AudioWorkletProcessors",
+                "value": 0
+              },
+              {
+                "name": "Documents",
+                "value": 2
+              },
+              {
+                "name": "Frames",
+                "value": 2
+              },
+              {
+                "name": "JSEventListeners",
+                "value": 1544
+              },
+              {
+                "name": "LayoutObjects",
+                "value": 1825
+              },
+              {
+                "name": "MediaKeySessions",
+                "value": 0
+              },
+              {
+                "name": "MediaKeys",
+                "value": 0
+              },
+              {
+                "name": "Nodes",
+                "value": 2414
+              },
+              {
+                "name": "Resources",
+                "value": 144
+              },
+              {
+                "name": "ContextLifecycleStateObservers",
+                "value": 22
+              },
+              {
+                "name": "V8PerContextDatas",
+                "value": 3
+              },
+              {
+                "name": "WorkerGlobalScopes",
+                "value": 0
+              },
+              {
+                "name": "UACSSResources",
+                "value": 0
+              },
+              {
+                "name": "RTCPeerConnections",
+                "value": 0
+              },
+              {
+                "name": "ResourceFetchers",
+                "value": 2
+              },
+              {
+                "name": "AdSubframes",
+                "value": 0
+              },
+              {
+                "name": "DetachedScriptStates",
+                "value": 0
+              },
+              {
+                "name": "ArrayBufferContents",
+                "value": 20
+              },
+              {
+                "name": "LayoutCount",
+                "value": 58
+              },
+              {
+                "name": "RecalcStyleCount",
+                "value": 676
+              },
+              {
+                "name": "LayoutDuration",
+                "value": 0.030891
+              },
+              {
+                "name": "RecalcStyleDuration",
+                "value": 0.252007
+              },
+              {
+                "name": "DevToolsCommandDuration",
+                "value": 0.045611
+              },
+              {
+                "name": "ScriptDuration",
+                "value": 1.01853
+              },
+              {
+                "name": "V8CompileDuration",
+                "value": 0.001434
+              },
+              {
+                "name": "TaskDuration",
+                "value": 4.117263
+              },
+              {
+                "name": "TaskOtherDuration",
+                "value": 2.76879
+              },
+              {
+                "name": "ThreadTime",
+                "value": 4.474015
+              },
+              {
+                "name": "ProcessTime",
+                "value": 7.993908
+              },
+              {
+                "name": "JSHeapUsedSize",
+                "value": 35059304
+              },
+              {
+                "name": "JSHeapTotalSize",
+                "value": 38158336
+              },
+              {
+                "name": "FirstMeaningfulPaint",
+                "value": 902039.959743
+              },
+              {
+                "name": "DomContentLoaded",
+                "value": 902039.714755
+              },
+              {
+                "name": "NavigationStart",
+                "value": 902039.649132
+              }
+            ]
+          },
+          "after": {
+            "metrics": [
+              {
+                "name": "Timestamp",
+                "value": 902154.038558
+              },
+              {
+                "name": "AudioHandlers",
+                "value": 0
+              },
+              {
+                "name": "AudioWorkletProcessors",
+                "value": 0
+              },
+              {
+                "name": "Documents",
+                "value": 2
+              },
+              {
+                "name": "Frames",
+                "value": 2
+              },
+              {
+                "name": "JSEventListeners",
+                "value": 1664
+              },
+              {
+                "name": "LayoutObjects",
+                "value": 1825
+              },
+              {
+                "name": "MediaKeySessions",
+                "value": 0
+              },
+              {
+                "name": "MediaKeys",
+                "value": 0
+              },
+              {
+                "name": "Nodes",
+                "value": 2414
+              },
+              {
+                "name": "Resources",
+                "value": 144
+              },
+              {
+                "name": "ContextLifecycleStateObservers",
+                "value": 22
+              },
+              {
+                "name": "V8PerContextDatas",
+                "value": 3
+              },
+              {
+                "name": "WorkerGlobalScopes",
+                "value": 0
+              },
+              {
+                "name": "UACSSResources",
+                "value": 0
+              },
+              {
+                "name": "RTCPeerConnections",
+                "value": 0
+              },
+              {
+                "name": "ResourceFetchers",
+                "value": 2
+              },
+              {
+                "name": "AdSubframes",
+                "value": 0
+              },
+              {
+                "name": "DetachedScriptStates",
+                "value": 0
+              },
+              {
+                "name": "ArrayBufferContents",
+                "value": 20
+              },
+              {
+                "name": "LayoutCount",
+                "value": 58
+              },
+              {
+                "name": "RecalcStyleCount",
+                "value": 676
+              },
+              {
+                "name": "LayoutDuration",
+                "value": 0.030891
+              },
+              {
+                "name": "RecalcStyleDuration",
+                "value": 0.252007
+              },
+              {
+                "name": "DevToolsCommandDuration",
+                "value": 0.04574
+              },
+              {
+                "name": "ScriptDuration",
+                "value": 1.091171
+              },
+              {
+                "name": "V8CompileDuration",
+                "value": 0.001434
+              },
+              {
+                "name": "TaskDuration",
+                "value": 4.509531
+              },
+              {
+                "name": "TaskOtherDuration",
+                "value": 3.088288
+              },
+              {
+                "name": "ThreadTime",
+                "value": 4.915006
+              },
+              {
+                "name": "ProcessTime",
+                "value": 8.764118
+              },
+              {
+                "name": "JSHeapUsedSize",
+                "value": 35048952
+              },
+              {
+                "name": "JSHeapTotalSize",
+                "value": 37109760
+              },
+              {
+                "name": "FirstMeaningfulPaint",
+                "value": 902039.959743
+              },
+              {
+                "name": "DomContentLoaded",
+                "value": 902039.714755
+              },
+              {
+                "name": "NavigationStart",
+                "value": 902039.649132
+              }
+            ]
+          }
+        },
+        "error": null
+      },
+      {
+        "launch": 2,
+        "samples": 20,
+        "coldVisibleMs": 6014,
+        "cleanup": true,
+        "idle": {
+          "ms": 15000,
+          "requests": [],
+          "before": {
+            "metrics": [
+              {
+                "name": "Timestamp",
+                "value": 902249.035772
+              },
+              {
+                "name": "AudioHandlers",
+                "value": 0
+              },
+              {
+                "name": "AudioWorkletProcessors",
+                "value": 0
+              },
+              {
+                "name": "Documents",
+                "value": 2
+              },
+              {
+                "name": "Frames",
+                "value": 2
+              },
+              {
+                "name": "JSEventListeners",
+                "value": 1472
+              },
+              {
+                "name": "LayoutObjects",
+                "value": 1825
+              },
+              {
+                "name": "MediaKeySessions",
+                "value": 0
+              },
+              {
+                "name": "MediaKeys",
+                "value": 0
+              },
+              {
+                "name": "Nodes",
+                "value": 2414
+              },
+              {
+                "name": "Resources",
+                "value": 136
+              },
+              {
+                "name": "ContextLifecycleStateObservers",
+                "value": 22
+              },
+              {
+                "name": "V8PerContextDatas",
+                "value": 3
+              },
+              {
+                "name": "WorkerGlobalScopes",
+                "value": 0
+              },
+              {
+                "name": "UACSSResources",
+                "value": 0
+              },
+              {
+                "name": "RTCPeerConnections",
+                "value": 0
+              },
+              {
+                "name": "ResourceFetchers",
+                "value": 2
+              },
+              {
+                "name": "AdSubframes",
+                "value": 0
+              },
+              {
+                "name": "DetachedScriptStates",
+                "value": 0
+              },
+              {
+                "name": "ArrayBufferContents",
+                "value": 12
+              },
+              {
+                "name": "LayoutCount",
+                "value": 60
+              },
+              {
+                "name": "RecalcStyleCount",
+                "value": 717
+              },
+              {
+                "name": "LayoutDuration",
+                "value": 0.032197
+              },
+              {
+                "name": "RecalcStyleDuration",
+                "value": 0.264875
+              },
+              {
+                "name": "DevToolsCommandDuration",
+                "value": 0.038782
+              },
+              {
+                "name": "ScriptDuration",
+                "value": 0.964435
+              },
+              {
+                "name": "V8CompileDuration",
+                "value": 0.001847
+              },
+              {
+                "name": "TaskDuration",
+                "value": 4.206712
+              },
+              {
+                "name": "TaskOtherDuration",
+                "value": 2.904576
+              },
+              {
+                "name": "ThreadTime",
+                "value": 4.552976
+              },
+              {
+                "name": "ProcessTime",
+                "value": 8.199021
+              },
+              {
+                "name": "JSHeapUsedSize",
+                "value": 34523584
+              },
+              {
+                "name": "JSHeapTotalSize",
+                "value": 38813696
+              },
+              {
+                "name": "FirstMeaningfulPaint",
+                "value": 902155.10117
+              },
+              {
+                "name": "DomContentLoaded",
+                "value": 902154.865505
+              },
+              {
+                "name": "NavigationStart",
+                "value": 902154.804046
+              }
+            ]
+          },
+          "after": {
+            "metrics": [
+              {
+                "name": "Timestamp",
+                "value": 902264.036857
+              },
+              {
+                "name": "AudioHandlers",
+                "value": 0
+              },
+              {
+                "name": "AudioWorkletProcessors",
+                "value": 0
+              },
+              {
+                "name": "Documents",
+                "value": 2
+              },
+              {
+                "name": "Frames",
+                "value": 2
+              },
+              {
+                "name": "JSEventListeners",
+                "value": 1592
+              },
+              {
+                "name": "LayoutObjects",
+                "value": 1825
+              },
+              {
+                "name": "MediaKeySessions",
+                "value": 0
+              },
+              {
+                "name": "MediaKeys",
+                "value": 0
+              },
+              {
+                "name": "Nodes",
+                "value": 2414
+              },
+              {
+                "name": "Resources",
+                "value": 136
+              },
+              {
+                "name": "ContextLifecycleStateObservers",
+                "value": 22
+              },
+              {
+                "name": "V8PerContextDatas",
+                "value": 3
+              },
+              {
+                "name": "WorkerGlobalScopes",
+                "value": 0
+              },
+              {
+                "name": "UACSSResources",
+                "value": 0
+              },
+              {
+                "name": "RTCPeerConnections",
+                "value": 0
+              },
+              {
+                "name": "ResourceFetchers",
+                "value": 2
+              },
+              {
+                "name": "AdSubframes",
+                "value": 0
+              },
+              {
+                "name": "DetachedScriptStates",
+                "value": 0
+              },
+              {
+                "name": "ArrayBufferContents",
+                "value": 12
+              },
+              {
+                "name": "LayoutCount",
+                "value": 60
+              },
+              {
+                "name": "RecalcStyleCount",
+                "value": 717
+              },
+              {
+                "name": "LayoutDuration",
+                "value": 0.032197
+              },
+              {
+                "name": "RecalcStyleDuration",
+                "value": 0.264875
+              },
+              {
+                "name": "DevToolsCommandDuration",
+                "value": 0.038871
+              },
+              {
+                "name": "ScriptDuration",
+                "value": 1.030792
+              },
+              {
+                "name": "V8CompileDuration",
+                "value": 0.001847
+              },
+              {
+                "name": "TaskDuration",
+                "value": 4.559976
+              },
+              {
+                "name": "TaskOtherDuration",
+                "value": 3.191394
+              },
+              {
+                "name": "ThreadTime",
+                "value": 4.950407
+              },
+              {
+                "name": "ProcessTime",
+                "value": 8.883484
+              },
+              {
+                "name": "JSHeapUsedSize",
+                "value": 34614928
+              },
+              {
+                "name": "JSHeapTotalSize",
+                "value": 38289408
+              },
+              {
+                "name": "FirstMeaningfulPaint",
+                "value": 902155.10117
+              },
+              {
+                "name": "DomContentLoaded",
+                "value": 902154.865505
+              },
+              {
+                "name": "NavigationStart",
+                "value": 902154.804046
+              }
+            ]
+          }
+        },
+        "error": null
+      }
+    ],
+    "paths": {
+      "339": {
+        "clusterMs": {
+          "n": 30,
+          "median": 2628.6998291015625,
+          "p95": 3546.10009765625,
+          "min": 2230.7998046875,
+          "max": 3819.099853515625
+        },
+        "commitsMs": {
+          "n": 30,
+          "median": 937.1000000238419,
+          "p95": 1199.8000000715256,
+          "min": 831.6000000238419,
+          "max": 1837.8000000715256
+        },
+        "surfaceMs": {
+          "detail": {
+            "n": 30,
+            "median": 2628.399999976158,
+            "p95": 3545.899999976158,
+            "min": 2230.7000000476837,
+            "max": 3819
+          },
+          "readiness": {
+            "n": 30,
+            "median": 2122.8500000834465,
+            "p95": 2827.600000023842,
+            "min": 1817.2999999523163,
+            "max": 2937.0999999046326
+          },
+          "reviewComments": {
+            "n": 30,
+            "median": 1303.75,
+            "p95": 1764,
+            "min": 1147,
+            "max": 2072.1999999284744
+          }
+        },
+        "clusterBytes": {
+          "n": 30,
+          "median": 22253.0,
+          "p95": 22253,
+          "min": 22253,
+          "max": 22253
+        },
+        "heads": [
+          "beb79928f2b3a64b9a1a30c053734becb354f1cc"
+        ]
+      },
+      "342": {
+        "clusterMs": {
+          "n": 30,
+          "median": 3906.300048828125,
+          "p95": 4762.89990234375,
+          "min": 3256.10009765625,
+          "max": 5361.5
+        },
+        "commitsMs": {
+          "n": 30,
+          "median": 1491.9500000476837,
+          "p95": 1934.2000000476837,
+          "min": 1203.3999999761581,
+          "max": 1936.6000000238419
+        },
+        "surfaceMs": {
+          "detail": {
+            "n": 30,
+            "median": 3904.150000035763,
+            "p95": 4760.700000047684,
+            "min": 3254.5,
+            "max": 5359.199999928474
+          },
+          "readiness": {
+            "n": 30,
+            "median": 2599.050000011921,
+            "p95": 3225.7999999523163,
+            "min": 2120.7999999523163,
+            "max": 3512.899999976158
+          },
+          "reviewComments": {
+            "n": 30,
+            "median": 1312.300000011921,
+            "p95": 1986.5,
+            "min": 1160.2000000476837,
+            "max": 2012.0999999046326
+          }
+        },
+        "clusterBytes": {
+          "n": 30,
+          "median": 670506.0,
+          "p95": 670506,
+          "min": 670506,
+          "max": 670506
+        },
+        "heads": [
+          "4469bb6bda46d16062c0c8274da363d18f646428"
+        ]
+      }
+    },
+    "heapBytes": {
+      "n": 60,
+      "median": 34068068.0,
+      "p95": 62788596,
+      "min": 32706660,
+      "max": 66084016
+    },
+    "rendererCounterDeltas": {
+      "ScriptDuration": {
+        "n": 60,
+        "median": 0.02321599999999996,
+        "p95": 0.04796100000000003,
+        "min": 0.015360999999999958,
+        "max": 0.10366600000000004
+      },
+      "TaskDuration": {
+        "n": 60,
+        "median": 0.13478749999999984,
+        "p95": 0.19119699999999984,
+        "min": 0.08555099999999971,
+        "max": 0.24960899999999997
+      },
+      "ProcessTime": {
+        "n": 60,
+        "median": 0.2679769999999997,
+        "p95": 0.45985999999999994,
+        "min": 0.16083200000000009,
+        "max": 0.4920030000000004
+      },
+      "ThreadTime": {
+        "n": 60,
+        "median": 0.15075949999999994,
+        "p95": 0.20813799999999993,
+        "min": 0.09579400000000016,
+        "max": 0.2858369999999999
+      },
+      "LayoutDuration": {
+        "n": 60,
+        "median": 0.0,
+        "p95": 0.00027699999999999947,
+        "min": 0.0,
+        "max": 0.00037400000000000627
+      },
+      "RecalcStyleDuration": {
+        "n": 60,
+        "median": 0.0,
+        "p95": 0.0003030000000000532,
+        "min": 0.0,
+        "max": 0.00624199999999997
+      },
+      "LayoutCount": {
+        "n": 60,
+        "median": 0.0,
+        "p95": 1,
+        "min": 0,
+        "max": 2
+      },
+      "RecalcStyleCount": {
+        "n": 60,
+        "median": 0.0,
+        "p95": 2,
+        "min": 0,
+        "max": 21
+      }
+    },
+    "longTasks": null,
+    "slowFrames": null,
+    "errors": []
+  },
+  "allObservedBaselineIncludingStoppedLaunch": {
+    "provenance": {
+      "label": "pass3e-before",
+      "buildSha": "05c69168e39aa8369cf4fcbc83dd5e3a41abf3f2",
+      "buildId": "sii2TG6an7DIIeXDU7nBR",
+      "runtime": {
+        "electron": "43.7.5"
+      },
+      "definition": "Native page-origin live GET cluster; parsed detail/readiness/review surfaces. Separate commits GET. No DOM speedup inference."
+    },
+    "launches": [
+      {
+        "launch": 0,
+        "samples": 20,
+        "coldVisibleMs": 6233,
+        "cleanup": true,
+        "idle": {
+          "ms": 15000,
+          "requests": [],
+          "before": {
+            "metrics": [
+              {
+                "name": "Timestamp",
+                "value": 900686.33866
+              },
+              {
+                "name": "AudioHandlers",
+                "value": 0
+              },
+              {
+                "name": "AudioWorkletProcessors",
+                "value": 0
+              },
+              {
+                "name": "Documents",
+                "value": 2
+              },
+              {
+                "name": "Frames",
+                "value": 2
+              },
+              {
+                "name": "JSEventListeners",
+                "value": 1552
+              },
+              {
+                "name": "LayoutObjects",
+                "value": 1825
+              },
+              {
+                "name": "MediaKeySessions",
+                "value": 0
+              },
+              {
+                "name": "MediaKeys",
+                "value": 0
+              },
+              {
+                "name": "Nodes",
+                "value": 2414
+              },
+              {
+                "name": "Resources",
+                "value": 144
+              },
+              {
+                "name": "ContextLifecycleStateObservers",
+                "value": 22
+              },
+              {
+                "name": "V8PerContextDatas",
+                "value": 3
+              },
+              {
+                "name": "WorkerGlobalScopes",
+                "value": 0
+              },
+              {
+                "name": "UACSSResources",
+                "value": 0
+              },
+              {
+                "name": "RTCPeerConnections",
+                "value": 0
+              },
+              {
+                "name": "ResourceFetchers",
+                "value": 2
+              },
+              {
+                "name": "AdSubframes",
+                "value": 0
+              },
+              {
+                "name": "DetachedScriptStates",
+                "value": 0
+              },
+              {
+                "name": "ArrayBufferContents",
+                "value": 20
+              },
+              {
+                "name": "LayoutCount",
+                "value": 55
+              },
+              {
+                "name": "RecalcStyleCount",
+                "value": 607
+              },
+              {
+                "name": "LayoutDuration",
+                "value": 0.030112
+              },
+              {
+                "name": "RecalcStyleDuration",
+                "value": 0.231963
+              },
+              {
+                "name": "DevToolsCommandDuration",
+                "value": 0.041837
+              },
+              {
+                "name": "ScriptDuration",
+                "value": 1.022527
+              },
+              {
+                "name": "V8CompileDuration",
+                "value": 0.001694
+              },
+              {
+                "name": "TaskDuration",
+                "value": 4.215579
+              },
+              {
+                "name": "TaskOtherDuration",
+                "value": 2.887446
+              },
+              {
+                "name": "ThreadTime",
+                "value": 4.581329
+              },
+              {
+                "name": "ProcessTime",
+                "value": 8.193776
+              },
+              {
+                "name": "JSHeapUsedSize",
+                "value": 34855156
+              },
+              {
+                "name": "JSHeapTotalSize",
+                "value": 39206912
+              },
+              {
+                "name": "FirstMeaningfulPaint",
+                "value": 900584.229397
+              },
+              {
+                "name": "DomContentLoaded",
+                "value": 900583.650075
+              },
+              {
+                "name": "NavigationStart",
+                "value": 900583.44994
+              }
+            ]
+          },
+          "after": {
+            "metrics": [
+              {
+                "name": "Timestamp",
+                "value": 900701.342588
+              },
+              {
+                "name": "AudioHandlers",
+                "value": 0
+              },
+              {
+                "name": "AudioWorkletProcessors",
+                "value": 0
+              },
+              {
+                "name": "Documents",
+                "value": 2
+              },
+              {
+                "name": "Frames",
+                "value": 2
+              },
+              {
+                "name": "JSEventListeners",
+                "value": 1672
+              },
+              {
+                "name": "LayoutObjects",
+                "value": 1825
+              },
+              {
+                "name": "MediaKeySessions",
+                "value": 0
+              },
+              {
+                "name": "MediaKeys",
+                "value": 0
+              },
+              {
+                "name": "Nodes",
+                "value": 2414
+              },
+              {
+                "name": "Resources",
+                "value": 144
+              },
+              {
+                "name": "ContextLifecycleStateObservers",
+                "value": 22
+              },
+              {
+                "name": "V8PerContextDatas",
+                "value": 3
+              },
+              {
+                "name": "WorkerGlobalScopes",
+                "value": 0
+              },
+              {
+                "name": "UACSSResources",
+                "value": 0
+              },
+              {
+                "name": "RTCPeerConnections",
+                "value": 0
+              },
+              {
+                "name": "ResourceFetchers",
+                "value": 2
+              },
+              {
+                "name": "AdSubframes",
+                "value": 0
+              },
+              {
+                "name": "DetachedScriptStates",
+                "value": 0
+              },
+              {
+                "name": "ArrayBufferContents",
+                "value": 20
+              },
+              {
+                "name": "LayoutCount",
+                "value": 55
+              },
+              {
+                "name": "RecalcStyleCount",
+                "value": 607
+              },
+              {
+                "name": "LayoutDuration",
+                "value": 0.030112
+              },
+              {
+                "name": "RecalcStyleDuration",
+                "value": 0.231963
+              },
+              {
+                "name": "DevToolsCommandDuration",
+                "value": 0.041994
+              },
+              {
+                "name": "ScriptDuration",
+                "value": 1.089924
+              },
+              {
+                "name": "V8CompileDuration",
+                "value": 0.001694
+              },
+              {
+                "name": "TaskDuration",
+                "value": 4.542014
+              },
+              {
+                "name": "TaskOtherDuration",
+                "value": 3.146327
+              },
+              {
+                "name": "ThreadTime",
+                "value": 4.949191
+              },
+              {
+                "name": "ProcessTime",
+                "value": 8.831953
+              },
+              {
+                "name": "JSHeapUsedSize",
+                "value": 34698600
+              },
+              {
+                "name": "JSHeapTotalSize",
+                "value": 38682624
+              },
+              {
+                "name": "FirstMeaningfulPaint",
+                "value": 900584.229397
+              },
+              {
+                "name": "DomContentLoaded",
+                "value": 900583.650075
+              },
+              {
+                "name": "NavigationStart",
+                "value": 900583.44994
+              }
+            ]
+          }
+        },
+        "error": null
+      }
+    ],
+    "paths": {
+      "339": {
+        "clusterMs": {
+          "n": 10,
+          "median": 2784.550048828125,
+          "p95": 3202.89990234375,
+          "min": 2595.39990234375,
+          "max": 3202.89990234375
+        },
+        "commitsMs": {
+          "n": 10,
+          "median": 1265.699999988079,
+          "p95": 1338.1000000238419,
+          "min": 1158.3999999761581,
+          "max": 1338.1000000238419
+        },
+        "surfaceMs": {
+          "detail": {
+            "n": 10,
+            "median": 2784.400000035763,
+            "p95": 3202.7000000476837,
+            "min": 2595.2000000476837,
+            "max": 3202.7000000476837
+          },
+          "readiness": {
+            "n": 10,
+            "median": 2403.5000000596046,
+            "p95": 2741.399999976158,
+            "min": 2142.399999976158,
+            "max": 2741.399999976158
+          },
+          "reviewComments": {
+            "n": 10,
+            "median": 1357.449999988079,
+            "p95": 1419.3999999761581,
+            "min": 1205.1999999284744,
+            "max": 1419.3999999761581
+          }
+        },
+        "clusterBytes": {
+          "n": 10,
+          "median": 22253.0,
+          "p95": 22253,
+          "min": 22253,
+          "max": 22253
+        },
+        "heads": [
+          "beb79928f2b3a64b9a1a30c053734becb354f1cc"
+        ]
+      },
+      "342": {
+        "clusterMs": {
+          "n": 10,
+          "median": 3708.25,
+          "p95": 4034.39990234375,
+          "min": 3333.39990234375,
+          "max": 4034.39990234375
+        },
+        "commitsMs": {
+          "n": 10,
+          "median": 1756.2999999523163,
+          "p95": 2297.7000000476837,
+          "min": 1272.5,
+          "max": 2297.7000000476837
+        },
+        "surfaceMs": {
+          "detail": {
+            "n": 10,
+            "median": 3706.7000000476837,
+            "p95": 4032.2000000476837,
+            "min": 3331,
+            "max": 4032.2000000476837
+          },
+          "readiness": {
+            "n": 10,
+            "median": 2618.800000011921,
+            "p95": 2962.5,
+            "min": 2388.600000023842,
+            "max": 2962.5
+          },
+          "reviewComments": {
+            "n": 10,
+            "median": 1274.1499999761581,
+            "p95": 1416.8000000715256,
+            "min": 1197.9000000953674,
+            "max": 1416.8000000715256
+          }
+        },
+        "clusterBytes": {
+          "n": 10,
+          "median": 670506.0,
+          "p95": 670506,
+          "min": 670506,
+          "max": 670506
+        },
+        "heads": [
+          "4469bb6bda46d16062c0c8274da363d18f646428"
+        ]
+      }
+    },
+    "heapBytes": {
+      "n": 20,
+      "median": 34700624.0,
+      "p95": 64223204,
+      "min": 33813136,
+      "max": 64915728
+    },
+    "rendererCounterDeltas": {
+      "ScriptDuration": {
+        "n": 20,
+        "median": 0.025255999999999973,
+        "p95": 0.04918699999999998,
+        "min": 0.011956999999999995,
+        "max": 0.08271600000000001
+      },
+      "TaskDuration": {
+        "n": 20,
+        "median": 0.15014850000000024,
+        "p95": 0.18802200000000013,
+        "min": 0.07837300000000003,
+        "max": 0.19624299999999995
+      },
+      "ProcessTime": {
+        "n": 20,
+        "median": 0.2814595,
+        "p95": 0.4061179999999993,
+        "min": 0.1494099999999996,
+        "max": 0.48851800000000045
+      },
+      "ThreadTime": {
+        "n": 20,
+        "median": 0.16788650000000027,
+        "p95": 0.20930399999999993,
+        "min": 0.08768699999999985,
+        "max": 0.21656300000000028
+      },
+      "LayoutDuration": {
+        "n": 20,
+        "median": 0.0,
+        "p95": 0.0,
+        "min": 0.0,
+        "max": 0.00041400000000000117
+      },
+      "RecalcStyleDuration": {
+        "n": 20,
+        "median": 0.0,
+        "p95": 0.0003720000000000112,
+        "min": 0.0,
+        "max": 0.0006239999999999857
+      },
+      "LayoutCount": {
+        "n": 20,
+        "median": 0.0,
+        "p95": 0,
+        "min": 0,
+        "max": 2
+      },
+      "RecalcStyleCount": {
+        "n": 20,
+        "median": 0.0,
+        "p95": 2,
+        "min": 0,
+        "max": 4
+      }
+    },
+    "longTasks": null,
+    "slowFrames": null,
+    "errors": []
+  },
+  "upstream": {
+    "baseline": {
+      "definition": "Global server observations in native warm cluster intervals, including active/background consumers; overlap lasts until headers, not body completion. Not per-request AES attribution.",
+      "githubStarts": 1839,
+      "identicalOverlapStarts": 491,
+      "endpointStarts": {
+        "/repos/$repository/pulls/339": 60,
+        "/repos/$repository/pulls/339/comments": 30,
+        "/graphql": 385,
+        "/repos/$repository/pulls/339/files": 30,
+        "/repos/$repository/pulls/339/reviews": 60,
+        "/repos/$repository": 129,
+        "/repos/$repository/issues/339/comments": 30,
+        "/repos/$repository/deployments": 120,
+        "/repos/$repository/branches/$branch/protection": 129,
+        "/repos/$repository/rules/branches/$branch": 129,
+        "/repos/$repository/commits/$sha/check-runs": 128,
+        "/repos/$repository/commits/$sha/status": 128,
+        "/repos/$repository/deployments/$deployment/statuses": 30,
+        "/repos/$repository/commits/$sha": 60,
+        "/repos/$repository/pulls/342": 62,
+        "/repos/$repository/pulls/342/comments": 30,
+        "/repos/$repository/pulls/342/reviews": 64,
+        "/repos/$repository/pulls/342/files": 150,
+        "/repos/$repository/issues/342/comments": 34,
+        "/repos/$repository/deployments/$deployment/statuses": 30,
+        "/repos/$repository/issues/342/timeline": 4,
+        "/repos/$repository/pulls/342/commits": 7,
+        "/repos/$repository/pulls/344/reviews": 4,
+        "/repos/$repository/pulls/344": 2,
+        "/repos/$repository/pulls": 4
+      },
+      "databaseOperations": {
+        "rest/v1/forge_repository_names": 4338,
+        "rest/v1/pull_requests": 1454,
+        "rest/v1/envelope_data_keys": 8895,
+        "rest/v1/rpc/upsert_pull_request_monotonic": 1157,
+        "rest/v1/rpc/auth_authorization_state": 223,
+        "rest/v1/issues": 12,
+        "rest/v1/projects": 228,
+        "rest/v1/project_members": 29,
+        "rest/v1/project_git_links": 215,
+        "rest/v1/git_user_identities": 165,
+        "rest/v1/pull_request_syncs": 18,
+        "rest/v1/pull_request_issues": 6,
+        "rest/v1/agent_runs": 5,
+        "rest/v1/agent_quota_resets": 4,
+        "rest/v1/billing_accounts": 4,
+        "rest/v1/rpc/get_user_usage_since": 3
+      },
+      "githubHeadersMs": {
+        "n": 1845,
+        "median": 352.0390419999603,
+        "p95": 704.8527919999324,
+        "min": 218.97254200000316,
+        "max": 5509.694374999963
+      },
+      "databaseHeadersMs": {
+        "n": 16756,
+        "median": 190.95185450004647,
+        "p95": 10260.236665999983,
+        "min": 48.28420900006313,
+        "max": 10494.690708999988
+      },
+      "githubStatuses": {
+        "200": 1717,
+        "403": 128
+      },
+      "conditional": 0,
+      "notModified": 0,
+      "quotaHeaderObservations": 1845,
+      "quotaMinimumByResource": {
+        "core": 2310,
+        "graphql": 4640
+      }
+    },
+    "candidate": {
+      "definition": "Global server observations in native warm cluster intervals, including active/background consumers; overlap lasts until headers, not body completion. Not per-request AES attribution.",
+      "githubStarts": 1302,
+      "identicalOverlapStarts": 0,
+      "endpointStarts": {
+        "/repos/$repository/pulls/339": 30,
+        "/repos/$repository/pulls/339/comments": 30,
+        "/graphql": 273,
+        "/repos/$repository/pulls/339/files": 30,
+        "/repos/$repository/pulls/339/reviews": 30,
+        "/repos/$repository": 65,
+        "/repos/$repository/branches/$branch/protection": 65,
+        "/repos/$repository/rules/branches/$branch": 64,
+        "/repos/$repository/issues/339/comments": 30,
+        "/repos/$repository/deployments": 120,
+        "/repos/$repository/commits/$sha/check-runs": 69,
+        "/repos/$repository/commits/$sha/status": 69,
+        "/repos/$repository/deployments/$deployment/statuses": 30,
+        "/repos/$repository/commits/$sha": 60,
+        "/repos/$repository/pulls/342": 35,
+        "/repos/$repository/pulls/342/comments": 30,
+        "/repos/$repository/pulls/342/reviews": 34,
+        "/repos/$repository/pulls/342/files": 150,
+        "/repos/$repository/issues/342/comments": 35,
+        "/repos/$repository/deployments/$deployment/statuses": 30,
+        "/repos/$repository/pulls/344": 6,
+        "/repos/$repository/pulls/344/reviews": 5,
+        "/repos/$repository/pulls/342/commits": 6,
+        "/repos/$repository/issues/342/timeline": 5,
+        "/repos/$repository/pulls": 1
+      },
+      "databaseOperations": {
+        "rest/v1/envelope_data_keys": 1028,
+        "rest/v1/rpc/auth_authorization_state": 217,
+        "rest/v1/projects": 229,
+        "rest/v1/pull_requests": 298,
+        "rest/v1/project_members": 24,
+        "rest/v1/forge_repository_names": 966,
+        "rest/v1/project_git_links": 220,
+        "rest/v1/git_user_identities": 133,
+        "rest/v1/rpc/upsert_pull_request_monotonic": 62,
+        "rest/v1/pull_request_syncs": 19,
+        "rest/v1/pull_request_issues": 5,
+        "rest/v1/issues": 5,
+        "rest/v1/agent_runs": 5,
+        "rest/v1/billing_accounts": 6,
+        "rest/v1/agent_quota_resets": 6,
+        "rest/v1/rpc/get_user_usage_since": 6
+      },
+      "githubHeadersMs": {
+        "n": 1298,
+        "median": 363.9059994999916,
+        "p95": 752.1362920000101,
+        "min": 217.07412499998463,
+        "max": 1559.283791999973
+      },
+      "databaseHeadersMs": {
+        "n": 3229,
+        "median": 61.317750000045635,
+        "p95": 9878.885666000002,
+        "min": 48.96345900002052,
+        "max": 10455.303625
+      },
+      "githubStatuses": {
+        "200": 1233,
+        "403": 65
+      },
+      "conditional": 0,
+      "notModified": 0,
+      "quotaHeaderObservations": 1298,
+      "quotaMinimumByResource": {
+        "core": 650,
+        "graphql": 4228
+      }
+    }
+  },
+  "limitations": [
+    "No live forge writes authorized; real mutation races not tested",
+    "No atomic GitHub snapshot; post-activation observation and sensitive action authority only",
+    "Global server intervals include background/sweep work; database reduction is not causal decrypt elimination",
+    "Whole-process GC/AES duration and true upstream body traffic not instrumented",
+    "No matched exact DOM-navigation campaign; API and previous-content clocks stay distinct"
+  ],
+  "evidence": [
+    {
+      "localOriginal": "output/playwright/performance/pass3e-account-discovery.json",
+      "originalBytes": 175,
+      "originalSha256": "45ea1281bc2e54a8b0b6e0e34575a22beb9971bdd0815b33d32c2330c2be97ea",
+      "published": null,
+      "omission": "Private account/connection/navigation inventories, local runtime/profile or login pixels; performance summary retains coverage/failure/restoration facts."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-after-complete.json",
+      "originalBytes": 753517,
+      "originalSha256": "9aef2874057c3df9bdeed004ecab01e510fe16eb17ac38866cd4176d6099c664",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-after-complete.json.gz",
+      "publishedBytes": 26082,
+      "publishedSha256": "9788b9f26167adba48a5fa618c752e5376aa6ebf6a491843713f02b60910ce78",
+      "uncompressedPublishedSha256": "5cfe00dd10b4178ac3864cc4583c4c05e25c00f9912db946a5b2026d22c56f05",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-after-complete.log",
+      "originalBytes": 5409,
+      "originalSha256": "b2112ed7f4599fd22052035450ccde77c3d9bc1fc2b759b60ea7dc973e04b863",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-after-complete.log.gz",
+      "publishedBytes": 865,
+      "publishedSha256": "bca4af3aee7a8e8c03e77c23e636d9effc2c704b9e52a99f24f37ce3b45cf109",
+      "uncompressedPublishedSha256": "b2112ed7f4599fd22052035450ccde77c3d9bc1fc2b759b60ea7dc973e04b863",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-after-server.log",
+      "originalBytes": 8862606,
+      "originalSha256": "bf695a894ff721fed96c69039dcb83105bdbbb44514d52835a0e9f3ccca3df3e",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-after-server.log.gz",
+      "publishedBytes": 105038,
+      "publishedSha256": "185db2c27b6ff00c9d9375a4995fda9aaada31ab1d17c9969d8c681989eb3e73",
+      "uncompressedPublishedSha256": "727ef675022e59d7ab2528bf0c894623bc2a2c96cd16d7968f12dca2413a37b4",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-after-upstream.jsonl",
+      "originalBytes": 5017397,
+      "originalSha256": "300703a068ef9057688e6315774a62faa690948f791961294914a312996d2f7f",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-after-upstream.jsonl.gz",
+      "publishedBytes": 507913,
+      "publishedSha256": "3ff10c435d33314b1c23e01834d5917a44f156182694ed9a0f9155166686796d",
+      "uncompressedPublishedSha256": "14a3ff1ff259550695dc94116737ca20f95299807ef019e95f7b7c84fb5bb61f",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-after.log",
+      "originalBytes": 768,
+      "originalSha256": "9511855fbd531c6fc45f797d3ff25a23749c02c198cd2a1fa3deccaed00111b8",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-after.log.gz",
+      "publishedBytes": 450,
+      "publishedSha256": "844ae2cd8175ecdce4cadaddf6859851d7bd4873d7fe08e66f8a838b310c1be9",
+      "uncompressedPublishedSha256": "14cabcf1cb42b6b3fc60b54a867b5c008e78fc0be6831e962ab7e26aa1438442",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-authorized-discovery.json",
+      "originalBytes": 230,
+      "originalSha256": "03b5347b39c1b4fdc22e5acad7fb479e858ca66682199ad98f7d1276e721945b",
+      "published": null,
+      "omission": "Private account/connection/navigation inventories, local runtime/profile or login pixels; performance summary retains coverage/failure/restoration facts."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-baseline-server.log",
+      "originalBytes": 989538,
+      "originalSha256": "feed6492f0278b52aeef54d4373f5a7f6762787c7a81a0760bf6cab88e731ba3",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-baseline-server.log.gz",
+      "publishedBytes": 11863,
+      "publishedSha256": "5ca9c7b4922303d32cd50ae76ccf3d361a07793534342a433e18b4f36affbfd4",
+      "uncompressedPublishedSha256": "ac2675c653745c0af0aef9bb6015a0ad4843b713245aec755c1a6a73a90c90c6",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-baseline-upstream.jsonl",
+      "originalBytes": 122310,
+      "originalSha256": "73436b53fe7b33cc957959aae53e214a2574a6a59f16328a8a45723c9fc2bf46",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-baseline-upstream.jsonl.gz",
+      "publishedBytes": 12304,
+      "publishedSha256": "4cbff2908302a8cb4ed18efd032d6d052dfafeb287c8c3e452916c51f9b816bf",
+      "uncompressedPublishedSha256": "73436b53fe7b33cc957959aae53e214a2574a6a59f16328a8a45723c9fc2bf46",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-before-complete.json",
+      "originalBytes": 763161,
+      "originalSha256": "87dd323e9ffb1d2c885f4b81048e85c06a23f706a4f2f4b17bef6657db0125d5",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-before-complete.json.gz",
+      "publishedBytes": 26611,
+      "publishedSha256": "167d802dd9ecb926375a4764b459adb8f3f4bd5490fae9600c2852e84380078c",
+      "uncompressedPublishedSha256": "e2bbe70edcceb8bb70118587405c2389b6b15154e3a70b2920d26f9bddcf1bcf",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-before-complete.log",
+      "originalBytes": 5368,
+      "originalSha256": "452ec6ff1c487517ca7010729983c962f04fa67db3bc2670d2305c6c1c52892e",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-before-complete.log.gz",
+      "publishedBytes": 869,
+      "publishedSha256": "627e16b8d175379bb4e3603aa488781b70e18eb613e2ba793774ddb6f79e3189",
+      "uncompressedPublishedSha256": "452ec6ff1c487517ca7010729983c962f04fa67db3bc2670d2305c6c1c52892e",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-before-heavy-profile.json",
+      "originalBytes": 565967,
+      "originalSha256": "fe49f94c4c0ec9d048541c91c58ca4abe131be9b4bf559628349c8f2948d0d5c",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-before-heavy-profile.json.gz",
+      "publishedBytes": 25920,
+      "publishedSha256": "467e850c59a7d412262be8373fecc93328669d5efe88f0a933aec58b3678d19d",
+      "uncompressedPublishedSha256": "fe49f94c4c0ec9d048541c91c58ca4abe131be9b4bf559628349c8f2948d0d5c",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-before.json",
+      "originalBytes": 250709,
+      "originalSha256": "232e177350b56d8fb237c5a25fb09b2e046e67512f9a6d039736ab58a76d86ae",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-before.json.gz",
+      "publishedBytes": 9069,
+      "publishedSha256": "3f9eec182a0fc592f5d3cf62bbe7b9c5c538b5223b2e77eee08d31d8584b3288",
+      "uncompressedPublishedSha256": "9e3cc0383ef91dcd68ea32b504f5fdb23f3f2db94e06abb8ef154af6d69b558c",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-before.log",
+      "originalBytes": 2196,
+      "originalSha256": "ccf78fa88c67fc1f87ec4aafe5d48e4052fdc93b60cbd2f2b846d1887d419f60",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-before.log.gz",
+      "publishedBytes": 576,
+      "publishedSha256": "66a52928139bb691e43da9723066d794fdce8d11c98958dda94af696cefc5984",
+      "uncompressedPublishedSha256": "b505d03804adff88abd35a97049ccb97d203b8d9dc792c0743b0df53c10fe726",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-build-after.log",
+      "originalBytes": 12890,
+      "originalSha256": "aa1977b4b0490221580bbe1c7bac62a0b9f128d47ad743acc49295c0d1f3c3fc",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-build-after.log.gz",
+      "publishedBytes": 2822,
+      "publishedSha256": "5087d5d0f1add729655aeab34fd20b95aa571888e47a7fd58274d94bd7f501b8",
+      "uncompressedPublishedSha256": "aa1977b4b0490221580bbe1c7bac62a0b9f128d47ad743acc49295c0d1f3c3fc",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-build-quota-final.log",
+      "originalBytes": 12890,
+      "originalSha256": "469cf4f8d675ca80138674279dae599be9bdc438003748b1da3a14638dd00a2c",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-build-quota-final.log.gz",
+      "publishedBytes": 2821,
+      "publishedSha256": "9967bf2c3dbaedcb6f22be2119849fdf10b72fbb4b41d1e996159f231d09664e",
+      "uncompressedPublishedSha256": "469cf4f8d675ca80138674279dae599be9bdc438003748b1da3a14638dd00a2c",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-dco.json",
+      "originalBytes": 101,
+      "originalSha256": "f9b7bcf62cd748e7d04c899529396c996b17dafaf9f91e8a863a0d2e54988b4c",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-dco.json.gz",
+      "publishedBytes": 111,
+      "publishedSha256": "29ddef256e6f21ac883836d0465602157399592d3b77e1cb98d245dea8823bdd",
+      "uncompressedPublishedSha256": "f9b7bcf62cd748e7d04c899529396c996b17dafaf9f91e8a863a0d2e54988b4c",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-desktop-audit.json",
+      "originalBytes": 4501,
+      "originalSha256": "bd4060e041f3595f6f53b6caa32434404c1ee987d1ef318e268632a631515d5b",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-desktop-audit.json.gz",
+      "publishedBytes": 852,
+      "publishedSha256": "8985f76c694b915fdea4198a3a9a030893257a9f4a53618d2a7a6ad8cd171015",
+      "uncompressedPublishedSha256": "bd4060e041f3595f6f53b6caa32434404c1ee987d1ef318e268632a631515d5b",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-diff-delivery.log",
+      "originalBytes": 0,
+      "originalSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-diff-delivery.log.gz",
+      "publishedBytes": 20,
+      "publishedSha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64",
+      "uncompressedPublishedSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-diff-product.log",
+      "originalBytes": 0,
+      "originalSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-diff-product.log.gz",
+      "publishedBytes": 20,
+      "publishedSha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64",
+      "uncompressedPublishedSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-diff-staged-final.log",
+      "originalBytes": 0,
+      "originalSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-diff-staged-final.log.gz",
+      "publishedBytes": 20,
+      "publishedSha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64",
+      "uncompressedPublishedSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-discovery.log",
+      "originalBytes": 1869,
+      "originalSha256": "568ac01290022b160b52cfaba26fa0d523b43e5628216555e523ee0db76a63ca",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-discovery.log.gz",
+      "publishedBytes": 316,
+      "publishedSha256": "b33003b42cedc9cd98b014c653441d5a3b938c67a283398b8d95b9502044f5c0",
+      "uncompressedPublishedSha256": "82f162407a4e7698878313c2e80cc60da141534639bd494259dd5cfda6e76935",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-discovery.mjs",
+      "originalBytes": 42952,
+      "originalSha256": "818aef3a7f1a2216d028dc61adecd362ab35b7f132d503307350906ee3a0f983",
+      "published": null,
+      "omission": "Private account/connection/navigation inventories, local runtime/profile or login pixels; performance summary retains coverage/failure/restoration facts."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-encrypted-access.log",
+      "originalBytes": 128,
+      "originalSha256": "d72d2e0b164e94fc33948b575ed850e65a488f46e148c3f3352eb4f1a00cafbd",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-encrypted-access.log.gz",
+      "publishedBytes": 110,
+      "publishedSha256": "721d4f290cdf13311124bcad9c7d0810753b01064b197227fd739a39ec838ca0",
+      "uncompressedPublishedSha256": "d72d2e0b164e94fc33948b575ed850e65a488f46e148c3f3352eb4f1a00cafbd",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-encrypted-delivery.log",
+      "originalBytes": 128,
+      "originalSha256": "d72d2e0b164e94fc33948b575ed850e65a488f46e148c3f3352eb4f1a00cafbd",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-encrypted-delivery.log.gz",
+      "publishedBytes": 110,
+      "publishedSha256": "721d4f290cdf13311124bcad9c7d0810753b01064b197227fd739a39ec838ca0",
+      "uncompressedPublishedSha256": "d72d2e0b164e94fc33948b575ed850e65a488f46e148c3f3352eb4f1a00cafbd",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-encryption-schema.log",
+      "originalBytes": 198,
+      "originalSha256": "ca0be109452d2b8c82957063d9924d6571daa9d9e92707f55602e2df01e7e5d2",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-encryption-schema.log.gz",
+      "publishedBytes": 155,
+      "publishedSha256": "f44a2dc9c420ef47d1bc13291dd6dc0f88c685f8319cd2d2ddff2a1cd97824fd",
+      "uncompressedPublishedSha256": "ca0be109452d2b8c82957063d9924d6571daa9d9e92707f55602e2df01e7e5d2",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-english-delivery.log",
+      "originalBytes": 155,
+      "originalSha256": "e69eb410834bfcdbfd4ace6775f801f4aada03a2b1ca8db06c40d4e399a1def4",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-english-delivery.log.gz",
+      "publishedBytes": 135,
+      "publishedSha256": "81a3a50f5f6c126207081865acf0ed9f96186ef5d3b83e197231c0a167a67260",
+      "uncompressedPublishedSha256": "e69eb410834bfcdbfd4ace6775f801f4aada03a2b1ca8db06c40d4e399a1def4",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-english-evidence.log",
+      "originalBytes": 155,
+      "originalSha256": "e69eb410834bfcdbfd4ace6775f801f4aada03a2b1ca8db06c40d4e399a1def4",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-english-evidence.log.gz",
+      "publishedBytes": 135,
+      "publishedSha256": "81a3a50f5f6c126207081865acf0ed9f96186ef5d3b83e197231c0a167a67260",
+      "uncompressedPublishedSha256": "e69eb410834bfcdbfd4ace6775f801f4aada03a2b1ca8db06c40d4e399a1def4",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-english-final.log",
+      "originalBytes": 155,
+      "originalSha256": "e69eb410834bfcdbfd4ace6775f801f4aada03a2b1ca8db06c40d4e399a1def4",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-english-final.log.gz",
+      "publishedBytes": 135,
+      "publishedSha256": "81a3a50f5f6c126207081865acf0ed9f96186ef5d3b83e197231c0a167a67260",
+      "uncompressedPublishedSha256": "e69eb410834bfcdbfd4ace6775f801f4aada03a2b1ca8db06c40d4e399a1def4",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-explore-server.log",
+      "originalBytes": 10769313,
+      "originalSha256": "d765f5d0f572e9d6f39ab301e97c847694d6ff77831e04244e9b0a82f59a2eea",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-explore-server.log.gz",
+      "publishedBytes": 118082,
+      "publishedSha256": "5d08d2a4aa956d7e9c3b17c0c4a0f9eb3350bc5c235bf0f9d056910a327fca51",
+      "uncompressedPublishedSha256": "86e94c2828c32c7484a7bc85a330dffbc8d95dba123658abd234331e880ada05",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-explore-upstream.jsonl",
+      "originalBytes": 10043536,
+      "originalSha256": "35dfb94606af35ad4a64173f18b706b6a6f9baa945f785fa386e256515d1f693",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-explore-upstream.jsonl.gz",
+      "publishedBytes": 954099,
+      "publishedSha256": "1611774f6d9af84d168eda9749fbe457f2d133869ed067fe3b4eb3b881c48833",
+      "uncompressedPublishedSha256": "f5b90c806ba8c9374956b2b1669f7643f4652e9437a31054c94da862c0ffa0d9",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-final-restoration.json",
+      "originalBytes": 358,
+      "originalSha256": "7221e8a27ceabf8c83b770e7b181b6d24ee98c3756f4dc4a0beab89143a04c17",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-final-restoration.json.gz",
+      "publishedBytes": 243,
+      "publishedSha256": "c591229a378821c5f3b6bf10c2c0b7b46497134c6b5771cddc485cb3d485e758",
+      "uncompressedPublishedSha256": "7221e8a27ceabf8c83b770e7b181b6d24ee98c3756f4dc4a0beab89143a04c17",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-github-candidates.json",
+      "originalBytes": 38414,
+      "originalSha256": "5d8b23ae0559845f406fe648ac52c076a14f30732416a5e3c44558b2a732f3a0",
+      "published": null,
+      "omission": "Private account/connection/navigation inventories, local runtime/profile or login pixels; performance summary retains coverage/failure/restoration facts."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-gitleaks-final.json",
+      "originalBytes": 3,
+      "originalSha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-gitleaks-final.json.gz",
+      "publishedBytes": 23,
+      "publishedSha256": "abc129be8d26e8d4afe9ce45f9d5a73c8ed9aa62810ca24ee789fe4581dc4a80",
+      "uncompressedPublishedSha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-gitleaks-final.log",
+      "originalBytes": 148,
+      "originalSha256": "7843790b4a208f1669fcd6fdea72a0e640800cf3ce6195152516e2d16c112e4b",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-gitleaks-final.log.gz",
+      "publishedBytes": 130,
+      "publishedSha256": "c9843b07b13535999fd23115d455cb6437d59d7346d10624aae8004770c929a9",
+      "uncompressedPublishedSha256": "7843790b4a208f1669fcd6fdea72a0e640800cf3ce6195152516e2d16c112e4b",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-gitleaks-original.json",
+      "originalBytes": 3,
+      "originalSha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-gitleaks-original.json.gz",
+      "publishedBytes": 23,
+      "publishedSha256": "abc129be8d26e8d4afe9ce45f9d5a73c8ed9aa62810ca24ee789fe4581dc4a80",
+      "uncompressedPublishedSha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-gitleaks-original.log",
+      "originalBytes": 148,
+      "originalSha256": "7aeb55922cf801b2a16b67edfe0214de9a60eae25a18b3caa40d4a574b7f54f3",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-gitleaks-original.log.gz",
+      "publishedBytes": 130,
+      "publishedSha256": "083be134ace74b630a53fd35c42d00ffb0e115882334b3bcfc7d4aea1fc9e95b",
+      "uncompressedPublishedSha256": "7aeb55922cf801b2a16b67edfe0214de9a60eae25a18b3caa40d4a574b7f54f3",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-gitleaks-published.json",
+      "originalBytes": 3,
+      "originalSha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-gitleaks-published.json.gz",
+      "publishedBytes": 23,
+      "publishedSha256": "abc129be8d26e8d4afe9ce45f9d5a73c8ed9aa62810ca24ee789fe4581dc4a80",
+      "uncompressedPublishedSha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-gitleaks-published.log",
+      "originalBytes": 148,
+      "originalSha256": "87178b8c2abf5ac48c7c0d83b4d183cfb7f0b61f3df585f991c1eced8def8c84",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-gitleaks-published.log.gz",
+      "publishedBytes": 130,
+      "publishedSha256": "c5e6b1fceacef60ef5e16b0e3443cd54da5c35e2d33deb08772badc2941c0119",
+      "uncompressedPublishedSha256": "87178b8c2abf5ac48c7c0d83b4d183cfb7f0b61f3df585f991c1eced8def8c84",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-lint-delivery-final.log",
+      "originalBytes": 549,
+      "originalSha256": "a50a565c696ef211d7cf02edd498e68d8720bfd8753f24af110cdd1cb85a0f9f",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-lint-delivery-final.log.gz",
+      "publishedBytes": 351,
+      "publishedSha256": "7f00c6a788bddb99f64375af2f39075c99689f10d7aae84e3d0abd6df6ab26a0",
+      "uncompressedPublishedSha256": "f1defb5ac6903c9c4f1154173bd5fbbe315a1cfe7221c316c8b2e5b0e5264194",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-lint-initial.log",
+      "originalBytes": 718,
+      "originalSha256": "4b5461a452bdb3091533da7d30767a954576e2071652a5e40d37cc74d39a805c",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-lint-initial.log.gz",
+      "publishedBytes": 443,
+      "publishedSha256": "6c553d7899b23186c1f3da6c187be892e446677b90daa4ca0c578bc207857d51",
+      "uncompressedPublishedSha256": "108bb1d8cc83b99f337def7f2498dcefa8b7f212267154f2f36f9776150eb2b0",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-lint-product-final.log",
+      "originalBytes": 549,
+      "originalSha256": "fa28ea6fc95468bc3df4deaa217521e0a1b2c759b2e16ff3e71956c2a1e32795",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-lint-product-final.log.gz",
+      "publishedBytes": 351,
+      "publishedSha256": "938f9acda8c59a7fd8a4fe4eb35ca5efeef160c8b29ab452fdee100ef3e2a3ad",
+      "uncompressedPublishedSha256": "f7eea5cb51097845a6b66bb3d34464d22d81db5e07eeee3eeb988d6aef99055e",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-lint-product.log",
+      "originalBytes": 772,
+      "originalSha256": "cae7fbd50a3a0763e3bb34a47280f6ac55a18378e604b0ae36bed9c8d5ed350e",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-lint-product.log.gz",
+      "publishedBytes": 482,
+      "publishedSha256": "2e777bc2fa59ebd68f1cb4dbf0af8814c19734d1803c6e13d5220c3d9768011b",
+      "uncompressedPublishedSha256": "4098eeba409cf078ddf3fbf8d70b0b72003e3f58ea71a268840b0bea348b9e6c",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-lint-quota-final.log",
+      "originalBytes": 549,
+      "originalSha256": "67cc15ae0002a026f8200fb5b56e4c400ede983e3941733a602e8b74907a7573",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-lint-quota-final.log.gz",
+      "publishedBytes": 351,
+      "publishedSha256": "81e4bb9112475041957db5d261cd1df783c07363271a5e5577d8535e562da3b5",
+      "uncompressedPublishedSha256": "5b015145f814fc5ae82aafa2754c5ab2c9922e9d4844c61d8b91f53459dcedb9",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-login.png",
+      "originalBytes": 73412,
+      "originalSha256": "7f4915522a98cc119309b2cb474a90854c1bb1cf000f6752bfe564c8c512bea3",
+      "published": null,
+      "omission": "Private account/connection/navigation inventories, local runtime/profile or login pixels; performance summary retains coverage/failure/restoration facts."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-native-injections-first-failure.json",
+      "originalBytes": 792,
+      "originalSha256": "21bbeddfec314447b3bdb4ed60a798a5a9737688798178020342dbbffec94f83",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-native-injections-first-failure.json.gz",
+      "publishedBytes": 356,
+      "publishedSha256": "1ec62158d06f8e75c1b675062214e05ba368a3f39cc345248cb88d303c96af81",
+      "uncompressedPublishedSha256": "21bbeddfec314447b3bdb4ed60a798a5a9737688798178020342dbbffec94f83",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-native-injections-first-failure.log",
+      "originalBytes": 430,
+      "originalSha256": "686c2bc8feecb713f4646202835ee3e29c2251a2f600be8aee6b7a2a4519084d",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-native-injections-first-failure.log.gz",
+      "publishedBytes": 304,
+      "publishedSha256": "c62c8d1d401610bc97e891ff22de71c97e21a4dee8d00f932185c0c99b3b3c1f",
+      "uncompressedPublishedSha256": "b00c24b63437f71811a9528fd656b7d9b94914f097fff18883cfd84472febc9f",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-native-injections-fourth-failure.json",
+      "originalBytes": 37074,
+      "originalSha256": "03dab3405bdead0a8245d590ddfb64b21a3809b5becec00013968debe839dfea",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-native-injections-fourth-failure.json.gz",
+      "publishedBytes": 2565,
+      "publishedSha256": "1620e0b3a707cad508aa49cb4494507e58fe883049e89ddf2ffdbcc60ab48e53",
+      "uncompressedPublishedSha256": "19a4ad8382237f20fee71fabc266e1576d8a494065d474d2a2411584bcb20a67",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-native-injections-fourth-failure.log",
+      "originalBytes": 437,
+      "originalSha256": "85f10be19f96adffa1737f10e08725e1a8a3030cc388e6c662b68ed06cf79858",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-native-injections-fourth-failure.log.gz",
+      "publishedBytes": 242,
+      "publishedSha256": "de2bef13f27df46ded8426a232edd3412ccf7282da9645b81e0d178227df3d74",
+      "uncompressedPublishedSha256": "0df2f6b330339b14c3f11d15509bc1f0e251eb16d79d1aae27a846ea5d639ae5",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-native-injections-second-failure.json",
+      "originalBytes": 6741,
+      "originalSha256": "812edacbf0f241135a9c347331c41947c0f5269b01d6103fa29752c4e9ffb35b",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-native-injections-second-failure.json.gz",
+      "publishedBytes": 883,
+      "publishedSha256": "78ed89e66eeb3a3c8136327d84aef5fc1e81d06658310ce17fadb29065aaebfe",
+      "uncompressedPublishedSha256": "6a5d2d2f70a4202793f5359c2b23b1ee445cbc19da63c53c90aedc03504f4054",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-native-injections-second-failure.log",
+      "originalBytes": 301,
+      "originalSha256": "1f37e62f72b81f0e2384994ca64e170ce1600ad51d3402cdafa36c06c8ad7471",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-native-injections-second-failure.log.gz",
+      "publishedBytes": 222,
+      "publishedSha256": "51484cde4ae1bd37009fdb6f0e5ff1756d6a009303ae679fdd5663655c5e0c52",
+      "uncompressedPublishedSha256": "2fb3d6750d92b84fc3418e02e2a2aad8d58873449073e7632443b3133a963464",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-native-injections-third-failure.json",
+      "originalBytes": 6871,
+      "originalSha256": "0e119f249a5de6f16400ae34b75a2c71266d3f292b79eaf7d3889b285e4923c8",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-native-injections-third-failure.json.gz",
+      "publishedBytes": 978,
+      "publishedSha256": "d4b22ae508ba888be833101245149e8c3aab14742edd89399249909dc88930ba",
+      "uncompressedPublishedSha256": "49d7e50977f1884743c656f339f261e88760d1fa260928273f2cef7c6ce94c95",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-native-injections-third-failure.log",
+      "originalBytes": 633,
+      "originalSha256": "7cb33808b28480e01c6f0c779661e61f139356bd75c7fb02ea12fdda03106c44",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-native-injections-third-failure.log.gz",
+      "publishedBytes": 325,
+      "publishedSha256": "f170a700af9ad044108ff4e8753f738a8a0a1ffb4d011783317ef7b25c91b945",
+      "uncompressedPublishedSha256": "698e1f4578d8007dfbf042e2142493bc66cfdf9a15f5ac91f1c7b8b322c0baa4",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-native-injections.json",
+      "originalBytes": 8923,
+      "originalSha256": "fd8fecfca94b6dfb92bfbf7cc49633612dce497a71ecfcee8f21e9ee3a1562ea",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-native-injections.json.gz",
+      "publishedBytes": 1119,
+      "publishedSha256": "6243e94cef8ddc8b1229d954de7912636d085f4450271a221b04d4035d339dc2",
+      "uncompressedPublishedSha256": "86d1125d03374bf851e3d998afec29b488c9855823ff40493400e92fad65e59f",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-native-injections.log",
+      "originalBytes": 436,
+      "originalSha256": "dc26f09d8600042726f8fa8ce9d5a98c83fda3842f3dd829bade8e87ce2e5094",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-native-injections.log.gz",
+      "publishedBytes": 242,
+      "publishedSha256": "d868d78934b652bfa9a29bffc1878c1ae5947db3b56e73078cac2326532efb6f",
+      "uncompressedPublishedSha256": "43c4982a713d33ba45aa734e911f58c250a30fed34631a424f4738a922c3c5f0",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-native-injections.mjs",
+      "originalBytes": 7421,
+      "originalSha256": "924171dd87212879c92a221edd774f47f4bd0bdb61042a4a34f404e49bad4cb4",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-native-injections.mjs.gz",
+      "publishedBytes": 2771,
+      "publishedSha256": "26c2f39e1908cb93630e848c240f5de779c6a092a9a9c7e41f9738e48795b64e",
+      "uncompressedPublishedSha256": "924171dd87212879c92a221edd774f47f4bd0bdb61042a4a34f404e49bad4cb4",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-navigation-readback.json",
+      "originalBytes": 89,
+      "originalSha256": "c37d5d1708ec726ee432ae25bfda9fd8ea2dfab7e49797f7b82db1b11c196086",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-navigation-readback.json.gz",
+      "publishedBytes": 95,
+      "publishedSha256": "c7c85622382358723f6ca63c13e4c5491f81b86101b79ab660f200a37ee50aa4",
+      "uncompressedPublishedSha256": "c37d5d1708ec726ee432ae25bfda9fd8ea2dfab7e49797f7b82db1b11c196086",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-owned-english-product.log",
+      "originalBytes": 155,
+      "originalSha256": "e69eb410834bfcdbfd4ace6775f801f4aada03a2b1ca8db06c40d4e399a1def4",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-owned-english-product.log.gz",
+      "publishedBytes": 135,
+      "publishedSha256": "81a3a50f5f6c126207081865acf0ed9f96186ef5d3b83e197231c0a167a67260",
+      "uncompressedPublishedSha256": "e69eb410834bfcdbfd4ace6775f801f4aada03a2b1ca8db06c40d4e399a1def4",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-personal-initial.json",
+      "originalBytes": 205563,
+      "originalSha256": "5bda813507148f289d717db0ada6ea68adad74913ca7f453daa5366f4860c17d",
+      "published": null,
+      "omission": "Private account/connection/navigation inventories, local runtime/profile or login pixels; performance summary retains coverage/failure/restoration facts."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-personal-runtime.json",
+      "originalBytes": 204,
+      "originalSha256": "82ebfe0161a28c8a18983190e17d1ec92a00fd61d5ac3a48c76e629ffb4c5ff3",
+      "published": null,
+      "omission": "Private account/connection/navigation inventories, local runtime/profile or login pixels; performance summary retains coverage/failure/restoration facts."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-pr-before-build.json",
+      "originalBytes": 193,
+      "originalSha256": "74aa3e16defc4dc07e9f85272d7149509e51d45f449cfd65941ea2530408093c",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-pr-before-build.json.gz",
+      "publishedBytes": 183,
+      "publishedSha256": "5ff6489fe2b3a67e8b36cc22a52cdd976a0bc34dea03f288d0634acf4b9bc667",
+      "uncompressedPublishedSha256": "74aa3e16defc4dc07e9f85272d7149509e51d45f449cfd65941ea2530408093c",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-pr-cumulative-before-update.json",
+      "originalBytes": 34431,
+      "originalSha256": "4dca38da1090e596221221c8a8a869c7ba91fccd1dca64c8bfdd64e862f112d7",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-pr-cumulative-before-update.json.gz",
+      "publishedBytes": 12003,
+      "publishedSha256": "6c672aaeb15e49a8bb8f7c57d5fe6c0504db4d47240e5e833530a0d9fa0a2821",
+      "uncompressedPublishedSha256": "4dca38da1090e596221221c8a8a869c7ba91fccd1dca64c8bfdd64e862f112d7",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-profile-restoration.json",
+      "originalBytes": 142,
+      "originalSha256": "8fa6574e33a083e77b68487ab6bf9ffdd3373ecb604318c10773110582c28d7c",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-profile-restoration.json.gz",
+      "publishedBytes": 130,
+      "publishedSha256": "90a9acdf5cc8eb6be64ca4b2a291f318374d49549df711a312eb368877f38786",
+      "uncompressedPublishedSha256": "8fa6574e33a083e77b68487ab6bf9ffdd3373ecb604318c10773110582c28d7c",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-public-delivery-final.log",
+      "originalBytes": 170,
+      "originalSha256": "7500a38f349470778293d3463c87ee25f443c153b4f07354d024cb89360616ee",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-public-delivery-final.log.gz",
+      "publishedBytes": 154,
+      "publishedSha256": "49a3f693476846d0cc7e89a06c882a54064437d7ac1461fbcdacf6025c3f0ae4",
+      "uncompressedPublishedSha256": "7500a38f349470778293d3463c87ee25f443c153b4f07354d024cb89360616ee",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-public-repo-product.log",
+      "originalBytes": 170,
+      "originalSha256": "84e1dc8f440c3c07b5281ed6bd957d3fe591d19c036ca4e361817765793a1c85",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-public-repo-product.log.gz",
+      "publishedBytes": 154,
+      "publishedSha256": "81e89e123ef0913968cadd4b015f8a6878bf65ff462942104ccf0924cca4de75",
+      "uncompressedPublishedSha256": "84e1dc8f440c3c07b5281ed6bd957d3fe591d19c036ca4e361817765793a1c85",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-root-audit.json",
+      "originalBytes": 369,
+      "originalSha256": "3669f26bedf8097ec173982324c016c19b0e323ae55ce7dd59007319c256340f",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-root-audit.json.gz",
+      "publishedBytes": 192,
+      "publishedSha256": "325616c1fc0408b1302cf55efec683c7849ccdbe18cfbbd889de7a646604c951",
+      "uncompressedPublishedSha256": "3669f26bedf8097ec173982324c016c19b0e323ae55ce7dd59007319c256340f",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-schema-delivery.log",
+      "originalBytes": 198,
+      "originalSha256": "ca0be109452d2b8c82957063d9924d6571daa9d9e92707f55602e2df01e7e5d2",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-schema-delivery.log.gz",
+      "publishedBytes": 155,
+      "publishedSha256": "f44a2dc9c420ef47d1bc13291dd6dc0f88c685f8319cd2d2ddff2a1cd97824fd",
+      "uncompressedPublishedSha256": "ca0be109452d2b8c82957063d9924d6571daa9d9e92707f55602e2df01e7e5d2",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-short-native-api.json",
+      "originalBytes": 5852,
+      "originalSha256": "8463b2ef6d43f7f1c98f2d3828504715ca81868b1cdb94276808ff3cb2e4d2de",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-short-native-api.json.gz",
+      "publishedBytes": 652,
+      "publishedSha256": "019c9b59a7aeb76b64f77ac9ab11e880e5583e41e5eba05bb615691513735108",
+      "uncompressedPublishedSha256": "ec3382d346e69899b227184ff72a9cce5101514a522e4af8b20085136e542b74",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-short-native-ui.json",
+      "originalBytes": 41584,
+      "originalSha256": "5b96f00cba00f28d6562efdb6eaadeea67263de067d44ac42efce265f6a1dd12",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-short-native-ui.json.gz",
+      "publishedBytes": 2284,
+      "publishedSha256": "b078880b2337b1e69a371fa4000335cc367740c3cbdf9f8f54ac0f5fbd0eb6c3",
+      "uncompressedPublishedSha256": "27682a0d56ddae321ced4028e42980e32abc27a6fede62924f7712166595d784",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-tests-focused.log",
+      "originalBytes": 903,
+      "originalSha256": "73a0faa307b7b59fc672bbb6bb9c64ec7c12ae7f20242967e806f21660c0c652",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-tests-focused.log.gz",
+      "publishedBytes": 476,
+      "publishedSha256": "bf468d6c8072f6ff6c6b253d9e08ea8feaa62aa2743917b9acff1e0a102fbaf2",
+      "uncompressedPublishedSha256": "b60d188c1093579d253b85e81ba4db7f4b9a4077ceac08a12b42d8f68744ec67",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-tests-guards.log",
+      "originalBytes": 896,
+      "originalSha256": "a7f57e6d2f7d016cf366ea01d219b3ea2c12186c668b349c825c5f1cb085ce55",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-tests-guards.log.gz",
+      "publishedBytes": 415,
+      "publishedSha256": "ad5e86ecd3b01556c7a5525b365dcb7fe7ad23874e6ad3a52a4a1a22882ec66b",
+      "uncompressedPublishedSha256": "2d6290ef780df34cd36115bd092f5382d88a3a592aa3c2334ac3699ea3b9dcdb",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-tests-initial.log",
+      "originalBytes": 250,
+      "originalSha256": "87ba83d4d5c85a22038355cce5ba14ac4506f59695c95ffee67bc5cf66927f56",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-tests-initial.log.gz",
+      "publishedBytes": 186,
+      "publishedSha256": "9ab715356d9490a43f3b461a68021ab7f1e7295543a1fda5bf99758b97316bee",
+      "uncompressedPublishedSha256": "4194e1dab35caf6e167eba5fd821f2f4df28ee3d6ca91023b2f1ac0691b05d4d",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-tests-preparation.log",
+      "originalBytes": 1798,
+      "originalSha256": "4cf5ad8db9347688fb411ef75b80e6c91d39246a38901fff729f8b3d8c1624f7",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-tests-preparation.log.gz",
+      "publishedBytes": 804,
+      "publishedSha256": "c1319513b40b570ad13979721454a7c894db477cbfabe4720ffd1383accffd5a",
+      "uncompressedPublishedSha256": "f7b1cb499a913dbe1a47112310749c4e751a9c8b4a0e8c6c910e11dfcc8e3c86",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-tests-query.log",
+      "originalBytes": 262,
+      "originalSha256": "99449d9181e72ce9672ed0948456e133ff86cd1c1bcc53e8b4422553dc122190",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-tests-query.log.gz",
+      "publishedBytes": 194,
+      "publishedSha256": "8c20c01e28220c4ccab53445471f2d01e936a5da00dfb40cd3fd54390bb5fe09",
+      "uncompressedPublishedSha256": "7cdf948fbe54e94ef2997279c28a6dbabbdaf37da5a46ee4a508003d6d041f0b",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-tests-quota-final.log",
+      "originalBytes": 820,
+      "originalSha256": "ad3c78e50b643ef7bdf4181196aa2d098fd06ffde355710530f4e3e64baead08",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-tests-quota-final.log.gz",
+      "publishedBytes": 471,
+      "publishedSha256": "57624f76872215b16d5ba4d5da16f1143f29563f3119f3ac3c7b0aa72a4e23ab",
+      "uncompressedPublishedSha256": "642199d1490ff4e717ca4be5071f86e4cb96bb18c969f4ce3e88d1e5f0b99da3",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-tests-reset.log",
+      "originalBytes": 342,
+      "originalSha256": "e45694972c8f47e6cb4b6d084483583133609dc8939ede1586aa12c96dacab5c",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-tests-reset.log.gz",
+      "publishedBytes": 249,
+      "publishedSha256": "d99d32f5877714d4bec8683b2fef85de52e2d480fb7955d9a13dafa94521e392",
+      "uncompressedPublishedSha256": "abd2bdff28e4d98bd53cb3b4ac644b8bcba56c4e1e02c59422badbcd7ec1dee9",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-typecheck-delivery-final.log",
+      "originalBytes": 43,
+      "originalSha256": "a232218ab0cb56112998296a30550c7d6df45b3d6f5aa5c171b8e1faf5b0340a",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-typecheck-delivery-final.log.gz",
+      "publishedBytes": 63,
+      "publishedSha256": "0ee7ede1c111b8bbfce667887d61ac67de187b1691610cd5ea6a72d351ed789c",
+      "uncompressedPublishedSha256": "a232218ab0cb56112998296a30550c7d6df45b3d6f5aa5c171b8e1faf5b0340a",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-typecheck-final-product.log",
+      "originalBytes": 43,
+      "originalSha256": "a232218ab0cb56112998296a30550c7d6df45b3d6f5aa5c171b8e1faf5b0340a",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-typecheck-final-product.log.gz",
+      "publishedBytes": 63,
+      "publishedSha256": "0ee7ede1c111b8bbfce667887d61ac67de187b1691610cd5ea6a72d351ed789c",
+      "uncompressedPublishedSha256": "a232218ab0cb56112998296a30550c7d6df45b3d6f5aa5c171b8e1faf5b0340a",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-typecheck-initial.log",
+      "originalBytes": 43,
+      "originalSha256": "a232218ab0cb56112998296a30550c7d6df45b3d6f5aa5c171b8e1faf5b0340a",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-typecheck-initial.log.gz",
+      "publishedBytes": 63,
+      "publishedSha256": "0ee7ede1c111b8bbfce667887d61ac67de187b1691610cd5ea6a72d351ed789c",
+      "uncompressedPublishedSha256": "a232218ab0cb56112998296a30550c7d6df45b3d6f5aa5c171b8e1faf5b0340a",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-typecheck-preparation.log",
+      "originalBytes": 43,
+      "originalSha256": "a232218ab0cb56112998296a30550c7d6df45b3d6f5aa5c171b8e1faf5b0340a",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-typecheck-preparation.log.gz",
+      "publishedBytes": 63,
+      "publishedSha256": "0ee7ede1c111b8bbfce667887d61ac67de187b1691610cd5ea6a72d351ed789c",
+      "uncompressedPublishedSha256": "a232218ab0cb56112998296a30550c7d6df45b3d6f5aa5c171b8e1faf5b0340a",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-typecheck-query.log",
+      "originalBytes": 168,
+      "originalSha256": "caba3d52fc2afc1e1f79c30703bceab1f73e9657ae83468039624590fc9fefd0",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-typecheck-query.log.gz",
+      "publishedBytes": 163,
+      "publishedSha256": "9c4a36eec73e76654f70e6c683a5dfd156b3b8651fabd2050168566e7554cc6b",
+      "uncompressedPublishedSha256": "caba3d52fc2afc1e1f79c30703bceab1f73e9657ae83468039624590fc9fefd0",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    },
+    {
+      "localOriginal": "output/playwright/performance/pass3e-typecheck-quota-final.log",
+      "originalBytes": 43,
+      "originalSha256": "a232218ab0cb56112998296a30550c7d6df45b3d6f5aa5c171b8e1faf5b0340a",
+      "published": "docs/audits/desktop-perf-min-614-pass-3e-evidence/pass3e-typecheck-quota-final.log.gz",
+      "publishedBytes": 63,
+      "publishedSha256": "0ee7ede1c111b8bbfce667887d61ac67de187b1691610cd5ea6a72d351ed789c",
+      "uncompressedPublishedSha256": "a232218ab0cb56112998296a30550c7d6df45b3d6f5aa5c171b8e1faf5b0340a",
+      "redactions": "Stable personal UUID/row labels; local profile/workspace/network paths; private installation/deployment identifiers. Timing/sample/error/operation values preserved."
+    }
+  ],
+  "nativeDiagnostics": {
+    "sha": "061615eaea1e815c4b29d4cb842816a4c7a64ee2",
+    "definition": "Separate injected native diagnostics. Twelve virtual tab rows; real GitHub reads; navigation writes intercepted in memory. No remote forge mutation.",
+    "visits": [],
+    "states": [],
+    "blockedWrites": [
+      {
+        "path": "/api/me/app-tabs/metadata",
+        "method": "POST"
+      },
+      {
+        "path": "/api/me/app-tabs/metadata",
+        "method": "POST"
+      },
+      {
+        "path": "/api/me/app-tabs/metadata",
+        "method": "POST"
+      },
+      {
+        "path": "/api/me/app-tabs/metadata",
+        "method": "POST"
+      },
+      {
+        "path": "/api/me/app-tabs/metadata",
+        "method": "POST"
+      }
+    ],
+    "cleanup": true,
+    "error": "TimeoutError: page.waitForFunction: Timeout 45000ms exceeded.",
+    "failureState": {
+      "readState": "error",
+      "text": "Impossible d\u2019actualiser cette pull request. R\u00e9essayez.R\u00e9essayer",
+      "url": "http://localhost:3111/pull-requests?pr=$identity-3"
+    },
+    "responses": [
+      {
+        "path": "/api/pull-requests/count",
+        "status": 200,
+        "at": 1791058464954
+      },
+      {
+        "path": "/api/pull-requests/count",
+        "status": 200,
+        "at": 1791058466850
+      },
+      {
+        "path": "/api/pull-requests/readiness",
+        "status": 200,
+        "at": 1791058466851
+      },
+      {
+        "path": "/api/pull-requests/$identity-3",
+        "status": 403,
+        "at": 1791058467300
+      },
+      {
+        "path": "/api/pull-requests/$identity-3/ai-review",
+        "status": 200,
+        "at": 1791058467529
+      },
+      {
+        "path": "/api/pull-requests/$identity-3/comments",
+        "status": 403,
+        "at": 1791058467529
+      },
+      {
+        "path": "/api/pull-requests/$identity-3/commits",
+        "status": 403,
+        "at": 1791058467614
+      },
+      {
+        "path": "/api/pull-requests/$identity-3/review-comments",
+        "status": 403,
+        "at": 1791058467653
+      },
+      {
+        "path": "/api/pull-requests/$identity-3/comments",
+        "status": 403,
+        "at": 1791058469223
+      },
+      {
+        "path": "/api/pull-requests/$identity-3/review-comments",
+        "status": 403,
+        "at": 1791058469328
+      },
+      {
+        "path": "/api/pull-requests/$identity-3/commits",
+        "status": 403,
+        "at": 1791058469363
+      }
+    ],
+    "routeReads": [
+      {
+        "at": 1791058464057,
+        "count": 12
+      },
+      {
+        "at": 1791058464333,
+        "count": 12
+      },
+      {
+        "at": 1791058464763,
+        "count": 12
+      },
+      {
+        "at": 1791058464959,
+        "count": 12
+      },
+      {
+        "at": 1791058465658,
+        "count": 12
+      }
+    ],
+    "requests": [
+      {
+        "path": "/api/pull-requests/count",
+        "method": "GET",
+        "at": 1791058464050
+      },
+      {
+        "path": "/api/billing",
+        "method": "GET",
+        "at": 1791058464053
+      },
+      {
+        "path": "/api/billing/usage",
+        "method": "GET",
+        "at": 1791058464053
+      },
+      {
+        "path": "/api/agent-runs",
+        "method": "GET",
+        "at": 1791058464053
+      },
+      {
+        "path": "/api/agent-reads",
+        "method": "GET",
+        "at": 1791058464054
+      },
+      {
+        "path": "/api/me/admin",
+        "method": "GET",
+        "at": 1791058464054
+      },
+      {
+        "path": "/api/me/avatar",
+        "method": "GET",
+        "at": 1791058464055
+      },
+      {
+        "path": "/api/pull-requests",
+        "method": "GET",
+        "at": 1791058464055
+      },
+      {
+        "path": "/api/notifications",
+        "method": "GET",
+        "at": 1791058464055
+      },
+      {
+        "path": "/api/projects/invitations",
+        "method": "GET",
+        "at": 1791058464055
+      },
+      {
+        "path": "/api/me/branch-cleanup-targets",
+        "method": "GET",
+        "at": 1791058464056
+      },
+      {
+        "path": "/api/me/triage-counts",
+        "method": "GET",
+        "at": 1791058464056
+      },
+      {
+        "path": "/api/me/smart-assign-warnings",
+        "method": "GET",
+        "at": 1791058464057
+      },
+      {
+        "path": "/api/me/app-tabs",
+        "method": "GET",
+        "at": 1791058464057
+      },
+      {
+        "path": "/api/me/scratchpad",
+        "method": "GET",
+        "at": 1791058464058
+      },
+      {
+        "path": "/api/account/push-subscriptions",
+        "method": "GET",
+        "at": 1791058464059
+      },
+      {
+        "path": "/api/projects",
+        "method": "GET",
+        "at": 1791058464060
+      },
+      {
+        "path": "/api/project-drafts",
+        "method": "GET",
+        "at": 1791058464060
+      },
+      {
+        "path": "/api/me/app-tabs/metadata",
+        "method": "POST",
+        "at": 1791058464076
+      },
+      {
+        "path": "/api/me/local-snapshots",
+        "method": "POST",
+        "at": 1791058464077
+      },
+      {
+        "path": "/api/me/local-snapshots",
+        "method": "POST",
+        "at": 1791058464077
+      },
+      {
+        "path": "/api/me/app-tabs/metadata",
+        "method": "POST",
+        "at": 1791058464078
+      },
+      {
+        "path": "/api/me/app-tabs/$identity-2366",
+        "method": "PATCH",
+        "at": 1791058464328
+      },
+      {
+        "path": "/api/me/app-tabs",
+        "method": "GET",
+        "at": 1791058464333
+      },
+      {
+        "path": "/api/avatars/$identity-1",
+        "method": "GET",
+        "at": 1791058464467
+      },
+      {
+        "path": "/api/me/app-tabs",
+        "method": "GET",
+        "at": 1791058464763
+      },
+      {
+        "path": "/api/billing",
+        "method": "GET",
+        "at": 1791058464763
+      },
+      {
+        "path": "/api/billing/usage",
+        "method": "GET",
+        "at": 1791058464763
+      },
+      {
+        "path": "/api/projects/invitations",
+        "method": "GET",
+        "at": 1791058464764
+      },
+      {
+        "path": "/api/me/app-tabs",
+        "method": "GET",
+        "at": 1791058464959
+      },
+      {
+        "path": "/api/me/app-tabs/metadata",
+        "method": "POST",
+        "at": 1791058465081
+      },
+      {
+        "path": "/api/me/local-snapshots",
+        "method": "POST",
+        "at": 1791058465309
+      },
+      {
+        "path": "/api/projects/$identity-2/icon/content",
+        "method": "GET",
+        "at": 1791058465394
+      },
+      {
+        "path": "/api/pull-requests/readiness",
+        "method": "GET",
+        "at": 1791058465394
+      },
+      {
+        "path": "/api/me/local-snapshots",
+        "method": "POST",
+        "at": 1791058465400
+      },
+      {
+        "path": "/api/me/app-tabs/metadata",
+        "method": "POST",
+        "at": 1791058465401
+      },
+      {
+        "path": "/api/me/search-index",
+        "method": "GET",
+        "at": 1791058465540
+      },
+      {
+        "path": "/api/me/app-tabs/$identity-2366",
+        "method": "PATCH",
+        "at": 1791058465649
+      },
+      {
+        "path": "/api/me/app-tabs",
+        "method": "GET",
+        "at": 1791058465657
+      },
+      {
+        "path": "/api/me/triage-counts",
+        "method": "GET",
+        "at": 1791058465776
+      },
+      {
+        "path": "/api/pull-requests/count",
+        "method": "GET",
+        "at": 1791058465777
+      },
+      {
+        "path": "/api/agent-runs",
+        "method": "GET",
+        "at": 1791058465777
+      },
+      {
+        "path": "/api/pull-requests",
+        "method": "GET",
+        "at": 1791058465778
+      },
+      {
+        "path": "/api/pull-requests/$identity-3",
+        "method": "GET",
+        "at": 1791058465788
+      },
+      {
+        "path": "/api/pull-requests/$identity-3/comments",
+        "method": "GET",
+        "at": 1791058465789
+      },
+      {
+        "path": "/api/pull-requests/$identity-3/commits",
+        "method": "GET",
+        "at": 1791058465790
+      },
+      {
+        "path": "/api/pull-requests/$identity-3/review-comments",
+        "method": "GET",
+        "at": 1791058465790
+      },
+      {
+        "path": "/api/pull-requests/$identity-3/ai-review",
+        "method": "GET",
+        "at": 1791058465791
+      },
+      {
+        "path": "/api/me/app-tabs/metadata",
+        "method": "POST",
+        "at": 1791058466406
+      },
+      {
+        "path": "/api/me/local-snapshots",
+        "method": "POST",
+        "at": 1791058466529
+      },
+      {
+        "path": "/api/me/local-snapshots",
+        "method": "POST",
+        "at": 1791058467544
+      },
+      {
+        "path": "/api/pull-requests/$identity-3/comments",
+        "method": "GET",
+        "at": 1791058468531
+      },
+      {
+        "path": "/api/pull-requests/$identity-3/commits",
+        "method": "GET",
+        "at": 1791058468618
+      },
+      {
+        "path": "/api/pull-requests/$identity-3/review-comments",
+        "method": "GET",
+        "at": 1791058468652
+      },
+      {
+        "path": "/api/me/app-tabs",
+        "method": "GET",
+        "at": 1791058509087
+      },
+      {
+        "path": "/api/me/local-snapshots",
+        "method": "POST",
+        "at": 1791058509118
+      }
+    ]
+  }
+}
