@@ -746,6 +746,10 @@
     "deleteConfirm": "{count, plural, one {Mover # problema para a lixeira?} other {Mover # problemas para a lixeira?}}"
   },
   "Board": {
+    "readRefreshing": "Atualizando quadro… Os dados anteriores são exibidos.",
+    "readPaused": "Atualização do quadro pausada. Reconecte para atualizar.",
+    "readPreviousError": "Não foi possível atualizar o quadro. Os dados anteriores são exibidos.",
+    "readRetry": "Tentar novamente",
     "viewCreated": "Visualização “{name}” criada.",
     "viewUpdated": "Visualização atualizada.",
     "needOneView": "Você precisa manter pelo menos uma visualização.",

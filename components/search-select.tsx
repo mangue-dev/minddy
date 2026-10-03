@@ -137,6 +137,7 @@ export const checkedProps = (checked: boolean) =>
   checked ? ({ "data-checked": "true" } as const) : {};
 
 type ShellProps = {
+  deferTrigger?: boolean;
   trigger: React.ReactNode;
   /** Optional tooltip on the trigger (used by the compact card pickers). */
   tooltip?: string;

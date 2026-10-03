@@ -746,6 +746,10 @@
     "deleteConfirm": "{count, plural, one {Déplacer # ticket vers la corbeille ?} other {Déplacer # tickets vers la corbeille ?}}"
   },
   "Board": {
+    "readRefreshing": "Mise à jour du tableau… Données précédentes affichées.",
+    "readPaused": "Mise à jour du tableau en pause. Reconnectez-vous pour actualiser.",
+    "readPreviousError": "Impossible de mettre à jour le tableau. Données précédentes affichées.",
+    "readRetry": "Réessayer",
     "viewCreated": "Vue « {name} » créée.",
     "viewUpdated": "Vue mise à jour.",
     "needOneView": "Vous devez garder au moins une vue.",

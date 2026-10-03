@@ -746,6 +746,10 @@
     "deleteConfirm": "{count, plural, one {Spostare # ticket nel cestino?} other {Spostare # ticket nel cestino?}}"
   },
   "Board": {
+    "readRefreshing": "Aggiornamento della bacheca… Sono mostrati i dati precedenti.",
+    "readPaused": "Aggiornamento della bacheca in pausa. Riconnettiti per aggiornare.",
+    "readPreviousError": "Impossibile aggiornare la bacheca. Sono mostrati i dati precedenti.",
+    "readRetry": "Riprova",
     "viewCreated": "Vista «{name}» creata.",
     "viewUpdated": "Visualizza aggiornato.",
     "needOneView": "Devi tenere almeno una vista.",

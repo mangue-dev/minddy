@@ -158,6 +158,7 @@ function StatusPick({
   }));
   return (
     <SearchSelect
+      deferTrigger
       value={value}
       onChange={(v) => onChange(v as IssueStatus)}
       options={options}
@@ -198,6 +199,7 @@ function PriorityPick({
   }));
   return (
     <SearchSelect
+      deferTrigger
       value={value}
       onChange={(v) => onChange(v as IssuePriority)}
       options={options}
@@ -246,6 +248,7 @@ function EffortPick({
   }));
   return (
     <SearchSelect
+      deferTrigger
       value={value}
       onChange={(v) => onChange(v as IssueEffort | null)}
       options={options}
@@ -361,6 +364,7 @@ function CategoryPickMenu({
   }));
   return (
     <SearchMultiSelect
+      deferTrigger
       values={selectedIds}
       onChange={onChange}
       options={options}
@@ -421,6 +425,7 @@ function AssigneePick({
   }));
   return (
     <SearchSelect
+      deferTrigger
       value={assignee?.user_id ?? null}
       onChange={onChange}
       options={options}

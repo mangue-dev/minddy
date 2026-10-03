@@ -746,6 +746,10 @@
     "deleteConfirm": "{count, plural, one {¿Mover # incidencia a la papelera?} other {¿Mover # incidencias a la papelera?}}"
   },
   "Board": {
+    "readRefreshing": "Actualizando tablero… Se muestran los datos anteriores.",
+    "readPaused": "Actualización del tablero en pausa. Reconecta para actualizar.",
+    "readPreviousError": "No se pudo actualizar el tablero. Se muestran los datos anteriores.",
+    "readRetry": "Reintentar",
     "viewCreated": "Vista «{name}» creada.",
     "viewUpdated": "Vista actualizada.",
     "needOneView": "Tienes que mantener al menos una vista.",

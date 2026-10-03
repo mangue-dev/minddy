@@ -1,6 +1,6 @@
 "use client";
 
-import { Activity, memo, useEffect, useLayoutEffect, useState, type ReactNode } from "react";
+import { Activity, memo, useCallback, useEffect, useLayoutEffect, useState, useSyncExternalStore, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
 import { usePathname, useSearchParams } from "next/navigation";
@@ -12,13 +12,21 @@ import { BoardLoadingSkeleton } from "./board-loading-skeleton";
 import { useRetainedBoardScroll } from "@/lib/use-retained-board-scroll";
 import { useColdBoardPrefetch } from "@/lib/use-cold-board-prefetch";
 import { observeRetainedBoardData } from "@/lib/retained-board-data";
+import { retainedBoardKeys, retainedBoardReadState } from "@/lib/retained-board-read-state";
+import { useTranslations } from "next-intl";
 
 const GlobalBoard = dynamic(() => import("./global-board").then((module) => module.GlobalBoard), { loading: () => <BoardLoadingSkeleton /> });
 const ProjectBoard = dynamic(() => import("@/app/(app)/projects/[id]/page"), { loading: () => <BoardLoadingSkeleton /> });
 
 const RetainedBoard = memo(function RetainedBoard({ view, active }: { view: RetainedAppView; active: boolean }) {
   const scroll = useRetainedBoardScroll(active);
-  return <div {...scroll} className="h-full min-h-0" data-retained-app-view={view.key} data-app-view-active={active ? "true" : "false"}
+  const client = useQueryClient();
+  const t = useTranslations("Board");
+  const subscribe = useCallback((notify: () => void) => client.getQueryCache().subscribe(notify), [client]);
+  const snapshot = useCallback(() => retainedBoardReadState(client, view), [client, view]);
+  const readState = useSyncExternalStore(subscribe, snapshot, () => "fresh");
+  return <div {...scroll} className="relative h-full min-h-0" data-retained-app-view={view.key} data-app-view-active={active ? "true" : "false"}
+    data-board-read-state={readState} aria-busy={active && readState !== "fresh"}
     inert={!active} aria-hidden={!active || undefined} style={{ display: active ? undefined : "none" }}>
     <Activity mode={active ? "visible" : "hidden"}>
     <AppTabNavigationScope activeId={view.tabId}>
@@ -27,6 +35,12 @@ const RetainedBoard = memo(function RetainedBoard({ view, active }: { view: Reta
       </AppTabRouteProvider>
     </AppTabNavigationScope>
     </Activity>
+    {active && readState !== "fresh" && <div role="status" className="absolute bottom-3 left-3 z-40 flex items-center gap-2 rounded-lg border bg-background px-3 py-2 text-xs text-muted-foreground">
+      {t(readState === "error" ? "readPreviousError" : readState === "paused" ? "readPaused" : "readRefreshing")}
+      {(readState === "error" || readState === "paused") && <button type="button" className="underline" onClick={() => {
+        for (const queryKey of retainedBoardKeys(view)) void client.refetchQueries({ queryKey, exact: true });
+      }}>{t("readRetry")}</button>}
+    </div>}
   </div>;
 });
 
