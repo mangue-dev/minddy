@@ -309,6 +309,28 @@ output was recovered from this chat's original tool observation, with that
 provenance recorded, rather than reconstructed. The existing Node module-type warning is unchanged. Final checks and
 excluded-path review are recorded with delivery evidence.
 
+Delivery CI at `6582b8dacf7c361ba5971729eb5b7806da5a2331`
+([run 37123932807](https://github.com/mangue-dev/minddy/actions/runs/37123932807))
+stopped before tests: Gitleaks reported two occurrences of the independently
+verified SHA-256 of `lib/realtime-keys.ts` in this results manifest. The follow-up
+allows only that exact digest, exact manifest path and generic API key rule;
+three policy regressions and a reachable-HEAD history scan pass. A broader local
+`--all` scan also sees unrelated local refs and retains ten findings; it is not
+represented as a passing scan of the PR. CI performs its own all-history scan.
+The full local suite passes **9,453 tests**, with **112 skipped**, in **1,048
+passing files and 19 skipped files**. No production source changed after the
+measured `b135cc3f22d1263bde321a7c373a60641139143c` commit.
+
+The separate dependency job fails on the desktop packaging tree's
+[GHSA-ch52-4w7c-c8xp](https://github.com/advisories/GHSA-ch52-4w7c-c8xp).
+Its manifests and lockfiles are byte-for-byte unchanged from the baseline;
+the previous baseline CI audit passed. The current advisory lists no patched
+version, and the audit suggests a breaking builder downgrade. This pass neither
+suppresses the advisory nor changes the packaging dependency tree. The failing
+dependency check remains an integration blocker, not a resolved security issue.
+Failed CI logs, baseline audit output, redacted checksum findings, local scanner
+outputs and complete local test output are retained in the results.
+
 Supplemental previous-gain revalidation uses one fresh native launch per older
 probe with ten warm repeats, compared to preserved pass-3 evidence rather than
 claimed as another three-launch causal experiment. Complete opening medians are

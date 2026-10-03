@@ -71,7 +71,7 @@ for (const phase of ['before', 'after']) {
 }
 const logs = [];
 for (const file of files.filter((file) => /^pass3b-.*\.log$/.test(file) && !file.includes('summary'))) { const raw = await readFile(`${root}/${file}`); if (/server-(before|after)\.log$/.test(file)) { const zipped = gzipSync(raw), artifact = `${assets}/min-614-${file}.gz`; await writeFile(artifact, zipped); artifacts.push({ file, artifact, bytes: raw.length, sha256: hash(raw), compressedBytes: zipped.length, compressedSha256: hash(zipped) }); }
-  logs.push({ file, bytes: raw.length, sha256: hash(raw), ...(/(?:tests|lint|typecheck|english|access|schema|build|restore|probe|retained-verification)/.test(file) ? { output: raw.toString() } : {}) }); }
+  logs.push({ file, bytes: raw.length, sha256: hash(raw), ...(/(?:tests|lint|typecheck|english|access|schema|build|restore|probe|retained-verification|ci-|gitleaks)/.test(file) ? { output: raw.toString() } : {}) }); }
 const screenshots = [];
 for (const file of files.filter((file) => /^pass3b-.*-failure\.png$/.test(file) || file === 'pass3b-after-1-loaded-light.png')) {
   const artifact = `${assets}/${file === 'pass3b-after-1-loaded-light.png' ? 'min-614-pass-3b-loaded-light.png' : `min-614-${file}`}`;

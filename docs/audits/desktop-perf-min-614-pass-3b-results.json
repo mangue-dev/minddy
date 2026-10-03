@@ -1271,7 +1271,7 @@
       ]
     }
   ],
-  "measuredAt": "2026-10-03T12:39:30.356Z",
+  "measuredAt": "2026-10-03T13:02:28.878Z",
   "method": "Three fresh native production launches and ten warm observations per main scenario in each implementation. Failed/interrupted/profile/injected runs are separate and preserved. No outlier removal. First visibility precedes the historical two frames; legacy menu input also includes closure. Persisted-read verification follows the existing 350 ms observation tail and is not minimum commit latency. Upstream windows may include concurrent background operations and are not request-correlated SQL profiles.",
   "before": {
     "runs": [
@@ -153406,6 +153406,312 @@
       }
     },
     {
+      "jobs": [
+        {
+          "completedAt": "2026-10-02T21:50:28Z",
+          "conclusion": "success",
+          "databaseId": 111044237293,
+          "name": "Dependencies audit",
+          "startedAt": "2026-10-02T21:50:15Z",
+          "status": "completed",
+          "steps": [
+            {
+              "completedAt": "2026-10-02T21:50:16Z",
+              "conclusion": "success",
+              "name": "Set up job",
+              "number": 1,
+              "startedAt": "2026-10-02T21:50:15Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-02T21:50:22Z",
+              "conclusion": "success",
+              "name": "Run actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09",
+              "number": 2,
+              "startedAt": "2026-10-02T21:50:16Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-02T21:50:23Z",
+              "conclusion": "success",
+              "name": "Run pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1",
+              "number": 3,
+              "startedAt": "2026-10-02T21:50:22Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-02T21:50:23Z",
+              "conclusion": "success",
+              "name": "Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
+              "number": 4,
+              "startedAt": "2026-10-02T21:50:23Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-02T21:50:24Z",
+              "conclusion": "success",
+              "name": "Review dependency changes",
+              "number": 5,
+              "startedAt": "2026-10-02T21:50:23Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-02T21:50:26Z",
+              "conclusion": "success",
+              "name": "Audit (high+)",
+              "number": 6,
+              "startedAt": "2026-10-02T21:50:24Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-02T21:50:27Z",
+              "conclusion": "success",
+              "name": "Post Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
+              "number": 10,
+              "startedAt": "2026-10-02T21:50:26Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-02T21:50:27Z",
+              "conclusion": "success",
+              "name": "Post Run pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1",
+              "number": 11,
+              "startedAt": "2026-10-02T21:50:27Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-02T21:50:27Z",
+              "conclusion": "success",
+              "name": "Post Run actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09",
+              "number": 12,
+              "startedAt": "2026-10-02T21:50:27Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-02T21:50:27Z",
+              "conclusion": "success",
+              "name": "Complete job",
+              "number": 13,
+              "startedAt": "2026-10-02T21:50:27Z",
+              "status": "completed"
+            }
+          ],
+          "url": "https://github.com/mangue-dev/minddy/actions/runs/37069163693/job/111044237293"
+        },
+        {
+          "completedAt": "2026-10-02T21:56:57Z",
+          "conclusion": "success",
+          "databaseId": 111044237416,
+          "name": "Tests & typecheck",
+          "startedAt": "2026-10-02T21:50:15Z",
+          "status": "completed",
+          "steps": [
+            {
+              "completedAt": "2026-10-02T21:50:16Z",
+              "conclusion": "success",
+              "name": "Set up job",
+              "number": 1,
+              "startedAt": "2026-10-02T21:50:15Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-02T21:50:32Z",
+              "conclusion": "success",
+              "name": "Run actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09",
+              "number": 2,
+              "startedAt": "2026-10-02T21:50:16Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-02T21:50:32Z",
+              "conclusion": "success",
+              "name": "Enforce immutable workflow and container references",
+              "number": 3,
+              "startedAt": "2026-10-02T21:50:32Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-02T21:50:51Z",
+              "conclusion": "success",
+              "name": "Public repository check",
+              "number": 4,
+              "startedAt": "2026-10-02T21:50:32Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-02T21:51:18Z",
+              "conclusion": "success",
+              "name": "Scan secrets and publication data markers",
+              "number": 5,
+              "startedAt": "2026-10-02T21:50:51Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-02T21:51:19Z",
+              "conclusion": "success",
+              "name": "Run pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1",
+              "number": 6,
+              "startedAt": "2026-10-02T21:51:18Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-02T21:51:26Z",
+              "conclusion": "success",
+              "name": "Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
+              "number": 7,
+              "startedAt": "2026-10-02T21:51:19Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-02T21:51:36Z",
+              "conclusion": "success",
+              "name": "Run pnpm install --frozen-lockfile",
+              "number": 8,
+              "startedAt": "2026-10-02T21:51:26Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-02T21:51:40Z",
+              "conclusion": "success",
+              "name": "Lint",
+              "number": 9,
+              "startedAt": "2026-10-02T21:51:36Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-02T21:51:43Z",
+              "conclusion": "success",
+              "name": "Encrypted column access",
+              "number": 10,
+              "startedAt": "2026-10-02T21:51:40Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-02T21:51:55Z",
+              "conclusion": "success",
+              "name": "Typecheck",
+              "number": 11,
+              "startedAt": "2026-10-02T21:51:43Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-02T21:51:55Z",
+              "conclusion": "success",
+              "name": "Desktop bundle",
+              "number": 12,
+              "startedAt": "2026-10-02T21:51:55Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-02T21:54:57Z",
+              "conclusion": "success",
+              "name": "Tests",
+              "number": 13,
+              "startedAt": "2026-10-02T21:51:55Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-02T21:54:58Z",
+              "conclusion": "success",
+              "name": "Release tooling tests",
+              "number": 14,
+              "startedAt": "2026-10-02T21:54:57Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-02T21:55:00Z",
+              "conclusion": "success",
+              "name": "Self-hosted tools and network policy tests",
+              "number": 15,
+              "startedAt": "2026-10-02T21:54:58Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-02T21:55:00Z",
+              "conclusion": "success",
+              "name": "Self-hosted minimal egress contract",
+              "number": 16,
+              "startedAt": "2026-10-02T21:55:00Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-02T21:55:01Z",
+              "conclusion": "success",
+              "name": "Self-hosted provider egress contract",
+              "number": 17,
+              "startedAt": "2026-10-02T21:55:00Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-02T21:55:01Z",
+              "conclusion": "success",
+              "name": "Self-hosted blocked-vendor egress diagnostic",
+              "number": 18,
+              "startedAt": "2026-10-02T21:55:01Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-02T21:55:11Z",
+              "conclusion": "success",
+              "name": "Check all edition contracts",
+              "number": 19,
+              "startedAt": "2026-10-02T21:55:01Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-02T21:56:54Z",
+              "conclusion": "success",
+              "name": "Build and start deployable editions",
+              "number": 20,
+              "startedAt": "2026-10-02T21:55:11Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-02T21:56:54Z",
+              "conclusion": "success",
+              "name": "Upload self-hosted egress reports",
+              "number": 21,
+              "startedAt": "2026-10-02T21:56:54Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-02T21:56:55Z",
+              "conclusion": "success",
+              "name": "Post Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
+              "number": 40,
+              "startedAt": "2026-10-02T21:56:54Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-02T21:56:55Z",
+              "conclusion": "success",
+              "name": "Post Run pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1",
+              "number": 41,
+              "startedAt": "2026-10-02T21:56:55Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-02T21:56:55Z",
+              "conclusion": "success",
+              "name": "Post Run actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09",
+              "number": 42,
+              "startedAt": "2026-10-02T21:56:55Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-02T21:56:55Z",
+              "conclusion": "success",
+              "name": "Complete job",
+              "number": 43,
+              "startedAt": "2026-10-02T21:56:55Z",
+              "status": "completed"
+            }
+          ],
+          "url": "https://github.com/mangue-dev/minddy/actions/runs/37069163693/job/111044237416"
+        }
+      ]
+    },
+    {
       "label": "pass3b-before-1",
       "native": true,
       "diagnostic": false,
@@ -207822,6 +208128,50 @@
       }
     },
     {
+      "0": {
+        "RuleID": "generic-api-key",
+        "Description": "Detected a Generic API Key, potentially exposing access to various services and sensitive operations.",
+        "StartLine": 226678,
+        "EndLine": 226678,
+        "StartColumn": 15,
+        "EndColumn": 99,
+        "Match": "realtime-keys.ts\": \"REDACTED\"",
+        "Secret": "REDACTED",
+        "File": "docs/audits/desktop-perf-min-614-pass-3b-results.json",
+        "SymlinkFile": "",
+        "Commit": "6582b8dacf7c361ba5971729eb5b7806da5a2331",
+        "Link": "https://github.com/mangue-dev/minddy/blob/6582b8dacf7c361ba5971729eb5b7806da5a2331/docs/audits/desktop-perf-min-614-pass-3b-results.json#L226678",
+        "Entropy": 3.7329154,
+        "Author": "Clément",
+        "Email": "81526886+mangue-dev@users.noreply.github.com",
+        "Date": "2026-10-03T12:45:00Z",
+        "Message": "test: record native comment persistence and recovery evidence\n\nSigned-off-by: Clément <81526886+mangue-dev@users.noreply.github.com>",
+        "Tags": [],
+        "Fingerprint": "6582b8dacf7c361ba5971729eb5b7806da5a2331:docs/audits/desktop-perf-min-614-pass-3b-results.json:generic-api-key:226678"
+      },
+      "1": {
+        "RuleID": "generic-api-key",
+        "Description": "Detected a Generic API Key, potentially exposing access to various services and sensitive operations.",
+        "StartLine": 250938,
+        "EndLine": 250938,
+        "StartColumn": 13,
+        "EndColumn": 97,
+        "Match": "realtime-keys.ts\": \"REDACTED\"",
+        "Secret": "REDACTED",
+        "File": "docs/audits/desktop-perf-min-614-pass-3b-results.json",
+        "SymlinkFile": "",
+        "Commit": "6582b8dacf7c361ba5971729eb5b7806da5a2331",
+        "Link": "https://github.com/mangue-dev/minddy/blob/6582b8dacf7c361ba5971729eb5b7806da5a2331/docs/audits/desktop-perf-min-614-pass-3b-results.json#L250938",
+        "Entropy": 3.7329154,
+        "Author": "Clément",
+        "Email": "81526886+mangue-dev@users.noreply.github.com",
+        "Date": "2026-10-03T12:45:00Z",
+        "Message": "test: record native comment persistence and recovery evidence\n\nSigned-off-by: Clément <81526886+mangue-dev@users.noreply.github.com>",
+        "Tags": [],
+        "Fingerprint": "6582b8dacf7c361ba5971729eb5b7806da5a2331:docs/audits/desktop-perf-min-614-pass-3b-results.json:generic-api-key:250938"
+      }
+    },
+    {
       "label": "pass3b-openings-after",
       "native": true,
       "diagnostic": false,
@@ -211212,6 +211562,101 @@
       "closingIssuesReferences": [],
       "headRefOid": "b0f7f46e58e2cda575d207e558237fc041683e3b",
       "state": "OPEN",
+      "title": "fix: reduce encrypted PR reads and desktop style invalidation (MIN-614)"
+    },
+    {
+      "autoMergeRequest": null,
+      "body": "## Why\n\nRefs MIN-614. Global encryption exposed additional loading costs in the desktop app. This first measured delivery reduces repeated encrypted PR reads and fixes native renderer style invalidation. MIN-614 remains open for the outstanding acceptance work recorded in its plan.\n\n## Changes\n\n- Coalesce repository identity decoding within each authorized operation, verify immutable index tokens without a writer-key lookup, and parallelize independent PR/count/sync/agent-decoration reads. Preserve source ordering, permission filters, GCM binding, key rotation and provider separation. No plaintext cache persists across requests.\n- Replace two root `:has(.app-top-bar)` CSS selectors with a marker owned by the mounted application bar. Preserve native drag/no-drag regions and responsive behavior.\n- Move activity-text overflow measurement after layout while preserving its DOM/focus; skip unnecessary board geometry reads when its scroll offset is already restored.\n- Add reproducible native/repository benchmarks, aggregate-only before/after evidence, a PostHog error investigation and synthetic light-mode screenshots. No migrations, new dependencies, API contract changes or breaking changes.\n\n## Verification\n\n- 44 focused tests across ten files; supplementary provider/upsert regression coverage.\n- Production build, `npm run typecheck`, `npm run lint`, `npm run check:owned-english`, `npm run check:encrypted-access`, `npm run check:encryption-schema`, and `git diff --check` pass. Every commit has a matching DCO sign-off.\n- Actual unpackaged Electron 43.7.5, fresh temporary profiles, the existing encrypted 600-issue fixture, and local production servers. No plaintext seeding, profile copying or fabricated forge responses.\n\n| Measurement | Baseline | Candidate | Candidate repeat |\n| --- | ---: | ---: | ---: |\n| Native issue dialog median | 1,210 ms | 316 ms | 328 ms |\n| Native board return median | 1,430 ms | 1,151 ms | 1,108 ms |\n| Native PR list route median | 1,400 ms | 739 ms | 3,709 ms |\n| Native PR list navigation, one observation | 2,722 ms | 1,821 ms | 2,280 ms |\n\nThe native issue style-time median drops from 785 to 138 ms, reproduced at 133 ms. A 51-PR authorized repository read drops from 111 to 11 upstream calls and from 749 to 455 ms in the three warm samples. Native readiness samples are small and are not field INP or p95 estimates. The slower PR repeat and a 48-second successful writer-key-read outlier are retained; no universal end-to-end PR latency improvement is claimed.\n\nFull methodology, observations, PostHog links and follow-ups: [MIN-614 audit](https://github.com/mangue-dev/minddy/blob/66886c54c1b37521f64f98ddc52643fa752fbacf/docs/audits/desktop-perf-min-614.md).\n\n## Risks and dependencies\n\nThe board still stalls on activation with 600 rich cards. Loaded feedback, active agent streams, packaged-app behavior and connected-forge detail/diff navigation need further measurements. The fixture has no forge credentials; PR screenshots show stored list readiness and a pending/unavailable detail, not successful forge content. PostHog identity/key/schema errors and Supabase transport latency remain unresolved. This PR must not close MIN-614 or trigger a deployment.\n\nEncryption, RLS, current-writer-key checks and root-key/cache policy remain unchanged. The native titlebar marker changes styling only while the application bar exists; StrictMode cleanup and drag-band policy are covered. Added screenshots contain the repository's synthetic performance fixture only, with no customer content or secrets. No external asset/dependency licensing changes.\n\n## Screenshots\n\nNative issue opening, light-mode synthetic fixture:\n\n![Native issue dialog](https://raw.githubusercontent.com/mangue-dev/minddy/66886c54c1b37521f64f98ddc52643fa752fbacf/docs/audits/assets/min-614-issue-light.png)\n\nStored PR list; the fixture has no connected forge credentials:\n\n![Stored PR list](https://raw.githubusercontent.com/mangue-dev/minddy/66886c54c1b37521f64f98ddc52643fa752fbacf/docs/audits/assets/min-614-pr-light.png)\n\n## Checklist\n\n- [x] Scope and measured outcome are associated with MIN-614; unfinished acceptance criteria remain explicit.\n- [x] Every commit carries its author's DCO sign-off.\n- [x] Regression coverage preserves the changed behavior and encryption guarantees.\n- [x] Documentation is updated; locale catalogs require no changes.\n- [x] No keys, customer data, private configuration or vulnerability details are included.\n- [x] Added resources have documented synthetic origin; no new dependencies.\n\n## Cumulative delivery: pass 2 and subsequent passes\n\nAt the user's request, this PR now contains both completed MIN-614 passes and will receive subsequent passes on the same branch, `codex/min-614-encryption-performance`. The original first-pass and pass-2 commits were preserved by fast-forward. PR #343 is superseded; there is no separate dependency to merge. The first-pass results above remain historical evidence; the following measurements use their own baseline and active-view readiness checks.\n\n### Pass 2: retained boards and tab activation\n\nMove public Next router subscriptions from each card to its column and pass the same navigation callback into card content and menu actions. This avoids 1,800 card router subscriptions replaying on the 600-card global board. Preserve React Activity, retained-view limits, live subscriptions, scroll/focus/filters/selection, optimistic drag-and-drop and authorized encrypted reads.\n\nThree fresh native production Electron launches per implementation, with ten warm returns per variant per launch (30 samples per row):\n\n| Scenario | Median readiness before → after | Reduction |\n| --- | ---: | ---: |\n| Close issue → global board | 201 → 198 ms | Essentially unchanged |\n| Page → global board | 1,217 → 682 ms | 44% |\n| Global → project board | 529 → 399 ms | 25% |\n| Project → global board | 972 → 701 ms | 28% |\n| Scrolled return | 1,371 → 786 ms | 43% |\n| Filtered return | 1,066 → 544 ms | 49% |\n| Hidden update → fresh board | 897 → 650 ms | 28% |\n\nThe runner requires the selected target tab, a visible non-inert active board, the expected card count and current title after hidden updates, no blocking dialog and two frames. A real Filters-menu click separately measures interaction response. Page-return input falls 217 → 152 ms; hidden-update input rises 224 → 238 ms. Several-hundred-millisecond stalls and cold-start variability remain. Heavy profiles are separate from ordinary samples. Rejected containment, permanently active Activity and catalog experiments are not shipped.\n\nMeasured source: baseline `66886c54c1b37521f64f98ddc52643fa752fbacf`; candidate `e08051839177e66b69b251c2cc871884367b091c`. [Pass-2 audit](https://github.com/mangue-dev/minddy/blob/7099e970d4c009b8591cfd7d10112a28f882068d/docs/audits/desktop-perf-min-614-pass-2.md) and [all samples, requests and errors](https://github.com/mangue-dev/minddy/blob/7099e970d4c009b8591cfd7d10112a28f882068d/docs/audits/desktop-perf-min-614-pass-2-results.json) retain runtime, build, dataset, reproduction commands, attribution and limitations.\n\nPass-2 validation: 136 focused tests in 19 files; production build, types, lint, owned-English, encrypted-access/schema checks and diff checks passed. Supplemental browser checks cover retained state, focus, shortcuts, drag persistence/reversal, eviction and tab closure. First-pass style and repository call-count gains were reverified. This consolidation only changes documentation; owned-English and diff checks pass again, and all four commits have matching DCO sign-offs.\n\nPostHog key/identity/schema errors were inspected; sampled events lack route/release/session dimensions needed to establish a board-version cause. Connected forge, populated feedback/agent sessions, broader issue/Page workflows and packaged-release coverage remain open. The cumulative coverage matrix and next issue-details/activity/comments/relations/mutations pass are recorded in MIN-614. Keep MIN-614 in progress; this PR does not authorize merging or production deployment.\n\nRestored filtered board in light mode (supplemental browser correctness capture, not a native timing sample):\n\n![Pass-2 restored filtered board](https://raw.githubusercontent.com/mangue-dev/minddy/1d3fb577cd5e5d338a3a619e0d75f8e8590647b1/docs/audits/assets/min-614-pass-2-restored-board-light.png)\n\n\n## Pass 3: loaded issue details and mutations\n\nOpening a loaded issue fetched the full automation simulation even though its status bar consumes only the current chain. The bar now uses an authorized `view=chain` read; the default route retains simulation and estimation for its consumers. Caller RLS, live-session authorization, current chain reads and parent-prefix realtime/start/resume/stop invalidation are preserved. There is no persistent plaintext cache or encryption/key-policy change.\n\nThree fresh native Electron launches before and after, with ten warm repetitions per main scenario, retain 792 ordinary observations and 120 persisted mutation confirmations. Complete active-view readiness checks the entire description, original comments, current title and successful detail API state.\n\n| Issue journey | Before median | After median |\n| --- | ---: | ---: |\n| Warm complete opening | 387 ms | 318 ms |\n| Scrolled-board opening | 384 ms | 296 ms |\n| Filtered-board opening | 390 ms | 277 ms |\n| Reopen after retained return | 394 ms | 351 ms |\n\nThe four opening variants improve in every candidate launch. A separate alternating server control completes 30 reads of each variant: full/status medians 262/197 ms, with five/three monitored REST operations. The fixture has no active chain, so active automation/estimate interactions remain unmeasured.\n\nCold complete opening is 656/673 ms, comment edit 750/793 ms, effort confirmation 476/482 ms and comment confirmation 524/530 ms; no gain is claimed for those paths. Warm opening still has a roughly 176 ms long task and 144 ms style work. The filtered menu probe increases from 101 to 134 ms, and retained reopen p95 worsens. Failed/partial runs, canceled reads, remote authorization RPC deadlines and scoped restoration evidence remain explicit. A local server restart uses the same compiled candidate; no guard is bypassed to make measurements succeed.\n\nBaseline: `7099e970d4c009b8591cfd7d10112a28f882068d`; product candidate: `71428008c11375ef0559c34c3019761ad17663f7`; final benchmark capture: `b49100b92`; delivery: `b0f7f46e58e2cda575d207e558237fc041683e3b`. Actual unpackaged Electron 43.7.5, Chromium 150.0.7871.250, production Next build, migrated marked MIN-540 encrypted fixture (600 issues). Build IDs, source hashes, dataset/history drift, network conditions and commands are retained in the [pass-3 audit](https://github.com/mangue-dev/minddy/blob/b0f7f46e58e2cda575d207e558237fc041683e3b/docs/audits/desktop-perf-min-614-pass-3.md), [complete results](https://github.com/mangue-dev/minddy/blob/b0f7f46e58e2cda575d207e558237fc041683e3b/docs/audits/desktop-perf-min-614-pass-3-results.json), and lossless upstream [before](https://github.com/mangue-dev/minddy/blob/b0f7f46e58e2cda575d207e558237fc041683e3b/docs/audits/assets/min-614-pass-3-upstream-before.jsonl.gz)/[after](https://github.com/mangue-dev/minddy/blob/b0f7f46e58e2cda575d207e558237fc041683e3b/docs/audits/assets/min-614-pass-3-upstream-after.jsonl.gz) archives. Prior pass-1/pass-2 audits, results and screenshots are unchanged.\n\nValidation: 214 targeted tests in 29 files; reference/candidate production builds, types, lint, owned-English, encrypted-access/schema checks and diff checks passed. Native rollback/retry/canonical-relation/resource/child checks revalidate MIN-630 without duplicating its implementation. Browser correctness checks cover focus, filter/selection/scroll, drag persistence and reversal, retention limits and eviction. Previous style and encrypted PR read gains hold (PR list remains 11 monitored calls); supplemental native retained Page return is 669 ms, scrolled return 661 ms and filtered return 486 ms. Heavy CPU/trace captures remain outside ordinary medians.\n\nPostHog key/identity/schema errors were inspected through MCP; sampled server events lack route/release/session dimensions needed to correlate them with this candidate. None is claimed fixed.\n\nNext: pass 3b should address persisted comment/edit and hidden-update costs, loaded description/plan autosave, larger threads, objectives/resources and interrupted/concurrent writes. Connected forge, active chains/agents, prolonged native backgrounding and signed-package coverage remain open. MIN-614 remains **in progress**. No GitHub closing references or auto-merge request are present. Minddy separately maps a linked **merged** PR to done, so a later authorized merge must explicitly keep/reopen the program until acceptance is complete. This update does not merge, run work:done or deploy.\n\nSynthetic fixture in native Electron, light mode, captured outside timed observations:\n\n![Pass-3 loaded issue description](https://raw.githubusercontent.com/mangue-dev/minddy/b0f7f46e58e2cda575d207e558237fc041683e3b/docs/audits/assets/min-614-pass-3-issue-light.png)\n\n![Pass-3 original comments and relation](https://raw.githubusercontent.com/mangue-dev/minddy/b0f7f46e58e2cda575d207e558237fc041683e3b/docs/audits/assets/min-614-pass-3-activity-light.png)\n",
+      "closingIssuesReferences": [],
+      "headRefOid": "6582b8dacf7c361ba5971729eb5b7806da5a2331",
+      "state": "OPEN",
+      "title": "fix: reduce encrypted PR reads and desktop style invalidation (MIN-614)"
+    },
+    {
+      "autoMergeRequest": null,
+      "body": "## Why\n\nRefs MIN-614. Global encryption exposed additional loading costs in the desktop app. This first measured delivery reduces repeated encrypted PR reads and fixes native renderer style invalidation. MIN-614 remains open for the outstanding acceptance work recorded in its plan.\n\n## Changes\n\n- Coalesce repository identity decoding within each authorized operation, verify immutable index tokens without a writer-key lookup, and parallelize independent PR/count/sync/agent-decoration reads. Preserve source ordering, permission filters, GCM binding, key rotation and provider separation. No plaintext cache persists across requests.\n- Replace two root `:has(.app-top-bar)` CSS selectors with a marker owned by the mounted application bar. Preserve native drag/no-drag regions and responsive behavior.\n- Move activity-text overflow measurement after layout while preserving its DOM/focus; skip unnecessary board geometry reads when its scroll offset is already restored.\n- Add reproducible native/repository benchmarks, aggregate-only before/after evidence, a PostHog error investigation and synthetic light-mode screenshots. No migrations, new dependencies, API contract changes or breaking changes.\n\n## Verification\n\n- 44 focused tests across ten files; supplementary provider/upsert regression coverage.\n- Production build, `npm run typecheck`, `npm run lint`, `npm run check:owned-english`, `npm run check:encrypted-access`, `npm run check:encryption-schema`, and `git diff --check` pass. Every commit has a matching DCO sign-off.\n- Actual unpackaged Electron 43.7.5, fresh temporary profiles, the existing encrypted 600-issue fixture, and local production servers. No plaintext seeding, profile copying or fabricated forge responses.\n\n| Measurement | Baseline | Candidate | Candidate repeat |\n| --- | ---: | ---: | ---: |\n| Native issue dialog median | 1,210 ms | 316 ms | 328 ms |\n| Native board return median | 1,430 ms | 1,151 ms | 1,108 ms |\n| Native PR list route median | 1,400 ms | 739 ms | 3,709 ms |\n| Native PR list navigation, one observation | 2,722 ms | 1,821 ms | 2,280 ms |\n\nThe native issue style-time median drops from 785 to 138 ms, reproduced at 133 ms. A 51-PR authorized repository read drops from 111 to 11 upstream calls and from 749 to 455 ms in the three warm samples. Native readiness samples are small and are not field INP or p95 estimates. The slower PR repeat and a 48-second successful writer-key-read outlier are retained; no universal end-to-end PR latency improvement is claimed.\n\nFull methodology, observations, PostHog links and follow-ups: [MIN-614 audit](https://github.com/mangue-dev/minddy/blob/66886c54c1b37521f64f98ddc52643fa752fbacf/docs/audits/desktop-perf-min-614.md).\n\n## Risks and dependencies\n\nThe board still stalls on activation with 600 rich cards. Loaded feedback, active agent streams, packaged-app behavior and connected-forge detail/diff navigation need further measurements. The fixture has no forge credentials; PR screenshots show stored list readiness and a pending/unavailable detail, not successful forge content. PostHog identity/key/schema errors and Supabase transport latency remain unresolved. This PR must not close MIN-614 or trigger a deployment.\n\nEncryption, RLS, current-writer-key checks and root-key/cache policy remain unchanged. The native titlebar marker changes styling only while the application bar exists; StrictMode cleanup and drag-band policy are covered. Added screenshots contain the repository's synthetic performance fixture only, with no customer content or secrets. No external asset/dependency licensing changes.\n\n## Screenshots\n\nNative issue opening, light-mode synthetic fixture:\n\n![Native issue dialog](https://raw.githubusercontent.com/mangue-dev/minddy/66886c54c1b37521f64f98ddc52643fa752fbacf/docs/audits/assets/min-614-issue-light.png)\n\nStored PR list; the fixture has no connected forge credentials:\n\n![Stored PR list](https://raw.githubusercontent.com/mangue-dev/minddy/66886c54c1b37521f64f98ddc52643fa752fbacf/docs/audits/assets/min-614-pr-light.png)\n\n## Checklist\n\n- [x] Scope and measured outcome are associated with MIN-614; unfinished acceptance criteria remain explicit.\n- [x] Every commit carries its author's DCO sign-off.\n- [x] Regression coverage preserves the changed behavior and encryption guarantees.\n- [x] Documentation is updated; locale catalogs require no changes.\n- [x] No keys, customer data, private configuration or vulnerability details are included.\n- [x] Added resources have documented synthetic origin; no new dependencies.\n\n## Cumulative delivery: pass 2 and subsequent passes\n\nAt the user's request, this PR now contains both completed MIN-614 passes and will receive subsequent passes on the same branch, `codex/min-614-encryption-performance`. The original first-pass and pass-2 commits were preserved by fast-forward. PR #343 is superseded; there is no separate dependency to merge. The first-pass results above remain historical evidence; the following measurements use their own baseline and active-view readiness checks.\n\n### Pass 2: retained boards and tab activation\n\nMove public Next router subscriptions from each card to its column and pass the same navigation callback into card content and menu actions. This avoids 1,800 card router subscriptions replaying on the 600-card global board. Preserve React Activity, retained-view limits, live subscriptions, scroll/focus/filters/selection, optimistic drag-and-drop and authorized encrypted reads.\n\nThree fresh native production Electron launches per implementation, with ten warm returns per variant per launch (30 samples per row):\n\n| Scenario | Median readiness before → after | Reduction |\n| --- | ---: | ---: |\n| Close issue → global board | 201 → 198 ms | Essentially unchanged |\n| Page → global board | 1,217 → 682 ms | 44% |\n| Global → project board | 529 → 399 ms | 25% |\n| Project → global board | 972 → 701 ms | 28% |\n| Scrolled return | 1,371 → 786 ms | 43% |\n| Filtered return | 1,066 → 544 ms | 49% |\n| Hidden update → fresh board | 897 → 650 ms | 28% |\n\nThe runner requires the selected target tab, a visible non-inert active board, the expected card count and current title after hidden updates, no blocking dialog and two frames. A real Filters-menu click separately measures interaction response. Page-return input falls 217 → 152 ms; hidden-update input rises 224 → 238 ms. Several-hundred-millisecond stalls and cold-start variability remain. Heavy profiles are separate from ordinary samples. Rejected containment, permanently active Activity and catalog experiments are not shipped.\n\nMeasured source: baseline `66886c54c1b37521f64f98ddc52643fa752fbacf`; candidate `e08051839177e66b69b251c2cc871884367b091c`. [Pass-2 audit](https://github.com/mangue-dev/minddy/blob/7099e970d4c009b8591cfd7d10112a28f882068d/docs/audits/desktop-perf-min-614-pass-2.md) and [all samples, requests and errors](https://github.com/mangue-dev/minddy/blob/7099e970d4c009b8591cfd7d10112a28f882068d/docs/audits/desktop-perf-min-614-pass-2-results.json) retain runtime, build, dataset, reproduction commands, attribution and limitations.\n\nPass-2 validation: 136 focused tests in 19 files; production build, types, lint, owned-English, encrypted-access/schema checks and diff checks passed. Supplemental browser checks cover retained state, focus, shortcuts, drag persistence/reversal, eviction and tab closure. First-pass style and repository call-count gains were reverified. This consolidation only changes documentation; owned-English and diff checks pass again, and all four commits have matching DCO sign-offs.\n\nPostHog key/identity/schema errors were inspected; sampled events lack route/release/session dimensions needed to establish a board-version cause. Connected forge, populated feedback/agent sessions, broader issue/Page workflows and packaged-release coverage remain open. The cumulative coverage matrix and next issue-details/activity/comments/relations/mutations pass are recorded in MIN-614. Keep MIN-614 in progress; this PR does not authorize merging or production deployment.\n\nRestored filtered board in light mode (supplemental browser correctness capture, not a native timing sample):\n\n![Pass-2 restored filtered board](https://raw.githubusercontent.com/mangue-dev/minddy/1d3fb577cd5e5d338a3a619e0d75f8e8590647b1/docs/audits/assets/min-614-pass-2-restored-board-light.png)\n\n\n## Pass 3: loaded issue details and mutations\n\nOpening a loaded issue fetched the full automation simulation even though its status bar consumes only the current chain. The bar now uses an authorized `view=chain` read; the default route retains simulation and estimation for its consumers. Caller RLS, live-session authorization, current chain reads and parent-prefix realtime/start/resume/stop invalidation are preserved. There is no persistent plaintext cache or encryption/key-policy change.\n\nThree fresh native Electron launches before and after, with ten warm repetitions per main scenario, retain 792 ordinary observations and 120 persisted mutation confirmations. Complete active-view readiness checks the entire description, original comments, current title and successful detail API state.\n\n| Issue journey | Before median | After median |\n| --- | ---: | ---: |\n| Warm complete opening | 387 ms | 318 ms |\n| Scrolled-board opening | 384 ms | 296 ms |\n| Filtered-board opening | 390 ms | 277 ms |\n| Reopen after retained return | 394 ms | 351 ms |\n\nThe four opening variants improve in every candidate launch. A separate alternating server control completes 30 reads of each variant: full/status medians 262/197 ms, with five/three monitored REST operations. The fixture has no active chain, so active automation/estimate interactions remain unmeasured.\n\nCold complete opening is 656/673 ms, comment edit 750/793 ms, effort confirmation 476/482 ms and comment confirmation 524/530 ms; no gain is claimed for those paths. Warm opening still has a roughly 176 ms long task and 144 ms style work. The filtered menu probe increases from 101 to 134 ms, and retained reopen p95 worsens. Failed/partial runs, canceled reads, remote authorization RPC deadlines and scoped restoration evidence remain explicit. A local server restart uses the same compiled candidate; no guard is bypassed to make measurements succeed.\n\nBaseline: `7099e970d4c009b8591cfd7d10112a28f882068d`; product candidate: `71428008c11375ef0559c34c3019761ad17663f7`; final benchmark capture: `b49100b92`; delivery: `b0f7f46e58e2cda575d207e558237fc041683e3b`. Actual unpackaged Electron 43.7.5, Chromium 150.0.7871.250, production Next build, migrated marked MIN-540 encrypted fixture (600 issues). Build IDs, source hashes, dataset/history drift, network conditions and commands are retained in the [pass-3 audit](https://github.com/mangue-dev/minddy/blob/b0f7f46e58e2cda575d207e558237fc041683e3b/docs/audits/desktop-perf-min-614-pass-3.md), [complete results](https://github.com/mangue-dev/minddy/blob/b0f7f46e58e2cda575d207e558237fc041683e3b/docs/audits/desktop-perf-min-614-pass-3-results.json), and lossless upstream [before](https://github.com/mangue-dev/minddy/blob/b0f7f46e58e2cda575d207e558237fc041683e3b/docs/audits/assets/min-614-pass-3-upstream-before.jsonl.gz)/[after](https://github.com/mangue-dev/minddy/blob/b0f7f46e58e2cda575d207e558237fc041683e3b/docs/audits/assets/min-614-pass-3-upstream-after.jsonl.gz) archives. Prior pass-1/pass-2 audits, results and screenshots are unchanged.\n\nValidation: 214 targeted tests in 29 files; reference/candidate production builds, types, lint, owned-English, encrypted-access/schema checks and diff checks passed. Native rollback/retry/canonical-relation/resource/child checks revalidate MIN-630 without duplicating its implementation. Browser correctness checks cover focus, filter/selection/scroll, drag persistence and reversal, retention limits and eviction. Previous style and encrypted PR read gains hold (PR list remains 11 monitored calls); supplemental native retained Page return is 669 ms, scrolled return 661 ms and filtered return 486 ms. Heavy CPU/trace captures remain outside ordinary medians.\n\nPostHog key/identity/schema errors were inspected through MCP; sampled server events lack route/release/session dimensions needed to correlate them with this candidate. None is claimed fixed.\n\nNext: pass 3b should address persisted comment/edit and hidden-update costs, loaded description/plan autosave, larger threads, objectives/resources and interrupted/concurrent writes. Connected forge, active chains/agents, prolonged native backgrounding and signed-package coverage remain open. MIN-614 remains **in progress**. No GitHub closing references or auto-merge request are present. Minddy separately maps a linked **merged** PR to done, so a later authorized merge must explicitly keep/reopen the program until acceptance is complete. This update does not merge, run work:done or deploy.\n\nSynthetic fixture in native Electron, light mode, captured outside timed observations:\n\n![Pass-3 loaded issue description](https://raw.githubusercontent.com/mangue-dev/minddy/b0f7f46e58e2cda575d207e558237fc041683e3b/docs/audits/assets/min-614-pass-3-issue-light.png)\n\n![Pass-3 original comments and relation](https://raw.githubusercontent.com/mangue-dev/minddy/b0f7f46e58e2cda575d207e558237fc041683e3b/docs/audits/assets/min-614-pass-3-activity-light.png)\n\n\n## MIN-614 phase 3b: comment persistence, reactivation and mutation evidence\n\nContinue the same cumulative branch and PR. Baseline `b0f7f46e58e2cda575d207e558237fc041683e3b`; measured product `b135cc3f22d1263bde321a7c373a60641139143c`; evidence/recovery delivery `6582b8dacf7c361ba5971729eb5b7806da5a2331`. All earlier audits, samples and screenshots remain.\n\nComment reads previously serialized independent authorized operations, and self-only comment notifications performed two unnecessary membership reads. Run independent caller-RLS thread/scope and actor/forge-sidecar reads concurrently; skip membership reads only when no other recipient exists. Current access, recipient membership, encryption, key rotation/revocation and error handling remain. DELETE routing now uses OLD parent metadata when NEW is a non-null all-null projection. Timeline activation performs an authoritative comments/events read despite a recent cache while preserving pending UUID overlays and streaming polling.\n\nThree fresh native Electron production launches and ten warm attempts per main scenario on 26 comments/six replies: 348 observations and 120 mutation-stage records per implementation. Every write identity is journaled before acknowledgement when client-generated; server-generated relation/resource identities are resolved from the journaled request scope before cleanup. Timed writes are never replayed automatically. All original fields/comment IDs/bodies/relations/resources/child parents and temporary tabs are verified restored; audit history is retained.\n\n| Creation clock, median milliseconds | Before | After |\n|---|---:|---:|\n| Observed optimistic row | 61.2 | 61.6 |\n| Server acknowledgement | 462.2 | 412.2 |\n| Authenticated persisted verification from interaction | 780.5 | 669.4 |\n| Exact visible thread reconciliation | 1,100.1 | 885.2 |\n\nAcknowledgement improves 10.8% and visible reconciliation 19.5%, consistently across launches. The verification/reconciliation clocks include the historical 350 ms observation tail; actual verification GET falls 286→227 ms. This is not a minimum commit-latency or field-INP claim.\n\nEditing, deletion and effort first response/acknowledgement do not improve; delete/effort p95 regressions remain. Loaded warm opening is 307.2→313.8 ms and hidden reopen 723.3→848.0 ms. Candidate primary retains **one failed hidden availability attempt out of 30**, with a 5.28 s failed clock and successful untimed recovery; the browser GET lacks a completion record at the bound. An incomplete candidate run also retains slow successful >5 s detail reads. Prior 500/503 and eight-second `auth_authorization_state` failures are **not resolved** or bypassed, and network/transport/SQL causation is not established.\n\nThe paired isolated mounted remote-delete diagnostic previously left the deleted UUID visible and now reconciles correctly. Independent activation tests verify recent-cache refresh, failed draft retention and echo deduplication. Fresh native correctness checks cover pre-write failure/retry/newer draft, failed edit/delete preservation, lost acknowledgement after a successful commit without replay, reverse-order concurrent writes, property rollback and ten post-persistence visible-effort cycles, MIN-630 held/canonical relation and rollback, a populated encrypted Page resource/child navigation, focus, renderer suspension and actual offline/online remote edit/deletion. A probe initially matched relation endpoints in noncanonical order and failed cleanup; launches stopped, scoped authorized recovery verified the original state, both failures were retained, and the corrected fresh probe passed. MIN-630 implementation is unchanged.\n\nEarlier probes revalidated standard/scrolled/filtered openings at 324.2/299.1/276.0 ms, ~144 ms issue style versus historical pre-pass-1 785 ms, retained returns, selection/filter/scroll/hotkeys/drag/reversal/eviction, encrypted PR REST counts 7/11/7/13, and chain status 202.5 ms/three operations versus full simulation 274.4 ms/five. Empty chains do not cover active execution. Residual hidden-return frame stalls remain ~417 ms. Filtered/scrolled first-input isolation, conflicting multi-client edits, objective/binary resources, populated feedback/agents/connected forge and production error correlation remain explicit gaps.\n\nValidation: 232 targeted tests in 33 files; production builds, types, lint, owned-English, encrypted-access/schema and diff checks pass. All 12 cumulative non-merge commits have exact author-matching DCO trailers. Earlier audits/results, migrations, translations, dependencies/lockfiles, vendor patches and Mangue-ui remain unchanged. PostHog MCP investigation has no usable sampled route/release/session dimensions, so no candidate correlation or error-resolution claim.\n\n[Phase 3b audit and coverage matrix](https://github.com/mangue-dev/minddy/blob/codex/min-614-encryption-performance/docs/audits/desktop-perf-min-614-pass-3b.md) · [Complete separate samples, commands, hashes and recovery evidence](https://github.com/mangue-dev/minddy/blob/codex/min-614-encryption-performance/docs/audits/desktop-perf-min-614-pass-3b-results.json)\n\n![Native loaded synthetic comment thread, light mode](https://raw.githubusercontent.com/mangue-dev/minddy/codex/min-614-encryption-performance/docs/audits/assets/min-614-pass-3b-loaded-light.png)\n\nMIN-614 remains **in progress**. Next: phase 3c, editor/read/reconnect tails with input-dispatch/frame clocks, property ranking and populated missing workloads. Keep this PR open without auto-merge; no merge, work:done or deployment was performed. Minddy independently maps a linked merged PR to done even without GitHub closing keywords; no per-issue opt-out protection is established.\n",
+      "closingIssuesReferences": [],
+      "headRefOid": "6582b8dacf7c361ba5971729eb5b7806da5a2331",
+      "state": "OPEN",
+      "statusCheckRollup": [
+        {
+          "__typename": "CheckRun",
+          "completedAt": "2026-10-03T12:47:20Z",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/mangue-dev/minddy/actions/runs/37123932807/job/111205336654",
+          "name": "Tests & typecheck",
+          "startedAt": "2026-10-03T12:46:02Z",
+          "status": "COMPLETED",
+          "workflowName": "CI"
+        },
+        {
+          "__typename": "CheckRun",
+          "completedAt": "2026-10-03T12:46:47Z",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/mangue-dev/minddy/actions/runs/37123931685/job/111205335040",
+          "name": "Analyze (actions)",
+          "startedAt": "2026-10-03T12:46:02Z",
+          "status": "COMPLETED",
+          "workflowName": "CodeQL"
+        },
+        {
+          "__typename": "CheckRun",
+          "completedAt": "2026-10-03T12:46:24Z",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/mangue-dev/minddy/actions/runs/37123932827/job/111205336614",
+          "name": "Developer Certificate of Origin",
+          "startedAt": "2026-10-03T12:46:03Z",
+          "status": "COMPLETED",
+          "workflowName": "DCO"
+        },
+        {
+          "__typename": "CheckRun",
+          "completedAt": "2026-10-03T12:46:57Z",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/mangue-dev/minddy/actions/runs/37123931685/job/111205334920",
+          "name": "Analyze (c-cpp)",
+          "startedAt": "2026-10-03T12:46:02Z",
+          "status": "COMPLETED",
+          "workflowName": "CodeQL"
+        },
+        {
+          "__typename": "CheckRun",
+          "completedAt": "2026-10-03T12:48:25Z",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/mangue-dev/minddy/actions/runs/37123931685/job/111205334973",
+          "name": "Analyze (javascript-typescript)",
+          "startedAt": "2026-10-03T12:46:02Z",
+          "status": "COMPLETED",
+          "workflowName": "CodeQL"
+        },
+        {
+          "__typename": "CheckRun",
+          "completedAt": "2026-10-03T12:46:24Z",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/mangue-dev/minddy/actions/runs/37123932807/job/111205336586",
+          "name": "Dependencies audit",
+          "startedAt": "2026-10-03T12:46:04Z",
+          "status": "COMPLETED",
+          "workflowName": "CI"
+        },
+        {
+          "__typename": "CheckRun",
+          "completedAt": "2026-10-03T12:46:41Z",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/mangue-dev/minddy/runs/111205435172",
+          "name": "CodeQL",
+          "startedAt": "2026-10-03T12:46:37Z",
+          "status": "COMPLETED",
+          "workflowName": ""
+        },
+        {
+          "__typename": "StatusContext",
+          "context": "Vercel",
+          "startedAt": "2026-10-03T12:47:12Z",
+          "state": "SUCCESS",
+          "targetUrl": "https://vercel.com/mangue-dev/minddy/718cTMmzJZ9x7CpPcjGMpAaCVWNt"
+        }
+      ],
       "title": "fix: reduce encrypted PR reads and desktop style invalidation (MIN-614)"
     },
     {
@@ -227014,7 +227459,10 @@
         "reconstructed": false
       },
       "validationCommands": [
-        "npx vitest run lib/issue-timeline-queries.test.ts lib/realtime-comment-metadata.test.ts lib/server/comment-read-route.test.ts lib/server/comment-reply-race.test.ts lib/server/issue-chain-status-route.test.ts lib/issue-chain-status-query.test.ts lib/optimistic/relation-writes.test.ts lib/use-issue-relations-query.test.ts lib/optimistic/issue-writes.test.ts lib/optimistic/pending-writes.test.ts lib/optimistic/remote-echo-encrypted.test.ts lib/comment-delivery.test.ts lib/comment-cache.test.ts lib/server/comment-store.test.ts lib/server/comment-idempotency.test.ts lib/server/comment-idempotency-route.test.ts lib/server/comment-lifecycle.test.ts lib/server/issue-events-route.test.ts lib/server/issue-store.test.ts lib/realtime-keys.test.ts lib/retained-app-views.test.ts lib/issue-menu-actions.test.ts lib/use-retained-board-scroll.test.ts lib/public-board-projection.test.ts lib/server/git/repository-name-content.test.ts lib/server/encryption/access-guard.test.ts lib/server/encryption/registry.test.ts lib/server/encryption/rotation.test.ts lib/server/encryption/store.test.ts lib/server/encryption/row-codec.test.ts lib/use-issue-panel-tab.test.ts lib/issue-panel-relations.test.ts lib/global-board-render.test.ts"
+        "npx vitest run lib/issue-timeline-queries.test.ts lib/realtime-comment-metadata.test.ts lib/server/comment-read-route.test.ts lib/server/comment-reply-race.test.ts lib/server/issue-chain-status-route.test.ts lib/issue-chain-status-query.test.ts lib/optimistic/relation-writes.test.ts lib/use-issue-relations-query.test.ts lib/optimistic/issue-writes.test.ts lib/optimistic/pending-writes.test.ts lib/optimistic/remote-echo-encrypted.test.ts lib/comment-delivery.test.ts lib/comment-cache.test.ts lib/server/comment-store.test.ts lib/server/comment-idempotency.test.ts lib/server/comment-idempotency-route.test.ts lib/server/comment-lifecycle.test.ts lib/server/issue-events-route.test.ts lib/server/issue-store.test.ts lib/realtime-keys.test.ts lib/retained-app-views.test.ts lib/issue-menu-actions.test.ts lib/use-retained-board-scroll.test.ts lib/public-board-projection.test.ts lib/server/git/repository-name-content.test.ts lib/server/encryption/access-guard.test.ts lib/server/encryption/registry.test.ts lib/server/encryption/rotation.test.ts lib/server/encryption/store.test.ts lib/server/encryption/row-codec.test.ts lib/use-issue-panel-tab.test.ts lib/issue-panel-relations.test.ts lib/global-board-render.test.ts",
+        "npm test",
+        "node --test scripts/gitleaks-policy.test.mjs",
+        "gitleaks git --config .gitleaks.toml --no-banner --redact=100 --log-opts=HEAD"
       ],
       "finalChecks": {
         "targetedTests": "232 passed in 33 files",
@@ -227026,6 +227474,14 @@
         "diffCheck": "passed",
         "excludedPaths": "Earlier audit/results, migrations, translations, dependencies/lockfiles, vendor patches and Mangue-ui unchanged against b0f7f46e58e2cda575d207e558237fc041683e3b",
         "productionSource": "Unchanged since measured commit b135cc3f22d1263bde321a7c373a60641139143c"
+      },
+      "ciFollowup": {
+        "deliveryHead": "6582b8dacf7c361ba5971729eb5b7806da5a2331",
+        "run": 37123932807,
+        "testsJob": "Stopped before tests at Gitleaks: two occurrences of exact realtime-keys.ts checksum; exact digest/path/rule exception added. Reachable-HEAD scan passes; local all-refs scan retains 10 unrelated-ref findings, not claimed passing.",
+        "fullLocalTests": "9453 passed, 112 skipped; 1048 passed files, 19 skipped",
+        "policyTests": "3 passed",
+        "dependencyAudit": "Failed: GHSA-ch52-4w7c-c8xp, desktop packaging tree unchanged vs baseline. Baseline CI audit passed, current advisory no patched version. No suppression or forced downgrade. Remains an integration blocker."
       }
     },
     {
@@ -250701,6 +251157,12 @@
       "sha256": "15dc9e2c629bac9ae599c04d18f015a1eb1a7a5a479254cdecd4dbf03a19970a"
     },
     {
+      "file": "pass3b-baseline-ci-audit.log",
+      "bytes": 24472,
+      "sha256": "31054f5a8cfbc680818416dd7542d0f78e7bf4a7e7085b9add01892e8032656a",
+      "output": "Dependencies audit\tUNKNOWN STEP\t﻿2026-10-02T21:50:15.7148961Z Current runner version: '2.337.0'\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:15.7175857Z ##[group]Runner Image Provisioner\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:15.7176784Z Hosted Compute Agent\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:15.7177404Z Version: 20260901.588\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:15.7178159Z Commit: f88ec8081b781fac6c440065ac7ff9e710ce3d0b\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:15.7178903Z Build Date: 2026-09-01T19:56:44Z\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:15.7179685Z Worker ID: {a651b999-5f35-4f3d-8940-e305fc0e0c13}\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:15.7180407Z Azure Region: eastus\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:15.7181029Z ##[endgroup]\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:15.7182524Z ##[group]Operating System\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:15.7183161Z Ubuntu\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:15.7183817Z 24.04.5\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:15.7184364Z LTS\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:15.7184929Z ##[endgroup]\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:15.7185680Z ##[group]Runner Image\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:15.7186293Z Image: ubuntu-24.04\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:15.7186950Z Version: 20260927.320.1\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:15.7188293Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:15.7189869Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260927.320\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:15.7190853Z ##[endgroup]\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:15.7191992Z ##[group]GITHUB_TOKEN Permissions\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:15.7194185Z Contents: read\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:15.7194898Z Metadata: read\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:15.7195811Z ##[endgroup]\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:15.7198040Z Secret source: Actions\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:15.7199067Z Cache mode: write\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:15.7199805Z Prepare workflow directory\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:15.7578664Z Prepare all required actions\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:15.7627206Z Getting action download info\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:16.0259319Z Download action repository 'actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09' (SHA:fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09)\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:16.1631571Z Download action repository 'pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1' (SHA:b906affcce14559ad1aafd4ab0e942779e9f58b1)\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:16.3924798Z Download action repository 'actions/setup-node@820762786026740c76f36085b0efc47a31fe5020' (SHA:820762786026740c76f36085b0efc47a31fe5020)\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:16.5031978Z Download action repository 'actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294' (SHA:a1d282b36b6f3519aa1f3fc636f609c47dddb294)\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:16.8956419Z Complete job name: Dependencies audit\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:16.9737575Z ##[group]Run actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:16.9738793Z with:\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:16.9739318Z   persist-credentials: false\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:16.9740042Z   repository: mangue-dev/minddy\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:16.9744232Z   token: ***\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:16.9744821Z   ssh-strict: true\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:16.9745511Z   ssh-user: git\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:16.9746019Z   clean: true\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:16.9746639Z   sparse-checkout-cone-mode: true\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:16.9747294Z   fetch-depth: 1\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:16.9747917Z   fetch-tags: false\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:16.9748463Z   show-progress: true\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:16.9748990Z   lfs: false\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:16.9749601Z   submodules: false\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:16.9750197Z   set-safe-directory: true\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:16.9750830Z   allow-unsafe-pr-checkout: false\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:16.9751703Z env:\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:16.9752196Z   CI: true\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:16.9752761Z ##[endgroup]\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:17.0794905Z Syncing repository: mangue-dev/minddy\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:17.0797326Z ##[group]Getting Git version info\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:17.0798159Z Working directory is '/home/runner/work/minddy/minddy'\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:17.0799492Z [command]/usr/bin/git version\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:17.0844114Z git version 2.55.0\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:17.0864036Z ##[endgroup]\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:17.0879892Z Temporarily overriding HOME='/home/runner/work/_temp/d8b87042-97d0-4315-b5cb-9c5c4a8135da' before making global git config changes\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:17.0882145Z Adding repository directory to the temporary git global config as a safe directory\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:17.0886148Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/minddy/minddy\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:17.0933115Z Deleting the contents of '/home/runner/work/minddy/minddy'\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:17.0937652Z ##[group]Initializing the repository\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:17.0941382Z [command]/usr/bin/git init /home/runner/work/minddy/minddy\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:17.1024432Z hint: Using 'master' as the name for the initial branch. This default branch name\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:17.1026263Z hint: will change to \"main\" in Git 3.0. To configure the initial branch name\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:17.1028170Z hint: to use in all of your new repositories, which will suppress this warning,\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:17.1029109Z hint: call:\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:17.1029679Z hint:\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:17.1031004Z hint: \tgit config --global init.defaultBranch <name>\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:17.1032027Z hint:\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:17.1033400Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:17.1034658Z hint: 'development'. The just-created branch can be renamed via this command:\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:17.1035774Z hint:\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:17.1036507Z hint: \tgit branch -m <name>\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:17.1037269Z hint:\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:17.1038180Z hint: Disable this message with \"git config set advice.defaultBranchName false\"\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:17.1039262Z Initialized empty Git repository in /home/runner/work/minddy/minddy/.git/\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:17.1041185Z [command]/usr/bin/git remote add origin https://github.com/mangue-dev/minddy\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:17.1083126Z ##[endgroup]\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:17.1084055Z ##[group]Disabling automatic garbage collection\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:17.1086606Z [command]/usr/bin/git config --local gc.auto 0\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:17.1118607Z ##[endgroup]\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:17.1119970Z ##[group]Setting up auth\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:17.1125685Z [command]/usr/bin/git config --local --name-only --get-regexp core\\.sshCommand\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:17.1156592Z [command]/usr/bin/git submodule foreach --recursive sh -c \"git config --local --name-only --get-regexp 'core\\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :\"\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:17.1469204Z [command]/usr/bin/git config --local --name-only --get-regexp http\\.https\\:\\/\\/github\\.com\\/\\.extraheader\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:17.1500100Z [command]/usr/bin/git submodule foreach --recursive sh -c \"git config --local --name-only --get-regexp 'http\\.https\\:\\/\\/github\\.com\\/\\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :\"\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:17.1720573Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\\.gitdir:\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:17.1751045Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:17.1981181Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:17.2019085Z ##[endgroup]\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:17.2020011Z ##[group]Fetching the repository\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:17.2106308Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +c7b1915e0123ed910208dc1ab44813318869f6d4:refs/remotes/pull/342/merge\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:21.1865667Z From https://github.com/mangue-dev/minddy\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:21.1867456Z  * [new ref]         c7b1915e0123ed910208dc1ab44813318869f6d4 -> pull/342/merge\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:21.1869785Z ##[endgroup]\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:21.1870564Z ##[group]Determining the checkout info\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:21.1871899Z ##[endgroup]\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:21.1877787Z [command]/usr/bin/git sparse-checkout disable\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:21.1934224Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:21.1965107Z ##[group]Checking out the ref\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:21.1968630Z [command]/usr/bin/git checkout --progress --force refs/remotes/pull/342/merge\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:21.9192122Z Note: switching to 'refs/remotes/pull/342/merge'.\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:21.9192681Z \nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:21.9193036Z You are in 'detached HEAD' state. You can look around, make experimental\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:21.9193798Z changes and commit them, and you can discard any commits you make in this\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:21.9195152Z state without impacting any branches by switching back to a branch.\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:21.9195925Z \nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:21.9196319Z If you want to create a new branch to retain commits you create, you may\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:21.9197103Z do so (now or later) by using -c with the switch command. Example:\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:21.9197550Z \nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:21.9197757Z   git switch -c <new-branch-name>\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:21.9198061Z \nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:21.9198272Z Or undo this operation with:\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:21.9198561Z \nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:21.9198734Z   git switch -\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:21.9198973Z \nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:21.9199389Z Turn off this advice by setting config variable advice.detachedHead to false\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:21.9199946Z \nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:21.9200484Z HEAD is now at c7b1915 Merge b0f7f46e58e2cda575d207e558237fc041683e3b into 8ba5e265e9a6b9775456905c7c9c2106bef923cc\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:21.9219674Z ##[endgroup]\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:21.9264230Z [command]/usr/bin/git log -1 --format=%H\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:21.9289133Z c7b1915e0123ed910208dc1ab44813318869f6d4\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:21.9298633Z ##[group]Removing auth\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:21.9302470Z [command]/usr/bin/git config --local --name-only --get-regexp core\\.sshCommand\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:21.9332861Z [command]/usr/bin/git submodule foreach --recursive sh -c \"git config --local --name-only --get-regexp 'core\\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :\"\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:21.9564859Z [command]/usr/bin/git config --local --name-only --get-regexp http\\.https\\:\\/\\/github\\.com\\/\\.extraheader\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:21.9589290Z http.https://github.com/.extraheader\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:21.9595625Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:21.9627315Z [command]/usr/bin/git submodule foreach --recursive sh -c \"git config --local --name-only --get-regexp 'http\\.https\\:\\/\\/github\\.com\\/\\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :\"\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:21.9865438Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\\.gitdir:\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:21.9896748Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:22.0131783Z ##[endgroup]\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:22.0374960Z ##[group]Run pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:22.0375609Z with:\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:22.0375863Z   version: 10.28.0\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:22.0376132Z   dest: ~/setup-pnpm\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:22.0376392Z   run_install: null\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:22.0376643Z   cache: false\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:22.0376929Z   cache_dependency_path: pnpm-lock.yaml\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:22.0377266Z   package_json_file: package.json\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:22.0377558Z   standalone: false\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:22.0377817Z env:\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:22.0378040Z   CI: true\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:22.0378271Z ##[endgroup]\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:22.1771315Z ##[group]Running self-installer...\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:22.5512180Z (node:2231) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:22.5514044Z (Use `node --trace-deprecation ...` to show where the warning was created)\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:22.6803561Z Progress: resolved 1, reused 0, downloaded 0, added 0\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:22.6889315Z Packages: +1\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:22.6889756Z +\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:23.0366662Z Progress: resolved 1, reused 0, downloaded 1, added 1, done\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:23.0909415Z \nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:23.0910093Z dependencies:\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:23.0910536Z + pnpm 10.28.0 (12.8.1 is available)\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:23.0910857Z \nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:23.0937606Z Done in 756ms\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:23.1150696Z ##[endgroup]\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:23.1150971Z Installation Completed!\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:23.1334652Z ##[group]Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:23.1335027Z with:\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:23.1335663Z   node-version: 24\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:23.1335882Z   check-latest: false\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:23.1338564Z   token: ***\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:23.1338793Z   package-manager-cache: true\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:23.1339046Z env:\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:23.1339231Z   CI: true\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:23.1339515Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:23.1339825Z ##[endgroup]\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:23.2629843Z Found in cache @ /opt/hostedtoolcache/node/24.21.0/x64\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:23.2633227Z ##[group]Environment details\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:23.6406981Z node: v24.21.0\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:23.6407351Z npm: 11.19.0\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:23.6407629Z yarn: 1.22.22\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:23.6408329Z ##[endgroup]\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:23.6579833Z ##[group]Run actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:23.6580269Z with:\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:23.6580481Z   fail-on-severity: high\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:23.6583126Z   repo-token: ***\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:23.6583346Z env:\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:23.6583531Z   CI: true\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:23.6583802Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:23.6584118Z ##[endgroup]\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:24.3805399Z ##[group]Vulnerabilities\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:24.3816300Z Dependency review did not detect any vulnerable packages with severity level \"high\" or higher.\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:24.3817730Z ##[endgroup]\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:24.3818624Z ##[group]Licenses\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:24.3819168Z ##[endgroup]\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:24.3819660Z ##[group]Denied\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:24.3820250Z Dependency review did not detect any denied packages\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:24.3820941Z ##[endgroup]\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:24.3821454Z ##[group]Scorecard\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:24.3822115Z ##[group]Dependency Changes\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:24.3826324Z ##[endgroup]\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:24.3827001Z ##[endgroup]\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:24.4196461Z ##[group]Run node scripts/audit.mjs\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:24.4196835Z ^[[36;1mnode scripts/audit.mjs^[[0m\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:24.4431839Z shell: /usr/bin/bash -e {0}\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:24.4432151Z env:\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:24.4432384Z   CI: true\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:24.4432652Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:24.4457723Z   MINDDY_AUDIT_ALLOW_UNAVAILABLE: true\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:24.4458049Z ##[endgroup]\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:24.4849684Z \nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:24.4850893Z → Audit root — pnpm-lock.yaml (the actually installed tree)\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:25.1225476Z No known vulnerabilities found\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:25.1238787Z \nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:25.1239543Z → Audit desktop — package-lock.json (macOS shell)\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:26.8620610Z found 0 vulnerabilities\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:26.8621103Z \nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:26.8621755Z ✓ Audit: no high/critical vulnerabilities reported.\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:26.8756844Z Post job cleanup.\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:27.0057558Z Post job cleanup.\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:27.1545605Z Pruning is unnecessary.\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:27.1697031Z Post job cleanup.\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:27.2622423Z [command]/usr/bin/git version\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:27.2664557Z git version 2.55.0\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:27.2702425Z Temporarily overriding HOME='/home/runner/work/_temp/4ee77097-2932-460a-9ca3-02fddc53f82c' before making global git config changes\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:27.2704320Z Adding repository directory to the temporary git global config as a safe directory\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:27.2708139Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/minddy/minddy\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:27.2750678Z [command]/usr/bin/git config --local --name-only --get-regexp core\\.sshCommand\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:27.2786874Z [command]/usr/bin/git submodule foreach --recursive sh -c \"git config --local --name-only --get-regexp 'core\\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :\"\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:27.3048919Z [command]/usr/bin/git config --local --name-only --get-regexp http\\.https\\:\\/\\/github\\.com\\/\\.extraheader\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:27.3082547Z [command]/usr/bin/git submodule foreach --recursive sh -c \"git config --local --name-only --get-regexp 'http\\.https\\:\\/\\/github\\.com\\/\\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :\"\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:27.3324977Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\\.gitdir:\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:27.3357736Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:27.3747883Z Cleaning up orphan processes\nDependencies audit\tUNKNOWN STEP\t2026-10-02T21:50:27.4017399Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/\n"
+    },
+    {
       "file": "pass3b-before-1.log",
       "bytes": 79150,
       "sha256": "b282e51b53d514df60bd8e5700e28fe3233bb43848941643ce9457d8f9e72ae8"
@@ -250749,6 +251211,18 @@
       "output": "{\"variant\":\"full\",\"successful\":30,\"failed\":0,\"elapsedMs\":[1657.642667,293.532459,266.205375,323.39058300000033,254.94608299999982,289.2371670000002,275.13629200000014,281.576583,256.119917,274.91191700000036,261.0567920000003,274.957042,257.41983400000026,266.81854100000055,262.09958299999926,290.17925000000105,273.93229099999917,279.48312500000065,275.18779099999847,264.8010000000013,262.782792,251.54774999999972,271.05462500000067,286.0979580000003,280.4082500000004,275.65854200000103,276.4032079999997,268.59420899999895,256.55033399999957,267.8043340000004],\"calls\":[5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5]}\n{\"variant\":\"chain\",\"successful\":30,\"failed\":0,\"elapsedMs\":[219.1344170000002,200.27525000000014,205.53029200000037,221.8177080000005,209.72533400000066,194.18033300000025,200.72950000000037,218.63991700000042,212.9556249999996,223.07737499999985,211.53662499999973,202.76170900000034,197.84620800000084,190.41250000000036,201.72020800000064,218.90358299999934,202.9877090000009,196.49462499999936,202.0614170000008,203.3422499999997,190.14133299999958,202.20849999999882,221.94700000000012,206.1374169999999,198.1170000000002,199.30474999999933,200.20216699999946,212.79704200000015,185.3209999999999,193.91912500000035],\"calls\":[3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3]}\n"
     },
     {
+      "file": "pass3b-ci-audit-failed.log",
+      "bytes": 5512,
+      "sha256": "b18da09e48b6199bda6fca90c39163c16e4520cb1eaa12c7fe44d0e3a426d6ab",
+      "output": "Dependencies audit\tAudit (high+)\t﻿2026-10-03T12:46:17.8737683Z ##[group]Run node scripts/audit.mjs\nDependencies audit\tAudit (high+)\t2026-10-03T12:46:17.8738074Z ^[[36;1mnode scripts/audit.mjs^[[0m\nDependencies audit\tAudit (high+)\t2026-10-03T12:46:17.9083091Z shell: /usr/bin/bash -e {0}\nDependencies audit\tAudit (high+)\t2026-10-03T12:46:17.9083506Z env:\nDependencies audit\tAudit (high+)\t2026-10-03T12:46:17.9106486Z   CI: true\nDependencies audit\tAudit (high+)\t2026-10-03T12:46:17.9106795Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin\nDependencies audit\tAudit (high+)\t2026-10-03T12:46:17.9107172Z   MINDDY_AUDIT_ALLOW_UNAVAILABLE: true\nDependencies audit\tAudit (high+)\t2026-10-03T12:46:17.9107452Z ##[endgroup]\nDependencies audit\tAudit (high+)\t2026-10-03T12:46:17.9548063Z \nDependencies audit\tAudit (high+)\t2026-10-03T12:46:17.9549312Z → Audit root — pnpm-lock.yaml (the actually installed tree)\nDependencies audit\tAudit (high+)\t2026-10-03T12:46:18.7809569Z No known vulnerabilities found\nDependencies audit\tAudit (high+)\t2026-10-03T12:46:18.7810003Z \nDependencies audit\tAudit (high+)\t2026-10-03T12:46:18.7811012Z → Audit desktop — package-lock.json (macOS shell)\nDependencies audit\tAudit (high+)\t2026-10-03T12:46:20.9873827Z # npm audit report\nDependencies audit\tAudit (high+)\t2026-10-03T12:46:20.9874223Z \nDependencies audit\tAudit (high+)\t2026-10-03T12:46:20.9874408Z http-cache-semantics  *\nDependencies audit\tAudit (high+)\t2026-10-03T12:46:20.9874719Z Severity: high\nDependencies audit\tAudit (high+)\t2026-10-03T12:46:20.9875633Z http-cache-semantics max-stale handling can disclose cross-user cached responses - https://github.com/advisories/GHSA-ch52-4w7c-c8xp\nDependencies audit\tAudit (high+)\t2026-10-03T12:46:20.9876583Z fix available via `npm audit fix --force`\nDependencies audit\tAudit (high+)\t2026-10-03T12:46:20.9877141Z Will install electron-builder@26.5.0, which is a breaking change\nDependencies audit\tAudit (high+)\t2026-10-03T12:46:20.9877731Z node_modules/http-cache-semantics\nDependencies audit\tAudit (high+)\t2026-10-03T12:46:20.9878161Z   cacheable-request  >=0.1.0\nDependencies audit\tAudit (high+)\t2026-10-03T12:46:20.9878634Z   Depends on vulnerable versions of http-cache-semantics\nDependencies audit\tAudit (high+)\t2026-10-03T12:46:20.9879149Z   node_modules/cacheable-request\nDependencies audit\tAudit (high+)\t2026-10-03T12:46:20.9879471Z     got  >=8.0.0\nDependencies audit\tAudit (high+)\t2026-10-03T12:46:20.9879832Z     Depends on vulnerable versions of cacheable-request\nDependencies audit\tAudit (high+)\t2026-10-03T12:46:20.9880165Z \nDependencies audit\tAudit (high+)\t2026-10-03T12:46:20.9881197Z ✗ Audit: high/critical vulnerability or audit command failure in:\nDependencies audit\tAudit (high+)\t2026-10-03T12:46:20.9881822Z     - desktop — package-lock.json (macOS shell)\nDependencies audit\tAudit (high+)\t2026-10-03T12:46:20.9882228Z     node_modules/got\nDependencies audit\tAudit (high+)\t2026-10-03T12:46:20.9882516Z       @electron/get  <=4.0.3\nDependencies audit\tAudit (high+)\t2026-10-03T12:46:20.9882868Z       Depends on vulnerable versions of got\nDependencies audit\tAudit (high+)\t2026-10-03T12:46:20.9883347Z       node_modules/app-builder-lib/node_modules/@electron/get\nDependencies audit\tAudit (high+)\t2026-10-03T12:46:20.9883886Z         app-builder-lib  26.6.0 - 27.0.0-alpha.2\nDependencies audit\tAudit (high+)\t2026-10-03T12:46:20.9884329Z         Depends on vulnerable versions of @electron/get\nDependencies audit\tAudit (high+)\t2026-10-03T12:46:20.9885220Z         Depends on vulnerable versions of dmg-builder\nDependencies audit\tAudit (high+)\t2026-10-03T12:46:20.9885853Z         Depends on vulnerable versions of electron-builder-squirrel-windows\nDependencies audit\tAudit (high+)\t2026-10-03T12:46:20.9886417Z         node_modules/app-builder-lib\nDependencies audit\tAudit (high+)\t2026-10-03T12:46:20.9886777Z           dmg-builder  26.6.0 - 27.0.0-alpha.2\nDependencies audit\tAudit (high+)\t2026-10-03T12:46:20.9887199Z           Depends on vulnerable versions of app-builder-lib\nDependencies audit\tAudit (high+)\t2026-10-03T12:46:20.9887565Z           node_modules/dmg-builder\nDependencies audit\tAudit (high+)\t2026-10-03T12:46:20.9888268Z             electron-builder  19.25.0 || 26.6.0 - 27.0.0-alpha.2\nDependencies audit\tAudit (high+)\t2026-10-03T12:46:20.9888843Z             Depends on vulnerable versions of app-builder-lib\nDependencies audit\tAudit (high+)\t2026-10-03T12:46:20.9889276Z             Depends on vulnerable versions of dmg-builder\nDependencies audit\tAudit (high+)\t2026-10-03T12:46:20.9889657Z             node_modules/electron-builder\nDependencies audit\tAudit (high+)\t2026-10-03T12:46:20.9890128Z           electron-builder-squirrel-windows  26.6.0 - 27.0.0-alpha.2\nDependencies audit\tAudit (high+)\t2026-10-03T12:46:20.9891399Z           Depends on vulnerable versions of app-builder-lib\nDependencies audit\tAudit (high+)\t2026-10-03T12:46:20.9891965Z           node_modules/electron-builder-squirrel-windows\nDependencies audit\tAudit (high+)\t2026-10-03T12:46:20.9892226Z \nDependencies audit\tAudit (high+)\t2026-10-03T12:46:20.9892384Z 8 high severity vulnerabilities\nDependencies audit\tAudit (high+)\t2026-10-03T12:46:20.9892586Z \nDependencies audit\tAudit (high+)\t2026-10-03T12:46:20.9892823Z To address all issues (including breaking changes), run:\nDependencies audit\tAudit (high+)\t2026-10-03T12:46:20.9893198Z   npm audit fix --force\nDependencies audit\tAudit (high+)\t2026-10-03T12:46:20.9953031Z ##[error]Process completed with exit code 1.\n"
+    },
+    {
+      "file": "pass3b-ci-tests-failed.log",
+      "bytes": 6218,
+      "sha256": "4657eebbe1292b37ad7b717ace9e0ebd63d354d9274376349392862a50cc9ec9",
+      "output": "Tests & typecheck\tScan secrets and publication data markers\t﻿2026-10-03T12:46:40.2841033Z ##[group]Run docker run --rm --volume \"$GITHUB_WORKSPACE:/repo:ro\" --workdir /repo ghcr.io/gitleaks/gitleaks:v8.30.1@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f git --config /repo/.gitleaks.toml --no-banner --redact=100 --log-opts=\"--all\"\nTests & typecheck\tScan secrets and publication data markers\t2026-10-03T12:46:40.2842963Z ^[[36;1mdocker run --rm --volume \"$GITHUB_WORKSPACE:/repo:ro\" --workdir /repo ghcr.io/gitleaks/gitleaks:v8.30.1@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f git --config /repo/.gitleaks.toml --no-banner --redact=100 --log-opts=\"--all\"^[[0m\nTests & typecheck\tScan secrets and publication data markers\t2026-10-03T12:46:40.2904512Z shell: /usr/bin/bash -e {0}\nTests & typecheck\tScan secrets and publication data markers\t2026-10-03T12:46:40.2904779Z env:\nTests & typecheck\tScan secrets and publication data markers\t2026-10-03T12:46:40.2904975Z   CI: true\nTests & typecheck\tScan secrets and publication data markers\t2026-10-03T12:46:40.2905162Z ##[endgroup]\nTests & typecheck\tScan secrets and publication data markers\t2026-10-03T12:46:40.4072060Z Unable to find image 'ghcr.io/gitleaks/gitleaks:v8.30.1@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f' locally\nTests & typecheck\tScan secrets and publication data markers\t2026-10-03T12:46:40.5528639Z ghcr.io/gitleaks/gitleaks@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f: Pulling from gitleaks/gitleaks\nTests & typecheck\tScan secrets and publication data markers\t2026-10-03T12:46:40.6038768Z d49a2dee86fb: Pulling fs layer\nTests & typecheck\tScan secrets and publication data markers\t2026-10-03T12:46:40.6039585Z d92b655ae8e2: Pulling fs layer\nTests & typecheck\tScan secrets and publication data markers\t2026-10-03T12:46:40.6040899Z 61fdfd7c0175: Pulling fs layer\nTests & typecheck\tScan secrets and publication data markers\t2026-10-03T12:46:40.6041778Z a43ab0c74cc4: Pulling fs layer\nTests & typecheck\tScan secrets and publication data markers\t2026-10-03T12:46:40.6042231Z a43ab0c74cc4: Waiting\nTests & typecheck\tScan secrets and publication data markers\t2026-10-03T12:46:40.6772840Z d49a2dee86fb: Verifying Checksum\nTests & typecheck\tScan secrets and publication data markers\t2026-10-03T12:46:40.6774596Z d49a2dee86fb: Download complete\nTests & typecheck\tScan secrets and publication data markers\t2026-10-03T12:46:40.6852495Z d92b655ae8e2: Verifying Checksum\nTests & typecheck\tScan secrets and publication data markers\t2026-10-03T12:46:40.6853020Z d92b655ae8e2: Download complete\nTests & typecheck\tScan secrets and publication data markers\t2026-10-03T12:46:40.6926129Z 61fdfd7c0175: Verifying Checksum\nTests & typecheck\tScan secrets and publication data markers\t2026-10-03T12:46:40.6926469Z 61fdfd7c0175: Download complete\nTests & typecheck\tScan secrets and publication data markers\t2026-10-03T12:46:40.7247031Z a43ab0c74cc4: Verifying Checksum\nTests & typecheck\tScan secrets and publication data markers\t2026-10-03T12:46:40.7247605Z a43ab0c74cc4: Download complete\nTests & typecheck\tScan secrets and publication data markers\t2026-10-03T12:46:40.7940073Z d49a2dee86fb: Pull complete\nTests & typecheck\tScan secrets and publication data markers\t2026-10-03T12:46:41.2696440Z d92b655ae8e2: Pull complete\nTests & typecheck\tScan secrets and publication data markers\t2026-10-03T12:46:41.3919862Z 61fdfd7c0175: Pull complete\nTests & typecheck\tScan secrets and publication data markers\t2026-10-03T12:46:41.4000987Z a43ab0c74cc4: Pull complete\nTests & typecheck\tScan secrets and publication data markers\t2026-10-03T12:46:41.4037206Z Digest: sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f\nTests & typecheck\tScan secrets and publication data markers\t2026-10-03T12:46:41.4044721Z Status: Downloaded newer image for ghcr.io/gitleaks/gitleaks@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f\nTests & typecheck\tScan secrets and publication data markers\t2026-10-03T12:47:18.2109984Z ^[[90m12:47PM^[[0m ^[[32mINF^[[0m ^[[1m1433 commits scanned.^[[0m\nTests & typecheck\tScan secrets and publication data markers\t2026-10-03T12:47:18.2112412Z ^[[90m12:47PM^[[0m ^[[32mINF^[[0m ^[[1mscanned ~79037858 bytes (79.04 MB) in 36.2s^[[0m\nTests & typecheck\tScan secrets and publication data markers\t2026-10-03T12:47:18.2113276Z ^[[90m12:47PM^[[0m ^[[33mWRN^[[0m ^[[1mleaks found: 2^[[0m\nTests & typecheck\tScan secrets and publication data markers\t2026-10-03T12:47:18.2993560Z ##[error]Process completed with exit code 1.\nTests & typecheck\tUpload self-hosted egress reports\t﻿2026-10-03T12:47:18.3172591Z ##[group]Run actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a\nTests & typecheck\tUpload self-hosted egress reports\t2026-10-03T12:47:18.3173022Z with:\nTests & typecheck\tUpload self-hosted egress reports\t2026-10-03T12:47:18.3173237Z   name: self-hosted-egress-reports\nTests & typecheck\tUpload self-hosted egress reports\t2026-10-03T12:47:18.3173573Z   path: /home/runner/work/_temp/self-hosted-egress-*.md\nTests & typecheck\tUpload self-hosted egress reports\t2026-10-03T12:47:18.3173907Z   if-no-files-found: error\nTests & typecheck\tUpload self-hosted egress reports\t2026-10-03T12:47:18.3174137Z   retention-days: 7\nTests & typecheck\tUpload self-hosted egress reports\t2026-10-03T12:47:18.3174351Z   compression-level: 6\nTests & typecheck\tUpload self-hosted egress reports\t2026-10-03T12:47:18.3174566Z   overwrite: false\nTests & typecheck\tUpload self-hosted egress reports\t2026-10-03T12:47:18.3174952Z   include-hidden-files: false\nTests & typecheck\tUpload self-hosted egress reports\t2026-10-03T12:47:18.3175188Z   archive: true\nTests & typecheck\tUpload self-hosted egress reports\t2026-10-03T12:47:18.3175611Z env:\nTests & typecheck\tUpload self-hosted egress reports\t2026-10-03T12:47:18.3175793Z   CI: true\nTests & typecheck\tUpload self-hosted egress reports\t2026-10-03T12:47:18.3175976Z ##[endgroup]\nTests & typecheck\tUpload self-hosted egress reports\t2026-10-03T12:47:18.4592973Z ##[error]No files were found with the provided path: /home/runner/work/_temp/self-hosted-egress-*.md. No artifacts will be uploaded.\n"
+    },
+    {
       "file": "pass3b-correctness-after-2.log",
       "bytes": 17235,
       "sha256": "8cca87f07ce3574c0ef64a102c3097f131fe1770ac88e1db2cc0f8348846aa17"
@@ -250794,6 +251268,54 @@
       "output": "\n> minddy@0.11.0 check:encryption-schema\n> node scripts/check-encryption-schema.mjs\n\nEncryption schema policy: 203 tables, 1798 classified columns, 173 encryption targets, 1781 consumer candidates.\n"
     },
     {
+      "file": "pass3b-english-ci-followup.log",
+      "bytes": 155,
+      "sha256": "e69eb410834bfcdbfd4ace6775f801f4aada03a2b1ca8db06c40d4e399a1def4",
+      "output": "\n> minddy@0.11.0 check:owned-english\n> node scripts/check-owned-english.mjs\n\nOwned English check passed: no likely French prose found in owned text files.\n"
+    },
+    {
+      "file": "pass3b-english-policy-final.log",
+      "bytes": 155,
+      "sha256": "e69eb410834bfcdbfd4ace6775f801f4aada03a2b1ca8db06c40d4e399a1def4",
+      "output": "\n> minddy@0.11.0 check:owned-english\n> node scripts/check-owned-english.mjs\n\nOwned English check passed: no likely French prose found in owned text files.\n"
+    },
+    {
+      "file": "pass3b-full-tests-delivery.log",
+      "bytes": 553,
+      "sha256": "a8ecbfd8fda4dd2349befb6f41743ae19e5c8e148f9c94321c399f2e8a2f4b0e",
+      "output": "\n> minddy@0.11.0 test\n> vitest run\n\n\n RUN  v5.0.2 /Users/clementguerin/Projets/minddy-ticketing/minddy\n\n[build:pages-md] .pages-md/main.js — 1540 Ko\n\n Test Files  1048 passed | 19 skipped (1067)\n      Tests  9453 passed | 112 skipped (9565)\n   Start at  14:59:47\n   Duration  39.27s (import 54%, tests 24%, transform 13%, environment 8%, worker 1%)\n\n    Isolate  1067 workers spawned · ~91ms startup each (spawn + environment, per file)\n             at least ~8.75s faster with isolate: false — reuses workers across files instead of one per file\n\n"
+    },
+    {
+      "file": "pass3b-gitleaks-final.log",
+      "bytes": 117,
+      "sha256": "df02b19a0432ee7fb925c926dabb819b4dee77e7b9fee69782931d82ff35d0ff",
+      "output": "3:00PM INF 3855 commits scanned.\n3:00PM INF scanned ~145882946 bytes (145.88 MB) in 23.3s\n3:00PM WRN leaks found: 10\n"
+    },
+    {
+      "file": "pass3b-gitleaks-initial.log",
+      "bytes": 109,
+      "sha256": "fca7904c9f7c2cfea35c051c1158e97088a62c6a7f598a079f79c258308e1902",
+      "output": "2:59PM INF 2 commits scanned.\n2:59PM INF scanned ~7464765 bytes (7.46 MB) in 3.31s\n2:59PM WRN leaks found: 2\n"
+    },
+    {
+      "file": "pass3b-gitleaks-policy-tests.log",
+      "bytes": 390,
+      "sha256": "668140c4e077b5afd6eeedb59a0d9a87d3d30d66ec2becd71153f71448396dbc",
+      "output": "✔ The MIN-614 evidence exception is restricted to its exact source checksum and manifest (1.51225ms)\n✔ Gitleaks extends maintained rules and adds publication-specific markers (0.286ms)\n✔ CI scans all Git history with the checked-in policy and redacts findings (0.232ms)\nℹ tests 3\nℹ suites 0\nℹ pass 3\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 65.525834\n"
+    },
+    {
+      "file": "pass3b-gitleaks-reachable-final.log",
+      "bytes": 114,
+      "sha256": "a583351941b3022c749ab86d0d2306fb68a473abf6403a1a99c714fcdc157421",
+      "output": "3:00PM INF 1413 commits scanned.\n3:00PM INF scanned ~78103240 bytes (78.10 MB) in 5.48s\n3:00PM INF no leaks found\n"
+    },
+    {
+      "file": "pass3b-lint-ci-followup.log",
+      "bytes": 548,
+      "sha256": "c8c9e99fd3d59f2fdabb3cc10968d8f237a55c68aa357a898b82d47939370966",
+      "output": "\n> minddy@0.11.0 lint\n> oxlint --deny-warnings\n\n(node:7810) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/clementguerin/Projets/minddy-ticketing/minddy/oxlint.config.ts?cache=1791032447200 is not specified and it doesn't parse as CommonJS.\nReparsing as ES module because module syntax was detected. This incurs a performance overhead.\nTo eliminate this warning, add \"type\": \"module\" to /Users/clementguerin/Projets/minddy-ticketing/minddy/package.json.\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+    },
+    {
       "file": "pass3b-lint-delivery.log",
       "bytes": 549,
       "sha256": "7889c8f7ae5bb31f26948a5dc7ff121405e9a6088e4eef3462c98886632de84a",
@@ -250806,10 +251328,22 @@
       "output": "\n> minddy@0.11.0 lint\n> oxlint --deny-warnings\n\n(node:90754) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/clementguerin/Projets/minddy-ticketing/minddy/oxlint.config.ts?cache=1791027174902 is not specified and it doesn't parse as CommonJS.\nReparsing as ES module because module syntax was detected. This incurs a performance overhead.\nTo eliminate this warning, add \"type\": \"module\" to /Users/clementguerin/Projets/minddy-ticketing/minddy/package.json.\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
     },
     {
+      "file": "pass3b-lint-generator-final.log",
+      "bytes": 549,
+      "sha256": "30627ca43707ff7e259adbae80d92e60e0ccc3fb8478408f644cb03d330b1315",
+      "output": "\n> minddy@0.11.0 lint\n> oxlint --deny-warnings\n\n(node:98494) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/clementguerin/Projets/minddy-ticketing/minddy/oxlint.config.ts?cache=1791031300696 is not specified and it doesn't parse as CommonJS.\nReparsing as ES module because module syntax was detected. This incurs a performance overhead.\nTo eliminate this warning, add \"type\": \"module\" to /Users/clementguerin/Projets/minddy-ticketing/minddy/package.json.\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+    },
+    {
       "file": "pass3b-lint-initial-transcript.log",
       "bytes": 807,
       "sha256": "79fdb18061d2475498718f96a0e91c083dbe6a5056435f83213ad2366c15763b",
       "output": "> minddy@0.11.0 typecheck\n> tsc --noEmit\n\n\n> minddy@0.11.0 lint\n> oxlint --deny-warnings\n\n(node:87426) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/clementguerin/Projets/minddy-ticketing/minddy/oxlint.config.ts?cache=1791026329534 is not specified and it doesn't parse as CommonJS.\nReparsing as ES module because module syntax was detected. This incurs a performance overhead.\nTo eliminate this warning, add \"type\": \"module\" to /Users/clementguerin/Projets/minddy-ticketing/minddy/package.json.\n(Use `node --trace-warnings ...` to show where the warning was created)\nscripts/performance/min614-mutation-journeys.mjs:226:74: warning eslint(no-unsafe-finally): Unsafe `finally` block. help: Control flow inside `try` or `catch` blocks will be overwritten by this statement.\n 14G\t.next\n"
+    },
+    {
+      "file": "pass3b-lint-policy-final.log",
+      "bytes": 548,
+      "sha256": "7aa2b2c6ba71f6336e7e879fd1816a7c8ce1ee430481ae8939036c2664548c3f",
+      "output": "\n> minddy@0.11.0 lint\n> oxlint --deny-warnings\n\n(node:8001) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/clementguerin/Projets/minddy-ticketing/minddy/oxlint.config.ts?cache=1791032536048 is not specified and it doesn't parse as CommonJS.\nReparsing as ES module because module syntax was detected. This incurs a performance overhead.\nTo eliminate this warning, add \"type\": \"module\" to /Users/clementguerin/Projets/minddy-ticketing/minddy/package.json.\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
     },
     {
       "file": "pass3b-lint-recovery.log",
@@ -250916,6 +251450,11 @@
       "bytes": 43,
       "sha256": "a232218ab0cb56112998296a30550c7d6df45b3d6f5aa5c171b8e1faf5b0340a",
       "output": "\n> minddy@0.11.0 typecheck\n> tsc --noEmit\n\n"
+    },
+    {
+      "file": "pass3b-work-pr.log",
+      "bytes": 491,
+      "sha256": "47bdaebfac50f37ceec7cd50c37d0cbbe7090443c455d3419cf205872f241125"
     }
   ],
   "provenance": {
@@ -251274,7 +251813,10 @@
       "reconstructed": false
     },
     "validationCommands": [
-      "npx vitest run lib/issue-timeline-queries.test.ts lib/realtime-comment-metadata.test.ts lib/server/comment-read-route.test.ts lib/server/comment-reply-race.test.ts lib/server/issue-chain-status-route.test.ts lib/issue-chain-status-query.test.ts lib/optimistic/relation-writes.test.ts lib/use-issue-relations-query.test.ts lib/optimistic/issue-writes.test.ts lib/optimistic/pending-writes.test.ts lib/optimistic/remote-echo-encrypted.test.ts lib/comment-delivery.test.ts lib/comment-cache.test.ts lib/server/comment-store.test.ts lib/server/comment-idempotency.test.ts lib/server/comment-idempotency-route.test.ts lib/server/comment-lifecycle.test.ts lib/server/issue-events-route.test.ts lib/server/issue-store.test.ts lib/realtime-keys.test.ts lib/retained-app-views.test.ts lib/issue-menu-actions.test.ts lib/use-retained-board-scroll.test.ts lib/public-board-projection.test.ts lib/server/git/repository-name-content.test.ts lib/server/encryption/access-guard.test.ts lib/server/encryption/registry.test.ts lib/server/encryption/rotation.test.ts lib/server/encryption/store.test.ts lib/server/encryption/row-codec.test.ts lib/use-issue-panel-tab.test.ts lib/issue-panel-relations.test.ts lib/global-board-render.test.ts"
+      "npx vitest run lib/issue-timeline-queries.test.ts lib/realtime-comment-metadata.test.ts lib/server/comment-read-route.test.ts lib/server/comment-reply-race.test.ts lib/server/issue-chain-status-route.test.ts lib/issue-chain-status-query.test.ts lib/optimistic/relation-writes.test.ts lib/use-issue-relations-query.test.ts lib/optimistic/issue-writes.test.ts lib/optimistic/pending-writes.test.ts lib/optimistic/remote-echo-encrypted.test.ts lib/comment-delivery.test.ts lib/comment-cache.test.ts lib/server/comment-store.test.ts lib/server/comment-idempotency.test.ts lib/server/comment-idempotency-route.test.ts lib/server/comment-lifecycle.test.ts lib/server/issue-events-route.test.ts lib/server/issue-store.test.ts lib/realtime-keys.test.ts lib/retained-app-views.test.ts lib/issue-menu-actions.test.ts lib/use-retained-board-scroll.test.ts lib/public-board-projection.test.ts lib/server/git/repository-name-content.test.ts lib/server/encryption/access-guard.test.ts lib/server/encryption/registry.test.ts lib/server/encryption/rotation.test.ts lib/server/encryption/store.test.ts lib/server/encryption/row-codec.test.ts lib/use-issue-panel-tab.test.ts lib/issue-panel-relations.test.ts lib/global-board-render.test.ts",
+      "npm test",
+      "node --test scripts/gitleaks-policy.test.mjs",
+      "gitleaks git --config .gitleaks.toml --no-banner --redact=100 --log-opts=HEAD"
     ],
     "finalChecks": {
       "targetedTests": "232 passed in 33 files",
@@ -251286,6 +251828,14 @@
       "diffCheck": "passed",
       "excludedPaths": "Earlier audit/results, migrations, translations, dependencies/lockfiles, vendor patches and Mangue-ui unchanged against b0f7f46e58e2cda575d207e558237fc041683e3b",
       "productionSource": "Unchanged since measured commit b135cc3f22d1263bde321a7c373a60641139143c"
+    },
+    "ciFollowup": {
+      "deliveryHead": "6582b8dacf7c361ba5971729eb5b7806da5a2331",
+      "run": 37123932807,
+      "testsJob": "Stopped before tests at Gitleaks: two occurrences of exact realtime-keys.ts checksum; exact digest/path/rule exception added. Reachable-HEAD scan passes; local all-refs scan retains 10 unrelated-ref findings, not claimed passing.",
+      "fullLocalTests": "9453 passed, 112 skipped; 1048 passed files, 19 skipped",
+      "policyTests": "3 passed",
+      "dependencyAudit": "Failed: GHSA-ch52-4w7c-c8xp, desktop packaging tree unchanged vs baseline. Baseline CI audit passed, current advisory no patched version. No suppression or forced downgrade. Remains an integration blocker."
     }
   }
 }

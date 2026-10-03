@@ -1,9 +1,21 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
 const root = new URL("..", import.meta.url);
 const read = (path) => readFileSync(new URL(path, root), "utf8");
+
+test("The MIN-614 evidence exception is restricted to its exact source checksum and manifest", () => {
+  const policy = read(".gitleaks.toml");
+  const digest = createHash("sha256").update(read("lib/realtime-keys.ts")).digest("hex");
+  const block = policy.split("[[allowlists]]").find((entry) => entry.includes("MIN-614 pass-3b source fingerprint"));
+  assert.ok(block);
+  assert.match(block, /targetRules = \["generic-api-key"\]/);
+  assert.match(block, /condition = "AND"/);
+  assert.ok(block.includes("docs/audits/desktop-perf-min-614-pass-3b-results\\.json$"));
+  assert.ok(block.includes(`^${digest}$`));
+});
 
 test("Gitleaks extends maintained rules and adds publication-specific markers", () => {
   const policy = read(".gitleaks.toml");
