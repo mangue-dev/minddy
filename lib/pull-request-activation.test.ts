@@ -24,9 +24,9 @@ it("requires authority after a retained activation even if hidden rendering was 
     return createElement("span", null, query.readState);
   }
   const render = (active: boolean, activatedAt: number) => act(() => root.render(
-    createElement(QueryClientProvider, { client }, createElement(Activity, { mode: active ? "visible" : "hidden" },
-      createElement(AppTabRouteProvider, { route: { pathname: "/pull-requests", search: "pr=pr", projectId: null }, active, activatedAt, children: createElement(Detail) }),
-    )),
+    createElement(QueryClientProvider, { client }, createElement(Activity, { mode: active ? "visible" : "hidden",
+      children: createElement(AppTabRouteProvider, { route: { pathname: "/pull-requests", search: "pr=pr", projectId: null }, active, activatedAt, children: createElement(Detail) }),
+    })),
   ));
   try {
     await render(true, now);

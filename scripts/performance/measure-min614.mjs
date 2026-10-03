@@ -125,8 +125,8 @@ try {
       const url = new URL(typeof args[0] === "string" ? args[0] : args[0].url ?? args[0], location.origin);
       if (url.origin !== location.origin || !url.pathname.startsWith('/api/')) return originalFetch(...args);
       const state = window.__min614.apiStates[url.pathname] ??= { pending: 0, status: null };
-      state.pending++;
-      try { const response = await originalFetch(...args); state.status = response.status; return response; }
+      state.pending++; state.lastStartedAt = performance.now();
+      try { const response = await originalFetch(...args); state.status = response.status; state.lastHeadersAt = performance.now(); return response; }
       finally { state.pending--; }
     };
     new PerformanceObserver((list) => window.__min614.tasks.push(...list.getEntries().map(({ startTime, duration }) => ({ start: startTime, duration })))).observe({ type: "longtask", buffered: true });

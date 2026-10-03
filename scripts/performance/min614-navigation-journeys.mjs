@@ -68,7 +68,14 @@ export async function measureNavigationJourneys({ page, context, fixture, tabs: 
   };
   const arm = (spec) => page.evaluate((spec) => {
     const start = performance.now();
-    const result = window.__navigationSample = { start, clocks: {}, skeletonFrames: 0, frames: 0 };
+    const primary = spec.kind === 'pr' ? `/api/pull-requests/${new URL(spec.href, location.origin).searchParams.get('pr')}`
+      : spec.kind === 'document' ? `/api/projects/${spec.href.split('/')[2]}/pages/${spec.href.split('/')[4]}`
+      : spec.kind === 'board' ? spec.href === '/all' ? '/api/me/board' : `/api/projects/${spec.href.split('/')[2]}/issues`
+      : `/api/projects/${spec.href.split('/')[2]}/${spec.kind === 'triage' ? 'issues' : spec.kind === 'pages' ? 'pages' : 'feedback'}`;
+    const hadDOM = [...document.querySelectorAll('[data-retained-app-view]')].some((node) => node.dataset.retainedAppView.startsWith(spec.id + ':'));
+    const hadPriorSuccessfulRead = window.__min614.apiStates[primary]?.status === 200;
+    const result = window.__navigationSample = { start, primary, hadDOM, hadPriorSuccessfulRead,
+      classification: hadDOM ? 'hot-dom' : hadPriorSuccessfulRead ? 'data-available-unmounted' : 'cold', clocks: {}, skeletonFrames: 0, frames: 0 };
     const stamp = (key) => { result.clocks[key] ??= performance.now() - start; };
     const gesture = () => stamp('gesture');
     document.addEventListener('pointerdown', gesture, { once: true, capture: true });
@@ -105,7 +112,7 @@ export async function measureNavigationJourneys({ page, context, fixture, tabs: 
     await arm(spec);
     const old = await measure(name, action, () => ready(spec));
     await page.waitForFunction(() => window.__navigationSample.clocks.usableExactScenario !== undefined, null, { timeout: 15000 });
-    const sample = await page.evaluate(() => ({ clocks: window.__navigationSample.clocks, skeletonFrames: window.__navigationSample.skeletonFrames, frames: window.__navigationSample.frames }));
+    const sample = await page.evaluate(() => ({ classification: window.__navigationSample.classification, hadDOM: window.__navigationSample.hadDOM, hadPriorSuccessfulRead: window.__navigationSample.hadPriorSuccessfulRead, primaryRead: window.__min614.apiStates[window.__navigationSample.primary], clocks: window.__navigationSample.clocks, skeletonFrames: window.__navigationSample.skeletonFrames, frames: window.__navigationSample.frames }));
     report.samples.push({ name, index: spec.position, old, ...sample, heap: await page.evaluate(() => performance.memory?.usedJSHeapSize ?? null) }); await save();
   };
   const select = async (spec) => {
