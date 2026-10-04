@@ -52,7 +52,10 @@ function anchorBlockId(editor: Editor, pos: number): string | null {
 
 const SELECTION_MENU_DELAY_MS = 300;
 
-function shouldShowSelectionMenu({ editor }: { editor: Editor }): boolean {
+export function shouldShowSelectionMenu({ editor }: { editor: Editor }): boolean {
+  // Activity can detach the view before a delayed BubbleMenu update runs.
+  // Tiptap retains editor state during unmount, but view access is unavailable.
+  if (!editor.isInitialized || editor.isDestroyed) return false;
   const { selection } = editor.state;
   const { from, to, empty } = selection;
   return (

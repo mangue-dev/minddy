@@ -1,8 +1,9 @@
 "use client";
 
+import { OneLine } from "@/components/one-line";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowRight01Icon, Delete02Icon, GlobeIcon, LockIcon, MessageMultiple01Icon, MoreHorizontalIcon, Edit04Icon, Plug01Icon } from "@hugeicons/core-free-icons";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslations, useFormatter } from "next-intl";
 import {
   Button,
@@ -77,6 +78,7 @@ import {
  * avoided a fourth copy of the thread.
  */
 export interface ThreadMessage {
+  optimisticEdit?: boolean;
   delivery?: Comment["delivery"];
   id: string;
   author_id: string | null;
@@ -254,36 +256,6 @@ function IntegrationAvatar({ className }: { className?: string }) {
     >
       <HugeiconsIcon icon={Plug01Icon} className="size-3.5" />
     </span>
-  );
-}
-
-/** One-line text that ellipsises and reveals the full text in a tooltip only
-    when it actually overflows. */
-function OneLine({ full, children }: { full: string; children: React.ReactNode }) {
-  const ref = useRef<HTMLParagraphElement>(null);
-  const [truncated, setTruncated] = useState(false);
-
-  useEffect(() => {
-    const measure = () => {
-      const el = ref.current;
-      if (el) setTruncated(el.scrollWidth > el.clientWidth + 1);
-    };
-    measure();
-    window.addEventListener("resize", measure);
-    return () => window.removeEventListener("resize", measure);
-  });
-
-  const p = (
-    <p ref={ref} className="min-w-0 flex-1 truncate text-sm">
-      {children}
-    </p>
-  );
-  if (!truncated) return p;
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>{p}</TooltipTrigger>
-      <TooltipContent className="max-w-xs">{full}</TooltipContent>
-    </Tooltip>
   );
 }
 
@@ -531,7 +503,7 @@ export function CommentBlock({
   };
 
   return (
-    <div className="group/comment flex flex-col gap-1.5" data-comment-id={comment.id} data-comment-state={comment.delivery?.state ?? "confirmed"} aria-busy={comment.delivery?.state === "sending"}>
+    <div className="group/comment flex flex-col gap-1.5" data-comment-id={comment.id} data-comment-state={comment.optimisticEdit ? "editing" : comment.delivery?.state ?? "confirmed"} aria-busy={comment.optimisticEdit || comment.delivery?.state === "sending"}>
       <div className="flex items-center gap-2">
         {viaNumo ? (
           <NumoAvatar />
@@ -562,7 +534,7 @@ export function CommentBlock({
         <span className="shrink-0 text-xs text-muted-foreground/80">
           {timeAgo(comment.created_at, t)}
         </span>
-        {comment.delivery?.state === "sending" && <Spinner className="size-3" aria-label={tCommon("loading")} />}
+        {(comment.optimisticEdit || comment.delivery?.state === "sending") && <Spinner className="size-3" aria-label={tCommon("loading")} />}
         {edited && !viaNumo && !visitor && (
           <span className="shrink-0 text-xs text-muted-foreground/60">{t("edited")}</span>
         )}
@@ -641,7 +613,7 @@ export function CommentBlock({
         <p className="text-sm italic text-muted-foreground">
           {tAssistant("commentError")}
         </p>
-      ) : editing ? (
+      ) : editing && !comment.optimisticEdit ? (
         <div className="flex flex-col gap-2">
           <MentionTextarea
             value={draft}
@@ -1069,6 +1041,8 @@ function groupRows(
 /** Minimalist activity feed, always visible; only long runs of events collapse. */
 export function IssueActivity({
   items,
+  readState,
+  onRetryRead,
   ctx,
   currentUserId,
   projectId,
@@ -1081,6 +1055,8 @@ export function IssueActivity({
   onDeleteAttachment,
 }: {
   items: ActivityItem[];
+  readState?: import("@/lib/timeline-read-state").TimelineReadState;
+  onRetryRead?: () => void;
   ctx: EventContext;
   /**
    * A strip clean to the surface, at the head of the card of a wire (MIN-282).
@@ -1119,7 +1095,16 @@ export function IssueActivity({
     <div className="flex flex-col">
       <span className="py-1 text-sm font-medium">{t("activity")}</span>
 
+      {readState && <div data-timeline-read-state={readState.phase} aria-busy={readState.phase === "loading" || readState.phase === "refreshing"}>
+        {readState.phase !== "fresh" && <div className="flex items-center gap-2 py-2 text-xs text-muted-foreground" role={readState.phase === "error" ? "alert" : "status"}>
+          {(readState.phase === "loading" || readState.phase === "refreshing") && <Spinner className="size-3" />}
+          <span>{t(readState.phase === "loading" ? "readLoading" : readState.phase === "refreshing" ? "readRefreshing"
+            : readState.phase === "paused" ? "readPaused" : readState.hasPreviousData ? "readPreviousError" : "readError")}</span>
+          {readState.phase === "error" && onRetryRead && <Button size="sm" variant="ghost" onClick={onRetryRead}>{t("readRetry")}</Button>}
+        </div>}
+      </div>}
       {rows.length === 0 ? (
+        (!readState || readState.phase === "fresh") &&
         <p className="mt-2 text-xs text-muted-foreground">{t("noActivity")}</p>
       ) : (
         <ol className="mt-2 flex flex-col gap-3">

@@ -27,6 +27,7 @@ if (signedIn.error) throw signedIn.error;
 assert.equal(signedIn.data.user.id, fixture.userId, "Wrong fixture account");
 assert.equal(signedIn.data.user.user_metadata.performance_fixture, MARKER, "Unmarked fixture account");
 
+const adaptive = process.argv.includes("--adaptive");
 const label = process.env.MINDDY_PERF_LABEL ?? "pass2-retained";
 assert.match(label, /^[a-zA-Z0-9_-]+$/, "Invalid output label");
 const tempTabs = [
@@ -39,9 +40,9 @@ const browser = await chromium.launch({ headless: !process.argv.includes("--head
 const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, locale: "en-US", colorScheme: "dark", reducedMotion: "no-preference" });
 await context.addCookies(cookies.map(({ name, value }) => ({ name, value, url: base, sameSite: "Lax" })));
 await context.addCookies([{ name: "NEXT_LOCALE", value: "en", url: base }]);
-await context.addInitScript(({ owner, first }) => {
+await context.addInitScript(({ base }) => {
+  if (location.origin !== base) return;
   localStorage.setItem("cookie_consent", "declined");
-  sessionStorage.setItem(`minddy.app-tabs.${owner}`, JSON.stringify({ id: first.id, href: first.href }));
   window.__retentionEvents = [];
   document.addEventListener("scroll", (event) => {
     const node = event.target;
@@ -53,7 +54,7 @@ await context.addInitScript(({ owner, first }) => {
     const node = event.target;
     if (node instanceof HTMLElement) window.__retentionEvents.push({ kind: "focus", path: location.pathname, tag: node.tagName, label: node.getAttribute("aria-label"), column: node.closest("[data-board-column-scroller]")?.getAttribute("data-board-column-status") });
   }, true);
-}, { owner: fixture.userId, first: globalTab });
+}, { base });
 const page = await context.newPage();
 page.setDefaultTimeout(30000);
 const pageErrors = [];
@@ -75,7 +76,9 @@ let filteredCount;
 let savedScroll;
 
 async function api(path, method = "GET", data) {
-  const response = await context.request.fetch(`${base}${path}`, { method, ...(data === undefined ? {} : { data }) });
+  let response;
+  try { response = await context.request.fetch(`${base}${path}`, { method, ...(data === undefined ? {} : { data }) }); }
+  catch { throw new Error(`${method} ${path}: transport failed`); }
   const body = await response.json();
   if (!response.ok()) throw new Error(`${method} ${path} failed (${response.status()}): ${body.code ?? body.error ?? "request failed"}`);
   return body;
@@ -100,9 +103,10 @@ async function removeTemporaryTab(spec) {
 async function retainedInvariant() {
   const state = await page.locator("[data-retained-app-view]").evaluateAll((nodes) => nodes.map((node) => ({
     key: node.dataset.retainedAppView, active: node.dataset.appViewActive === "true", inert: node.inert,
-    visible: node.checkVisibility(), hidden: node.getAttribute("aria-hidden"),
+    visible: node.checkVisibility(), hidden: node.getAttribute("aria-hidden"), cards: node.querySelectorAll("[data-issue-id]").length,
   })));
-  assert.ok(state.length >= 1 && state.length <= 2, `Retained view count ${state.length} exceeds the LRU bound`);
+  assert.ok(state.length >= 1 && state.length <= (adaptive ? 6 : 2), `Retained view count ${state.length} exceeds the configured bound`);
+  if (adaptive) assert.ok(state.reduce((sum, view) => sum + Math.max(1, Math.ceil(view.cards / 200)), 0) <= 6, "Retained card weight exceeds the configured budget");
   assert.equal(state.filter((view) => view.active).length, 1, "Exactly one board must be active");
   for (const view of state) {
     assert.equal(view.visible, view.active, "Retained board visibility differs from activation");
@@ -122,6 +126,7 @@ async function activate(spec, { expectedCount, title } = {}) {
   }, { tabId: spec.id, pathname: new URL(spec.href, base).pathname, count: expectedCount ?? (spec === globalTab ? filteredCount ?? globalCount ?? 600 : 100), selector: activeSelector });
   if (title) await page.waitForFunction((part) => document.title.includes(part), title);
   await frames();
+  assert.equal(await page.evaluate(() => document.activeElement?.closest('[data-app-view-active="false"]') === null), true, "Focus remained in a hidden board");
   await page.evaluate((name) => window.__retentionEvents.push({ kind: "activated", name, columns: [...document.querySelectorAll('[data-app-view-active="true"] [data-board-column-scroller]')].map((node) => ({ status: node.dataset.boardColumnStatus, top: node.scrollTop })) }), spec.custom_name);
   return retainedInvariant();
 }
@@ -179,15 +184,23 @@ try {
   }
   const initialTabs = await listTabs();
   preservedTabs = initialTabs.filter((tab) => !tempTabs.some((spec) => spec.id === tab.id)).map(selectFields);
+  results.restoration = { ownedTabIds: tempTabs.map(({ id }) => id), preservedTabs };
+  await writeFile(`${output}/${label}.json`, JSON.stringify(results, null, 2));
   for (const name of ["Performance board", "Performance pages"]) assert.ok(preservedTabs.some((tab) => tab.custom_name === name), `Missing protected benchmark tab: ${name}`);
   for (const spec of tempTabs) {
     await removeTemporaryTab(spec);
     await api("/api/me/app-tabs", "POST", { id: spec.id });
     const created = (await listTabs()).find((tab) => tab.id === spec.id);
     assert.ok(created);
-    await api(`/api/me/app-tabs/${spec.id}`, "PATCH", { revision: created.revision, patch: { href: spec.href, custom_name: spec.custom_name } });
+    await api(`/api/me/app-tabs/${spec.id}`, "PATCH", { revision: created.revision, patch: { href: spec.href, custom_name: spec.custom_name, pinned: true } });
   }
+  const { snapshot } = await api("/api/me/local-snapshots", "POST", { operation: "seal", slot: "window-tabs", value: { id: globalTab.id, href: globalTab.href } });
+  await context.addInitScript(({ owner, snapshot, base }) => {
+    if (location.origin === base) sessionStorage.setItem(`minddy.app-tabs.${owner}`, JSON.stringify(snapshot));
+  }, { owner: fixture.userId, snapshot, base });
   originalIssue = await api(`/api/issues/${fixture.firstIssue}`);
+  results.restoration.issue = Object.fromEntries(["id", "status", "position", "assignee_id", "cycle_id"].map((key) => [key, originalIssue[key]]));
+  await writeFile(`${output}/${label}.json`, JSON.stringify(results, null, 2));
   assertScope("issues", originalIssue, fixture.userId);
   assert.equal(originalIssue.project_id, fixture.projects[0]);
   assert.match(originalIssue.title, /^Performance task 1\.1:/);
@@ -207,7 +220,7 @@ try {
   });
   await check("global-filter-selection-and-scroll", async () => {
     await active().getByRole("button", { name: "Filters", exact: true }).click();
-    await page.getByRole("button", { name: "Hide done issues", exact: true }).click();
+    await page.getByRole("menuitem", { name: "Hide done issues", exact: true }).click();
     await page.keyboard.press("Escape");
     await page.waitForFunction((selector) => document.querySelector(selector)?.querySelectorAll("[data-issue-id]").length === 480, activeSelector);
     filteredCount = await active().locator("[data-issue-id]").count();
@@ -260,13 +273,20 @@ try {
     assert.equal(await card().locator('[class~="bg-primary/10"]').count(), 1, "Selection was lost");
     const scroll = await active().locator(`[data-board-column-scroller][data-board-column-status="${originalIssue.status}"]`).evaluate((node) => node.scrollTop);
     assert.ok(Math.abs(scroll - savedScroll) <= 1, `Scroll changed from ${savedScroll} to ${scroll}`);
+    const dark = await page.evaluate(() => document.documentElement.classList.contains("dark"));
+    await page.evaluate(() => document.documentElement.classList.remove("dark"));
+    await frames();
     await page.screenshot({ path: `${output}/${label}-restored-global.png` });
+    if (dark) await page.evaluate(() => document.documentElement.classList.add("dark"));
     return { scrollTop: scroll, cards: filteredCount, selected: true, identity: true };
   });
   await check("active-project-drag-with-hidden-duplicate-and-reversal", async () => {
     await activate(projectTab, { title: "Performance 1" });
-    await active().getByRole("button", { name: "Sort", exact: true }).click();
+    await active().locator('button[aria-label="Filters"]').click();
+    await page.getByRole("menuitem", { name: "Sort", exact: true }).hover();
     await page.getByRole("menuitem", { name: "Manual", exact: true }).click();
+    await page.keyboard.press("Escape");
+    await page.keyboard.press("Escape");
     issueMayHaveMoved = true;
     await dragTo(originalIssue.status === "backlog" ? "todo" : "backlog");
     await dragTo(originalIssue.status);
@@ -291,17 +311,18 @@ try {
     await cdp.detach();
     return { roundtrips: 6, retainedViews: await retainedInvariant(), heapBytes: metrics.JSHeapUsedSize, connectedNodes: await page.locator("*").count() };
   });
-  await check("lru-eviction-and-close-eviction", async () => {
+  await check(adaptive ? "weighted-retention-and-close-eviction" : "lru-eviction-and-close-eviction", async () => {
     await activate(thirdTab, { title: "Performance 2" });
-    assert.equal(await page.evaluate(() => window.__retentionGlobal.isConnected), false, "The least recently used board was not evicted");
+    assert.equal(await page.evaluate(() => window.__retentionGlobal.isConnected), adaptive, "The configured retention policy did not preserve or evict the expected board");
     await active().evaluate((node) => { window.__retentionThird = node; });
     await activate(globalTab, { title: "All issues" });
-    assert.equal(await active().evaluate((node) => node === window.__retentionGlobal), false, "Evicted board unexpectedly kept its DOM");
+    assert.equal(await active().evaluate((node) => node === window.__retentionGlobal), adaptive, "The configured retention policy produced unexpected DOM reuse");
     assert.equal(await active().locator("[data-issue-id]").count(), filteredCount, "Eviction lost the tab's working filter");
-    await page.getByRole("button", { name: `Close ${thirdTab.custom_name}`, exact: true }).click();
+    await page.locator(`[data-app-tab-id="${thirdTab.id}"]`).click({ button: "right" });
+    await page.getByRole("menuitem", { name: "Close tab", exact: true }).click();
     await page.locator(`[data-app-tab-id="${thirdTab.id}"]`).waitFor({ state: "detached" });
     await page.waitForFunction(() => !window.__retentionThird.isConnected);
-    assert.equal(await page.locator("[data-retained-app-view]").count(), 1, "Closing a hidden tab retained its board");
+    assert.equal(await page.locator("[data-retained-app-view]").count(), adaptive ? 2 : 1, "Closing a hidden tab retained its board");
     return { retainedViews: await retainedInvariant(), closedTabRemoved: true };
   });
   results.status = "passed";
@@ -317,6 +338,11 @@ try {
     if (issueMayHaveMoved && originalIssue) {
       await api(`/api/issues/${fixture.firstIssue}`, "PATCH", { status: originalIssue.status, position: originalIssue.position, assignee_id: originalIssue.assignee_id, cycle_id: originalIssue.cycle_id });
       results.cleanup.push("Restored fixture issue fields");
+    }
+    if (originalIssue) {
+      const restored = await api(`/api/issues/${fixture.firstIssue}`);
+      for (const key of ["status", "position", "assignee_id", "cycle_id"]) assert.equal(restored[key], originalIssue[key], `Unrestored issue ${key}`);
+      results.restoration.issueVerified = true;
     }
     for (const spec of tempTabs) await removeTemporaryTab(spec);
     const remaining = await listTabs();

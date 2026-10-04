@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useOptionalAppTabNavigation } from "@/lib/app-tab-navigation-context";
 import { useCurrentViewTaggedPublication } from "@/lib/current-view-context";
@@ -20,6 +20,12 @@ export function AppTabRouteSync() {
     window.addEventListener("hashchange", sync);
     return () => window.removeEventListener("hashchange", sync);
   }, []);
+  // A committed URL acknowledges the target before a mounted surface's
+  // passive redirect can replace it (for example Pages' remembered document).
+  // Tagged selection publication still refines it through the observer below.
+  useLayoutEffect(() => {
+    session.observe(path + (search.size ? `?${search}` : "") + window.location.hash, null);
+  }, [path, search, session, activeId, hash]);
   useEffect(() => {
     // A publication only speaks for the tab that owns it: while a switch is
     // settling, the outgoing board is still mounted and still the last

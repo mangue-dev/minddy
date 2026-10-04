@@ -1,5 +1,5 @@
 import { after, NextResponse, type NextRequest } from "next/server";
-import { decodeRepositoryName } from "@/lib/server/git/repository-name-content";
+import { createRepositoryNameDecoder } from "@/lib/server/git/repository-name-content";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { getAuthedUser } from "@/lib/server/api-auth";
@@ -252,10 +252,14 @@ export async function GET(request: NextRequest) {
       .select("id, status, pr_number, created_at, repo_link:project_git_links(provider, repo_full_name)")
       .in("pr_number", numbers)
       .order("created_at", { ascending: true });
-    for (const run of (data ?? []) as unknown as RunRow[]) {
+    const runs = (data ?? []) as unknown as RunRow[];
+    const decodeName = createRepositoryNameDecoder(auth.user.id);
+    const names = await Promise.all(runs.map((run) => run.repo_link?.repo_full_name
+      ? decodeName(run.repo_link.provider, run.repo_link.repo_full_name) : null));
+    for (const [index, run] of runs.entries()) {
       const link = run.repo_link;
       if (!link?.repo_full_name || run.pr_number == null) continue;
-      const clearName = await decodeRepositoryName(link.provider,link.repo_full_name);
+      const clearName = names[index];
       const key = `${link.provider}:${clearName}:${run.pr_number}`;
       const list = runsByPr.get(key);
       if (list) list.push(run);

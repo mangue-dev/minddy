@@ -134,3 +134,13 @@ describe("application tab subscriptions", () => {
     unregister();
   });
 });
+
+it("uses local history only for a destination qualified by the mounted retained host", () => {
+  const history = vi.spyOn(window.history, "pushState");
+  session.isRetainedDestination = (id, href) => id === firstId && href === "/all";
+  session.navigate("/all");
+  expect(history).toHaveBeenCalledWith(null, "", "/all");
+  session.navigate("/projects/cold");
+  expect(router.push).toHaveBeenCalledWith("/projects/cold", { scroll: false });
+  history.mockRestore();
+});

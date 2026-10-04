@@ -174,6 +174,7 @@ export interface InstallationTokenScope {
 // one hour, on a single repository, with `contents` for only permission.
 const SAFETY_WINDOW_MS = 5 * 60_000;
 const installationTokenCache = new Map<string, InstallationToken>();
+const installationTokenMints = new Map<string, Promise<InstallationToken>>();
 
 /** STABLE cache key for a pair (installation, scope): the lists are
  * sorted, so two equivalent calls in a different order share
@@ -207,6 +208,25 @@ export async function getInstallationToken(
   if (cached && Date.parse(cached.expiresAt) - Date.now() > SAFETY_WINDOW_MS) {
     return cached;
   }
+  const existingMint = installationTokenMints.get(key);
+  if (existingMint) return existingMint;
+
+  const mint = mintInstallationToken(installationId, scope).then((minted) => {
+    // A reset during minting must not repopulate retired token state.
+    if (installationTokenMints.get(key) === mint && minted.expiresAt &&
+        !Number.isNaN(Date.parse(minted.expiresAt))) installationTokenCache.set(key, minted);
+    return minted;
+  }).finally(() => {
+    if (installationTokenMints.get(key) === mint) installationTokenMints.delete(key);
+  });
+  installationTokenMints.set(key, mint);
+  return mint;
+}
+
+async function mintInstallationToken(
+  installationId: number | string,
+  scope?: InstallationTokenScope,
+): Promise<InstallationToken> {
 
   const payload: Record<string, unknown> = {};
   if (scope?.repositories?.length) payload.repositories = scope.repositories;
@@ -242,9 +262,6 @@ export async function getInstallationToken(
   }
 
   const minted = { token: data.token, expiresAt: data.expires_at ?? "" };
-  if (minted.expiresAt && !Number.isNaN(Date.parse(minted.expiresAt))) {
-    installationTokenCache.set(key, minted);
-  }
   return minted;
 }
 
@@ -252,6 +269,7 @@ export async function getInstallationToken(
  * survives from one case to the next would hide the scope requested by the second. */
 export function __clearInstallationTokenCacheForTests(): void {
   installationTokenCache.clear();
+  installationTokenMints.clear();
 }
 
 /**

@@ -68,6 +68,8 @@ export class AppTabsSession {
   }
   getActiveHref = () => this.activeHref;
   navigate: (href: string) => void = () => {};
+  /** Owned by the mounted view host; only an exact retained destination qualifies. */
+  isRetainedDestination: (tabId: string | null, href: string) => boolean = () => false;
   prefetch: (href: string) => void = () => {};
   remember: (id: string, href: string) => void = () => {};
   onDispose: () => void = () => {};

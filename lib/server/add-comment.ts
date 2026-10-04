@@ -211,7 +211,12 @@ export async function addCommentToIssue({
 
   // Notifications: @mentions + "comment on an issue I own/am assigned" +
   // reply on a thread I authored (root or direct parent).
-  const valid = await projectMemberIds(service, issue.project_id as string);
+  const possibleRecipients = [...mentioned, ...threadAuthorIds, issue.created_by, issue.assignee_id];
+  // A self-only comment cannot notify anyone. Actual recipients still require
+  // the current membership read; the project access check above always runs.
+  const valid = possibleRecipients.some((uid) => typeof uid === "string" && uid !== actorId)
+    ? await projectMemberIds(service, issue.project_id as string)
+    : new Set<string>();
 
   const mentionSet = new Set(
     mentioned.filter((uid) => uid !== actorId && valid.has(uid))

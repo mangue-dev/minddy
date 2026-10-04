@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AppTabViewHost } from "@/components/app-tab-view-host";
-import { retainAppView } from "./retained-app-views";
+import { isRetainedDestination, retainAppView, retainedAppViewKind } from "./retained-app-views";
 import { useAppTabRoute } from "./app-tab-route-context";
 
 const state = vi.hoisted(() => ({
@@ -17,6 +17,8 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(state.search),
   useParams: () => ({ id: state.path.split("/")[2] }),
 }));
+vi.mock("./runtime-config-provider", () => ({ useRuntimeConfig: () => ({ siteName: "minddy" }) }));
+vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key }));
 vi.mock("./app-tabs-context", () => ({
   useAppTabs: () => ({ tabs: state.tabs, activeId: state.activeId, session: state }),
   AppTabNavigationScope: ({ children }: { children: React.ReactNode }) => children,
@@ -70,6 +72,85 @@ afterEach(async () => {
 });
 
 describe("bounded retained board views", () => {
+  it("does not evict frequent boards for an unmounted large PR diff", async () => {
+    state.tabs = Array.from({ length: 12 }, (_, index) => ({ id: `t${index}` }));
+    client.setQueryData(["me", "board"], { issues: Array(600).fill({}) });
+    client.setQueryData(["issues", "p"], Array(100).fill({}));
+    client.setQueryData(["pull-request", "large"], { files: Array(441).fill({}) });
+    const routes = ["/all", "/projects/q/pages", "/projects/p/pages/a", "/pull-requests?pr=small", "/projects/p/feedback", "/projects/p/triage", "/projects/q", "/projects/p/pages", "/projects/p", "/projects/q/feedback", "/pull-requests?pr=large", "/projects/q/triage"];
+    let board: Element | null = null;
+    for (let run = 0; run < 4; run++) for (const index of [0, 10, 11, 9, 8, 2, 3, 5, 10, 7, 8, 0]) {
+      const url = new URL(routes[index], "https://test.invalid");
+      Object.assign(state, { activeId: `t${index}`, path: url.pathname, search: url.search.slice(1), activeHref: routes[index] });
+      await render();
+      if (index === 0 && run >= 2) {
+        const current = container.querySelector('[data-app-view-active="true"] input');
+        if (board) expect(current).toBe(board);
+        board = current;
+      }
+      expect(container.querySelectorAll("[data-retained-app-view]").length).toBeLessThanOrEqual(6);
+    }
+  });
+  it("keeps unknown nested destinations under the ordinary router", () => {
+    expect(retainedAppViewKind("/projects/p/feedback/unknown")).toBeNull();
+    expect(retainedAppViewKind("/projects/p/triage/unknown")).toBeNull();
+    expect(retainedAppViewKind("/projects/p/pages/document")).toBe("pages");
+  });
+  it("retains mixed late destinations with scoped routes and evicts a closed editor", async () => {
+    state.tabs = Array.from({ length: 12 }, (_, index) => ({ id: `t${index}` }));
+    const routes = ["/pull-requests", "/projects/p/pages/document", "/projects/p/feedback", "/projects/p/triage"];
+    let editor: HTMLInputElement | null = null;
+    for (const index of [8, 9, 10, 11, 8, 11, 10, 9]) {
+      Object.assign(state, { activeId: `t${index}`, path: routes[index - 8], activeHref: routes[index - 8] });
+      await render();
+      const active = container.querySelector('[data-app-view-active="true"]')!;
+      expect(active.querySelector("[data-board-path]")?.getAttribute("data-board-path")).toBe(routes[index - 8]);
+      if (index === 9) {
+        const current = active.querySelector("input")!;
+        if (editor) expect(current).toBe(editor);
+        editor = current; editor.value = "Retained editor draft";
+      }
+      expect(liveEffects).toBe(1);
+      expect(container.querySelectorAll("[data-retained-app-view]").length).toBeLessThanOrEqual(6);
+    }
+    expect(editor!.value).toBe("Retained editor draft");
+    state.tabs = state.tabs.filter((tab) => tab.id !== "t9");
+    Object.assign(state, { activeId: "t11", path: routes[3], activeHref: routes[3] });
+    await render();
+    expect(editor!.isConnected).toBe(false);
+  });
+
+  it("reuses the Pages shell within a tab while keeping other projects isolated", () => {
+    const open = new Set(["pages"]);
+    const first = retainAppView([], { pathname: "/projects/p/pages/a", search: "", projectId: "p" }, "pages", open);
+    const next = retainAppView(first, { pathname: "/projects/p/pages/b", search: "", projectId: "p" }, "pages", open);
+    expect(next).toHaveLength(1); expect(next[0].key).toBe(first[0].key);
+    expect(next[0].route.pathname).toBe("/projects/p/pages/b");
+    const other = retainAppView(next, { pathname: "/projects/q/pages/a", search: "", projectId: "q" }, "pages", open);
+    expect(other).toHaveLength(2); expect(other[0].route.projectId).toBe("p");
+  });
+
+  it("updates document metadata on retained returns and reads project names from the owner cache", async () => {
+    client.setQueryData(["projects"], [{ id: "p", name: "Project P" }]);
+    await render();
+    expect(document.title).toContain("all");
+    state.path = "/projects/p"; state.activeHref = state.path; state.activeId = "other";
+    await render();
+    expect(document.title).toContain("Project P");
+    state.path = "/all"; state.activeHref = state.path; state.activeId = "board";
+    await render();
+    expect(document.title).toContain("all");
+    state.path = "/projects/p"; state.activeHref = state.path; state.activeId = "other";
+    await render();
+    expect(document.title).toContain("Project P");
+    const oldTitle = document.title;
+    document.title = "Issue panel title";
+    await act(() => { client.setQueryData(["projects"], [{ id: "p", name: "Renamed P" }]); });
+    expect(document.title).toBe("Issue panel title");
+    await act(async () => { document.title = oldTitle; await Promise.resolve(); });
+    expect(document.title).toContain("Renamed P");
+  });
+
   it("preserves the exact DOM and input draft, suspends hidden effects and hides portals", async () => {
     await render();
     const input = container.querySelector("input")!;
@@ -77,7 +158,7 @@ describe("bounded retained board views", () => {
     const board = container.querySelector<HTMLElement>("[data-retained-app-view]")!;
     board.scrollTop = 42;
     expect(liveEffects).toBe(1);
-    state.path = "/projects/p/pages";
+    state.path = "/settings";
     state.activeHref = state.path;
     state.activeId = "pages";
     await render();
@@ -112,14 +193,13 @@ describe("bounded retained board views", () => {
     expect(liveEffects).toBe(1);
   });
 
-  it("evicts the least recent board at the fixed bound and releases closed tabs", async () => {
+  it("bounds retained weight and releases closed tabs", async () => {
     await render();
     for (const [id, path] of [["other", "/projects/p2"], ["fourth", "/projects/p3"], ["pages", "/projects/p4"]]) {
       Object.assign(state, { activeId: id, path, activeHref: path });
       await render();
     }
-    expect(container.querySelectorAll("[data-retained-app-view]")).toHaveLength(2);
-    expect(container.querySelector('[data-board-path="/all"]')).toBeNull();
+    expect(container.querySelectorAll("[data-retained-app-view]")).toHaveLength(4);
     expect(liveEffects).toBe(1);
     state.tabs = [{ id: "pages" }];
     await render();
@@ -148,7 +228,7 @@ describe("bounded retained board views", () => {
     const input = container.querySelector("input");
     state.tabs = state.tabs.filter((tab) => tab.id !== "board");
     state.activeId = "pages";
-    state.activeHref = "/projects/p/pages";
+    state.activeHref = "/settings";
     await render();
     expect(container.querySelector("input")).toBe(input);
     expect(mounts).toBe(1);
@@ -165,5 +245,52 @@ describe("bounded retained board views", () => {
     expect(restored).toHaveLength(1);
     expect(restored[0].key).toBe(startup[0].key);
     expect(restored[0].tabId).toBe("board");
+  });
+
+  it("qualifies only the exact retained tab and repeatable selection for local navigation", () => {
+    const route = { pathname: "/all", search: "view=first", projectId: null };
+    const views = retainAppView([], route, "board", new Set(["board"]));
+    expect(isRetainedDestination(views, "board", "/all?view=first")).toBe(true);
+    expect(isRetainedDestination(views, "other", "/all?view=first")).toBe(false);
+    expect(isRetainedDestination(views, "board", "/all?view=second")).toBe(false);
+    expect(isRetainedDestination(views, "board", "/projects/p/pages")).toBe(false);
+    expect(isRetainedDestination(views, "board", "https://external.test/all")).toBe(false);
+    const consumed = [{ ...views[0], route: { ...route, search: "" }, href: "/all?view=first" }];
+    expect(isRetainedDestination(consumed, "board", "/all?view=first")).toBe(true);
+    expect(isRetainedDestination(consumed, "board", "/all?view=second")).toBe(false);
+  });
+
+  it.each([2, 4, 6])("adapts to late frequent visits across twelve tabs under budget %s", (budget) => {
+    const open = new Set(Array.from({ length: 12 }, (_, i) => `t${i}`));
+    let views: ReturnType<typeof retainAppView> = [];
+    let visits: string[] = [];
+    const sequence = [...Array.from({ length: 12 }, (_, i) => i), ...Array.from({ length: 10 }, (_, i) => [10, 11, i % 3]).flat()];
+    let misses = 0;
+    for (const index of sequence) {
+      const tabId = `t${index}`;
+      const route = { pathname: `/projects/p${index}`, search: "", projectId: `p${index}` };
+      if (!views.some((view) => view.tabId === tabId)) misses++;
+      visits = [...visits, tabId].slice(-32);
+      views = retainAppView(views, route, tabId, open, { budget, limit: 6, visits, cost: () => 1 });
+      expect(views.length).toBeLessThanOrEqual(budget);
+      expect(views.at(-1)?.tabId).toBe(tabId);
+    }
+    if (budget >= 4) {
+      expect(views.map((view) => view.tabId)).toContain("t10");
+      expect(views.map((view) => view.tabId)).toContain("t11");
+      // Twelve compulsory first visits plus fewer misses than the 30 returns
+      // that a two-slot LRU would miss in this three-destination pattern.
+      expect(misses).toBeLessThan(30);
+    }
+    // A new visit pattern replaces formerly frequent tabs rather than pinning them.
+    for (let i = 0; i < 40; i++) {
+      const tabId = `t${i % 3}`;
+      visits = [...visits, tabId].slice(-32);
+      views = retainAppView(views, { pathname: `/projects/p${i % 3}`, search: "", projectId: `p${i % 3}` }, tabId, open, { budget, limit: 6, visits, cost: () => 1 });
+    }
+    // An unused spare slot may retain one older view; neither old favourite can
+    // displace the three newly frequent destinations when the budget fits them.
+    if (budget === 4) expect(views.filter((view) => ["t10", "t11"].includes(view.tabId!)).length).toBeLessThanOrEqual(1);
+    if (budget === 2) expect(views.filter((view) => ["t10", "t11"].includes(view.tabId!))).toHaveLength(0);
   });
 });

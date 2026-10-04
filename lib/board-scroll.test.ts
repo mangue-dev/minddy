@@ -37,4 +37,13 @@ describe("restoreBoardScroll", () => {
 
     expect(writes).toBe(0);
   });
+  it("does not read layout dimensions when the preserved offset is already restored", () => {
+    const node = {
+      scrollLeft: 0,
+      get clientWidth(): number { throw new Error("Unexpected layout read"); },
+      get scrollWidth(): number { throw new Error("Unexpected layout read"); },
+    };
+    restoreBoardScroll(node, { current: 0 });
+  });
+
 });

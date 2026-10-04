@@ -32,10 +32,16 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   if (!auth.ok) return auth.response;
   const t = await getTranslations("ApiErrors");
 
-  const { data, error } = await commentStore(auth.supabase, "comments", auth.user.id)
-    .select("*, attachments(*)")
-    .eq("issue_id", id)
-    .order("created_at", { ascending: true });
+  // Both reads retain caller RLS; neither depends on the other's content.
+  const [thread, issueScopeResult] = await Promise.all([
+    commentStore(auth.supabase, "comments", auth.user.id)
+      .select("*, attachments(*)")
+      .eq("issue_id", id)
+      .order("created_at", { ascending: true }),
+    auth.supabase.from("issues").select("project_id").eq("id", id).maybeSingle(),
+  ]);
+  const { data, error } = thread;
+  const { data: issueScope, error: issueScopeError } = issueScopeResult;
 
   if (error) {
     console.error("[api/comments] list failed:", error.message);
@@ -44,15 +50,18 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
 
   // MCP comments: resolve actress key (name + agent) — customer service,
   // the api_keys RLS policy is owner-only (see api-key-actors.ts).
-  const keyActors = await resolveApiKeyActors(
-    (data ?? []).map((c) => c.api_key_id as string | null)
-  );
+  if (issueScopeError || !issueScope?.project_id) {
+    return NextResponse.json({ error: t("databaseError") }, { status: 500 });
+  }
   const commentIds = (data ?? []).map((comment) => comment.id as string);
-  const firstGithub = commentIds.length
-    ? await auth.supabase.from("github_issue_comment_syncs")
-        .select("issue_id,remote_comment_id,comment_id,author_login,author_association,html_url,html_url_encryption_version,created_at_remote,updated_at_remote,deleted_at_remote")
-        .in("comment_id", commentIds)
-    : { data: [], error: null };
+  const [keyActors, firstGithub] = await Promise.all([
+    resolveApiKeyActors((data ?? []).map((c) => c.api_key_id as string | null)),
+    commentIds.length
+      ? auth.supabase.from("github_issue_comment_syncs")
+          .select("issue_id,remote_comment_id,comment_id,author_login,author_association,html_url,html_url_encryption_version,created_at_remote,updated_at_remote,deleted_at_remote")
+          .in("comment_id", commentIds)
+      : Promise.resolve({ data: [], error: null }),
+  ]);
   const { data: githubRows, error: githubError } = legacyGithubCommentUrlSchema(firstGithub.error)
     ? await auth.supabase.from("github_issue_comment_syncs")
         .select("issue_id,remote_comment_id,comment_id,author_login,author_association,html_url,created_at_remote,updated_at_remote,deleted_at_remote")
@@ -60,11 +69,6 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     : firstGithub;
   if (githubError) {
     console.error("[api/comments] GitHub metadata list failed:", githubError.message);
-    return NextResponse.json({ error: t("databaseError") }, { status: 500 });
-  }
-  const { data: issueScope, error: issueScopeError } = await auth.supabase.from("issues")
-    .select("project_id").eq("id", id).maybeSingle();
-  if (issueScopeError || !issueScope?.project_id) {
     return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
   const decodedGithubRows = await Promise.all((githubRows ?? []).map((row) =>

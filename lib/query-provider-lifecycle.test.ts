@@ -102,6 +102,7 @@ describe("query provider persistence lifecycle", () => {
   it("persists confirmed comments but never pending drafts or per-query search snippets", async () => {
     await mount();
     client.setQueryData(["comments", "issue-1"], [{ id: "pending", delivery: { state: "sending", retry: () => {} } }]);
+    client.setQueryData(["comments", "editing-issue"], [{ id: "editing", body: "Unconfirmed edit", optimisticEdit: true }]);
     client.setQueryData(["page-comments", "page-1"], [{ id: "failed", delivery: { state: "error", retry: () => {} } }]);
     client.setQueryData(["me", "pages", "search", "text"], [{ id: "snippet" }]);
     client.setQueryData(["comments", "issue-2"], [{ id: "confirmed" }]);

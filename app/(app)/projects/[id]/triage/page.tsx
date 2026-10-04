@@ -3,7 +3,8 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowLeft01Icon, Cancel01Icon, CircleDotDashedIcon as CircleDotDashed, Copy01Icon, CheckIcon } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { usePathname, useParams, useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
+import { AppTabRouteBoundary, useAppTabRoute } from "@/lib/app-tab-route-context";
 import Link from "next/link";
 import { useTranslations, useFormatter } from "next-intl";
 import {
@@ -72,7 +73,11 @@ import type { Issue, IssueUpdateInput } from "@/lib/types";
 /** Linear-style triage: pending issues on the left, full issue view on the
  *  right where the fields get configured before the issue is accepted onto
  *  the board (→ backlog), declined (→ canceled) or marked as a duplicate. */
-export default function TriagePage() {
+export default function TriageRoute() {
+  return <AppTabRouteBoundary><TriagePage /></AppTabRouteBoundary>;
+}
+
+function TriagePage() {
   const t = useTranslations("Triage");
   const tField = useTranslations("Field");
   const tIssueUI = useTranslations("IssueUI");
@@ -80,11 +85,10 @@ export default function TriagePage() {
   const format = useFormatter();
   // Mounts with the page: warm the deferred editor chunk once painted.
   useIdleMarkdownEditorPreload();
-  const params = useParams<{ id: string }>();
-  const projectId = params.id;
+  const { projectId: routeProjectId, pathname, searchParams } = useAppTabRoute();
+  const projectId = routeProjectId!;
   const router = useRouter();
-  const pathname = usePathname();
-  const issueParam = useSearchParams().get("issue");
+  const issueParam = searchParams.get("issue");
   const { user } = useAuth();
 
   const { projects, loading: projectsLoading } = useProjects();

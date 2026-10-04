@@ -7,7 +7,7 @@ import { useNow, useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button, Spinner, toast } from "mangue-ui";
 import { postIssueAutomationApi } from "@/lib/agent-api";
-import { issueChainQueryKey, useIssueChainQuery } from "@/lib/use-agent-runs";
+import { issueChainQueryKey, useIssueChainStatusQuery } from "@/lib/use-agent-runs";
 import type { MessageKey } from "@/lib/i18n-keys";
 
 /**
@@ -35,7 +35,7 @@ const STATUS_KEYS = {
 export function ChainStatusBar({ issueId }: { issueId: string }) {
   const t = useTranslations("Automations");
   const queryClient = useQueryClient();
-  const { chain } = useIssueChainQuery(issueId);
+  const { chain } = useIssueChainStatusQuery(issueId);
   const [busy, setBusy] = useState<"resume" | "start" | "stop" | null>(null);
   // The countdown to a reprieve refreshes itself: without a clock, it
   // would display "in 5 min" until booting, and would give the impression that

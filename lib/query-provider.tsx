@@ -126,7 +126,7 @@ function isPersistable(query: Query): boolean {
   // Pending/failed comments retain recovery callbacks and unconfirmed content.
   // Reopen from authoritative data after a reload; never restore a false success.
   if ((query.queryKey[0] === "comments" || query.queryKey[0] === "page-comments") &&
-      Array.isArray(query.state.data) && query.state.data.some((comment) => comment?.delivery)) return false;
+      Array.isArray(query.state.data) && query.state.data.some((comment) => (comment?.delivery || comment?.optimisticEdit))) return false;
   return isPersistableKey(query.queryKey);
 }
 

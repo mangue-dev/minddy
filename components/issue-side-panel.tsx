@@ -255,7 +255,7 @@ export function IssueSidePanel({
   // prompt, or to launch the agent (`null` = closed).
   const [customTarget, setCustomTarget] = useState<CustomPromptTarget | null>(null);
 
-  const { items, addComment, updateComment, deleteComment, deleteAttachment } =
+  const { items, readState, retryRead, addComment, updateComment, deleteComment, deleteAttachment } =
     useIssueTimeline(
       issue?.id ?? null,
       // The ticket bears its own birth: enough to open its timeline itself
@@ -268,6 +268,7 @@ export function IssueSidePanel({
           }
         : null,
       issue?.project_id ?? null,
+      open,
     );
 
   // Code agent of this ticket. Same derivations as maps (lib/server/
@@ -1214,6 +1215,8 @@ export function IssueSidePanel({
                 )}
 
                 <IssueActivity
+                  readState={readState}
+                  onRetryRead={retryRead}
                   items={items}
                   ctx={{
                     members,

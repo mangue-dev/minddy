@@ -16,7 +16,7 @@ import { decodePullRequestUrlRow, encodePullRequestUrl,
   shouldEncryptPullRequestUrl } from "./pull-request-url-content";
 import { decodePullRequestContentRow, encodePullRequestContent,
   PR_CONTENT_FIELDS, shouldEncryptPullRequestContent } from "./pull-request-content";
-import { decodeRepositoryName, repositoryStorageName } from
+import { createRepositoryNameDecoder, decodeRepositoryName, repositoryStorageName } from
   "@/lib/server/git/repository-name-content";
 
 /**
@@ -145,10 +145,11 @@ function toRow(input: PullRequestUpsert, id?: string,
   return row;
 }
 
-async function decodeStoredPr<T extends PullRequestRow>(row: T): Promise<T> {
+async function decodeStoredPr<T extends PullRequestRow>(row: T,
+  decodeName = decodeRepositoryName): Promise<T> {
   const content = await decodePullRequestContentRow(
     await decodePullRequestUrlRow(row));
-  return { ...content, repo_full_name: (await decodeRepositoryName(
+  return { ...content, repo_full_name: (await decodeName(
     row.provider,row.repo_full_name))! };
 }
 
@@ -619,8 +620,11 @@ export async function readRepoSyncStates(
     .select("provider, repo_full_name, synced_at, truncated")
     .in("repo_full_name", [...new Set(stored.map((r) => r.name))]);
   const map = new Map<string, RepoSyncState>();
-  for (const row of (data ?? []) as RepoSyncState[]) {
-    const clearName = await decodeRepositoryName(row.provider,row.repo_full_name);
+  const decodeName = createRepositoryNameDecoder();
+  const rows = (data ?? []) as RepoSyncState[];
+  const names = await Promise.all(rows.map((row) => decodeName(row.provider, row.repo_full_name)));
+  for (const [index, row] of rows.entries()) {
+    const clearName = names[index];
     map.set(`${row.provider}:${clearName}`, { ...row, repo_full_name: clearName! });
   }
   return map;
@@ -901,9 +905,10 @@ export async function listVisibleRepos(
         !r.project.deleted_at &&
         isRepoProviderId(r.provider),
     )
+  const decodeName = createRepositoryNameDecoder();
   return Promise.all(rows.map(async (r) => ({
       provider: r.provider as RepoProviderId,
-      repoFullName: (await decodeRepositoryName(r.provider,r.repo_full_name))!,
+      repoFullName: (await decodeName(r.provider,r.repo_full_name))!,
       project: { ...r.project!, name: await decodeProjectName(r.project!) } as VisibleRepo["project"],
     })));
 }
@@ -997,13 +1002,16 @@ export async function listPullRequestsForUser(
   const rows = ((data ?? []) as unknown as PullRequestWithIssue[]).filter((row) =>
     pairs.has(`${row.provider}:${row.repo_full_name}`),
   );
-  const linked = await loadPullRequestIssues(supabase, rows.map((row) => row.id));
-  return Promise.all(rows.map(async (raw) => {
-    const row = await decodeStoredPr(raw);
+  const decodeName = createRepositoryNameDecoder();
+  const [linked, decoded] = await Promise.all([
+    loadPullRequestIssues(supabase, rows.map((row) => row.id)),
+    Promise.all(rows.map((row) => decodeStoredPr(row, decodeName))),
+  ]);
+  return decoded.map((row) => {
     const issues = linked.get(row.id) ?? [];
     issues.sort((a, b) => Number(b.id === row.issue_id) - Number(a.id === row.issue_id));
     return { ...row, issues, issue: issues[0] ?? null };
-  }));
+  });
 }
 
 /**
@@ -1019,9 +1027,13 @@ export async function countPullRequestsForUser(
 ): Promise<number> {
   const namesByProvider = new Map<string, Set<string>>();
   const service = getServiceClient();
-  for (const repo of repos) {
+  const unique = [...new Map(repos.map((repo) => [repoSyncKey(repo.provider, repo.repoFullName), repo])).values()];
+  const stored = await Promise.all(unique.map(async (repo) => ({ ...repo,
+    name: await repositoryStorageName(repo.provider, repo.repoFullName, false, service),
+  })));
+  for (const repo of stored) {
     const names = namesByProvider.get(repo.provider) ?? new Set<string>();
-    names.add(await repositoryStorageName(repo.provider,repo.repoFullName,false,service));
+    names.add(repo.name);
     namesByProvider.set(repo.provider, names);
   }
 
