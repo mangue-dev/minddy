@@ -7407,7 +7407,7 @@
       "functionReferences": []
     },
     "record_encryption_backfill_progress(text,text,jsonb,boolean)": {
-      "sha256": "d7ee420937e4303f6004dc63214cb332be60919ca983e58a35fa69b238ddb52c",
+      "sha256": "20b5c49907054f8e2fce81c0f9d38eae9b7a970b93a2c6365ecaca611ec97102",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""

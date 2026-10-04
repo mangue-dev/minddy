@@ -22,6 +22,7 @@ export type InvitationBackfillResult = {
 /** One bounded, fair pass over legacy and historical invitation emails. */
 export async function backfillInvitationEmailsBatch(
   limit = 100,
+  signal?: AbortSignal,
 ): Promise<InvitationBackfillResult> {
   if (!isInvitationEncryptionEnabled() || !isInvitationEncryptionConfigured()) {
     throw new Error("Invitation encryption is not enabled and configured");
@@ -44,6 +45,7 @@ export async function backfillInvitationEmailsBatch(
     failed: 0,
   };
   for (const row of data ?? []) {
+    signal?.throwIfAborted();
     try {
       const legacy = row.encryption_version === 0;
       if (row.status !== "pending" || Date.parse(row.expires_at as string) <= Date.now()) {

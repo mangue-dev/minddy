@@ -17,6 +17,8 @@ const blindKeys = {
 };
 const store = new EncryptedStore(contentKeys);
 const reads = vi.fn();
+const registrations = vi.fn();
+let registrationError: { code: string } | null = null;
 const rows = new Map<string,Record<string,unknown>>();
 
 vi.mock("@/lib/server/encryption/registry",() => ({
@@ -42,9 +44,12 @@ vi.mock("@/lib/supabase-service",() => ({
             row[key]===value)) Object.assign(row,patch);
         return { data:row,error:null };
       },
-      insert:async (value:Record<string,unknown>) => {
+      upsert:async (value:Record<string,unknown>, options:Record<string,unknown>) => {
+        registrations(value, options);
+        expect(options).toEqual({ onConflict: "provider,token", ignoreDuplicates: true });
+        if (registrationError) return { error: registrationError };
         const key=`${value.provider}:${value.token}`;
-        if (rows.has(key)) return { error:{ code:"23505" } };
+        if (rows.has(key)) return { error:null };
         rows.set(key,{ ...value });return { error:null };
       },
       update:(value:Record<string,unknown>) => { patch=value;return query; },
@@ -79,6 +84,29 @@ describe("recoverable forge repository identities",() => {
     contentVersions.set(2,correct);
     expect(await decodeRepositoryName("github",token)).toBe(clear);
   });
+  it("registers concurrent duplicates without overwriting the stored ciphertext", async () => {
+    const name = "Private/Concurrent";
+    const tokens = await Promise.all(Array.from({ length: 12 }, () =>
+      registerRepositoryName("github", name)));
+    expect(new Set(tokens).size).toBe(1);
+    const original = { ...rows.get(`github:${tokens[0]}`)! };
+    expect(await registerRepositoryName("github", name.toLowerCase())).toBe(tokens[0]);
+    expect(rows.get(`github:${tokens[0]}`)).toEqual(original);
+    expect(await decodeRepositoryName("github", tokens[0])).toBe(name);
+  });
+
+  it("fails registration on database errors and rejects a corrupted stored identity", async () => {
+    registrationError = { code: "57014" };
+    try {
+      await expect(registerRepositoryName("github", "Private/Unavailable"))
+        .rejects.toThrow("Unable to register forge repository name");
+    } finally { registrationError = null; }
+    const first = await registerRepositoryName("github", "Private/Corrupt");
+    const second = await registerRepositoryName("github", "Private/Other");
+    rows.set(`github:${first}`, { ...rows.get(`github:${second}`)! });
+    await expect(registerRepositoryName("github", "Private/Corrupt")).rejects.toThrow();
+  });
+
   it("coalesces an authorized operation and revalidates identities on the next operation", async () => {
     const token = await registerRepositoryName("github", "Private/Shared");
     reads.mockClear();

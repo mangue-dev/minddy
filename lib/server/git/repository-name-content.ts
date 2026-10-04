@@ -110,17 +110,18 @@ export async function registerRepositoryName(provider: string,
     throw new Error("Forge repository identity verification failed");
   }
   const { error:insertError } = await service.from("forge_repository_names")
-    .insert({ provider,token,full_name_ciphertext:ciphertext,
+    .upsert({ provider,token,full_name_ciphertext:ciphertext,
       encryption_version:store.versionOf(ciphertext),
-      encryption_checked_at:new Date().toISOString() });
-  if (insertError && insertError.code!=="23505") {
+      encryption_checked_at:new Date().toISOString() },
+      { onConflict: "provider,token", ignoreDuplicates: true });
+  if (insertError) {
     throw new Error("Unable to register forge repository name");
   }
-  if (insertError) {
-    const decoded = await decodeRepositoryName(provider,token);
-    if (!decoded || normalize(provider,decoded)!==name) {
-      throw new Error("Forge repository identity collision");
-    }
+  // A competing registration may have won. Authenticate the persisted identity
+  // even when ON CONFLICT leaves the existing ciphertext untouched.
+  const decoded = await decodeRepositoryName(provider,token);
+  if (!decoded || normalize(provider,decoded)!==name) {
+    throw new Error("Forge repository identity collision");
   }
   return token;
 }

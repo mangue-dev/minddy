@@ -8,10 +8,11 @@ import { attachmentObjectMetadata, decodeAttachmentObject,
   encodeAttachmentObject } from "./attachment-object-content";
 
 /** Re-encode old project-key versions into verified immutable forge objects. */
-export async function rotateForgeAttachmentsBatch(limit = 10) {
+export async function rotateForgeAttachmentsBatch(limit = 10, signal?: AbortSignal) {
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) {
     throw new Error("Invalid forge attachment rotation batch size");
   }
+  signal?.throwIfAborted();
   const service = getServiceClient();
   const candidates = await service.rpc("list_forge_attachment_rotation_candidates",
     { p_limit: limit });
@@ -19,6 +20,7 @@ export async function rotateForgeAttachmentsBatch(limit = 10) {
   const result = { scanned: 0, rotated: 0, unchanged: 0,
     conflicted: 0, failed: 0, orphansRemoved: 0, abandonedRemoved: 0 };
   for (const row of candidates.data ?? []) {
+    signal?.throwIfAborted();
     result.scanned++;
     const path = row.storage_path as string;
     const attempted = await service.rpc("mark_forge_attachment_rotation_checked", {
@@ -93,6 +95,7 @@ export async function rotateForgeAttachmentsBatch(limit = 10) {
   const orphans = await service.rpc("list_forge_attachment_orphans", { p_limit: limit });
   if (orphans.error) throw new Error("Unable to scan forge attachment orphans");
   for (const row of orphans.data ?? []) {
+    signal?.throwIfAborted();
     const removed = await service.storage.from(FORGE_ATTACHMENTS_BUCKET)
       .remove([row.name]);
     if (removed.error) result.failed++;
@@ -106,6 +109,7 @@ export async function rotateForgeAttachmentsBatch(limit = 10) {
     .limit(limit);
   if (abandoned.error) throw new Error("Unable to scan abandoned forge attachments");
   for (const row of abandoned.data ?? []) {
+    signal?.throwIfAborted();
     const deleted = await service.rpc("delete_abandoned_forge_attachment", {
       p_id: row.id, p_expected_path: row.storage_path,
     });

@@ -8,11 +8,12 @@ import { attachmentObjectMetadata, decodeAttachmentObject,
 import { hasDataRootKey } from "./local-key-wrapper";
 
 /** Move historical forge uploads to verified ciphertext and opaque paths. */
-export async function backfillForgeAttachmentsBatch(limit = 10) {
+export async function backfillForgeAttachmentsBatch(limit = 10, signal?: AbortSignal) {
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) {
     throw new Error("Invalid forge attachment batch size");
   }
   if (!hasDataRootKey()) throw new Error("Forge attachment root key is unavailable");
+  signal?.throwIfAborted();
   const service = getServiceClient();
   const candidates = await service.rpc("list_forge_attachment_migration_candidates",
     { p_limit: limit });
@@ -35,6 +36,7 @@ export async function backfillForgeAttachmentsBatch(limit = 10) {
   if (rows.error) throw new Error("Unable to scan forge attachments");
   const result = { scanned: 0, migrated: 0, failed: 0 };
   for (const row of rows.data ?? []) {
+    signal?.throwIfAborted();
     result.scanned++;
     const oldPath = row.name as string;
     const digest = createHash("sha256").update(oldPath).digest("hex");
