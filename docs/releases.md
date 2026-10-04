@@ -70,10 +70,13 @@ The heart follows SemVer:
 - **major**: API/configuration breakage, announced deletion or migration of
   data incompatible with the old application.
 
-The public [changelog](https://minddy.app/changelog) documents user-visible
-deliveries. Add a product entry through `scripts/changelog-add.mjs`; it updates
-the app's localized release notes. Cloud operations and purely marketing
-changes remain in their respective journals.
+The public [changelog](https://minddy.app/changelog) announces confirmed
+production versions. Prepare one localized release draft using the existing
+changelog skill and `scripts/changelog-add.mjs`. Small updates use compact text;
+substantial releases use illustrated bentos. The protected promotion workflow
+publishes the content only after the exact SHA's successful production
+deployment. See [the changelog workflow](changelog.md) for the schema, storage
+configuration, performance budgets, and historical backfill.
 
 ## The single order
 

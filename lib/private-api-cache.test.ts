@@ -21,6 +21,8 @@ describe("private API cache policy", () => {
 
   it("preserves the explicit public caches", () => {
     expect(isPrivateApiNoStorePath("/api/avatars/user-id")).toBe(false);
+    expect(isPrivateApiNoStorePath("/api/changelog")).toBe(false);
+    expect(isPrivateApiNoStorePath("/api/changelog-private")).toBe(true);
     expect(
       isPrivateApiNoStorePath("/api/self-hosting/email-templates/invite")
     ).toBe(false);

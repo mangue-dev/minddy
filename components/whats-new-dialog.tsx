@@ -11,22 +11,10 @@ import {
   DialogTitle,
 } from "mangue-ui";
 import type { Locale } from "@/i18n/config";
-import type { MessageKey } from "@/lib/i18n-keys";
-import { CHANGELOG_ENTRIES } from "@/lib/changelog";
 import { ChangelogEntries } from "@/components/changelog-entries";
 import { useScrollFade } from "@/lib/use-scroll-fade";
 
-/**
- * "What's new" — the public page `/changelog`, read without leaving the app.
- *
- * Same content, same list component: what is written once in
- * `lib/changelog.ts` and the namespace `Changelog` is displayed in both places.
- * The modal takes the size of the notebook and the creation wizard of
- * project — it's the app window, there is only one.
- *
- * Nothing to load: the entries are in the bundle, like the rest of the
- * catalog. The modal opens full, with no loading state.
- */
+/** Load published versions when the in-app changelog opens. */
 export function WhatsNewDialog({
   open,
   onOpenChange,
@@ -72,17 +60,14 @@ export function WhatsNewDialog({
           {...scrollProps}
           className="flex flex-1 flex-col overflow-y-auto px-6 pt-14 pb-12 sm:pt-20"
         >
-          <div className="mx-auto w-full max-w-2xl">
+          <div className="mx-auto w-full max-w-4xl">
             <DialogTitle className="mb-10 text-3xl leading-[1.05] font-semibold tracking-tighter text-balance">
               {t("heroTitle")}
             </DialogTitle>
             <ChangelogEntries
               locale={locale}
-              entries={CHANGELOG_ENTRIES.map((entry) => ({
-                ...entry,
-                title: t(`entry_${entry.id}_title` as MessageKey<"Changelog">),
-                body: t(`entry_${entry.id}_body` as MessageKey<"Changelog">),
-              }))}
+              labels={{ more: t("more"), loading: t("loading"), error: t("error"),
+                retry: t("retry"), details: t("details") }}
             />
           </div>
         </div>
