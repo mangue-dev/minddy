@@ -26,7 +26,7 @@ function row(table: ProtectedTable, metadata: Record<string, unknown> = {}): Sto
 afterEach(() => vi.restoreAllMocks());
 
 describe("encrypted row codec", () => {
-  it("preserves content types, clears every protected column and audits without content", async () => {
+  it("preserves content types, clears every protected column and decrypts without logging", async () => {
     const log = vi.spyOn(console, "info").mockImplementation(() => {});
     const source = row("issues", {
       title: "Confidential title", description: "", plan: null,
@@ -39,10 +39,7 @@ describe("encrypted row codec", () => {
     expect(source.title).toBe("Confidential title");
     const { encryption_version: _version, encrypted_content: _content, ...expected } = source;
     expect(await codec.decode(saved, context, audit)).toEqual(expected);
-    expect(log).toHaveBeenCalledWith("[data-decrypt]", expect.objectContaining({
-      actor_id: "user-1", table: "issues", row_id: '["row-1"]',
-    }));
-    expect(JSON.stringify(log.mock.calls)).not.toContain("Confidential title");
+    expect(log).not.toHaveBeenCalled();
   });
 
   it("rejects ciphertext transplanted to another real primary key, table or owner", async () => {

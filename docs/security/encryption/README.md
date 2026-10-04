@@ -426,8 +426,10 @@ parents: issues, objectives, feedback posts and pages. It resolves the parent
 project before encryption; database composite foreign keys bind that project
 to the actual parent, including service-role writes. Parent IDs, row IDs and
 scope are immutable. Routes retain their authorization/RLS checks and MCP
-reads record the caller in the decryption audit. Webhooks receive the logical
-in-memory event after a successful insert, never the stored ciphertext.
+reads pass caller metadata to the codec. Successful decryptions do not emit
+console events; decryption failures still propagate to the caller. Webhooks
+receive the logical in-memory event after a successful insert, never the stored
+ciphertext.
 
 The PR echo/burst guards now filter metadata in SQL, then compare decoded
 values in 500-row pages. They do not apply a one-row limit before a protected

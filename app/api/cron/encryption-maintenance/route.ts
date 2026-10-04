@@ -1,3 +1,4 @@
+import { MaintenanceRunner } from "@/lib/server/encryption/maintenance-runner";
 import { backfillCommentsBatch } from "@/lib/server/encryption/comment-backfill";
 import { backfillObjectivesBatch } from "@/lib/server/encryption/objective-backfill";
 import { backfillCategoriesBatch } from "@/lib/server/encryption/category-backfill";
@@ -165,108 +166,111 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "encryption_not_configured" }, { status: 503 });
   }
   try {
-    const rotation = await rotateDueContentKeys();
-    // Agent and Numo repositories update shared run/conversation bundles.
-    // Serialize their passes to avoid competing parent-row locks.
-    let bundleTail: Promise<unknown> = Promise.resolve();
-    const bundlePass = <T,>(work: () => Promise<T>): Promise<T> => {
-      const result = bundleTail.then(work);
-      bundleTail = result.catch(() => undefined);
-      return result;
-    };
-    const outcomes = await Promise.allSettled([
-      contentEnabled ? backfillInvitationEmailsBatch(100) : Promise.resolve(null),
-      contentEnabled ? backfillScratchpadsBatch(50, request.signal) : Promise.resolve(null),
-      contentEnabled ? backfillStatEventsBatch(50, request.signal) : Promise.resolve(null),
-      contentEnabled ? backfillHistoryBatch("issue_events", 50, request.signal) : Promise.resolve(null),
-      contentEnabled ? backfillHistoryBatch("page_versions", 50, request.signal) : Promise.resolve(null),
-      contentEnabled ? backfillCommentsBatch("comments", 50, request.signal) : Promise.resolve(null),
-      contentEnabled ? backfillCommentsBatch("page_comments", 50, request.signal) : Promise.resolve(null),
-      contentEnabled ? backfillObjectivesBatch(50, request.signal) : Promise.resolve(null),
-      contentEnabled ? backfillCategoriesBatch(50, request.signal) : Promise.resolve(null),
-      contentEnabled ? backfillProjectDraftsBatch(50, request.signal) : Promise.resolve(null),
-      contentEnabled ? backfillFeedbackPostsBatch(50, request.signal) : Promise.resolve(null),
-      contentEnabled ? backfillIssuesBatch(50, request.signal) : Promise.resolve(null),
-      contentEnabled ? bundlePass(() => backfillAgentJournalBatch(5, request.signal)) : Promise.resolve(null),
-      contentEnabled ? bundlePass(() => backfillAgentEventsBatch(20, request.signal)) : Promise.resolve(null),
-      contentEnabled ? bundlePass(() => backfillAgentLaunchBatch(20, request.signal)) : Promise.resolve(null),
-      contentEnabled ? bundlePass(() => backfillAgentTitleBatch(20, request.signal)) : Promise.resolve(null),
-      contentEnabled ? bundlePass(() => backfillAgentCheckpointBatch(5, request.signal)) : Promise.resolve(null),
-      contentEnabled ? bundlePass(() => backfillAgentDelegationBatch(20, request.signal)) : Promise.resolve(null),
-      contentEnabled ? bundlePass(() => backfillAgentStandaloneMessages(20, request.signal)) : Promise.resolve(null),
-      contentEnabled ? bundlePass(() => backfillAgentQueueBatch(20, request.signal)) : Promise.resolve(null),
-      contentEnabled ? bundlePass(() => backfillAgentContextsBatch(20, request.signal)) : Promise.resolve(null),
-      contentEnabled ? backfillGithubIssueMetadataBatch(20, request.signal) : Promise.resolve(null),
-      contentEnabled ? backfillGithubCommentUrlsBatch(20, request.signal) : Promise.resolve(null),
-      contentEnabled ? bundlePass(() => backfillAgentVerdictsBatch(20, request.signal)) : Promise.resolve(null),
-      contentEnabled ? bundlePass(() => backfillAgentDeploymentUrlsBatch(20, request.signal)) : Promise.resolve(null),
-      contentEnabled ? bundlePass(() => backfillAgentRunBaseBranchesBatch(20, request.signal)) : Promise.resolve(null),
-      contentEnabled ? bundlePass(() => backfillOrphanRuntimeBaseBranchesBatch(20, request.signal)) : Promise.resolve(null),
-      contentEnabled ? bundlePass(() => backfillAgentArtifactBranchesBatch(20, request.signal)) : Promise.resolve(null),
-      contentEnabled ? bundlePass(() => backfillAgentRunWorkBranchesBatch(20, request.signal)) : Promise.resolve(null),
-      contentEnabled ? bundlePass(() => backfillOrphanRuntimeWorkBranchesBatch(20, request.signal)) : Promise.resolve(null),
-      contentEnabled ? bundlePass(() => backfillAgentDelegationResultsBatch(20, request.signal)) : Promise.resolve(null),
-      contentEnabled ? bundlePass(() => backfillNumoWorkerEventsBatch(20, request.signal)) : Promise.resolve(null),
-      contentEnabled ? bundlePass(() => backfillNumoWorkerCheckpointsBatch(20, request.signal)) : Promise.resolve(null),
-      contentEnabled ? bundlePass(() => backfillAgentRunSummariesBatch(20, request.signal)) : Promise.resolve(null),
-      contentEnabled ? bundlePass(() => backfillAgentTurnSummariesBatch(20, request.signal)) : Promise.resolve(null),
-      contentEnabled ? bundlePass(() => backfillAgentArtifactUrlsBatch(20, request.signal)) : Promise.resolve(null),
-      contentEnabled ? bundlePass(() => backfillAgentRunPrUrlsBatch(20, request.signal)) : Promise.resolve(null),
-      contentEnabled ? backfillPullRequestUrlsBatch(20, request.signal) : Promise.resolve(null),
-      contentEnabled ? backfillPullRequestContentBatch(20, request.signal) : Promise.resolve(null),
-      contentEnabled ? backfillPrCommentEditsBatch(20, request.signal) : Promise.resolve(null),
-      contentEnabled ? backfillForgeRelayDeliveriesBatch(20, request.signal) : Promise.resolve(null),
-      contentEnabled ? scrubForgeRelayAuditBatch(100, request.signal) : Promise.resolve(null),
-      contentEnabled ? backfillAttachmentObjectsBatch(10, request.signal) : Promise.resolve(null),
-      contentEnabled ? backfillAttachmentMetadataBatch("attachments", 30, request.signal) : Promise.resolve(null),
-      contentEnabled ? backfillAttachmentMetadataBatch("page_files", 30, request.signal) : Promise.resolve(null),
-      contentEnabled ? backfillFeedbackIdentityBatch("feedback_users", 30, request.signal) : Promise.resolve(null),
-      contentEnabled ? backfillFeedbackIdentityBatch("feedback_otp_codes", 30, request.signal) : Promise.resolve(null),
-      contentEnabled ? backfillShareTokensBatch(30, request.signal) : Promise.resolve(null),
-      contentEnabled ? bundlePass(() => backfillNumoSurfaceDestinationsBatch(30, request.signal)) : Promise.resolve(null),
-      contentEnabled ? backfillFeedbackSsoBatch(30, request.signal) : Promise.resolve(null),
-      contentEnabled ? backfillForgeMentionKeysBatch(50, request.signal) : Promise.resolve(null),
-      contentEnabled ? bundlePass(() => backfillNumoActivityBatch(30, request.signal)) : Promise.resolve(null),
-      contentEnabled ? backfillProviderResourcesBatch(50, request.signal) : Promise.resolve(null),
-      contentEnabled ? backfillAppConfigBatch(30, request.signal) : Promise.resolve(null),
-      contentEnabled ? backfillFeedbackMergeBatch(50, request.signal) : Promise.resolve(null),
-      contentEnabled ? bundlePass(() => backfillAgentChainCodesBatch(50, request.signal)) : Promise.resolve(null),
-      contentEnabled ? bundlePass(() => backfillNumoTurnIntentsBatch(30, request.signal)) : Promise.resolve(null),
-      contentEnabled ? bundlePass(() => backfillNumoAutomationContentBatch(30, request.signal)) : Promise.resolve(null),
-      contentEnabled ? bundlePass(() => backfillNumoConversationTitlesBatch(30, request.signal)) : Promise.resolve(null),
-      contentEnabled ? bundlePass(() => backfillNumoUserMessagesBatch(30, request.signal)) : Promise.resolve(null),
-      contentEnabled ? bundlePass(() => backfillNumoFinalContentBatch(30, request.signal)) : Promise.resolve(null),
-      contentEnabled ? bundlePass(() => backfillNumoErrorsBatch(30, request.signal)) : Promise.resolve(null),
-      contentEnabled ? bundlePass(() => backfillNumoToolContentBatch(30, request.signal)) : Promise.resolve(null),
-      contentEnabled ? backfillForgeRepositoryNamesBatch(30, request.signal) : Promise.resolve(null),
-      contentEnabled ? backfillForgeDefaultBranchesBatch(30, request.signal) : Promise.resolve(null),
-      contentEnabled ? backfillProjectIconsBatch(10, request.signal) : Promise.resolve(null),
-      contentEnabled ? backfillViewContentBatch(30, request.signal) : Promise.resolve(null),
-      contentEnabled ? backfillSavedViewBookmarksBatch(30, request.signal) : Promise.resolve(null),
-      contentEnabled ? bundlePass(() => backfillAgentRoutineContentBatch(30, request.signal)) : Promise.resolve(null),
-      contentEnabled ? backfillProjectContentBatch(30, request.signal) : Promise.resolve(null),
-      contentEnabled ? backfillPageContentBatch(30, request.signal) : Promise.resolve(null),
-      contentEnabled ? backfillUserAiKeysBatch(30, request.signal) : Promise.resolve(null),
-      contentEnabled ? backfillRelayInstancesBatch(20, request.signal) : Promise.resolve(null),
-      contentEnabled ? backfillProjectWebhookSecretsBatch(30, request.signal) : Promise.resolve(null),
-      contentEnabled ? backfillRelayProvisioningBatch(request.signal) : Promise.resolve(null),
-      contentEnabled ? backfillRelayUserDeliveriesBatch(30, request.signal) : Promise.resolve(null),
-      contentEnabled ? backfillForgeOAuthConnectionsBatch(25, request.signal) : Promise.resolve(null),
-      contentEnabled ? backfillForgeOAuthIdentitiesBatch(25, request.signal) : Promise.resolve(null),
-      contentEnabled ? backfillMcpConnectionsBatch(25, request.signal) : Promise.resolve(null),
-      contentEnabled ? backfillMcpAttemptsBatch(25, request.signal) : Promise.resolve(null),
-      contentEnabled ? bundlePass(() => backfillAgentBranchPrefixesBatch(25, request.signal)) : Promise.resolve(null),
-      contentEnabled ? backfillAppTabsBatch(25, request.signal) : Promise.resolve(null),
-      contentEnabled ? backfillAiDecisionEvaluationsBatch(25, request.signal) : Promise.resolve(null),
-      contentEnabled ? scrubStripeWebhookPayloadsBatch(100, request.signal) : Promise.resolve(null),
-      contentEnabled ? backfillCustomDomainVerificationBatch(25, request.signal) : Promise.resolve(null),
-      contentEnabled ? backfillBillingIdentityBatch(25, request.signal) : Promise.resolve(null),
-      contentEnabled ? backfillOAuthClientsBatch(25, request.signal) : Promise.resolve(null),
-      contentEnabled ? backfillOAuthCodesBatch(25, request.signal) : Promise.resolve(null),
-      contentEnabled ? backfillApiKeysBatch(25, request.signal) : Promise.resolve(null),
-      contentEnabled ? backfillIntegrationsBatch(25, request.signal) : Promise.resolve(null),
-      contentEnabled ? backfillPushBatch(25, request.signal) : Promise.resolve(null),
-    ]);
+    const signal = AbortSignal.any([request.signal, AbortSignal.timeout(50_000)]);
+    const rotationRunner = new MaintenanceRunner(signal, 1);
+    const rotationPass = rotationRunner.schedule(() => rotateDueContentKeys(20, Date.now(), signal));
+    await rotationRunner.run();
+    const rotation = await rotationPass;
+    const runner = new MaintenanceRunner(signal);
+    const maintenancePass = <T,>(work: () => Promise<T>) => runner.schedule(work);
+    const bundlePass = <T,>(work: () => Promise<T>) => runner.schedule(work, true);
+    const passes = [
+      contentEnabled ? maintenancePass(() => backfillInvitationEmailsBatch(100, signal)) : Promise.resolve(null),
+      contentEnabled ? maintenancePass(() => backfillScratchpadsBatch(50, signal)) : Promise.resolve(null),
+      contentEnabled ? maintenancePass(() => backfillStatEventsBatch(50, signal)) : Promise.resolve(null),
+      contentEnabled ? maintenancePass(() => backfillHistoryBatch("issue_events", 50, signal)) : Promise.resolve(null),
+      contentEnabled ? maintenancePass(() => backfillHistoryBatch("page_versions", 50, signal)) : Promise.resolve(null),
+      contentEnabled ? maintenancePass(() => backfillCommentsBatch("comments", 50, signal)) : Promise.resolve(null),
+      contentEnabled ? maintenancePass(() => backfillCommentsBatch("page_comments", 50, signal)) : Promise.resolve(null),
+      contentEnabled ? maintenancePass(() => backfillObjectivesBatch(50, signal)) : Promise.resolve(null),
+      contentEnabled ? maintenancePass(() => backfillCategoriesBatch(50, signal)) : Promise.resolve(null),
+      contentEnabled ? maintenancePass(() => backfillProjectDraftsBatch(50, signal)) : Promise.resolve(null),
+      contentEnabled ? maintenancePass(() => backfillFeedbackPostsBatch(50, signal)) : Promise.resolve(null),
+      contentEnabled ? maintenancePass(() => backfillIssuesBatch(50, signal)) : Promise.resolve(null),
+      contentEnabled ? bundlePass(() => backfillAgentJournalBatch(5, signal)) : Promise.resolve(null),
+      contentEnabled ? bundlePass(() => backfillAgentEventsBatch(20, signal)) : Promise.resolve(null),
+      contentEnabled ? bundlePass(() => backfillAgentLaunchBatch(20, signal)) : Promise.resolve(null),
+      contentEnabled ? bundlePass(() => backfillAgentTitleBatch(20, signal)) : Promise.resolve(null),
+      contentEnabled ? bundlePass(() => backfillAgentCheckpointBatch(5, signal)) : Promise.resolve(null),
+      contentEnabled ? bundlePass(() => backfillAgentDelegationBatch(20, signal)) : Promise.resolve(null),
+      contentEnabled ? bundlePass(() => backfillAgentStandaloneMessages(20, signal)) : Promise.resolve(null),
+      contentEnabled ? bundlePass(() => backfillAgentQueueBatch(20, signal)) : Promise.resolve(null),
+      contentEnabled ? bundlePass(() => backfillAgentContextsBatch(20, signal)) : Promise.resolve(null),
+      contentEnabled ? maintenancePass(() => backfillGithubIssueMetadataBatch(20, signal)) : Promise.resolve(null),
+      contentEnabled ? maintenancePass(() => backfillGithubCommentUrlsBatch(20, signal)) : Promise.resolve(null),
+      contentEnabled ? bundlePass(() => backfillAgentVerdictsBatch(20, signal)) : Promise.resolve(null),
+      contentEnabled ? bundlePass(() => backfillAgentDeploymentUrlsBatch(20, signal)) : Promise.resolve(null),
+      contentEnabled ? bundlePass(() => backfillAgentRunBaseBranchesBatch(20, signal)) : Promise.resolve(null),
+      contentEnabled ? bundlePass(() => backfillOrphanRuntimeBaseBranchesBatch(20, signal)) : Promise.resolve(null),
+      contentEnabled ? bundlePass(() => backfillAgentArtifactBranchesBatch(20, signal)) : Promise.resolve(null),
+      contentEnabled ? bundlePass(() => backfillAgentRunWorkBranchesBatch(20, signal)) : Promise.resolve(null),
+      contentEnabled ? bundlePass(() => backfillOrphanRuntimeWorkBranchesBatch(20, signal)) : Promise.resolve(null),
+      contentEnabled ? bundlePass(() => backfillAgentDelegationResultsBatch(20, signal)) : Promise.resolve(null),
+      contentEnabled ? bundlePass(() => backfillNumoWorkerEventsBatch(20, signal)) : Promise.resolve(null),
+      contentEnabled ? bundlePass(() => backfillNumoWorkerCheckpointsBatch(20, signal)) : Promise.resolve(null),
+      contentEnabled ? bundlePass(() => backfillAgentRunSummariesBatch(20, signal)) : Promise.resolve(null),
+      contentEnabled ? bundlePass(() => backfillAgentTurnSummariesBatch(20, signal)) : Promise.resolve(null),
+      contentEnabled ? bundlePass(() => backfillAgentArtifactUrlsBatch(20, signal)) : Promise.resolve(null),
+      contentEnabled ? bundlePass(() => backfillAgentRunPrUrlsBatch(20, signal)) : Promise.resolve(null),
+      contentEnabled ? maintenancePass(() => backfillPullRequestUrlsBatch(20, signal)) : Promise.resolve(null),
+      contentEnabled ? maintenancePass(() => backfillPullRequestContentBatch(20, signal)) : Promise.resolve(null),
+      contentEnabled ? maintenancePass(() => backfillPrCommentEditsBatch(20, signal)) : Promise.resolve(null),
+      contentEnabled ? maintenancePass(() => backfillForgeRelayDeliveriesBatch(20, signal)) : Promise.resolve(null),
+      contentEnabled ? maintenancePass(() => scrubForgeRelayAuditBatch(100, signal)) : Promise.resolve(null),
+      contentEnabled ? maintenancePass(() => backfillAttachmentObjectsBatch(10, signal)) : Promise.resolve(null),
+      contentEnabled ? maintenancePass(() => backfillAttachmentMetadataBatch("attachments", 30, signal)) : Promise.resolve(null),
+      contentEnabled ? maintenancePass(() => backfillAttachmentMetadataBatch("page_files", 30, signal)) : Promise.resolve(null),
+      contentEnabled ? maintenancePass(() => backfillFeedbackIdentityBatch("feedback_users", 30, signal)) : Promise.resolve(null),
+      contentEnabled ? maintenancePass(() => backfillFeedbackIdentityBatch("feedback_otp_codes", 30, signal)) : Promise.resolve(null),
+      contentEnabled ? maintenancePass(() => backfillShareTokensBatch(30, signal)) : Promise.resolve(null),
+      contentEnabled ? bundlePass(() => backfillNumoSurfaceDestinationsBatch(30, signal)) : Promise.resolve(null),
+      contentEnabled ? maintenancePass(() => backfillFeedbackSsoBatch(30, signal)) : Promise.resolve(null),
+      contentEnabled ? maintenancePass(() => backfillForgeMentionKeysBatch(50, signal)) : Promise.resolve(null),
+      contentEnabled ? bundlePass(() => backfillNumoActivityBatch(30, signal)) : Promise.resolve(null),
+      contentEnabled ? maintenancePass(() => backfillProviderResourcesBatch(50, signal)) : Promise.resolve(null),
+      contentEnabled ? maintenancePass(() => backfillAppConfigBatch(30, signal)) : Promise.resolve(null),
+      contentEnabled ? maintenancePass(() => backfillFeedbackMergeBatch(50, signal)) : Promise.resolve(null),
+      contentEnabled ? bundlePass(() => backfillAgentChainCodesBatch(50, signal)) : Promise.resolve(null),
+      contentEnabled ? bundlePass(() => backfillNumoTurnIntentsBatch(30, signal)) : Promise.resolve(null),
+      contentEnabled ? bundlePass(() => backfillNumoAutomationContentBatch(30, signal)) : Promise.resolve(null),
+      contentEnabled ? bundlePass(() => backfillNumoConversationTitlesBatch(30, signal)) : Promise.resolve(null),
+      contentEnabled ? bundlePass(() => backfillNumoUserMessagesBatch(30, signal)) : Promise.resolve(null),
+      contentEnabled ? bundlePass(() => backfillNumoFinalContentBatch(30, signal)) : Promise.resolve(null),
+      contentEnabled ? bundlePass(() => backfillNumoErrorsBatch(30, signal)) : Promise.resolve(null),
+      contentEnabled ? bundlePass(() => backfillNumoToolContentBatch(30, signal)) : Promise.resolve(null),
+      contentEnabled ? maintenancePass(() => backfillForgeRepositoryNamesBatch(30, signal)) : Promise.resolve(null),
+      contentEnabled ? maintenancePass(() => backfillForgeDefaultBranchesBatch(30, signal)) : Promise.resolve(null),
+      contentEnabled ? maintenancePass(() => backfillProjectIconsBatch(10, signal)) : Promise.resolve(null),
+      contentEnabled ? maintenancePass(() => backfillViewContentBatch(30, signal)) : Promise.resolve(null),
+      contentEnabled ? maintenancePass(() => backfillSavedViewBookmarksBatch(30, signal)) : Promise.resolve(null),
+      contentEnabled ? bundlePass(() => backfillAgentRoutineContentBatch(30, signal)) : Promise.resolve(null),
+      contentEnabled ? maintenancePass(() => backfillProjectContentBatch(30, signal)) : Promise.resolve(null),
+      contentEnabled ? maintenancePass(() => backfillPageContentBatch(30, signal)) : Promise.resolve(null),
+      contentEnabled ? maintenancePass(() => backfillUserAiKeysBatch(30, signal)) : Promise.resolve(null),
+      contentEnabled ? maintenancePass(() => backfillRelayInstancesBatch(20, signal)) : Promise.resolve(null),
+      contentEnabled ? maintenancePass(() => backfillProjectWebhookSecretsBatch(30, signal)) : Promise.resolve(null),
+      contentEnabled ? maintenancePass(() => backfillRelayProvisioningBatch(signal)) : Promise.resolve(null),
+      contentEnabled ? maintenancePass(() => backfillRelayUserDeliveriesBatch(30, signal)) : Promise.resolve(null),
+      contentEnabled ? maintenancePass(() => backfillForgeOAuthConnectionsBatch(25, signal)) : Promise.resolve(null),
+      contentEnabled ? maintenancePass(() => backfillForgeOAuthIdentitiesBatch(25, signal)) : Promise.resolve(null),
+      contentEnabled ? maintenancePass(() => backfillMcpConnectionsBatch(25, signal)) : Promise.resolve(null),
+      contentEnabled ? maintenancePass(() => backfillMcpAttemptsBatch(25, signal)) : Promise.resolve(null),
+      contentEnabled ? bundlePass(() => backfillAgentBranchPrefixesBatch(25, signal)) : Promise.resolve(null),
+      contentEnabled ? maintenancePass(() => backfillAppTabsBatch(25, signal)) : Promise.resolve(null),
+      contentEnabled ? maintenancePass(() => backfillAiDecisionEvaluationsBatch(25, signal)) : Promise.resolve(null),
+      contentEnabled ? maintenancePass(() => scrubStripeWebhookPayloadsBatch(100, signal)) : Promise.resolve(null),
+      contentEnabled ? maintenancePass(() => backfillCustomDomainVerificationBatch(25, signal)) : Promise.resolve(null),
+      contentEnabled ? maintenancePass(() => backfillBillingIdentityBatch(25, signal)) : Promise.resolve(null),
+      contentEnabled ? maintenancePass(() => backfillOAuthClientsBatch(25, signal)) : Promise.resolve(null),
+      contentEnabled ? maintenancePass(() => backfillOAuthCodesBatch(25, signal)) : Promise.resolve(null),
+      contentEnabled ? maintenancePass(() => backfillApiKeysBatch(25, signal)) : Promise.resolve(null),
+      contentEnabled ? maintenancePass(() => backfillIntegrationsBatch(25, signal)) : Promise.resolve(null),
+      contentEnabled ? maintenancePass(() => backfillPushBatch(25, signal)) : Promise.resolve(null),
+      maintenancePass(() => backfillForgeAttachmentsBatch(10, signal)),
+      maintenancePass(() => rotateForgeAttachmentsBatch(10, signal)),
+    ] as const;
+    await runner.run();
+    const outcomes = await Promise.allSettled(passes);
     const invitation = outcomes[0];
     const scratchpad = outcomes[1];
     const statistics = outcomes[2];
@@ -358,12 +362,10 @@ export async function GET(request: NextRequest) {
     const apiKeys = outcomes[88];
     const integrations = outcomes[89];
     const push = outcomes[90];
-    const forgeAttachments = contentEnabled
-      ? await backfillForgeAttachmentsBatch(10).catch(() =>
-        ({ scanned: 0, migrated: 0, failed: 1 })) : null;
-    const forgeAttachmentRotation = contentEnabled
-      ? await rotateForgeAttachmentsBatch(10).catch(() =>
-        ({ scanned: 0, rotated: 0, failed: 1 })) : null;
+    const forgeAttachments = outcomes[91].status === "fulfilled"
+      ? outcomes[91].value : { scanned: 0, migrated: 0, failed: 1 };
+    const forgeAttachmentRotation = outcomes[92].status === "fulfilled"
+      ? outcomes[92].value : { scanned: 0, rotated: 0, failed: 1 };
     const failed = outcomes.some((outcome) => outcome.status === "rejected") || rotation.failed > 0 ||
       (forgeAttachments?.failed ?? 0) > 0 ||
       (forgeAttachmentRotation?.failed ?? 0) > 0 ||

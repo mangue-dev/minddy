@@ -66,3 +66,28 @@ it("preserves the existing auth timeout wrapper and caller cancellation", async 
   controller.abort();
   expect(signal?.aborted).toBe(true);
 });
+
+it("cancels maintenance SDK requests without leaking its deadline to concurrent requests", async () => {
+  const { withSupabaseAbortSignal } = await import("./supabase-fetch");
+  const transport = vi.fn<typeof fetch>(async () => new Response("ok"));
+  vi.stubGlobal("fetch", transport);
+  const maintenance = new AbortController();
+  const caller = new AbortController();
+  await Promise.all([
+    withSupabaseAbortSignal(maintenance.signal, async () => {
+      await Promise.resolve();
+      await supabaseServerFetch("https://project.supabase.co/rest/v1/issues", { signal: caller.signal });
+      await supabaseServerFetchWithTimeout("https://project.supabase.co/auth/v1/user");
+    }),
+    supabaseServerFetch("https://project.supabase.co/rest/v1/projects"),
+  ]);
+  const outside = transport.mock.calls.find(([url]) => String(url).endsWith("projects"))!;
+  expect(outside[1]).toBeUndefined();
+  const scoped = transport.mock.calls.filter(([url]) => !String(url).endsWith("projects"));
+  expect(scoped).toHaveLength(2);
+  expect(scoped.every(([, init]) => init?.signal && !init.signal.aborted)).toBe(true);
+  maintenance.abort();
+  expect(scoped.every(([, init]) => init?.signal?.aborted)).toBe(true);
+  await supabaseServerFetch("https://project.supabase.co/rest/v1/issues");
+  expect(transport.mock.calls.at(-1)?.[1]).toBeUndefined();
+});

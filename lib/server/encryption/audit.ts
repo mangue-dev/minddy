@@ -8,15 +8,6 @@ export type DecryptAudit = {
     | "repository_read" | "migration_verification" | "key_rotation";
 };
 
-/** No plaintext, key material, ciphertext, or search input enters this event. */
-export function auditDecryption(context: EncryptionContext, audit: DecryptAudit): void {
-  console.info("[data-decrypt]", {
-    actor_id: audit.actorId,
-    reason: audit.reason,
-    scope_kind: context.scope.kind,
-    scope_id: context.scope.id,
-    table: context.table,
-    column: context.column,
-    row_id: context.rowId,
-  });
+export function auditDecryption(_context: EncryptionContext, _audit: DecryptAudit): void {
+  // Successful decryptions are intentionally silent to avoid flooding request logs.
 }

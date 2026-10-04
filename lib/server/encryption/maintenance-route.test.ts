@@ -140,7 +140,7 @@ describe("application-wide encryption maintenance", () => {
     const response = await GET(request());
     expect(response.status).toBe(200);
     for (const callback of callbacks.values()) expect(callback).toHaveBeenCalled();
-    expect(callbacks.get("backfillInvitationEmailsBatch")).toHaveBeenCalledWith(100);
+    expect(callbacks.get("backfillInvitationEmailsBatch")).toHaveBeenCalledWith(100, expect.any(AbortSignal));
     expect(callbacks.get("backfillIssuesBatch")).toHaveBeenCalledWith(50, expect.any(AbortSignal));
     expect(callbacks.get("backfillHistoryBatch")).toHaveBeenCalledTimes(2);
     expect(callbacks.get("backfillCommentsBatch")).toHaveBeenCalledTimes(2);
@@ -195,6 +195,34 @@ describe("application-wide encryption maintenance", () => {
       expect(callbacks.get("backfillIssuesBatch")).toHaveBeenCalled();
       expect(await response.json()).toMatchObject({ invitation_failed: true });
       expect(JSON.stringify(log.mock.calls)).not.toContain("Private provider content");
+    } finally { log.mockRestore(); }
+  });
+  it("returns an incomplete response and stops queued repositories when the request is aborted", async () => {
+    enable();
+    const controller = new AbortController();
+    const started: string[] = [];
+    const release: Array<() => void> = [];
+    for (const [name, callback] of callbacks) {
+      if (name === "rotateDueContentKeys") continue;
+      callback.mockImplementation(() => {
+        started.push(name);
+        return new Promise((resolve) => release.push(() => resolve(emptyBatch)));
+      });
+    }
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const pending = GET(new NextRequest("http://localhost/api/cron/encryption-maintenance", {
+        headers: { authorization: `Bearer ${secret}` }, signal: controller.signal,
+      }));
+      await new Promise<void>((resolve) => setImmediate(resolve));
+      expect(started).toHaveLength(3);
+      controller.abort();
+      const response = await pending;
+      expect(response.status).toBe(503);
+      expect(await response.json()).toMatchObject({ issues: { failed: true } });
+      release.forEach((finish) => finish());
+      await new Promise<void>((resolve) => setImmediate(resolve));
+      expect(started).toHaveLength(3);
     } finally { log.mockRestore(); }
   });
   it("reports interrupted content batches as incomplete", async () => {

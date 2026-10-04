@@ -5,7 +5,7 @@ import { getContentKeys, listDueContentKeys, markContentKeyRotationAttempt } fro
 const ROTATION_AGE_MS = 90 * 24 * 60 * 60 * 1_000;
 
 /** Bounded and restartable: a successful CAS gives the current key a new creation date. */
-export async function rotateDueContentKeys(limit = 20, now = Date.now()): Promise<{
+export async function rotateDueContentKeys(limit = 20, now = Date.now(), signal?: AbortSignal): Promise<{
   scanned: number; advanced: number; failed: number;
 }> {
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100 || !Number.isFinite(now)) {
@@ -14,6 +14,7 @@ export async function rotateDueContentKeys(limit = 20, now = Date.now()): Promis
   const due = await listDueContentKeys(new Date(now - ROTATION_AGE_MS).toISOString(), limit);
   const result = { scanned: due.length, advanced: 0, failed: 0 };
   for (const record of due) {
+    signal?.throwIfAborted();
     try {
       await markContentKeyRotationAttempt(record, new Date(now).toISOString());
       // Another worker may have advanced the candidate since the batch was read.
