@@ -1874,6 +1874,11 @@
       "selection": "Problemauswahl"
     },
     "shortcuts": {
+      "numberedTab": "Tab 1–10 öffnen (0 wählt Tab 10)",
+      "previousTab": "Vorheriger Tab",
+      "nextTab": "Nächster Tab",
+      "previousSidebarOption": "Vorherige Option in der sichtbaren Seitenleiste",
+      "nextSidebarOption": "Nächste Option in der sichtbaren Seitenleiste",
       "navHome": "Startseite",
       "navInbox": "Posteingang",
       "navPullRequests": "Code-Reviews",

@@ -1874,6 +1874,11 @@
       "selection": "Seleção de problemas"
     },
     "shortcuts": {
+      "numberedTab": "Ir para a aba 1–10 (0 seleciona a 10ª)",
+      "previousTab": "Aba anterior",
+      "nextTab": "Próxima aba",
+      "previousSidebarOption": "Opção anterior na barra lateral visível",
+      "nextSidebarOption": "Próxima opção na barra lateral visível",
       "navHome": "Página inicial",
       "navInbox": "Caixa de entrada",
       "navPullRequests": "Revisões de código",

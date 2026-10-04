@@ -1874,6 +1874,11 @@
       "selection": "Selezione di ticket"
     },
     "shortcuts": {
+      "numberedTab": "Apri scheda 1–10 (0 seleziona la 10)",
+      "previousTab": "Scheda precedente",
+      "nextTab": "Scheda successiva",
+      "previousSidebarOption": "Opzione precedente nella barra laterale visibile",
+      "nextSidebarOption": "Opzione successiva nella barra laterale visibile",
       "navHome": "Home",
       "navInbox": "Invio",
       "navPullRequests": "Revisioni del codice",
