@@ -18,6 +18,7 @@ import {
   useCallback,
   useContext,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -73,6 +74,8 @@ interface BulkActionsContextValue {
   request: BulkActionsRequest | null;
   /** Bumps on each request so the palette re-opens on repeat actions. */
   openSignal: number;
+  /** Claims a launch signal once, including across palette remounts. */
+  consumeOpenSignal: (signal: number) => boolean;
   /** Called by the pill's "Actions" button — stores the request and opens ⌘K. */
   requestBulkActions: (request: BulkActionsRequest) => void;
 }
@@ -82,6 +85,13 @@ const BulkActionsContext = createContext<BulkActionsContextValue | null>(null);
 export function BulkActionsProvider({ children }: { children: ReactNode }) {
   const [request, setRequest] = useState<BulkActionsRequest | null>(null);
   const [openSignal, setOpenSignal] = useState(0);
+  const consumedOpenSignal = useRef(0);
+
+  const consumeOpenSignal = useCallback((signal: number) => {
+    if (signal <= consumedOpenSignal.current) return false;
+    consumedOpenSignal.current = signal;
+    return true;
+  }, []);
 
   const requestBulkActions = useCallback((next: BulkActionsRequest) => {
     // MIN-75: the “Actions” button of the selection pill. It's the only one
@@ -96,8 +106,8 @@ export function BulkActionsProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo<BulkActionsContextValue>(
-    () => ({ request, openSignal, requestBulkActions }),
-    [request, openSignal, requestBulkActions]
+    () => ({ request, openSignal, consumeOpenSignal, requestBulkActions }),
+    [request, openSignal, consumeOpenSignal, requestBulkActions]
   );
 
   return (

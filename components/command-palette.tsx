@@ -59,6 +59,7 @@ import { projectOrbIcon } from "@/components/project-orb";
 import { projectOrbSeed } from "@/lib/project-orb-colors";
 import { StatusIndicator, PriorityIndicator } from "@/components/issue-indicators";
 import { useBulkActions } from "@/lib/bulk-actions-context";
+import { useBulkPaletteMode } from "@/lib/use-bulk-palette-mode";
 import { displayName } from "@/lib/display-name";
 import { fetchIssueApi, updateIssueApi } from "@/lib/issues-api";
 import { buildIssuePrompt } from "@/lib/issue-prompt";
@@ -258,8 +259,8 @@ export function CommandPalette({
   // delete) like normal lines, instead of the usual content. THE
   // configurable fields open the inline form (the “submenu”, like
   // “Change the theme”).
-  const { request: bulkRequest, openSignal } = useBulkActions();
-  const [bulkMode, setBulkMode] = useState(false);
+  const { request: bulkRequest } = useBulkActions();
+  const showBulk = useBulkPaletteMode({ open, destinationOnly, onOpenChange });
 
   // Favorites persisted in the account (user_metadata.palette_favorites) — same
   // mechanism as the account preferences, so they survive reloads and sync
@@ -333,20 +334,6 @@ export function CommandPalette({
     },
     [currentProjectId, members, searchIndex]
   );
-
-  // A board pill has requested grouped actions → we open the palette by
-  // bulk mode (it will then display the selection options).
-  useEffect(() => {
-    if (openSignal === 0) return;
-    onOpenChange(true);
-    setBulkMode(true);
-  }, [openSignal, onOpenChange]);
-
-  // Any closure (Escape, click outside, ⌘K) exits bulk mode: the next
-  // opening ⌘K/⌘P finds the normal palette.
-  useEffect(() => {
-    if (!open) setBulkMode(false);
-  }, [open]);
 
   // The cmdk groups become the categories of the palette (order preserved),
   // plus “Saved views”, which ONLY exists in the palette: neither the nav
@@ -1372,7 +1359,6 @@ export function CommandPalette({
 
   // In bulk mode, the palette displays the selection options instead of the
   // normal content (navigation, creation, etc.).
-  const showBulk = bulkMode && !!bulkRequest;
   const paletteItems = showBulk ? bulkItems : items;
   const paletteCategories = showBulk
     ? bulkCategories
