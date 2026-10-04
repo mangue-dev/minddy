@@ -29,6 +29,13 @@ export const CHEATSHEET: CheatsheetSection[] = [
     id: "navigation",
     titleKey: "navigation",
     shortcuts: [
+      // Use Control on every platform: macOS reserves Command+Shift+3/4/5
+      // for screenshots before the browser receives the keydown event.
+      { id: "nav.numberedTab", labelKey: "numberedTab", keys: [["Ctrl", "⇧", "1–9, 0"]] },
+      { id: "nav.previousTab", labelKey: "previousTab", keys: [["mod", "⇧", "←"]] },
+      { id: "nav.nextTab", labelKey: "nextTab", keys: [["mod", "⇧", "→"]] },
+      { id: "nav.previousSidebarOption", labelKey: "previousSidebarOption", keys: [["mod", "⇧", "↑"]] },
+      { id: "nav.nextSidebarOption", labelKey: "nextSidebarOption", keys: [["mod", "⇧", "↓"]] },
       { id: "nav.home", labelKey: "navHome", keys: [["G"], ["H"]] },
       { id: "nav.inbox", labelKey: "navInbox", keys: [["G"], ["I"]] },
       {

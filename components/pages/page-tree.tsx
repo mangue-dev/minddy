@@ -449,6 +449,7 @@ function PageRow({
         href={href}
         prefetch={false}
         data-sidebar-filter-result
+        aria-current={active ? "page" : undefined}
         onMouseEnter={() => onPrefetch(page.id)}
         onFocus={() => onPrefetch(page.id)}
         onClick={(event) => {

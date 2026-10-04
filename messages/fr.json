@@ -1874,6 +1874,11 @@
       "selection": "Sélection de tickets"
     },
     "shortcuts": {
+      "numberedTab": "Onglet 1 à 10 (0 sélectionne le 10e)",
+      "previousTab": "Onglet précédent",
+      "nextTab": "Onglet suivant",
+      "previousSidebarOption": "Option précédente de la sidebar affichée",
+      "nextSidebarOption": "Option suivante de la sidebar affichée",
       "navHome": "Accueil",
       "navInbox": "Inbox",
       "navPullRequests": "Code reviews",

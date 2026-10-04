@@ -148,6 +148,7 @@ export function SecondarySidebar({
   const body = (
     <aside
       aria-label={title}
+      data-sidebar-navigation
       className="flex min-h-0 flex-1 flex-col"
       onContextMenu={(event: MouseEvent<HTMLElement>) => {
         if (event.defaultPrevented || !(event.target instanceof Element)) return;
@@ -195,6 +196,7 @@ export function SecondarySidebar({
   return (
     <aside
       aria-label={title}
+      data-sidebar-navigation
       className={cn(
         "min-h-0 flex-col border-border",
         "w-full shrink-0 md:flex md:w-80 md:border-r",

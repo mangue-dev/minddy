@@ -237,6 +237,8 @@ function SidebarRow({ item }: { item: AppNavItem }) {
     row = (
       <MotionLink
         href={item.href}
+        data-sidebar-navigation-item
+        aria-disabled={item.disabled || undefined}
         className={rowClass}
         aria-current={active ? "page" : undefined}
         onMouseEnter={warm}
@@ -252,6 +254,8 @@ function SidebarRow({ item }: { item: AppNavItem }) {
     row = (
       <motion.button
         type="button"
+        data-sidebar-navigation-item
+        aria-current={active ? "page" : undefined}
         onClick={item.onClick}
         disabled={item.disabled}
         onContextMenu={openContextMenu}
@@ -1056,6 +1060,7 @@ export function AppSidebar({
   return (
     <aside
       id={railId}
+      data-sidebar-navigation
       style={{ width: EXPANDED_WIDTH }}
       className={cn(
         "flex h-full flex-col overflow-hidden bg-sidebar text-sidebar-foreground",

@@ -1874,6 +1874,11 @@
       "selection": "Issue selection"
     },
     "shortcuts": {
+      "numberedTab": "Switch to tab 1–10 (0 selects tab 10)",
+      "previousTab": "Previous tab",
+      "nextTab": "Next tab",
+      "previousSidebarOption": "Previous option in the visible sidebar",
+      "nextSidebarOption": "Next option in the visible sidebar",
       "navHome": "Home",
       "navInbox": "Inbox",
       "navPullRequests": "Code reviews",

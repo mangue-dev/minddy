@@ -44,6 +44,9 @@ import { useSecondarySidebar } from "@/lib/secondary-sidebar-context";
 import { eventKey } from "@/lib/keyboard/event-key";
 import { matchesModShiftCombo, matchesModCombo } from "@/lib/keyboard/mod-combo";
 import { trackEvent } from "@/lib/analytics";
+import { useOptionalAppTabSession } from "@/lib/app-tabs-context";
+import { activateShortcutTab, navigationShortcut } from "@/lib/keyboard/navigation-shortcuts";
+import { activateSidebarOption } from "@/lib/keyboard/sidebar-navigation";
 
 /** Leader key that arms a navigation chord. */
 export const CHORD_PREFIX = "g";
@@ -95,6 +98,7 @@ function isDialogOpen(): boolean {
 }
 
 export function KeyboardProvider({ children }: { children: ReactNode }) {
+  const tabSession = useOptionalAppTabSession();
   const router = useAppRouter();
   const pathname = usePathname();
   const { toggle: toggleAssistant } = useAssistantPanelActions();
@@ -125,6 +129,8 @@ export function KeyboardProvider({ children }: { children: ReactNode }) {
   secondaryPresentRef.current = secondaryPresent;
   // Mirrors chordPrefix synchronously for the listener (state is async).
   const armedRef = useRef(false);
+  const tabSessionRef = useRef(tabSession);
+  tabSessionRef.current = tabSession;
 
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | null = null;
@@ -203,6 +209,22 @@ export function KeyboardProvider({ children }: { children: ReactNode }) {
     };
 
     const onKeyDown = (e: KeyboardEvent) => {
+      const navigation = navigationShortcut(e);
+      if (navigation) {
+        // Arrow chords select words/paragraphs in editors. Keep those native
+        // gestures while allowing numbered tab switches during editing.
+        if (isDialogOpen() ||
+            (navigation.kind !== "tab-index" && isTypingTarget(e.target))) return;
+        const handled = navigation.kind === "sidebar-step"
+          ? activateSidebarOption(navigation.direction)
+          : activateShortcutTab(tabSessionRef.current, navigation);
+        if (handled) {
+          e.preventDefault();
+          e.stopImmediatePropagation();
+          disarm();
+        }
+        return;
+      }
       if (matchesModShiftCombo(e, "k")) {
         // Always consume the shortcut, even when an existing dialog or text
         // field means that the notebook should stay closed.

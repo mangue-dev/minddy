@@ -1874,6 +1874,11 @@
       "selection": "Selección de incidencias"
     },
     "shortcuts": {
+      "numberedTab": "Ir a la pestaña 1–10 (0 selecciona la 10)",
+      "previousTab": "Pestaña anterior",
+      "nextTab": "Pestaña siguiente",
+      "previousSidebarOption": "Opción anterior de la barra lateral visible",
+      "nextSidebarOption": "Opción siguiente de la barra lateral visible",
       "navHome": "Inicio",
       "navInbox": "Caja de entrada",
       "navPullRequests": "Revisiones de código",

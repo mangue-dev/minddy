@@ -511,6 +511,7 @@ function RoutineRow({
     <button
       type="button"
       data-sidebar-filter-result
+      aria-current={selected ? "true" : undefined}
       data-navigation-href={`/routines?routine=${encodeURIComponent(routine.id)}`}
       onClick={onSelect}
       className={cn(

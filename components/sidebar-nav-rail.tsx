@@ -68,6 +68,7 @@ export function SidebarNavRail({
             <li key={item.value}>
               <button
                 type="button"
+                data-sidebar-navigation-item
                 data-navigation-href={hrefForValue?.(item.value)}
                 onClick={() => onValueChange(item.value)}
                 aria-current={active ? "true" : undefined}
