@@ -92,9 +92,12 @@ function subscribeRun(runId: string, listener: Listener): () => void {
           channel.on("broadcast", { event: "event" }, ({ payload }) => {
             const signal = payload as { id?: string; type?: string } | null;
             if (!signal?.id || !signal.type) return;
-            // A persisted event supersedes provisional text. Do not replay it
-            // to a view that resumes before the next live snapshot arrives.
-            fresh.stream = null;
+            // Apply the same transition to replayed and already-visible state:
+            // tool events clear narration but retain files until the turn closes.
+            if (fresh.stream) {
+              const next = liveAfterEvent(liveFromStream(null, fresh.stream), signal.type as AgentEventType);
+              fresh.stream = next ? { ...next, at: fresh.stream.at } : null;
+            }
             for (const l of fresh.listeners) l.onEvent?.({
               id: signal.id, type: signal.type as AgentEventType,
             });

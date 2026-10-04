@@ -8,8 +8,9 @@ import { AccountQueryProvider } from "./account-query-provider";
 import { projectIconQueryKey } from "./use-project-icon";
 const account = vi.hoisted(() => ({ id: "account-a" }));
 vi.mock("./auth-context", () => ({ useAuth: () => ({ user: { id: account.id } }) }));
-vi.mock("./local-snapshots", () => ({
-  invalidateLocalSnapshotWrites: vi.fn(),
+vi.mock("./local-snapshots", async (original) => ({
+  // Retain the real account-generation fence while replacing network storage.
+  ...await original<typeof import("./local-snapshots")>(),
   saveLocalSnapshot: async (storage: Storage, key: string, _slot: string, value: unknown) => {
     storage.setItem(key, JSON.stringify({ format: "minddy-local-v1", value }));
   },

@@ -245,3 +245,31 @@ confirm actual `$web_vitals` ingestion. Recommend enabling/confirming Web Vitals
 in that project, verifying populated reports on representative routes, then
 removing the appropriate Vercel subscription once ownership is established.
 Neither provider's settings nor the Speed Insights integration are changed here.
+
+### PR review and collection follow-up
+
+The full CI run identified three failures in `query-provider-lifecycle.test.ts`:
+its complete local-snapshot mock omitted the newly used account-generation API.
+The mock now retains the real generation/invalidation functions and replaces
+only snapshot storage. All five lifecycle tests pass, including logout/account
+isolation. The shared live replay cache now applies `liveAfterEvent`, preserving
+provisional files across tool events and clearing them for closing events.
+Regression tests cover retained-view reactivation and unchanged timestamps.
+49 focused tests across seven files, typecheck and targeted lint pass.
+
+A read-only check on October 4 of production's public runtime configuration and
+the matching PostHog SDK configuration confirms EU ingestion is configured, but
+the remote configuration delivers `capturePerformance.web_vitals: false` with
+`network_timing: true`. A cache-busted read agrees. The configuration advertises
+a five-minute cache lifetime; both Web Vitals script variants are reachable and
+the application CSP does not restrict their script origins. This identifies a
+configuration blocker, not a confirmed analytics ingestion delay. No private
+PostHog event data or hosted settings were accessed or modified.
+
+Enable **Web vitals autocapture** for the project whose public key Minddy uses;
+allowed toolbar URLs and network timing are separate settings. Then reload the
+page after configuration refresh, interact with it and switch away from the tab.
+Look for `$web_vitals` in the event feed before interpreting a blank dashboard.
+The SDK groups available metrics for up to five seconds; some metrics finalize
+on interaction or when the document becomes hidden. SPA route changes do not
+start a new page-load measurement with the default Web Vitals configuration.

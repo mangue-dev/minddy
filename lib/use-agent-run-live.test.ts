@@ -36,7 +36,7 @@ const read = vi.fn<(url: string, init: RequestInit) => Promise<Response>>();
 function Viewer({ diff = false }: { diff?: boolean }) {
   const live = useAgentRunLive("run-1", true);
   const files = useAgentRunLocalDiff("run-1", diff);
-  return createElement("span", null, `${live?.text ?? ""}|${files?.files[0]?.filename ?? ""}`);
+  return createElement("span", { "data-live": JSON.stringify(live) }, `${live?.text ?? ""}|${files?.files[0]?.filename ?? ""}`);
 }
 async function render(active: boolean, viewers = 1) {
   await act(() => root.render(createElement(QueryClientProvider, { client },
@@ -133,6 +133,40 @@ describe("agent live snapshot lifecycle", () => {
     expect(host.textContent).toBe("|file-1.ts|file-1.ts");
     expect(read).toHaveBeenCalledTimes(1);
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ["agent-run-events", "run-1"] });
+  });
+
+  it.each(["tool_call", "tool_result"])("retains live files when a view resumes after %s with an unchanged snapshot", async (type) => {
+    const files = [{ path: "edited.ts", status: "modified", additions: 0, deletions: 0 }];
+    const fileStats = [{ ...files[0], additions: 3, deletions: 1 }];
+    read.mockResolvedValue({ ok: true, json: async () => ({ stream: {
+      at: 10, text: "Provisional", files, filesTruncated: true, fileStats,
+      tools: 1, reasoningActive: true, reasoningMs: 25,
+    } }) } as Response);
+    await renderSeparateViews(false);
+    const onEvent = realtime.channel.mock.results[0].value.on.mock.calls[0][2];
+    await act(() => onEvent({ payload: { id: "event-1", type } }));
+    await renderSeparateViews(true);
+    const states = [...host.querySelectorAll("span")].map(span => JSON.parse(span.getAttribute("data-live")!));
+    for (const state of states) expect(state).toMatchObject({
+      text: "", tools: 0, reasoningActive: false, reasoningMs: 25,
+      files, filesTruncated: true, fileStats,
+    });
+    await act(() => vi.advanceTimersByTimeAsync(500));
+    expect(read).toHaveBeenCalledTimes(2);
+    for (const span of host.querySelectorAll("span")) {
+      expect(JSON.parse(span.getAttribute("data-live")!)).toMatchObject(states[0]);
+    }
+  });
+
+  it.each(["summary", "files_changed", "quota_exhausted"])("does not replay live files after the closing event %s", async (type) => {
+    read.mockResolvedValue({ ok: true, json: async () => ({ stream: {
+      at: 10, text: "Provisional", files: [{ path: "edited.ts", status: "modified" }],
+    } }) } as Response);
+    await renderSeparateViews(false);
+    const onEvent = realtime.channel.mock.results[0].value.on.mock.calls[0][2];
+    await act(() => onEvent({ payload: { id: "event-1", type } }));
+    await renderSeparateViews(true);
+    for (const span of host.querySelectorAll("span")) expect(span.getAttribute("data-live")).toBe("null");
   });
 
   it("keeps the last snapshot hidden and reads the latest stream and diff on return", async () => {
