@@ -5,6 +5,8 @@ import { Add01Icon, FilterIcon, GitPullRequestIcon, Link02Icon } from "@hugeicon
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
+import { useOptionalAppTabNavigation } from "@/lib/app-tab-navigation-context";
+import { canConsumePrDeepLink } from "@/lib/pr-navigation";
 import { AppTabRouteBoundary, useAppTabRoute } from "@/lib/app-tab-route-context";
 import { useFormatter, useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
@@ -434,6 +436,7 @@ function PullRequestsPageInner() {
   const tCommon = useTranslations("Common");
   const format = useFormatter();
   const router = useRouter();
+  const navigation = useOptionalAppTabNavigation();
   const { projects, openCreateProject, loading: projectsLoading } = useProjects();
   const queryClient = useQueryClient();
 
@@ -459,11 +462,14 @@ function PullRequestsPageInner() {
    */
   const consumeDeepLink = useCallback(() => {
     if (!deepLink) return;
+    const expected = `/pull-requests?${searchParams.toString()}`;
+    if (!canConsumePrDeepLink(expected, navigation?.activeId ?? null,
+      navigation?.session.getSnapshot(), window.location.pathname + window.location.search)) return;
     router.replace(
       consumedDeepLinkHref("/pull-requests", searchParams.toString()),
       { scroll: false },
     );
-  }, [deepLink, router, searchParams]);
+  }, [deepLink, navigation, router, searchParams]);
 
   const [filter, setFilter] = useState<PullRequestStateFilter>("open");
   const [author, setAuthor] = useState<string>(AUTHOR_ALL);

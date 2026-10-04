@@ -103,22 +103,27 @@ vi.mock("@/lib/server/agent/runs", () => ({
 vi.mock("@/lib/server/agent/issue-status-sync", () => ({
   syncIssueStatusFromPr: async () => {},
 }));
+const recordForgePrGesture = vi.fn(async () => {});
 vi.mock("@/lib/server/agent/pr-activity", () => ({
   applyForgePrToIssue: async () => {},
   isPrActionEcho: async () => false,
   recordForgePrActionEvents: async () => {},
-  recordForgePrGesture: async () => {},
+  recordForgePrGesture,
   notifyForgePrAction: async () => {},
 }));
 vi.mock("@/lib/server/agent/pr-opened-notify", () => ({
   notifyPullRequestOpened: async () => {},
 }));
 const findPullRequestByNumber = vi.fn(async (): Promise<Record<string, unknown> | null> => null);
+const upsertPullRequestWithOutcome = vi.fn(async () => ({ row: null, applied: false }));
+const recordPrCommentEditQuiet = vi.fn(async () => {});
+vi.mock("@/lib/server/agent/pr-comment-edits", () => ({ recordPrCommentEditQuiet }));
 vi.mock("@/lib/server/agent/pull-requests", () => ({
   findPullRequestByNumber: (...a: unknown[]) => findPullRequestByNumber(...(a as [])),
   findPullRequestsByHeadSha: async () => [],
   resolveIssueForPr: async () => null,
   upsertPullRequest: async () => null,
+  upsertPullRequestWithOutcome,
 }));
 const handleForgeNumoMention = vi.fn(async () => {});
 vi.mock("@/lib/server/agent/pr-mention", () => ({
@@ -377,6 +382,46 @@ describe("POST /api/webhooks/github", () => {
     const replay = await githubPOST(githubRequest({ deliveryId }));
     expect(await replay.json()).toEqual({ ok: true, duplicate: true });
     expect(syncRemoteIssueEvent).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps a rejected stale PR body edit at its forge timestamp", async () => {
+    const response = await githubPOST(githubRequest({
+      event: "pull_request",
+      body: {
+        action: "edited", number: 7,
+        repository: { id: 9001, full_name: "acme/app" },
+        pull_request: { number: 7, body: "Second version", updated_at: "2026-10-04T11:00:00Z" },
+        changes: { body: { from: "Original" } },
+        sender: { login: "octocat" },
+      },
+    }));
+    expect(response.status).toBe(200);
+    await vi.waitFor(() => expect(recordPrCommentEditQuiet).toHaveBeenCalledWith({
+      provider: "github", repoFullName: "acme/app", prNumber: 7, commentId: 0,
+      body: "Original", editedBy: "octocat", occurredAt: "2026-10-04T11:00:00Z",
+    }));
+    expect(upsertPullRequestWithOutcome).toHaveBeenCalledOnce();
+    expect(recordForgePrGesture).not.toHaveBeenCalled();
+  });
+
+  it("dates a PR comment edit by its updated time instead of its creation or delivery time", async () => {
+    const response = await githubPOST(githubRequest({
+      event: "issue_comment",
+      body: {
+        action: "edited", repository: { id: 9001, full_name: "acme/app" },
+        issue: { number: 7, pull_request: {} },
+        comment: { id: 22, body: "Revised", user: { login: "octocat" },
+          created_at: "2026-10-03T11:00:00Z", updated_at: "2026-10-04T11:00:00Z" },
+        changes: { body: { from: "Original" } },
+      },
+    }));
+    expect(response.status).toBe(200);
+    await vi.waitFor(() => expect(recordPrCommentEditQuiet).toHaveBeenCalledWith({
+      provider: "github", repoFullName: "acme/app", prNumber: 7, commentId: 22,
+      body: "Original", editedBy: "octocat", occurredAt: "2026-10-04T11:00:00Z",
+    }));
+    expect(recordForgePrGesture).not.toHaveBeenCalled();
+    expect(handleForgeNumoMention).not.toHaveBeenCalled();
   });
 
   it("synchronizes a regular issue comment without treating it as a PR comment", async () => {

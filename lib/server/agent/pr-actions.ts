@@ -1028,8 +1028,8 @@ async function withForgeAttachmentPublication<T>(prId: string, body: string,
 /**
  * Edits an existing thread comment (MIN-548). Human gesture, under the
  * person's git account like the create. The CURRENT body is snapshotted into
- * `pr_comment_edits` BEFORE the forge write — best effort: a failed snapshot
- * must not block the edit (the history has a gap, the edit still lands).
+ * `pr_comment_edits` after a successful forge write using its edit timestamp.
+ * A failed snapshot leaves a gap in history without failing the edit.
  * The thread broadcast goes out like the create path, then the updated
  * comment — whose `updated_at` now carries the "(edited)" marker — is
  * returned.
@@ -1052,7 +1052,13 @@ export async function updatePrCommentResponse(
     } catch {
       console.error("[pr-actions] edit_snapshot_read_failed");
     }
-    if (previous != null) {
+    const comment = await withForgeAttachmentPublication(scope.pr.id, payload.body,
+      () => scope.forge.updatePullRequestComment({
+      ...actorCall(actor.actor, scope),
+      commentId: payload.commentId,
+      body: payload.body.slice(0, MAX_COMMENT_BODY_LENGTH),
+    }));
+    if (previous != null && previous !== comment.body) {
       await recordPrCommentEditQuiet({
         provider: scope.target.provider,
         repoFullName: scope.target.repoFullName,
@@ -1060,14 +1066,9 @@ export async function updatePrCommentResponse(
         commentId: payload.commentId,
         body: previous,
         editedBy: actor.actor.login,
+        occurredAt: comment.updated_at,
       });
     }
-    const comment = await withForgeAttachmentPublication(scope.pr.id, payload.body,
-      () => scope.forge.updatePullRequestComment({
-      ...actorCall(actor.actor, scope),
-      commentId: payload.commentId,
-      body: payload.body.slice(0, MAX_COMMENT_BODY_LENGTH),
-    }));
     // Direct (MIN-161): the thread, among everyone who watches this PR — the
     // webhook echo (`issue_comment`/note update) would only repeat it later,
     // and GitLab does not deliver a note-edit echo at all.
@@ -2587,28 +2588,28 @@ export async function prMaintenanceActionResponse(
           { status: 400 },
         );
       }
-      // Snapshot FIRST (MIN-548), like a comment edit: the body opens the
-      // conversation thread (`PR_BODY_COMMENT_ID`), so its previous versions
-      // read like any message's. Read from the forge's own state — if the
-      // read fails, we still edit, the history simply starts here.
+      // Read before writing, then record only a successful edit at forge time.
+      let previous: string | null = null;
       try {
         const current = await scope.forge.getPullRequest(scope.call);
-        if (current.body != null) {
-          await recordPrCommentEditQuiet({
-            provider: scope.target.provider,
-            repoFullName: scope.target.repoFullName,
-            prNumber: scope.pr.number,
-            commentId: PR_BODY_COMMENT_ID,
-            body: current.body,
-            editedBy: actor.actor.login,
-          });
-        }
+        previous = current.body ?? null;
       } catch {
         console.error("[pr-actions] body_edit_snapshot_read_failed");
       }
-      await withPrOperation(`${scope.pr.id}:update-body`, () =>
+      const updated = await withPrOperation(`${scope.pr.id}:update-body`, () =>
         scope.forge.updatePullRequestBody({ ...call, body: nextBody }),
       );
+      if (previous != null && previous !== updated.body) {
+        await recordPrCommentEditQuiet({
+          provider: scope.target.provider,
+          repoFullName: scope.target.repoFullName,
+          prNumber: scope.pr.number,
+          commentId: PR_BODY_COMMENT_ID,
+          body: previous,
+          editedBy: actor.actor.login,
+          occurredAt: updated.updatedAt,
+        });
+      }
       broadcastPrChanged(scope.pr.id, ["pr", "conversation"]);
       return NextResponse.json({ ok: true });
     }

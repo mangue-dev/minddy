@@ -5,7 +5,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
 import { ArrowDown01Icon, ArrowLeft01Icon, ArrowUp01Icon, Cancel01Icon, Copy01Icon, Edit04Icon, GitPullRequestDraftIcon, GitPullRequestIcon, HistoryIcon, LinkSquare01Icon, Message01Icon, MessageSquareQuoteIcon, MoreHorizontalIcon, CheckIcon, Undo02Icon, ViewIcon } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useFormatter, useNow, useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import {
   Button,
   Checkbox,  Dialog,
@@ -80,7 +80,6 @@ import {
   isAgentRunWorking,
   type MergeMethod,
   type PullRequestComment,
-  type PullRequestCommentEdit,
   type PullRequestCommit,
   type PullRequestListItem,
   type PullRequestReviewComment,
@@ -94,6 +93,8 @@ import {
 } from "@/lib/pr-readiness";
 import { viewerReviewIsRequested } from "@/lib/pr-review-request";
 import { settleMergeFlowOverride, type PullRequestDetailTab } from "@/lib/pr-readiness-actions";
+import { useForgeNow } from "@/lib/use-forge-now";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { normalizeForgeInstant } from "@/lib/forge-time";
 import { REPO_PROVIDERS } from "@/lib/repo-providers";
 import { PrEndpointProvider } from "@/lib/pr-endpoint-context";
@@ -283,9 +284,9 @@ function buildFeed(
  * standalone quote button: editing one's own message (MIN-548) added a second
  * gesture, and two buttons appearing on hover was one too many. The menu
  * holds Edit (own human message only), Quote, and — when the message was
- * edited — the list of its previous versions, fetched lazily on menu open.
+ * edited — the list of its previous versions, fetched when the dialog opens.
  */
-function ThreadComment({
+export function ThreadComment({
   endpoint,
   commentId,
   user,
@@ -335,36 +336,28 @@ function ThreadComment({
 }) {
   const t = useTranslations("PullRequests");
   const format = useFormatter();
-  const now = useNow();
+  const now = useForgeNow();
   const list = reactions?.byComment.get(commentId) ?? [];
   const when = normalizeForgeInstant(createdAt, now);
-  const edited = !!updatedAt && updatedAt !== createdAt;
-  // The history only exists when the forge says the message moved: opening the
-  // menu on an unedited message would fire a useless request every hover.
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [edits, setEdits] = useState<PullRequestCommentEdit[] | null>(null);
+  const queryClient = useQueryClient();
   const [historyOpen, setHistoryOpen] = useState(false);
+  const history = useQuery({
+    queryKey: ["pr-comment-edits", endpoint, commentId, updatedAt],
+    queryFn: ({ signal }) => fetchPullRequestCommentEditsApi(endpoint, commentId, signal),
+    // General PR activity is not a body edit. Only recorded snapshots prove one.
+    enabled: commentId === PR_BODY_COMMENT_ID || historyOpen,
+    staleTime: 60_000,
+    retry: false,
+  });
+  const edits = history.data?.edits;
+  const edited = commentId === PR_BODY_COMMENT_ID
+    ? !!edits?.length
+    : !!updatedAt && Date.parse(updatedAt) > Date.parse(createdAt ?? "");
+  const canViewHistory = edited || (commentId === PR_BODY_COMMENT_ID &&
+    (history.isPending || history.isError || history.fetchStatus === "paused"));
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
   const [saving, setSaving] = useState(false);
-
-  // Lazily on menu open, and only once: previous versions never change —
-  // a snapshot is frozen at the moment it was taken.
-  useEffect(() => {
-    if (!menuOpen || !edited || edits) return;
-    let cancelled = false;
-    fetchPullRequestCommentEditsApi(endpoint, commentId)
-      .then(({ edits: rows }) => {
-        if (!cancelled) setEdits(rows);
-      })
-      .catch(() => {
-        // An unreadable history hides the menu entry rather than failing.
-        if (!cancelled) setEdits([]);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [menuOpen, edited, edits, endpoint, commentId]);
 
   const save = async () => {
     const next = draft.trim();
@@ -377,9 +370,7 @@ function ThreadComment({
         await updatePullRequestCommentApi(endpoint, { commentId, body: next });
       }
       setEditing(false);
-      // The history just grew (this save snapshotted the previous body):
-      // forget the list read before the edit, the next menu open refetches.
-      setEdits(null);
+      void queryClient.invalidateQueries({ queryKey: ["pr-comment-edits", endpoint, commentId] });
       onEdited?.();
     } catch (err) {
       toast.error((err as Error).message);
@@ -428,8 +419,8 @@ function ThreadComment({
             >
               {t("cancel")}
             </Button>
-          ) : (canEdit || onQuoteReply || edited) ? (
-            <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
+          ) : (canEdit || onQuoteReply || canViewHistory) ? (
+            <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
@@ -458,10 +449,9 @@ function ThreadComment({
                     {t(quotingNumo ? "quoteReplyNumo" : "quoteReply")}
                   </DropdownMenuItem>
                 ) : null}
-                {/* The history is always offered on an edited message: the
-                    lazy read may fail or return nothing — the dialog says so,
-                    and the menu must never open empty. */}
-                {edited ? (
+                {/* Keep loading and failed body reads reachable without
+                    claiming that an edit has been recorded. */}
+                {canViewHistory ? (
                   <DropdownMenuItem onSelect={() => setHistoryOpen(true)}>
                     <HugeiconsIcon icon={HistoryIcon} />
                     {t("viewPreviousVersions")}
@@ -512,7 +502,12 @@ function ThreadComment({
               <DialogTitle>{t("previousVersionsTitle")}</DialogTitle>
             </DialogHeader>
             <div className="flex max-h-96 min-w-0 flex-col gap-4 overflow-y-auto">
-              {!edits ? (
+              {history.isError || history.fetchStatus === "paused" ? (
+                <div className="flex flex-col gap-2 text-sm text-muted-foreground" role="alert">
+                  <p>{t(history.fetchStatus === "paused" ? "readPaused" : "readFailed")}</p>
+                  <Button variant="ghost" size="sm" onClick={() => void history.refetch()}>{t("readRetry")}</Button>
+                </div>
+              ) : !edits ? (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Spinner className="size-3.5 shrink-0" />
                   {t("previousVersionsLoading")}
@@ -657,6 +652,7 @@ export function PrDetail({
     readiness,
     loading,
     readState,
+    displayReadState,
     refetch: refetchPr,
   } = usePullRequestQuery(item.prId, true);
   const {
@@ -1694,7 +1690,7 @@ export function PrDetail({
       }
       reviewThreadActions={reviewThreadActions}
     >
-    <QueryReadBoundary phase={readState} className="h-full min-h-0" contentClassName="h-full min-h-0" fallback={
+    <QueryReadBoundary phase={displayReadState} className="h-full min-h-0" contentClassName="h-full min-h-0" fallback={
       readState === "error" || readState === "paused" ? (
         <div className="flex h-full flex-col items-center justify-center gap-3 text-sm text-muted-foreground" role="alert">
           <p>{t(readState === "error" ? "readFailed" : "readPaused")}</p>

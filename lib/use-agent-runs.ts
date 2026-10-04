@@ -5,7 +5,7 @@ import { useAppTabActive, useAppTabActivation } from "./app-tab-route-context";
 import { useQuery, type QueryClient } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import { assertPullRequestReadBudget, pullRequestReadRetry, pullRequestQueryOptions, pullRequestReadState, pullRequestReadPrecedesActivation } from "./pull-request-query";
-import { nextReadActivationSequence } from "./read-activation-sequence";
+import { nextReadActivationSequence, readActivationSession } from "./read-activation-sequence";
 import {
   fetchAgentRunApi,
   fetchAgentRunDiffApi,
@@ -231,6 +231,10 @@ export function usePullRequestQuery(prId: string, enabled: boolean) {
     readinessThreads: data?.reviewThreads ?? null,
     loading: enabled && isPending,
     readState: pullRequestReadState(query, activationSequence),
+    // A recent background snapshot paints immediately; writes still use readState.
+    displayReadState: !query.isError && query.fetchStatus !== "paused" &&
+      data?.readSession === readActivationSession && Date.now() - dataUpdatedAt < 60_000
+      ? "fresh" as const : pullRequestReadState(query, activationSequence),
     refetch,
   };
 }

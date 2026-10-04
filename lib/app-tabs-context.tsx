@@ -9,6 +9,7 @@ import { appTabsQueryKey, useAppTabsQuery } from "./use-app-tabs-query";
 import { AppTabRouteSync } from "@/components/app-tab-route-sync";
 import { appTabsStorageKey } from "./app-tabs-storage";
 import { prefetchAppTabDestination, isPreparedAppTabDestination } from "./prefetch-tab-destination";
+import { PrBackgroundSync } from "./use-pr-background";
 import { createPrTabPreparation } from "./pr-tab-preparation";
 import { NavigationContext, useOptionalAppTabNavigation } from "./app-tab-navigation-context";
 import { removeLocalSnapshot, restoreLocalSnapshot, saveLocalSnapshot } from "./local-snapshots";
@@ -141,6 +142,7 @@ function AccountTabs({ owner, children }: { owner: string; children: ReactNode }
     loadError: query.isError, reload: () => { void query.refetch(); } }), [snapshot, session, query.isPending, query.isError, query.refetch]);
   const navigation = useMemo(() => ({ session, activeId: snapshot.activeId }), [session, snapshot.activeId]);
   return <SessionContext.Provider value={session}><NavigationContext.Provider value={navigation}><Context.Provider value={value}>
+    <PrBackgroundSync />
     <Suspense fallback={null}><AppTabRouteSync /></Suspense>
     {children}
   </Context.Provider></NavigationContext.Provider></SessionContext.Provider>;

@@ -1,4 +1,4 @@
-import { after, NextResponse, type NextRequest } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 import { createRepositoryNameDecoder } from "@/lib/server/git/repository-name-content";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -109,17 +109,6 @@ const STATE_FILTERS: Record<string, PullRequestState[]> = {
 };
 
 /**
- * Catching up on a deposit. BLOCKING if it has never been scanned — otherwise the page
- * would appear empty on a repository that has just been linked. Simply OUT OF DATE, it
- * part in `after()`: the response does not make the user wait for a
- * lost webhook, and the next display will be correct.
- *
- * The shared `sweepRepo` (lib/server/agent/pull-requests-sweep.ts, MIN-595) is
- * also fired by the badge count route: every reader of a TTL window coalesces
- * into one forge read, whichever route got there first.
- */
-
-/**
  * PR targeted by a deep-link (direct `?pr=`, historical `?run=`) when the page
  * does not contain it — the list is limited, a link is not.
  *
@@ -180,12 +169,8 @@ export async function GET(request: NextRequest) {
   }
 
   // ── Catch-up ────────────────────────────────────────────────────────────
-  // The sync states and the PR rows are independent reads, so they run
-  // together. A repository that was NEVER swept forces a blocking forge scan
-  // that must precede the row read for its PRs to exist yet — in that case the
-  // rows are read again after the sweep. Already-swept repositories (the
-  // steady state) pay no second read, and stale repositories keep sweeping
-  // out of band through `after()`.
+  // Read rows and sync stamps together, then reread after any stale repository
+  // catches up so this response includes newly discovered pull requests.
   const [syncs, rowsBeforeSweep] = await Promise.all([
     readRepoSyncStates(repos),
     listPullRequestsForUser(auth.supabase, repos, {
@@ -194,30 +179,29 @@ export async function GET(request: NextRequest) {
     }).catch((err: unknown) => err as Error),
   ]);
   const seen = new Set<string>();
-  // Cut seen by a BLOCKING scan of this request: `syncs` has been read
-  // BEFORE him and still said “never swept” for this deposit. Without this postponement, the
-  // very first display of a deposit of more than MAX_PR_PAGES × 100 PR se
-  // would be silent about the cut — precisely the lie by omission that is being corrected.
   let sweptTruncated = false;
-  let blockingSweep = false;
+  const staleRepos: VisibleRepo[] = [];
   for (const repo of repos) {
     const key = repoSyncKey(repo.provider, repo.repoFullName);
     if (seen.has(key)) continue;
     seen.add(key);
     const state = syncs.get(key);
     if (!needsRepoSync(state)) continue;
-    if (state) after(() => sweepRepo(auth.user.id, repo));
-    else {
-      blockingSweep = true;
+    staleRepos.push(repo);
+  }
+  // Keep catch-up latency bounded without flooding the forge with scans.
+  let nextRepo = 0;
+  await Promise.all(Array.from({ length: Math.min(3, staleRepos.length) }, async () => {
+    while (nextRepo < staleRepos.length) {
+      const repo = staleRepos[nextRepo++];
       if (await sweepRepo(auth.user.id, repo)) sweptTruncated = true;
     }
-  }
+  }));
   // ── PR ──────────────────────────────── ────────────────────────────────
   let rows: PullRequestWithIssue[];
-  if (blockingSweep) {
+  if (staleRepos.length > 0) {
     try {
-      // A never-scanned repository just received its first sweep: its pull
-      // requests exist now, and this first display must show them.
+      // The sweep may have discovered new PRs or changed existing states.
       rows = await listPullRequestsForUser(auth.supabase, repos, {
         limit: limit + 1,
         states: states ?? undefined,

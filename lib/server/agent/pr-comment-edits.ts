@@ -1,5 +1,5 @@
 import "server-only";
-import { randomUUID } from "node:crypto";
+import { createHash } from "node:crypto";
 
 import { getServiceClient } from "@/lib/supabase-service";
 import type { RepoProviderId } from "@/lib/repo-providers";
@@ -12,8 +12,8 @@ import { decodePrCommentEdit, encodePrCommentEdit,
  * body the comment carried BEFORE the rewrite. `comment_id` 0 is the body of
  * the pull request itself — the thread's opening message. Captured on two
  * paths per subject:
- * - edits made FROM minddy — the API snapshots the current body before the
- *   forge write (`updatePrCommentResponse`, `prMaintenanceActionResponse`);
+ * - edits made from minddy — the API reads the current body before the forge
+ *   write and records it after success with the returned edit timestamp;
  * - edits made on github.com — the webhooks deliver the previous body
  *   (`issue_comment` `changes.body.from` for comments, `pull_request`
  *   `changes.body.from` for the body; GitLab has no note-edit webhook: only
@@ -21,8 +21,9 @@ import { decodePrCommentEdit, encodePrCommentEdit,
  *
  * An edit from minddy echoes back through the webhook a few seconds later
  * carrying the SAME previous body; the echo is not a second version. The
- * recorder therefore skips a row whose body equals the newest snapshot of
- * the same comment — which also collapses replayed deliveries.
+ * recorder uses the forge edit timestamp for ordering and a deterministic ID
+ * for that event and previous body, so echoes and replays are idempotent even
+ * when deliveries arrive out of order.
  *
  * WRITES go through the service client only: the table has no insert policy,
  * like other forge-fed tables. READS go through RLS on the
@@ -48,41 +49,43 @@ export async function recordPrCommentEditQuiet(input: {
   commentId: number;
   body: string;
   editedBy: string | null;
+  occurredAt: string | null | undefined;
 }): Promise<void> {
-  const storedName = await repositoryStorageName(input.provider,
-    input.repoFullName,true);
-  // An edit from minddy echoes through the webhook carrying the SAME
-  // previous body, and replayed deliveries repeat themselves: a row whose
-  // body equals the newest snapshot of this comment is not a version, skip
-  // it. The read is also best effort — on failure, record anyway (a
-  // duplicate read as a gap is better than a lost version).
-  const { data: newest } = await getServiceClient()
-    .from("pr_comment_edits")
-    .select("id,body")
-    .eq("provider", input.provider)
-    .eq("repo_full_name", storedName)
-    .eq("pr_number", input.prNumber)
-    .eq("comment_id", input.commentId)
-    .order("created_at", { ascending: false })
-    .limit(1);
-  if (newest?.length === 1 &&
-      await decodePrCommentEdit(newest[0].id, newest[0].body) === input.body) return;
-  const id = randomUUID();
-  const body = await shouldEncryptPrCommentEdit()
-    ? await encodePrCommentEdit(id, input.body) : input.body;
-  const { error } = await getServiceClient()
-    .from("pr_comment_edits")
-    .insert({
-      id,
-      provider: input.provider,
-      repo_full_name: storedName,
-      pr_number: input.prNumber,
-      comment_id: input.commentId,
-      body,
-      edited_by: input.editedBy,
-    });
-  if (error) {
-    console.error("[pr-comment-edits] insert_failed", error.code);
+  // An undated snapshot cannot be ordered safely against delayed deliveries.
+  const timestamp = input.occurredAt ? Date.parse(input.occurredAt) : NaN;
+  if (!Number.isFinite(timestamp)) return;
+  const createdAt = new Date(timestamp).toISOString();
+  try {
+    const storedName = await repositoryStorageName(input.provider,
+      input.repoFullName, true);
+    // UUID v8: the primary key deduplicates concurrent API/webhook echoes.
+    // Including the body preserves distinct edits with the same forge timestamp.
+    const digest = createHash("sha256").update(JSON.stringify([
+      input.provider, storedName, input.prNumber, input.commentId, createdAt, input.body,
+    ])).digest().subarray(0, 16);
+    digest[6] = (digest[6] & 0x0f) | 0x80;
+    digest[8] = (digest[8] & 0x3f) | 0x80;
+    const hex = digest.toString("hex");
+    const id = `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+    const body = await shouldEncryptPrCommentEdit()
+      ? await encodePrCommentEdit(id, input.body) : input.body;
+    const { error } = await getServiceClient()
+      .from("pr_comment_edits")
+      .insert({
+        id,
+        provider: input.provider,
+        repo_full_name: storedName,
+        pr_number: input.prNumber,
+        comment_id: input.commentId,
+        body,
+        edited_by: input.editedBy,
+        created_at: createdAt,
+      });
+    if (error && error.code !== "23505") {
+      console.error("[pr-comment-edits] insert_failed", error.code);
+    }
+  } catch {
+    console.error("[pr-comment-edits] snapshot_failed");
   }
 }
 
@@ -95,7 +98,7 @@ export async function listPrCommentEdits(input: {
 }): Promise<PrCommentEditRow[]> {
   const storedName = await repositoryStorageName(input.provider,
     input.repoFullName,false);
-  const { data } = await getServiceClient()
+  const { data, error } = await getServiceClient()
     .from("pr_comment_edits")
     .select("id, body, edited_by, created_at")
     .eq("provider", input.provider)
@@ -104,6 +107,7 @@ export async function listPrCommentEdits(input: {
     .eq("comment_id", input.commentId)
     .order("created_at", { ascending: true })
     .limit(100);
+  if (error) throw new Error("Unable to load previous comment versions");
   return Promise.all(((data ?? []) as (PrCommentEditRow & { id: string })[])
     .map(async (row) => ({
     body: await decodePrCommentEdit(row.id, row.body ?? ""),

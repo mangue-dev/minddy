@@ -4,11 +4,12 @@ import { PrCommitsSkeleton } from "@/components/pull-requests/pr-loading-skeleto
 import { useMemo, useState } from "react";
 import { AppIcon } from "@/components/icon";
 import { ShieldCheckIcon as ShieldCheck } from "@hugeicons/core-free-icons";
-import { useFormatter, useNow, useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import {
   Badge,
 } from "mangue-ui";
 import { AuthorNames, AuthorStack } from "@/components/git/author-stack";
+import { useForgeNow } from "@/lib/use-forge-now";
 import { normalizeForgeInstant } from "@/lib/forge-time";
 import { PrCommitDiffSheet } from "@/components/pull-requests/pr-commit-diff-sheet";
 import { ShaButton } from "@/components/pull-requests/pr-sha-button";
@@ -133,7 +134,7 @@ function CommitRow({
 }) {
   const t = useTranslations("PullRequests");
   const format = useFormatter();
-  const now = useNow();
+  const now = useForgeNow();
   const title = useMemo(() => commitTitle(commit.message), [commit.message]);
 
   // ALL authors, principal first (MIN-159): a co-signed commit has
