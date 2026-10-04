@@ -17,6 +17,8 @@ export function navigationShortcut(event: KeyboardEvent): NavigationShortcut | n
     case "ArrowDown": return { kind: "sidebar-step", direction: 1 };
   }
 
+  // Control+Shift is the advertised number-row chord, including on macOS.
+  // Command+Shift remains an alias when the OS lets those events through.
   const digit = /^Digit([0-9])$/.exec(event.code)?.[1] ??
     (/^[0-9]$/.test(event.key) ? event.key : null);
   if (digit === null) return null;

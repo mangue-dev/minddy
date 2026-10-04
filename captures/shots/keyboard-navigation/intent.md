@@ -1,7 +1,9 @@
 # Keyboard navigation cheat sheet
 
-MIN-635 adds Mod+Shift number-row shortcuts for tabs 1–10, horizontal arrows
-for adjacent tabs, and vertical arrows for visible sidebar options.
+MIN-635 adds Control+Shift number-row shortcuts for tabs 1–10, Mod+Shift
+horizontal arrows for adjacent tabs, and Mod+Shift vertical arrows for visible
+sidebar options. Control is also used on macOS so the numbered shortcuts avoid
+the system's Command+Shift screenshot combinations.
 
 The light-mode English and French PNGs show the actual `KeyboardCheatsheet`
 component, rendered with the application's compiled CSS and message catalogs in

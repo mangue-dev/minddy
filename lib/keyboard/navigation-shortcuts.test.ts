@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { createHomeTab } from "@/lib/app-tabs";
 import { AppTabsSession, type AppTabsTransport } from "@/lib/app-tabs-session";
 import { activateShortcutTab, navigationShortcut } from "./navigation-shortcuts";
-import { CHEATSHEET } from "./shortcuts";
+import { CHEATSHEET, resolveKeyToken } from "./shortcuts";
 
 const chord = (init: KeyboardEventInit) => new KeyboardEvent("keydown", {
   metaKey: true, shiftKey: true, ...init,
@@ -19,8 +19,10 @@ describe("Mod+Shift navigation shortcut parsing", () => {
     ["Spanish", '!"·$%&/()=' ],
   ])("maps all ten number-row keys on %s keyboards", (_layout, keys) => {
     [...keys].forEach((key, index) => {
-      expect(navigationShortcut(chord({ key, code: `Digit${(index + 1) % 10}` })))
-        .toEqual({ kind: "tab-index", index });
+      for (const modifier of [{ metaKey: false, ctrlKey: true }, { metaKey: true }]) {
+        expect(navigationShortcut(chord({ key, code: `Digit${(index + 1) % 10}`, ...modifier })))
+          .toEqual({ kind: "tab-index", index });
+      }
     });
   });
 
@@ -49,13 +51,30 @@ describe("Mod+Shift navigation shortcut parsing", () => {
 
   it("documents the numbered shortcut and all four directions", () => {
     const shortcuts = CHEATSHEET.flatMap((section) => section.shortcuts);
+    expect(shortcuts.find((shortcut) => shortcut.id === "nav.numberedTab")?.keys)
+      .toEqual([["Ctrl", "⇧", "1–9, 0"]]);
     for (const [id, key] of [
-      ["numberedTab", "1–9, 0"], ["previousTab", "←"], ["nextTab", "→"],
+      ["previousTab", "←"], ["nextTab", "→"],
       ["previousSidebarOption", "↑"], ["nextSidebarOption", "↓"],
     ]) {
       expect(shortcuts.find((shortcut) => shortcut.id === `nav.${id}`)?.keys)
         .toEqual([["mod", "⇧", key]]);
     }
+  });
+
+  it.each(["MacIntel", "Win32", "Linux x86_64"])("advertises Control for numbered tabs on %s", (platform) => {
+    vi.stubGlobal("navigator", { platform, userAgent: platform });
+    try {
+      const numbered = CHEATSHEET.flatMap((section) => section.shortcuts)
+        .find((shortcut) => shortcut.id === "nav.numberedTab")!;
+      expect(numbered.keys.map((step) => step.map(resolveKeyToken)))
+        .toEqual([["Ctrl", "⇧", "1–9, 0"]]);
+      for (const digit of [3, 4, 5]) {
+        expect(navigationShortcut(chord({
+          metaKey: false, ctrlKey: true, key: String(digit), code: `Digit${digit}`,
+        }))).toEqual({ kind: "tab-index", index: digit - 1 });
+      }
+    } finally { vi.unstubAllGlobals(); }
   });
 });
 

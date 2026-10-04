@@ -51,13 +51,15 @@ function press(init: KeyboardEventInit, target: EventTarget = window) {
 }
 
 describe("global navigation shortcut routing", () => {
-  it("switches tabs from an editor and consumes the shortcut before other listeners", async () => {
+  it.each([
+    { metaKey: false, ctrlKey: true }, { metaKey: true, ctrlKey: false },
+  ])("switches tabs from an editor and consumes the chord with modifiers %j", async (modifier) => {
     const input = document.querySelector("input")!;
     const otherListener = vi.fn();
     window.addEventListener("keydown", otherListener);
     try {
       await act(() => {
-        const event = press({ key: "@", code: "Digit2" }, input);
+        const event = press({ key: "@", code: "Digit2", ...modifier }, input);
         expect(event.defaultPrevented).toBe(true);
       });
       expect(state.activate).toHaveBeenCalledExactlyOnceWith("two");
