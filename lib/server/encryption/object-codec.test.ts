@@ -32,8 +32,7 @@ describe("protected storage object codec", () => {
       expect(result.bytes.equals(source)).toBe(true);
       expect(result.metadata).toEqual(metadata);
       expect(source.equals(Buffer.alloc(length, 0xa5))).toBe(true);
-      expect(console.info).toHaveBeenCalledTimes(1);
-      expect(JSON.stringify(vi.mocked(console.info).mock.calls)).not.toContain(metadata.fileName);
+      expect(console.info).not.toHaveBeenCalled();
     },
   );
 
