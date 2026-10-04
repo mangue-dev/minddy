@@ -8,8 +8,9 @@ import { AccountQueryProvider } from "./account-query-provider";
 import { projectIconQueryKey } from "./use-project-icon";
 const account = vi.hoisted(() => ({ id: "account-a" }));
 vi.mock("./auth-context", () => ({ useAuth: () => ({ user: { id: account.id } }) }));
-vi.mock("./local-snapshots", () => ({
-  invalidateLocalSnapshotWrites: vi.fn(),
+vi.mock("./local-snapshots", async (original) => ({
+  // Retain the real account-generation fence while replacing network storage.
+  ...await original<typeof import("./local-snapshots")>(),
   saveLocalSnapshot: async (storage: Storage, key: string, _slot: string, value: unknown) => {
     storage.setItem(key, JSON.stringify({ format: "minddy-local-v1", value }));
   },
@@ -95,7 +96,8 @@ describe("query provider persistence lifecycle", () => {
     expect(client.getQueryData(["projects"])).toBeUndefined();
     await act(async () => window.dispatchEvent(new Event("pagehide")));
     client.setQueryData(["projects"], [{ id: "late-private-response" }]);
-    await vi.advanceTimersByTimeAsync(2_000);
+    // Exceed the five-second batching window and its idle allowance after logout.
+    await vi.advanceTimersByTimeAsync(6_000);
     expect(window.localStorage.getItem(QUERY_CACHE_STORAGE_KEY)).toBeNull();
   });
 

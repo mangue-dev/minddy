@@ -2712,14 +2712,14 @@
     "file": "lib/server/agent/run-event-store.ts",
     "operation": "from",
     "resource": "agent_run_events",
-    "line": 106,
+    "line": 107,
     "storage": false
   },
   {
     "file": "lib/server/agent/run-event-store.ts",
     "operation": "from",
     "resource": "agent_run_events",
-    "line": 135,
+    "line": 146,
     "storage": false
   },
   {
@@ -10473,44 +10473,37 @@
   },
   {
     "file": "lib/server/oauth/grants.ts",
+    "operation": "rpc",
+    "resource": "touch_oauth_grant_activity",
+    "line": 363,
+    "storage": false
+  },
+  {
+    "file": "lib/server/oauth/grants.ts",
     "operation": "from",
     "resource": "oauth_grants",
-    "line": 364,
+    "line": 375,
+    "storage": false
+  },
+  {
+    "file": "lib/server/oauth/grants.ts",
+    "operation": "from",
+    "resource": "oauth_grants",
+    "line": 405,
     "storage": false
   },
   {
     "file": "lib/server/oauth/grants.ts",
     "operation": "from",
     "resource": "api_keys",
-    "line": 365,
+    "line": 410,
     "storage": false
   },
   {
     "file": "lib/server/oauth/grants.ts",
     "operation": "from",
     "resource": "oauth_grants",
-    "line": 377,
-    "storage": false
-  },
-  {
-    "file": "lib/server/oauth/grants.ts",
-    "operation": "from",
-    "resource": "oauth_grants",
-    "line": 407,
-    "storage": false
-  },
-  {
-    "file": "lib/server/oauth/grants.ts",
-    "operation": "from",
-    "resource": "api_keys",
-    "line": 412,
-    "storage": false
-  },
-  {
-    "file": "lib/server/oauth/grants.ts",
-    "operation": "from",
-    "resource": "oauth_grants",
-    "line": 431,
+    "line": 429,
     "storage": false
   },
   {

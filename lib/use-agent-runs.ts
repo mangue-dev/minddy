@@ -9,7 +9,6 @@ import { nextReadActivationSequence, readActivationSession } from "./read-activa
 import {
   fetchAgentRunApi,
   fetchAgentRunDiffApi,
-  fetchAgentRunEventsApi,
   fetchAgentSessionsApi,
   fetchAllPullRequestsApi,
   fetchIssueAgentRunsApi,
@@ -33,6 +32,7 @@ import {
   type AgentLocalDiff,
 } from "./agent-local-diff";
 import { DESKTOP_LOCAL_DIFF_PATCH_CAP } from "./desktop/local-run-diff";
+import { readAgentEvents, type AgentEventsData } from "./agent-events-query";
 import {
   PULL_REQUEST_SETTLED_POLL_MS,
   pullRequestReadinessBatchRefetchInterval,
@@ -166,9 +166,18 @@ export function useAgentRunQuery(runId: string | null) {
  */
 export function useAgentRunEventsQuery(runId: string | null, active: boolean) {
   const enabled = !!runId;
+  const firstRead = useRef<string | null>(null);
   const { data, isPending, isFetching } = useQuery({
     queryKey: ["agent-run-events", runId],
-    queryFn: () => fetchAgentRunEventsApi(runId as string),
+    queryFn: async ({ client, queryKey, signal }) => {
+      const state = client.getQueryState<AgentEventsData>(queryKey);
+      const result = await readAgentEvents(runId as string, state?.data, {
+        full: firstRead.current !== runId || state?.status === "error" || state?.isInvalidated,
+        signal,
+      });
+      firstRead.current = runId;
+      return result;
+    },
     enabled,
     refetchOnMount: "always",
     refetchInterval: active ? 2000 : false,

@@ -240,13 +240,9 @@ export default async function RootLayout({
                 other possible source than the page. Don't give anything back. */}
             <DesktopChrome />
             <CookieBanner />
-            {/* PostHog (MIN-78). Mounted here, therefore active EVERYWHERE — including on
-                public pages (landing, feedback board, shared views),
-                this is where acquisition comes into play. Don't return anything and don't wrap
-                nothing: it charges the client to the idle and drops it in
-                `lib/analytics.ts`, ce qui garde `posthog-js` hors du bundle
-                initial (MIN-94). The init is deferred and cookieless as long as the
-                headband has not been sliced ​​— see component. */}
+            {/* PostHog covers public pages and the app. The SDK loads after idle
+                outside the initial bundle. Device consent controls anonymous,
+                persistent and disabled measurement. */}
             <PostHogInit />
             </BrowserIntlProvider>
             </RuntimeConfigProvider>

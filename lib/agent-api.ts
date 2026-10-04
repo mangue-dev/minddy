@@ -447,9 +447,10 @@ export function parseFilesChangedPayload(
 export async function fetchAgentRunEventsApi(
   runId: string,
   after?: number,
+  signal?: AbortSignal,
 ): Promise<{ events: AgentRunEvent[] }> {
   const q = after != null ? `?after=${after}` : "";
-  return parseJson(await fetch(`/api/agent-runs/${runId}/events${q}`));
+  return parseJson(await fetch(`/api/agent-runs/${runId}/events${q}`, { signal }));
 }
 
 /**

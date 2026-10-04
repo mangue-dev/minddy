@@ -20,6 +20,7 @@ function client(error: { message: string } | null = null) {
       return query;
     },
     order: () => query,
+    limit: () => query,
     gt: (column: string, value: unknown) => {
       filters.push([column, value]);
       return query;
@@ -43,6 +44,33 @@ function client(error: { message: string } | null = null) {
 }
 
 describe("agent run event read boundary", () => {
+  it("reads histories beyond the database row cap using project-scoped cursors", async () => {
+    const cursors: number[] = [];
+    let after = 0;
+    const rows = Array.from({ length: 1003 }, (_, index) => ({
+      id: `event-${index + 1}`, run_id: "run-1", seq: index + 1, type: "summary",
+      payload: { text: "message" }, created_at: "2026-01-01",
+      encryption_version: 0, encrypted_content: null,
+    }));
+    const filters: Array<[string, unknown]> = [];
+    const query = {
+      select: () => query, order: () => query, limit: () => query,
+      eq: (column: string, value: unknown) => { filters.push([column, value]); return query; },
+      gt: (_column: string, value: number) => { after = value; cursors.push(value); return query; },
+      then: (resolve: (value: unknown) => unknown) => Promise.resolve(resolve({
+        data: rows.filter(row => row.seq > after).slice(0, 1000), error: null,
+      })),
+    };
+    const events = await listRunEvents({ from: () => query } as unknown as SupabaseClient,
+      { id: "run-1", project_id: "project-1" });
+    expect(events).toHaveLength(1003);
+    expect(cursors).toEqual([1000]);
+    expect(filters).toEqual([
+      ["run_id", "run-1"], ["run.project_id", "project-1"],
+      ["run_id", "run-1"], ["run.project_id", "project-1"],
+    ]);
+  });
+
   it("binds the run and project before returning event content", async () => {
     const { filters, service } = client();
     const rows = await listRunEvents(service,
@@ -68,7 +96,7 @@ describe("agent run event read boundary", () => {
   it("reads a legacy preview schema only while the event flag is disabled", async () => {
     let reads = 0;
     const query = {
-      select: () => query, eq: () => query, order: () => query,
+      select: () => query, eq: () => query, order: () => query, limit: () => query,
       then: (resolve: (value: unknown) => unknown) => Promise.resolve(resolve(
         ++reads === 1
           ? { data: null, error: { code: "PGRST204" } }

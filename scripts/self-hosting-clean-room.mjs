@@ -48,7 +48,6 @@ const CLOUD_OPT_INS = [
   "MINDDY_MANAGED_AI",
   "MINDDY_MANAGED_BILLING",
   "AGENT_EXECUTION_BACKEND",
-  "MINDDY_PUBLIC_VERCEL_ANALYTICS",
   "MINDDY_PUBLIC_POSTHOG_KEY",
   "MINDDY_PUBLIC_ERROR_TRACKING",
   "POSTHOG_API_KEY",
@@ -216,7 +215,6 @@ export function createEgressPolicy({ profile = "minimal", allowedHosts = [], env
     const host = hostFromEnvironment(env, "POSTHOG_HOST");
     if (host) configuredHosts.push(host);
   }
-  if (env.MINDDY_PUBLIC_VERCEL_ANALYTICS?.trim() === "1") configuredHosts.push("vitals.vercel-insights.com");
   if (profile === "minimal" && configuredHosts.length > 0) {
     throw new Error("The minimal egress profile has an optional provider configured.");
   }

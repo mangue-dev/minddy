@@ -6,9 +6,11 @@
  * been made, the value is `null` and NO analytical cookies should be set.
  *
  * This contract is honored by `components/posthog-init.tsx` (MIN-78): it reads
- * `readConsent()` at init ("memory" persistence as long as it is not
- * "accepted") and listens to CONSENT_CHANGED_EVENT to react to the click of the banner
- * without reloading. The listener is installed during assembly, BEFORE loading the PostHog client, and the consent is reread after: a click that falls during the download is therefore caught (MIN-94).
+ * `readConsent()` before capture and listens for local and cross-tab changes.
+ * Before acceptance, measurement uses page memory or optional server hashing,
+ * without persisting an analytics identifier. A refusal blocks all browser
+ * capture, even when the SDK could otherwise continue cookieless measurement.
+ * The choice is reread after lazy loading so a click during download is honored.
  */
 
 export const COOKIE_CONSENT_KEY = "cookie_consent";
@@ -16,9 +18,12 @@ export const CONSENT_CHANGED_EVENT = "minddy:cookie-consent-changed";
 
 export type CookieConsent = "accepted" | "declined";
 
+let volatileConsent: CookieConsent | undefined;
+
 /** The saved choice, or null if the user has not yet decided. */
 export function readConsent(): CookieConsent | null {
   if (typeof window === "undefined") return null;
+  if (volatileConsent !== undefined) return volatileConsent;
   try {
     const raw = window.localStorage.getItem(COOKIE_CONSENT_KEY);
     return raw === "accepted" || raw === "declined" ? raw : null;
@@ -32,8 +37,10 @@ export function readConsent(): CookieConsent | null {
 export function writeConsent(consent: CookieConsent): void {
   try {
     window.localStorage.setItem(COOKIE_CONSENT_KEY, consent);
+    volatileConsent = undefined;
   } catch {
-    // Without storage, the banner will reappear: this is the safe behavior.
+    // Honor the choice for this page even when durable preference storage fails.
+    volatileConsent = consent;
   }
   window.dispatchEvent(new Event(CONSENT_CHANGED_EVENT));
 }

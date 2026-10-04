@@ -87,6 +87,7 @@ export function resolveRuntimeConfig(env: RuntimeConfigEnvironment): RuntimeConf
         // Error tracking is an explicit opt-in (MIN-542): exceptions leave for
         // PostHog only when the operator sets `1`, in addition to the key pair.
         errorTracking: env.MINDDY_PUBLIC_ERROR_TRACKING === "1",
+        cookieless: env.MINDDY_PUBLIC_POSTHOG_COOKIELESS === "1",
       },
       vapidPublicKey: env.MINDDY_PUBLIC_VAPID_PUBLIC_KEY?.trim() || null,
       capabilities: Object.fromEntries(

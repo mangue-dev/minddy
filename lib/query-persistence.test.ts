@@ -70,7 +70,7 @@ describe("workspace query persistence", () => {
     }
     expect(scans).not.toHaveBeenCalled();
     expect(persistClient).not.toHaveBeenCalled();
-    await vi.advanceTimersByTimeAsync(1_000);
+    await vi.advanceTimersByTimeAsync(5_000);
     expect(scans).toHaveBeenCalledTimes(1);
     expect(persistClient).toHaveBeenCalledTimes(1);
 
@@ -94,7 +94,7 @@ describe("workspace query persistence", () => {
     client.removeQueries({ queryKey: ["issues", "project-0"] });
     const query = client.getQueryCache().find({ queryKey: ["issues", "project-1"] })!;
     query.setState({ status: "error", error: new Error("Unavailable") });
-    await vi.advanceTimersByTimeAsync(1_000);
+    await vi.advanceTimersByTimeAsync(5_000);
     const keys = persistClient.mock.calls[0][0].clientState.queries.map((query) => query.queryKey);
     expect(keys).toHaveLength(4);
     expect(keys).not.toContainEqual(["issues", "project-0"]);
@@ -124,7 +124,7 @@ describe("workspace query persistence", () => {
     const { client, persistClient } = workspace();
     persistClient.mockImplementation(() => { throw new Error("Quota exceeded"); });
     client.setQueryData(["comments", "issue-1"], [{ text: "Still available" }]);
-    await vi.advanceTimersByTimeAsync(1_000);
+    await vi.advanceTimersByTimeAsync(5_000);
     expect(client.getQueryData(["comments", "issue-1"])).toEqual([{ text: "Still available" }]);
   });
 
@@ -132,7 +132,7 @@ describe("workspace query persistence", () => {
     const { client, persistClient } = workspace();
     const mutations = client.getMutationCache();
     mutations.build(client, { mutationKey: ["online-write"] });
-    await vi.advanceTimersByTimeAsync(1_000);
+    await vi.advanceTimersByTimeAsync(5_000);
     expect(persistClient).not.toHaveBeenCalled();
     const paused = mutations.build(client, { mutationKey: ["offline-write"] }, {
       context: undefined,
@@ -145,10 +145,10 @@ describe("workspace query persistence", () => {
       variables: { title: "Queued change" },
       submittedAt: Date.now(),
     });
-    await vi.advanceTimersByTimeAsync(1_000);
+    await vi.advanceTimersByTimeAsync(5_000);
     expect(persistClient.mock.calls[0][0].clientState.mutations).toHaveLength(1);
     mutations.remove(paused);
-    await vi.advanceTimersByTimeAsync(1_000);
+    await vi.advanceTimersByTimeAsync(5_000);
     expect(persistClient.mock.calls[1][0].clientState.mutations).toHaveLength(0);
   });
 });
@@ -159,7 +159,7 @@ describe("query snapshot scheduling", () => {
     vi.stubGlobal("requestIdleCallback", idle);
     const save = vi.fn();
     scheduleQuerySnapshot(save);
-    vi.advanceTimersByTime(1_000);
+    vi.advanceTimersByTime(5_000);
     expect(idle).toHaveBeenCalledWith(expect.any(Function), { timeout: 1_000 });
     expect(save).not.toHaveBeenCalled();
     idle.mock.calls[0][0]();
@@ -173,7 +173,7 @@ describe("query snapshot scheduling", () => {
     vi.stubGlobal("cancelIdleCallback", cancelIdle);
     const save = vi.fn();
     const cancel = scheduleQuerySnapshot(save);
-    vi.advanceTimersByTime(1_000);
+    vi.advanceTimersByTime(5_000);
     cancel();
     expect(cancelIdle).toHaveBeenCalledWith(42);
     (idle.mock.calls[0] as unknown as [() => void])[0]();

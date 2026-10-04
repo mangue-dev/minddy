@@ -9308,6 +9308,22 @@
       ],
       "protectedRelations": [],
       "functionReferences": []
+    },
+    "touch_oauth_grant_activity(uuid,uuid,timestamp with time zone)": {
+      "sha256": "2b23ae3c3fb16d3b6fccd7cd2e248f009432436e233e875dabd6634ddb992530",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "relations": [
+        "api_keys",
+        "oauth_grants"
+      ],
+      "protectedRelations": [
+        "api_keys"
+      ],
+      "functionReferences": []
     }
   },
   "triggers": {

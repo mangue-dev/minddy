@@ -11,6 +11,7 @@
     { "path": "/api/cron/agent-drain", "schedule": "*/2 * * * *" },
     { "path": "/api/cron/numo-turns", "schedule": "* * * * *" },
     { "path": "/api/cron/forge-relay-deliveries", "schedule": "* * * * *" },
+    { "path": "/api/cron/forge-relay-maintenance", "schedule": "35 * * * *" },
     { "path": "/api/cron/automations", "schedule": "*/2 * * * *" },
     { "path": "/api/cron/smart-assign", "schedule": "*/5 * * * *" },
     { "path": "/api/cron/routines", "schedule": "*/5 * * * *" },

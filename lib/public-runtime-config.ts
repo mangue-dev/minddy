@@ -12,6 +12,8 @@ export interface PublicRuntimeConfig {
     host: string | null;
     allowLocalhost: boolean;
     errorTracking: boolean;
+    /** Enable only after the PostHog project accepts server-hashed events. */
+    cookieless?: boolean;
   };
   vapidPublicKey: string | null;
   capabilities: Record<string, { state: string; configured: boolean }>;
