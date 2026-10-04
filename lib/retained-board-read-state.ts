@@ -6,7 +6,7 @@ export function retainedBoardKeys(view: RetainedAppView): readonly (readonly unk
   return ["issues", "members", "categories", "objectives", "integrations", "issue-relations", "views"].map((prefix) => [prefix, view.route.projectId]);
 }
 
-/** Activation refreshes must conceal cached rows before the next paint. */
+/** Notify the board immediately when one of its prerequisites changes. */
 export function subscribeRetainedBoardReadState(client: QueryClient, view: RetainedAppView, notify: () => void) {
   const keys = retainedBoardKeys(view);
   return client.getQueryCache().subscribe((event) => {
@@ -31,7 +31,7 @@ export function refreshRetainedBoard(client: QueryClient, view: RetainedAppView)
   }));
 }
 
-/** Only complete, current prerequisites may reveal a retained board. */
+/** Distinguish incomplete reads from background updates to a loaded board. */
 export function retainedBoardReadState(client: QueryClient, view: RetainedAppView): "loading" | "fresh" | "refreshing" | "paused" | "error" {
   const states = retainedBoardKeys(view).map((key) => client.getQueryState(key));
   if (states.some((state) => state?.fetchStatus === "paused")) return "paused";
