@@ -13,10 +13,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   Spinner,
+  Skeleton,
   cn,
   toast,
 } from "mangue-ui";
 import { Github, Gitlab } from "@/components/git/provider-icons";
+import { QueryReadBoundary } from "@/components/query-read-boundary";
 import { mcpActorLabel } from "@/lib/mcp-agents";
 import {
   AutomationAvatar,
@@ -1066,8 +1068,7 @@ export function IssueActivity({
    * `null` adds nothing — a ticket has no banner.
    */
   commentHeader?: (comment: ThreadMessage) => React.ReactNode;
-  /** Cf. `ReplyComposer`: false on a page, where a file has no line where
-      s'accrocher. */
+  /** As in `ReplyComposer`, pages have no attachment target. */
   allowAttachments?: boolean;
   currentUserId: string | null;
   projectId: string;
@@ -1095,14 +1096,18 @@ export function IssueActivity({
     <div className="flex flex-col">
       <span className="py-1 text-sm font-medium">{t("activity")}</span>
 
-      {readState && <div data-timeline-read-state={readState.phase} aria-busy={readState.phase === "loading" || readState.phase === "refreshing"}>
-        {readState.phase !== "fresh" && <div className="flex items-center gap-2 py-2 text-xs text-muted-foreground" role={readState.phase === "error" ? "alert" : "status"}>
-          {(readState.phase === "loading" || readState.phase === "refreshing") && <Spinner className="size-3" />}
-          <span>{t(readState.phase === "loading" ? "readLoading" : readState.phase === "refreshing" ? "readRefreshing"
-            : readState.phase === "paused" ? "readPaused" : readState.hasPreviousData ? "readPreviousError" : "readError")}</span>
-          {readState.phase === "error" && onRetryRead && <Button size="sm" variant="ghost" onClick={onRetryRead}>{t("readRetry")}</Button>}
-        </div>}
-      </div>}
+      <QueryReadBoundary phase={readState?.phase ?? "fresh"} className={readState && readState.phase !== "fresh" ? "min-h-24" : undefined} fallback={
+        readState?.phase === "error" || readState?.phase === "paused" ? (
+          <div className="flex items-center gap-2 py-2 text-xs text-muted-foreground" role="alert">
+            <span>{t(readState.phase === "error" ? "readError" : "readPaused")}</span>
+            {onRetryRead && <Button size="sm" variant="ghost" onClick={onRetryRead}>{t("readRetry")}</Button>}
+          </div>
+        ) : <div className="mt-2 flex flex-col gap-3" aria-hidden>
+          <Skeleton className="h-4 w-2/3" />
+          <Skeleton className="h-4 w-1/2" />
+          <Skeleton className="h-4 w-3/4" />
+        </div>
+      }>
       {rows.length === 0 ? (
         (!readState || readState.phase === "fresh") &&
         <p className="mt-2 text-xs text-muted-foreground">{t("noActivity")}</p>
@@ -1139,6 +1144,7 @@ export function IssueActivity({
           })}
         </ol>
       )}
+      </QueryReadBoundary>
     </div>
   );
 }

@@ -9,12 +9,11 @@ interface Read {
 /** An empty result is meaningful only after both authoritative reads succeed. */
 export function timelineReadState(comments: Read, events: Read, online = true) {
   const reads = [comments, events];
-  const hasPreviousData = reads.some((read) => read.data !== undefined);
   const phase: TimelineReadPhase = !online || reads.some((read) => read.fetchStatus === "paused") ? "paused"
     : reads.some((read) => read.fetchStatus === "fetching") ? (reads.some((read) => read.isPending) ? "loading" : "refreshing")
     : reads.some((read) => read.isError) ? "error"
     : reads.some((read) => read.isPending) ? "loading" : "fresh";
-  return { phase, hasPreviousData };
+  return { phase };
 }
 
 export type TimelineReadState = ReturnType<typeof timelineReadState>;

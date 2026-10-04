@@ -36,6 +36,7 @@ import { NumoIcon } from "@/components/numo-icon";
 import { ProjectOrb } from "@/components/project-orb";
 import { projectOrbSeed } from "@/lib/project-orb-colors";
 import { PrActivitySkeleton, PrFilesSkeleton, PrHeaderActionsSkeleton, PrMetadataSkeleton, PrStatusSkeleton } from "@/components/pull-requests/pr-loading-skeleton";
+import { QueryReadBoundary } from "@/components/query-read-boundary";
 import { PrCommits } from "@/components/pull-requests/pr-commits";
 import { PrCommentComposer } from "@/components/pull-requests/pr-comment-composer";
 import { PrDiff } from "@/components/pull-requests/pr-diff";
@@ -1693,6 +1694,27 @@ export function PrDetail({
       }
       reviewThreadActions={reviewThreadActions}
     >
+    <QueryReadBoundary phase={readState} className="h-full min-h-0" contentClassName="h-full min-h-0" fallback={
+      readState === "error" || readState === "paused" ? (
+        <div className="flex h-full flex-col items-center justify-center gap-3 text-sm text-muted-foreground" role="alert">
+          <p>{t(readState === "error" ? "readFailed" : "readPaused")}</p>
+          <Button variant="ghost" size="sm" onClick={() => void refetchPr()}>{t("readRetry")}</Button>
+          <Button variant="ghost" size="sm" onClick={onBack}>{t("backToList")}</Button>
+        </div>
+      ) : <div className="flex h-full min-h-0 flex-col">
+        <AppContentHeader>
+          <Button variant="ghost" size="icon-sm" aria-label={t("backToList")} className="md:hidden" onClick={onBack}>
+            <HugeiconsIcon icon={ArrowLeft01Icon} />
+          </Button>
+          <PrHeaderActionsSkeleton />
+        </AppContentHeader>
+        <div className="flex flex-col gap-6 p-6" aria-hidden>
+          <PrMetadataSkeleton />
+          <PrStatusSkeleton />
+          <PrActivitySkeleton />
+        </div>
+      </div>
+    }>
     <div className="flex h-full min-h-0 flex-col">
       {/* Header: back (mobile) · identifier · actions */}
       {/* Header WITHOUT border: it's the fade of the thread that says it continues
@@ -2099,14 +2121,6 @@ export function PrDetail({
           {/* The only place to say which Git account is in use (MIN-144).
               It stays silent when everything is configured correctly. */}
           {!loading ? <PrViewerCallout viewer={viewer} repoUrl={pr?.url} /> : null}
-
-          {readState !== "fresh" ? (
-            <div role="status" data-testid="pr-read-state" data-read-state={readState}
-              className="flex items-center gap-2 text-sm text-muted-foreground">
-              <span>{t(readState === "error" ? "readFailed" : readState === "paused" ? "readPaused" : loading ? "readLoading" : "readRefreshing")}</span>
-              {readState === "error" ? <Button variant="ghost" size="sm" onClick={() => void refetchPr()}>{t("readRetry")}</Button> : null}
-            </div>
-          ) : null}
 
           {/* Quick-glance cards: every condition that stands between this PR
               and the merge, each in its own color, each with its own quick
@@ -2845,6 +2859,7 @@ export function PrDetail({
 
       </FormDialog>
     </div>
+    </QueryReadBoundary>
     </PrEndpointProvider>
   );
 }

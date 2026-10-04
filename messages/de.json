@@ -746,11 +746,8 @@
     "deleteConfirm": "{count, plural, one {# Problem in den Papierkorb verschieben?} other {# Probleme in den Papierkorb verschieben?}}"
   },
   "Board": {
-    "readLoading": "Board wird geladen…",
     "readError": "Board konnte nicht geladen werden.",
-    "readRefreshing": "Board wird aktualisiert… Vorherige Daten werden angezeigt.",
     "readPaused": "Board-Aktualisierung pausiert. Stelle die Verbindung wieder her.",
-    "readPreviousError": "Board konnte nicht aktualisiert werden. Vorherige Daten werden angezeigt.",
     "readRetry": "Erneut versuchen",
     "viewCreated": "Ansicht „{name}“ erstellt.",
     "viewUpdated": "Ansicht aktualisiert.",
@@ -3243,10 +3240,7 @@
     "duplicate": "Duplikat"
   },
   "Timeline": {
-    "readLoading": "Aktivität wird geladen…",
-    "readRefreshing": "Aktivität wird aktualisiert… Bisherige Daten werden angezeigt.",
     "readPaused": "Aktualisierungen pausiert. Verbinde dich erneut, um die Aktivität zu aktualisieren.",
-    "readPreviousError": "Aktivität konnte nicht aktualisiert werden. Bisherige Daten werden angezeigt.",
     "readError": "Aktivität konnte nicht geladen werden.",
     "readRetry": "Erneut versuchen",
     "activity": "Aktivität",
@@ -3694,10 +3688,8 @@
     "sessionDeleted": "Konversation gelöscht"
   },
   "PullRequests": {
-    "readLoading": "Pull Request wird geladen…",
-    "readRefreshing": "Vorherige Daten werden angezeigt. Updates werden geprüft…",
     "readFailed": "Dieser Pull Request konnte nicht aktualisiert werden. Versuche es erneut.",
-    "readPaused": "Du bist offline. Vorherige Daten werden angezeigt.",
+    "readPaused": "Du bist offline. Stelle die Verbindung wieder her, um diesen Pull Request zu laden.",
     "readRetry": "Erneut versuchen",
     "title": "Code-Reviews",
     "emptyState": "Kein Pull-Request entspricht diesen Filtern",

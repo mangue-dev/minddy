@@ -746,11 +746,8 @@
     "deleteConfirm": "{count, plural, one {Move # issue to the trash?} other {Move # issues to the trash?}}"
   },
   "Board": {
-    "readLoading": "Loading board…",
     "readError": "Could not load board.",
-    "readRefreshing": "Updating board… Showing previous data.",
     "readPaused": "Board updates paused. Reconnect to refresh.",
-    "readPreviousError": "Could not update board. Showing previous data.",
     "readRetry": "Try again",
     "viewCreated": "View “{name}” created.",
     "viewUpdated": "View updated.",
@@ -3243,10 +3240,7 @@
     "duplicate": "Duplicate"
   },
   "Timeline": {
-    "readLoading": "Loading activity…",
-    "readRefreshing": "Updating activity… Showing previous data.",
     "readPaused": "Activity updates paused. Reconnect to refresh.",
-    "readPreviousError": "Could not update activity. Showing previous data.",
     "readError": "Could not load activity.",
     "readRetry": "Try again",
     "activity": "Activity",
@@ -3694,10 +3688,8 @@
     "sessionDeleted": "Conversation deleted"
   },
   "PullRequests": {
-    "readLoading": "Loading pull request…",
-    "readRefreshing": "Showing previous data. Checking for updates…",
     "readFailed": "Could not refresh this pull request. Try again.",
-    "readPaused": "You’re offline. Showing previous data.",
+    "readPaused": "You’re offline. Reconnect to load this pull request.",
     "readRetry": "Try again",
     "title": "Code reviews",
     "emptyState": "No pull request matches these filters",
