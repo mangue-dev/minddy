@@ -4,6 +4,8 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { writeFile } from 'node:fs/promises';
 import { verifyNativeNavigation } from './verify-min614-navigation.mjs';
+import { verifyNavigationState } from './verify-min614-navigation-state.mjs';
+import { verifyNavigationPreparation } from './verify-min614-navigation-preparation.mjs';
 
 export async function measureNavigationJourneys({ page, context, fixture, tabs: originalTabs, base, measure, diagnostic, output, label, cdp }) {
   const report = { cleanup: false, definition: 'Native navigation with real migrated MIN-540 Minddy reads, virtual tabs and synthetic forge UI responses. No live GitHub latency/freshness claim.', samples: [], workload: {}, idle: [] };
@@ -53,6 +55,14 @@ export async function measureNavigationJourneys({ page, context, fixture, tabs: 
         Object.assign(tab, body.patch, { revision: tab.revision + 1 }); return route.fulfill({ json: { tab } });
       }
       if (method === 'DELETE') { virtualTabs = virtualTabs.filter((tab) => tab.id !== id); return route.fulfill({ json: { ok: true } }); }
+      if (method === 'POST' && url.pathname.endsWith('/move')) {
+        const moved = virtualTabs.find((tab) => tab.id === id); assert.ok(moved);
+        virtualTabs = virtualTabs.filter((tab) => tab.id !== id);
+        const index = body.beforeId === null ? virtualTabs.length : virtualTabs.findIndex((tab) => tab.id === body.beforeId); assert.ok(index >= 0);
+        virtualTabs.splice(index, 0, moved);
+        virtualTabs.forEach((tab, position) => Object.assign(tab, { position, revision: tab.revision + 1 }));
+        return route.fulfill({ json: { tabs: virtualTabs } });
+      }
       if (method === 'POST') { const tab = { ...specs[0], id: body.id, href: '/home', position: virtualTabs.length }; virtualTabs.push(tab); return route.fulfill({ json: { tab } }); }
     }
     if (url.pathname.startsWith('/api/pull-requests/')) {
@@ -73,10 +83,16 @@ export async function measureNavigationJourneys({ page, context, fixture, tabs: 
       : spec.kind === 'document' ? `/api/projects/${spec.href.split('/')[2]}/pages/${spec.href.split('/')[4]}`
       : spec.kind === 'board' ? spec.href === '/all' ? '/api/me/board' : `/api/projects/${spec.href.split('/')[2]}/issues`
       : `/api/projects/${spec.href.split('/')[2]}/${spec.kind === 'triage' ? 'issues' : spec.kind === 'pages' ? 'pages' : 'feedback'}`;
-    const hadDOM = [...document.querySelectorAll('[data-retained-app-view]')].some((node) => node.dataset.retainedTabId === spec.id || node.dataset.retainedAppView.startsWith(spec.id + ':'));
+    // This fixture has exactly one tab per board route. Older builds preserve
+    // their startup key when adopting that tab, so its unique route is also a
+    // valid identity witness; general same-route tabs must use the owner ID.
+    const retainedRoots = [...document.querySelectorAll('[data-retained-app-view]')];
+    const ownedDOM = retainedRoots.some((node) => node.dataset.retainedTabId === spec.id || node.dataset.retainedAppView.startsWith(spec.id + ':'));
+    const uniqueBoardDOM = spec.kind === 'board' && retainedRoots.some((node) => node.dataset.retainedAppView.endsWith(':' + spec.href));
+    const hadDOM = ownedDOM || uniqueBoardDOM;
     const hadPriorSuccessfulRead = window.__min614.apiStates[primary]?.status === 200;
     const alreadyActive = location.pathname + location.search === spec.href;
-    const result = window.__navigationSample = { start, primary, hadDOM, hadPriorSuccessfulRead, alreadyActive,
+    const result = window.__navigationSample = { start, primary, hadDOM, hadPriorSuccessfulRead, alreadyActive, domProvenance: ownedDOM ? 'tab-owner' : uniqueBoardDOM ? 'fixture-unique-board-route' : null,
       classification: hadDOM ? 'hot-dom' : hadPriorSuccessfulRead ? 'data-available-unmounted' : 'cold', clocks: {}, skeletonFrames: 0, frames: 0 };
     const stamp = (key) => { result.clocks[key] ??= performance.now() - start; };
     const gesture = () => stamp('gesture');
@@ -113,10 +129,23 @@ export async function measureNavigationJourneys({ page, context, fixture, tabs: 
   }, spec);
   const checkpoint = async (spec, name, action) => {
     await arm(spec);
-    const old = await measure(name, action, () => ready(spec));
-    await page.waitForFunction(() => window.__navigationSample.clocks.usableExactScenario !== undefined, null, { timeout: 15000 });
-    const sample = await page.evaluate(() => ({ classification: window.__navigationSample.classification, hadDOM: window.__navigationSample.hadDOM, hadPriorSuccessfulRead: window.__navigationSample.hadPriorSuccessfulRead, alreadyActive: window.__navigationSample.alreadyActive, primaryRead: window.__min614.apiStates[window.__navigationSample.primary], clocks: window.__navigationSample.clocks, skeletonFrames: window.__navigationSample.skeletonFrames, frames: window.__navigationSample.frames }));
-    report.samples.push({ name, index: spec.position, old, ...sample, heap: await page.evaluate(() => performance.memory?.usedJSHeapSize ?? null) }); await save();
+    let old, deadlineError;
+    try {
+      old = await measure(name, action, () => ready(spec));
+      await page.waitForFunction(() => window.__navigationSample.clocks.usableExactScenario !== undefined, null, { timeout: 15000 });
+    } catch (error) {
+      if (!error.message.includes('Timeout')) throw error;
+      old ??= error.measurement;
+      assert.ok(old, 'Never replay a gesture with an unknown outcome');
+      deadlineError = error.message.split('\n')[0];
+      report.deadlineFailures ??= []; report.deadlineFailures.push({ name, error: deadlineError, old }); await save();
+      // Keep the original failed timer and exact-clock origin. Observe only:
+      // recovery is not a passing deadline and never replays the gesture.
+      await ready(spec);
+      await page.waitForFunction(() => window.__navigationSample.clocks.usableExactScenario !== undefined, null, { timeout: 60000 });
+    }
+    const sample = await page.evaluate(() => ({ classification: window.__navigationSample.classification, domProvenance: window.__navigationSample.domProvenance, hadDOM: window.__navigationSample.hadDOM, hadPriorSuccessfulRead: window.__navigationSample.hadPriorSuccessfulRead, alreadyActive: window.__navigationSample.alreadyActive, primaryRead: window.__min614.apiStates[window.__navigationSample.primary], clocks: window.__navigationSample.clocks, skeletonFrames: window.__navigationSample.skeletonFrames, frames: window.__navigationSample.frames }));
+    report.samples.push({ name, index: spec.position, old, ...sample, ...(deadlineError ? { deadlineError, recoveredAfterDeadline: true } : {}), heap: await page.evaluate(() => performance.memory?.usedJSHeapSize ?? null) }); await save();
   };
   const select = async (spec) => {
     const control = page.locator(`[data-app-tab-id="${spec.id}"]`);
@@ -130,9 +159,9 @@ export async function measureNavigationJourneys({ page, context, fixture, tabs: 
       return root?.checkVisibility() && root.querySelectorAll('[data-issue-id]').length === spec.count;
     }, spec, { timeout: 15000 });
     else if (spec.kind === 'document') await page.locator('.page-editor .tiptap').filter({ visible: true }).waitFor({ timeout: 15000 });
-    else if (spec.kind === 'pages') await page.getByText(spec.text, { exact: true }).first().waitFor({ timeout: 15000 });
+    else if (spec.kind === 'pages') await page.getByText(spec.text, { exact: true }).filter({ visible: true }).first().waitFor({ timeout: 15000 });
     else if (spec.kind === 'pr') { await page.getByTestId('pr-activity-timeline').filter({ visible: true }).waitFor({ timeout: 15000 }); await page.waitForFunction(() => ![...document.querySelectorAll('[data-testid="pr-read-state"]')].some((node) => node.checkVisibility()), null, { timeout: 15000 }); }
-    else { for (const title of spec.titles) await page.getByText(title, { exact: true }).first().waitFor({ timeout: 15000 }); }
+    else { for (const title of spec.titles) await page.getByText(title, { exact: true }).filter({ visible: true }).first().waitFor({ timeout: 15000 }); }
   };
   await save();
   try {
@@ -144,7 +173,7 @@ export async function measureNavigationJourneys({ page, context, fixture, tabs: 
       report.stage = spec.custom_name; await save();
       await checkpoint(spec, `explore-cold-${spec.position}-${spec.kind}`, () => select(spec));
     }
-    const repeats = diagnostic || process.argv.includes('--navigation-explore') ? 1 : 10;
+    const repeats = process.argv.includes('--navigation-noop-diagnostic') ? 2 : diagnostic || process.argv.includes('--navigation-explore') ? 1 : 10;
     for (let run = 0; run < repeats; run++) {
       for (const index of [0, 10, 11, 9, 8, 2, 3, 5, 10, 7, 8, 0]) {
         const spec = specs[index]; report.stage = spec.custom_name; await save();
@@ -152,7 +181,13 @@ export async function measureNavigationJourneys({ page, context, fixture, tabs: 
       }
     }
     if (process.argv.includes('--navigation-correctness')) {
-      await verifyNativeNavigation({ page, context, specs, select, ready, issues, base, output, label, measure });
+      await verifyNativeNavigation({ page, context, specs, select, ready, issues, base, output, label, measure, inspectTabs: () => virtualTabs.map(({ id, href, revision }) => ({ id, href, revision })) });
+    }
+    if (process.argv.includes('--navigation-state')) {
+      await verifyNavigationState({ page, context, specs, select, ready, base, output, label });
+    }
+    if (process.argv.includes('--navigation-preparation')) {
+      await verifyNavigationPreparation({ page, specs, select, ready, output, label });
     }
     // Stop the expensive scenario predicate before the independent idle guard.
     await page.evaluate(() => { window.__navigationSample = null; });
@@ -160,7 +195,11 @@ export async function measureNavigationJourneys({ page, context, fixture, tabs: 
     const before = await cdp.send('Performance.getMetrics'); await page.waitForTimeout(15000);
     report.idle.push({ durationMs: 15000, scenarioProbeDisabled: true, before, after: await cdp.send('Performance.getMetrics') });
     await page.screenshot({ path: `${output}/${label}-navigation-light.png` });
-  } catch (error) { report.error = error.message.split('\n')[0]; report.failureState = await page.locator('body').innerText(); throw error; }
+  } catch (error) {
+    report.error = error.message.split('\n')[0]; report.failureState = await page.locator('body').innerText();
+    report.failedSample = await page.evaluate(() => ({ probe: window.__navigationSample, route: location.pathname + location.search, selected: document.querySelector('[data-app-tab-id][aria-selected="true"]')?.dataset.appTabId, roots: [...document.querySelectorAll('[data-retained-app-view]')].map((node) => ({ key: node.dataset.retainedAppView, active: node.dataset.appViewActive, state: node.dataset.boardReadState, cards: node.querySelectorAll('[data-issue-id]').length })), apiStates: window.__min614.apiStates }));
+    throw error;
+  }
   finally {
     await page.goto('about:blank'); await context.unroute(`${base}/api/**`, routeHandler);
     const fields = (row) => ({ id: row.id, href: row.href, pinned: row.pinned, position: row.position, custom_name: row.custom_name });

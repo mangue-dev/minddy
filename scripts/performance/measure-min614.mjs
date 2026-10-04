@@ -114,6 +114,9 @@ try {
   }
   await context.addCookies(cookies.map(({ name, value }) => ({ name, value, url: base, sameSite: "Lax" })));
   await context.addCookies([{ name: "NEXT_LOCALE", value: "en", url: base }]);
+  if (process.env.MINDDY_PERF_THEME === 'light') await context.addInitScript((base) => {
+    if (location.origin === base) localStorage.setItem('mangue-ui-theme', 'light');
+  }, base);
   if (cpuProfile) await context.addInitScript(() => {
     window.__min614ReactCommits = [];
     window.__REACT_DEVTOOLS_GLOBAL_HOOK__ = {
@@ -225,7 +228,7 @@ try {
     if (cpuProfile) result.reactCommits = await page.evaluate((since) => (window.__min614ReactCommits ?? []).filter((entry) => entry.at >= since), started);
     measurements.push(result);
     console.log(JSON.stringify(result));
-    if (failure) throw failure;
+    if (failure) { failure.measurement = result; throw failure; }
     return result;
   }
   const board = () => page.locator('[data-retained-app-view][data-app-view-active="true"] [data-issue-id]').first();
