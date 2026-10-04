@@ -52,7 +52,7 @@ const RetainedBoard = memo(function RetainedBoard({ view, active }: { view: Reta
     inert={!active} aria-hidden={!active || undefined} style={{ display: active ? undefined : "none" }}>
     <Activity mode={active ? "visible" : "hidden"}>
     <RetainedBoardTitle view={view} />
-    <QueryReadBoundary phase={readState} className="h-full min-h-0" contentClassName="h-full min-h-0" fallback={
+    <QueryReadBoundary phase={readState} keepContentWhileRefreshing={isBoard} className="h-full min-h-0" contentClassName="h-full min-h-0" fallback={
       readState === "error" || readState === "paused" ? (
         <div className="flex h-full flex-col items-center justify-center gap-3 text-sm text-muted-foreground" role="alert">
           <p>{t(readState === "error" ? "readError" : "readPaused")}</p>

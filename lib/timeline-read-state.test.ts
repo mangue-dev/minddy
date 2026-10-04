@@ -15,5 +15,6 @@ describe("authoritative timeline read state", () => {
     expect(timelineReadState({ ...fresh, data: undefined, isError: true }, { ...fresh, data: undefined })).toEqual({ phase: "error" });
     expect(timelineReadState({ ...fresh, fetchStatus: "paused" }, fresh).phase).toBe("paused");
     expect(timelineReadState(fresh, fresh, false).phase).toBe("paused");
+    expect(timelineReadState({ ...fresh, fetchStatus: "fetching" }, { ...fresh, isError: true }).phase).toBe("error");
   });
 });

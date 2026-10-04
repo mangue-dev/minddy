@@ -54,7 +54,7 @@ export function FeedbackParticipantsGroup({ projectId }: { projectId: string }) 
   }, [query]);
   const enabled = debounced.length >= 2;
 
-  const { data, isFetching } = useQuery({
+  const { data, isPending } = useQuery({
     queryKey: ["feedback-participants", projectId, debounced],
     enabled,
     queryFn: async (): Promise<TeamFeedbackUserOption[]> => {
@@ -119,7 +119,7 @@ export function FeedbackParticipantsGroup({ projectId }: { projectId: string }) 
           <p className="text-xs text-muted-foreground">
             {t("feedbackParticipantsHint")}
           </p>
-        ) : isFetching ? (
+        ) : isPending ? (
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <Spinner className="size-3.5" />
             {tc("loading")}

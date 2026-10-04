@@ -1096,7 +1096,7 @@ export function IssueActivity({
     <div className="flex flex-col">
       <span className="py-1 text-sm font-medium">{t("activity")}</span>
 
-      <QueryReadBoundary phase={readState?.phase ?? "fresh"} className={readState && readState.phase !== "fresh" ? "min-h-24" : undefined} fallback={
+      <QueryReadBoundary phase={readState?.phase ?? "fresh"} keepContentWhileRefreshing className={readState && readState.phase !== "fresh" && readState.phase !== "refreshing" ? "min-h-24" : undefined} fallback={
         readState?.phase === "error" || readState?.phase === "paused" ? (
           <div className="flex items-center gap-2 py-2 text-xs text-muted-foreground" role="alert">
             <span>{t(readState.phase === "error" ? "readError" : "readPaused")}</span>
@@ -1109,7 +1109,7 @@ export function IssueActivity({
         </div>
       }>
       {rows.length === 0 ? (
-        (!readState || readState.phase === "fresh") &&
+        (!readState || readState.phase === "fresh" || readState.phase === "refreshing") &&
         <p className="mt-2 text-xs text-muted-foreground">{t("noActivity")}</p>
       ) : (
         <ol className="mt-2 flex flex-col gap-3">

@@ -57,8 +57,10 @@ it.each(["later millisecond", "same millisecond", "clock rollback"])("requires a
   }
 });
 
-it("paints a recent background snapshot immediately while revalidating mutation authority", async () => {
+it.each([0, 60_001, 300_000])("keeps a loaded snapshot visible after %i ms while revalidating mutation authority", async (age) => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  let now = Date.now();
+  vi.spyOn(Date, "now").mockImplementation(() => now);
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   let release!: (response: Response) => void;
   const fetch = vi.fn<typeof globalThis.fetch>()
@@ -66,19 +68,28 @@ it("paints a recent background snapshot immediately while revalidating mutation 
     .mockImplementation(() => new Promise<Response>((resolve) => { release = resolve; }));
   vi.stubGlobal("fetch", fetch);
   await client.fetchQuery(pullRequestQueryOptions("pr"));
+  now += age;
   const container = document.createElement("div");
+  document.body.appendChild(container);
   const root = createRoot(container);
   function Detail() {
     const query = usePullRequestQuery("pr", true);
-    return createElement("span", null, `${query.pr?.headSha}:${query.readState}:${query.displayReadState}`);
+    return createElement(QueryReadBoundary, { phase: query.displayReadState, fallback: createElement("div", { "data-skeleton": true }),
+      children: createElement("button", { disabled: query.readState !== "fresh" }, `${query.pr?.headSha}:${query.readState}:${query.displayReadState}`) });
   }
   try {
     await act(() => root.render(createElement(QueryClientProvider, { client }, createElement(Detail))));
     expect(container.textContent).toBe("prepared:refreshing:fresh");
+    const content = container.querySelector("button")!;
+    expect(getComputedStyle(content).visibility).toBe("visible");
+    expect(container.querySelector("[data-skeleton]")).toBeNull();
+    expect(content.disabled).toBe(true);
     await act(async () => { release(Response.json({ pr: { headSha: "current" }, files: [] })); });
     await act(async () => { await vi.waitFor(() => expect(client.isFetching()).toBe(0)); await new Promise((resolve) => setTimeout(resolve, 10)); });
     expect(container.textContent).toBe("current:fresh:fresh");
+    expect(container.querySelector("button")).toBe(content);
+    expect(content.disabled).toBe(false);
   } finally {
-    await act(() => root.unmount()); client.clear(); vi.restoreAllMocks(); vi.unstubAllGlobals();
+    await act(() => root.unmount()); client.clear(); container.remove(); vi.restoreAllMocks(); vi.unstubAllGlobals();
   }
 });
