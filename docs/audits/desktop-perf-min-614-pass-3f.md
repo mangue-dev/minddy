@@ -36,7 +36,9 @@ and a fresh temporary desktop profile/account QueryClient per launch. This is
 the unpackaged native shell with the production web build, not a signed packaged
 release. The production server is restarted for each implementation, not for
 every desktop launch; installation/key/authorization process caches can be warm.
-No heavy profiling or checks run during the accepted ordinary cohorts.
+No heavy profiling or checks run during the accepted ordinary cohorts. Hardware
+recorded after the campaign: Apple M4 Pro, Mac16,8, 24 GiB, macOS 27.0
+(26A428). Power and thermal state were not captured.
 
 The performance tester uses the **migrated MIN-540 encrypted fixture**: six
 projects, 600 issues, existing page documents and stored synthetic PR metadata.
@@ -376,3 +378,21 @@ the canonical workload before timing. If restoration fails, stop measurements.
 Post-push final HEAD checks and Minddy status are recorded separately; absent
 GitHub closing references/auto-merge do not prevent Minddy's forge integration
 from marking the issue done on a later merge.
+
+## Publication repair and final forge checks
+
+The initial delivery at `6608fea7177d0e998996daef5cf7800121638a60` reached the
+unchanged forge history scanner, which rejected the synthetic setup email's
+`example.invalid` domain. The fixture now uses `example.test`, already recognized
+by the existing policy. Only new 3f commits were rewritten; the previous phases
+and their commits are untouched. No Gitleaks exception or scanner is changed.
+The original seven-commit range is retained in a local Git bundle plus gzip and
+checksums in the results manifest. Original measured SHAs/builds/samples remain
+unaltered; the rebased product commit has identical `app`, `components` and `lib`
+trees to the measured `70f772c`. A new pinned-version history scan of the repaired
+range passes. This publication-only repair does not replace native measurements
+with an intermediate-product timing. The original forge failure is retained.
+
+Post-repair final HEAD/status/check receipts are recorded separately after push;
+the known dependency gate remains blocked. No merge, cleanup workflow or
+production deployment is performed.

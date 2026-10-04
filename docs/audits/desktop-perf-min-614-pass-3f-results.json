@@ -15804,5 +15804,28 @@
       "compressedBytes": 70,
       "compressedSha256": "75aef71e646ec23919a2b232d30f6fded5a779be3676423aef34a5dd8cb4e322"
     }
-  ]
+  ],
+  "nativeHardware": {
+    "model": "Mac16,8",
+    "processor": "Apple M4 Pro",
+    "memoryBytes": 25769803776,
+    "macOSVersion": "27.0",
+    "macOSBuild": "26A428",
+    "collected": "After the final campaign; power/thermal state not captured"
+  },
+  "publicationRepair": {
+    "originalPushedHead": "6608fea7177d0e998996daef5cf7800121638a60",
+    "measuredProductSource": "70f772c4ba31f3b484ebb214674f843a7e42f872",
+    "rebasedProductSource": "0401db41705de2643aab7b48d259f1dc91758055",
+    "scope": "Only new 3f commits rewritten to replace the synthetic fixture email with the already-recognized example.test domain. No scanner/exception changes; app/components/lib product trees identical; previous phases untouched. Original builds/samples/SHAs retained.",
+    "originalCommitsBundle": {
+      "localFile": "output/playwright/performance/pass3f-before-publication-repair.bundle",
+      "bytes": 1742152,
+      "sha256": "a3cd871761c201b2692292a37bf6b1a4825d7a1ac51ca19f9378f81a179b6e80",
+      "compressedBytes": 1742448,
+      "compressedSha256": "a04e26ae8c0937ca12aef6b9eab55244d3a3ea20044b5fc218faf2e1af60d89c"
+    },
+    "initialCI": "https://github.com/mangue-dev/minddy/actions/runs/37163964964",
+    "repairedRangeScan": "Pinned Gitleaks 8.30.1, unchanged policy, zero findings in 73f3ec10..repaired HEAD"
+  }
 }
