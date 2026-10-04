@@ -597,7 +597,7 @@ async function reconcileDriftedPr(
  * lightly on the client side; this TTL is what bounds how old a
  * webhook-less fact (dev, self-hosted relay) can get.
  */
-export const REPO_SYNC_TTL_MS = 5 * 60_000;
+export const REPO_SYNC_TTL_MS = 60_000;
 
 export interface RepoSyncState {
   provider: string;
@@ -640,7 +640,8 @@ export function repoSyncKey(
 /** Does the repository need a catch-up? (never swept, or too old). */
 export function needsRepoSync(state: RepoSyncState | undefined): boolean {
   if (!state) return true;
-  return Date.now() - Date.parse(state.synced_at) > REPO_SYNC_TTL_MS;
+  const syncedAt = Date.parse(state.synced_at);
+  return !Number.isFinite(syncedAt) || Date.now() - syncedAt >= REPO_SYNC_TTL_MS;
 }
 
 /**
@@ -702,7 +703,7 @@ export async function syncRepoPullRequests(opts: {
     true, service);
   const { data: existing } = await service
     .from("pull_requests")
-    .select("number, issue_id, state")
+    .select("number, issue_id, state, head_sha, updated_at")
     .eq("provider", opts.provider)
     .eq("repo_full_name", storedName);
   const knownByNumber = new Map(
@@ -711,6 +712,8 @@ export async function syncRepoPullRequests(opts: {
         number: number;
         issue_id: string | null;
         state: PullRequestState;
+        head_sha: string | null;
+        updated_at: string;
       }>
     ).map((r) => [r.number, r]),
   );
@@ -718,7 +721,7 @@ export async function syncRepoPullRequests(opts: {
   const projects = await projectsForRepo(opts.provider, opts.repoFullName);
   const observations: Array<{
     input: PullRequestUpsert;
-    before: { state: PullRequestState } | undefined;
+    before: { state: PullRequestState; head_sha: string | null; updated_at: string } | undefined;
     state: PullRequestState;
     at: number;
   }> = [];
@@ -732,9 +735,8 @@ export async function syncRepoPullRequests(opts: {
   for (const pull of pulls) {
     const before = knownByNumber.get(pull.number);
     const state = prStateFromRef(pull);
-    // Only lines ALREADY known: on the first scan of a repository that we
-    // just linked, everything is new, and nothing happened there before
-    // minddy ne doit bouger un ticket.
+    // Resolve associations even for equal observations: a newly linked project
+    // may reveal the issue that an earlier webhook could not identify.
     const issueId =
       before?.issue_id ??
       (await resolveIssueForPr({
@@ -745,6 +747,11 @@ export async function syncRepoPullRequests(opts: {
         body: pull.body,
         projects,
       }));
+    // Unchanged forge observations need no write or project broadcast, unless
+    // the resolver just learned a missing issue association.
+    if (before && issueId === before.issue_id && before.state === state &&
+        before.head_sha === (pull.headSha ?? null) && pull.updatedAt &&
+        Date.parse(before.updated_at) >= Date.parse(pull.updatedAt)) continue;
     observations.push({
       input: {
         provider: opts.provider,
@@ -804,9 +811,9 @@ export async function syncRepoPullRequests(opts: {
     if (!outcome?.applied || !observation.before) continue;
     const input = observation.input;
     const headMoved =
-      input.headSha != null && input.headSha !== (outcome.row.head_sha ?? null);
-    const titleMoved =
-      input.title != null && input.title !== (outcome.row.title ?? null);
+      input.headSha != null && input.headSha !== (observation.before.head_sha ?? null);
+    const metadataMoved = input.updatedAt != null &&
+      Date.parse(input.updatedAt) > Date.parse(observation.before.updated_at);
     if (headMoved) {
       void broadcastPrChangedByNumber({
         provider: opts.provider,
@@ -814,7 +821,7 @@ export async function syncRepoPullRequests(opts: {
         number: input.number,
         parts: ["pr", "conversation", "commits"],
       });
-    } else if (titleMoved) {
+    } else if (metadataMoved) {
       void broadcastPrChangedByNumber({
         provider: opts.provider,
         repoFullName: opts.repoFullName,

@@ -75,6 +75,11 @@ describe("pull request activation authority", () => {
     stop(); client.clear();
   });
 
+  it("keeps authoritative content visible during routine polling", () => {
+    expect(pullRequestReadState({ isPending: false, isError: false, fetchStatus: "fetching",
+      data: { readSequence: 11, readSession: readActivationSession } }, 10)).toBe("fresh");
+  });
+
   it("distinguishes previous, authoritative, persisted, failed and offline data", () => {
     const previous = { isPending: false, isError: false, fetchStatus: "idle" as const, data: { readSequence: 5, readSession: readActivationSession } };
     expect(pullRequestReadState(previous, 10)).toBe("refreshing");

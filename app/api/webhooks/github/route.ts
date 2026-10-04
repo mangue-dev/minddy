@@ -291,10 +291,6 @@ async function handlePullRequest(payload: PullRequestEvent): Promise<void> {
       : null;
   const ingested = ingestion?.row ?? null;
 
-  // An older or replayed delivery must not drive runs, issue status,
-  // notifications, or activity after the PR row refused its stale snapshot.
-  if (ingestion && !ingestion.applied) return;
-
   // Edit history (MIN-548): GitHub delivers the PREVIOUS body on `edited`
   // (`changes.body.from`), so the snapshot of the thread's opening message is
   // possible without a second read. Best effort — a lost snapshot is a gap in
@@ -313,6 +309,11 @@ async function handlePullRequest(payload: PullRequestEvent): Promise<void> {
       editedBy: payload.sender?.login ?? null,
     });
   }
+
+  // Body snapshots remain useful even when a newer PR observation already won.
+  // An older or replayed delivery must not drive runs, issue status,
+  // notifications, or activity after the PR row refused its stale snapshot.
+  if (ingestion && !ingestion.applied) return;
 
   // Inbox: The project learns that a pull request is waiting for eyes. Here, right
   // after ingestion, and not lower with the other notifications: these

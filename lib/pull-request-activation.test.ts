@@ -56,3 +56,29 @@ it.each(["later millisecond", "same millisecond", "clock rollback"])("requires a
     await act(() => root.unmount()); client.clear(); container.remove(); vi.restoreAllMocks(); vi.unstubAllGlobals();
   }
 });
+
+it("paints a recent background snapshot immediately while revalidating mutation authority", async () => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  let release!: (response: Response) => void;
+  const fetch = vi.fn<typeof globalThis.fetch>()
+    .mockResolvedValueOnce(Response.json({ pr: { headSha: "prepared" }, files: [] }))
+    .mockImplementation(() => new Promise<Response>((resolve) => { release = resolve; }));
+  vi.stubGlobal("fetch", fetch);
+  await client.fetchQuery(pullRequestQueryOptions("pr"));
+  const container = document.createElement("div");
+  const root = createRoot(container);
+  function Detail() {
+    const query = usePullRequestQuery("pr", true);
+    return createElement("span", null, `${query.pr?.headSha}:${query.readState}:${query.displayReadState}`);
+  }
+  try {
+    await act(() => root.render(createElement(QueryClientProvider, { client }, createElement(Detail))));
+    expect(container.textContent).toBe("prepared:refreshing:fresh");
+    await act(async () => { release(Response.json({ pr: { headSha: "current" }, files: [] })); });
+    await act(async () => { await vi.waitFor(() => expect(client.isFetching()).toBe(0)); await new Promise((resolve) => setTimeout(resolve, 10)); });
+    expect(container.textContent).toBe("current:fresh:fresh");
+  } finally {
+    await act(() => root.unmount()); client.clear(); vi.restoreAllMocks(); vi.unstubAllGlobals();
+  }
+});

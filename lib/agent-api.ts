@@ -1478,11 +1478,11 @@ export interface PullRequestCommentEdit {
  * list it afterwards.
  */
 export async function updatePullRequestCommentApi(
-  prId: string,
+  endpoint: PrEndpoint,
   input: { commentId: number; body: string },
 ): Promise<{ comment: PullRequestComment }> {
   return parseJson(
-    await fetch(`${prEndpoint(prId)}/comments`, {
+    await fetch(`${endpoint}/comments`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ commentId: input.commentId, body: input.body }),
@@ -1492,10 +1492,11 @@ export async function updatePullRequestCommentApi(
 
 /** Previous versions of one comment, oldest-first. */
 export async function fetchPullRequestCommentEditsApi(
-  prId: string,
+  endpoint: PrEndpoint,
   commentId: number,
+  signal?: AbortSignal,
 ): Promise<{ edits: PullRequestCommentEdit[] }> {
   return parseJson(
-    await fetch(`${prEndpoint(prId)}/comment-edits?commentId=${commentId}`),
+    await fetch(`${endpoint}/comment-edits?commentId=${commentId}`, { signal }),
   );
 }

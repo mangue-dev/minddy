@@ -95,7 +95,7 @@ export async function listPrCommentEdits(input: {
 }): Promise<PrCommentEditRow[]> {
   const storedName = await repositoryStorageName(input.provider,
     input.repoFullName,false);
-  const { data } = await getServiceClient()
+  const { data, error } = await getServiceClient()
     .from("pr_comment_edits")
     .select("id, body, edited_by, created_at")
     .eq("provider", input.provider)
@@ -104,6 +104,7 @@ export async function listPrCommentEdits(input: {
     .eq("comment_id", input.commentId)
     .order("created_at", { ascending: true })
     .limit(100);
+  if (error) throw new Error("Unable to load previous comment versions");
   return Promise.all(((data ?? []) as (PrCommentEditRow & { id: string })[])
     .map(async (row) => ({
     body: await decodePrCommentEdit(row.id, row.body ?? ""),

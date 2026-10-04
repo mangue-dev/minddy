@@ -70,6 +70,6 @@ export function pullRequestReadState(
   if (query.fetchStatus === "paused") return "paused";
   if (query.isError) return "error";
   if (query.isPending) return "loading";
-  if (query.fetchStatus === "fetching" || pullRequestReadPrecedesActivation(query.data, activationSequence)) return "refreshing";
+  if (pullRequestReadPrecedesActivation(query.data, activationSequence)) return "refreshing";
   return "fresh";
 }

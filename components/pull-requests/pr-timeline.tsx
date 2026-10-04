@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { AppIcon } from "@/components/icon";
 import { Cancel01Icon as X, CancelCircleIcon as CircleSlash, CheckIcon as Check } from "@hugeicons/core-free-icons";
-import { useFormatter, useNow, useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import { cn } from "mangue-ui";
 import { AuthorNames, AuthorStack } from "@/components/git/author-stack";
 import { GitLogin } from "@/components/git/git-login";
@@ -21,6 +21,7 @@ import {
   groupReviewThreads,
   type ReviewThreadState,
 } from "@/lib/pr-review-threads";
+import { useForgeNow } from "@/lib/use-forge-now";
 import { normalizeForgeInstant } from "@/lib/forge-time";
 import type { PrTimelineEvent, PrReviewState } from "@/lib/pr-timeline";
 import type { PrEndpoint, PullRequestReviewComment } from "@/lib/agent-api";
@@ -88,7 +89,7 @@ const KIND_MESSAGE: Record<
 export function PrTimelineRow({ event }: { event: PrTimelineEvent }) {
   const t = useTranslations("PullRequests");
   const format = useFormatter();
-  const now = useNow();
+  const now = useForgeNow();
   // A NUE review — approved without a word — arrives here rather than on the map: it
   // then keeps the color of its verdict, the only carrier of meaning.
   const verdict =
@@ -238,7 +239,7 @@ export function PrTimelineReview({
 }) {
   const t = useTranslations("PullRequests");
   const format = useFormatter();
-  const now = useNow();
+  const now = useForgeNow();
   const state = REVIEW_STATE[event.reviewState ?? "commented"];
   const threads = groupReviewThreads(comments, threadStates);
   const replies = useReviewReplies(endpoint, onChanged);
