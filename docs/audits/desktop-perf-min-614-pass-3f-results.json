@@ -15827,5 +15827,271 @@
     },
     "initialCI": "https://github.com/mangue-dev/minddy/actions/runs/37163964964",
     "repairedRangeScan": "Pinned Gitleaks 8.30.1, unchanged policy, zero findings in 73f3ec10..repaired HEAD"
+  },
+  "securityMitigation": {
+    "verifiedAt": "2026-10-04T00:41:48.684200+00:00",
+    "parentHead": "5968366f5360f27c496418484ed47683c08dc643",
+    "advisory": "https://github.com/advisories/GHSA-ch52-4w7c-c8xp",
+    "upstreamPatchedRelease": null,
+    "packageVersion": "4.2.0",
+    "pristineSha256": "01b7d66c854b2fe53ac05c98feb6e0d64722ab8898a778e2d2426a8b468d178f",
+    "patchedSha256": "534ce153e727c3f23c04da877572a9a59f47ca1b793e2f82da91715b7e881fb1",
+    "originalSecurityTests": {
+      "tests": 21,
+      "pass": 5,
+      "fail": 16
+    },
+    "mitigatedTests": {
+      "tests": 21,
+      "pass": 21,
+      "fail": 0
+    },
+    "releaseToolingTests": 104,
+    "audit": {
+      "exitCode": 1,
+      "root": "passed",
+      "desktopHighFindings": 8,
+      "gate": "blocked"
+    },
+    "packaging": {
+      "asarSha256": "86955daf6672abd9b33d9bfb34b454d5bd2c4c773dcbed7cb557c2741a3f11ba",
+      "buildDependenciesPackaged": [],
+      "electron": "43.7.5",
+      "builder": "26.15.3"
+    },
+    "scope": "Local installed build-dependency backport only; no measured product source or Electron version change. Native 3f gains, regressions and gaps are preserved. Unsigned macOS arm64 directory packaging only; no release, signing or notarization.",
+    "publicOmissions": "Absolute workspace prefix replaced with [workspace]; npm deprecation-notice maintainer contact omitted after unchanged Gitleaks policy rejected it. All test outcomes, package versions and advisory findings retained. Original npm source, configurations, raw logs, private PR receipts and unsigned package stay local.",
+    "evidence": [
+      {
+        "original": "output/playwright/performance/ghsa-ch52/audit.log",
+        "sha256": "722598f2571a963e4cfe9a485c5ff9e507ed737477fb373306521d5592b55818",
+        "gzipSha256": "72859269dfd13d657781c089d19dbcd20fe184e2c65840e2a8c0bbaa5c773c59",
+        "bytes": 1964
+      },
+      {
+        "original": "output/playwright/performance/ghsa-ch52/baseline-tests.log",
+        "sha256": "7e935055d52e4abf83480392d0cd40c3b9c045f25f12222c15e6630939461c49",
+        "gzipSha256": "11aa9cea09fe6f9c6224f0fd0a74ff61b690ee0ee5b1270e91c7a9881935ea33",
+        "bytes": 17498
+      },
+      {
+        "original": "output/playwright/performance/ghsa-ch52/clean-install.log",
+        "sha256": "61189e0c6f6f1c2263e37c4ec369b565976939f9664f3a58c8fc81d88fb4284b",
+        "gzipSha256": "8bd7272e0ebd20ef2b327ed187fa0bf976f5c3c2bbcf74ed67015fb0fd114d61",
+        "bytes": 3752
+      },
+      {
+        "original": "output/playwright/performance/ghsa-ch52/desktop-build.log",
+        "sha256": "7272c386f9d226abe7667897113de0e702157f2de2bed76c711fb2f24555c118",
+        "gzipSha256": "151240686ae46f435215a85c9ed4f34bb08f61010f42dc0b5e180c2b2a552252",
+        "bytes": 352
+      },
+      {
+        "original": "output/playwright/performance/ghsa-ch52/desktop-typecheck.log",
+        "sha256": "35242be87a841745a134ad00a586a903eeb9f470b3166a50128c296f6e9d2c99",
+        "gzipSha256": "b94ee639dad5f50b34bb256adb4d411fc4d35da6272df993c7695ba8e0ff478f",
+        "bytes": 51
+      },
+      {
+        "original": "output/playwright/performance/ghsa-ch52/encrypted-access.log",
+        "sha256": "d72d2e0b164e94fc33948b575ed850e65a488f46e148c3f3352eb4f1a00cafbd",
+        "gzipSha256": "721d4f290cdf13311124bcad9c7d0810753b01064b197227fd739a39ec838ca0",
+        "bytes": 128
+      },
+      {
+        "original": "output/playwright/performance/ghsa-ch52/encryption-schema.log",
+        "sha256": "ca0be109452d2b8c82957063d9924d6571daa9d9e92707f55602e2df01e7e5d2",
+        "gzipSha256": "f44a2dc9c420ef47d1bc13291dd6dc0f88c685f8319cd2d2ddff2a1cd97824fd",
+        "bytes": 198
+      },
+      {
+        "original": "output/playwright/performance/ghsa-ch52/english.log",
+        "sha256": "e69eb410834bfcdbfd4ace6775f801f4aada03a2b1ca8db06c40d4e399a1def4",
+        "gzipSha256": "81a3a50f5f6c126207081865acf0ed9f96186ef5d3b83e197231c0a167a67260",
+        "bytes": 155
+      },
+      {
+        "original": "output/playwright/performance/ghsa-ch52/final-audit.log",
+        "sha256": "722598f2571a963e4cfe9a485c5ff9e507ed737477fb373306521d5592b55818",
+        "gzipSha256": "72859269dfd13d657781c089d19dbcd20fe184e2c65840e2a8c0bbaa5c773c59",
+        "bytes": 1964,
+        "published": "docs/audits/desktop-perf-min-614-pass-3f-security-evidence/final-audit.log.gz",
+        "publishedSha256": "72859269dfd13d657781c089d19dbcd20fe184e2c65840e2a8c0bbaa5c773c59",
+        "publishedRawSha256": "722598f2571a963e4cfe9a485c5ff9e507ed737477fb373306521d5592b55818",
+        "publishedBytes": 679
+      },
+      {
+        "original": "output/playwright/performance/ghsa-ch52/final-baseline-tests.log",
+        "sha256": "6a93a71861f9e88b83e9e60aea1737bafe8fe0d05e66ddf87f07381421e289ca",
+        "gzipSha256": "d750e5f576a5f512159e7665265f905ce89b441fe704c66569647e17d2469ba6",
+        "bytes": 16789,
+        "published": "docs/audits/desktop-perf-min-614-pass-3f-security-evidence/final-baseline-tests.log.gz",
+        "publishedSha256": "08b7a83d6ba3b08da78dc5dcfd070316c137effd66fe8af85ff7273357fcccef",
+        "publishedRawSha256": "00a03bd93562bb152ba1ef36c29b44db223e57d38d708c9e23143eca451b5ab3",
+        "publishedBytes": 1344
+      },
+      {
+        "original": "output/playwright/performance/ghsa-ch52/final-clean-install.log",
+        "sha256": "9517f27a3d124ed8bad3e402b82347bf4b14695f59edb53c52ae7bc15becc6d0",
+        "gzipSha256": "e78049694d94071a209d3d45a57ee75dc28877d71aa38b289852c4d1b48b6465",
+        "bytes": 3751,
+        "published": "docs/audits/desktop-perf-min-614-pass-3f-security-evidence/final-clean-install.log.gz",
+        "publishedSha256": "3f5f25a7e1d7d7ed24764e218db32e31ac1d975fd94c10562fc1944821401da3",
+        "publishedRawSha256": "c70e748eb3e2297cbc050bb337d943f8b179fdb31f293aa4475ccf09d09d9525",
+        "publishedBytes": 1387
+      },
+      {
+        "original": "output/playwright/performance/ghsa-ch52/final-lint.log",
+        "sha256": "a31ab081f54da77c4917ad2aec1197720453621ac0de820440be3808cf1f4cb1",
+        "gzipSha256": "469f323540cefb1d4c2395d2ee24f745627eadac7c62116e3899d11b977364d5",
+        "bytes": 549
+      },
+      {
+        "original": "output/playwright/performance/ghsa-ch52/final-mitigated-tests.log",
+        "sha256": "1039a1a74b3da4134dffc833ee0eab79e87f44b343b3a266a7fb02d25c6def89",
+        "gzipSha256": "123d176b0e0767927be8f62bf98c4b40a9959ae740cb1cb0c5d129ebd325da65",
+        "bytes": 2333,
+        "published": "docs/audits/desktop-perf-min-614-pass-3f-security-evidence/final-mitigated-tests.log.gz",
+        "publishedSha256": "123d176b0e0767927be8f62bf98c4b40a9959ae740cb1cb0c5d129ebd325da65",
+        "publishedRawSha256": "1039a1a74b3da4134dffc833ee0eab79e87f44b343b3a266a7fb02d25c6def89",
+        "publishedBytes": 763
+      },
+      {
+        "original": "output/playwright/performance/ghsa-ch52/final-release-tests.log",
+        "sha256": "cfd76f022b11197e5eb04c46acce282e1fdc742fe430838f1e061cddf7570f0c",
+        "gzipSha256": "a75279ee4a91bbfd4e21e708fc4ea90a15b4b114ae8fe306df53f3486f8a6170",
+        "bytes": 8971,
+        "published": "docs/audits/desktop-perf-min-614-pass-3f-security-evidence/final-release-tests.log.gz",
+        "publishedSha256": "a75279ee4a91bbfd4e21e708fc4ea90a15b4b114ae8fe306df53f3486f8a6170",
+        "publishedRawSha256": "cfd76f022b11197e5eb04c46acce282e1fdc742fe430838f1e061cddf7570f0c",
+        "publishedBytes": 3405
+      },
+      {
+        "original": "output/playwright/performance/ghsa-ch52/final-unsigned-pack.log",
+        "sha256": "678a94b3a9f42ede8b6bcd8ccff131729d1827c8c1d6ded354868ece500d119f",
+        "gzipSha256": "8f34cd043b513c1978076e937e1e0e3d3b0feccd9643acad45e40cd980c57295",
+        "bytes": 1098
+      },
+      {
+        "original": "output/playwright/performance/ghsa-ch52/lint.log",
+        "sha256": "77d36d75252cf84df7aec4ad54e6e7b6a2fc9b18c6294da2656b2adebad5cd3a",
+        "gzipSha256": "c9bf2c0bb59fe4c07a58ba04d475f145d787d4992cbd6187f303ae13ff60c8c0",
+        "bytes": 549
+      },
+      {
+        "original": "output/playwright/performance/ghsa-ch52/lock-update.log",
+        "sha256": "96e347f9860a1e8239f642c1fad0ff2e660641f15d113259f7c01c4b7ae235e2",
+        "gzipSha256": "e14fa97c57157656612f7321625b6b77d56bad22167aefe02102f9584961419c",
+        "bytes": 325
+      },
+      {
+        "original": "output/playwright/performance/ghsa-ch52/mitigated-tests.log",
+        "sha256": "99e4554921119fb511a8d8d26ad6fe0a22b7dd9ce80cc502fede7bba6a7d6c46",
+        "gzipSha256": "8173c87920d38e90ff08ed4bedfdd10a65c580d20b7fcde6634cd72f98a94313",
+        "bytes": 2330
+      },
+      {
+        "original": "output/playwright/performance/ghsa-ch52/public-repo.log",
+        "sha256": "dfb364d3fc41b13912fed65f861462f9e075a4c5853663345dd3fd9649058748",
+        "gzipSha256": "58e11cd77772b6be3f511659f3d84d40abe4b714b471aa4f4a2adb00e8fcea0e",
+        "bytes": 170
+      },
+      {
+        "original": "output/playwright/performance/ghsa-ch52/release-clean-install.log",
+        "sha256": "c178e5a4044e7f7131a556664d480f1e8674fc3afb86fd4df94843f71f68170b",
+        "gzipSha256": "b06e59e6c2e22eb5718db890c8e28c9897079e8781962e83fc395db6415f68d9",
+        "bytes": 1189,
+        "published": "docs/audits/desktop-perf-min-614-pass-3f-security-evidence/release-clean-install.log.gz",
+        "publishedSha256": "1015325788e35ad6e165a02c9b9c310a0cb6667967b89316dee1fcb4b522e2cf",
+        "publishedRawSha256": "f41b5cd949878a456265f112e7ca8306a1856aae59acfb79ec2c3ed50b595161",
+        "publishedBytes": 647
+      },
+      {
+        "original": "output/playwright/performance/ghsa-ch52/release-mitigated-build.log",
+        "sha256": "ef7bb726b512cf42907a8f2f8d36829c8fabfd135f80ac898a18af7ffe79a6b5",
+        "gzipSha256": "16aa6122e8f936455cd6daee9cd69ea5a0cb7ee7e55975923c7554d90de55b9d",
+        "bytes": 2964,
+        "published": "docs/audits/desktop-perf-min-614-pass-3f-security-evidence/release-mitigated-build.log.gz",
+        "publishedSha256": "16aa6122e8f936455cd6daee9cd69ea5a0cb7ee7e55975923c7554d90de55b9d",
+        "publishedRawSha256": "ef7bb726b512cf42907a8f2f8d36829c8fabfd135f80ac898a18af7ffe79a6b5",
+        "publishedBytes": 919
+      },
+      {
+        "original": "output/playwright/performance/ghsa-ch52/release-tests.log",
+        "sha256": "af737aa5e08f450ce91f78d3d5190aeeb27e5daa46172ff3d492ac0704851018",
+        "gzipSha256": "0293d6a655133b6fb9813c84edc7bb43b01dd4d344b8dcf8a762b4694ae2fc31",
+        "bytes": 8981
+      },
+      {
+        "original": "output/playwright/performance/ghsa-ch52/release-unsigned-pack.log",
+        "sha256": "678a94b3a9f42ede8b6bcd8ccff131729d1827c8c1d6ded354868ece500d119f",
+        "gzipSha256": "8f34cd043b513c1978076e937e1e0e3d3b0feccd9643acad45e40cd980c57295",
+        "bytes": 1098,
+        "published": "docs/audits/desktop-perf-min-614-pass-3f-security-evidence/release-unsigned-pack.log.gz",
+        "publishedSha256": "b7d394d61593a9847f50538731ca18e258b2c4e26651d0e6f74b5a23acb7d850",
+        "publishedRawSha256": "68d5548de4a1d0dc3fa5f88af654cc48f27afe0c2161d5a0a29662af7d844f51",
+        "publishedBytes": 433
+      },
+      {
+        "original": "output/playwright/performance/ghsa-ch52/restore-runtime.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gzipSha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64",
+        "bytes": 0
+      },
+      {
+        "original": "output/playwright/performance/ghsa-ch52/typecheck.log",
+        "sha256": "a232218ab0cb56112998296a30550c7d6df45b3d6f5aa5c171b8e1faf5b0340a",
+        "gzipSha256": "0ee7ede1c111b8bbfce667887d61ac67de187b1691610cd5ea6a72d351ed789c",
+        "bytes": 43
+      },
+      {
+        "original": "output/playwright/performance/ghsa-ch52/unsigned-pack.log",
+        "sha256": "678a94b3a9f42ede8b6bcd8ccff131729d1827c8c1d6ded354868ece500d119f",
+        "gzipSha256": "8f34cd043b513c1978076e937e1e0e3d3b0feccd9643acad45e40cd980c57295",
+        "bytes": 1098
+      },
+      {
+        "original": "output/playwright/performance/ghsa-ch52/workflow-pins.log",
+        "sha256": "43d3646e282fb26830e7b707e4df3ed98b15c6097365f225c8a85f6c9778ebf0",
+        "gzipSha256": "9612591d841ee338b9e2874a58b5520c6cc6a9242a0d4bb4b1ff6ce7d2e13b29",
+        "bytes": 197
+      },
+      {
+        "original": "output/playwright/performance/ghsa-ch52/final-english.log",
+        "sha256": "e69eb410834bfcdbfd4ace6775f801f4aada03a2b1ca8db06c40d4e399a1def4",
+        "gzipSha256": "81a3a50f5f6c126207081865acf0ed9f96186ef5d3b83e197231c0a167a67260",
+        "bytes": 155
+      },
+      {
+        "original": "output/playwright/performance/ghsa-ch52/final-public-evidence-scan.log",
+        "sha256": "e69c1c24986652da4290cccbcb9d5372eddc087870d2676e8845862c746f82d2",
+        "gzipSha256": "5ff06c091297d7c97830813d3e1b0848521a33a7119837884494734ae0a26541",
+        "bytes": 79
+      },
+      {
+        "original": "output/playwright/performance/ghsa-ch52/final-public-repo.log",
+        "sha256": "dfb364d3fc41b13912fed65f861462f9e075a4c5853663345dd3fd9649058748",
+        "gzipSha256": "58e11cd77772b6be3f511659f3d84d40abe4b714b471aa4f4a2adb00e8fcea0e",
+        "bytes": 170
+      },
+      {
+        "original": "output/playwright/performance/ghsa-ch52/public-evidence-scan-details.log",
+        "sha256": "fd69ff7493cdc4d1fd8daa701de125f8d8f196463ddef0a4d4de45a62d13bdf3",
+        "gzipSha256": "75b2ad315ee12c4764acbf06e38e71644d30c599136ea146996f667bc5225e87",
+        "bytes": 79
+      },
+      {
+        "original": "output/playwright/performance/ghsa-ch52/public-evidence-scan.log",
+        "sha256": "f0a4df538421a0435a653ada0785c9f545478236ddb8266af77b74c1330fe29f",
+        "gzipSha256": "7f73754b1529e16697ced4033f7695cd6950590edf5a10ed0a05f18c0a5ea9bd",
+        "bytes": 79
+      }
+    ],
+    "publicEvidenceScan": {
+      "version": "8.30.1",
+      "findingsAfterRedaction": 0,
+      "initialFindings": 2,
+      "reason": "Public maintainer email in npm deprecation notice; omitted from published copies only, scanner unchanged."
+    }
   }
 }

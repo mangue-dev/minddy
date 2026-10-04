@@ -396,3 +396,69 @@ with an intermediate-product timing. The original forge failure is retained.
 Post-repair final HEAD/status/check receipts are recorded separately after push;
 the known dependency gate remains blocked. No merge, cleanup workflow or
 production deployment is performed.
+
+## Follow-up: local GHSA mitigation without an audit bypass
+
+After the 3f delivery at `5968366f5360f27c496418484ed47683c08dc643`, the user
+requested a fix for GHSA-ch52-4w7c-c8xp if possible. On October 4, the registry
+still publishes http-cache-semantics 4.2.0 and the
+[advisory](https://github.com/advisories/GHSA-ch52-4w7c-c8xp) lists no patched
+release. The installed affected path is electron-builder 26.15.3 →
+app-builder-lib → @electron/get 3.1.0 → got 11.8.6 → cacheable-request 7.0.4 →
+http-cache-semantics 4.2.0. These are build dependencies; the inspected packaged
+application contains none of this chain.
+
+The official [@electron/get 5 release](https://github.com/electron/get/releases/tag/v5.0.0)
+replaces got with fetch, but a direct override would leave this builder's got
+timeout, proxy-agent, TLS and retry options incompatible. The published v26
+builder tag also retains @electron/get 3. No major downgrade, prerelease builder,
+unreviewed fork, fabricated package version or audit exception is introduced.
+
+`scripts/patch-desktop-http-cache.mjs` applies a bounded local backport informed
+by upstream [PR #58](https://github.com/kornelski/http-cache-semantics/pull/58)
+and the additional stale-fallback restrictions in
+[PR #60](https://github.com/kornelski/http-cache-semantics/pull/60). This is a
+local mitigation, not an upstream-maintainer-approved release. Response reuse
+restrictions are checked before client `max-stale`, stale-while-revalidate,
+stale-if-error and TTL retention can bypass them. Error fallback also requires a
+matching request and respects request no-cache/Pragma. Existing must-revalidate
+behavior, ordinary expiration, allowed stale reuse, explicit public/immutable
+cookie opt-ins, private caches and successful 304 validation are preserved.
+
+The installer validates every lockfile copy and its actual package version
+before changing any source. Pristine and patched SHA-256 digests are pinned;
+unknown source, tampering and unreviewed upgrades fail closed. The package keeps
+its real 4.2.0 version. Normal installation applies the patch and tests it; the
+desktop build explicitly repeats this verification because release workflows
+install with `--ignore-scripts`. CI uses that same restricted installation and
+explicit owned verification before the unchanged complete-tree audit.
+
+The final regression suite has 21 tests. Running it against the original npm
+source produces 16 security failures and five passing controls; the mitigated
+consumer dependency passes all 21. Coverage includes bounded/unbounded
+max-stale, serialized policies, cookies, no-cache/no-store/private, wildcard Vary,
+proxy/must revalidation, shared s-maxage, authenticated storage, error fallback,
+request identity and allowed reuse. Clean normal and release-style installations,
+the desktop bundle/typecheck, 104 release-tooling tests, root typecheck/lint,
+English/encrypted-access/schema/public-repository/action-pin checks and
+`git diff --check` pass. Local unsigned macOS arm64 directory packaging passes
+with Electron 43.7.5 and electron-builder 26.15.3. Signing, notarization and
+Windows/Linux packaging are not claimed or invoked by this verification.
+
+The complete audit still exits 1 with eight high findings in this chain; root
+audit passes. **The security gate remains blocked pending an official dependency
+fix.** A successful local mitigation test does not cancel the advisory. No scanner,
+Gitleaks exception or dependency-audit threshold is changed. The 3f native
+measurements and regressions remain intact; no performance campaign is relabeled
+as a measurement of this follow-up. Product sources in `app`, `components`, `lib`
+and `desktop/src`, as well as the measured Electron version, are unchanged.
+
+The results manifest adds a separate `securityMitigation` receipt with original
+and patched digests, test outcomes, packaging inspection and evidence checksums.
+Full logs/source/configuration remain locally under
+`output/playwright/performance/ghsa-ch52/` with compressed copies. Published gzip
+logs replace the absolute workspace prefix with `[workspace]` and omit a maintainer
+contact from npm's deprecation notice after the unchanged scanner rejected it.
+Package versions, test outcomes and advisory findings are retained. The unsigned
+package stays local. Final forge
+checks/status are recorded after pushing the signed-off follow-up to #342.
