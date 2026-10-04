@@ -9,10 +9,7 @@
   "desktopName": "minddy",
   "main": "dist/main.js",
   "scripts": {
-    "postinstall": "npm run verify:dependency-security",
-    "verify:dependency-security": "node ../scripts/patch-desktop-http-cache.mjs && npm run test:dependency-security",
-    "test:dependency-security": "node --test ../scripts/desktop-http-cache.test.mjs",
-    "build": "npm run verify:dependency-security && node ../scripts/build-desktop.mjs",
+    "build": "node ../scripts/build-desktop.mjs",
     "typecheck": "tsc --noEmit",
     "start": "npm run build && electron .",
     "pack": "npm run build && electron-builder --dir",

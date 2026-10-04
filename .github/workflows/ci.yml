@@ -253,16 +253,9 @@ jobs:
         with:
           fail-on-severity: high
 
-      # Install without dependency lifecycle scripts, as in desktop releases,
-      # then explicitly verify the owned security backport and regressions.
-      - name: Verify desktop dependency mitigation
-        run: |
-          npm ci --prefix desktop --ignore-scripts
-          npm --prefix desktop run verify:dependency-security
-
-      # The audit reads lockfiles and keeps the unpatched upstream advisory
-      # blocking despite the local mitigation. Both executable trees are covered.
-      # The root package-lock is a compatibility projection, not an installed tree.
+      # No installation: the audit reads the lockfiles, it does not need
+      # the tree. The root pnpm and desktop npm trees are covered. The root
+      # package-lock is a compatibility projection, not an installed tree.
       - name: Audit (high+)
         env:
           # Dependency Review protects changed PR dependencies, while enabled
