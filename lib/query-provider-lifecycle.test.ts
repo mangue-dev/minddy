@@ -96,7 +96,8 @@ describe("query provider persistence lifecycle", () => {
     expect(client.getQueryData(["projects"])).toBeUndefined();
     await act(async () => window.dispatchEvent(new Event("pagehide")));
     client.setQueryData(["projects"], [{ id: "late-private-response" }]);
-    await vi.advanceTimersByTimeAsync(2_000);
+    // Exceed the five-second batching window and its idle allowance after logout.
+    await vi.advanceTimersByTimeAsync(6_000);
     expect(window.localStorage.getItem(QUERY_CACHE_STORAGE_KEY)).toBeNull();
   });
 
