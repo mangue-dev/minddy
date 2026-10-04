@@ -82,7 +82,7 @@ export default function ProjectSettingsPage() {
   const handleDelete = async () => {
     await deleteProject(project.id);
     toast.success(t("projectDeleted", { name: project.name }));
-    router.push("/home");
+    router.replace("/home");
   };
 
   const tabs: SettingsTab[] = [

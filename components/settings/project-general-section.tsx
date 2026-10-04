@@ -84,7 +84,7 @@ export function ProjectGeneralSection({
       await removeMemberApi(project.id, user.id);
       toast.success(t("leftProject", { name: project.name }));
       refetch();
-      router.push("/home");
+      router.replace("/home");
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
