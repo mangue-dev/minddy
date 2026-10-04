@@ -256,7 +256,7 @@ interface IssueCommentEvent {
   /** `body` serves the mention `@numo` (MIN-162): this is the only signal we have
       from a call to Numo written from github.com. */
   comment?:
-    | { id?: number; body?: string | null; user?: GithubActor; created_at?: string }
+    | { id?: number; body?: string | null; user?: GithubActor; created_at?: string; updated_at?: string }
     | null;
   /** On `edited`, the previous values — `changes.body.from` is the body BEFORE
       the rewrite: the snapshot the edit history records (MIN-548). */
@@ -295,7 +295,7 @@ async function handlePullRequest(payload: PullRequestEvent): Promise<void> {
   // (`changes.body.from`), so the snapshot of the thread's opening message is
   // possible without a second read. Best effort — a lost snapshot is a gap in
   // the history, never a broken webhook; the recorder skips the echo of an
-  // edit made from minddy (same body as the snapshot the API just wrote).
+  // edit made from minddy (same previous body and forge edit timestamp).
   if (
     action === "edited" &&
     typeof payload.changes?.body?.from === "string"
@@ -307,10 +307,11 @@ async function handlePullRequest(payload: PullRequestEvent): Promise<void> {
       commentId: PR_BODY_COMMENT_ID,
       body: payload.changes.body.from,
       editedBy: payload.sender?.login ?? null,
+      occurredAt: payload.pull_request?.updated_at,
     });
   }
 
-  // Body snapshots remain useful even when a newer PR observation already won.
+  // Dated, replay-safe snapshots preserve history even when a newer PR won.
   // An older or replayed delivery must not drive runs, issue status,
   // notifications, or activity after the PR row refused its stale snapshot.
   if (ingestion && !ingestion.applied) return;
@@ -540,7 +541,7 @@ async function handleIssueComment(payload: IssueCommentEvent): Promise<void> {
     await syncGithubIssueComment(issueComment);
     return;
   }
-  if (!isPullRequestComment(payload)) return;
+  if (!payload.issue?.pull_request) return;
   const actor = payload.comment?.user ?? payload.sender;
   const number = payload.issue?.number;
   const repoFullName = payload.repository?.full_name;
@@ -566,9 +567,12 @@ async function handleIssueComment(payload: IssueCommentEvent): Promise<void> {
       commentId: payload.comment.id,
       body: payload.changes.body.from,
       editedBy: actor?.login ?? null,
+      occurredAt: payload.comment.updated_at,
     });
   }
 
+  // Edits and deletions refresh the thread but do not create comment activity.
+  if (!isPullRequestComment(payload)) return;
   await recordGithubGesture({
     type: "pr_commented",
     number,

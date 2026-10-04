@@ -180,19 +180,26 @@ export async function GET(request: NextRequest) {
   ]);
   const seen = new Set<string>();
   let sweptTruncated = false;
-  let blockingSweep = false;
+  const staleRepos: VisibleRepo[] = [];
   for (const repo of repos) {
     const key = repoSyncKey(repo.provider, repo.repoFullName);
     if (seen.has(key)) continue;
     seen.add(key);
     const state = syncs.get(key);
     if (!needsRepoSync(state)) continue;
-    blockingSweep = true;
-    if (await sweepRepo(auth.user.id, repo)) sweptTruncated = true;
+    staleRepos.push(repo);
   }
+  // Keep catch-up latency bounded without flooding the forge with scans.
+  let nextRepo = 0;
+  await Promise.all(Array.from({ length: Math.min(3, staleRepos.length) }, async () => {
+    while (nextRepo < staleRepos.length) {
+      const repo = staleRepos[nextRepo++];
+      if (await sweepRepo(auth.user.id, repo)) sweptTruncated = true;
+    }
+  }));
   // ── PR ──────────────────────────────── ────────────────────────────────
   let rows: PullRequestWithIssue[];
-  if (blockingSweep) {
+  if (staleRepos.length > 0) {
     try {
       // The sweep may have discovered new PRs or changed existing states.
       rows = await listPullRequestsForUser(auth.supabase, repos, {

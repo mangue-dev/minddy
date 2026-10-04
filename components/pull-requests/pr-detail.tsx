@@ -353,6 +353,8 @@ export function ThreadComment({
   const edited = commentId === PR_BODY_COMMENT_ID
     ? !!edits?.length
     : !!updatedAt && Date.parse(updatedAt) > Date.parse(createdAt ?? "");
+  const canViewHistory = edited || (commentId === PR_BODY_COMMENT_ID &&
+    (history.isPending || history.isError || history.fetchStatus === "paused"));
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
   const [saving, setSaving] = useState(false);
@@ -417,7 +419,7 @@ export function ThreadComment({
             >
               {t("cancel")}
             </Button>
-          ) : (canEdit || onQuoteReply || edited) ? (
+          ) : (canEdit || onQuoteReply || canViewHistory) ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -447,10 +449,9 @@ export function ThreadComment({
                     {t(quotingNumo ? "quoteReplyNumo" : "quoteReply")}
                   </DropdownMenuItem>
                 ) : null}
-                {/* The history is always offered on an edited message: the
-                    lazy read may fail or return nothing — the dialog says so,
-                    and the menu must never open empty. */}
-                {edited ? (
+                {/* Keep loading and failed body reads reachable without
+                    claiming that an edit has been recorded. */}
+                {canViewHistory ? (
                   <DropdownMenuItem onSelect={() => setHistoryOpen(true)}>
                     <HugeiconsIcon icon={HistoryIcon} />
                     {t("viewPreviousVersions")}
