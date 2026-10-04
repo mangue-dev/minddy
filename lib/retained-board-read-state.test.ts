@@ -1,10 +1,85 @@
 import { QueryClient } from "@tanstack/react-query";
-import { expect, it } from "vitest";
-import { retainedBoardReadState } from "./retained-board-read-state";
+import { expect, it, vi } from "vitest";
+import { refreshRetainedBoard, retainedBoardKeys, retainedBoardReadState, subscribeRetainedBoardReadState } from "./retained-board-read-state";
 import type { RetainedAppView } from "./retained-app-views";
 const view: RetainedAppView = { key: "g", tabId: "g", kind: "global-board", route: { pathname: "/all", search: "", projectId: null } };
 
-it("labels previous board rows while invalidated, fetching, paused or failed", async () => {
+it.each([view, { ...view, kind: "project-board" as const, route: { pathname: "/projects/p", projectId: "p", search: "" } }])("notifies an expired $kind activation synchronously and ignores unrelated queries", async (board) => {
+  const now = vi.spyOn(Date, "now").mockReturnValue(1000);
+  const client = new QueryClient({ defaultOptions: { queries: { staleTime: 300_000 } } });
+  const pending: ((rows: string[]) => void)[] = [];
+  let activating = false;
+  const read = () => activating ? new Promise<string[]>((resolve) => pending.push(resolve)) : Promise.resolve(["Cached rows"]);
+  const notify = vi.fn(() => retainedBoardReadState(client, board));
+  let stop = () => {};
+  try {
+    for (const queryKey of retainedBoardKeys(board)) await client.fetchQuery({ queryKey, queryFn: read });
+    stop = subscribeRetainedBoardReadState(client, board, notify);
+    client.setQueryData(["avatar", "user"], []);
+    client.setQueryData([...retainedBoardKeys(board)[0], "unrelated"], []);
+    expect(notify).not.toHaveBeenCalled();
+    now.mockReturnValue(302_000);
+    activating = true;
+    const refresh = refreshRetainedBoard(client, board);
+    // No await or timer flush: the layout effect must notify before returning.
+    expect(notify).toHaveBeenCalled();
+    expect(notify.mock.results.every((result) => result.value === "refreshing")).toBe(true);
+    for (const finish of pending) finish(["Current rows"]);
+    await refresh;
+    expect(notify.mock.results.at(-1)?.value).toBe("fresh");
+    stop();
+    notify.mockClear();
+    client.setQueryData(retainedBoardKeys(board)[0], ["Updated after unsubscribe"]);
+    expect(notify).not.toHaveBeenCalled();
+  } finally { stop(); client.clear(); now.mockRestore(); }
+});
+
+it.each([view, { ...view, kind: "project-board" as const, route: { pathname: "/projects/p", projectId: "p", search: "" } }])("waits for every prerequisite of a $kind, including absent queries", (board) => {
+  const client = new QueryClient();
+  expect(retainedBoardReadState(client, board)).toBe("loading");
+  for (const key of retainedBoardKeys(board).slice(0, -1)) client.setQueryData(key, []);
+  expect(retainedBoardReadState(client, board)).toBe("loading");
+  client.setQueryData(retainedBoardKeys(board).at(-1)!, []);
+  expect(retainedBoardReadState(client, board)).toBe("fresh");
+  client.clear();
+});
+
+it("refreshes expired retained rows on activation without introducing a live expiry timer", async () => {
+  const now = vi.spyOn(Date, "now").mockReturnValue(1000);
+  const client = new QueryClient({ defaultOptions: { queries: { staleTime: 300_000 } } });
+  try {
+    for (const key of retainedBoardKeys(view)) await client.fetchQuery({ queryKey: key, queryFn: async () => [] });
+    expect(retainedBoardReadState(client, view)).toBe("fresh");
+    now.mockReturnValue(302_000);
+    const refresh = refreshRetainedBoard(client, view);
+    expect(retainedBoardReadState(client, view)).toBe("refreshing");
+    await refresh;
+    expect(retainedBoardReadState(client, view)).toBe("fresh");
+  } finally { now.mockRestore(); client.clear(); }
+});
+
+it("reuses fresh caches and joins pending activation reads without cancelling them", async () => {
+  const client = new QueryClient({ defaultOptions: { queries: { staleTime: 300_000 } } });
+  const read = vi.fn(async () => []);
+  try {
+    for (const key of retainedBoardKeys(view)) await client.fetchQuery({ queryKey: key, queryFn: read });
+    read.mockClear();
+    await refreshRetainedBoard(client, view);
+    expect(read).not.toHaveBeenCalled();
+    let finish!: (rows: string[]) => void;
+    const pendingRead = vi.fn(() => new Promise<string[]>((resolve) => { finish = resolve; }));
+    const first = client.fetchQuery({ queryKey: ["me", "board"], queryFn: pendingRead, staleTime: 0 });
+    await client.invalidateQueries({ queryKey: ["me", "board"], refetchType: "none" });
+    const second = refreshRetainedBoard(client, view);
+    expect(pendingRead).toHaveBeenCalledTimes(1);
+    finish(["Current rows"]);
+    await Promise.all([first, second]);
+    expect(retainedBoardReadState(client, view)).toBe("fresh");
+    expect(client.getQueryData(["me", "board"])).toEqual(["Current rows"]);
+  } finally { client.clear(); }
+});
+
+it("waits for invalidated or pending board reads and exposes paused or failed reads", async () => {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   client.setQueryData(["me", "board"], { issues: ["previous"] });
   client.setQueryData(["views", "global"], []);

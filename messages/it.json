@@ -746,11 +746,8 @@
     "deleteConfirm": "{count, plural, one {Spostare # ticket nel cestino?} other {Spostare # ticket nel cestino?}}"
   },
   "Board": {
-    "readLoading": "Caricamento della bacheca…",
     "readError": "Impossibile caricare la bacheca.",
-    "readRefreshing": "Aggiornamento della bacheca… Sono mostrati i dati precedenti.",
     "readPaused": "Aggiornamento della bacheca in pausa. Riconnettiti per aggiornare.",
-    "readPreviousError": "Impossibile aggiornare la bacheca. Sono mostrati i dati precedenti.",
     "readRetry": "Riprova",
     "viewCreated": "Vista «{name}» creata.",
     "viewUpdated": "Visualizza aggiornato.",
@@ -3243,10 +3240,7 @@
     "duplicate": "Riproduzione"
   },
   "Timeline": {
-    "readLoading": "Caricamento attività…",
-    "readRefreshing": "Aggiornamento attività… Sono mostrati i dati precedenti.",
     "readPaused": "Aggiornamenti in pausa. Riconnettiti per aggiornare l’attività.",
-    "readPreviousError": "Impossibile aggiornare l’attività. Sono mostrati i dati precedenti.",
     "readError": "Impossibile caricare l’attività.",
     "readRetry": "Riprova",
     "activity": "Attività",
@@ -3694,10 +3688,8 @@
     "sessionDeleted": "Conversazione cancellata"
   },
   "PullRequests": {
-    "readLoading": "Caricamento della pull request…",
-    "readRefreshing": "Sono mostrati i dati precedenti. Ricerca di aggiornamenti…",
     "readFailed": "Impossibile aggiornare questa pull request. Riprova.",
-    "readPaused": "Sei offline. Sono mostrati i dati precedenti.",
+    "readPaused": "Sei offline. Riconnettiti per caricare questa pull request.",
     "readRetry": "Riprova",
     "title": "Revisioni del codice",
     "emptyState": "Nessuna pull request corrisponde a questi filtri",

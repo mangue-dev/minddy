@@ -15,8 +15,9 @@ import { BoardLoadingSkeleton } from "./board-loading-skeleton";
 import { useRetainedBoardScroll } from "@/lib/use-retained-board-scroll";
 import { useColdBoardPrefetch } from "@/lib/use-cold-board-prefetch";
 import { observeRetainedBoardData } from "@/lib/retained-board-data";
-import { retainedBoardKeys, retainedBoardReadState } from "@/lib/retained-board-read-state";
+import { refreshRetainedBoard, retainedBoardKeys, retainedBoardReadState, subscribeRetainedBoardReadState } from "@/lib/retained-board-read-state";
 import { useTranslations } from "next-intl";
+import { QueryReadBoundary } from "./query-read-boundary";
 
 const GlobalBoard = dynamic(() => appTabSurfaceLoaders["global-board"]().then((module) => module.GlobalBoard), { loading: () => <BoardLoadingSkeleton /> });
 const ProjectBoard = dynamic(appTabSurfaceLoaders["project-board"], { loading: () => <BoardLoadingSkeleton /> });
@@ -35,15 +36,32 @@ const RetainedBoard = memo(function RetainedBoard({ view, active }: { view: Reta
   const scroll = useRetainedBoardScroll(active);
   const client = useQueryClient();
   const t = useTranslations("Board");
-  const subscribe = useCallback((notify: () => void) => client.getQueryCache().subscribe(notify), [client]);
   const isBoard = view.kind === "global-board" || view.kind === "project-board";
-  const snapshot = useCallback(() => isBoard ? retainedBoardReadState(client, view) : "fresh", [client, view, isBoard]);
-  const readState = useSyncExternalStore(subscribe, snapshot, () => "fresh");
+  const subscribe = useCallback((notify: () => void) => {
+    return isBoard ? subscribeRetainedBoardReadState(client, view, notify) : () => {};
+  }, [client, view, isBoard]);
+  const snapshot = useCallback(() => isBoard ? retainedBoardReadState(client, view) : "fresh" as const, [client, view, isBoard]);
+  const readState = useSyncExternalStore(subscribe, snapshot, () => "fresh" as const);
+  useLayoutEffect(() => {
+    if (!active || !isBoard) return;
+    // Start activation reads before paint, joining any already pending request.
+    void refreshRetainedBoard(client, view);
+  }, [active, isBoard, client, view]);
   return <div {...scroll} className="relative h-full min-h-0" data-retained-app-view={view.key} data-retained-tab-id={view.tabId ?? undefined} data-app-view-active={active ? "true" : "false"}
     data-board-read-state={isBoard ? readState : undefined} aria-busy={active && readState !== "fresh"}
     inert={!active} aria-hidden={!active || undefined} style={{ display: active ? undefined : "none" }}>
     <Activity mode={active ? "visible" : "hidden"}>
     <RetainedBoardTitle view={view} />
+    <QueryReadBoundary phase={readState} className="h-full min-h-0" contentClassName="h-full min-h-0" fallback={
+      readState === "error" || readState === "paused" ? (
+        <div className="flex h-full flex-col items-center justify-center gap-3 text-sm text-muted-foreground" role="alert">
+          <p>{t(readState === "error" ? "readError" : "readPaused")}</p>
+          <button type="button" className="underline" onClick={() => {
+            for (const queryKey of retainedBoardKeys(view)) void client.refetchQueries({ queryKey, exact: true });
+          }}>{t("readRetry")}</button>
+        </div>
+      ) : <BoardLoadingSkeleton />
+    }>
     <AppTabNavigationScope activeId={view.tabId}>
       <AppTabRouteProvider route={view.route} active={active} activationSequence={activation.current.sequence}>
         {view.kind === "global-board" ? <GlobalBoard /> : view.kind === "project-board" ? <ProjectBoard />
@@ -51,13 +69,8 @@ const RetainedBoard = memo(function RetainedBoard({ view, active }: { view: Reta
           : view.kind === "feedback" ? <Feedback /> : <Triage />}
       </AppTabRouteProvider>
     </AppTabNavigationScope>
+    </QueryReadBoundary>
     </Activity>
-    {active && readState !== "fresh" && <div role="status" className="absolute bottom-3 left-3 z-40 flex items-center gap-2 rounded-lg border bg-background px-3 py-2 text-xs text-muted-foreground">
-      {t(readState === "error" ? (client.getQueryData(retainedBoardKeys(view)[0]) === undefined ? "readError" : "readPreviousError") : readState === "paused" ? "readPaused" : readState === "loading" ? "readLoading" : "readRefreshing")}
-      {(readState === "error" || readState === "paused") && <button type="button" className="underline" onClick={() => {
-        for (const queryKey of retainedBoardKeys(view)) void client.refetchQueries({ queryKey, exact: true });
-      }}>{t("readRetry")}</button>}
-    </div>}
   </div>;
 });
 

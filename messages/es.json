@@ -746,11 +746,8 @@
     "deleteConfirm": "{count, plural, one {¿Mover # incidencia a la papelera?} other {¿Mover # incidencias a la papelera?}}"
   },
   "Board": {
-    "readLoading": "Cargando tablero…",
     "readError": "No se pudo cargar el tablero.",
-    "readRefreshing": "Actualizando tablero… Se muestran los datos anteriores.",
     "readPaused": "Actualización del tablero en pausa. Reconecta para actualizar.",
-    "readPreviousError": "No se pudo actualizar el tablero. Se muestran los datos anteriores.",
     "readRetry": "Reintentar",
     "viewCreated": "Vista «{name}» creada.",
     "viewUpdated": "Vista actualizada.",
@@ -3243,10 +3240,7 @@
     "duplicate": "Reproducción"
   },
   "Timeline": {
-    "readLoading": "Cargando actividad…",
-    "readRefreshing": "Actualizando actividad… Se muestran los datos anteriores.",
     "readPaused": "Actualizaciones en pausa. Vuelve a conectarte para actualizar la actividad.",
-    "readPreviousError": "No se pudo actualizar la actividad. Se muestran los datos anteriores.",
     "readError": "No se pudo cargar la actividad.",
     "readRetry": "Reintentar",
     "activity": "Actividad",
@@ -3694,10 +3688,8 @@
     "sessionDeleted": "Conversación borrada"
   },
   "PullRequests": {
-    "readLoading": "Cargando pull request…",
-    "readRefreshing": "Se muestran los datos anteriores. Buscando actualizaciones…",
     "readFailed": "No se pudo actualizar esta pull request. Inténtalo de nuevo.",
-    "readPaused": "Estás sin conexión. Se muestran los datos anteriores.",
+    "readPaused": "Estás sin conexión. Vuelve a conectarte para cargar esta pull request.",
     "readRetry": "Volver a intentar",
     "title": "Revisiones de código",
     "emptyState": "Ninguna pull request coincide con estos filtros",
