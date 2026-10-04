@@ -140,7 +140,6 @@
     "@tiptap/suggestion": "^3.31.3",
     "@vercel/analytics": "^2.0.1",
     "@vercel/sandbox": "^3.5.0",
-    "@vercel/speed-insights": "^2.0.0",
     "border-beam": "^1.4.1",
     "cmdk": "^1.1.1",
     "diff": "^9.0.0",

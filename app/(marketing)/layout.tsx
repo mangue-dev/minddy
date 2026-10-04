@@ -1,5 +1,4 @@
 import { Analytics } from "@vercel/analytics/next";
-import { SpeedInsights } from "@vercel/speed-insights/next";
 import { MarketingNav } from "@/components/marketing/marketing-nav";
 import { MarketingFooter } from "@/components/marketing/marketing-footer";
 import { DesktopMarketingRedirect } from "@/components/desktop-marketing-redirect";
@@ -18,7 +17,6 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
       <main className="flex-1">{children}</main>
       <MarketingFooter />
       {webAnalytics && <Analytics />}
-      {webAnalytics && <SpeedInsights />}
     </div>
   );
 }

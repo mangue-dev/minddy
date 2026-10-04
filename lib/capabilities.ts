@@ -446,8 +446,8 @@ export function resolveCapabilities(env: CapabilityEnvironment): Record<Capabili
       state: env.MINDDY_PUBLIC_VERCEL_ANALYTICS?.trim() === "1" ? "ready" : "disabled",
       missing: env.MINDDY_PUBLIC_VERCEL_ANALYTICS?.trim() === "1" ? [] : ["MINDDY_PUBLIC_VERCEL_ANALYTICS=1"],
       diagnostic: env.MINDDY_PUBLIC_VERCEL_ANALYTICS?.trim() === "1"
-        ? "Vercel Analytics and Speed Insights are enabled on public pages."
-        : "Vercel Analytics and Speed Insights are disabled; set MINDDY_PUBLIC_VERCEL_ANALYTICS=1 to enable them.",
+        ? "Vercel Analytics is enabled on public pages."
+        : "Vercel Analytics is disabled; set MINDDY_PUBLIC_VERCEL_ANALYTICS=1 to enable it.",
     }),
     scheduler:
       !present(env, "CRON_SECRET")

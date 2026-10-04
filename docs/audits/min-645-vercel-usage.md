@@ -240,11 +240,9 @@ metrics, so this is not exact feature parity with Vercel Speed Insights.
 Minddy already loads `posthog-js` 1.434.13 in `components/posthog-init.tsx`, with
 its existing consent/opt-out handling, disabled DOM autocapture and disabled
 session recording. It does not set `capture_performance`; collection may follow
-the remote project setting. No live PostHog account access was available to
-confirm actual `$web_vitals` ingestion. Recommend enabling/confirming Web Vitals
-in that project, verifying populated reports on representative routes, then
-removing the appropriate Vercel subscription once ownership is established.
-Neither provider's settings nor the Speed Insights integration are changed here.
+the remote project setting. During the initial audit, live PostHog account
+access was unavailable and `$web_vitals` ingestion remained unconfirmed. The
+October 5 follow-up below records activation and client replacement.
 
 ### PR review and collection follow-up
 
@@ -273,3 +271,31 @@ Look for `$web_vitals` in the event feed before interpreting a blank dashboard.
 The SDK groups available metrics for up to five seconds; some metrics finalize
 on interaction or when the document becomes hidden. SPA route changes do not
 start a new page-load measurement with the default Web Vitals configuration.
+
+### Activated replacement (October 5)
+
+The user enabled Web Vitals in PostHog and reported the first production event.
+A fresh read of the SDK configuration matching Minddy's production public key
+now returns `capturePerformance.web_vitals: true` from the EU ingestion project.
+The event receipt is user-confirmed; this public configuration check does not
+inspect private event data or establish representative coverage of every route.
+
+`app/(marketing)/layout.tsx` and `app/(legal)/layout.tsx` no longer mount Vercel
+Speed Insights. Its dependency is removed from both lockfiles and `package.json`.
+The existing root `PostHogInit` remains responsible for Web Vitals, using remote
+configuration and its existing consent/opt-out behavior. Vercel Web Analytics
+remains on public pages under `MINDDY_PUBLIC_VERCEL_ANALYTICS=1`; its capability
+diagnostic and `.env.example` now describe only that integration.
+
+This change stops client collection after deployment; it does not cancel a
+hosted subscription. In the relevant Vercel project's Speed Insights page,
+use the top-right ellipsis to **Turn off Speed Insights Plus**, following
+[Vercel's downgrade instructions](https://vercel.com/docs/speed-insights/using-speed-insights#downgrading-from-speed-insights-plus).
+Plus remains available through the billing cycle. The CSV's unattributed $10
+add-on must be matched to its actual project before claiming fixed-cost savings.
+No production deployment or hosted billing change was performed in this follow-up.
+
+Verification: 51 focused capability/analytics tests, typecheck, targeted lint,
+owned-English and whitespace checks pass. The pnpm lockfile passes a frozen
+offline check, and the npm lockfile changes only the removed dependency.
+Locale catalogs, PR polls, Numo/FAB components and PostHog initialization are untouched.
