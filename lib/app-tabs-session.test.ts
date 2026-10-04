@@ -26,6 +26,60 @@ function setup(initial: AppTab[] = [createHomeTab("owner"), createHomeTab("owner
 }
 
 describe("application tab sessions", () => {
+  it("reuses an exact destination without replacing the outgoing tab or losing local state", async () => {
+    const home = createHomeTab("owner");
+    const pr = { ...createHomeTab("owner", undefined, 1), href: "/pull-requests?pr=a" };
+    const { session, transport, navigate } = setup([home, pr]);
+    await session.initialize("/home");
+    session.setLocalState(`${pr.id}:review`, "selected-file");
+    expect(session.reuseDestination(pr.href)).toBe(true);
+    await vi.waitFor(() => expect(session.getSnapshot().activeId).toBe(pr.id));
+    expect(navigate).toHaveBeenCalledWith(pr.href);
+    expect(session.getSnapshot().tabs.find((tab) => tab.id === home.id)?.href).toBe("/home");
+    expect(session.getLocalState(`${pr.id}:review`)).toBe("selected-file");
+    expect(transport.create).not.toHaveBeenCalled();
+    expect(session.reuseDestination("/pull-requests")).toBe(false);
+    expect(session.reuseDestination("/pull-requests?pr=b")).toBe(false);
+    session.dispose();
+  });
+  it("prefers the active duplicate and still allows explicit new tabs", async () => {
+    const { session, navigate } = setup();
+    await session.initialize("/home");
+    await session.activate(session.getSnapshot().tabs[1].id);
+    const active = session.getSnapshot().activeId;
+    navigate.mockClear();
+    expect(session.reuseDestination("/home")).toBe(true);
+    await session.activate(active!);
+    expect(session.getSnapshot().activeId).toBe(active);
+    expect(navigate).not.toHaveBeenCalled();
+    await session.create("/home");
+    expect(session.getSnapshot().tabs).toHaveLength(3);
+    expect(session.getSnapshot().activeId).not.toBe(active);
+    session.dispose();
+  });
+  it("honors editor departure failures when reusing a destination", async () => {
+    const home = createHomeTab("owner");
+    const board = { ...createHomeTab("owner", undefined, 1), href: "/all" };
+    const { session, navigate } = setup([home, board]);
+    await session.initialize("/home");
+    session.registerDeparture(async () => false);
+    expect(session.reuseDestination("/all")).toBe(true);
+    await vi.waitFor(() => expect(session.getSnapshot().error).toBe("save_failed"));
+    expect(session.getSnapshot().activeId).toBe(home.id);
+    expect(navigate).not.toHaveBeenCalled();
+    session.dispose();
+  });
+  it("does not switch tabs when passive route observation reaches a duplicate", async () => {
+    const home = createHomeTab("owner");
+    const board = { ...createHomeTab("owner", undefined, 1), href: "/all" };
+    const { session, navigate } = setup([home, board]);
+    await session.initialize("/home");
+    session.observe("/all", null);
+    expect(session.getSnapshot().activeId).toBe(home.id);
+    expect(session.getSnapshot().tabs.filter((tab) => tab.href === "/all")).toHaveLength(2);
+    expect(navigate).not.toHaveBeenCalled();
+    session.dispose();
+  });
   it("opens new tabs immediately while outgoing synchronization is slow", async () => {
     const { session, transport, rows, navigate } = setup(); await session.initialize("/home");
     const original = rows()[0];

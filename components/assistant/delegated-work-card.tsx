@@ -3,7 +3,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AlertCircleIcon, BotIcon, CancelCircleIcon as Ban, CheckIcon, GitBranchIcon, GitCommitIcon, GitPullRequestIcon, HelpCircleIcon, LinkSquare01Icon, LoaderCircleIcon, PackageIcon, SquareIcon } from "@hugeicons/core-free-icons";
 import dynamic from "next/dynamic";
-import Link from "next/link";
+import Link from "@/components/app-link";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useNow, useTranslations } from "next-intl";

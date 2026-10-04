@@ -79,7 +79,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import Link from "next/link";
+import Link from "@/components/app-link";
 import { useAiSurfaceAvailability } from "@/lib/use-ai-surface-availability";
 import { ReasoningBlock } from "@/components/agent/reasoning-block";
 import { assistantMessageReasoning } from "@/lib/assistant-reasoning";

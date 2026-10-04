@@ -79,6 +79,9 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
               <Suspense fallback={null}>
                 <ProjectDraftResume />
               </Suspense>
+              {/* Navigation providers also scope keyboard chords and assistant links. */}
+              <CurrentViewProvider>
+              <AppTabsProvider>
               <AssistantPanelProvider>
                 {/* The Numo conversation lives above both projections. Closing
                     the panel or leaving the page dismantles a shell, not the
@@ -97,17 +100,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
                           <UndoProvider>
                             <CreateProvider>
                               <BulkActionsProvider>
-                                {/* “Save current view” (⌘K) starts from
- address; surfaces whose selection
- does not live there (the PR
- open, the active view of a board) the
- publish here. Above the shell, therefore:
- it is the palette which reads. */}
-                                <CurrentViewProvider>
-                                  <AppTabsProvider>
-                                  <AppShellChrome>{children}</AppShellChrome>
-                                  </AppTabsProvider>
-                                </CurrentViewProvider>
+                                <AppShellChrome>{children}</AppShellChrome>
                               </BulkActionsProvider>
                             </CreateProvider>
                             <AssistantPanel />
@@ -142,6 +135,8 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
                   </AssistantComposerProvider>
                 </AssistantChatProvider>
               </AssistantPanelProvider>
+              </AppTabsProvider>
+              </CurrentViewProvider>
               </IssuePanelProvider>
             </ProjectsProvider>
           </RealtimeProvider>

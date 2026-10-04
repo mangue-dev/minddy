@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/app-link";
 import { AppIcon } from "@/components/icon";
 import { GaugeIcon as CircleGauge } from "@hugeicons/core-free-icons";
 import { useFormatter, useTranslations } from "next-intl";

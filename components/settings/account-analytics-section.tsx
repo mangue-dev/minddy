@@ -6,7 +6,7 @@ import {useEffect, useState} from "react";
 import {useLocale, useTranslations} from "next-intl";
 import {Switch} from "mangue-ui";
 
-import Link from "next/link";
+import Link from "@/components/app-link";
 
 import {SettingsGroup, SettingsRow} from "@/components/settings/settings-ui";
 import {SETTINGS_SECTIONS} from "@/lib/settings-sections";

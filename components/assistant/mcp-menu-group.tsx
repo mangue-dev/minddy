@@ -2,7 +2,7 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Alert01Icon, Settings01Icon } from "@hugeicons/core-free-icons";
-import { useRouter } from "next/navigation";
+import { useAppRouter } from "@/lib/use-app-router";
 import { useTranslations } from "next-intl";
 import { CommandGroup, CommandItem } from "mangue-ui";
 import { McpServiceLogo } from "@/components/mcp-service-logo";
@@ -22,7 +22,7 @@ export function McpMenuGroup({
   onNavigate: () => void;
 }) {
   const t = useTranslations("McpClients");
-  const router = useRouter();
+  const router = useAppRouter();
   const { data } = useMcpConnections(userId);
   const search = query.trim().toLocaleLowerCase();
   const connections = (data?.connections ?? []).filter(

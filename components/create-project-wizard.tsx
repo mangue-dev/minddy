@@ -5,7 +5,7 @@ import { FileUploadIcon, InformationCircleIcon, Layers01Icon, Refresh01Icon, Spa
 import { createUuid } from "@/lib/create-uuid";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useAppRouter } from "@/lib/use-app-router";
 import { useLocale, useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -137,7 +137,7 @@ export function CreateProjectWizard({
   /** New object on each restart — triggers initialization at the git stage. */
   resume: ProjectSetupResumeState | null;
 }) {
-  const router = useRouter();
+  const router = useAppRouter();
   const t = useTranslations("Projects");
   const tSettings = useTranslations("Settings");
   const tCommon = useTranslations("Common");

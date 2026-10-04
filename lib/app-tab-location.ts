@@ -9,6 +9,18 @@ const SELECTION_PARAMS = new Set([
 ]);
 export const APP_TAB_MAX_HREF = 2000;
 
+/** Match the whole destination, including parameters persistence does not keep. */
+export function sameAppTabDestination(left: string, right: string): boolean {
+  const canonical = (href: string) => {
+    if (!normalizeAppTabLocation(href)) return null;
+    const url = new URL(href, "https://minddy.invalid");
+    url.searchParams.sort();
+    return url.pathname.replace(/\/$/, "") + url.search + url.hash;
+  };
+  const destination = canonical(left);
+  return destination !== null && destination === canonical(right);
+}
+
 export function normalizeAppTabLocation(raw: unknown): string | null {
   if (typeof raw !== "string" || !raw.startsWith("/") || raw.startsWith("//") ||
       // eslint-disable-next-line no-control-regex -- Reject control characters in stored destinations.

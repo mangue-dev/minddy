@@ -17,8 +17,8 @@ import {
 } from "react";
 import dynamic from "next/dynamic";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
+import { useAppNavigation, useAppRouter } from "@/lib/use-app-router";
+import Link from "@/components/app-link";
 import {
   Button,
   DropdownMenuItem,
@@ -121,7 +121,8 @@ function ProjectBoard() {
   const tProjects = useTranslations("Projects");
   const { pathname, searchParams, projectId: routeProjectId } = useAppTabRoute();
   const projectId = routeProjectId!;
-  const router = useRouter();
+  const router = useAppRouter();
+  const openDestination = useAppNavigation();
   const objectiveParam = searchParams.get("objective");
   const familyParam = searchParams.get("family");
   const issueParam = searchParams.get("issue");
@@ -199,7 +200,7 @@ function ProjectBoard() {
               id: "issue-family-board-current",
               label: tFamily("openHere"),
               icon: <HugeiconsIcon icon={Layout3ColumnIcon} className="size-4" />,
-              onSelect: () => window.history.pushState(null, "", href),
+              onSelect: () => openDestination(href, () => window.history.pushState(null, "", href)),
             },
             {
               id: "issue-family-board-new-tab",
@@ -214,7 +215,7 @@ function ProjectBoard() {
         },
       ];
     },
-    [appTabs, familyParentIds, projectId, searchParams, tFamily],
+    [appTabs, familyParentIds, projectId, searchParams, tFamily, openDestination],
   );
   const buildIssueMenuActions = useCallback(
     (issue: Issue): ContextMenuAction[] => [

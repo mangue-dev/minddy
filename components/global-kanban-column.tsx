@@ -3,7 +3,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon } from "@hugeicons/core-free-icons";
 import { Fragment, memo, useCallback, useMemo, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useAppRouter } from "@/lib/use-app-router";
 import { useDroppable } from "@dnd-kit/core";
 import { cn } from "mangue-ui";
 import { BOARD_COLUMN_CLASS } from "@/lib/board-layout";
@@ -125,7 +125,7 @@ export const GlobalKanbanColumn = memo(function GlobalKanbanColumn({
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: status.value });
   const { ref: fadeRef, scrollProps, edges } = useScrollFade<HTMLDivElement>();
-  const router = useRouter();
+  const router = useAppRouter();
   const t = useTranslations("Board");
   const ts = useTranslations("Status");
 

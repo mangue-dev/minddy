@@ -4,7 +4,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
 import { Add01Icon, CancelCircleIcon as CircleSlash, RepeatIcon, UserIcon } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useState, type SVGProps } from "react";
-import Link from "next/link";
+import Link from "@/components/app-link";
 import { useFormatter, useLocale, useTranslations } from "next-intl";
 import {
   Badge,

@@ -1,7 +1,7 @@
 "use client";
 import type { ReactNode } from "react";
 import { Search01Icon as Search } from "@hugeicons/core-free-icons";
-import Link from "next/link";
+import Link from "@/components/app-link";
 import { cn } from "mangue-ui";
 import { useTranslations } from "next-intl";
 import { AppIcon } from "@/components/icon";

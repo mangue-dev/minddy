@@ -25,7 +25,7 @@ import {
   useState,
   type DragEvent,
 } from "react";
-import Link from "next/link";
+import Link from "@/components/app-link";
 import { useTranslations } from "next-intl";
 import { Button, cn } from "mangue-ui";
 import type { PageSummary } from "@/lib/pages-api";

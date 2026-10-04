@@ -5,7 +5,7 @@ import { AppIcon } from "@/components/icon";
 import { FolderKanbanIcon, TagsIcon, Target01Icon } from "@hugeicons/core-free-icons";
 import type { ReactNode } from "react";
 import { useTranslations } from "next-intl";
-import { useRouter } from "next/navigation";
+import { useAppRouter } from "@/lib/use-app-router";
 import { MentionChip } from "@/components/mention-chip";
 import {
   Tooltip,
@@ -46,7 +46,7 @@ export function WorkLandscape({
   objectives: StatObjectiveBucket[];
 }) {
   const t = useTranslations("Stats");
-  const router = useRouter();
+  const router = useAppRouter();
 
   const projectRows: LandscapeRow[] = projects.map((project) => {
     const seed = project.orbSeed ?? project.id;

@@ -19,6 +19,7 @@ import { hasVisibleOpenDialog } from "@/lib/visible-overlays";
 // display it (the recording status, the conflict banner) and give it
 // the editor, the only surface capable of adopting a merged document.
 
+import { useAppNavigation } from "@/lib/use-app-router";
 import { useAppTabDeparture } from "@/lib/app-tabs-context";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -561,9 +562,16 @@ function PageSurface({
   // `subpage` block in this document. The column makes the truth, the block is
   // a view — and it is here that the view comes back down to the truth.
   const base = pagesHref(projectId);
+  const openDestination = useAppNavigation();
   const openPage = useCallback(
-    (id: string) => onNavigate ? onNavigate(id) : pushPagesHistory(pageHref(projectId, id)),
-    [projectId, onNavigate]
+    (id: string) => {
+      if (onNavigate) onNavigate(id);
+      else {
+        const href = pageHref(projectId, id);
+        openDestination(href, () => pushPagesHistory(href));
+      }
+    },
+    [projectId, onNavigate, openDestination]
   );
 
   const lookup = useMemo<PagesLookup>(
