@@ -1,4 +1,5 @@
 "use client";
+import { useLayoutEffect } from "react";
 import { useWindowButtonsSlot, useWideLayout } from "@/lib/use-window-buttons";
 import { appTopBarNavigationWidth } from "@/lib/app-chrome-layout";
 import { SidebarVisibilityButton } from "./sidebar-visibility-button";
@@ -15,6 +16,16 @@ export function AppTopBar({ hidden, inbox, onSearch, onSearchWarm, onNewTab }: {
   onSearchWarm: () => void;
   onNewTab: () => void;
 }) {
+  // Track bar presence once rather than matching a root :has() on every mutation.
+  useLayoutEffect(() => {
+    const root = document.documentElement;
+    const previous = root.getAttribute("data-app-top-bar");
+    root.setAttribute("data-app-top-bar", "");
+    return () => {
+      if (previous === null) root.removeAttribute("data-app-top-bar");
+      else root.setAttribute("data-app-top-bar", previous);
+    };
+  }, []);
   const native = useWindowButtonsSlot(useWideLayout());
   const width = appTopBarNavigationWidth(hidden);
   return <div className="app-top-bar relative z-40 hidden h-11 shrink-0 items-center bg-sidebar text-sidebar-foreground desktop:flex">

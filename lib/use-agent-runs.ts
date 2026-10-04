@@ -1,6 +1,11 @@
 "use client";
 
+import { useAppTabActive, useAppTabActivation } from "./app-tab-route-context";
+
 import { useQuery, type QueryClient } from "@tanstack/react-query";
+import { useEffect, useRef } from "react";
+import { assertPullRequestReadBudget, pullRequestReadRetry, pullRequestQueryOptions, pullRequestReadState, pullRequestReadPrecedesActivation } from "./pull-request-query";
+import { nextReadActivationSequence } from "./read-activation-sequence";
 import {
   fetchAgentRunApi,
   fetchAgentRunDiffApi,
@@ -9,8 +14,8 @@ import {
   fetchAllPullRequestsApi,
   fetchIssueAgentRunsApi,
   fetchIssueAutomationApi,
+  fetchIssueChainStatusApi,
   fetchOpenPullRequestCountApi,
-  fetchPullRequestApi,
   fetchPullRequestReadinessBatchApi,
   fetchPrCommitDiffApi,
   fetchPullRequestCommentsApi,
@@ -31,7 +36,6 @@ import { DESKTOP_LOCAL_DIFF_PATCH_CAP } from "./desktop/local-run-diff";
 import {
   PULL_REQUEST_SETTLED_POLL_MS,
   pullRequestReadinessBatchRefetchInterval,
-  pullRequestRefetchInterval,
 } from "./pr-readiness-actions";
 
 /** Cache key for agent runs of an issue. */
@@ -72,6 +76,22 @@ export function useIssueAgentRunsQuery(issueId: string | null) {
 /** Ticket automation chain cache key (MIN-147). */
 export function issueChainQueryKey(issueId: string) {
   return ["agent-chain", "issue", issueId] as const;
+}
+
+/** Keep status reads under the same realtime and mutation invalidation prefix. */
+export function issueChainStatusQueryKey(issueId: string) {
+  return [...issueChainQueryKey(issueId), "status"] as const;
+}
+
+export function useIssueChainStatusQuery(issueId: string | null) {
+  const enabled = !!issueId;
+  const { data, isPending } = useQuery({
+    queryKey: issueChainStatusQueryKey(issueId ?? ""),
+    queryFn: () => fetchIssueChainStatusApi(issueId as string),
+    enabled,
+    refetchOnMount: "always",
+  });
+  return { chain: data?.chain ?? null, loading: enabled && isPending };
 }
 
 /**
@@ -169,12 +189,25 @@ export function useAgentRunEventsQuery(runId: string | null, active: boolean) {
  * precisely when the user is looking.
  */
 export function usePullRequestQuery(prId: string, enabled: boolean) {
-  const { data, isPending, refetch, dataUpdatedAt } = useQuery({
-    queryKey: ["pull-request", prId],
-    queryFn: () => fetchPullRequestApi(prId),
+  const active = useAppTabActive();
+  const scopeActivation = useAppTabActivation();
+  enabled = enabled && active;
+  const activation = useRef<{ prId: string; enabled: boolean; sequence: number } | null>(null);
+  if (!activation.current || activation.current.prId !== prId || activation.current.enabled !== enabled || scopeActivation > activation.current.sequence) {
+    activation.current = { prId, enabled, sequence: nextReadActivationSequence() };
+  }
+  const query = useQuery({
+    ...pullRequestQueryOptions(prId),
     enabled,
-    refetchInterval: (query) => pullRequestRefetchInterval(query.state.data),
   });
+  const { data, isPending, refetch, dataUpdatedAt } = query;
+  const activationSequence = activation.current.sequence;
+  // An in-flight hover read may finish after activation but have started before
+  // a near-click remote change. Join it for display, then validate authoritatively.
+  useEffect(() => {
+    if (enabled && data && pullRequestReadPrecedesActivation(data, activationSequence) &&
+        query.fetchStatus === "idle" && !query.isError) void refetch();
+  }, [enabled, data, activationSequence, query.fetchStatus, query.isError, refetch]);
   return {
     pr: data?.pr ?? null,
     /** When the forge GET powering `pr` was RECEIVED — what orders it against
@@ -197,6 +230,7 @@ export function usePullRequestQuery(prId: string, enabled: boolean) {
     readiness: data?.readiness ?? null,
     readinessThreads: data?.reviewThreads ?? null,
     loading: enabled && isPending,
+    readState: pullRequestReadState(query, activationSequence),
     refetch,
   };
 }
@@ -206,7 +240,8 @@ export function usePullRequestReadinessBatchQuery(prIds: readonly string[]) {
   const enabled = sortedPrIds.length > 0;
   const { data, isPending, isError } = useQuery({
     queryKey: ["pull-request-readiness", "batch", sortedPrIds],
-    queryFn: () => fetchPullRequestReadinessBatchApi(sortedPrIds),
+    queryFn: ({ client }) => { assertPullRequestReadBudget(client); return fetchPullRequestReadinessBatchApi(sortedPrIds); },
+    retry: pullRequestReadRetry,
     enabled,
     refetchOnMount: "always",
     refetchInterval: (query) =>
@@ -376,7 +411,8 @@ export function useAllPullRequestsQuery(
 ) {
   const { data, isPending, isFetching, refetch } = useQuery({
     queryKey: allPullRequestsQueryKey(state, limit, pin),
-    queryFn: () => fetchAllPullRequestsApi({ state, limit, pin }),
+    queryFn: ({ client }) => { assertPullRequestReadBudget(client); return fetchAllPullRequestsApi({ state, limit, pin }); },
+    retry: pullRequestReadRetry,
     placeholderData: (previous) => previous,
     refetchOnMount: "always",
     refetchInterval: (query) => {
@@ -485,12 +521,15 @@ export function usePrCommentsQuery(prId: string | null) {
   const enabled = !!prId;
   const { data, isPending, refetch } = useQuery({
     queryKey: ["pr-comments", prId],
+    retry: pullRequestReadRetry,
     queryFn: async ({ client }) => {
+      assertPullRequestReadBudget(client);
       const startedAt = Date.now();
       const data = await fetchPullRequestCommentsApi(prId as string);
       return applyPendingPrReactions(client, ["pr-comments", prId as string], data, startedAt);
     },
     enabled,
+    refetchOnMount: "always",
     refetchInterval: PULL_REQUEST_SETTLED_POLL_MS,
   });
   return {
@@ -517,8 +556,10 @@ export function usePrCommitsQuery(prId: string | null) {
   const enabled = !!prId;
   const { data, isPending, refetch } = useQuery({
     queryKey: ["pr-commits", prId],
-    queryFn: () => fetchPullRequestCommitsApi(prId as string),
+    queryFn: ({ client }) => { assertPullRequestReadBudget(client); return fetchPullRequestCommitsApi(prId as string); },
+    retry: pullRequestReadRetry,
     enabled,
+    refetchOnMount: "always",
     refetchInterval: PULL_REQUEST_SETTLED_POLL_MS,
   });
   return {
@@ -538,7 +579,8 @@ export function usePrCommitDiffQuery(prId: string, sha: string | null) {
   const enabled = !!sha;
   const { data, isPending } = useQuery({
     queryKey: ["pr-commit-diff", prId, sha],
-    queryFn: () => fetchPrCommitDiffApi(prId, sha as string),
+    queryFn: ({ client }) => { assertPullRequestReadBudget(client); return fetchPrCommitDiffApi(prId, sha as string); },
+    retry: pullRequestReadRetry,
     enabled,
   });
   return { diff: data ?? null, loading: enabled && isPending };
@@ -553,12 +595,15 @@ export function usePrReviewCommentsQuery(endpoint: PrEndpoint | null) {
   const enabled = !!endpoint;
   const { data, isPending, refetch } = useQuery({
     queryKey: ["pr-review-comments", endpoint],
+    retry: pullRequestReadRetry,
     queryFn: async ({ client }) => {
+      assertPullRequestReadBudget(client);
       const startedAt = Date.now();
       const data = await fetchPrReviewCommentsApi(endpoint as PrEndpoint);
       return applyPendingPrReactions(client, commentReactionsKey(endpoint as PrEndpoint, "review"), data, startedAt);
     },
     enabled,
+    refetchOnMount: "always",
   });
   // `threads` (MIN-139) travels with the comments: it's the same query, so
   // the same refresh — resolving a thread and replying in it cannot

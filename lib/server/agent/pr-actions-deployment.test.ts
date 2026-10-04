@@ -3,6 +3,42 @@ import { describe, expect, it, vi } from "vitest";
 import { prDetailResponse, type PrScope } from "./pr-actions";
 
 describe("pull request detail deployment", () => {
+  it("starts independent forge reads together while preserving policy-before-checks", async () => {
+    let releaseReviews!: (value: null) => void;
+    let releasePolicy!: (value: unknown) => void;
+    const reviews = new Promise<null>((resolve) => { releaseReviews = resolve; });
+    const policy = new Promise((resolve) => { releasePolicy = resolve; });
+    const listReviews = vi.fn(() => reviews);
+    const getRepositoryMergePolicy = vi.fn(() => policy);
+    const listChecks = vi.fn(async () => ({ checks: [], deploymentUrl: null }));
+    const getPullRequestDeployment = vi.fn(async () => ({ status: "none" }));
+    const listPullRequestFiles = vi.fn(async () => ({ files: [], truncated: false }));
+    const scope = {
+      target: { provider: "gitlab" },
+      call: { token: "token", repoFullName: "acme/app", number: 42 },
+      actor: async () => ({ kind: "unavailable", reason: "notConfigured", login: null }),
+      forge: {
+        getPullRequest: async () => ({ state: "open", base: "main", headSha: "live-head" }),
+        listReviews, getRepositoryMergePolicy, listChecks, getPullRequestDeployment, listPullRequestFiles,
+        listReviewThreads: async () => null,
+      },
+    } as unknown as PrScope;
+    const result = prDetailResponse(scope);
+    await vi.waitFor(() => {
+      expect(listReviews).toHaveBeenCalledOnce();
+      expect(getRepositoryMergePolicy).toHaveBeenCalledOnce();
+      expect(getPullRequestDeployment).toHaveBeenCalledOnce();
+      expect(listPullRequestFiles).toHaveBeenCalledOnce();
+    });
+    expect(listChecks).not.toHaveBeenCalled();
+    releasePolicy({ methods: [], requiredCheckNames: ["build"], checksMustPass: true });
+    await vi.waitFor(() => expect(listChecks).toHaveBeenCalledWith(expect.objectContaining({
+      sha: "live-head", requiredCheckNames: ["build"], checksRequired: true,
+    })));
+    releaseReviews(null);
+    expect((await result).status).toBe(200);
+  });
+
   it("resolves the deployment from the live forge head", async () => {
     const getPullRequestDeployment = vi
       .fn()

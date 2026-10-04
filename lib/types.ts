@@ -127,6 +127,8 @@ export function isPageResource(
 }
 
 export interface Comment {
+  /** An in-memory edit awaiting its canonical server acknowledgement. */
+  optimisticEdit?: boolean;
   delivery?: CommentDelivery;
   id: string;
   /** Exactly one of issue_id / objective_id / feedback_post_id is the parent. */

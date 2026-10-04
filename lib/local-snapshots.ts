@@ -2,6 +2,7 @@ type Slot = "query-cache" | "issue-drafts" | "objective-drafts" | "search-histor
 type Snapshot = { format: "minddy-local-v1"; owner: string; expiresAt: number; ciphertext: string };
 let generation = 0;
 const revisions = new Map<string, number>();
+const pendingOpens = new WeakMap<Storage, Map<string, { raw: string; generation: number; value: Promise<unknown> }>>();
 
 async function request(body: Record<string, unknown>) {
   const response = await fetch("/api/me/local-snapshots", {
@@ -38,7 +39,21 @@ export async function restoreLocalSnapshot(storage: Storage, key: string, slot: 
   const snapshot = JSON.parse(raw) as Snapshot;
   if (snapshot?.format !== "minddy-local-v1") return undefined;
   if (snapshot.expiresAt <= Date.now()) { removeLocalSnapshot(storage, key); return undefined; }
-  const { value } = await request({ operation: "open", slot, snapshot });
+  // Share only a currently authorized operation on identical ciphertext. Never
+  // reuse a completed plaintext result or cross storage/account generations.
+  let opens = pendingOpens.get(storage);
+  if (!opens) { opens = new Map(); pendingOpens.set(storage, opens); }
+  const identity = `${slot}:${key}`;
+  let pending = opens.get(identity);
+  if (!pending || pending.raw !== raw || pending.generation !== started) {
+    const entry = { raw, generation: started, value: request({ operation: "open", slot, snapshot }).then(({ value }) => value) };
+    opens.set(identity, entry);
+    void entry.value.finally(() => {
+      if (opens.get(identity) === entry) opens.delete(identity);
+    }).catch(() => {});
+    pending = entry;
+  }
+  const value = await pending.value;
   if (started !== generation || revisions.get(key) !== revision || storage.getItem(key) !== raw) return undefined;
   return value;
 }

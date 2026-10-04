@@ -25,6 +25,8 @@ describe("desktop drag band", () => {
 
   it("keeps creation controls non-draggable below the application bar", () => {
     expect(styles.includes('.sidebar-brand-row { -webkit-app-region: no-drag; }')).toBe(true);
-    expect(styles.includes('html[data-desktop-app]:has(.app-top-bar) .desktop-drag-band { display: none; }')).toBe(true);
+    expect(styles.includes('html[data-desktop-app][data-app-top-bar] .desktop-drag-band { display: none; }')).toBe(true);
+    expect(styles).toContain('html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-band');
+    expect(styles).not.toContain(':has(.app-top-bar)');
   });
 });

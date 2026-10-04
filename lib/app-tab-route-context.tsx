@@ -8,10 +8,15 @@ export interface AppTabRouteSnapshot {
   search: string;
   projectId: string | null;
 }
+const ActiveContext = createContext(true);
+const ActivationContext = createContext(0);
+export const useAppTabActivation = () => useContext(ActivationContext);
+export const useAppTabActive = () => useContext(ActiveContext);
+
 const Context = createContext<AppTabRouteSnapshot | null>(null);
 
-export function AppTabRouteProvider({ route, children }: { route: AppTabRouteSnapshot; children: ReactNode }) {
-  return <Context.Provider value={route}>{children}</Context.Provider>;
+export function AppTabRouteProvider({ route, children, active = true, activationSequence = 0 }: { route: AppTabRouteSnapshot; children: ReactNode; active?: boolean; activationSequence?: number }) {
+  return <ActivationContext.Provider value={activationSequence}><ActiveContext.Provider value={active}><Context.Provider value={route}>{children}</Context.Provider></ActiveContext.Provider></ActivationContext.Provider>;
 }
 
 function LiveRoute({ children }: { children: ReactNode }) {

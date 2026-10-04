@@ -2,10 +2,12 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
 import { Add01Icon, Alert01Icon, ArrowLeft01Icon, ArrowRight01Icon, ArrowUp01Icon, Cancel01Icon, CancelCircleIcon as Ban, Clock01Icon, Copy01Icon, Delete02Icon, FilterIcon, GitMergeIcon, GlobeIcon, LanguageCircleIcon, Link02Icon, LockIcon, MessageMultiple01Icon, MoreHorizontalIcon, SentIcon, Shield01Icon, SparklesIcon, CheckIcon, Undo02Icon } from "@hugeicons/core-free-icons";
+import { feedbackQueryOptions } from "@/lib/feedback-query";
 import { useAppTabChange } from "@/lib/use-app-tab-change";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { usePathname, useParams, useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
+import { AppTabRouteBoundary, useAppTabRoute } from "@/lib/app-tab-route-context";
 import Link from "next/link";
 import { useLocale, useNow, useTranslations, useFormatter } from "next-intl";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
@@ -34,7 +36,7 @@ import {
   cn,
   toast,
 } from "mangue-ui";
-// (ChevronUp sert au compteur de voix des posts)
+// ChevronUp renders the post vote count.
 import { EmptyScene } from "@/components/empty-scene";
 import { AppContentHeader } from "@/components/app-content-header";
 import { FeedbackSetupWizard } from "@/components/feedback/feedback-setup-wizard";
@@ -769,6 +771,10 @@ function FeedbackRow({
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export function FeedbackTeamPage() {
+  return <AppTabRouteBoundary><FeedbackTeamPageInner /></AppTabRouteBoundary>;
+}
+
+function FeedbackTeamPageInner() {
   const t = useTranslations("FeedbackBoard");
   const tCommon = useTranslations("Common");
   const format = useFormatter();
@@ -776,12 +782,10 @@ export function FeedbackTeamPage() {
   // Mounts with the page: warm the deferred editor chunk once painted, so a
   // team reply never waits on tiptap (markdown-editor-lazy.tsx).
   useIdleMarkdownEditorPreload();
-  const params = useParams<{ id: string }>();
-  const projectId = params.id;
-  const searchParams = useSearchParams();
+  const { projectId: routeProjectId, pathname, searchParams } = useAppTabRoute();
+  const projectId = routeProjectId!;
   const postParam = searchParams.get("post");
   const router = useRouter();
-  const pathname = usePathname();
   const { projects } = useProjects();
   const project = projects.find((p) => p.id === projectId);
   const queryClient = useQueryClient();
@@ -791,11 +795,7 @@ export function FeedbackTeamPage() {
   const [setupOpen, setSetupOpen] = useState(false);
 
   const { data: listData, isPending } = useQuery({
-    queryKey: ["feedback", projectId],
-    queryFn: () =>
-      api<{ posts: TeamFeedbackListItem[]; board_enabled: boolean }>(
-        `/api/projects/${projectId}/feedback`
-      ),
+    ...feedbackQueryOptions(projectId),
   });
   const posts = useMemo(() => listData?.posts ?? [], [listData]);
   const boardEnabled = listData?.board_enabled ?? false;

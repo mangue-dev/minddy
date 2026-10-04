@@ -82,9 +82,9 @@ async function json<T>(response: Response, fallback: string): Promise<T> {
 }
 
 /** All living pages of the project, flat (`buildPageTree` makes the tree). */
-export async function fetchPagesApi(projectId: string): Promise<PageSummary[]> {
+export async function fetchPagesApi(projectId: string, signal?: AbortSignal): Promise<PageSummary[]> {
   return json(
-    await fetch(`/api/projects/${projectId}/pages`),
+    await fetch(`/api/projects/${projectId}/pages`, { signal }),
     "Request failed"
   );
 }

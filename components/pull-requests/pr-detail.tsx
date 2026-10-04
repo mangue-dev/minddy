@@ -655,6 +655,7 @@ export function PrDetail({
     mergePolicy,
     readiness,
     loading,
+    readState,
     refetch: refetchPr,
   } = usePullRequestQuery(item.prId, true);
   const {
@@ -1981,6 +1982,7 @@ export function PrDetail({
                 acting={maintenanceAction}
                 onAction={(blocker) => void handleReadinessAction(blocker)}
                 canMerge={!!canWrite}
+                authorityReady={readState === "fresh"}
                 merging={acting === "merge" || isWorking}
                 onMerge={openMergeConfirmation}
                 mergeFlowActive={mergeFlowOverride ?? !!pr?.mergeFlowActive}
@@ -2097,6 +2099,14 @@ export function PrDetail({
           {/* The only place to say which Git account is in use (MIN-144).
               It stays silent when everything is configured correctly. */}
           {!loading ? <PrViewerCallout viewer={viewer} repoUrl={pr?.url} /> : null}
+
+          {readState !== "fresh" ? (
+            <div role="status" data-testid="pr-read-state" data-read-state={readState}
+              className="flex items-center gap-2 text-sm text-muted-foreground">
+              <span>{t(readState === "error" ? "readFailed" : readState === "paused" ? "readPaused" : loading ? "readLoading" : "readRefreshing")}</span>
+              {readState === "error" ? <Button variant="ghost" size="sm" onClick={() => void refetchPr()}>{t("readRetry")}</Button> : null}
+            </div>
+          ) : null}
 
           {/* Quick-glance cards: every condition that stands between this PR
               and the merge, each in its own color, each with its own quick

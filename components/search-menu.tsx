@@ -82,6 +82,8 @@ export type SearchMenuProps = {
   container?: HTMLElement | null;
   /** Stop pointer/click from bubbling to a draggable/clickable ancestor. */
   stopPropagation?: boolean;
+  /** Rich boards keep closed popovers unmounted while retaining their trigger. */
+  deferTrigger?: boolean;
   /** cmdk groups/items (each caller wraps its options in a CommandGroup). */
   children: React.ReactNode;
 };
@@ -104,9 +106,12 @@ export function SearchMenu({
   contentClassName,
   container,
   stopPropagation,
+  deferTrigger,
   children,
 }: SearchMenuProps) {
   const t = useTranslations("Picker");
+  const triggerNode = React.useRef<HTMLElement | null>(null);
+  const virtualAnchor = React.useRef({ getBoundingClientRect: () => triggerNode.current?.getBoundingClientRect() ?? new DOMRect() });
   const stop = stopPropagation
     ? (e: React.SyntheticEvent) => e.stopPropagation()
     : undefined;
@@ -119,6 +124,10 @@ export function SearchMenu({
       className={cn("w-60 overflow-hidden rounded-xl p-0", contentClassName)}
       onClick={stop}
       onPointerDown={stop}
+      onCloseAutoFocus={deferTrigger ? (event) => {
+        event.preventDefault();
+        triggerNode.current?.focus();
+      } : undefined}
     >
       <Command shouldFilter={shouldFilter}>
         <DropdownSearchRow>
@@ -154,6 +163,41 @@ export function SearchMenu({
         {content}
       </Popover>
     );
+  }
+
+  if (deferTrigger && React.isValidElement<React.HTMLAttributes<HTMLElement> & { ref?: React.Ref<HTMLElement>; "data-state"?: string }>(trigger)) {
+    const props = trigger.props;
+    return <Tooltip open={tooltip ? undefined : false}>
+      <TooltipTrigger asChild>{React.cloneElement(trigger, {
+        ref: (node) => {
+          triggerNode.current = node;
+          if (typeof props.ref === "function") props.ref(node);
+          else if (props.ref) props.ref.current = node;
+        },
+        "aria-haspopup": "dialog",
+        "aria-expanded": open,
+        "data-state": open ? "open" : "closed",
+        onClick: (event) => {
+          props.onClick?.(event);
+          if (!event.defaultPrevented) onOpenChange(!open);
+        },
+        onKeyDown: (event) => {
+          props.onKeyDown?.(event);
+          if (!event.defaultPrevented && event.key === "ArrowDown") {
+            event.preventDefault();
+            onOpenChange(true);
+          }
+        },
+      })}</TooltipTrigger>
+      {open && <Popover open onOpenChange={onOpenChange} modal={modal}>
+        <PopoverAnchor virtualRef={virtualAnchor} />
+        {content}
+      </Popover>}
+      <TooltipContent className="flex items-center gap-1.5">
+        {tooltip}
+        {shortcutHint && <Kbd size="sm">{shortcutHint}</Kbd>}
+      </TooltipContent>
+    </Tooltip>;
   }
 
   // Trigger-anchored mode.

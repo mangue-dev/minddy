@@ -746,6 +746,12 @@
     "deleteConfirm": "{count, plural, one {Déplacer # ticket vers la corbeille ?} other {Déplacer # tickets vers la corbeille ?}}"
   },
   "Board": {
+    "readLoading": "Chargement du tableau…",
+    "readError": "Impossible de charger le tableau.",
+    "readRefreshing": "Mise à jour du tableau… Données précédentes affichées.",
+    "readPaused": "Mise à jour du tableau en pause. Reconnectez-vous pour actualiser.",
+    "readPreviousError": "Impossible de mettre à jour le tableau. Données précédentes affichées.",
+    "readRetry": "Réessayer",
     "viewCreated": "Vue « {name} » créée.",
     "viewUpdated": "Vue mise à jour.",
     "needOneView": "Vous devez garder au moins une vue.",
@@ -3237,6 +3243,12 @@
     "duplicate": "Doublon"
   },
   "Timeline": {
+    "readLoading": "Chargement de l’activité…",
+    "readRefreshing": "Actualisation de l’activité… Données précédentes affichées.",
+    "readPaused": "Actualisation de l’activité en pause. Reconnectez-vous pour actualiser.",
+    "readPreviousError": "Impossible d’actualiser l’activité. Données précédentes affichées.",
+    "readError": "Impossible de charger l’activité.",
+    "readRetry": "Réessayer",
     "activity": "Activité",
     "noActivity": "Aucune activité pour l'instant.",
     "eventsCount": "{count, plural, one {# événement} other {# événements}}",
@@ -3682,6 +3694,11 @@
     "sessionDeleted": "Conversation supprimée"
   },
   "PullRequests": {
+    "readLoading": "Chargement de la pull request…",
+    "readRefreshing": "Données précédentes affichées. Recherche de mises à jour…",
+    "readFailed": "Impossible d’actualiser cette pull request. Réessayez.",
+    "readPaused": "Vous êtes hors ligne. Données précédentes affichées.",
+    "readRetry": "Réessayer",
     "title": "Code reviews",
     "emptyState": "Aucune pull request dans ces filtres",
     "emptyOpen": "Aucune pull request ouverte",

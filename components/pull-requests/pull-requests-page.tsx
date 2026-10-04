@@ -4,7 +4,8 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, FilterIcon, GitPullRequestIcon, Link02Icon } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
+import { AppTabRouteBoundary, useAppTabRoute } from "@/lib/app-tab-route-context";
 import { useFormatter, useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -424,6 +425,10 @@ function PrGroupRows({
 }
 
 export function PullRequestsPage() {
+  return <AppTabRouteBoundary><PullRequestsPageInner /></AppTabRouteBoundary>;
+}
+
+function PullRequestsPageInner() {
   const t = useTranslations("PullRequests");
   const tProjects = useTranslations("Projects");
   const tCommon = useTranslations("Common");
@@ -437,7 +442,7 @@ export function PullRequestsPage() {
   // Both preselect the PR. The status filter is widened ONCE, when the loaded
   // target turns out to be invisible in the default “open” lens — after that
   // the lens the reader picks is the master rule.
-  const searchParams = useSearchParams();
+  const { searchParams } = useAppTabRoute();
   const runParam = searchParams.get("run");
   const prParam = searchParams.get("pr");
   const deepLink = prParam ?? runParam;

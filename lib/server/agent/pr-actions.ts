@@ -33,6 +33,7 @@ import { forcedToolCall } from "@/lib/server/feedback/forced-tool-call";
 import { getAppConfigValues } from "@/lib/server/app-config";
 import { modelConfigKeys, resolveFromValues } from "@/lib/server/model-config";
 import { forgeFor, isForgeApiError, type Forge, type MergeMethod } from "./forge";
+import { withGithubReadScope } from "./github-read-flight";
 import { encodePullRequestContent, shouldEncryptPullRequestContent } from
   "./pull-request-content";
 import {
@@ -146,6 +147,8 @@ export interface PrScope {
 export async function resolvePrScope(
   userId: string,
   pr: PullRequestRow,
+  shareReads = false,
+  readNotBefore = performance.now(),
 ): Promise<PrScope | null> {
   const provider = rowProvider(pr);
   const target = await resolveRepoCloneTargetForRepo({
@@ -155,11 +158,30 @@ export async function resolvePrScope(
   });
   if (!target) return null;
 
+  const forge = forgeFor(target.provider);
+  const scopedForge = { ...forge };
+  // Only GET routes share reads. Sensitive mutation decisions use the original
+  // forge and perform fresh reads even when a display request is in flight.
+  if (shareReads && target.provider === "github") {
+    const identity = [userId, target.provider, target.linkId, target.connectionId,
+      target.externalRepoId, target.repoFullName];
+    const methods = ["getPullRequest", "getRepositoryMergePolicy", "listPullRequestFiles",
+      "listReviews", "listReviewThreads", "listChecks", "getPullRequestDeployment",
+      "listPullRequestComments", "listTimeline", "listPullRequestCommits",
+      "listPullRequestCommitExtras", "listPullRequestReviewComments",
+      "listReviewCommentReactions", "listConversationReactions"] as const;
+    for (const name of methods) {
+      const method = forge[name] as (...args: unknown[]) => unknown;
+      Object.assign(scopedForge, { [name]: (...args: unknown[]) =>
+        withGithubReadScope(identity, () => method.apply(forge, args), readNotBefore) });
+    }
+  }
+
   let pending: Promise<ForgeActor> | null = null;
   return {
     pr,
     target,
-    forge: forgeFor(target.provider),
+    forge: shareReads ? scopedForge : forge,
     call: { token: target.token, repoFullName: target.repoFullName, number: pr.number },
     // NEVER rejects: a resolution failure is worth “no account” (so
     // a 403 which invites you to reconnect, or a banner), never a 500 which
@@ -252,13 +274,14 @@ export async function authorizePrRequest(
   request: NextRequest,
   prId: string,
 ): Promise<PrRequestAuth> {
+  const readNotBefore = performance.now();
   const auth = await getAuthedUser(request);
   if (!auth.ok) return { ok: false, response: auth.response };
 
   const pr = await findPullRequest(prId);
   if (!pr) return { ok: false, response: prNotFound() };
 
-  const scope = await resolvePrScope(auth.user.id, pr);
+  const scope = await resolvePrScope(auth.user.id, pr, request.method === "GET", readNotBefore);
   if (!scope) return { ok: false, response: prNotFound() };
   // Keep the authenticated client: its RLS is the guard when an action touches a
   // table beyond the PR. Manual ticket linking (MIN-163) rereads the ticket with
@@ -283,6 +306,7 @@ export async function authorizeRunPrRequest(
   request: NextRequest,
   runId: string,
 ): Promise<PrRequestAuth | { ok: false; noPr: true; response: NextResponse }> {
+  const readNotBefore = performance.now();
   const auth = await getAuthedUser(request);
   if (!auth.ok) return { ok: false, response: auth.response };
 
@@ -300,7 +324,7 @@ export async function authorizeRunPrRequest(
     };
   }
 
-  const scope = await resolvePrScope(auth.user.id, pr);
+  const scope = await resolvePrScope(auth.user.id, pr, request.method === "GET", readNotBefore);
   if (!scope) return { ok: false, response: prNotFound() };
   return { ok: true, scope, userId: auth.user.id, supabase: auth.supabase };
 }
@@ -325,10 +349,12 @@ export function forgeErrorResponse(err: unknown): NextResponse {
             : err.status === 422
               ? "forgeRejected"
               : "forgeUnavailable";
-  const status = err.status === 401 || err.status === 403 || err.status === 404 || err.status === 409
+  const status = err.status === 401 || err.status === 403 || err.status === 404 || err.status === 409 || err.status === 429
     ? err.status
     : 502;
-  return NextResponse.json({ error: err.message, code }, { status });
+  const retryAfter = "retryAfter" in err && typeof err.retryAfter === "string" ? err.retryAfter : null;
+  return NextResponse.json({ error: err.message, code }, { status,
+    ...(retryAfter ? { headers: { "Retry-After": retryAfter } } : {}) });
 }
 
 // ── Detail ───────────────────────────────── ──────────────────────────────────
@@ -433,38 +459,42 @@ async function readPullRequestReadiness(
   pr: PullRequestRef,
 ): Promise<PullRequestReadinessResult> {
   const { forge, call } = scope;
-  const [reviews, reviewThreads, viewer] = await Promise.all([
+  // Policy and its dependent checks do not depend on reviews or actor lookup.
+  const policyAndChecks = async () => {
+    let mergePolicy: RepositoryMergePolicy;
+    try {
+      mergePolicy = pr.base
+        ? await forge.getRepositoryMergePolicy({ ...call, base: pr.base })
+        : unavailableMergePolicy(scope.target.provider, "unknown");
+    } catch (error) {
+      mergePolicy = unavailableMergePolicy(
+        scope.target.provider,
+        isForgeApiError(error) && error.status === 403 ? "forbidden" : "unknown",
+      );
+    }
+
+    let checks: ChecksSummary | null = null;
+    let checksError: "forbidden" | "unknown" | null = null;
+    if (pr.headSha) {
+      try {
+        checks = await forge.listChecks({
+          ...call,
+          sha: pr.headSha,
+          requiredCheckNames: mergePolicy.requiredCheckNames,
+          checksRequired: mergePolicy.checksMustPass,
+        });
+      } catch (error) {
+        checksError = isForgeApiError(error) && error.status === 403 ? "forbidden" : "unknown";
+      }
+    }
+    return { mergePolicy, checks, checksError };
+  };
+  const [reviews, reviewThreads, viewer, { mergePolicy, checks, checksError }] = await Promise.all([
     forge.listReviews(call).catch(() => null),
     forge.listReviewThreads(call).catch(() => null),
     resolveViewer(scope),
+    policyAndChecks(),
   ]);
-
-  let mergePolicy: RepositoryMergePolicy;
-  try {
-    mergePolicy = pr.base
-      ? await forge.getRepositoryMergePolicy({ ...call, base: pr.base })
-      : unavailableMergePolicy(scope.target.provider, "unknown");
-  } catch (error) {
-    mergePolicy = unavailableMergePolicy(
-      scope.target.provider,
-      isForgeApiError(error) && error.status === 403 ? "forbidden" : "unknown",
-    );
-  }
-
-  let checks: ChecksSummary | null = null;
-  let checksError: "forbidden" | "unknown" | null = null;
-  if (pr.headSha) {
-    try {
-      checks = await forge.listChecks({
-        ...call,
-        sha: pr.headSha,
-        requiredCheckNames: mergePolicy.requiredCheckNames,
-        checksRequired: mergePolicy.checksMustPass,
-      });
-    } catch (error) {
-      checksError = isForgeApiError(error) && error.status === 403 ? "forbidden" : "unknown";
-    }
-  }
 
   const baseReadiness = reducePullRequestReadiness({
     state: pr.state === "closed" ? "closed" : "open",
@@ -511,7 +541,7 @@ async function readPullRequestReadiness(
 /**
  * GET details: PR metadata + files/patches + CI checks + approvals +
  * merge methods offered by the forge, and what the reader has the right to do there
- * faire (`viewer`).
+ * perform (`viewer`).
  *
  * Readings remain on the INSTALLATION token: any member of the project
  * minddy continues to SEE the PR even without a git account connected. Only the
@@ -521,38 +551,31 @@ export async function prDetailResponse(scope: PrScope): Promise<NextResponse> {
   const { forge, call } = scope;
   try {
     const pr = await forge.getPullRequest(call);
-    const [diff, readinessData] = await Promise.all([
+    const [diff, readinessData, outcome] = await Promise.all([
       forge.listPullRequestFiles(call),
       readPullRequestReadiness(scope, pr),
+      // Deployment is tied to the live head, independent of files and checks.
+      pr.headSha ? forge.getPullRequestDeployment({
+        token: call.token,
+        repoFullName: call.repoFullName,
+        number: call.number,
+        branch: pr.headFromBaseRepository ? pr.head : undefined,
+        sha: pr.headSha,
+      }).catch(() => {
+        console.error("[pr-actions] deployment_unreadable");
+        return null;
+      }) : Promise.resolve(null),
     ]);
     const files = diff.files;
     let deploymentUrl = readinessData.checks?.deploymentUrl ?? null;
     let deploymentDurationMs: number | null = null;
     let deploymentStatus: DeploymentOutcome["status"] | null = null;
     let deploymentStartedAt: string | null = null;
-    if (pr.headSha) {
-      try {
-        // One read either way: the lifecycle of the head environment —
-        // settled (its URL and duration), still running, or nothing to show.
-        const outcome = await forge.getPullRequestDeployment({
-          token: call.token,
-          repoFullName: call.repoFullName,
-          number: call.number,
-          branch: pr.headFromBaseRepository ? pr.head : undefined,
-          sha: pr.headSha,
-        });
-        if (outcome.status !== "none") {
-          deploymentUrl ??= outcome.url;
-          deploymentStatus = outcome.status;
-        }
-        if (outcome.status === "success") {
-          deploymentDurationMs = outcome.durationMs;
-        } else if (outcome.status === "in_progress") {
-          deploymentStartedAt = outcome.startedAt;
-        }
-      } catch {
-        console.error("[pr-actions] deployment_unreadable");
-      }
+    if (outcome && outcome.status !== "none") {
+      deploymentUrl ??= outcome.url;
+      deploymentStatus = outcome.status;
+      if (outcome.status === "success") deploymentDurationMs = outcome.durationMs;
+      else if (outcome.status === "in_progress") deploymentStartedAt = outcome.startedAt;
     }
 
     return NextResponse.json({
@@ -596,6 +619,7 @@ export async function prReadinessBatchResponse(
   userId: string,
   prIds: readonly string[],
 ): Promise<NextResponse> {
+  const readNotBefore = performance.now();
   const readiness: Record<string, PullRequestReadiness> = {};
   const unavailablePrIds: string[] = [];
   let nextIndex = 0;
@@ -605,7 +629,7 @@ export async function prReadinessBatchResponse(
       const prId = prIds[nextIndex++];
       try {
         const pr = await findPullRequest(prId);
-        const scope = pr ? await resolvePrScope(userId, pr) : null;
+        const scope = pr ? await resolvePrScope(userId, pr, true, readNotBefore) : null;
         if (!pr || !scope) {
           unavailablePrIds.push(prId);
           continue;
@@ -645,17 +669,19 @@ export async function prReadinessBatchResponse(
  */
 export async function prCommitsResponse(scope: PrScope): Promise<NextResponse> {
   try {
-    const { commits, truncated } = await scope.forge.listPullRequestCommits(scope.call);
     // The weight of each commit AND its authors come from a second call (no
     // forge does not serve them with the list). Best effort: without it, the list is displayed
     // as is, only the +/− flag is missing — the diff of a commit remains
     // openable, and it bears its own numbers.
-    const extras = await scope.forge
+    const [{ commits, truncated }, extras] = await Promise.all([
+      scope.forge.listPullRequestCommits(scope.call),
+      scope.forge
       .listPullRequestCommitExtras(scope.call)
       .catch(() => {
         console.error("[pr-actions] commit_extras_unreadable");
         return new Map<string, CommitExtras>();
-      });
+      }),
+    ]);
     return NextResponse.json({
       commits: commits.map((c) => {
         const e = extras.get(c.sha);

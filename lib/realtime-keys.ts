@@ -83,30 +83,37 @@ const ISSUE_AGGREGATE_KEYS: Invalidation[] = [
 
 const active = (key: QueryKey): Invalidation => ({ key, refetch: "active" });
 
+/** Metadata triggers can project DELETE's NEW row into a non-null empty record. */
+function routingRecord(change: BroadcastChange): Record<string, unknown> | null {
+  return change.operation === "DELETE"
+    ? change.old_record ?? change.record
+    : change.record ?? change.old_record;
+}
+
 function issueIdOf(change: BroadcastChange): string | null {
-  const issueId = (change.record ?? change.old_record)?.issue_id;
+  const issueId = routingRecord(change)?.issue_id;
   return typeof issueId === "string" ? issueId : null;
 }
 
 /** The ROUTINE of a broadcast run (MIN-185), when he wears one. */
 function routineIdOf(change: BroadcastChange): string | null {
-  const routineId = (change.record ?? change.old_record)?.routine_id;
+  const routineId = routingRecord(change)?.routine_id;
   return typeof routineId === "string" ? routineId : null;
 }
 
 function objectiveIdOf(change: BroadcastChange): string | null {
-  const objectiveId = (change.record ?? change.old_record)?.objective_id;
+  const objectiveId = routingRecord(change)?.objective_id;
   return typeof objectiveId === "string" ? objectiveId : null;
 }
 
 function feedbackPostIdOf(change: BroadcastChange): string | null {
-  const postId = (change.record ?? change.old_record)?.feedback_post_id;
+  const postId = routingRecord(change)?.feedback_post_id;
   return typeof postId === "string" ? postId : null;
 }
 
 /** The PAGE of an activity line (MIN-278) — the fourth parent of an event. */
 function pageIdOf(change: BroadcastChange): string | null {
-  const pageId = (change.record ?? change.old_record)?.page_id;
+  const pageId = routingRecord(change)?.page_id;
   return typeof pageId === "string" ? pageId : null;
 }
 

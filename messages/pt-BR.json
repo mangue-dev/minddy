@@ -746,6 +746,12 @@
     "deleteConfirm": "{count, plural, one {Mover # problema para a lixeira?} other {Mover # problemas para a lixeira?}}"
   },
   "Board": {
+    "readLoading": "Carregando quadro…",
+    "readError": "Não foi possível carregar o quadro.",
+    "readRefreshing": "Atualizando quadro… Os dados anteriores são exibidos.",
+    "readPaused": "Atualização do quadro pausada. Reconecte para atualizar.",
+    "readPreviousError": "Não foi possível atualizar o quadro. Os dados anteriores são exibidos.",
+    "readRetry": "Tentar novamente",
     "viewCreated": "Visualização “{name}” criada.",
     "viewUpdated": "Visualização atualizada.",
     "needOneView": "Você precisa manter pelo menos uma visualização.",
@@ -3237,6 +3243,12 @@
     "duplicate": "Duplicar"
   },
   "Timeline": {
+    "readLoading": "Carregando atividade…",
+    "readRefreshing": "Atualizando atividade… Exibindo os dados anteriores.",
+    "readPaused": "Atualizações pausadas. Reconecte-se para atualizar a atividade.",
+    "readPreviousError": "Não foi possível atualizar a atividade. Exibindo os dados anteriores.",
+    "readError": "Não foi possível carregar a atividade.",
+    "readRetry": "Tentar novamente",
     "activity": "Atividade",
     "noActivity": "Nenhuma atividade ainda.",
     "eventsCount": "{count, plural, one {# evento} other {# eventos}}",
@@ -3682,6 +3694,11 @@
     "sessionDeleted": "Conversa excluída"
   },
   "PullRequests": {
+    "readLoading": "Carregando pull request…",
+    "readRefreshing": "Mostrando dados anteriores. Buscando atualizações…",
+    "readFailed": "Não foi possível atualizar esta pull request. Tente novamente.",
+    "readPaused": "Você está offline. Mostrando dados anteriores.",
+    "readRetry": "Tentar novamente",
     "title": "Revisões de código",
     "emptyState": "Nenhum pull request corresponde a esses filtros",
     "emptyOpen": "Nenhum pull request aberto",

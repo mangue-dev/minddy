@@ -68,3 +68,29 @@ it("keeps ordinary field menus non-modal by default", async () => {
   expect(document.querySelector("[data-floating-surface]")).not.toBeNull();
   expect(document.body.hasAttribute("data-scroll-locked")).toBe(false);
 });
+
+it("keeps a deferred trigger's DOM and focus through keyboard opening and Escape", async () => {
+  function Deferred() {
+    const [open, setOpen] = React.useState(false);
+    return React.createElement(SearchMenu, {
+      open, onOpenChange: setOpen, deferTrigger: true,
+      trigger: React.createElement("button", null, "Priority"),
+      children: React.createElement("div", null, "Urgent"),
+    });
+  }
+  await act(() => root.render(React.createElement(Deferred)));
+  const trigger = host.querySelector("button")!;
+  trigger.focus();
+  expect(trigger.getAttribute("aria-expanded")).toBe("false");
+  expect(document.querySelector('[data-floating-surface]')).toBeNull();
+  await act(() => trigger.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true })));
+  expect(host.querySelector("button")).toBe(trigger);
+  expect(trigger.getAttribute("aria-expanded")).toBe("true");
+  const menu = document.querySelector('[data-floating-surface]')!;
+  expect(menu).not.toBeNull();
+  await act(() => menu.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })));
+  await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
+  expect(host.querySelector("button")).toBe(trigger);
+  expect(document.activeElement).toBe(trigger);
+  expect(trigger.getAttribute("aria-expanded")).toBe("false");
+});

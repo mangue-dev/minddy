@@ -35,6 +35,8 @@ import type { AgentDelegationResult } from "./server/agent/agent-contract";
  */
 export class ApiError extends Error {
   code?: string;
+  status?: number;
+  retryAt?: number;
   /**
    * Structured detail that the raw message does not carry — today the
    * `modelLimit` of a refusal `modelAbovePlan` (model, multiplier, ceiling,
@@ -68,7 +70,15 @@ async function parseJson<T>(response: Response): Promise<T> {
       modelLimit?: Record<string, unknown>;
     } | null;
     const message = payload?.error || text.trim() || "Request failed";
-    throw new ApiError(message, payload?.code, payload?.modelLimit);
+    const error = new ApiError(message, payload?.code, payload?.modelLimit);
+    error.status = response.status;
+    const retryAfter = response.headers.get("retry-after");
+    if (retryAfter) {
+      const seconds = Number(retryAfter);
+      const retryAt = Number.isFinite(seconds) ? Date.now() + Math.max(0, seconds) * 1000 : Date.parse(retryAfter);
+      if (Number.isFinite(retryAt)) error.retryAt = retryAt;
+    }
+    throw error;
   }
   return data as T;
 }
@@ -256,6 +266,13 @@ export async function fetchIssueAutomationApi(
   issueId: string,
 ): Promise<IssueAutomationState> {
   return parseJson(await fetch(`/api/issues/${issueId}/automation`));
+}
+
+/** Fetch the live chain without calculating an unused launch estimate. */
+export async function fetchIssueChainStatusApi(
+  issueId: string,
+): Promise<Pick<IssueAutomationState, "chain">> {
+  return parseJson(await fetch(`/api/issues/${issueId}/automation?view=chain`));
 }
 
 /**
@@ -638,8 +655,9 @@ export interface PullRequestFile {
 
 export async function fetchPullRequestApi(
   prId: string,
+  signal?: AbortSignal,
 ): Promise<AgentRunPrResponse> {
-  return parseJson(await fetch(`/api/pull-requests/${prId}`));
+  return parseJson(await fetch(`/api/pull-requests/${prId}`, { signal, cache: "no-store" }));
 }
 
 export interface PullRequestReadinessResponse {

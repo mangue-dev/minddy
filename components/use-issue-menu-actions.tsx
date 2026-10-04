@@ -29,13 +29,18 @@ export interface IssueMenuOptions {
 
 /** One action factory for card context menus and sidebar More menus. */
 export function useIssueMenuActions() {
+  const router = useRouter();
+  return useIssueMenuActionsWithNavigation(router.push);
+}
+
+/** Build card actions without subscribing every card to Next route changes. */
+export function useIssueMenuActionsWithNavigation(navigate: (href: string) => void) {
   const t = useTranslations("IssueUI");
   const tAgent = useTranslations("Agent");
   const tRel = useTranslations("Relations");
   const tCommon = useTranslations("Common");
   const tAction = useTranslations("CommandPaletteActions");
   const tPr = useTranslations("PullRequests");
-  const router = useRouter();
   const appTabs = useOptionalAppTabSession();
   const { isPending, mutate } = useUnlinkPullRequestIssue();
 
@@ -66,7 +71,7 @@ export function useIssueMenuActions() {
                   id: "open-pr-current-tab",
                   label: tAction("openInCurrentTab"),
                   icon: <HugeiconsIcon icon={ArrowRight01Icon} className="size-4" />,
-                  onSelect: () => router.push(`/pull-requests?pr=${pr.prId}`),
+                  onSelect: () => navigate(`/pull-requests?pr=${pr.prId}`),
                 },
                 {
                   id: "open-pr-new-tab",
@@ -165,5 +170,5 @@ export function useIssueMenuActions() {
           ]
         : []),
     ];
-  }, [t, tAgent, tRel, tCommon, tAction, tPr, router, appTabs, isPending, mutate]);
+  }, [t, tAgent, tRel, tCommon, tAction, tPr, navigate, appTabs, isPending, mutate]);
 }

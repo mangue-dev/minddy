@@ -49,13 +49,13 @@ function queryResult(data: unknown) {
   return query;
 }
 
-function service(commentInsert: { data: unknown; error: unknown }) {
+function service(commentInsert: { data: unknown; error: unknown }, owner = "owner-1") {
   return {
     from(table: string) {
       if (table === "issues") {
         return queryResult({
           project_id: "project-1",
-          created_by: "owner-1",
+          created_by: owner,
           assignee_id: null,
         });
       }
@@ -132,5 +132,30 @@ describe("comment reply and root deletion races", () => {
       expect.anything(),
       resources,
     );
+  });
+});
+
+
+describe("issue comment notification recipients", () => {
+  beforeEach(() => { vi.clearAllMocks(); mocks.parseResourcesInput.mockReturnValue([]); });
+  it("skips recipient lookup for a self-only comment after enforcing project access", async () => {
+    mocks.insertAttachments.mockResolvedValue([]);
+    mocks.getServiceClient.mockReturnValue(service({ data: { id: "comment-1", body: "Private note" }, error: null }, "actor-1"));
+    const result = await addCommentToIssue({ issueId: "issue-1", actorId: "actor-1", body: "Private note", mentionedUserIds: ["actor-1"] });
+    expect(result.ok).toBe(true);
+    expect(mocks.getProjectAccess).toHaveBeenCalledWith("actor-1", "project-1");
+    expect(mocks.projectMemberIds).not.toHaveBeenCalled();
+    expect(mocks.insertNotifications).toHaveBeenCalledWith(expect.anything(), []);
+  });
+
+  it("checks current membership for real recipients and excludes outsiders", async () => {
+    mocks.insertAttachments.mockResolvedValue([]);
+    mocks.projectMemberIds.mockResolvedValueOnce(new Set(["owner-1", "member-1"]));
+    mocks.getServiceClient.mockReturnValue(service({ data: { id: "comment-1", body: "Team note" }, error: null }));
+    const result = await addCommentToIssue({ issueId: "issue-1", actorId: "actor-1", body: "Team note", mentionedUserIds: ["member-1", "outsider", "actor-1"] });
+    expect(result.ok).toBe(true);
+    expect(mocks.projectMemberIds).toHaveBeenCalledWith(expect.anything(), "project-1");
+    const rows = (mocks.insertNotifications.mock.calls.at(-1) as unknown as [unknown, { user_id: string }[]])[1];
+    expect(rows.map((row: { user_id: string }) => row.user_id).sort()).toEqual(["member-1", "owner-1"]);
   });
 });

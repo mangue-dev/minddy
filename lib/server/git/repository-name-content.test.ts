@@ -12,10 +12,11 @@ const contentKeys = {
     bytes:Buffer.from(contentVersions.get(version)!) }),
 };
 const blindKeys = {
-  current:async () => ({ version:1,bytes:Buffer.from(indexKey) }),
+  current:vi.fn(async () => ({ version:1,bytes:Buffer.from(indexKey) })),
   byVersion:async () => ({ version:1,bytes:Buffer.from(indexKey) }),
 };
 const store = new EncryptedStore(contentKeys);
+const reads = vi.fn();
 const rows = new Map<string,Record<string,unknown>>();
 
 vi.mock("@/lib/server/encryption/registry",() => ({
@@ -34,7 +35,7 @@ vi.mock("@/lib/supabase-service",() => ({
       eq:(field:string,value:unknown) => {
         filters[field]=value; return query;
       },
-      single:async () => ({ data:matching(),error:matching()?null:{ code:"PGRST116" } }),
+      single:async () => { reads(filters.provider, filters.token); return { data:matching(),error:matching()?null:{ code:"PGRST116" } }; },
       maybeSingle:async () => {
         const row=matching();
         if (row && patch && Object.entries(filters).every(([key,value]) =>
@@ -53,7 +54,7 @@ vi.mock("@/lib/supabase-service",() => ({
 }));
 
 const { registerRepositoryName,decodeRepositoryName,repositoryNameToken,
-  rotateRepositoryName } = await import("./repository-name-content");
+  rotateRepositoryName, createRepositoryNameDecoder } = await import("./repository-name-content");
 
 describe("recoverable forge repository identities",() => {
   it("keeps one stable opaque key while rotating ciphertext and refuses a wrong key",async () => {
@@ -78,4 +79,33 @@ describe("recoverable forge repository identities",() => {
     contentVersions.set(2,correct);
     expect(await decodeRepositoryName("github",token)).toBe(clear);
   });
+  it("coalesces an authorized operation and revalidates identities on the next operation", async () => {
+    const token = await registerRepositoryName("github", "Private/Shared");
+    reads.mockClear();
+    blindKeys.current.mockClear();
+    const decode = createRepositoryNameDecoder("actor-1");
+    expect(await Promise.all(Array.from({ length: 51 }, () => decode("github", token))))
+      .toEqual(Array(51).fill("Private/Shared"));
+    expect(reads).toHaveBeenCalledTimes(1);
+    expect(blindKeys.current).not.toHaveBeenCalled();
+
+    const next = createRepositoryNameDecoder("actor-2");
+    expect(await next("github", token)).toBe("Private/Shared");
+    expect(reads).toHaveBeenCalledTimes(2);
+    await expect(decode("gitlab", token)).rejects.toThrow("unavailable");
+  });
+
+  it("retries failed identity loads and rejects a transplanted ciphertext", async () => {
+    const first = await registerRepositoryName("github", "Private/First");
+    const second = await registerRepositoryName("github", "Private/Second");
+    const original = rows.get(`github:${first}`)!;
+    const decode = createRepositoryNameDecoder();
+    rows.delete(`github:${first}`);
+    await expect(decode("github", first)).rejects.toThrow("unavailable");
+    rows.set(`github:${first}`, rows.get(`github:${second}`)!);
+    await expect(decode("github", first)).rejects.toThrow();
+    rows.set(`github:${first}`, original);
+    expect(await decode("github", first)).toBe("Private/First");
+  });
+
 });
