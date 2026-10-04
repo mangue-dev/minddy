@@ -152,14 +152,12 @@ external work performed per read.
 
 ## Verification and next measurements
 
-31 focused Vitest tests pass across visible polling, React hook lifecycle,
+The initial change passed 31 focused Vitest tests across visible polling, React hook lifecycle,
 live route authorization, encrypted snapshots, stream state and local diffs.
 Coverage includes shared subscribers, retained view reactivation, cancellation
 during JSON decoding, rapid hide/show, failure recovery and request counts.
-Typecheck, targeted lint, owned-English and whitespace checks pass. Only the
-live client hook, its new scheduler/tests and this audit change. Locale
-catalogs, server routes, migrations, runtime flags and Vercel configuration
-are untouched.
+Typecheck, targeted lint, owned-English and whitespace checks passed for that
+initial change. The additional authorized scope is described below.
 
 After the normal authorized release, compare matching Minddy-only windows in
 Vercel Usage and Observability, separating preview from production. During an
@@ -176,12 +174,74 @@ Other worthwhile investigations need more evidence before changing behavior:
 - Review the $10 unattributed Speed Insights Plus subscription separately if
   performance reporting is no longer needed. Sampling its small event volume
   will not remove its fixed subscription or Observability charges.
-- The twelve current cron schedules produce 4,994 scheduled requests per day
+- The twelve original cron schedules produce 4,994 scheduled requests per day
   on one production deployment, before downstream work. Queue recovery,
   delivery and automation latency depend on those schedules; do not reduce
   them without measuring their idle rate and required recovery latency.
 
 Do not weaken live authorization, cache private responses at the CDN, remove
-error reporting or disable Observability for other projects to save these
-events. The request lifecycle correction is isolated and can be reviewed
-without changing the team's operational visibility.
+error reporting or disable Observability for other projects to save these events.
+
+## Additional approved optimizations
+
+PR polling, prefetching, Numo and the compact agent conversation remain active.
+The changes below reduce per-request work and snapshot frequency while keeping
+the existing background conversation updates and two-second event poll.
+
+- **Query snapshots:** the bounded batching interval grows from one to five
+  seconds. Explicit visibility/pagehide flushes remain immediate. Only one
+  encryption request runs at a time, with one latest waiting snapshot; identical
+  content shares a pending request or skips a completed save. Account-generation
+  and revision fences prevent obsolete responses from reaching local storage.
+  Decrypted data remains memory-only. Draft persistence is unchanged.
+- **Agent event history:** ordinary polls use the existing `after` cursor and
+  merge new events by ID and sequence. First reads, remounts, invalidation,
+  recovery after errors and a 30-second reconciliation request full history.
+  Full reads repair late commits, corrections and retention deletions. Reads
+  are paged beyond the database's 1,000-row default cap and every page retains
+  the authorized run/project filters. Realtime invalidations can still cause
+  full reads, so transferred-byte savings depend on the workload.
+- **OAuth activity:** live token-hash, grant revocation, key revocation and expiry
+  checks remain per-request. Two post-response activity updates become one
+  service-role-only RPC, reducing this path from three database HTTP requests
+  to two. The transaction updates only the grant's actual key and uses monotonic
+  timestamps. It touches no encrypted key names/agent content or token values.
+  The migration adds no table or plaintext column; affected migration, SQL and
+  TypeScript consumer inventories are updated. Apply migration
+  `20270109200026_oauth_activity_bookkeeping.sql` before the application release.
+- **Relay retention:** delivery/retry processing stays minutely. Finished
+  delivery deletion runs hourly at minute 35 on Vercel and the self-hosted
+  scheduler, retaining the seven-day cutoff and excluding pending deliveries.
+  This changes retention scans from 1,440 to 24 per day (98.3% fewer), with up
+  to one additional hour before removal. It adds 24 maintenance invocations;
+  the 13 Vercel schedules now total 5,018 scheduled requests per day. This saves
+  downstream work rather than reducing the number of scheduled invocations.
+
+These are deterministic local changes, not measured production cost savings.
+160 focused Vitest tests pass across 21 files, including the initial lifecycle
+checks. Typecheck, targeted lint, owned-English, encryption consumer inventory,
+scheduler syntax and whitespace checks pass. Tests exercise persistence races/logout, incremental ordering and reconciliation,
+background polling, OAuth checks and cron authorization/separation. The isolated
+PostgreSQL integration test uses the baseline OAuth/key table definitions and
+checks execution grants, mismatched keys, monotonic timestamps, revoked grants
+and transaction rollback. Existing key/name encryption and live authorization
+remain unchanged. Locale catalogs, Numo/FAB components and PR query settings
+are untouched.
+
+## Speed Insights replacement assessment
+
+[PostHog Web Vitals](https://posthog.com/docs/web-analytics/web-vitals) provides
+LCP, INP, CLS and FCP in Web Analytics. Collection is independent of DOM
+autocapture and session replay. Its `$web_vitals` events consume the ordinary
+analytics quota (the first one million monthly events are free), so it is not
+unconditionally free. Sampling is available. TTFB is not among its four built-in
+metrics, so this is not exact feature parity with Vercel Speed Insights.
+
+Minddy already loads `posthog-js` 1.434.13 in `components/posthog-init.tsx`, with
+its existing consent/opt-out handling, disabled DOM autocapture and disabled
+session recording. It does not set `capture_performance`; collection may follow
+the remote project setting. No live PostHog account access was available to
+confirm actual `$web_vitals` ingestion. Recommend enabling/confirming Web Vitals
+in that project, verifying populated reports on representative routes, then
+removing the appropriate Vercel subscription once ownership is established.
+Neither provider's settings nor the Speed Insights integration are changed here.

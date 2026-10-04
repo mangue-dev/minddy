@@ -357,15 +357,13 @@ export async function verifyOAuthAccessToken(
   const actorKey = data.api_keys as unknown as { revoked_at: string | null };
   if (actorKey?.revoked_at) return null;
 
-  // A usual timestamp does not delay the request: it leaves AFTER the response,
-  // but attached to the invocation - detached, he would die in the frost of the lambda.
+  // Keep activity bookkeeping attached to the invocation after the response.
+  // One RPC updates both timestamps without caching the authorization decision.
   afterOrNow(async () => {
-    const [grant, key] = await Promise.all([
-      service.from("oauth_grants").update({ last_used_at: now }).eq("id", data.id),
-      service.from("api_keys").update({ last_used_at: now }).eq("id", data.api_key_id),
-    ]);
-    if (grant.error) console.error("[oauth/grants] last_used_at:", grant.error.message);
-    if (key.error) console.error("[oauth/grants] key last_used_at:", key.error.message);
+    const { error } = await service.rpc("touch_oauth_grant_activity", {
+      p_grant_id: data.id, p_api_key_id: data.api_key_id, p_used_at: now,
+    });
+    if (error) console.error("[oauth/grants] activity update:", error.message);
   });
 
   return { userId: data.user_id as string, keyId: data.api_key_id as string };

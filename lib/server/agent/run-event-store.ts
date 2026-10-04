@@ -102,20 +102,31 @@ export async function listRunEvents(
   options: { after?: number; types?: string[]; actorId?: string | null } = {},
 ): Promise<StoredRunEvent[]> {
   if (!run.id || !run.project_id) throw new Error("Run event project scope is required");
-  const read = (columns: string) => {
+  const pageSize = 1000;
+  const read = (columns: string, after: number | undefined) => {
     let query = service.from("agent_run_events")
     .select(columns)
     .eq("run_id", run.id)
     .eq("run.project_id", run.project_id)
-    .order("seq", { ascending: true });
-    if (options.after !== undefined) query = query.gt("seq", options.after);
+    .order("seq", { ascending: true }).limit(pageSize);
+    if (after !== undefined) query = query.gt("seq", after);
     if (options.types) query = query.in("type", options.types);
     return query;
   };
-  let { data, error } = await read(EVENT_COLUMNS);
-  if (legacySchema(error)) ({ data, error } = await read(LEGACY_COLUMNS));
-  if (error) throw new Error("Unable to read agent run events");
-  return Promise.all((data ?? []).map((row) =>
+  const rows: EventRow[] = [];
+  let after = options.after;
+  for (;;) {
+    let { data, error } = await read(EVENT_COLUMNS, after);
+    if (legacySchema(error)) ({ data, error } = await read(LEGACY_COLUMNS, after));
+    if (error) throw new Error("Unable to read agent run events");
+    const page = (data ?? []) as unknown as EventRow[];
+    rows.push(...page);
+    if (page.length < pageSize) break;
+    const next = page[page.length - 1].seq;
+    if (after !== undefined && next <= after) throw new Error("Invalid agent event cursor");
+    after = next;
+  }
+  return Promise.all(rows.map((row) =>
     decodeRunEvent(run.project_id, row as unknown as EventRow, options.actorId)));
 }
 

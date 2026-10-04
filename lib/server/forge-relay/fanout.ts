@@ -390,7 +390,7 @@ const FINISHED_RETENTION_MS = 7 * 24 * 60 * 60_000;
 /**
  * Queue retention: delivered and dead-lettered rows leave after a week. Dead
  * letters are the incident-response record, so they age out SLOWLY; pending
- * rows are never touched. Called by the cron route alongside the worker.
+ * rows are never touched. Called by the hourly relay maintenance route.
  */
 export async function pruneFinishedRelayDeliveries(): Promise<number> {
   const cutoff = new Date(Date.now() - FINISHED_RETENTION_MS).toISOString();
