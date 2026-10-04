@@ -3,8 +3,8 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AtIcon, Delete02Icon, GitMergeIcon, GitPullRequestIcon, InboxIcon, Mail01Icon, MailOpen01Icon, Megaphone01Icon, Message01Icon, Settings01Icon, UserAdd01Icon } from "@hugeicons/core-free-icons";
 import { useMemo, useState, type ReactNode } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import Link from "@/components/app-link";
+import { useAppRouter } from "@/lib/use-app-router";
 import { useFormatter, useNow, useTranslations } from "next-intl";
 import {
   AlertDialog,
@@ -161,7 +161,7 @@ function ActionTooltip({
 }
 
 export default function InboxContent({ onNavigate }: { onNavigate: () => void }) {
-  const router = useRouter();
+  const router = useAppRouter();
   const openAssistant = useAssistantPanelActions().open;
   const t = useTranslations("Inbox");
   const tCommon = useTranslations("Common");

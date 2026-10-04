@@ -3,7 +3,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowDown01Icon, CodeSimpleIcon as Code2, Copy01Icon, LinkSquare01Icon, MessageMultiple01Icon, Refresh01Icon, CheckIcon, ViewIcon, ViewOffIcon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
-import Link from "next/link";
+import Link from "@/components/app-link";
 import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import {

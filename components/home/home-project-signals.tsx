@@ -3,7 +3,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { useMemo } from "react";
-import Link from "next/link";
+import Link from "@/components/app-link";
 import { useTranslations } from "next-intl";
 import { motion } from "framer-motion";
 import { useProjects } from "@/lib/projects-context";

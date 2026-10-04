@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useAppRouter } from "@/lib/use-app-router";
 import { useTranslations } from "next-intl";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowRight01Icon, DateTimeIcon, Delete02Icon, ExternalLinkIcon, GitPullRequestIcon, Link02Icon, LinkBackwardIcon, Target01Icon } from "@hugeicons/core-free-icons";
@@ -29,7 +29,7 @@ export interface IssueMenuOptions {
 
 /** One action factory for card context menus and sidebar More menus. */
 export function useIssueMenuActions() {
-  const router = useRouter();
+  const router = useAppRouter();
   return useIssueMenuActionsWithNavigation(router.push);
 }
 

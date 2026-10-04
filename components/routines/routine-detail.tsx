@@ -3,9 +3,9 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Alert01Icon, ArrowLeft01Icon, ArrowRight01Icon, Delete02Icon, GitPullRequestIcon, MoreHorizontalIcon, PauseCircleIcon, Edit04Icon, PlayIcon } from "@hugeicons/core-free-icons";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import Link from "next/link";
+import Link from "@/components/app-link";
 import { useFormatter, useLocale, useNow, useTranslations } from "next-intl";
-import { useRouter } from "next/navigation";
+import { useAppRouter } from "@/lib/use-app-router";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Badge,
@@ -132,7 +132,7 @@ export function RoutineDetail({
   const tAgents = useTranslations("Agents");
   const tCommon = useTranslations("Common");
   const format = useFormatter();
-  const router = useRouter();
+  const router = useAppRouter();
   const queryClient = useQueryClient();
   const {
     routineSchedulingConfigured,
@@ -928,7 +928,7 @@ function formatRunUsagePercent(
  */
 function PrHeaderAction({ run }: { run: RoutineRunSummary }) {
   const t = useTranslations("Agents");
-  const router = useRouter();
+  const router = useAppRouter();
   if (run.pr_number == null) return null;
   const closed =
     run.pr_state === "merged" || run.pr_state === "closed"

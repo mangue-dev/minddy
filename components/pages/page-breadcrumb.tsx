@@ -22,7 +22,7 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { File02Icon } from "@hugeicons/core-free-icons";
-import Link from "next/link";
+import Link from "@/components/app-link";
 import { useTranslations } from "next-intl";
 import {
   DropdownMenu,

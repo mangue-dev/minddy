@@ -4,7 +4,7 @@ import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
 import { BarChartIcon, ComputerIcon, Copy01Icon, CreditCardIcon, Delete02Icon, Logout01Icon, MoonIcon, Settings01Icon, Shield01Icon, Sun01Icon, CheckIcon } from "@hugeicons/core-free-icons";
 import { useEffect, useMemo, useState, type SVGProps } from "react";
 import { useTranslations } from "next-intl";
-import { useRouter } from "next/navigation";
+import { useAppRouter } from "@/lib/use-app-router";
 import { APP_VERSION } from "@/lib/app-version";
 import { getDesktopBridge } from "@/lib/desktop/bridge";
 import { toast } from "mangue-ui";
@@ -42,7 +42,7 @@ export function useAccountActions(): {
   commandGroup: PaletteGroup;
 } {
   const t = useTranslations("Nav");
-  const router = useRouter();
+  const router = useAppRouter();
   const { signOut } = useAuth();
   // The account theme: the choice is persisted to user_metadata so it
   // follows the account to every device (lib/use-account-theme.ts).

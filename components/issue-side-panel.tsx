@@ -6,7 +6,7 @@ import { useIssuePanelTab } from "@/lib/use-issue-panel-tab";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
+import { useAppRouter } from "@/lib/use-app-router";
 import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 import {
@@ -175,7 +175,7 @@ export function IssueSidePanel({
 }) {
   const { siteName } = useRuntimeConfig();
   const { user } = useAuth();
-  const router = useRouter();
+  const router = useAppRouter();
   const t = useTranslations("IssueUI");
   const tField = useTranslations("Field");
   const tCommon = useTranslations("Common");

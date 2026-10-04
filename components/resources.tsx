@@ -3,7 +3,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, AttachmentIcon, Cancel01Icon, File02Icon, Link02Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
+import Link from "@/components/app-link";
 import { useLocale, useTranslations } from "next-intl";
 import {
   Button,

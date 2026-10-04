@@ -3,7 +3,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowLeft01Icon } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
-import Link from "next/link";
+import Link from "@/components/app-link";
 import { Button } from "mangue-ui";
 import { AppContentHeader } from "@/components/app-content-header";
 import { ProgressRing } from "@/components/progress-ring";

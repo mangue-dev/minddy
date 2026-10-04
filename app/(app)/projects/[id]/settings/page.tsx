@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { GitBranchIcon as GitBranch, ImportIcon, ListOrderedIcon as ListOrdered, MessageMultiple01Icon as MessagesSquare, PlugIcon as Plug, RepeatIcon as Repeat, Settings02Icon as Settings2, TagsIcon as Tags, UserGroupIcon as Users } from "@hugeicons/core-free-icons";
-import { useParams, useRouter } from "next/navigation";
-import Link from "next/link";
+import { useParams } from "next/navigation";
+import { useAppRouter } from "@/lib/use-app-router";
+import Link from "@/components/app-link";
 import { useTranslations } from "next-intl";
 import { Button, ConfirmDeleteDialog, toast } from "mangue-ui";
 import { useAuth } from "@/lib/auth-context";
@@ -36,7 +37,7 @@ export default function ProjectSettingsPage() {
   const tc = useTranslations("Common");
   const tRecurrence = useTranslations("Recurrence");
   const { id } = useParams<{ id: string }>();
-  const router = useRouter();
+  const router = useAppRouter();
   const { user } = useAuth();
   const { projects, loading: projectsLoading, deleteProject } = useProjects();
   const project = projects.find((p) => p.id === id);
@@ -81,7 +82,7 @@ export default function ProjectSettingsPage() {
   const handleDelete = async () => {
     await deleteProject(project.id);
     toast.success(t("projectDeleted", { name: project.name }));
-    router.push("/home");
+    router.replace("/home");
   };
 
   const tabs: SettingsTab[] = [

@@ -3,7 +3,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
 import { Add01Icon, CheckIcon, CircleDotDashedIcon, CircleIcon, LayoutGridIcon, MessageMultiple01Icon, MoreHorizontalIcon, Settings01Icon, Target01Icon } from "@hugeicons/core-free-icons";
-import { useRouter } from "next/navigation";
+import { useAppRouter } from "@/lib/use-app-router";
 import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -52,7 +52,7 @@ function Stat({
 }
 
 export function ProjectCard({ project }: { project: Project }) {
-  const router = useRouter();
+  const router = useAppRouter();
   const t = useTranslations("Projects");
   const tIssue = useTranslations("Issue");
 

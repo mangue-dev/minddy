@@ -12,7 +12,7 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Cancel01Icon, Link02Icon } from "@hugeicons/core-free-icons";
-import { useRouter } from "next/navigation";
+import { useAppRouter } from "@/lib/use-app-router";
 import { useMemo, useState } from "react";
 import { RelationObjectiveLabel } from "@/components/relation-objective-label";
 import { useTranslations } from "next-intl";
@@ -55,7 +55,7 @@ export function ObjectiveRelationsSection({
   onOpenIssue?: (issueId: string) => void;
   variant?: "panel" | "board";
 }) {
-  const router = useRouter();
+  const router = useAppRouter();
   const t = useTranslations("Relations");
   const tCommon = useTranslations("Common");
   const { relations, addRelation, removeRelation } =

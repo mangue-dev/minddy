@@ -2,7 +2,7 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowDown01Icon, Settings01Icon, CheckIcon } from "@hugeicons/core-free-icons";
-import Link from "next/link";
+import Link from "@/components/app-link";
 import { useFormatter, useTranslations } from "next-intl";
 import {
   Button,

@@ -3,7 +3,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Delete02Icon, Logout01Icon } from "@hugeicons/core-free-icons";
 import {useEffect, useState} from "react";
-import {useRouter} from "next/navigation";
+import { useAppRouter } from "@/lib/use-app-router";
 import {useTranslations} from "next-intl";
 import {Badge, Button, Input, Spinner, toast} from "mangue-ui";
 import {useAuth} from "@/lib/auth-context";
@@ -34,7 +34,7 @@ export function ProjectGeneralSection({
 }) {
   const t = useTranslations("Settings");
   const tc = useTranslations("Common");
-  const router = useRouter();
+  const router = useAppRouter();
   const { user } = useAuth();
   const { updateProject, refetch } = useProjects();
 
@@ -84,7 +84,7 @@ export function ProjectGeneralSection({
       await removeMemberApi(project.id, user.id);
       toast.success(t("leftProject", { name: project.name }));
       refetch();
-      router.push("/home");
+      router.replace("/home");
     } catch (err) {
       toast.error((err as Error).message);
     } finally {

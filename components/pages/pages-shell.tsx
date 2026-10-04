@@ -5,6 +5,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, Cancel01Icon, ExpandIcon } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useMemo, useState, useRef } from "react";
+import { useAppNavigation } from "@/lib/use-app-router";
 import { AppTabRouteBoundary, useAppTabRoute } from "@/lib/app-tab-route-context";
 import { useTranslations } from "next-intl";
 import {
@@ -41,6 +42,7 @@ export function PagesShell() {
 }
 
 function PagesShellInner() {
+  const openDestination = useAppNavigation();
   const t = useTranslations("Pages");
   const tCommon = useTranslations("Common");
   const { projectId: routeProjectId, pathname, searchParams } = useAppTabRoute();
@@ -69,12 +71,15 @@ function PagesShellInner() {
     const href = parent?.database_schema != null
       ? `${pageHref(projectId, parent.id)}?entry=${pageId}`
       : pageHref(projectId, pageId);
-    if (validPreview) void previewFlush.current().then((saved) => { if (saved) pushPagesHistory(href); });
-    else pushPagesHistory(href);
-  }, [projectId, byId, validPreview]);
+    const open = () => openDestination(href, () => pushPagesHistory(href));
+    if (validPreview) void previewFlush.current().then((saved) => { if (saved) open(); });
+    else open();
+  }, [projectId, byId, validPreview, openDestination]);
   const leavePreview = async (extend = false) => {
     if (!(await previewFlush.current())) return;
-    pushPagesHistory(pageHref(projectId, extend && validPreview ? validPreview.id : activePageId!));
+    const href = pageHref(projectId, extend && validPreview ? validPreview.id : activePageId!);
+    if (extend) openDestination(href, () => pushPagesHistory(href));
+    else pushPagesHistory(href);
   };
 
   // The open page is retained HERE rather than in `PageView`: the shell

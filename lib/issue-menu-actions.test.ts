@@ -14,6 +14,7 @@ const dependencies = vi.hoisted(() => ({
   isPending: false,
   hasAppTabs: true,
   routerRead: vi.fn(),
+  reuseDestination: vi.fn(() => false),
 }));
 vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key }));
 vi.mock("next/navigation", () => ({ useRouter: () => {
@@ -21,7 +22,7 @@ vi.mock("next/navigation", () => ({ useRouter: () => {
   return { push: dependencies.push };
 } }));
 vi.mock("@/lib/app-tabs-context", () => ({
-  useOptionalAppTabSession: () => dependencies.hasAppTabs ? { create: dependencies.create } : null,
+  useOptionalAppTabSession: () => dependencies.hasAppTabs ? { create: dependencies.create, reuseDestination: dependencies.reuseDestination } : null,
 }));
 vi.mock("@/lib/use-unlink-pull-request-issue", () => ({
   useUnlinkPullRequestIssue: () => ({ isPending: dependencies.isPending, mutate: dependencies.mutate }),
@@ -65,6 +66,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   dependencies.isPending = false;
   dependencies.hasAppTabs = true;
+  dependencies.reuseDestination.mockReturnValue(false);
 });
 afterEach(() => vi.unstubAllGlobals());
 
@@ -146,6 +148,17 @@ describe("shared issue menu actions", () => {
     vi.stubGlobal("window", { open });
     build().action("open-pr-new-tab").onSelect?.();
     expect(open).toHaveBeenCalledWith("/pull-requests?pr=pr", "_blank", "noopener,noreferrer");
+  });
+
+  it("reuses the PR tab for ordinary opening and bypasses reuse for explicit creation", () => {
+    dependencies.reuseDestination.mockReturnValue(true);
+    const { action } = build();
+    action("open-pr-current-tab").onSelect?.();
+    expect(dependencies.reuseDestination).toHaveBeenCalledExactlyOnceWith("/pull-requests?pr=pr");
+    expect(dependencies.push).not.toHaveBeenCalled();
+    action("open-pr-new-tab").onSelect?.();
+    expect(dependencies.create).toHaveBeenCalledWith("/pull-requests?pr=pr");
+    expect(dependencies.reuseDestination).toHaveBeenCalledTimes(1);
   });
 
   it("uses the owning column's navigation action without reading Next route context", () => {

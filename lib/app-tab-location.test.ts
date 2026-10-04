@@ -1,7 +1,26 @@
 import { describe, expect, it } from "vitest";
-import { appTabRoute, normalizeAppTabLocation } from "./app-tab-location";
+import { appTabRoute, normalizeAppTabLocation, sameAppTabDestination } from "./app-tab-location";
 
 describe("application tab destinations", () => {
+  it("matches equivalent query ordering without dropping destination details", () => {
+    expect(sameAppTabDestination("/projects/p/?view=v&objective=o", "/projects/p?objective=o&view=v")).toBe(true);
+  });
+  it.each([
+    ["/pull-requests?pr=a", "/pull-requests?pr=b"],
+    ["/pull-requests", "/pull-requests?pr=a"],
+    ["/pull-requests?run=a", "/pull-requests"],
+    ["/projects/p?issue=a", "/projects/p"],
+    ["/projects/p?setup=numo", "/projects/p"],
+    ["/all?view=a", "/all?view=b"],
+    ["/projects/p?family=a", "/projects/p?objective=a"],
+    ["/projects/p/pages/a#one", "/projects/p/pages/a#two"],
+    ["/projects/p/pages/a", "/projects/p/pages/a#one"],
+    ["/settings?section=profile", "/settings"],
+    ["/home?view=a&view=b", "/home?view=a"],
+    ["/login", "/login"],
+  ])("keeps distinct or unsupported destinations separate: %s and %s", (left, right) => {
+    expect(sameAppTabDestination(left, right)).toBe(false);
+  });
   it.each(["/login", "/signup", "/share/token", "/f/token", "/p/token", "/connect/github", "/projects/p/pages-print/a", "//example.com", "/\\example.com", "/home\n", "/projects/p/unknown", "/home/extra", "/projects/%2f%2fevil"])("rejects unsupported destination %s", (href) => {
     expect(normalizeAppTabLocation(href)).toBeNull();
   });

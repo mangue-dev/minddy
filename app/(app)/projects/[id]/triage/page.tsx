@@ -5,7 +5,7 @@ import { ArrowLeft01Icon, Cancel01Icon, CircleDotDashedIcon as CircleDotDashed, 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppTabRouteBoundary, useAppTabRoute } from "@/lib/app-tab-route-context";
-import Link from "next/link";
+import Link from "@/components/app-link";
 import { useTranslations, useFormatter } from "next-intl";
 import {
   Button,

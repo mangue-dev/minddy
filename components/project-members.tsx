@@ -3,7 +3,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Cancel01Icon, UserAdd01Icon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
-import Link from "next/link";
+import Link from "@/components/app-link";
 import { useTranslations } from "next-intl";
 import {
   Badge,

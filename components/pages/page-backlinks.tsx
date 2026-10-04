@@ -8,7 +8,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { File02Icon, HashtagIcon } from "@hugeicons/core-free-icons";
 import { useQuery } from "@tanstack/react-query";
-import Link from "next/link";
+import Link from "@/components/app-link";
 import { useTranslations } from "next-intl";
 import { cn } from "mangue-ui";
 
@@ -23,6 +23,7 @@ import {
   PAGE_ACTIVITY_FRESH_MS,
   pageBacklinksKey,
 } from "@/lib/page-activity-cache";
+import { useAppNavigation } from "@/lib/use-app-router";
 import { pushPagesHistory } from "@/lib/pages-navigation";
 
 /** The shades of the two genres that have one, taken as is from Numo's
@@ -80,6 +81,7 @@ function BacklinkPill({
 }) {
   const t = useTranslations("Pages");
   const { openIssue } = useIssuePanelActions();
+  const openDestination = useAppNavigation();
   const target = mentionNavigationTarget(item.kind, item.id, projectId);
   const href = target?.href ?? "#";
   const label = item.title.trim() || t("untitled");
@@ -95,7 +97,7 @@ function BacklinkPill({
           openIssue(target.projectId, target.issueId);
         } else if (item.kind === "page" && target) {
           event.preventDefault();
-          pushPagesHistory(target.href);
+          openDestination(target.href, () => pushPagesHistory(target.href));
         }
       }}
     >

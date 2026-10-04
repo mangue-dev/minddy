@@ -2,8 +2,9 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowLeft01Icon, ArrowUpDownIcon, Home01Icon } from "@hugeicons/core-free-icons";
-import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import Link from "@/components/app-link";
+import { usePathname } from "next/navigation";
+import { useAppRouter } from "@/lib/use-app-router";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useTranslations } from "next-intl";
 import {
@@ -51,7 +52,7 @@ function ProjectChip({ project, className }: { project: Project; className?: str
 
 function ProjectSwitcher({ project }: { project: Project }) {
   const t = useTranslations("Nav");
-  const router = useRouter();
+  const router = useAppRouter();
   const { projects } = useProjects();
 
   if (projects.length <= 1) {

@@ -7,7 +7,7 @@ import {
   LoaderCircleIcon,
 } from "@hugeicons/core-free-icons";
 import { useCallback, useState } from "react";
-import Link from "next/link";
+import Link from "@/components/app-link";
 import { useTranslations } from "next-intl";
 import { Button, Popover, PopoverContent, PopoverTrigger, cn } from "mangue-ui";
 import { type BillingPlanId } from "@/lib/billing-plans";

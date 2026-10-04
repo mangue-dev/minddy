@@ -4,7 +4,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Download01Icon } from "@hugeicons/core-free-icons";
 import {useEffect, useState} from "react";
 import {useTranslations} from "next-intl";
-import Link from "next/link";
+import Link from "@/components/app-link";
 import {Button, Input, Spinner, toast} from "mangue-ui";
 import {useAuth} from "@/lib/auth-context";
 import {isDesktop} from "@/lib/desktop/bridge";

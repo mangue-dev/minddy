@@ -12,7 +12,7 @@ import {
   type MouseEvent,
   type ReactNode,
 } from "react";
-import Link from "next/link";
+import Link from "@/components/app-link";
 import dynamic from "next/dynamic";
 import { APP_VERSION } from "@/lib/app-version";
 import { getDesktopBridge } from "@/lib/desktop/bridge";

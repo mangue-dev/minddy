@@ -1,5 +1,5 @@
 import { createHomeTab, moveAppTabBefore, reconcileAppTabs, selectTabAfterClose, sortAppTabs, type AppTab, type AppTabPatch } from "./app-tabs";
-import { normalizeAppTabLocation } from "./app-tab-location";
+import { normalizeAppTabLocation, sameAppTabDestination } from "./app-tab-location";
 import { AppTabRequestError } from "./app-tabs-api";
 
 /** Whether `url` reopens the remembered destination's page while carrying no
@@ -354,6 +354,16 @@ export class AppTabsSession {
     const tab = this.snapshot.tabs.find((row) => row.id === id);
     if (tab) this.select(tab);
   });
+  /** Called only when opening a destination, never by route observation. */
+  reuseDestination = (href: string): boolean => {
+    if (this.disposed || !this.snapshot.activeId) return false;
+    const matches = (tab: AppTab) => sameAppTabDestination(href, tab.href);
+    const active = this.active();
+    const tab = (active && matches(active) ? active : null) ?? this.snapshot.tabs.find(matches);
+    if (!tab) return false;
+    void this.activate(tab.id);
+    return true;
+  };
   create = (href: string = "/home") => {
     if (this.disposed) return Promise.resolve();
     const destination = normalizeAppTabLocation(href) ?? "/home";

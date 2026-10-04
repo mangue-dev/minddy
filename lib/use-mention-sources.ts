@@ -15,7 +15,8 @@
 // immediately quotable, and a deleted ticket ceases to be cited.
 
 import { useMemo } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
+import { useAppNavigation, useAppRouter } from "@/lib/use-app-router";
 import { displayName } from "@/lib/display-name";
 import { issueIdentifier } from "@/lib/issue-constants";
 import { contentMentionScanner } from "@/lib/mention-scan";
@@ -178,7 +179,8 @@ export function useMentionLinksFor(
   },
   onOpenIssue?: (projectId: string, issueId: string) => void,
 ): MentionLinks {
-  const router = useRouter();
+  const router = useAppRouter();
+  const openDestination = useAppNavigation();
   const pathname = usePathname();
   const { openIssue, closeIssue } = useIssuePanelActions();
   const { issues, objectives, pages, references } = sources;
@@ -209,14 +211,14 @@ export function useMentionLinksFor(
             base &&
             (pathname === base || pathname.startsWith(`${base}/`))
           ) {
-            pushPagesHistory(target.href);
+            openDestination(target.href, () => pushPagesHistory(target.href));
           } else {
             router.push(target.href);
           }
         }
       },
     };
-  }, [projectOf, router, pathname, onOpenIssue, openIssue, closeIssue]);
+  }, [projectOf, router, openDestination, pathname, onOpenIssue, openIssue, closeIssue]);
 }
 
 /**

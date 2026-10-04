@@ -38,7 +38,8 @@ import {
   type ReactNode,
 } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
+import { useAppRouter } from "@/lib/use-app-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "mangue-ui";
 import { useAccountTheme } from "@/lib/use-account-theme";
@@ -233,7 +234,7 @@ export function CommandPalette({
   const tNav = useTranslations("Nav");
   const tAction = useTranslations("CommandPaletteActions");
   const pathname = usePathname();
-  const router = useRouter();
+  const router = useAppRouter();
   const appTabs = useOptionalAppTabSession();
   const queryClient = useQueryClient();
   const { user, updateUserMetadata } = useAuth();

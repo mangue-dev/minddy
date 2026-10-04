@@ -2,7 +2,7 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Alert01Icon, ArrowRight01Icon } from "@hugeicons/core-free-icons";
-import Link from "next/link";
+import Link from "@/components/app-link";
 import { useTranslations } from "next-intl";
 import { motion } from "framer-motion";
 import { useSmartAssignWarningsQuery } from "@/lib/use-smart-assign-warnings-query";

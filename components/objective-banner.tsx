@@ -3,7 +3,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowDown01Icon, ArrowLeft01Icon, DateTimeIcon } from "@hugeicons/core-free-icons";
 import { startTransition } from "react";
-import Link from "next/link";
+import Link from "@/components/app-link";
 import { useTranslations, useFormatter } from "next-intl";
 import { Button, cn } from "mangue-ui";
 import { OBJECTIVE_STATUS_MAP } from "@/lib/objective-constants";

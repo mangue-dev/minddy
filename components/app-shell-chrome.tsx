@@ -12,9 +12,10 @@ import {
   useState,
   type ComponentType,
 } from "react";
-import Link from "next/link";
+import Link from "@/components/app-link";
 import dynamic from "next/dynamic";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
+import { useAppNavigation, useAppRouter } from "@/lib/use-app-router";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import {
@@ -324,7 +325,8 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   const appTabs = useOptionalAppTabNavigation();
   const activeAppTabId = appTabs?.activeId;
   const searchParams = useSearchParams();
-  const router = useRouter();
+  const router = useAppRouter();
+  const openDestination = useAppNavigation();
   const { user } = useAuth();
   const {
     projects,
@@ -355,12 +357,12 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       const href = pageHref(projectId, pageId);
       const base = pagesHref(projectId);
       if (pathname === base || pathname.startsWith(`${base}/`)) {
-        pushPagesHistory(href);
+        openDestination(href, () => pushPagesHistory(href));
       } else {
         router.push(href);
       }
     },
-    [pathname, router]
+    [pathname, router, openDestination]
   );
   const { setOpen: setCheatsheetOpen } = useCheatsheet();
   const { hidden: sidebarHidden } = useSidebarVisibility();

@@ -8,7 +8,7 @@ import { useAppTabChange } from "@/lib/use-app-tab-change";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppTabRouteBoundary, useAppTabRoute } from "@/lib/app-tab-route-context";
-import Link from "next/link";
+import Link from "@/components/app-link";
 import { useLocale, useNow, useTranslations, useFormatter } from "next-intl";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import {

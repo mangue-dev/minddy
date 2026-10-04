@@ -26,7 +26,7 @@ import {
   Target01Icon,
 } from "@hugeicons/core-free-icons";
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useAppRouter } from "@/lib/use-app-router";
 import { useQuery } from "@tanstack/react-query";
 import { RelationObjectiveLabel } from "@/components/relation-objective-label";
 import { useTranslations } from "next-intl";
@@ -79,7 +79,7 @@ export function RelationsSection({
 }) {
   const t = useTranslations("Relations");
   const tCommon = useTranslations("Common");
-  const router = useRouter();
+  const router = useAppRouter();
   const [open, setOpen] = useState(false);
 
   // Loaded HERE rather than passed as prop: the panel opens on a ticket at the

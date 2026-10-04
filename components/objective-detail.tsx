@@ -5,8 +5,8 @@ import { ArrowLeft01Icon, Delete02Icon, Mic01Icon, MoreHorizontalIcon, TaskEdit0
 import { hasVisibleOpenDialog } from "@/lib/visible-overlays";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import Link from "@/components/app-link";
+import { useAppRouter } from "@/lib/use-app-router";
 import { useTranslations } from "next-intl";
 import {
   Button,
@@ -217,7 +217,7 @@ export function ObjectiveDetail({
   onBusyChange: (busy: boolean) => void;
 }) {
   const { user } = useAuth();
-  const router = useRouter();
+  const router = useAppRouter();
   const t = useTranslations("Objectives");
   const tCommon = useTranslations("Common");
   const tIssue = useTranslations("Issue");
