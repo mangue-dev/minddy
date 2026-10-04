@@ -18,6 +18,17 @@ const baseEnvironment = {
 } as const;
 
 describe("resolveRuntimeConfig", () => {
+  it("keeps server-hashed anonymous analytics explicitly opt-in", () => {
+    expect(resolveRuntimeConfig(baseEnvironment).public.posthog.cookieless).toBe(false);
+    expect(resolveRuntimeConfig({
+      ...baseEnvironment,
+      MINDDY_PUBLIC_POSTHOG_COOKIELESS: "1",
+    }).public.posthog.cookieless).toBe(true);
+    expect(resolveRuntimeConfig({
+      ...baseEnvironment,
+      MINDDY_PUBLIC_POSTHOG_COOKIELESS: "true",
+    }).public.posthog.cookieless).toBe(false);
+  });
   it("resolves distinct runtime fixtures from one build-time-independent contract", () => {
     const first = resolveRuntimeConfig(baseEnvironment).public;
     const second = resolveRuntimeConfig({

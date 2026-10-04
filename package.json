@@ -138,7 +138,6 @@
     "@tiptap/react": "3.31.3",
     "@tiptap/starter-kit": "^3.31.3",
     "@tiptap/suggestion": "^3.31.3",
-    "@vercel/analytics": "^2.0.1",
     "@vercel/sandbox": "^3.5.0",
     "border-beam": "^1.4.1",
     "cmdk": "^1.1.1",

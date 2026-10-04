@@ -15,7 +15,6 @@ export type CapabilityId =
   | "agentExecution"
   | "vercelSandbox"
   | "vercelDomains"
-  | "vercelWebAnalytics"
   | "scheduler"
   | "analytics"
   | "transactionalEmail"
@@ -440,15 +439,6 @@ export function resolveCapabilities(env: CapabilityEnvironment): Record<Capabili
     agentExecution,
     vercelSandbox,
     vercelDomains,
-    vercelWebAnalytics: status({
-      id: "vercelWebAnalytics",
-      requirement: "optional",
-      state: env.MINDDY_PUBLIC_VERCEL_ANALYTICS?.trim() === "1" ? "ready" : "disabled",
-      missing: env.MINDDY_PUBLIC_VERCEL_ANALYTICS?.trim() === "1" ? [] : ["MINDDY_PUBLIC_VERCEL_ANALYTICS=1"],
-      diagnostic: env.MINDDY_PUBLIC_VERCEL_ANALYTICS?.trim() === "1"
-        ? "Vercel Analytics is enabled on public pages."
-        : "Vercel Analytics is disabled; set MINDDY_PUBLIC_VERCEL_ANALYTICS=1 to enable it.",
-    }),
     scheduler:
       !present(env, "CRON_SECRET")
           ? status({

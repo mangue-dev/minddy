@@ -128,9 +128,12 @@ these calls do not bear the identity of the author.
 *PostHog, Inc. — European instance `eu.posthog.com` (Germany hosting).*
 
 - **Transfer outside the EU**: none, the European body is used.
-- **Browser measurement**: before the choice, it is anonymous, without cookies and
-  stored only in memory; consent authorizes persistence.
-  A refusal triggers `opt_out_capturing()` and cuts all broadcasts from the browser.
+- **Browser measurement**: PostHog measures pages, Web Vitals and catalog events.
+  Before the choice, analytics identifiers are not persisted on the device. An
+  operator may enable server-hashed anonymous measurement; otherwise identity
+  lasts only for the current page load. Account/person/group context is applied
+  only after acceptance. Refusal disables cookieless mode and browser capture;
+  consent changes are synchronized across open tabs. See `docs/analytics.md`.
 - **Server events**: technical facts necessary to measure the
   service (creation via MCP, webhook, cron) can be issued without depending on the
   banner, under legitimate interest. They do not read or write the terminal.

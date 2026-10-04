@@ -277,7 +277,7 @@ within the app through the managed forge relay, and `--no-forge-relay` opts
 out for deployments that must never contact minddy infrastructure. The
 installer generates only the internal secrets required by those choices and
 leaves external provider credentials blank for the operator to supply.
-Stripe billing, PostHog/Vercel analytics, Minddy-managed AI, Vercel domain
+Stripe billing, PostHog analytics, Minddy-managed AI, Vercel domain
 management, and APNs release credentials are intentionally not offered as
 initial self-host options.
 

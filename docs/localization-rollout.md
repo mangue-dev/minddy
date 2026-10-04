@@ -19,7 +19,7 @@ Every new product string must be added to all six catalogs in the same change. P
 
 Every public page has a dedicated URL in each locale. English remains unprefixed, while French, German, Brazilian Portuguese, Italian, and Spanish use explicit language prefixes and translated slugs. Authenticated pages keep stable application URLs and use the account locale.
 
-Use the localized public paths as the acquisition dimension. Vercel Analytics provides visits, referrers, countries, page paths, and time on page. PostHog carries the locale and first localized landing path as registered properties so signup, onboarding, project, issue, and agent events can be segmented by acquisition locale.
+Use the localized public paths as the acquisition dimension. PostHog provides visits, referrers, countries and page paths. After acceptance, it carries the locale and first localized landing path as registered properties so signup, onboarding, project, issue and agent events can be segmented by acquisition locale. Before acceptance, only anonymous page traffic is measured.
 
 For each locale, review a rolling 28-day cohort and record:
 

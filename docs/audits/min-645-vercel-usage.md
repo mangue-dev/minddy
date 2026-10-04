@@ -299,3 +299,42 @@ Verification: 51 focused capability/analytics tests, typecheck, targeted lint,
 owned-English and whitespace checks pass. The pnpm lockfile passes a frozen
 offline check, and the npm lockfile changes only the removed dependency.
 Locale catalogs, PR polls, Numo/FAB components and PostHog initialization are untouched.
+
+### PostHog-only web analytics follow-up (October 5)
+
+The user requested replacing Vercel Web Analytics as well. Both public layouts
+now use the root PostHog integration; `@vercel/analytics`, its capability,
+environment flag and self-hosted egress allowance are removed. This complements
+the earlier Speed Insights removal. It does not change intentional PR polls or
+Numo/agent compact FAB behavior, and does not cancel hosted subscriptions.
+
+Read-only inspection of the matching EU PostHog project (231975, UTC) found
+cookieless server hashing disabled. The connected app lacks `project:write`.
+The new `MINDDY_PUBLIC_POSTHOG_COOKIELESS=1` runtime opt-in must follow activation
+of **Cookieless server hash mode** in that project. Until then, anonymous browser
+identifiers stay in page memory. No production setting or deployment was changed.
+
+The consent implementation gates account/person/group context until acceptance,
+keeps SPA pageviews, and stops every browser event on refusal, including hashed
+pageviews and Web Vitals. It handles cross-tab changes, a choice made during SDK
+download, and unavailable preference storage. Titles and URL queries/fragments
+are removed before browser events are sent. Privacy/cookie copy is updated in
+all six locales. See [analytics rollout](../analytics.md) for activation and
+verification, including the limitation that hash visits are not stitched to
+an account after acceptance.
+
+A seven-day production-host query returned 27 PostHog visitors and 33 pageviews
+across the application, versus the user's 19 Vercel visitors. Filtering public
+routes in all six locales returned 22 visitors and 26 pageviews. An earlier
+English-only public filter returned 12 visitors and omitted localized routes;
+it must not be used for provider comparison. Internal/test filtering was enabled.
+These rolling UTC queries were not a private Vercel dashboard export with an
+exactly matched window, so the remaining difference cannot be attributed to a
+specific cause. Scope, identity/persistence and filtering differences remain
+relevant; neither service's visitor count is an exact count of people.
+
+Verification: 175 focused Vitest tests and 15 self-hosted egress tests pass,
+including the installed PostHog SDK and React initialization lifecycle.
+Typecheck, targeted lint, localization contracts, owned-English, frozen pnpm
+lockfile and whitespace checks pass. The npm lockfile changes only the removed
+dependency; all six catalogs change only the intended analytics/privacy fields.

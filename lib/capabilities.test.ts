@@ -30,16 +30,6 @@ describe("resolveCapabilities", () => {
     expect(capabilities.managedBilling.state).toBe("disabled");
   });
 
-  it("enables public Vercel telemetry only through an explicit opt-in", () => {
-    expect(resolveCapabilities(core).vercelWebAnalytics.configured).toBe(false);
-    expect(
-      resolveCapabilities({
-        ...core,
-        MINDDY_PUBLIC_VERCEL_ANALYTICS: "1",
-      }).vercelWebAnalytics.configured,
-    ).toBe(true);
-  });
-
   it("diagnoses each partial configuration with its missing variables", () => {
     const capabilities = resolveCapabilities({
       ...core,
@@ -119,7 +109,6 @@ describe("resolveCapabilities", () => {
       "managedBilling",
       "managedAi",
       "vercelSandbox",
-      "vercelWebAnalytics",
       "analytics",
       "transactionalEmail",
       "webPush",

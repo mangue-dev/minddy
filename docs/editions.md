@@ -93,9 +93,9 @@ selects Cloud-managed billing and AI; it never activates code execution by
 itself. A hostname, Vercel deployment, branch name, customer ID, or environment
 key cannot silently switch an installation to Cloud or enable a provider.
 
-PostHog needs a complete browser or server pair, `EMAIL_PROVIDER=resend` needs
-the operator's sender configuration, and Vercel Analytics needs an explicit
-public flag. The executable catalog in `lib/capabilities.ts` classifies each
+PostHog needs a complete browser or server pair, with a separate opt-in for
+server-hashed anonymous visitors. `EMAIL_PROVIDER=resend` needs the operator's
+sender configuration. The executable catalog in `lib/capabilities.ts` classifies each
 capability and reports missing configuration.
 
 CI tests the minimal self-hosted, BYOK, Cloud, partial-configuration, and
