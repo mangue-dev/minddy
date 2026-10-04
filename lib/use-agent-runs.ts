@@ -231,9 +231,9 @@ export function usePullRequestQuery(prId: string, enabled: boolean) {
     readinessThreads: data?.reviewThreads ?? null,
     loading: enabled && isPending,
     readState: pullRequestReadState(query, activationSequence),
-    // A recent background snapshot paints immediately; writes still use readState.
+    // Loaded session data stays visible during revalidation; writes still use readState.
     displayReadState: !query.isError && query.fetchStatus !== "paused" &&
-      data?.readSession === readActivationSession && Date.now() - dataUpdatedAt < 60_000
+      data?.readSession === readActivationSession
       ? "fresh" as const : pullRequestReadState(query, activationSequence),
     refetch,
   };
