@@ -1,0 +1,35 @@
+.release {
+  container-type: inline-size;
+}
+
+.masonry {
+  columns: 1;
+  column-gap: .75rem;
+}
+
+.card {
+  --changelog-card-radius: 1.5rem;
+  --changelog-card-inset: .75rem;
+  display: inline-block;
+  width: 100%;
+  margin-bottom: .75rem;
+  break-inside: avoid;
+  vertical-align: top;
+  border-radius: var(--changelog-card-radius);
+}
+
+.illustration {
+  padding: var(--changelog-card-inset);
+}
+
+.figure {
+  border-radius: calc(var(--changelog-card-radius) - var(--changelog-card-inset) - 1px);
+}
+
+@container (min-width: 640px) {
+  .masonry { columns: 2; }
+}
+
+@container (min-width: 960px) {
+  .masonry { columns: 3; }
+}

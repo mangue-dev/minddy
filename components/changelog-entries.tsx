@@ -1,63 +1,112 @@
+"use client";
+
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Locale } from "@/i18n/config";
-import { formatChangelogAge, formatChangelogDate } from "@/lib/changelog";
-import { AppTooltip } from "@/components/ui/app-tooltip";
+import { formatChangelogDate, mergeChangelogReleases } from "@/lib/changelog";
+import type { ChangelogFeatureDetail, ChangelogLabels, ChangelogPageContent, ChangelogReleaseSummary } from "@/lib/changelog-types";
+import { ChangelogFeatureCard } from "@/components/changelog-feature-card";
+import styles from "./changelog-cards.module.css";
 
-/**
- * The list of deliveries, as it appears — shared by the page
- * public `/changelog` and by the “New features” modal of the app.
- *
- * The component translates NOTHING: it receives titles and bodies already
- * resolved. This is what allows it to be made on both sides of the border
- * server/client without costing anything. The root layout only sends to the browser
- * the four namespaces of the public site (MIN-100); a client component that
- * would call `useTranslations("Changelog")` would display key paths
- * on `/changelog`, or would require embedding the namespace — which grows to
- * each delivery — in the landing bundle. Both callers know
- * already translate, each with its half of next-intl.
- */
+export function releaseAnchor(version: string) { return `v${version.replaceAll(".", "-")}`; }
 
-export interface ChangelogEntryContent {
-  /** Stable slug: URL anchor and `guid` of the RSS feed. */
-  id: string;
-  /** Deployment date, short ISO. */
-  date: string;
-  title: string;
-  body: string;
+async function load<T>(locale: Locale, query = ""): Promise<T> {
+  const response = await fetch(`/api/changelog?locale=${encodeURIComponent(locale)}${query}`);
+  if (!response.ok) throw new Error("Changelog request failed");
+  return response.json();
 }
 
-export function ChangelogEntries({
-  entries,
-  locale,
-}: {
-  entries: ReadonlyArray<ChangelogEntryContent>;
-  locale: Locale;
+/** Each bounded page includes its locale's details for immediate native disclosure. */
+export function ChangelogEntries({ initial, locale, labels }: {
+  initial?: ChangelogPageContent; locale: Locale; labels: ChangelogLabels;
 }) {
+  const [page, setPage] = useState<ChangelogPageContent | undefined>(initial);
+  const [busy, setBusy] = useState(!initial);
+  const [error, setError] = useState(false);
+  const [reveal, setReveal] = useState<{ id: string; sequence: number } | null>(null);
+  const mounted = useRef(true);
+  const pageRequest = useRef(0);
+
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
+  const fetchPage = useCallback(async (after?: string) => {
+    const request = ++pageRequest.current;
+    setBusy(true); setError(false);
+    try {
+      const result = await load<ChangelogPageContent>(locale, after ? `&after=${encodeURIComponent(after)}` : "");
+      if (mounted.current && request === pageRequest.current) setPage(previous => ({ ...result, releases: after && previous
+        ? mergeChangelogReleases(previous.releases, result.releases) : result.releases }));
+    } catch { if (mounted.current && request === pageRequest.current) setError(true); }
+    finally { if (mounted.current && request === pageRequest.current) setBusy(false); }
+  }, [locale]);
+
+  useEffect(() => {
+    pageRequest.current++;
+    setReveal(null); setPage(initial); setError(false); setBusy(!initial);
+    if (!initial) void fetchPage();
+  }, [initial, fetchPage]);
+
+  // Historical links load their release before opening the feature in its own card.
+  useEffect(() => {
+    let active = true;
+    const appendRelease = (release: ChangelogReleaseSummary) => setPage(p => p ? ({ ...p,
+      releases: mergeChangelogReleases(p.releases, [release]),
+    }) : { releases: [release], next: null });
+    const followAnchor = async () => {
+      const anchor = window.location.hash.slice(1);
+      if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(anchor)) return;
+      const version = /^v\d+-\d+-\d+$/.test(anchor) ? anchor.slice(1).replaceAll("-", ".") : null;
+      try {
+        if (version) {
+          if (!document.getElementById(anchor)) {
+            const release = await load<ChangelogReleaseSummary>(locale, `&version=${version}`);
+            if (active) appendRelease(release);
+            requestAnimationFrame(() => document.getElementById(anchor)?.scrollIntoView());
+          }
+        } else {
+          if (document.getElementById(anchor)) {
+            if (active) setReveal(previous => ({ id: anchor, sequence: (previous?.sequence ?? 0) + 1 }));
+            return;
+          }
+          const feature = await load<ChangelogFeatureDetail>(locale, `&feature=${encodeURIComponent(anchor)}`);
+          if (!document.getElementById(releaseAnchor(feature.version))) {
+            const release = await load<ChangelogReleaseSummary>(locale, `&version=${feature.version}`);
+            if (active) appendRelease(release);
+          }
+          if (active) setReveal(previous => ({ id: anchor, sequence: (previous?.sequence ?? 0) + 1 }));
+        }
+      } catch { /* Unknown historical anchors leave the readable release list in place. */ }
+    };
+    void followAnchor();
+    window.addEventListener("hashchange", followAnchor);
+    return () => { active = false; window.removeEventListener("hashchange", followAnchor); };
+  }, [locale]);
+
   return (
-    <ol className="flex flex-col">
-      {entries.map((entry) => (
-        // The anchor allows you to clock a precise delivery — that's what we
-        // sticks in a response to a user who was expecting something.
-        <li
-          key={entry.id}
-          id={entry.id}
-          className="scroll-mt-24 border-b border-border py-8 first:pt-0 last:border-b-0"
-        >
-          <AppTooltip label={formatChangelogDate(entry.date, locale)}>
-            <time
-              dateTime={entry.date}
-              className="mb-3 block w-fit font-mono text-xs text-muted-foreground"
-            >
-              {formatChangelogAge(entry.date, locale)}
-            </time>
-          </AppTooltip>
-          <h2 className="mb-3 text-xl font-semibold tracking-tight text-balance sm:text-2xl">
-            {entry.title}
-          </h2>
-          <p className="leading-relaxed text-pretty text-muted-foreground">
-            {entry.body}
-          </p>
-        </li>
-      ))}
-    </ol>
+    <div>
+      <ol className="space-y-14 sm:space-y-20">
+        {page?.releases.map(release => (
+          <li key={`${locale}:${release.version}`} id={releaseAnchor(release.version)} className={`${styles.release} scroll-mt-24`}>
+            <div className="mb-5 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+              <span>v{release.version}</span><span aria-hidden>•</span>
+              <time dateTime={release.publishedAt}>{formatChangelogDate(release.publishedAt.slice(0, 10), locale)}</time>
+            </div>
+            <h2 className={release.layout === "compact" ? "mb-2 text-lg font-medium tracking-tight" : "mb-3 max-w-2xl text-2xl font-semibold tracking-tight text-balance sm:text-4xl"}>{release.title}</h2>
+            <p className={release.layout === "compact" ? "max-w-2xl text-sm leading-relaxed text-muted-foreground" : "mb-7 max-w-2xl leading-relaxed text-pretty text-muted-foreground"}>{release.summary}</p>
+            <div className={release.layout === "compact" ? "mt-3 border-b border-border pb-4" : styles.masonry}>
+              {release.features.map(feature => <ChangelogFeatureCard
+                key={feature.id} feature={feature} labels={labels} compact={release.layout === "compact"}
+                reveal={reveal?.id === feature.id ? reveal.sequence : undefined}
+              />)}
+            </div>
+          </li>
+        ))}
+      </ol>
+      <div className="mt-10 flex flex-col items-center gap-3" aria-live="polite">
+        {busy && <p className="text-sm text-muted-foreground" role="status">{labels.loading}</p>}
+        {error && <p className="text-sm text-muted-foreground" role="alert">{labels.error}</p>}
+        {(page?.next || error) && <button type="button" disabled={busy} onClick={() => void fetchPage(page?.next ?? undefined)} className="rounded-full border border-border px-5 py-2.5 text-sm font-medium hover:bg-muted disabled:opacity-50">
+          {error ? labels.retry : labels.more}
+        </button>}
+      </div>
+    </div>
   );
 }

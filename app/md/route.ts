@@ -5,7 +5,7 @@ import { locales, defaultLocale, type Locale } from "@/i18n/config";
 import { MARKDOWN_LOCALE_COPY } from "@/lib/markdown-locale-copy";
 import { BILLING_PLANS } from "@/lib/billing-plans";
 import { planFeatureLabels } from "@/lib/plan-features";
-import { CHANGELOG_ENTRIES } from "@/lib/changelog";
+import { getChangelogIndex, getChangelogRelease } from "@/lib/server/changelog";
 import {
   COMPARISONS,
   COMPARISON_FEATURES,
@@ -22,7 +22,6 @@ import {
   type PublicRouteKey,
 } from "@/lib/public-routes";
 import { MCP_ENDPOINT, MINDDY_REPOSITORY_URL, SITE_URL } from "@/lib/site";
-import type { MessageKey } from "@/lib/i18n-keys";
 import {
   FAQ_KEYS,
   MCP_FAQ_KEYS,
@@ -448,26 +447,22 @@ async function renderDownloadPlatform(
   ].join("\n\n") + "\n";
 }
 
-/**
- * The changelog in Markdown (MIN-93) — the simplest text version of the site,
- * and probably the most useful: "what changed in minddy" is
- * a question you ask a model, and all he needs are dates and
- * phrases.
- */
+/** Text equivalents of published releases, including each feature's full details. */
 async function renderChangelog(locale: Locale, canonical: string): Promise<string> {
   const t = await getTranslations({ locale, namespace: "Changelog" });
-
+  const index = (await getChangelogIndex()).slice(0, 50);
+  const releases = await Promise.all(index.map(r => getChangelogRelease(r.version)));
   return [
-    // No subtitle: the page no longer has one, and the header already bears the
-    // description. One more sentence before the list wouldn't say anything new.
     header(t("metaTitle"), t("metaDescription"), canonical, locale),
-    ...CHANGELOG_ENTRIES.map((entry) =>
-      [
-        `## ${t(`entry_${entry.id}_title` as MessageKey<"Changelog">)}`,
-        `*${entry.date}*`,
-        t(`entry_${entry.id}_body` as MessageKey<"Changelog">),
-      ].join("\n\n"),
-    ),
+    ...index.map((entry, i) => [
+      `## v${entry.version} · ${entry.copy[locale].title}`,
+      `*${entry.publishedAt.slice(0, 10)}*`,
+      entry.copy[locale].summary,
+      ...(releases[i]?.features.map(f => [
+        `### ${f.copy[locale].title}`,
+        ...f.copy[locale].details,
+      ].join("\n\n")) ?? []),
+    ].join("\n\n")),
     links(locale),
   ].join("\n\n") + "\n";
 }

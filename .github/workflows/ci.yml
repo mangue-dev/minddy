@@ -119,6 +119,9 @@ jobs:
       - name: Release tooling tests
         run: pnpm run test:release
 
+      - name: Changelog publication and backfill tests
+        run: node --test scripts/changelog.test.mjs
+
       - name: Self-hosted tools and network policy tests
         run: |
           pnpm run test:self-hosted

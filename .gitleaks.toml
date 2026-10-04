@@ -198,3 +198,11 @@ condition = "AND"
 paths = ['''(?:^|/)scripts/self-hosting-encryption\.test\.mjs$''']
 regexTarget = "secret"
 regexes = ['''^192\.168\.1\.50$''']
+
+[[allowlists]]
+description = "Exact SHA-256 of lib/realtime-keys.ts at 6582b8dacf7c361ba5971729eb5b7806da5a2331, recorded twice in the performance report's sourceHashes. Independently verified against the tracked source file."
+targetRules = ["generic-api-key"]
+condition = "AND"
+paths = ['''(?:^|/)docs/audits/desktop-perf-min-614-pass-3b-results\.json$''']
+regexTarget = "secret"
+regexes = ['''^a7e58926695f0e3a4b15a86d18ab441076a1fbf5f29b59619f45da1bf3168f6b$''']

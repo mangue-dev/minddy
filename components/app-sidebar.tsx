@@ -18,7 +18,7 @@ import { APP_VERSION } from "@/lib/app-version";
 import { getDesktopBridge } from "@/lib/desktop/bridge";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import {
   Button,
   DropdownMenu,
@@ -73,7 +73,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import type { MessageKey } from "@/lib/i18n-keys";
-import { CHANGELOG_ENTRIES } from "@/lib/changelog";
+import type { ChangelogPageContent } from "@/lib/changelog-types";
+import type { Locale } from "@/i18n/config";
 import type { Project } from "@/lib/types";
 
 /** Expanded width the sidebar keeps on every level — the old secondary
@@ -667,8 +668,6 @@ function AccountButton({
   );
 }
 
-const CHANGELOG_PREVIEW_ENTRIES = CHANGELOG_ENTRIES.slice(0, 3);
-
 function ChangelogTimelineMarker({
   position,
 }: {
@@ -702,7 +701,8 @@ function ChangelogButton({
   portalOwner: string;
 }) {
   const t = useTranslations("Nav");
-  const tc = useTranslations("Changelog");
+  const locale = useLocale() as Locale;
+  const [preview, setPreview] = useState<ChangelogPageContent | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMounted, setDialogMounted] = useState(false);
@@ -719,6 +719,16 @@ function ChangelogButton({
     setMenuOpen(nextOpen);
     onMenuOpenChange?.(nextOpen);
   };
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    let active = true;
+    fetch(`/api/changelog?locale=${encodeURIComponent(locale)}`).then(response => {
+      if (!response.ok) throw new Error("Changelog preview unavailable");
+      return response.json() as Promise<ChangelogPageContent>;
+    }).then(result => { if (active) setPreview(result); }).catch(() => { /* The full changelog offers retry. */ });
+    return () => { active = false; };
+  }, [menuOpen, locale]);
 
   const control = (
     <button
@@ -744,18 +754,16 @@ function ChangelogButton({
             {t("whatsNew")}
           </DropdownMenuLabel>
           <ol>
-            {CHANGELOG_PREVIEW_ENTRIES.map((entry, index) => (
+            {(preview?.releases.slice(0, 3) ?? []).map((entry, index) => (
               <li
-                key={entry.id}
+                key={entry.version}
                 className="flex h-8 items-center gap-1.5 px-2.5 text-sm leading-tight"
               >
                 <ChangelogTimelineMarker
                   position={index === 0 ? "first" : "middle"}
                 />
                 <span className="min-w-0 flex-1 truncate">
-                  {tc(
-                    `entry_${entry.id}_title` as MessageKey<"Changelog">,
-                  )}
+                  {`v${entry.version} · ${entry.title}`}
                 </span>
               </li>
             ))}

@@ -1,0 +1,716 @@
+{
+  "version": "0.11.0",
+  "layout": "bento",
+  "publishedAt": "2026-09-30T14:59:42Z",
+  "sha": "316e30460d6b8adcf6ae1400c958077195de5245",
+  "deploymentId": 6762664747,
+  "copy": {
+    "en": {
+      "title": "A more private, connected workspace",
+      "summary": "Encrypted workspace content, one Numo, and more ways to organize your work."
+    },
+    "fr": {
+      "title": "Un espace plus privé et mieux connecté",
+      "summary": "Vos contenus chiffrés, un seul Numo et de nouvelles façons d’organiser votre travail."
+    },
+    "de": {
+      "title": "Ein privaterer, vernetzter Arbeitsbereich",
+      "summary": "Verschlüsselte Inhalte, ein gemeinsamer Numo und neue Möglichkeiten, deine Arbeit zu organisieren."
+    },
+    "pt-BR": {
+      "title": "Um espaço mais privado e conectado",
+      "summary": "Conteúdo criptografado, um único Numo e mais formas de organizar seu trabalho."
+    },
+    "it": {
+      "title": "Uno spazio più riservato e connesso",
+      "summary": "Contenuti crittografati, un solo Numo e nuovi modi per organizzare il lavoro."
+    },
+    "es": {
+      "title": "Un espacio más privado y conectado",
+      "summary": "Contenido cifrado, un solo Numo y más formas de organizar tu trabajo."
+    }
+  },
+  "features": [
+    {
+      "id": "encrypted-workspace-content",
+      "illustration": {
+        "kind": "code",
+        "name": "shield"
+      },
+      "copy": {
+        "en": {
+          "title": "Workspace content is encrypted at rest",
+          "summary": "Projects, issues, pages, comments and AI history are now encrypted in the database and file storage.",
+          "details": [
+            "Projects, issues, pages, comments and AI history are now encrypted in the database and file storage. Search and collaboration keep working with content decrypted only for authorized users."
+          ]
+        },
+        "fr": {
+          "title": "Les contenus sont chiffrés au repos",
+          "summary": "Projets, tickets, pages, commentaires et historique IA sont désormais chiffrés dans la base et le stockage de fichiers.",
+          "details": [
+            "Projets, tickets, pages, commentaires et historique IA sont désormais chiffrés dans la base et le stockage de fichiers. La recherche et la collaboration restent disponibles, avec un déchiffrement réservé aux utilisateurs autorisés."
+          ]
+        },
+        "de": {
+          "title": "Workspace content is encrypted at rest",
+          "summary": "Projects, issues, pages, comments and AI history are now encrypted in the database and file storage.",
+          "details": [
+            "Projects, issues, pages, comments and AI history are now encrypted in the database and file storage. Search and collaboration keep working with content decrypted only for authorized users."
+          ]
+        },
+        "pt-BR": {
+          "title": "Workspace content is encrypted at rest",
+          "summary": "Projects, issues, pages, comments and AI history are now encrypted in the database and file storage.",
+          "details": [
+            "Projects, issues, pages, comments and AI history are now encrypted in the database and file storage. Search and collaboration keep working with content decrypted only for authorized users."
+          ]
+        },
+        "it": {
+          "title": "Workspace content is encrypted at rest",
+          "summary": "Projects, issues, pages, comments and AI history are now encrypted in the database and file storage.",
+          "details": [
+            "Projects, issues, pages, comments and AI history are now encrypted in the database and file storage. Search and collaboration keep working with content decrypted only for authorized users."
+          ]
+        },
+        "es": {
+          "title": "Workspace content is encrypted at rest",
+          "summary": "Projects, issues, pages, comments and AI history are now encrypted in the database and file storage.",
+          "details": [
+            "Projects, issues, pages, comments and AI history are now encrypted in the database and file storage. Search and collaboration keep working with content decrypted only for authorized users."
+          ]
+        }
+      }
+    },
+    {
+      "id": "mcp-catalog",
+      "illustration": {
+        "kind": "code",
+        "name": "connections"
+      },
+      "copy": {
+        "en": {
+          "title": "Connect more tools to Numo",
+          "summary": "A searchable registry of preconfigured MCP connections covers far more services, and Numo can now set a connection up for you, authentication guide included.",
+          "details": [
+            "A searchable registry of preconfigured MCP connections covers far more services, and Numo can now set a connection up for you, authentication guide included. No more hand-typing server URLs."
+          ]
+        },
+        "fr": {
+          "title": "Connectez plus d'outils à Numo",
+          "summary": "Un registre de connexions MCP préconfigurées, cherchable, couvre beaucoup plus de services, et Numo peut désormais créer une connexion pour vous, guide…",
+          "details": [
+            "Un registre de connexions MCP préconfigurées, cherchable, couvre beaucoup plus de services, et Numo peut désormais créer une connexion pour vous, guide d'authentification compris. Fini les URLs à saisir à la main."
+          ]
+        },
+        "de": {
+          "title": "Verbinden Sie mehr Werkzeuge mit Numo",
+          "summary": "Ein durchsuchbares Verzeichnis vorkonfigurierter MCP-Verbindungen deckt weit mehr Dienste ab, und Numo kann jetzt eine Verbindung für Sie einrichten,…",
+          "details": [
+            "Ein durchsuchbares Verzeichnis vorkonfigurierter MCP-Verbindungen deckt weit mehr Dienste ab, und Numo kann jetzt eine Verbindung für Sie einrichten, Authentifizierungsanleitung inklusive. Kein manuelles Eintippen von Server-URLs mehr."
+          ]
+        },
+        "pt-BR": {
+          "title": "Conecte mais ferramentas ao Numo",
+          "summary": "Um registro de conexões MCP préconfiguradas, com busca, cobre muito mais serviços, e o Numo agora pode criar uma conexão para você, com guia de autenticação…",
+          "details": [
+            "Um registro de conexões MCP préconfiguradas, com busca, cobre muito mais serviços, e o Numo agora pode criar uma conexão para você, com guia de autenticação incluído. Chega de digitar URLs na mão."
+          ]
+        },
+        "it": {
+          "title": "Collegate più strumenti a Numo",
+          "summary": "Un registro di connessioni MCP preconfigurate, con ricerca, copre molti più servizi, e Numo ora può creare una connessione per voi, guida di autenticazione…",
+          "details": [
+            "Un registro di connessioni MCP preconfigurate, con ricerca, copre molti più servizi, e Numo ora può creare una connessione per voi, guida di autenticazione inclusa. Basta digitare gli URL a mano."
+          ]
+        },
+        "es": {
+          "title": "Conecte más herramientas a Numo",
+          "summary": "Un registro de conexiones MCP preconfiguradas, con buscador, cubre muchos más servicios, y Numo ahora puede crear una conexión por usted, guía de…",
+          "details": [
+            "Un registro de conexiones MCP preconfiguradas, con buscador, cubre muchos más servicios, y Numo ahora puede crear una conexión por usted, guía de autenticación incluida. Se acabó escribir las URL a mano."
+          ]
+        }
+      }
+    },
+    {
+      "id": "performance",
+      "illustration": {
+        "kind": "code",
+        "name": "activity"
+      },
+      "copy": {
+        "en": {
+          "title": "minddy stays fast on big projects",
+          "summary": "A deep performance pass: boards, issue lists and pages load and scroll smoothly even on accounts with thousands of tickets.",
+          "details": [
+            "A deep performance pass: boards, issue lists and pages load and scroll smoothly even on accounts with thousands of tickets. Everyday actions feel immediate again."
+          ]
+        },
+        "fr": {
+          "title": "minddy reste rapide sur les gros projets",
+          "summary": "Une passe de performance en profondeur : boards, listes de tickets et pages se chargent et défilent sans accroc, même sur des comptes avec des milliers de…",
+          "details": [
+            "Une passe de performance en profondeur : boards, listes de tickets et pages se chargent et défilent sans accroc, même sur des comptes avec des milliers de tickets. Les actions du quotidien redeviennent immédiates."
+          ]
+        },
+        "de": {
+          "title": "minddy bleibt bei großen Projekten schnell",
+          "summary": "Eine tiefe Performance-Runde: Boards, Ticketlisten und Seiten laden und scrollen reibungslos, selbst bei Konten mit tausenden Tickets.",
+          "details": [
+            "Eine tiefe Performance-Runde: Boards, Ticketlisten und Seiten laden und scrollen reibungslos, selbst bei Konten mit tausenden Tickets. Alltägliche Aktionen fühlen sich wieder sofort an."
+          ]
+        },
+        "pt-BR": {
+          "title": "O minddy continua rápido nos projetos grandes",
+          "summary": "Uma passada de performance em profundidade: boards, listas de tickets e páginas carregam e rolam sem travar, mesmo em contas com milhares de tickets.",
+          "details": [
+            "Uma passada de performance em profundidade: boards, listas de tickets e páginas carregam e rolam sem travar, mesmo em contas com milhares de tickets. As ações do dia a dia voltam a ser imediatas."
+          ]
+        },
+        "it": {
+          "title": "minddy resta veloce sui progetti grandi",
+          "summary": "Un passaggio di prestazioni in profondità: board, elenchi di ticket e pagine si caricano e scorrono senza intoppi, anche su account con migliaia di ticket.",
+          "details": [
+            "Un passaggio di prestazioni in profondità: board, elenchi di ticket e pagine si caricano e scorrono senza intoppi, anche su account con migliaia di ticket. Le azioni di tutti i giorni tornano immediate."
+          ]
+        },
+        "es": {
+          "title": "minddy sigue siendo rápido en los proyectos grandes",
+          "summary": "Una pasada de rendimiento en profundidad: los tableros, las listas de tickets y las páginas cargan y se desplazan sin tropiezos, incluso en cuentas con…",
+          "details": [
+            "Una pasada de rendimiento en profundidad: los tableros, las listas de tickets y las páginas cargan y se desplazan sin tropiezos, incluso en cuentas con miles de tickets. Las acciones del día a día vuelven a ser inmediatas."
+          ]
+        }
+      }
+    },
+    {
+      "id": "family-boards",
+      "illustration": {
+        "kind": "code",
+        "name": "board"
+      },
+      "copy": {
+        "en": {
+          "title": "Isolate a ticket family on its own board",
+          "summary": "Open a parent with all its sub-issues on a dedicated board from a URL parameter.",
+          "details": [
+            "Open a parent with all its sub-issues on a dedicated board from a URL parameter. Perfect for following one feature without the noise of the rest of the project."
+          ]
+        },
+        "fr": {
+          "title": "Isolez une famille de tickets sur son board",
+          "summary": "Ouvrez un parent avec tous ses sous-tickets sur un board dédié, via un paramètre d'URL.",
+          "details": [
+            "Ouvrez un parent avec tous ses sous-tickets sur un board dédié, via un paramètre d'URL. Idéal pour suivre une seule fonctionnalité sans le bruit du reste du projet."
+          ]
+        },
+        "de": {
+          "title": "Isolieren Sie eine Ticket-Familie auf ihrem eigenen Board",
+          "summary": "Öffnen Sie ein Parent-Ticket mit allen seinen Sub-Tickets auf einem eigenen Board über einen URL-Parameter.",
+          "details": [
+            "Öffnen Sie ein Parent-Ticket mit allen seinen Sub-Tickets auf einem eigenen Board über einen URL-Parameter. Ideal, um eine einzelne Funktion ohne den Lärm des Rests des Projekts zu verfolgen."
+          ]
+        },
+        "pt-BR": {
+          "title": "Isole uma família de tickets no próprio board",
+          "summary": "Abra um ticket pai com todos os seus subtickets num board dedicado, por meio de um parâmetro de URL.",
+          "details": [
+            "Abra um ticket pai com todos os seus subtickets num board dedicado, por meio de um parâmetro de URL. Ideal para acompanhar uma só funcionalidade sem o barulho do resto do projeto."
+          ]
+        },
+        "it": {
+          "title": "Isolate una famiglia di ticket nella sua board",
+          "summary": "Aprite un ticket padre con tutti i suoi sottoticket in una board dedicata, tramite un parametro URL.",
+          "details": [
+            "Aprite un ticket padre con tutti i suoi sottoticket in una board dedicata, tramite un parametro URL. Ideale per seguire una sola funzionalità senza il rumore del resto del progetto."
+          ]
+        },
+        "es": {
+          "title": "Aísle una familia de tickets en su propio tablero",
+          "summary": "Abra un ticket padre con todos sus subtickets en un tablero dedicado, mediante un parámetro de URL.",
+          "details": [
+            "Abra un ticket padre con todos sus subtickets en un tablero dedicado, mediante un parámetro de URL. Ideal para seguir una sola funcionalidad sin el ruido del resto del proyecto."
+          ]
+        }
+      }
+    },
+    {
+      "id": "smart-triage",
+      "illustration": {
+        "kind": "code",
+        "name": "assistant"
+      },
+      "copy": {
+        "en": {
+          "title": "Let AI keep your board in order",
+          "summary": "A new Smart sort orders board columns by priority, relations and urgency, with an AI pass when rules are not enough.",
+          "details": [
+            "A new Smart sort orders board columns by priority, relations and urgency, with an AI pass when rules are not enough. It is always available from the view order, no button to remember."
+          ]
+        },
+        "fr": {
+          "title": "L'IA garde votre board en ordre",
+          "summary": "Un nouveau tri Smart ordonne les colonnes du board selon priorité, relations et urgence, avec une passe d'IA quand les règles ne suffisent plus.",
+          "details": [
+            "Un nouveau tri Smart ordonne les colonnes du board selon priorité, relations et urgence, avec une passe d'IA quand les règles ne suffisent plus. Toujours disponible dans l'ordre de la vue, sans bouton à retenir."
+          ]
+        },
+        "de": {
+          "title": "Die KI hält Ihr Board in Ordnung",
+          "summary": "Eine neue Smart-Sortierung ordnet die Board-Spalten nach Priorität, Beziehungen und Dringlichkeit, mit einem KI-Durchgang, wenn Regeln nicht mehr reichen.",
+          "details": [
+            "Eine neue Smart-Sortierung ordnet die Board-Spalten nach Priorität, Beziehungen und Dringlichkeit, mit einem KI-Durchgang, wenn Regeln nicht mehr reichen. Immer über die Ansichtssortierung verfügbar, ohne Knopf, den man sich merken muss."
+          ]
+        },
+        "pt-BR": {
+          "title": "A IA mantém seu board em ordem",
+          "summary": "Uma nova ordenação Smart organiza as colunas do board por prioridade, relações e urgência, com uma passada de IA quando as regras não bastam.",
+          "details": [
+            "Uma nova ordenação Smart organiza as colunas do board por prioridade, relações e urgência, com uma passada de IA quando as regras não bastam. Sempre disponível na ordenação da view, sem botão para decorar."
+          ]
+        },
+        "it": {
+          "title": "L'IA tiene la vostra board in ordine",
+          "summary": "Un nuovo ordinamento Smart dispone le colonne della board per priorità, relazioni e urgenza, con un passaggio di IA quando le regole non bastano.",
+          "details": [
+            "Un nuovo ordinamento Smart dispone le colonne della board per priorità, relazioni e urgenza, con un passaggio di IA quando le regole non bastano. Sempre disponibile nell'ordinamento della vista, senza pulsante da ricordare."
+          ]
+        },
+        "es": {
+          "title": "La IA mantiene su tablero en orden",
+          "summary": "Una nueva ordenación Smart ordena las columnas del tablero según prioridad, relaciones y urgencia, con una pasada de IA cuando las reglas no bastan.",
+          "details": [
+            "Una nueva ordenación Smart ordena las columnas del tablero según prioridad, relaciones y urgencia, con una pasada de IA cuando las reglas no bastan. Siempre disponible en el orden de la vista, sin botón que recordar."
+          ]
+        }
+      }
+    },
+    {
+      "id": "smart-fill-everywhere",
+      "illustration": {
+        "kind": "code",
+        "name": "assistant"
+      },
+      "copy": {
+        "en": {
+          "title": "Smart Fill completes every ticket",
+          "summary": "Smart Fill no longer stops at new tickets.",
+          "details": [
+            "Smart Fill no longer stops at new tickets. It fills what is missing and tidies triage on tickets you already have, with fine-grained opt-outs when you want to keep control."
+          ]
+        },
+        "fr": {
+          "title": "Smart Fill complète tous les tickets",
+          "summary": "Smart Fill ne se limite plus aux nouveaux tickets.",
+          "details": [
+            "Smart Fill ne se limite plus aux nouveaux tickets. Il complète ce qui manque et passe au crible le triage des tickets existants, avec des opt-outs fins pour garder la main."
+          ]
+        },
+        "de": {
+          "title": "Smart Fill vervollständigt jedes Ticket",
+          "summary": "Smart Fill beschränkt sich nicht mehr auf neue Tickets.",
+          "details": [
+            "Smart Fill beschränkt sich nicht mehr auf neue Tickets. Es ergänzt, was fehlt, und bringt das Triage bestehender Tickets in Ordnung, mit feinen Opt-outs, wenn Sie die Kontrolle behalten wollen."
+          ]
+        },
+        "pt-BR": {
+          "title": "O Smart Fill completa todos os tickets",
+          "summary": "O Smart Fill não se limita mais aos tickets novos.",
+          "details": [
+            "O Smart Fill não se limita mais aos tickets novos. Ele completa o que falta e repassa o triage dos tickets existentes, com opt-outs finos para você manter o controle."
+          ]
+        },
+        "it": {
+          "title": "Smart Fill completa tutti i ticket",
+          "summary": "Smart Fill non si limita più ai ticket nuovi.",
+          "details": [
+            "Smart Fill non si limita più ai ticket nuovi. Completa ciò che manca e passa al setaccio il triage dei ticket esistenti, con opt-out fini per mantenere il controllo."
+          ]
+        },
+        "es": {
+          "title": "Smart Fill completa todos los tickets",
+          "summary": "Smart Fill ya no se limita a los tickets nuevos.",
+          "details": [
+            "Smart Fill ya no se limita a los tickets nuevos. Completa lo que falta y repasa el triage de los tickets existentes, con opciones de exclusión finas para conservar el control."
+          ]
+        }
+      }
+    },
+    {
+      "id": "byok-providers",
+      "illustration": {
+        "kind": "code",
+        "name": "connections"
+      },
+      "copy": {
+        "en": {
+          "title": "Bring your own AI providers",
+          "summary": "Connect several providers at once and pick the right model for each job: chat, transcription, image or embeddings.",
+          "details": [
+            "Connect several providers at once and pick the right model for each job: chat, transcription, image or embeddings. minddy detects what each key can do, and OpenCode Go and Zen work out of the box."
+          ]
+        },
+        "fr": {
+          "title": "Apportez vos propres fournisseurs d'IA",
+          "summary": "Connectez plusieurs fournisseurs à la fois et choisissez le bon modèle pour chaque usage : chat, transcription, image ou embeddings.",
+          "details": [
+            "Connectez plusieurs fournisseurs à la fois et choisissez le bon modèle pour chaque usage : chat, transcription, image ou embeddings. minddy détecte ce que permet chaque clé, et OpenCode Go et Zen fonctionnent sans configuration."
+          ]
+        },
+        "de": {
+          "title": "Bringen Sie Ihre eigenen KI-Anbieter mit",
+          "summary": "Verbinden Sie mehrere Anbieter gleichzeitig und wählen Sie das richtige Modell für jede Aufgabe: Chat, Transkription, Bild oder Embeddings.",
+          "details": [
+            "Verbinden Sie mehrere Anbieter gleichzeitig und wählen Sie das richtige Modell für jede Aufgabe: Chat, Transkription, Bild oder Embeddings. minddy erkennt, was jeder Schlüssel kann, und OpenCode Go und Zen funktionieren ohne Konfiguration."
+          ]
+        },
+        "pt-BR": {
+          "title": "Traga seus próprios provedores de IA",
+          "summary": "Conecte vários provedores de uma vez e escolha o modelo certo para cada uso: chat, transcrição, imagem ou embeddings.",
+          "details": [
+            "Conecte vários provedores de uma vez e escolha o modelo certo para cada uso: chat, transcrição, imagem ou embeddings. O minddy detecta o que cada chave permite, e OpenCode Go e Zen funcionam sem configuração."
+          ]
+        },
+        "it": {
+          "title": "Portate i vostri fornitori di IA",
+          "summary": "Collegate più fornitori contemporaneamente e scegliete il modello giusto per ogni uso: chat, trascrizione, immagini o embeddings.",
+          "details": [
+            "Collegate più fornitori contemporaneamente e scegliete il modello giusto per ogni uso: chat, trascrizione, immagini o embeddings. minddy rileva cosa consente ogni chiave, e OpenCode Go e Zen funzionano senza configurazione."
+          ]
+        },
+        "es": {
+          "title": "Traiga sus propios proveedores de IA",
+          "summary": "Conecte varios proveedores a la vez y elija el modelo adecuado para cada uso: chat, transcripción, imagen o embeddings.",
+          "details": [
+            "Conecte varios proveedores a la vez y elija el modelo adecuado para cada uso: chat, transcripción, imagen o embeddings. minddy detecta lo que permite cada clave, y OpenCode Go y Zen funcionan sin configuración."
+          ]
+        }
+      }
+    },
+    {
+      "id": "voice-dictation",
+      "illustration": {
+        "kind": "code",
+        "name": "assistant"
+      },
+      "copy": {
+        "en": {
+          "title": "Voice dictation that keeps up",
+          "summary": "Dictate anywhere in the app with context-aware transcription.",
+          "details": [
+            "Dictate anywhere in the app with context-aware transcription. What you say lands where you are, from ticket titles to Numo prompts, with better accuracy than before."
+          ]
+        },
+        "fr": {
+          "title": "Une dictée vocale au niveau",
+          "summary": "Dictez partout dans l'app avec une transcription consciente du contexte.",
+          "details": [
+            "Dictez partout dans l'app avec une transcription consciente du contexte. Vos mots arrivent là où vous êtes, du titre d'un ticket aux prompts de Numo, avec une meilleure précision."
+          ]
+        },
+        "de": {
+          "title": "Diktieren, das mithält",
+          "summary": "Diktieren Sie überall in der App mit kontextbewusster Transkription.",
+          "details": [
+            "Diktieren Sie überall in der App mit kontextbewusster Transkription. Was Sie sagen, landet dort, wo Sie sind, von Ticket-Titeln bis zu Numo-Prompts, mit besserer Genauigkeit als zuvor."
+          ]
+        },
+        "pt-BR": {
+          "title": "Um ditado por voz de altura",
+          "summary": "Dite em qualquer lugar do app com uma transcrição ciente do contexto.",
+          "details": [
+            "Dite em qualquer lugar do app com uma transcrição ciente do contexto. Suas palavras chegam onde você está, do título de um ticket aos prompts do Numo, com melhor precisão do que antes."
+          ]
+        },
+        "it": {
+          "title": "Una dettatura vocale all'altezza",
+          "summary": "Dettate ovunque nell'app con una trascrizione consapevole del contesto.",
+          "details": [
+            "Dettate ovunque nell'app con una trascrizione consapevole del contesto. Le vostre parole arrivano dove siete, dal titolo di un ticket ai prompt di Numo, con una precisione migliore di prima."
+          ]
+        },
+        "es": {
+          "title": "Un dictado por voz a la altura",
+          "summary": "Dicte en cualquier parte de la app con una transcripción consciente del contexto.",
+          "details": [
+            "Dicte en cualquier parte de la app con una transcripción consciente del contexto. Sus palabras llegan donde usted está, del título de un ticket a los prompts de Numo, con mejor precisión que antes."
+          ]
+        }
+      }
+    },
+    {
+      "id": "objective-relations",
+      "illustration": {
+        "kind": "code",
+        "name": "board"
+      },
+      "copy": {
+        "en": {
+          "title": "Link objectives and issues",
+          "summary": "The blocked by, blocks and related relations now work between objectives as well as issues, and across the two.",
+          "details": [
+            "The blocked by, blocks and related relations now work between objectives as well as issues, and across the two. See at a glance which goal is holding up which ticket."
+          ]
+        },
+        "fr": {
+          "title": "Reliez objectifs et tickets",
+          "summary": "Les relations bloqué par, bloque et lié fonctionnent désormais entre objectifs, en plus des tickets, et d'un objectif vers un ticket.",
+          "details": [
+            "Les relations bloqué par, bloque et lié fonctionnent désormais entre objectifs, en plus des tickets, et d'un objectif vers un ticket. Voyez d'un coup d'œil quel objectif retient quel ticket."
+          ]
+        },
+        "de": {
+          "title": "Verknüpfen Sie Ziele und Tickets",
+          "summary": "Die Beziehungen blockiert von, blockiert und verwandt gibt es jetzt auch zwischen Zielen, zusätzlich zu Tickets, und von einem Ziel zu einem Ticket.",
+          "details": [
+            "Die Beziehungen blockiert von, blockiert und verwandt gibt es jetzt auch zwischen Zielen, zusätzlich zu Tickets, und von einem Ziel zu einem Ticket. Sehen Sie auf einen Blick, welches Ziel welches Ticket aufhält."
+          ]
+        },
+        "pt-BR": {
+          "title": "Relacione objetivos e tickets",
+          "summary": "As relações bloqueado por, bloqueia e vinculado funcionam agora entre objetivos, além de entre tickets, e de um objetivo para um ticket.",
+          "details": [
+            "As relações bloqueado por, bloqueia e vinculado funcionam agora entre objetivos, além de entre tickets, e de um objetivo para um ticket. Veja num relance qual objetivo segura qual ticket."
+          ]
+        },
+        "it": {
+          "title": "Collegate obiettivi e ticket",
+          "summary": "Le relazioni bloccato da, blocca e collegato funzionano ora anche tra obiettivi, oltre che tra ticket, e da un obiettivo a un ticket.",
+          "details": [
+            "Le relazioni bloccato da, blocca e collegato funzionano ora anche tra obiettivi, oltre che tra ticket, e da un obiettivo a un ticket. Vedete a colpo d'occhio quale obiettivo trattiene quale ticket."
+          ]
+        },
+        "es": {
+          "title": "Relacione objetivos y tickets",
+          "summary": "Las relaciones bloqueado por, bloquea y vinculado funcionan ahora entre objetivos, además de entre tickets, y de un objetivo a un ticket.",
+          "details": [
+            "Las relaciones bloqueado por, bloquea y vinculado funcionan ahora entre objetivos, además de entre tickets, y de un objetivo a un ticket. Vea de un vistazo qué objetivo retiene qué ticket."
+          ]
+        }
+      }
+    },
+    {
+      "id": "pr-page",
+      "illustration": {
+        "kind": "code",
+        "name": "pages"
+      },
+      "copy": {
+        "en": {
+          "title": "A clearer pull request page",
+          "summary": "Status cards, live checks and merge state at a glance.",
+          "details": [
+            "Status cards, live checks and merge state at a glance. Review discussions and commit messages are editable in place, and Numo can merge, rename or comment on a pull request for you."
+          ]
+        },
+        "fr": {
+          "title": "Une page pull request plus claire",
+          "summary": "Cartes d'état, checks en direct et fusion en un coup d'œil.",
+          "details": [
+            "Cartes d'état, checks en direct et fusion en un coup d'œil. Les discussions et les messages de commit se modifient sur place, et Numo peut fusionner, renommer ou commenter une pull request pour vous."
+          ]
+        },
+        "de": {
+          "title": "Eine übersichtlichere Pull-Request-Seite",
+          "summary": "Statuskarten, laufende Checks und Merge-Status auf einen Blick.",
+          "details": [
+            "Statuskarten, laufende Checks und Merge-Status auf einen Blick. Review-Diskussionen und Commit-Nachrichten lassen sich direkt bearbeiten, und Numo kann einen Pull Request für Sie zusammenführen, umbenennen oder kommentieren."
+          ]
+        },
+        "pt-BR": {
+          "title": "Uma página de pull request mais clara",
+          "summary": "Cartões de status, checks em tempo real e merge num relance.",
+          "details": [
+            "Cartões de status, checks em tempo real e merge num relance. As discussões de review e as mensagens de commit são editáveis no lugar, e o Numo pode fazer merge, renomear ou comentar uma pull request para você."
+          ]
+        },
+        "it": {
+          "title": "Una pagina pull request più chiara",
+          "summary": "Schede di stato, check in tempo reale e merge a colpo d'occhio.",
+          "details": [
+            "Schede di stato, check in tempo reale e merge a colpo d'occhio. Le discussioni di review e i messaggi di commit si modificano sul posto, e Numo può fare il merge, rinominare o commentare una pull request per voi."
+          ]
+        },
+        "es": {
+          "title": "Una página de pull request más clara",
+          "summary": "Tarjetas de estado, checks en directo y fusión de un vistazo.",
+          "details": [
+            "Tarjetas de estado, checks en directo y fusión de un vistazo. Las discusiones de review y los mensajes de commit se editan en el sitio, y Numo puede fusionar, renombrar o comentar una pull request por usted."
+          ]
+        }
+      }
+    },
+    {
+      "id": "app-tabs",
+      "illustration": {
+        "kind": "code",
+        "name": "board"
+      },
+      "copy": {
+        "en": {
+          "title": "Work in tabs",
+          "summary": "minddy opens pages in tabs, like a browser.",
+          "details": [
+            "minddy opens pages in tabs, like a browser. Move between your board, a pull request and a conversation without losing your place, with your tabs kept across sessions."
+          ]
+        },
+        "fr": {
+          "title": "Travaillez en onglets",
+          "summary": "minddy ouvre ses pages en onglets, comme un navigateur.",
+          "details": [
+            "minddy ouvre ses pages en onglets, comme un navigateur. Passez du board à une pull request puis à une conversation sans perdre votre place, et retrouvez vos onglets à la prochaine session."
+          ]
+        },
+        "de": {
+          "title": "Arbeiten Sie mit Tabs",
+          "summary": "minddy öffnet Seiten in Tabs, wie ein Browser.",
+          "details": [
+            "minddy öffnet Seiten in Tabs, wie ein Browser. Wechseln Sie zwischen Board, Pull Request und Konversation, ohne den Überblick zu verlieren, und Ihre Tabs bleiben über Sitzungen hinweg erhalten."
+          ]
+        },
+        "pt-BR": {
+          "title": "Trabalhe em abas",
+          "summary": "O minddy abre as páginas em abas, como um navegador.",
+          "details": [
+            "O minddy abre as páginas em abas, como um navegador. Vá do board a uma pull request e depois a uma conversa sem perder o seu lugar, e encontre suas abas na próxima sessão."
+          ]
+        },
+        "it": {
+          "title": "Lavorate con le schede",
+          "summary": "minddy apre le pagine in schede, come un browser.",
+          "details": [
+            "minddy apre le pagine in schede, come un browser. Passate dalla board a una pull request e poi a una conversazione senza perdere il vostro posto, e ritrovate le schede alla sessione successiva."
+          ]
+        },
+        "es": {
+          "title": "Trabaje con pestañas",
+          "summary": "minddy abre sus páginas en pestañas, como un navegador.",
+          "details": [
+            "minddy abre sus páginas en pestañas, como un navegador. Pase del tablero a una pull request y luego a una conversación sin perder su lugar, y recupere sus pestañas en la próxima sesión."
+          ]
+        }
+      }
+    },
+    {
+      "id": "unified-numo",
+      "illustration": {
+        "kind": "code",
+        "name": "assistant"
+      },
+      "copy": {
+        "en": {
+          "title": "One Numo for chats and coding",
+          "summary": "The assistant and the code agent are now one: ask Numo in any conversation and it can delegate real code work, show its progress and answer your questions…",
+          "details": [
+            "The assistant and the code agent are now one: ask Numo in any conversation and it can delegate real code work, show its progress and answer your questions while it runs. Routines run as Numo conversations too."
+          ]
+        },
+        "fr": {
+          "title": "Un seul Numo pour discuter et coder",
+          "summary": "L'assistant et l'agent de code ne font qu'un : demandez à Numo dans n'importe quelle conversation, il peut déléguer un vrai travail de code, montrer sa…",
+          "details": [
+            "L'assistant et l'agent de code ne font qu'un : demandez à Numo dans n'importe quelle conversation, il peut déléguer un vrai travail de code, montrer sa progression et répondre à vos questions pendant qu'il travaille. Les routines s'exécutent aussi comme des conversations Numo."
+          ]
+        },
+        "de": {
+          "title": "Ein Numo für Chat und Coding",
+          "summary": "Assistent und Code-Agent sind jetzt eins: Bitten Sie Numo in einer beliebigen Konversation, und es kann echte Codearbeit delegieren, seinen Fortschritt…",
+          "details": [
+            "Assistent und Code-Agent sind jetzt eins: Bitten Sie Numo in einer beliebigen Konversation, und es kann echte Codearbeit delegieren, seinen Fortschritt zeigen und Ihre Fragen beantworten, während es läuft. Routinen laufen ebenfalls als Numo-Konversationen."
+          ]
+        },
+        "pt-BR": {
+          "title": "Um só Numo para conversar e programar",
+          "summary": "O assistente e o agente de código agora são um só: peça ao Numo em qualquer conversa e ele pode delegar trabalho de código real, mostrar o progresso e…",
+          "details": [
+            "O assistente e o agente de código agora são um só: peça ao Numo em qualquer conversa e ele pode delegar trabalho de código real, mostrar o progresso e responder às suas perguntas enquanto trabalha. As rotinas também rodam como conversas do Numo."
+          ]
+        },
+        "it": {
+          "title": "Un solo Numo per chattare e programmare",
+          "summary": "L'assistente e l'agente di codice sono ora una sola cosa: chiedete a Numo in qualsiasi conversazione e può delegare un vero lavoro di codice, mostrare i…",
+          "details": [
+            "L'assistente e l'agente di codice sono ora una sola cosa: chiedete a Numo in qualsiasi conversazione e può delegare un vero lavoro di codice, mostrare i suoi progressi e rispondere alle vostre domande mentre lavora. Anche le routine girano come conversazioni Numo."
+          ]
+        },
+        "es": {
+          "title": "Un solo Numo para chatear y programar",
+          "summary": "El asistente y el agente de código son ahora uno: pida algo a Numo en cualquier conversación y puede delegar trabajo de código real, mostrar su progreso y…",
+          "details": [
+            "El asistente y el agente de código son ahora uno: pida algo a Numo en cualquier conversación y puede delegar trabajo de código real, mostrar su progreso y responder a sus preguntas mientras trabaja. Las rutinas también se ejecutan como conversaciones de Numo."
+          ]
+        }
+      }
+    },
+    {
+      "id": "merge-readiness",
+      "illustration": {
+        "kind": "code",
+        "name": "board"
+      },
+      "copy": {
+        "en": {
+          "title": "See what is holding up a pull request",
+          "summary": "The pull request view now lists missing approvals, unresolved discussions and checks still to pass.",
+          "details": [
+            "The pull request view now lists missing approvals, unresolved discussions and checks still to pass. Update the branch or rerun failed checks from minddy when your repository allows it."
+          ]
+        },
+        "fr": {
+          "title": "Voyez ce qui empêche de fusionner une pull request",
+          "summary": "La vue de la pull request indique les validations manquantes, les discussions non résolues et les vérifications restantes.",
+          "details": [
+            "La vue de la pull request indique les validations manquantes, les discussions non résolues et les vérifications restantes. Actualisez la branche ou relancez les vérifications en échec depuis minddy lorsque votre dépôt le permet."
+          ]
+        },
+        "de": {
+          "title": "Sieh, was das Zusammenführen eines Pull Requests verhindert",
+          "summary": "Die Pull-Request-Ansicht zeigt fehlende Freigaben, ungelöste Diskussionen und ausstehende Prüfungen.",
+          "details": [
+            "Die Pull-Request-Ansicht zeigt fehlende Freigaben, ungelöste Diskussionen und ausstehende Prüfungen. Aktualisiere den Branch oder starte fehlgeschlagene Prüfungen in minddy erneut, wenn dein Repository es erlaubt."
+          ]
+        },
+        "pt-BR": {
+          "title": "Veja o que impede a integração de uma pull request",
+          "summary": "A visualização da pull request mostra aprovações pendentes, discussões não resolvidas e verificações restantes.",
+          "details": [
+            "A visualização da pull request mostra aprovações pendentes, discussões não resolvidas e verificações restantes. Atualize a branch ou execute novamente as verificações com falha pelo minddy quando o repositório permitir."
+          ]
+        },
+        "it": {
+          "title": "Scopri cosa impedisce di unire una pull request",
+          "summary": "La vista della pull request mostra le approvazioni mancanti, le discussioni irrisolte e i controlli ancora da superare.",
+          "details": [
+            "La vista della pull request mostra le approvazioni mancanti, le discussioni irrisolte e i controlli ancora da superare. Aggiorna il branch o riesegui i controlli non riusciti da minddy quando il repository lo consente."
+          ]
+        },
+        "es": {
+          "title": "Consulta qué impide fusionar una pull request",
+          "summary": "La vista de la pull request muestra las aprobaciones pendientes, las conversaciones sin resolver y las comprobaciones restantes.",
+          "details": [
+            "La vista de la pull request muestra las aprobaciones pendientes, las conversaciones sin resolver y las comprobaciones restantes. Actualiza la rama o vuelve a ejecutar las comprobaciones fallidas desde minddy cuando tu repositorio lo permita."
+          ]
+        }
+      }
+    }
+  ],
+  "evidence": {
+    "commits": [
+      "316e30460d6b8adcf6ae1400c958077195de5245",
+      "53864fc4b1fd24aa7966a14ac73a4218e4fb69bd",
+      "dd8c881a19d78f223f3e0d09fdc40dbdff2b93a9",
+      "acf0d8255ee5e1ec3bd53ea05f8359845930b96b",
+      "a7366efcf729bc42ff0b14531f79f063401ab2ef",
+      "1a14630e4e9c9d069e7ff88fb05c9669da6babf3",
+      "1c6956bb445da861df00abc29e11da1ea0600316",
+      "cbd6980be8510b18fff1178b72ad2f08e5f77738",
+      "d90158dafacf53f50ab37c342e23cd42d8651c4f",
+      "32c6dcae079ba7445270a89297a01f5fbf2c2771",
+      "c4bf8194ea3f241d244970dbb133420053ac2f06",
+      "224c11b133b1334459967a59dc2f98ba46293e82",
+      "0b28607589a49b7b470b371d1016bc25a43a6457"
+    ],
+    "issues": []
+  }
+}

@@ -4,7 +4,6 @@ import { join } from "node:path";
 import { createTranslator } from "next-intl";
 import { describe, expect, it } from "vitest";
 
-import { CHANGELOG_ENTRIES } from "@/lib/changelog";
 import de from "@/messages/de.json";
 import en from "@/messages/en.json";
 import es from "@/messages/es.json";
@@ -154,23 +153,6 @@ describe("i18n catalog ↔ code contract", () => {
       .map((v) => `  ${v.file}:${v.line} — ${v.key} expects values`)
       .join("\n");
     expect(violations, `Calls without values:\n${report}`).toEqual([]);
-  });
-
-  /**
-   * Keys built at runtime bypass typing: they are cast at the call site
-   * (the convention in lib/i18n-keys.ts), so the compiler no longer guarantees
-   * that they exist. These key families are used on PUBLIC pages, where a
-   * missing key would display `Changelog.entry_x_title` to a visitor. We
-   * therefore verify their existence here, at the source.
-   */
-  it.each([
-    ["Changelog", CHANGELOG_ENTRIES.map((e) => e.id), ["entry_%_title", "entry_%_body"]],
-  ] as const)("the %s namespace covers every constructed key", (namespace, ids, shapes) => {
-    const flat = new Set(leafPaths((namespace === "Changelog" ? en.Changelog : {}) as Catalog));
-    const missing = ids
-      .flatMap((id) => shapes.map((shape) => shape.replace("%", id)))
-      .filter((key) => !flat.has(key));
-    expect(missing, `Missing ${namespace} keys: ${missing.join(", ")}`).toEqual([]);
   });
 
   it("all locales contain exactly the English keys", () => {
