@@ -8,6 +8,8 @@ import type { AgentEventType } from "./agent-api";
 import { liveAfterEvent, liveFromStream, type AgentRunLive, type StreamPayload } from "./agent-live";
 import { parseAgentLocalDiff, type AgentLocalDiff } from "./agent-local-diff";
 import { onRealtimeRekey, resolveRealtimeTopic } from "./realtime-topic";
+import { useAppTabActive } from "./app-tab-route-context";
+import { startVisiblePoll } from "./visible-poll";
 
 export type { AgentRunLive } from "./agent-live";
 
@@ -19,7 +21,8 @@ export type { AgentRunLive } from "./agent-live";
  * loop. The code agent cannot: its loop runs as a
  * task in the background, without a browser at the end. The server stores a
  * protected current snapshot for the live tail and diff. This hook polls the
- * authorized route twice per second while the run is active.
+ * authorized route with a 500 ms interval while the run and view are active.
+ * Hidden documents suspend snapshot reads and catch up immediately on return.
  *
  * `event` — a source-row invalidation. The authorized event route loads the
  * content; Realtime never carries the event payload.
@@ -42,6 +45,8 @@ interface Entry {
   connectVersion: number;
   stopRekey: () => void;
   stopPoll: () => void;
+  stream: StreamPayload | null;
+  diff: AgentLocalDiff | null;
 }
 
 /**
@@ -61,6 +66,8 @@ function subscribeRun(runId: string, listener: Listener): () => void {
       connectVersion: 0,
       stopRekey: () => {},
       stopPoll: () => {},
+      stream: null,
+      diff: null,
     };
     entry = fresh;
     channels.set(runId, fresh);
@@ -85,6 +92,9 @@ function subscribeRun(runId: string, listener: Listener): () => void {
           channel.on("broadcast", { event: "event" }, ({ payload }) => {
             const signal = payload as { id?: string; type?: string } | null;
             if (!signal?.id || !signal.type) return;
+            // A persisted event supersedes provisional text. Do not replay it
+            // to a view that resumes before the next live snapshot arrives.
+            fresh.stream = null;
             for (const l of fresh.listeners) l.onEvent?.({
               id: signal.id, type: signal.type as AgentEventType,
             });
@@ -99,43 +109,45 @@ function subscribeRun(runId: string, listener: Listener): () => void {
     };
     fresh.stopRekey = onRealtimeRekey(connect);
     connect();
-    let pending = false;
     let streamAt = 0;
     let diffAt = 0;
-    const poll = async () => {
-      if (pending || fresh.closed) return;
-      pending = true;
+    const poll = async (signal: AbortSignal) => {
+      if (fresh.closed) return;
       try {
         const response = await fetch(`/api/agent-runs/${runId}/live`, {
           cache: "no-store",
+          signal,
         });
-        if (!response.ok || fresh.closed) return;
+        if (!response.ok || fresh.closed || signal.aborted) return;
         const value = await response.json() as {
           stream?: StreamPayload | null;
           diff?: Record<string, unknown> | null;
         };
+        if (fresh.closed || signal.aborted) return;
         const nextStreamAt = typeof value.stream?.at === "number" ? value.stream.at : 0;
         if (nextStreamAt > streamAt) {
           streamAt = nextStreamAt;
-          for (const l of fresh.listeners) l.onStream?.(value.stream ?? {});
+          fresh.stream = value.stream ?? {};
+          for (const l of fresh.listeners) l.onStream?.(fresh.stream);
         }
         const nextDiffAt = typeof value.diff?.at === "number" ? value.diff.at : 0;
         if (nextDiffAt > diffAt) {
           diffAt = nextDiffAt;
           const diff = parseAgentLocalDiff(value.diff);
+          fresh.diff = diff;
           for (const l of fresh.listeners) l.onDiff?.(diff);
         }
       } catch {
         // The next poll retries after a transient network failure.
-      } finally {
-        pending = false;
       }
     };
-    void poll();
-    const interval = setInterval(() => void poll(), 500);
-    fresh.stopPoll = () => clearInterval(interval);
+    fresh.stopPoll = startVisiblePoll(poll, 500);
   }
   entry.listeners.add(listener);
+  // Another visible view may already own this poll. Its timestamp cursor must
+  // not leave a newly resumed subscriber blank until the snapshot changes.
+  if (entry.stream) listener.onStream?.(entry.stream);
+  if (entry.diff) listener.onDiff?.(entry.diff);
 
   const opened = entry;
   return () => {
@@ -156,11 +168,12 @@ export function useAgentRunLocalDiff(
   runId: string | null,
   active: boolean,
 ): AgentLocalDiff | null {
+  const viewActive = useAppTabActive();
   const [diff, setDiff] = useState<AgentLocalDiff | null>(null);
 
   useEffect(() => {
     setDiff(null);
-    if (!runId || !active) return;
+    if (!runId || !active || !viewActive) return;
     return subscribeRun(runId, {
       onDiff: (next) => {
         // The relay already validates the shape; the order is carried by the wrapper
@@ -168,7 +181,7 @@ export function useAgentRunLocalDiff(
         setDiff(next);
       },
     });
-  }, [runId, active]);
+  }, [runId, active, viewActive]);
 
   return diff;
 }
@@ -180,6 +193,7 @@ export function useAgentRunLive(
   runId: string | null,
   active: boolean,
 ): AgentRunLive | null {
+  const viewActive = useAppTabActive();
   const queryClient = useQueryClient();
   const [live, setLive] = useState<AgentRunLive | null>(null);
   // Timestamp of the last `stream` retained: two sendings sent 250 ms apart
@@ -190,7 +204,7 @@ export function useAgentRunLive(
   useEffect(() => {
     setLive(null);
     lastAt.current = 0;
-    if (!runId || !active) return;
+    if (!runId || !active || !viewActive) return;
 
     return subscribeRun(runId, {
       onStream: (p) => {
@@ -209,7 +223,7 @@ export function useAgentRunLive(
         void queryClient.invalidateQueries({ queryKey: ["agent-run-events", runId] });
       },
     });
-  }, [runId, active, queryClient]);
+  }, [runId, active, viewActive, queryClient]);
 
   return live;
 }
