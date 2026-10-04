@@ -1,8 +1,38 @@
 import { QueryClient } from "@tanstack/react-query";
 import { expect, it, vi } from "vitest";
-import { refreshRetainedBoard, retainedBoardKeys, retainedBoardReadState } from "./retained-board-read-state";
+import { refreshRetainedBoard, retainedBoardKeys, retainedBoardReadState, subscribeRetainedBoardReadState } from "./retained-board-read-state";
 import type { RetainedAppView } from "./retained-app-views";
 const view: RetainedAppView = { key: "g", tabId: "g", kind: "global-board", route: { pathname: "/all", search: "", projectId: null } };
+
+it.each([view, { ...view, kind: "project-board" as const, route: { pathname: "/projects/p", projectId: "p", search: "" } }])("notifies an expired $kind activation synchronously and ignores unrelated queries", async (board) => {
+  const now = vi.spyOn(Date, "now").mockReturnValue(1000);
+  const client = new QueryClient({ defaultOptions: { queries: { staleTime: 300_000 } } });
+  const pending: ((rows: string[]) => void)[] = [];
+  let activating = false;
+  const read = () => activating ? new Promise<string[]>((resolve) => pending.push(resolve)) : Promise.resolve(["Cached rows"]);
+  const notify = vi.fn(() => retainedBoardReadState(client, board));
+  let stop = () => {};
+  try {
+    for (const queryKey of retainedBoardKeys(board)) await client.fetchQuery({ queryKey, queryFn: read });
+    stop = subscribeRetainedBoardReadState(client, board, notify);
+    client.setQueryData(["avatar", "user"], []);
+    client.setQueryData([...retainedBoardKeys(board)[0], "unrelated"], []);
+    expect(notify).not.toHaveBeenCalled();
+    now.mockReturnValue(302_000);
+    activating = true;
+    const refresh = refreshRetainedBoard(client, board);
+    // No await or timer flush: the layout effect must notify before returning.
+    expect(notify).toHaveBeenCalled();
+    expect(notify.mock.results.every((result) => result.value === "refreshing")).toBe(true);
+    for (const finish of pending) finish(["Current rows"]);
+    await refresh;
+    expect(notify.mock.results.at(-1)?.value).toBe("fresh");
+    stop();
+    notify.mockClear();
+    client.setQueryData(retainedBoardKeys(board)[0], ["Updated after unsubscribe"]);
+    expect(notify).not.toHaveBeenCalled();
+  } finally { stop(); client.clear(); now.mockRestore(); }
+});
 
 it.each([view, { ...view, kind: "project-board" as const, route: { pathname: "/projects/p", projectId: "p", search: "" } }])("waits for every prerequisite of a $kind, including absent queries", (board) => {
   const client = new QueryClient();

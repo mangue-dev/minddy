@@ -6,6 +6,14 @@ export function retainedBoardKeys(view: RetainedAppView): readonly (readonly unk
   return ["issues", "members", "categories", "objectives", "integrations", "issue-relations", "views"].map((prefix) => [prefix, view.route.projectId]);
 }
 
+/** Activation refreshes must conceal cached rows before the next paint. */
+export function subscribeRetainedBoardReadState(client: QueryClient, view: RetainedAppView, notify: () => void) {
+  const keys = retainedBoardKeys(view);
+  return client.getQueryCache().subscribe((event) => {
+    if (keys.some((key) => key.length === event.query.queryKey.length && key.every((part, index) => part === event.query.queryKey[index]))) notify();
+  });
+}
+
 function expiredBoardQuery(client: QueryClient, key: readonly unknown[]) {
   const query = client.getQueryCache().find({ queryKey: key, exact: true });
   // Query instances retain observer options, although QueryOptions omits staleTime.

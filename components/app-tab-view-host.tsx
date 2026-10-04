@@ -1,7 +1,7 @@
 "use client";
 
 import { Activity, memo, useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
-import { notifyManager, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
 import { appTabSurfaceLoaders } from "@/lib/app-tab-surfaces";
 import { usePathname, useSearchParams } from "next/navigation";
@@ -15,7 +15,7 @@ import { BoardLoadingSkeleton } from "./board-loading-skeleton";
 import { useRetainedBoardScroll } from "@/lib/use-retained-board-scroll";
 import { useColdBoardPrefetch } from "@/lib/use-cold-board-prefetch";
 import { observeRetainedBoardData } from "@/lib/retained-board-data";
-import { refreshRetainedBoard, retainedBoardKeys, retainedBoardReadState } from "@/lib/retained-board-read-state";
+import { refreshRetainedBoard, retainedBoardKeys, retainedBoardReadState, subscribeRetainedBoardReadState } from "@/lib/retained-board-read-state";
 import { useTranslations } from "next-intl";
 import { QueryReadBoundary } from "./query-read-boundary";
 
@@ -38,11 +38,7 @@ const RetainedBoard = memo(function RetainedBoard({ view, active }: { view: Reta
   const t = useTranslations("Board");
   const isBoard = view.kind === "global-board" || view.kind === "project-board";
   const subscribe = useCallback((notify: () => void) => {
-    const keys = isBoard ? retainedBoardKeys(view) : [];
-    const onChange = notifyManager.batchCalls(notify);
-    return client.getQueryCache().subscribe((event) => {
-      if (keys.some((key) => key.length === event.query.queryKey.length && key.every((part, index) => part === event.query.queryKey[index]))) onChange();
-    });
+    return isBoard ? subscribeRetainedBoardReadState(client, view, notify) : () => {};
   }, [client, view, isBoard]);
   const snapshot = useCallback(() => isBoard ? retainedBoardReadState(client, view) : "fresh" as const, [client, view, isBoard]);
   const readState = useSyncExternalStore(subscribe, snapshot, () => "fresh" as const);
