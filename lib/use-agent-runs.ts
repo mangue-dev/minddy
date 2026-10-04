@@ -4,7 +4,8 @@ import { useAppTabActive, useAppTabActivation } from "./app-tab-route-context";
 
 import { useQuery, type QueryClient } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
-import { assertPullRequestReadBudget, pullRequestReadRetry, pullRequestQueryOptions, pullRequestReadState } from "./pull-request-query";
+import { assertPullRequestReadBudget, pullRequestReadRetry, pullRequestQueryOptions, pullRequestReadState, pullRequestReadPrecedesActivation } from "./pull-request-query";
+import { nextReadActivationSequence } from "./read-activation-sequence";
 import {
   fetchAgentRunApi,
   fetchAgentRunDiffApi,
@@ -191,22 +192,22 @@ export function usePullRequestQuery(prId: string, enabled: boolean) {
   const active = useAppTabActive();
   const scopeActivation = useAppTabActivation();
   enabled = enabled && active;
-  const activation = useRef({ prId, enabled, at: Date.now() });
-  if (activation.current.prId !== prId || activation.current.enabled !== enabled || scopeActivation > activation.current.at) {
-    activation.current = { prId, enabled, at: Math.max(scopeActivation, Date.now()) };
+  const activation = useRef<{ prId: string; enabled: boolean; sequence: number } | null>(null);
+  if (!activation.current || activation.current.prId !== prId || activation.current.enabled !== enabled || scopeActivation > activation.current.sequence) {
+    activation.current = { prId, enabled, sequence: nextReadActivationSequence() };
   }
   const query = useQuery({
     ...pullRequestQueryOptions(prId),
     enabled,
   });
   const { data, isPending, refetch, dataUpdatedAt } = query;
-  const activatedAt = activation.current.at;
+  const activationSequence = activation.current.sequence;
   // An in-flight hover read may finish after activation but have started before
   // a near-click remote change. Join it for display, then validate authoritatively.
   useEffect(() => {
-    if (enabled && data && (data.readStartedAt ?? 0) < activatedAt &&
+    if (enabled && data && pullRequestReadPrecedesActivation(data, activationSequence) &&
         query.fetchStatus === "idle" && !query.isError) void refetch();
-  }, [enabled, data, activatedAt, query.fetchStatus, query.isError, refetch]);
+  }, [enabled, data, activationSequence, query.fetchStatus, query.isError, refetch]);
   return {
     pr: data?.pr ?? null,
     /** When the forge GET powering `pr` was RECEIVED — what orders it against
@@ -229,7 +230,7 @@ export function usePullRequestQuery(prId: string, enabled: boolean) {
     readiness: data?.readiness ?? null,
     readinessThreads: data?.reviewThreads ?? null,
     loading: enabled && isPending,
-    readState: pullRequestReadState(query, activatedAt),
+    readState: pullRequestReadState(query, activationSequence),
     refetch,
   };
 }

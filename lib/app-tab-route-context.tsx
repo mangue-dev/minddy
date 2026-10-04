@@ -15,8 +15,8 @@ export const useAppTabActive = () => useContext(ActiveContext);
 
 const Context = createContext<AppTabRouteSnapshot | null>(null);
 
-export function AppTabRouteProvider({ route, children, active = true, activatedAt = 0 }: { route: AppTabRouteSnapshot; children: ReactNode; active?: boolean; activatedAt?: number }) {
-  return <ActivationContext.Provider value={activatedAt}><ActiveContext.Provider value={active}><Context.Provider value={route}>{children}</Context.Provider></ActiveContext.Provider></ActivationContext.Provider>;
+export function AppTabRouteProvider({ route, children, active = true, activationSequence = 0 }: { route: AppTabRouteSnapshot; children: ReactNode; active?: boolean; activationSequence?: number }) {
+  return <ActivationContext.Provider value={activationSequence}><ActiveContext.Provider value={active}><Context.Provider value={route}>{children}</Context.Provider></ActiveContext.Provider></ActivationContext.Provider>;
 }
 
 function LiveRoute({ children }: { children: ReactNode }) {

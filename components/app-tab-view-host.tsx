@@ -7,6 +7,7 @@ import { appTabSurfaceLoaders } from "@/lib/app-tab-surfaces";
 import { usePathname, useSearchParams } from "next/navigation";
 import { AppTabNavigationScope, useAppTabs } from "@/lib/app-tabs-context";
 import { AppTabRouteProvider } from "@/lib/app-tab-route-context";
+import { nextReadActivationSequence } from "@/lib/read-activation-sequence";
 import { normalizeAppTabLocation } from "@/lib/app-tab-location";
 import { isRetainedDestination, retainAppView, retainedAppViewKind, type RetainedAppView } from "@/lib/retained-app-views";
 import { RetainedBoardTitle } from "./retained-board-title";
@@ -26,8 +27,10 @@ const Feedback = dynamic(() => appTabSurfaceLoaders.feedback().then((module) => 
 const Triage = dynamic(appTabSurfaceLoaders.triage);
 
 const RetainedBoard = memo(function RetainedBoard({ view, active }: { view: RetainedAppView; active: boolean }) {
-  const activation = useRef({ active, at: Date.now() });
-  if (active && !activation.current.active) activation.current.at = Date.now();
+  const activation = useRef<{ active: boolean; sequence: number } | null>(null);
+  if (!activation.current || (active && !activation.current.active)) {
+    activation.current = { active, sequence: nextReadActivationSequence() };
+  }
   activation.current.active = active;
   const scroll = useRetainedBoardScroll(active);
   const client = useQueryClient();
@@ -42,7 +45,7 @@ const RetainedBoard = memo(function RetainedBoard({ view, active }: { view: Reta
     <Activity mode={active ? "visible" : "hidden"}>
     <RetainedBoardTitle view={view} />
     <AppTabNavigationScope activeId={view.tabId}>
-      <AppTabRouteProvider route={view.route} active={active} activatedAt={activation.current.at}>
+      <AppTabRouteProvider route={view.route} active={active} activationSequence={activation.current.sequence}>
         {view.kind === "global-board" ? <GlobalBoard /> : view.kind === "project-board" ? <ProjectBoard />
           : view.kind === "pages" ? <Pages /> : view.kind === "pull-requests" ? <PullRequests />
           : view.kind === "feedback" ? <Feedback /> : <Triage />}

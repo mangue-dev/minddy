@@ -62,7 +62,7 @@ describe("tab destination prefetch", () => {
     prefetchAppTabDestination(client, "/pull-requests?pr=pr1", new Set());
     await vi.waitFor(() => expect(requested()).toEqual(["/api/pull-requests/pr1", "/api/pull-requests"]));
     expect(String(fetchMock.mock.calls[1][0])).toContain("pr=pr1");
-    await vi.waitFor(() => expect(client.getQueryData(["pull-request", "pr1"])).toEqual({ readStartedAt: expect.any(Number) }));
+    await vi.waitFor(() => expect(client.getQueryData(["pull-request", "pr1"])).toEqual({ readSequence: expect.any(Number), readSession: expect.any(String) }));
     prefetchAppTabDestination(client, "/pull-requests?pr=pr1", new Set());
     await vi.waitFor(() => expect(requested()).toHaveLength(2));
   });

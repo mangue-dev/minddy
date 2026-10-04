@@ -1,6 +1,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { ApiError, fetchPullRequestApi } from "./agent-api";
 import { pullRequestRefetchInterval } from "./pr-readiness-actions";
+import { nextReadActivationSequence, readActivationSession } from "./read-activation-sequence";
 
 /** Retry-After also gates focus, activation and speculative reads. */
 export function pullRequestReadRetryAt(state: { error: unknown; errorUpdatedAt: number } | undefined): number {
@@ -38,28 +39,37 @@ export function pullRequestQueryOptions(prId: string) {
     queryKey: ["pull-request", prId] as const,
     queryFn: async ({ signal, client }: { signal: AbortSignal; client?: QueryClient }) => {
       if (client) assertPullRequestReadBudget(client);
-      const readStartedAt = Date.now();
+      const readSequence = nextReadActivationSequence();
       const data = await fetchPullRequestApi(prId, signal);
-      return { ...data, readStartedAt };
+      return { ...data, readSequence, readSession: readActivationSession };
     },
     staleTime: 0,
     retry: pullRequestReadRetry,
     refetchOnMount: "always" as const,
-    refetchInterval: (query: { state: { data?: Awaited<ReturnType<typeof fetchPullRequestApi>>; error: unknown; errorUpdatedAt: number } }) =>
-      pullRequestReadRetryAt(query.state) > Date.now() ? false : pullRequestRefetchInterval(query.state.data),
+    refetchInterval: (query: { state: { data?: Awaited<ReturnType<typeof fetchPullRequestApi>>; error: unknown; errorUpdatedAt: number } }) => {
+      const delay = pullRequestReadRetryAt(query.state) - Date.now();
+      return delay > 0 ? delay : pullRequestRefetchInterval(query.state.data);
+    },
   };
 }
 
 export type PullRequestReadState = "loading" | "refreshing" | "fresh" | "paused" | "error";
 
+export function pullRequestReadPrecedesActivation(
+  data: { readSequence?: number; readSession?: string } | undefined,
+  activationSequence: number,
+): boolean {
+  return data?.readSession !== readActivationSession || (data.readSequence ?? 0) < activationSequence;
+}
+
 export function pullRequestReadState(
-  query: { data?: { readStartedAt?: number }; isPending: boolean; isError: boolean;
+  query: { data?: { readSequence?: number; readSession?: string }; isPending: boolean; isError: boolean;
     fetchStatus: "idle" | "fetching" | "paused" },
-  activatedAt: number,
+  activationSequence: number,
 ): PullRequestReadState {
   if (query.fetchStatus === "paused") return "paused";
   if (query.isError) return "error";
   if (query.isPending) return "loading";
-  if (query.fetchStatus === "fetching" || (query.data?.readStartedAt ?? 0) < activatedAt) return "refreshing";
+  if (query.fetchStatus === "fetching" || pullRequestReadPrecedesActivation(query.data, activationSequence)) return "refreshing";
   return "fresh";
 }

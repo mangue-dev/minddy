@@ -6,8 +6,9 @@ import { expect, it, vi } from "vitest";
 import { AppTabRouteProvider } from "./app-tab-route-context";
 import { usePullRequestQuery } from "./use-agent-runs";
 import { pullRequestQueryOptions } from "./pull-request-query";
+import { nextReadActivationSequence } from "./read-activation-sequence";
 
-it("requires authority after a retained activation even if hidden rendering was deferred", async () => {
+it.each(["later millisecond", "same millisecond", "clock rollback"])("requires authority after a retained activation with %s even if hidden rendering was deferred", async (timing) => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   let now = 10;
   vi.spyOn(Date, "now").mockImplementation(() => now);
@@ -23,21 +24,22 @@ it("requires authority after a retained activation even if hidden rendering was 
     states.push({ head: query.pr?.headSha, state: query.readState });
     return createElement("span", null, query.readState);
   }
-  const render = (active: boolean, activatedAt: number) => act(() => root.render(
+  const render = (active: boolean, activationSequence: number) => act(() => root.render(
     createElement(QueryClientProvider, { client }, createElement(Activity, { mode: active ? "visible" : "hidden",
-      children: createElement(AppTabRouteProvider, { route: { pathname: "/pull-requests", search: "pr=pr", projectId: null }, active, activatedAt, children: createElement(Detail) }),
+      children: createElement(AppTabRouteProvider, { route: { pathname: "/pull-requests", search: "pr=pr", projectId: null }, active, activationSequence, children: createElement(Detail) }),
     })),
   ));
   try {
-    await render(true, now);
+    const initialActivation = nextReadActivationSequence();
+    await render(true, initialActivation);
     await act(async () => { pending.shift()!(Response.json({ pr: { headSha: "initial" } })); });
     await act(async () => { await vi.waitFor(() => expect(container.textContent).toBe("fresh")); });
-    await render(false, now);
+    await render(false, initialActivation);
     now = 20;
     const preparation = client.fetchQuery(pullRequestQueryOptions("pr"));
-    now = 30;
+    now = timing === "later millisecond" ? 30 : timing === "same millisecond" ? 20 : 5;
     const start = states.length;
-    await render(true, now);
+    await render(true, nextReadActivationSequence());
     await act(async () => { pending.shift()!(Response.json({ pr: { headSha: "old-preparation" } })); await preparation; });
     await act(async () => { await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(3)); });
     expect(states.slice(start).some((row) => row.head === "old-preparation" && row.state === "fresh")).toBe(false);
