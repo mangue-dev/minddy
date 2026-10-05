@@ -33,8 +33,8 @@ const project = {
 };
 
 const surfaces: Record<string, string> = {
-  "chat de projet": buildSystemPrompt(project, "fr"),
-  "chat global": buildGlobalSystemPrompt("fr"),
+  "project chat": buildSystemPrompt(project, "fr"),
+  "global chat": buildGlobalSystemPrompt("fr"),
 };
 
 describe("how to respond to distress", () => {
@@ -51,7 +51,7 @@ describe("how to respond to distress", () => {
   }
 });
 
-describe("messages du chat Numo", () => {
+describe("Numo chat messages", () => {
   for (const [surface, prompt] of Object.entries(surfaces)) {
     it(`treats every user message as a direct request in ${surface}`, () => {
       expect(prompt).toContain("direct message from the person currently talking to");

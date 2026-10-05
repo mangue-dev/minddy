@@ -16,10 +16,6 @@ const root = process.cwd();
 const ignoredPaths = [
   /^messages\/fr\.json$/,
   /^\.claude\//,
-  // The Numo audit reports (docs/audits/numo-<date>.md) are a recurring
-  // owner-mandated deliverable written in French, like the series the August
-  // audits established.
-  /^docs\/audits\/numo-\d{4}-\d{2}-\d{2}\.md$/,
   /(^|\/)(?:LICENSE|NOTICE)(?:\.|$)/,
   /^scripts\/check-owned-english\.mjs$/,
   /^captures\/.*\/history\.jsonl$/,
