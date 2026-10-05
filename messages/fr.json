@@ -3679,6 +3679,8 @@
     "sessionDeleted": "Conversation supprimée"
   },
   "PullRequests": {
+    "descriptionMoreActions": "Actions de la description",
+    "editDescriptionPlaceholder": "Modifier la description…",
     "sectionCreatedByMe": "Créées par moi",
     "sectionMyReview": "À revoir par moi",
     "sectionTeamReview": "À revoir par mon équipe",

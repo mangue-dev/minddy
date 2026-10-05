@@ -144,8 +144,8 @@ import {
 
 /**
  * PR detail panel (MIN-66 + MIN-138 + MIN-143): header (ticket +
- * status + actions), CI checks banner, then two GitHub-style tabs — the thread
- * conversation (PR description + comments) and modified files.
+ * status + actions), insight properties, standalone description, and tabs
+ * for activity, commits, and modified files.
  * Everything is controlled by `item.prId`: since MIN-143 the PR no longer belongs to the run
  * who opened it, and a human PR has none.
  *
@@ -304,6 +304,7 @@ export function ThreadComment({
   forceBot,
   reactions,
   activity,
+  presentation = "comment",
 }: {
   /** Routes of this PR — the edit composer reuses them (mentions, uploads). */
   endpoint: PrEndpoint;
@@ -313,8 +314,7 @@ export function ThreadComment({
   /** Last edit at the forge — the "(edited)" marker compares it to `createdAt`. */
   updatedAt?: string | null;
   body: string;
-  /** The viewer may edit THIS message: own human message with an account on
-      the forge. The PR body is excluded — editing it is out of scope. */
+  /** Only the human author with a connected forge account may edit this content. */
   canEdit?: boolean;
   /** Refetch the thread after a saved edit: the card alone does not own the
       comments query, and the cache must not show the old body. */
@@ -336,8 +336,11 @@ export function ThreadComment({
       Numo's review is the only case: his verdict is the message, his work
       is what produced it. */
   activity?: React.ReactNode;
+  /** Render the PR body as plain description content outside the activity feed. */
+  presentation?: "comment" | "description";
 }) {
   const t = useTranslations("PullRequests");
+  const isDescription = presentation === "description";
   const format = useFormatter();
   const now = useForgeNow();
   const list = reactions?.byComment.get(commentId) ?? [];
@@ -382,88 +385,92 @@ export function ThreadComment({
     }
   };
 
+  const actions = editing ? (
+    <Button
+      variant="ghost"
+      size="sm"
+      className="-my-1 text-muted-foreground"
+      onClick={() => {
+        setEditing(false);
+        setDraft("");
+      }}
+    >
+      {t("cancel")}
+    </Button>
+  ) : (canEdit || onQuoteReply || canViewHistory) ? (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label={t(isDescription ? "descriptionMoreActions" : "commentMoreActions")}
+          className="-my-1 size-7 rounded-full text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+        >
+          <HugeiconsIcon icon={MoreHorizontalIcon} className="size-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        {canEdit ? (
+          <DropdownMenuItem
+            onSelect={() => {
+              setDraft(body);
+              setEditing(true);
+            }}
+          >
+            <HugeiconsIcon icon={Edit04Icon} />
+            {t("editComment")}
+          </DropdownMenuItem>
+        ) : null}
+        {onQuoteReply ? (
+          <DropdownMenuItem onClick={onQuoteReply}>
+            <HugeiconsIcon icon={MessageSquareQuoteIcon} />
+            {t(quotingNumo ? "quoteReplyNumo" : "quoteReply")}
+          </DropdownMenuItem>
+        ) : null}
+        {/* Keep loading and failed body reads reachable without
+            claiming that an edit has been recorded. */}
+        {canViewHistory ? (
+          <DropdownMenuItem onSelect={() => setHistoryOpen(true)}>
+            <HugeiconsIcon icon={HistoryIcon} />
+            {t("viewPreviousVersions")}
+          </DropdownMenuItem>
+        ) : null}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  ) : null;
+
   return (
     <article
-      data-testid="pr-activity-message"
+      data-testid={isDescription ? "pr-description" : "pr-activity-message"}
       // chat-selectable: the global reset of mangue-ui kills text selection;
       // the message card must read like a text surface, copyable like on the
       // forge.
-      className="chat-selectable group overflow-clip rounded-lg border border-border bg-card shadow-xs"
+      className={cn("chat-selectable group min-w-0", !isDescription && "overflow-clip rounded-lg border border-border bg-card shadow-xs")}
     >
-      <div className="flex flex-col gap-2 px-3.5 py-3">
-        <header className="flex min-h-5 items-center gap-2">
-          <ForgeUserAvatar
-            user={user}
-            forceBot={forceBot}
-            className="size-5 shrink-0"
-          />
-          <GitLogin
-            login={user?.login}
-            className="text-sm font-medium text-foreground"
-          />
-          {when ? (
-            <span className="shrink-0 text-xs text-muted-foreground/80">
-              {format.relativeTime(when, now)}
-            </span>
-          ) : null}
-          {edited ? (
-            <span className="shrink-0 text-xs text-muted-foreground/60">{t("edited")}</span>
-          ) : null}
-          <span className="min-w-0 flex-1" />
-          {editing ? (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="-my-1 text-muted-foreground"
-              onClick={() => {
-                setEditing(false);
-                setDraft("");
-              }}
-            >
-              {t("cancel")}
-            </Button>
-          ) : (canEdit || onQuoteReply || canViewHistory) ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label={t("commentMoreActions")}
-                  className="-my-1 size-7 rounded-full text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
-                >
-                  <HugeiconsIcon icon={MoreHorizontalIcon} className="size-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {canEdit ? (
-                  <DropdownMenuItem
-                    onSelect={() => {
-                      setDraft(body);
-                      setEditing(true);
-                    }}
-                  >
-                    <HugeiconsIcon icon={Edit04Icon} />
-                    {t("editComment")}
-                  </DropdownMenuItem>
-                ) : null}
-                {onQuoteReply ? (
-                  <DropdownMenuItem onClick={onQuoteReply}>
-                    <HugeiconsIcon icon={MessageSquareQuoteIcon} />
-                    {t(quotingNumo ? "quoteReplyNumo" : "quoteReply")}
-                  </DropdownMenuItem>
-                ) : null}
-                {/* Keep loading and failed body reads reachable without
-                    claiming that an edit has been recorded. */}
-                {canViewHistory ? (
-                  <DropdownMenuItem onSelect={() => setHistoryOpen(true)}>
-                    <HugeiconsIcon icon={HistoryIcon} />
-                    {t("viewPreviousVersions")}
-                  </DropdownMenuItem>
-                ) : null}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : null}
-        </header>
+      <div className={cn("flex flex-col gap-2", !isDescription && "px-3.5 py-3")}>
+        {!isDescription ? (
+          <header className="flex min-h-5 items-center gap-2">
+            <ForgeUserAvatar
+              user={user}
+              forceBot={forceBot}
+              className="size-5 shrink-0"
+            />
+            <GitLogin
+              login={user?.login}
+              className="text-sm font-medium text-foreground"
+            />
+            {when ? (
+              <span className="shrink-0 text-xs text-muted-foreground/80">
+                {format.relativeTime(when, now)}
+              </span>
+            ) : null}
+            {edited ? (
+              <span className="shrink-0 text-xs text-muted-foreground/60">{t("edited")}</span>
+            ) : null}
+            <span className="min-w-0 flex-1" />
+            {actions}
+          </header>
+        ) : null}
         {activity ? <div>{activity}</div> : null}
         {editing ? (
           // Inline edit state: the same composer as the thread — mentions,
@@ -479,7 +486,7 @@ export function ThreadComment({
               setDraft("");
             }}
             posting={saving}
-            placeholder={t("editCommentPlaceholder")}
+            placeholder={t(isDescription ? "editDescriptionPlaceholder" : "editCommentPlaceholder")}
             submitLabel={t("saveChanges")}
             autoFocus
           />
@@ -492,9 +499,12 @@ export function ThreadComment({
             {body}
           </Markdown>
         )}
-        {reactions && (list.length > 0 || reactions.canReact) ? (
-          <div>
-            <CommentReactionChips commentId={commentId} reactions={reactions} list={list} />
+        {(reactions && (list.length > 0 || reactions.canReact)) || (isDescription && actions) ? (
+          <div className={isDescription ? "flex items-center justify-between gap-2" : undefined}>
+            {reactions && (list.length > 0 || reactions.canReact) ? (
+              <CommentReactionChips commentId={commentId} reactions={reactions} list={list} />
+            ) : null}
+            {isDescription ? <span className="ml-auto">{actions}</span> : null}
           </div>
         ) : null}
       </div>
@@ -2122,6 +2132,45 @@ export function PrDetail({
             />
           )}
 
+          {!loading && prDescription ? (
+            <ThreadComment
+              presentation="description"
+              endpoint={prEndpoint(item.prId)}
+              commentId={PR_BODY_COMMENT_ID}
+              user={pr?.user ?? null}
+              createdAt={pr?.createdAt ?? null}
+              updatedAt={pr?.updatedAt ?? null}
+              body={prDescription}
+              // Like on the forge: the AUTHOR rewrites the
+              // description — Numo's PRs stay read-only, the agent
+              // retells them himself.
+              canEdit={
+                canComment &&
+                !!viewer?.login &&
+                !!pr?.user?.login &&
+                pr.user.login.toLowerCase() === viewer.login.toLowerCase() &&
+                !item.runId
+              }
+              onSave={async (next) => {
+                await maintainPullRequestApi(item.prId, "update_body", {
+                  body: next,
+                });
+              }}
+              onEdited={() => void refetchPr()}
+              // Quoting returns to the activity tab, where the composer lives.
+              onQuoteReply={
+                canComment
+                  ? () => {
+                    setTab("activity");
+                    quoteReply(prDescription, pr?.user?.login);
+                  }
+                  : undefined
+              }
+              reactions={threadReactions}
+              forceBot={!!item.runId}
+            />
+          ) : null}
+
           {/* GitHub style tabs: the thread on one side, the code on the other. */}
           <Tabs
             value={tab}
@@ -2155,12 +2204,11 @@ export function PrDetail({
               </TabsTrigger>
             </TabsList>
 
-            {/* Thread: PR description opens discussion, comments
-                GitHub follow, compose closes. */}
+            {/* Activity contains forge events and comments, followed by the composer. */}
             <TabsContent value="activity" className="mt-4 flex flex-col gap-3">
               {loading || commentsLoading ? (
                 <PrActivitySkeleton />
-              ) : !prDescription && feed.length === 0 && !reviewCommentsLoading ? (
+              ) : feed.length === 0 && !reviewCommentsLoading ? (
                 <p className="text-sm text-muted-foreground">{t("noComments")}</p>
               ) : (
                 // MIN-548: the activity is a plain stack of cards and lines —
@@ -2168,44 +2216,6 @@ export function PrDetail({
                 // from left to right, and a card is a card, like the ticket
                 // timeline.
                 <div data-testid="pr-activity-timeline" className="flex flex-col gap-3">
-                  {prDescription ? (
-                    <ThreadComment
-                      // The body of the PR is not a commentary, but it
-                      // reacts like one: the server translates this zero into the
-                      // subject each forge expects.
-                      endpoint={prEndpoint(item.prId)}
-                      commentId={PR_BODY_COMMENT_ID}
-                      user={pr?.user ?? null}
-                      createdAt={pr?.createdAt ?? null}
-                      updatedAt={pr?.updatedAt ?? null}
-                      body={prDescription}
-                      // Like on the forge: the AUTHOR rewrites the
-                      // description — Numo's PRs stay read-only, the agent
-                      // retells them himself.
-                      canEdit={
-                        canComment &&
-                        !!viewer?.login &&
-                        !!pr?.user?.login &&
-                        pr.user.login.toLowerCase() === viewer.login.toLowerCase() &&
-                        !item.runId
-                      }
-                      onSave={async (next) => {
-                        await maintainPullRequestApi(item.prId, "update_body", {
-                          body: next,
-                        });
-                      }}
-                      onEdited={() => void refetchPr()}
-                      // Quote feeds the bottom composer: without a git account it
-                      // there is none, and the gesture would lead nowhere.
-                      onQuoteReply={
-                        canComment
-                          ? () => quoteReply(prDescription, pr?.user?.login)
-                          : undefined
-                      }
-                      reactions={threadReactions}
-                      forceBot={!!item.runId}
-                    />
-                  ) : null}
                   {feed.map((entry) => {
                     if (entry.kind === "event") {
                       return <PrTimelineRow key={entry.key} event={entry.event} />;

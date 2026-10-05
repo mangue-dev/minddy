@@ -3679,6 +3679,8 @@
     "sessionDeleted": "Conversation deleted"
   },
   "PullRequests": {
+    "descriptionMoreActions": "Description actions",
+    "editDescriptionPlaceholder": "Edit the description…",
     "sectionCreatedByMe": "Created by me",
     "sectionMyReview": "Needs my review",
     "sectionTeamReview": "Needs my team’s review",
