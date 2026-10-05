@@ -65,6 +65,15 @@ export function AssistantPanel() {
   // Guarantees pendingOptions are dispatched at most once per open, even if
   // dependencies (route project id) flip mid-dispatch.
   const dispatchedOptionsRef = useRef<OpenAssistantOptions | null>(null);
+  // Consuming opening options must not expose the old thread while loading.
+  const [loadingConversationId, setLoadingConversationId] = useState<string | null>(null);
+  const requestedConversationId = pendingOptions?.conversationId ?? loadingConversationId;
+
+  useEffect(() => {
+    if (loadingConversationId && (!isOpen || state.conversationId === loadingConversationId)) {
+      setLoadingConversationId(null);
+    }
+  }, [isOpen, state.conversationId, loadingConversationId]);
 
   const activeProject = useMemo(() => {
     if (!scopeProjectId) return null;
@@ -113,6 +122,7 @@ export function AssistantPanel() {
       // Loading first marks the choice, so the panel's restore can never
       // override it with the stale pointer it reads in flight; marking read
       // keeps the unread dot of the history honest.
+      setLoadingConversationId(conversationId);
       void loadConversation(conversationId, projectId ?? null);
       void updateConversation(conversationId, { read: true }).catch(() => {});
     }
@@ -188,7 +198,7 @@ export function AssistantPanel() {
             projectId={scopeProjectId}
             mobileSubtitle={activeProject?.name}
             compact
-            visible={isOpen && (!pendingOptions?.conversationId || pendingOptions.conversationId === state.conversationId)}
+            visible={isOpen && (!requestedConversationId || requestedConversationId === state.conversationId)}
             displayMode={displayMode}
             onToggleDisplayMode={toggleDisplayMode}
             onClose={close}
