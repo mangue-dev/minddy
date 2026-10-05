@@ -3,7 +3,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
 import { AlertCircleIcon, ArrowUpRight01Icon, GitBranchIcon, GitMergeIcon, GitPullRequestDraftIcon, Shield01Icon, CheckIcon, UserRoundCheckIcon as UserRoundCheck, ViewIcon, Wrench01Icon } from "@hugeicons/core-free-icons";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useFormatter, useNow, useTranslations } from "next-intl";
 import {
   Popover,
@@ -12,6 +12,8 @@ import {
   cn,
 } from "mangue-ui";
 
+import { PrReviewsCard } from "@/components/pull-requests/pr-reviews-card";
+import type { PrTimelineEvent } from "@/lib/pr-timeline";
 import { AppTooltip } from "@/components/ui/app-tooltip";
 import { CheckLogo } from "@/components/pull-requests/pr-check-logo";
 import { NumoIcon } from "@/components/numo-icon";
@@ -115,6 +117,7 @@ interface PrStatusCard {
   id: string;
   tone: PrStatusCardTone;
   title: string;
+  subtitle?: string;
   /** Final duration, frozen. `null` = the card carries no time. */
   durationMs: number | null;
   /** Live timer — the duration recomputes on every tick until it settles. */
@@ -176,7 +179,11 @@ interface PrStatusCardsProps {
   /** The deployment story as the forge reported it, made sticky by the
       caller — the card never tears down mid-build. */
   deployment: PrDeploymentStory | null;
-  unresolvedThreads: PullRequestFeedbackThread[];
+  conversationThreads: PullRequestFeedbackThread[];
+  timeline: PrTimelineEvent[];
+  requestedReviewers: { login: string; avatar_url: string | null }[];
+  canRequestReviewer: boolean;
+  onRequestReviewer: () => void;
   canAct: (blocker: ReadinessBlocker) => boolean;
   acting: ReadinessAction | null;
   onAction: (blocker: ReadinessBlocker) => void;
@@ -212,25 +219,7 @@ interface PrStatusCardsProps {
 export function PrStatusCards(props: PrStatusCardsProps) {
   const t = useTranslations("PullRequests");
   const now = useNow({ updateInterval: 1_000 });
-  const cards = useMemo(
-    () => buildStatusCards(t, props),
-    // `now` only drives the ticking durations, not the card set.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [
-      props.readiness,
-      props.checks,
-      props.deployment,
-      props.unresolvedThreads,
-      props.acting,
-      props.numoReview,
-      props.aiReviews,
-      props.requestingReviewer,
-      props.onRequestAiReview,
-      props.fixRun,
-      props.numoMerge,
-      props.fix,
-    ],
-  );
+  const cards = buildStatusCards(t, props);
   if (cards.length === 0) return null;
 
   return (
@@ -253,6 +242,12 @@ export function PrStatusCards(props: PrStatusCardsProps) {
           onChecksOpenChange={props.onChecksOpenChange}
         />
       ))}
+      <PrReviewsCard
+        timeline={props.timeline}
+        requestedReviewers={props.requestedReviewers}
+        canRequest={props.canRequestReviewer}
+        onRequest={props.onRequestReviewer}
+      />
     </div>
   );
 }
@@ -269,7 +264,7 @@ function buildStatusCards(
   props: PrStatusCardsProps,
 ): { card: PrStatusCard; checksCard: boolean }[] {
   const cards: { card: PrStatusCard; checksCard: boolean }[] = [];
-  const { readiness, checks, unresolvedThreads } = props;
+  const { readiness, checks, conversationThreads } = props;
   const blockers = readiness?.blockers ?? [];
   const push = (card: PrStatusCard, checksCard = false) =>
     cards.push({ card, checksCard });
@@ -608,31 +603,8 @@ function buildStatusCards(
             : undefined,
         });
         break;
-      case "conversations": {
-        const authors = unresolvedThreads
-          .map((thread) => thread.root.user)
-          .filter(
-            (user): user is { login: string; avatar_url: string | null } =>
-              !!user,
-          );
-        const unique = authors.filter(
-          (user, index) =>
-            authors.findIndex((other) => other.login === user.login) === index,
-        );
-        push({
-          id: blocker.id,
-          tone,
-          title: t("cardUnresolvedConversations", { count: blocker.count ?? 0 }),
-          durationMs: null,
-          startedAt: null,
-          donutParts: null,
-          avatars: unique.slice(0, 4),
-          iconKind: blocker.kind,
-          hoverLabel: t("blockerActionResolve"),
-          onSelect: props.onOpenConversations,
-        });
+      case "conversations":
         break;
-      }
       case "branch":
         push({
           id: blocker.id,
@@ -700,6 +672,46 @@ function buildStatusCards(
         break;
     }
   }
+
+  const resolvedCount = conversationThreads.filter(
+    (thread) => thread.resolution?.resolved === true,
+  ).length;
+  const allResolved =
+    conversationThreads.length > 0 &&
+    resolvedCount === conversationThreads.length;
+  push({
+    id: "conversations",
+    tone:
+      conversationThreads.length === 0
+        ? "neutral"
+        : allResolved
+          ? "success"
+          : "progress",
+    title: t("cardConversations", { count: conversationThreads.length }),
+    subtitle:
+      conversationThreads.length > 0
+        ? t("conversationsProgress", {
+            resolved: resolvedCount,
+            total: conversationThreads.length,
+          })
+        : t("noConversations"),
+    durationMs: null,
+    startedAt: null,
+    donutParts:
+      conversationThreads.length > 0 && !allResolved
+        ? conversationThreads.map((thread) =>
+            thread.resolution?.resolved === true
+              ? "success"
+              : thread.resolution?.resolved === false
+                ? "pending"
+                : "neutral",
+          )
+        : null,
+    avatars: null,
+    iconKind: "conversations",
+    hoverLabel: t("viewConversations"),
+    onSelect: props.onOpenConversations,
+  });
 
   return cards.sort((a, b) => rankCard(a.card) - rankCard(b.card));
 }
@@ -823,7 +835,7 @@ function PrStatusCardView({
           <ChecksDonut parts={card.donutParts} />
         ) : card.avatars ? (
           <AvatarCascade users={card.avatars} />
-        ) : card.id === "checks-passed" ? (
+        ) : card.id === "checks-passed" || (card.id === "conversations" && card.tone === "success") ? (
           <HugeiconsIcon icon={CheckIcon} />
         ) : card.id === "deployment" ? (
           <HugeiconsIcon icon={ArrowUpRight01Icon} />
@@ -837,6 +849,7 @@ function PrStatusCardView({
           blockerIcon(card.iconKind)
         )}
       </span>
+      {card.subtitle ? <span className="text-xs text-muted-foreground">{card.subtitle}</span> : null}
       {/* Title and timer read together, in the same voice: the time is part
           of what the card says, not metadata. */}
       <p
@@ -1106,7 +1119,7 @@ export function ChecksDonut({ parts }: { parts: CheckState[] }) {
       className="size-4 shrink-0"
       aria-hidden
     >
-      {parts.slice(0, 12).map((state, index) => (
+      {parts.map((state, index) => (
         <circle
           key={index}
           cx={size / 2}

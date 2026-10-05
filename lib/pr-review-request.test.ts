@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { PrViewer, PullRequestRef } from "./agent-api";
-import { viewerReviewIsRequested } from "./pr-review-request";
+import { reviewerReviewGroups, viewerReviewIsRequested } from "./pr-review-request";
 
 const viewer: PrViewer = {
   provider: "github",
@@ -31,5 +31,42 @@ describe("viewerReviewIsRequested", () => {
   it("does not infer a request without a matching viewer login", () => {
     expect(viewerReviewIsRequested(pullRequest, { ...viewer, login: "someone-else" })).toBe(false);
     expect(viewerReviewIsRequested(pullRequest, null)).toBe(false);
+  });
+});
+
+
+describe("reviewerReviewGroups", () => {
+  it("preserves review history while using the latest verdict for each reviewer", () => {
+    const timeline: import("./pr-timeline").PrTimelineEvent[] = [
+      {
+        id: "old",
+        kind: "reviewed",
+        actor: { login: "Ada", avatar_url: null },
+        reviewState: "changes_requested",
+        createdAt: "2026-10-01T10:00:00Z",
+      },
+      { id: "request", kind: "review_requested", actor: null, createdAt: null },
+      {
+        id: "new",
+        kind: "reviewed",
+        actor: { login: "ada", avatar_url: null },
+        reviewState: "approved",
+        createdAt: "2026-10-02T10:00:00Z",
+      },
+      {
+        id: "other",
+        kind: "reviewed",
+        actor: { login: "Grace", avatar_url: null },
+        reviewState: "commented",
+        createdAt: null,
+      },
+    ];
+    expect(
+      reviewerReviewGroups(timeline).map((group) =>
+        group.map((review) => review.id),
+      ),
+    ).toEqual([["new", "old"], ["other"]]);
+    expect(timeline[0].id).toBe("old");
+    expect(reviewerReviewGroups([])).toEqual([]);
   });
 });

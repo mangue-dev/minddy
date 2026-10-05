@@ -4,6 +4,7 @@ import type { PullRequestReviewComment } from "./agent-api";
 import type { ReviewThreadState } from "./pr-review-threads";
 import {
   buildPullRequestFeedbackPrompt,
+  conversationReviewerGroups,
   unresolvedReviewThreads,
 } from "./pr-unresolved-conversations";
 
@@ -86,5 +87,52 @@ describe("unresolved pull request conversations", () => {
     expect(prompt).toContain("components/button.tsx:42 (outdated code context)");
     expect(prompt).toContain("@reviewer:\nUse the shared badge style.");
     expect(prompt).toContain("@reviewer:\nAgreed.");
+  });
+});
+
+
+describe("conversationReviewerGroups", () => {
+  it("keeps resolved threads last and groups roots by reviewer without counting replies", () => {
+    const threads = [
+      {
+        id: 3,
+        root: comment(3, "Done", { user: { login: "Ada", avatar_url: null } }),
+        comments: [comment(3, "Done")],
+        resolution: states[1],
+      },
+      {
+        id: 1,
+        root: comment(1, "Fix"),
+        comments: [comment(1, "Fix"), comment(2, "Reply")],
+        resolution: states[0],
+      },
+      {
+        id: 4,
+        root: comment(4, "Unknown state", {
+          user: { login: "Reviewer", avatar_url: null },
+        }),
+        comments: [comment(4, "Unknown state")],
+      },
+      {
+        id: 5,
+        root: comment(5, "Another reviewer", { user: null }),
+        comments: [comment(5, "Another reviewer")],
+        resolution: { ...states[0], rootCommentId: 5 },
+      },
+    ];
+    const groups = conversationReviewerGroups(threads);
+    expect(
+      groups.map((group) => [
+        group.resolved,
+        group.threads.map((thread) => thread.id),
+      ]),
+    ).toEqual([
+      [false, [1, 4]],
+      [false, [5]],
+      [true, [3]],
+    ]);
+    expect(groups[0].threads[0].comments).toHaveLength(2);
+    expect(conversationReviewerGroups([])).toEqual([]);
+    expect(threads.map((thread) => thread.id)).toEqual([3, 1, 4, 5]);
   });
 });

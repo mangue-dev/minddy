@@ -889,6 +889,14 @@ export async function submitPullRequestReviewApi(
   );
 }
 
+/** Ask a repository member to review the pull request. */
+export async function requestPullRequestReviewerApi(prId: string, login: string): Promise<{ ok: true }> {
+  return parseJson(await fetch(`${prEndpoint(prId)}/review-requests`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ login }),
+  }));
+}
+
 /**
  * “Have it checked by Numo” (MIN-141): a review pass on the diff, which
  * files a summary and up to five line comments on the PR.

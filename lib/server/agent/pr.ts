@@ -895,6 +895,18 @@ export async function listBranches(opts: {
     person: you type three letters, you don't pull out a directory. */
 const MAX_MEMBER_PAGES = 2;
 
+/** Add a reviewer without replacing existing GitHub review requests. */
+export async function requestPullRequestReviewer(opts: {
+  token: string; repoFullName: string; number: number; login: string;
+}): Promise<void> {
+  const { owner, repo } = splitRepo(opts.repoFullName);
+  await ghJson(
+    `${GITHUB_API_BASE}/repos/${owner}/${repo}/pulls/${opts.number}/requested_reviewers`,
+    opts.token,
+    { method: "POST", body: JSON.stringify({ reviewers: [opts.login] }) },
+  );
+}
+
 /**
  * The GitHub accounts that can be mentioned on this repository (MIN-162) — its
  * collaborators, `affiliation=all` (direct members, inherited from the organization
