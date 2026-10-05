@@ -1,9 +1,4 @@
 {
-  "StatusLine": {
-    "bellLabel": "Recent errors",
-    "historyTitle": "Recent errors",
-    "clear": "Clear"
-  },
   "Scratchpad": {
     "actions": "Notebook actions",
     "title": "Task notebook",

@@ -31,6 +31,14 @@ const request = (body: unknown) => new NextRequest("https://fixture.invalid/api/
   method: "POST", body: JSON.stringify(body), headers: { "Content-Type": "application/json" },
 });
 
+it("rejects saving and restoring the removed error-history slot", async () => {
+  for (const operation of ["seal", "open"]) {
+    const response = await POST(request({ operation, slot: "status-history", value: ["Failure"] }));
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "invalid_snapshot_request" });
+  }
+});
+
 it("authenticates before processing client content and never leaks failures", async () => {
   fixture.authorized = false;
   expect((await POST(request({ operation: "seal", slot: "issue-drafts", value: "PRIVATE_SENTINEL" }))).status).toBe(401);

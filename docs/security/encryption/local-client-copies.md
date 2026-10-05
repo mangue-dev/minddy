@@ -5,6 +5,9 @@ Electron. It is not a claim about endpoint backups, swap, browser extensions,
 OS snapshots, downloaded exports or historical installations. The server can
 decrypt; this is application encryption, not E2EE.
 
+Toast messages are transient. The content toaster removes legacy error-history
+snapshots on mount; error history is no longer saved or restored.
+
 ## Content copies
 
 | Copy and writer | Scope and retention | Read, deletion and migration |
@@ -13,7 +16,6 @@ decrypt; this is application encryption, not E2EE.
 | Issue/objective draft title, body and resource references (`drafts.ts`) | Account-owned self-authored recovery copy; at most ten per kind and 30 days per draft. No key is stored on the device. | Authenticated owner restore and explicit delete. Web Locks serialize cross-tab read/modify/seal/write; an in-process queue covers environments without Web Locks. A failed save leaves the dialog and previous disk copy intact, with a localized error. Existing unowned clear drafts require explicit recovery and current access to every referenced project before atomic replacement. They are not silently discarded. |
 | Search query history (`useQueryHistory.ts`) | Account envelope; at most 50 entries, 24 hours. | Authenticated restore, access fingerprint and logout deletion. Unowned legacy history is invalidated, not assigned to the next account. Search and new history remain available. |
 | Database-list filters including free-text values (`page-database-view.tsx`) | Account envelope per database; 30 days. | Authenticated restore, access fingerprint and logout deletion. Unowned clear preferences reset; controls and encrypted persistence remain available. |
-| Status-line error history (`status-history.ts`) | Account envelope; at most five entries, 24 hours from each occurrence. | No raw error-history disk writes. Explicit clear and logout invalidate late writes; old unowned history is invalidated. Restoration filters expired occurrences rather than renewing their lifetime. |
 | Window tab destinations, including query/fragment (`app-tabs-context.tsx`) | Account envelope in sessionStorage; 24 hours, also bounded by the window session. | Authenticated restore and logout removal. The server-backed encrypted tab collection remains authoritative; old clear window snapshots reset. |
 | Public Feedback draft title/body (`feedback-draft-storage.ts`) | Board-capability recovery copy; 32 KiB content limit and 30-day authenticated expiry. | Server seals with the project's historical content keys, a separate purpose and random per-draft nonce; open/seal requires the same enabled live board before and after crypto. Same-origin, rate-limited 64 KiB streamed requests return no-store. Clear/publication invalidates late writes; explicit legacy recover/discard, debounce and awaited close preserve recovery. This is not an account-owned Auth cache. |
 
