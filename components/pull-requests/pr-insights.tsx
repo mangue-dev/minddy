@@ -7,9 +7,6 @@ import { useEffect, useState } from "react";
 import { useFormatter, useNow, useTranslations } from "next-intl";
 import {
   Button,
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
   PopoverTrigger,
   cn,
 } from "mangue-ui";
@@ -186,7 +183,6 @@ interface PrInsightsProps {
 export function PrInsights(props: PrInsightsProps) {
   const t = useTranslations("PullRequests");
   const now = useNow({ updateInterval: 1_000 });
-  const [blockersOpen, setBlockersOpen] = useState(true);
   const insights = buildInsights(t, props);
   const fixInsight = insights.find(({ insight }) => insight.id === "fix")?.insight;
   const checksInsight = insights.find((entry) => entry.isChecks)!.insight;
@@ -235,10 +231,6 @@ export function PrInsights(props: PrInsightsProps) {
   );
   const other = insights.filter((entry) => !entry.isChecks && entry.insight.id !== "fix" && entry.insight.id !== "reviews" && !reviews.includes(entry));
   const rest = [...other.filter(({ insight }) => insight.id === "conversations"), ...other.filter(({ insight }) => insight.id !== "conversations")];
-
-  useEffect(() => {
-    if (props.checksOpen && checksInsight.tone === "danger") setBlockersOpen(true);
-  }, [props.checksOpen, checksInsight.tone]);
 
   const rows = [
     {
@@ -321,12 +313,12 @@ export function PrInsights(props: PrInsightsProps) {
   return (
     <div data-testid="pr-insights" className="flex w-full min-w-0 flex-col gap-2">
       {blocked.length > 0 || fixInsight ? (
-        <Collapsible open={blockersOpen} onOpenChange={setBlockersOpen} data-testid="pr-insight-blockers">
+        <section aria-label={t("insightBlockers")} data-testid="pr-insight-blockers">
           <div data-testid="pr-insight-blockers-header" className="flex min-w-0 items-center gap-2">
-            <CollapsibleTrigger className="flex min-w-0 flex-1 items-center gap-2 rounded py-1 text-left text-sm font-medium text-destructive outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            <h3 className="flex min-w-0 flex-1 items-center gap-2 py-1 text-sm font-medium text-destructive">
               <span className="shrink-0">{t("insightBlockers")}</span>
               {blocked.length > 0 ? <span className="text-xs tabular-nums">{blocked.length}</span> : null}
-            </CollapsibleTrigger>
+            </h3>
             {fixInsight ? (
               <PrInsightPopover>
                 <PopoverTrigger asChild>
@@ -342,12 +334,10 @@ export function PrInsights(props: PrInsightsProps) {
               </PrInsightPopover>
             ) : null}
           </div>
-          <CollapsibleContent>
-            <div className="flex min-w-0 flex-col pt-2">
-              {blocked.map((row) => <div key={row.id}>{row.content}</div>)}
-            </div>
-          </CollapsibleContent>
-        </Collapsible>
+          <div className="flex min-w-0 flex-col pt-2">
+            {blocked.map((row) => <div key={row.id}>{row.content}</div>)}
+          </div>
+        </section>
       ) : null}
       <div className="flex min-w-0 flex-col">
         {rows.filter((row) => row.tone !== "danger").map((row) => <div key={row.id}>{row.content}</div>)}

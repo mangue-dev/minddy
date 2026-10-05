@@ -15,7 +15,6 @@ vi.mock("mangue-ui", async () => ({
   ...await vi.importActual<Record<string, unknown>>("mangue-ui/components/ui/button.tsx"),
   ...await vi.importActual<Record<string, unknown>>("mangue-ui/components/ui/badge.tsx"),
   ...await vi.importActual<Record<string, unknown>>("mangue-ui/components/ui/popover.tsx"),
-  ...await vi.importActual<Record<string, unknown>>("mangue-ui/components/ui/collapsible.tsx"),
   ...await vi.importActual<Record<string, unknown>>("mangue-ui/lib/utils.ts"),
 }));
 
@@ -148,16 +147,18 @@ describe("pull request insight properties", () => {
     expect(trigger("checks").getAttribute("aria-label")).toContain("Skipped");
   });
 
-  it("reopens the blocking group when another control opens the checks", async () => {
+  it("keeps blocking rows visible and allows another control to open the checks", async () => {
     props.checks = checks("failure");
     await render();
     const group = document.querySelector('[data-testid="pr-insight-blockers"]')!;
-    const toggle = group.querySelector<HTMLButtonElement>("button")!;
-    await act(async () => toggle.click());
-    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+    const header = group.querySelector('[data-testid="pr-insight-blockers-header"]')!;
+    expect(header.querySelector("button")).toBeNull();
+    await act(async () => header.querySelector<HTMLHeadingElement>("h3")!.click());
+    expect(group.contains(trigger("checks"))).toBe(true);
+    expect(group.querySelector('[data-slot="collapsible-content"]')).toBeNull();
     props.checksOpen = true;
     await render();
-    expect(toggle.getAttribute("aria-expanded")).toBe("true");
+    expect(group.contains(trigger("checks"))).toBe(true);
     expect(document.querySelector('[data-testid="pr-checks-popover"]')).not.toBeNull();
   });
   it("keeps a human change request blocking even after Numo finishes", async () => {
@@ -193,19 +194,16 @@ describe("pull request insight properties", () => {
     expect(onOpen).not.toHaveBeenCalled();
   });
 
-  it("opens global correction actions from the header without expanding the group", async () => {
+  it("opens global correction actions beside the static blockers heading", async () => {
     const onCopy = vi.fn();
     const onLaunch = vi.fn();
     props.fix = { canLaunch: true, onCopy, onLaunch };
     await render();
     const header = document.querySelector('[data-testid="pr-insight-blockers-header"]')!;
     const action = header.querySelector<HTMLButtonElement>('[data-testid="pr-fix-action"]')!;
-    const toggle = header.querySelector<HTMLButtonElement>("button")!;
+    expect(header.querySelectorAll("button")).toHaveLength(1);
     expect(trigger("fix")).toBeNull();
-    await act(async () => toggle.click());
-    expect(toggle.getAttribute("aria-expanded")).toBe("false");
     await act(async () => action.click());
-    expect(toggle.getAttribute("aria-expanded")).toBe("false");
     expect(document.querySelector('[data-testid="pr-fix-popover"]')).not.toBeNull();
     const copy = document.querySelector<HTMLButtonElement>('[data-testid="pr-card-fix-copy"]')!;
     const launch = document.querySelector<HTMLButtonElement>('[data-testid="pr-card-fix-launch"]')!;
