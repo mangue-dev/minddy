@@ -440,7 +440,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "list_views",
       description:
-        "List the saved kanban views of the current scope — the project's views in project mode, the user's personal cross-project views on the global board — with their id, name, kind, shared, filters, sort, display. Call it BEFORE update_view: the `filters` argument of update_view replaces the whole config, so you must read the current one and resend every key you want to keep. kind 'my' is the user's system view ('Mes tickets'): its name and its assignee filter (locked to [\"@me\"], the dynamic 'assigned to me' value) can never change, and it cannot be deleted — other filters/sort/display remain editable.",
+        "List the saved kanban views of the current scope — the project's views in project mode, the user's personal cross-project views on the global board — with their id, name, kind, shared, filters, sort, display. Call it BEFORE update_view: the `filters` argument of update_view replaces the whole config, so you must read the current one and resend every key you want to keep. kind 'my' is the user's system view (its name is localized — \"My issues\" in English, \"Mes tickets\" in French): its name and its assignee filter (locked to [\"@me\"], the dynamic 'assigned to me' value) can never change, and it cannot be deleted — other filters/sort/display remain editable.",
       parameters: { type: "object", properties: {} },
     },
   },
@@ -1131,7 +1131,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
             type: "array",
             items: { type: "string", enum: [...FEEDBACK_POST_STATUSES] },
             description:
-              "Only these public statuses (open, planned, in_progress, shipped, declined). Omit for all.",
+              "Only these statuses (open, planned, in_progress, shipped, declined, and spam — never shown on the public board but filterable from the team view). Omit for all.",
           },
           limit: {
             type: "number",
@@ -1263,7 +1263,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "update_project",
       description:
-        "Update the project's own settings — every switch of its Settings page: identity (name, key, accent color), auto-assign on create, Smart Assign and its per-member rules, Smart Triage's engine (rules, or the AI scoring pass), the automations switch (the agent loop), AI review of incoming feedback, and feedback translation (enabled, team language, languages to skip). OWNER ONLY — fails for a non-owner. Changing the key rewrites how every issue is referenced (MIND-42 → NEW-42): confirm with the user before doing it. Only pass the fields to change. Smart Assign, Smart Triage's AI engine and automations are plan- or budget-gated: turning one ON can be refused for the owner's plan or usage budget — relay that refusal, don't retry.",
+        "Update the project's own settings: identity (name, key, accent color — the icon itself is set from the project's Settings → General page, you have no tool for it), auto-assign on create, Smart Assign and its per-member rules, Smart Triage's mode ('rules' only — the deterministic board sort; the AI scoring pass was retired), the automations switch (the agent loop), AI review of incoming feedback, and feedback translation (enabled, team language, languages to skip). OWNER ONLY — fails for a non-owner. Changing the key rewrites how every issue is referenced (MIND-42 → NEW-42): confirm with the user before doing it. Only pass the fields to change. Smart Assign and automations are plan- or budget-gated: turning one ON can be refused for the owner's plan or usage budget — relay that refusal, don't retry.",
       parameters: {
         type: "object",
         properties: {
@@ -1339,7 +1339,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "invite_member",
       description:
-        "Invite someone to the project by email. OWNER ONLY. The email must belong to an existing minddy account; the person gets a pending in-app invitation they accept from their Home. No email is sent.",
+        "Invite someone to the project by email. OWNER ONLY. Any valid email address works — the person does NOT need an existing minddy account: once they sign up or sign in with that address, the pending invitation is waiting in their Home. minddy also emails them the invitation when the instance's transactional email is configured (best-effort, sent after the response — without it, the in-app invitation is the only delivery).",
       parameters: {
         type: "object",
         properties: {
