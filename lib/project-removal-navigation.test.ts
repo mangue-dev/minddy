@@ -46,7 +46,6 @@ vi.mock("@/components/settings/project-git-section", () => ({ ProjectGitSection:
 vi.mock("@/components/settings/project-import-section", () => ({ ProjectImportSection: () => null }));
 vi.mock("@/components/settings/project-recurrences-section", () => ({ ProjectRecurrencesSection: () => null }));
 vi.mock("@/components/settings/smart-assign-section", () => ({ SmartAssignSection: () => null }));
-vi.mock("@/components/settings/smart-triage-section", () => ({ SmartTriageSection: () => null }));
 vi.mock("@/components/project-icon-picker", () => ({ ProjectIconPicker: () => null }));
 vi.mock("@/components/route-skeletons", () => ({ SettingsPageSkeleton: () => null }));
 
