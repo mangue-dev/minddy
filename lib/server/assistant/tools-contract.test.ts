@@ -169,6 +169,7 @@ describe("Numo tool contracts", () => {
       "source_references",
       "constraints",
       "authorized_work",
+      "requires_pull_request",
     ]);
     expect(launch?.function.parameters.properties).toHaveProperty("expected_output");
     expect(launch?.function.parameters.properties).toHaveProperty("continuation_run_id");

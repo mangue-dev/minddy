@@ -169,6 +169,7 @@ export interface LaunchAgentInput {
     constraints: string[];
     authorizedWork: AgentDelegationAuthorization[];
     expectedOutput?: string[];
+    requiresPullRequest?: boolean;
     attachments?: AttachmentInput[];
   } | null;
   /**
@@ -543,6 +544,7 @@ export async function launchAgentRun(
         constraints: input.delegation.constraints,
         authorizedWork: input.delegation.authorizedWork,
         expectedOutput: input.delegation.expectedOutput,
+        requiresPullRequest: input.delegation.requiresPullRequest,
       })
     : null;
   const workerPrompt = delegationBrief
