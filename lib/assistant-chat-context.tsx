@@ -41,6 +41,8 @@ export interface AssistantChatContextValue extends AssistantChatApi {
   /** Start the one-time active-conversation restore for any mounted surface. */
   requestRestore: () => void;
   isBusy: boolean;
+  /** Acknowledge a completed response once its conversation is displayed. */
+  markResponseRead: (conversationId: string) => void;
   pinned: AssistantPinnedContext[];
   setPinned: Dispatch<SetStateAction<AssistantPinnedContext[]>>;
 }
@@ -160,6 +162,31 @@ export function AssistantChatProvider({ children }: { children: ReactNode }) {
     state.status === "streaming" ||
     state.status === "executing_tool" ||
     state.status === "generating_server";
+
+  const [unreadResponses, setUnreadResponses] = useState<ReadonlyMap<string, string>>(
+    () => new Map(),
+  );
+  const observedResponses = useRef(new Set<string>());
+  useEffect(() => {
+    const response = state.completedResponse;
+    if (!response) return;
+    const key = `${response.conversationId}:${response.messageId}`;
+    if (observedResponses.current.has(key)) return;
+    observedResponses.current.add(key);
+    setUnreadResponses((previous) =>
+      new Map(previous).set(response.conversationId, response.messageId),
+    );
+  }, [state.completedResponse]);
+  const unreadConversationId = unreadResponses.keys().next().value ?? null;
+  const markResponseRead = useCallback((conversationId: string) => {
+    if (!unreadResponses.has(conversationId)) return;
+    setUnreadResponses((previous) => {
+      const next = new Map(previous);
+      next.delete(conversationId);
+      return next;
+    });
+    void updateConversation(conversationId, { read: true }).catch(() => {});
+  }, [unreadResponses]);
 
   // A contextual opening supplies the next message's project until its options
   // are consumed. Navigation supplies ambient context independently of history.
@@ -303,6 +330,7 @@ export function AssistantChatProvider({ children }: { children: ReactNode }) {
       restoring: restoring || !restored,
       requestRestore,
       isBusy,
+      markResponseRead,
       pinned,
       setPinned,
     }),
@@ -319,6 +347,7 @@ export function AssistantChatProvider({ children }: { children: ReactNode }) {
       restoring,
       requestRestore,
       isBusy,
+      markResponseRead,
       pinned,
     ],
   );
@@ -326,9 +355,11 @@ export function AssistantChatProvider({ children }: { children: ReactNode }) {
   return (
     <AssistantChatContext.Provider value={value}>
       <AssistantBusyContext.Provider value={isBusy}>
-        <AssistantResumeContext.Provider value={resumeValue}>
-          {children}
-        </AssistantResumeContext.Provider>
+        <AssistantUnreadResponseContext.Provider value={unreadConversationId}>
+          <AssistantResumeContext.Provider value={resumeValue}>
+            {children}
+          </AssistantResumeContext.Provider>
+        </AssistantUnreadResponseContext.Provider>
       </AssistantBusyContext.Provider>
     </AssistantChatContext.Provider>
   );
@@ -349,6 +380,14 @@ const AssistantBusyContext = createContext(false);
 
 export function useAssistantBusy(): boolean {
   return useContext(AssistantBusyContext);
+}
+
+/** Launcher consumers receive a stable unread-conversation ID rather than every streamed token. */
+const AssistantUnreadResponseContext = createContext<string | null>(null);
+
+/** Open the oldest conversation with a response that has not been displayed yet. */
+export function useAssistantUnreadResponseConversationId(): string | null {
+  return useContext(AssistantUnreadResponseContext);
 }
 
 /**
