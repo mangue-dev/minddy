@@ -110,12 +110,11 @@ export function PrMetadataSkeleton() {
 
 export function PrStatusSkeleton() {
   return (
-    <div aria-hidden data-testid="pr-status-skeleton" className="flex flex-wrap gap-2">
+    <div aria-hidden data-testid="pr-status-skeleton" className="flex w-full flex-col">
       {Array.from({ length: 3 }, (_, i) => (
-        <div key={i} className="flex h-24 w-40 max-w-full flex-col gap-3 rounded-xl bg-muted/40 p-3">
-          <Skeleton className="size-5 rounded" />
-          <Skeleton className="h-3 w-24" />
-          <Skeleton className="h-3 w-16" />
+        <div key={i} className="flex min-h-11 items-center justify-between gap-3">
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-6 w-40 rounded-md" />
         </div>
       ))}
     </div>

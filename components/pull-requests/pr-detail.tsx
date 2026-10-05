@@ -49,7 +49,7 @@ import {
 import { PrTimelineReview, PrTimelineRow } from "@/components/pull-requests/pr-timeline";
 import { PrStateBadge } from "@/components/pull-requests/pr-state-badge";
 import { PrReadinessBadge, PrReadinessControl } from "@/components/pull-requests/pr-readiness";
-import { PrStatusCards } from "@/components/pull-requests/pr-readiness-cards";
+import { PrInsights } from "@/components/pull-requests/pr-insights";
 import { PrRequestReview } from "@/components/pull-requests/pr-request-review";
 import { groupReviewThreads } from "@/lib/pr-review-threads";
 import { PrUnresolvedConversations } from "@/components/pull-requests/pr-unresolved-conversations";
@@ -793,9 +793,8 @@ export function PrDetail({
   const [scrolledDown, setScrolledDown] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const [unresolvedSidebarOpen, setUnresolvedSidebarOpen] = useState(false);
-  // The checks popover is ONE surface, shared: the checks card opens it,
-  // and the merge-state popover's "View checks" opens the same list.
-  const [checksPopoverOpen, setChecksPopoverOpen] = useState(false);
+  // The checks property and the merge-state control open the same popover.
+  const [checksDetailsOpen, setChecksDetailsOpen] = useState(false);
   // Soft fade up and down the feed — the same as the agent conversation and
   // than the columns of the board: it only lights up on the side where there REMAINS some
   // something to see, what a fixed border cannot say.
@@ -1741,7 +1740,7 @@ export function PrDetail({
             className="size-4 shrink-0"
           />
         ) : null}
-        <span className="flex min-w-0 items-center gap-1 font-mono text-sm">
+        <span className="flex shrink-0 items-center gap-1 font-mono text-sm">
           {forgeUrl ? (
             <a
               href={forgeUrl}
@@ -1775,8 +1774,7 @@ export function PrDetail({
             </span>
           )}
         </span>
-        {/* A Numo merge in progress has its own card in the status grid —
-            it survives navigation there, which a header spinner never did. */}
+        {/* Background merge work appears in the insight rows across navigation. */}
         {isWorking ? (
           <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
             <Spinner />
@@ -1790,7 +1788,7 @@ export function PrDetail({
           // — then its STATE, last. The badge closes the line in both cases,
           // merged (nothing before it) as closed (the button before it): it is
           // always in the same place that we read what became of her.
-          <div className="ml-auto flex items-center gap-1.5">
+          <div className="ml-auto flex shrink-0 items-center gap-1.5">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -2012,7 +2010,7 @@ export function PrDetail({
                 autoMerging={maintenanceAction === "enable_auto_merge"}
                 onToggleAutoMerge={(enable) => void toggleAutoMerge(enable)}
                 checks={checks}
-                onOpenChecks={() => setChecksPopoverOpen(true)}
+                onOpenChecks={() => setChecksDetailsOpen(true)}
               />
             ) : (
               <PrReadinessBadge readiness={null} />
@@ -2150,7 +2148,7 @@ export function PrDetail({
             onRequested={refreshReviewState}
           />
           {loading ? <PrStatusSkeleton /> : (
-            <PrStatusCards
+            <PrInsights
               readiness={effectiveReadiness}
               checks={checks}
               provider={item.provider}
@@ -2172,8 +2170,8 @@ export function PrDetail({
               numoReview={numoReviewCard}
               fixRun={fixRunCard}
               numoMerge={numoMerging ? { startedAt: numoMergeStartedAt } : null}
-              checksOpen={checksPopoverOpen}
-              onChecksOpenChange={setChecksPopoverOpen}
+              checksOpen={checksDetailsOpen}
+              onChecksOpenChange={setChecksDetailsOpen}
               onRequestReview={openAiReviewDialog}
               fix={fixCard}
             />

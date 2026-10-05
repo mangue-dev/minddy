@@ -20,7 +20,7 @@ import {
   cn,
 } from "mangue-ui";
 import { AppTooltip } from "@/components/ui/app-tooltip";
-import { ChecksDonut } from "@/components/pull-requests/pr-readiness-cards";
+import { ChecksDonut } from "@/components/pull-requests/pr-insights";
 import type { ChecksSummary } from "@/lib/agent-api";
 
 import type {
