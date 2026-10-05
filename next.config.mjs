@@ -293,6 +293,10 @@ const nextConfig = {
   // comment there, it carries the measure.
   experimental: {
     optimizePackageImports: ["radix-ui", "simple-icons"],
+    // Vercel rejects this app's build cache once it exceeds 1.50 GB. Writing
+    // Turbopack's cache then overlaps TypeScript checking without a reusable
+    // result. Keep dependency and TypeScript caches small enough to restore.
+    turbopackFileSystemCacheForBuild: process.env.VERCEL !== "1",
   },
   /**
    * Runtime files of the repository, embedded in the functions.
