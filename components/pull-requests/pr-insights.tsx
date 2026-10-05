@@ -16,7 +16,7 @@ import {
   cn,
 } from "mangue-ui";
 
-import { PrReviewsDetails } from "@/components/pull-requests/pr-reviews-details";
+import { PrReviewsDetails, type PrReviewerDetails } from "@/components/pull-requests/pr-reviews-details";
 import { reviewerReviewGroups, reviewCardTone } from "@/lib/pr-review-request";
 import type { PrTimelineEvent } from "@/lib/pr-timeline";
 import { AppTooltip } from "@/components/ui/app-tooltip";
@@ -201,6 +201,8 @@ export function PrInsights(props: PrInsightsProps) {
   const latest = groups.map((group) => group[0]);
   const humanTone = reviewCardTone(props.timeline, props.requestedReviewers);
   const externalReviews = props.aiReviews ?? [];
+  const reviewActive = props.numoReview?.kind === "running" ||
+    externalReviews.some((review) => review.state === "running" || review.state === "requested");
   const providerLogins = new Set(externalReviews.flatMap((review) =>
     review.provider.githubLogins.map((login) => login.toLowerCase()),
   ));
@@ -284,15 +286,28 @@ export function PrInsights(props: PrInsightsProps) {
             </>
           }
         >
-          <div className="flex flex-col gap-3">
-            {reviews.map(({ insight }) => <StatusDetails key={insight.id} insight={insight} now={now} />)}
-            <PrReviewsDetails
-              timeline={props.timeline}
-              requestedReviewers={props.requestedReviewers}
-              canRequest={props.canRequestReviewer}
-              onRequest={props.onRequestReviewer}
-            />
-          </div>
+          <PrReviewsDetails
+            timeline={props.timeline}
+            requestedReviewers={props.requestedReviewers}
+            canRequest={props.canRequestReviewer}
+            onRequest={props.onRequestReviewer}
+            additionalReviewers={reviews.map(({ insight }): PrReviewerDetails => {
+              const agent = externalReviews.find((review) => insight.id === `ai-review-${review.provider.id}`);
+              const numo = insight.id === "numo-review";
+              return {
+                id: insight.id,
+                name: agent?.provider.name ?? (numo ? t("numoAuthor") : t("reviewsTitle")),
+                avatar: <StatusIcon insight={insight} />,
+                logins: agent?.provider.githubLogins,
+                action: numo && insight.action && !reviewActive ? (
+                  <Button variant="ghost" size="sm" data-testid={insight.action.testId} disabled={insight.action.disabled} onClick={insight.action.onClick}>
+                    {insight.action.label}
+                  </Button>
+                ) : undefined,
+                details: numo && insight.action ? undefined : <ReviewStatusDetails insight={insight} now={now} />,
+              };
+            })}
+          />
         </PrInsightRow>
       ),
     },
@@ -478,25 +493,12 @@ function buildInsights(
       completed: "cardAiReviewCompleted", clean: "cardAiReviewClean",
       findings: "cardAiReviewFindings", failed: "cardAiReviewFailed", skipped: "cardAiReviewSkipped",
     };
-    const request = !active && props.onRequestAiReview ? {
-      label: props.requestingReviewer === review.provider.id ? t("cardAiReviewSending") : t("cardAiReviewRequestAgain"),
-      onClick: () => props.onRequestAiReview?.(review.provider),
-      disabled: !!props.requestingReviewer,
-      testId: `pr-card-request-${review.provider.id}`,
-    } : undefined;
-    const open = review.url ? () => window.open(review.url!, "_blank", "noreferrer") : undefined;
     push({
       id: `ai-review-${review.provider.id}`, tone, logo: review.provider.logo,
       title: t(labels[review.state], { provider: review.provider.name }),
       startedAt: review.state === "running" ? review.startedAt : null,
       durationMs: review.durationMs, updatedAt: review.updatedAt,
       donutParts: null, iconKind: "review_requested",
-      actions: open && request ? {
-        top: { label: t("cardAiReviewView"), onClick: open }, bottom: request,
-      } : undefined,
-      action: !open ? request : undefined,
-      onSelect: open && !request ? open : undefined,
-      openLabel: open && !request ? t("cardAiReviewView") : undefined,
     });
   }
 
@@ -530,9 +532,6 @@ function buildInsights(
         startedAt: numoReview.startedAt,
         donutParts: null,
         iconKind: "mergeability",
-        // Older runs may not have a conversation to open.
-        openLabel: numoReview.onOpen ? t("numoReviewOpenSession") : undefined,
-        onSelect: numoReview.onOpen ?? undefined,
       });
     }
   }
@@ -818,6 +817,27 @@ function PrInsightView({ insight, now }: { insight: PrInsight; now: Date }) {
     >
       <StatusDetails insight={insight} now={now} />
     </PrInsightRow>
+  );
+}
+
+/** Review metadata belongs below the identity banner. */
+function ReviewStatusDetails({ insight, now }: { insight: PrInsight; now: Date }) {
+  const t = useTranslations("PullRequests");
+  const format = useFormatter();
+  const duration = insight.startedAt
+    ? formatRunDuration(t, Math.max(now.getTime() - Date.parse(insight.startedAt), 0))
+    : formatRunDuration(t, insight.durationMs);
+  return (
+    <div className="space-y-1 px-2 pt-2 text-xs">
+      <div className="flex items-center justify-between gap-3">
+        <span className={cn(insight.tone === "danger" && "text-destructive", insight.tone === "success" && "text-emerald-700 dark:text-emerald-400", insight.tone === "progress" && "text-amber-700 dark:text-amber-400")}>{insight.title}</span>
+        {duration ? <span className="shrink-0 font-mono tabular-nums text-muted-foreground">{duration}</span> : null}
+      </div>
+      {insight.updatedAt ? <time dateTime={insight.updatedAt} className="text-muted-foreground">{format.dateTime(new Date(insight.updatedAt), { dateStyle: "medium", timeStyle: "short" })}</time> : null}
+      {!insight.id.startsWith("ai-review-") && insight.id !== "numo-review" && insight.action ? (
+        <Button variant="outline" size="sm" data-testid={insight.action.testId} disabled={insight.action.disabled} onClick={insight.action.onClick}>{insight.action.label}</Button>
+      ) : null}
+    </div>
   );
 }
 

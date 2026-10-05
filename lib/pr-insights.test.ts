@@ -172,7 +172,7 @@ describe("pull request insight properties", () => {
     expect(document.querySelector('[data-testid="pr-reviews-popover"]')!.textContent).toContain("Already reviewed by Numo");
   });
 
-  it("keeps a running Numo review integrated and opens its conversation", async () => {
+  it("shows a running Numo review below its reviewer banner without activity actions", async () => {
     const onOpen = vi.fn();
     props.numoReview = { kind: "running", label: messages.PullRequests.numoReviewRunning, onOpen, startedAt: "2026-10-05T10:00:00Z", durationMs: null };
     await render();
@@ -182,8 +182,11 @@ describe("pull request insight properties", () => {
     expect(trigger("numo-review")).toBeNull();
     await act(async () => trigger("reviews").click());
     const detail = document.querySelector('[data-testid="pr-insight-detail-numo-review"]')!;
-    await act(async () => detail.querySelector<HTMLButtonElement>("button")!.click());
-    expect(onOpen).toHaveBeenCalledOnce();
+    expect(detail.querySelector("header")!.textContent).toBe("Numo");
+    expect(detail.querySelector("header")!.textContent).not.toContain("Numo is reviewing");
+    expect(detail.textContent).toContain("Numo is reviewing");
+    expect(detail.querySelector("button")).toBeNull();
+    expect(onOpen).not.toHaveBeenCalled();
   });
 
   it("opens global correction actions from the header without expanding the group", async () => {
@@ -239,6 +242,38 @@ describe("pull request insight properties", () => {
     expect(button.querySelector('[data-reviewer-login="pending-reviewer"]')).not.toBeNull();
     expect(button.querySelector(`[data-reviewer-login="${bot.login}"]`)).toBeNull();
     expect(button.querySelector(`[data-testid="pr-review-provider-${provider.id}"]`)).not.toBeNull();
+  });
+
+  it("places the idle Numo action inside its reviewer banner", async () => {
+    await render();
+    await act(async () => trigger("reviews").click());
+    const section = document.querySelector('[data-testid="pr-insight-detail-numo-review"]')!;
+    const action = section.querySelector<HTMLButtonElement>('[data-testid="pr-card-numo-review"]')!;
+    expect(section.querySelector("header")!.contains(action)).toBe(true);
+    await act(async () => action.click());
+    expect(props.onRequestReview).toHaveBeenCalledOnce();
+    expect(document.querySelector('[data-testid="pr-reviews-details"]')!.textContent).not.toContain("No reviews yet");
+  });
+
+  it.each(["requested", "running", "completed", "clean", "findings", "failed", "skipped"] as const)("groups %s agent metadata and verdicts below one banner without agent actions", async (state) => {
+    const provider = AI_REVIEW_PROVIDERS[0];
+    props.onRequestAiReview = vi.fn();
+    props.timeline = [{ id: "review:codex", kind: "reviewed", actor: { login: provider.githubLogins[0], avatar_url: null }, createdAt: "2026-10-05T10:00:00Z", reviewState: "approved" }];
+    props.aiReviews = [{ provider, state, startedAt: "2026-10-05T10:00:00Z", durationMs: 30_000, updatedAt: "2026-10-05T10:00:30Z", url: "https://github.com/test/repository/pull/1" }];
+    props.requestedReviewers = [{ login: provider.githubLogins[0], avatar_url: null }, { login: "pending-reviewer", avatar_url: null }];
+    await render();
+    await act(async () => trigger("reviews").click());
+    const section = document.querySelector(`[data-testid="pr-insight-detail-ai-review-${provider.id}"]`)!;
+    const header = section.querySelector("header")!;
+    expect(header.textContent).toBe(provider.name);
+    expect(section.querySelector("button")).toBeNull();
+    expect(document.querySelector('[data-testid="pr-card-numo-review"]') === null).toBe(state === "requested" || state === "running");
+    expect(section.querySelector("time")).not.toBeNull();
+    expect(section.textContent).toContain("approved");
+    expect(header.textContent).not.toContain("approved");
+    expect(document.querySelector('[data-testid="pr-reviews-details"]')!.querySelectorAll(`[data-reviewer-login="${provider.githubLogins[0]}"]`)).toHaveLength(0);
+    const pending = document.querySelector('[data-testid="pr-reviews-details"] [data-reviewer-login="pending-reviewer"]')!;
+    expect(pending.closest("header")).not.toBeNull();
   });
 
 });
