@@ -2,7 +2,8 @@
   "buildCommand": "npm run check:deployment-db && npm run build",
   "git": {
     "deploymentEnabled": {
-      "dependabot/**": false
+      "**": false,
+      "main": true
     }
   },
   "crons": [
