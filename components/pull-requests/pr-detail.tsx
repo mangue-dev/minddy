@@ -2142,7 +2142,7 @@ export function PrDetail({
               setScrolledDown(false);
             }}
           >
-            <TabsList variant="line" className={TAB_LIST_DENSE}>
+            <TabsList variant="line" className={cn(TAB_LIST_DENSE, "-translate-x-3")}>
               <TabsTrigger value="activity" className={cn(TAB_TRIGGER_DENSE, "gap-1.5")}>
                 {t("tabDescriptionActivity")}
                 {conversationCount > 0 ? (
