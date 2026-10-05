@@ -1,5 +1,6 @@
 import "server-only";
 
+import { rememberReviewQueue } from "./pull-request-review-queue";
 import type { VisibleRepo } from "./pull-requests";
 import { resolveRepoCloneTargetForRepo } from "./repo-access";
 import { stampRepoSync, syncRepoPullRequests } from "./pull-requests";
@@ -30,6 +31,8 @@ async function performSweep(userId: string, repo: VisibleRepo): Promise<boolean>
       provider: repo.provider,
       repoFullName: repo.repoFullName,
       token: target.token,
+      includeReviewRequests: true,
+      onObserved: (pulls) => { rememberReviewQueue(userId, repo, pulls); },
     });
     return truncated;
   } catch {

@@ -1,3 +1,4 @@
+import { invalidateReviewQueue } from "./pull-request-review-queue";
 import { issueStore } from "@/lib/server/issue-store";
 import { MAX_ATTACHMENT_UPLOAD_BYTES } from "@/lib/attachment-upload-limits";
 import "server-only";
@@ -2015,6 +2016,7 @@ export async function prRequestReviewerResponse(scope: PrScope, login: unknown):
         return NextResponse.json({ error: "The author cannot review their own pull request" }, { status: 422 });
       }
       await scope.forge.requestPullRequestReviewer({ ...actorCall(actor.actor, scope), login });
+      invalidateReviewQueue(scope.pr.provider, scope.call.repoFullName);
       broadcastPrChanged(scope.pr.id, ["pr", "conversation"]);
       return NextResponse.json({ ok: true });
     });
@@ -2767,6 +2769,7 @@ export async function prReviewResponse(
         locale: await getLocale(),
       });
       published = result.published;
+      invalidateReviewQueue(scope.pr.provider, scope.call.repoFullName);
     }
   } catch (err) {
     // The Numo conversation already carries the request, so a later forge

@@ -691,12 +691,16 @@ export async function syncRepoPullRequests(opts: {
   provider: RepoProviderId;
   repoFullName: string;
   token: string;
+  includeReviewRequests?: boolean;
+  onObserved?: (pulls: PullRequestRef[]) => void;
 }): Promise<{ count: number; truncated: boolean }> {
   const forge = forgeFor(opts.provider);
   const { pulls, truncated } = await forge.listPullRequests({
     token: opts.token,
     repoFullName: opts.repoFullName,
+    ...(opts.includeReviewRequests ? { includeReviewRequests: true } : {}),
   });
+  opts.onObserved?.(pulls);
 
   const service = getServiceClient();
   const storedName = await repositoryStorageName(opts.provider, opts.repoFullName,

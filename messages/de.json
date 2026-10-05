@@ -3679,6 +3679,13 @@
     "sessionDeleted": "Konversation gelöscht"
   },
   "PullRequests": {
+    "sectionCreatedByMe": "Von mir erstellt",
+    "sectionMyReview": "Benötigen mein Review",
+    "sectionTeamReview": "Benötigen das Review meines Teams",
+    "sectionCompleted": "Kürzlich abgeschlossen",
+    "filterSections": "Abschnitte filtern",
+    "filterSectionsLabel": "Abschnitte",
+    "emptySections": "Keine Pull Requests in diesen Abschnitten",
     "readFailed": "Dieser Pull Request konnte nicht aktualisiert werden. Versuche es erneut.",
     "readPaused": "Du bist offline. Stelle die Verbindung wieder her, um diesen Pull Request zu laden.",
     "readRetry": "Erneut versuchen",

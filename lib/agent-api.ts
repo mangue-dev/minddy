@@ -945,6 +945,10 @@ export type PullRequestStateFilter = "open" | "merged" | "closed" | "all";
 export interface PullRequestListItem {
   /** The item IS the PR. The run is no longer the carrier, just a decoration. */
   prId: string;
+  /** Authenticated viewer owns this PR, including PRs opened by their Numo run. */
+  createdByMe?: boolean;
+  /** The viewer has a pending review request at the forge. */
+  reviewRequestedForMe?: boolean;
   pr_number: number;
   pr_url: string | null;
   pr_state: "draft" | "open" | "merged" | "closed";

@@ -1,10 +1,13 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
-const mocks = vi.hoisted(() => ({ list: vi.fn(), syncs: vi.fn(), sweep: vi.fn(), repos: vi.fn() }));
+const mocks = vi.hoisted(() => ({ runs: [] as unknown[], opened: [] as unknown[], identities: vi.fn(), queue: vi.fn(), list: vi.fn(), syncs: vi.fn(), sweep: vi.fn(), repos: vi.fn() }));
 vi.mock("@/lib/server/git/repository-name-content", () => ({ createRepositoryNameDecoder: () => async (_provider: string, name: string) => name }));
 vi.mock("@/lib/server/api-auth", () => ({ getAuthedUser: async () => {
-  const query = { select: () => query, in: () => query, order: async () => ({ data: [] }) };
-  return { ok: true, user: { id: "owner" }, supabase: { from: () => query } };
+  return { ok: true, user: { id: "owner" }, supabase: { from: (table: string) => {
+    const query = { select: () => query, in: () => query, order: () => query, eq: () => query,
+      then: (resolve: (value: unknown) => unknown) => Promise.resolve({ data: table === "agent_runs" ? mocks.runs : mocks.opened }).then(resolve) };
+    return query;
+  } } };
 } }));
 vi.mock("@/lib/server/agent/pull-requests", () => ({
   findPullRequest: vi.fn(), loadPullRequestIssues: vi.fn(), resolvePrForRun: vi.fn(),
@@ -15,6 +18,8 @@ vi.mock("@/lib/server/agent/pull-requests", () => ({
   rowProvider: () => "github",
 }));
 vi.mock("@/lib/server/agent/pull-requests-sweep", () => ({ sweepRepo: mocks.sweep }));
+vi.mock("@/lib/server/git/user-identities", () => ({ listUserIdentities: mocks.identities }));
+vi.mock("@/lib/server/agent/pull-request-review-queue", () => ({ readReviewQueue: mocks.queue }));
 vi.mock("@/lib/server/agent/runs", () => ({ getRun: vi.fn() }));
 
 import { GET } from "@/app/api/pull-requests/route";
@@ -22,6 +27,9 @@ const row = { id: "new-pr", number: 1, repo_full_name: "acme/app", provider: "gi
   state: "open", title: "New PR", issue: null, issues: [], updated_at: "2026-10-04T12:00:00Z" };
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.runs = []; mocks.opened = [];
+  mocks.identities.mockResolvedValue([]);
+  mocks.queue.mockResolvedValue(new Map());
   mocks.repos.mockResolvedValue([{ provider: "github", repoFullName: "acme/app",
     project: { id: "project", key: "ACME", name: "Acme" } }]);
 });
@@ -78,4 +86,56 @@ it("catches up distinct stale repositories with at most three concurrent scans b
   expect(mocks.list).toHaveBeenCalledTimes(2);
   expect(maximum).toBe(3);
   expect(mocks.sweep.mock.calls.map(([, repo]) => repo.repoFullName)).toEqual(repos.map((repo) => repo.repoFullName));
+});
+
+
+it("matches ownership and pending review requests against the personal forge identity", async () => {
+  mocks.identities.mockResolvedValue([{ provider: "github", account_login: "Ada" }]);
+  mocks.syncs.mockResolvedValue(new Map([["github:acme/app", { synced_at: "fresh" }]]));
+  mocks.list.mockResolvedValue([{ ...row, author_login: "ada" }, { ...row, id: "review-pr", number: 2, author_login: "grace" }]);
+  mocks.queue.mockResolvedValue(new Map([[2, ["ADA"]]]));
+  const body = await (await GET(new NextRequest("http://localhost/api/pull-requests"))).json();
+  expect(body.pullRequests).toEqual([
+    expect.objectContaining({ prId: "new-pr", createdByMe: true, reviewRequestedForMe: false }),
+    expect.objectContaining({ prId: "review-pr", createdByMe: false, reviewRequestedForMe: true }),
+  ]);
+  expect(mocks.queue).toHaveBeenCalledOnce();
+  expect(mocks.queue).toHaveBeenCalledWith("owner", expect.objectContaining({ repoFullName: "acme/app" }));
+});
+
+it("does not scan review queues for completed PRs or a disconnected personal identity", async () => {
+  mocks.identities.mockResolvedValue([{ provider: "github", account_login: "ada" }]);
+  mocks.syncs.mockResolvedValue(new Map([["github:acme/app", { synced_at: "fresh" }]]));
+  mocks.list.mockResolvedValue([{ ...row, state: "closed" }]);
+  await GET(new NextRequest("http://localhost/api/pull-requests?state=all"));
+  expect(mocks.queue).not.toHaveBeenCalled();
+});
+
+it("keeps the cached PR list available when the forge review queue fails", async () => {
+  mocks.identities.mockResolvedValue([{ provider: "github", account_login: "ada" }]);
+  mocks.syncs.mockResolvedValue(new Map([["github:acme/app", { synced_at: "fresh" }]]));
+  mocks.list.mockResolvedValue([row]);
+  mocks.queue.mockRejectedValue(new Error("Offline"));
+  const log = vi.spyOn(console, "error").mockImplementation(() => {});
+  try {
+    const body = await (await GET(new NextRequest("http://localhost/api/pull-requests"))).json();
+    expect(body.pullRequests).toHaveLength(1);
+    expect(body.pullRequests[0].reviewRequestedForMe).toBe(false);
+  } finally { log.mockRestore(); }
+});
+
+
+it("counts Numo PRs as mine only when my run actually opened the PR", async () => {
+  mocks.identities.mockResolvedValue([{ provider: "github", account_login: "numo-bot" }]);
+  mocks.syncs.mockResolvedValue(new Map([["github:acme/app", { synced_at: "fresh" }]]));
+  mocks.list.mockResolvedValue([row, { ...row, id: "fixed-pr", number: 2 }, { ...row, id: "other-pr", number: 3, author_login: "numo-bot" }]);
+  mocks.runs = [
+    { id: "my-opening", created_by: "owner", pr_number: 1, status: "completed", repo_link: { provider: "github", repo_full_name: "acme/app" } },
+    { id: "my-fix", created_by: "owner", pr_number: 2, status: "completed", repo_link: { provider: "github", repo_full_name: "acme/app" } },
+    { id: "their-opening", created_by: "other", pr_number: 3, status: "completed", repo_link: { provider: "github", repo_full_name: "acme/app" } },
+  ];
+  mocks.opened = [{ run_id: "my-opening" }, { run_id: "their-opening" }];
+  const body = await (await GET(new NextRequest("http://localhost/api/pull-requests"))).json();
+  expect(body.pullRequests.map((pr: { createdByMe: boolean; numoOpened: boolean }) => [pr.createdByMe, pr.numoOpened]))
+    .toEqual([[true, true], [false, false], [false, true]]);
 });

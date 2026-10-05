@@ -3679,6 +3679,13 @@
     "sessionDeleted": "Conversation supprimée"
   },
   "PullRequests": {
+    "sectionCreatedByMe": "Créées par moi",
+    "sectionMyReview": "À revoir par moi",
+    "sectionTeamReview": "À revoir par mon équipe",
+    "sectionCompleted": "Récemment terminées",
+    "filterSections": "Filtrer les sections",
+    "filterSectionsLabel": "Sections",
+    "emptySections": "Aucune pull request dans ces sections",
     "readFailed": "Impossible d’actualiser cette pull request. Réessayez.",
     "readPaused": "Vous êtes hors ligne. Reconnectez-vous pour charger cette pull request.",
     "readRetry": "Réessayer",

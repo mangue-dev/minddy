@@ -3679,6 +3679,13 @@
     "sessionDeleted": "Conversation deleted"
   },
   "PullRequests": {
+    "sectionCreatedByMe": "Created by me",
+    "sectionMyReview": "Needs my review",
+    "sectionTeamReview": "Needs my team’s review",
+    "sectionCompleted": "Recently completed",
+    "filterSections": "Filter sections",
+    "filterSectionsLabel": "Sections",
+    "emptySections": "No pull requests in these sections",
     "readFailed": "Could not refresh this pull request. Try again.",
     "readPaused": "You’re offline. Reconnect to load this pull request.",
     "readRetry": "Try again",
