@@ -200,9 +200,20 @@ export function PrInsights(props: PrInsightsProps) {
   const count = groups.reduce((total, group) => total + group.length, 0);
   const latest = groups.map((group) => group[0]);
   const humanTone = reviewCardTone(props.timeline, props.requestedReviewers);
-  const reviewerAvatars = latest.length > 0
-    ? latest.flatMap((review) => review.actor ? [review.actor] : [])
-    : props.requestedReviewers;
+  const externalReviews = props.aiReviews ?? [];
+  const providerLogins = new Set(externalReviews.flatMap((review) =>
+    review.provider.githubLogins.map((login) => login.toLowerCase()),
+  ));
+  const reviewerAvatars = [
+    ...latest.flatMap((review) => review.actor ? [review.actor] : []),
+    ...props.requestedReviewers,
+  ].filter((user, index, users) =>
+    !providerLogins.has(user.login.toLowerCase()) &&
+    users.findIndex((candidate) => candidate.login.toLowerCase() === user.login.toLowerCase()) === index,
+  );
+  const showNumo = !!props.numoReview && (
+    props.numoReview.kind !== "requested" || (reviewerAvatars.length === 0 && externalReviews.length === 0)
+  );
   const reviewTone = reviews.some(({ insight }) => insight.tone === "danger") ||
     humanTone === "danger"
     ? "danger"
@@ -239,9 +250,11 @@ export function PrInsights(props: PrInsightsProps) {
           tone={checksInsight.tone}
           testId="pr-status-card-checks"
           detailsTestId="pr-checks-popover"
+          ariaLabel={`${t("viewChecks")}: ${checksInsight.title}`}
+          showChevron={false}
           open={props.checksOpen}
           onOpenChange={props.onChecksOpenChange}
-          summary={<StatusSummary insight={checksInsight} now={now} />}
+          summary={<StatusSummary insight={checksInsight} now={now} compact />}
         >
           <ChecksDetails checks={props.checks} provider={props.provider} />
         </PrInsightRow>
@@ -256,11 +269,18 @@ export function PrInsights(props: PrInsightsProps) {
           tone={reviewTone}
           testId="pr-status-card-reviews"
           detailsTestId="pr-reviews-popover"
+          ariaLabel={`${t("viewReviews")}: ${reviewSummary}`}
+          showChevron={false}
           summary={
             <>
               {reviewerAvatars.length > 0 ? <AvatarCascade users={reviewerAvatars} /> : null}
-              {props.numoReview && props.numoReview.kind !== "requested" ? <NumoIcon animated={false} className="size-4 shrink-0" /> : null}
-              <span className="min-w-0 truncate">{reviewSummary}</span>
+              {externalReviews.map((review) => (
+                <span key={review.provider.id} data-testid={`pr-review-provider-${review.provider.id}`}>
+                  <StatusIcon insight={reviews.find(({ insight }) => insight.id === `ai-review-${review.provider.id}`)!.insight} />
+                </span>
+              ))}
+              {showNumo ? <NumoIcon animated={false} className="size-4 shrink-0" /> : null}
+              {!showNumo && reviewerAvatars.length === 0 && externalReviews.length === 0 ? <AppIcon icon={UserRoundCheck} className="size-4 shrink-0" /> : null}
             </>
           }
         >
@@ -750,8 +770,8 @@ function StatusIcon({ insight }: { insight: PrInsight }) {
     <span aria-hidden className="flex shrink-0 items-center [&_svg]:size-4">
       {insight.logo ? (
         <span className="inline-block size-4 bg-current [mask-repeat:no-repeat] [mask-position:center] [mask-size:contain]" style={{ maskImage: `url(${insight.logo})`, WebkitMaskImage: `url(${insight.logo})` }} />
-      ) : insight.donutParts ? (
-        <ChecksDonut parts={insight.donutParts} />
+      ) : insight.donutParts || insight.id === "checks" ? (
+        <ChecksDonut parts={insight.donutParts ?? []} />
       ) : insight.id === "conversations" && insight.tone === "success" ? (
         <HugeiconsIcon icon={CheckIcon} />
       ) : insight.id === "deployment" ? (
@@ -767,7 +787,7 @@ function StatusIcon({ insight }: { insight: PrInsight }) {
   );
 }
 
-function StatusSummary({ insight, now }: { insight: PrInsight; now: Date }) {
+function StatusSummary({ insight, now, compact = false }: { insight: PrInsight; now: Date; compact?: boolean }) {
   const t = useTranslations("PullRequests");
   const duration = insight.startedAt
     ? formatRunDuration(t, Math.max(now.getTime() - Date.parse(insight.startedAt), 0))
@@ -775,7 +795,7 @@ function StatusSummary({ insight, now }: { insight: PrInsight; now: Date }) {
   return (
     <>
       <StatusIcon insight={insight} />
-      <AppTooltip label={insight.title}><span className="min-w-0 truncate">{insight.title}</span></AppTooltip>
+      {!compact ? <AppTooltip label={insight.title}><span className="min-w-0 truncate">{insight.title}</span></AppTooltip> : null}
       {duration ? <span className="shrink-0 font-mono text-xs tabular-nums">{duration}</span> : null}
     </>
   );
@@ -881,7 +901,6 @@ function ChecksDetails({ checks, provider }: { checks: ChecksSummary | null; pro
             <span className={cn("font-mono tabular-nums", CHECK_ROW_TEXT[check.state])}>
               {formatRunDuration(t, check.state === "pending" && check.startedAt ? Math.max(now.getTime() - Date.parse(check.startedAt), 0) : check.durationMs)}
             </span>
-            {check.url ? <a href={check.url} target="_blank" rel="noreferrer" className="rounded text-muted-foreground underline-offset-4 hover:underline focus-visible:outline-ring">{t("checkDetails")}</a> : null}
           </div>
         </li>
       ))}
@@ -901,7 +920,7 @@ export function ChecksDonut({ parts }: { parts: CheckState[] }) {
   const radius = 6.5;
   const stroke = 3;
   const circumference = 2 * Math.PI * radius;
-  const slice = circumference / parts.length;
+  const slice = parts.length > 0 ? circumference / parts.length : 0;
   // Slices run clockwise from 12 o'clock; a small gap keeps adjacent parts
   // readable even when every slice has the same color.
   const gap = parts.length > 1 ? Math.min(1.5, slice * 0.2) : 0;
@@ -911,7 +930,9 @@ export function ChecksDonut({ parts }: { parts: CheckState[] }) {
       className="size-4 shrink-0"
       aria-hidden
     >
-      {parts.map((state, index) => (
+      {parts.length === 0 ? (
+        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" className="stroke-muted-foreground/30" strokeWidth={stroke} />
+      ) : parts.map((state, index) => (
         <circle
           key={index}
           cx={size / 2}
@@ -942,7 +963,7 @@ function AvatarCascade({
           key={user.login}
           user={user}
           className={cn(
-            "size-4 ring-1 ring-insight",
+            "size-4 ring-1 ring-card",
             index > 0 && "-ml-1.5",
           )}
         />

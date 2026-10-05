@@ -16,6 +16,8 @@ export function PrInsightRow({
   children,
   testId,
   detailsTestId,
+  ariaLabel,
+  showChevron = true,
   open,
   onOpenChange,
 }: {
@@ -25,6 +27,8 @@ export function PrInsightRow({
   children: ReactNode;
   testId: string;
   detailsTestId?: string;
+  ariaLabel?: string;
+  showChevron?: boolean;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 }) {
@@ -34,15 +38,18 @@ export function PrInsightRow({
         <PopoverTrigger asChild>
           <button
             type="button"
+            aria-label={ariaLabel ?? label}
             data-testid={testId}
             className={cn(TRIGGER, "mr-0 min-w-0")}
           >
             {summary}
-            <HugeiconsIcon
-              icon={ArrowDown01Icon}
-              aria-hidden
-              className="size-3.5 shrink-0 text-muted-foreground"
-            />
+            {showChevron ? (
+              <HugeiconsIcon
+                icon={ArrowDown01Icon}
+                aria-hidden
+                className="size-3.5 shrink-0 text-muted-foreground"
+              />
+            ) : null}
           </button>
         </PopoverTrigger>
         <PopoverContent

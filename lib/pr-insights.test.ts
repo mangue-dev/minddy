@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PrInsights } from "@/components/pull-requests/pr-insights";
 import type { CheckState, ChecksSummary } from "@/lib/agent-api";
 import messages from "@/messages/en.json";
+import { AI_REVIEW_PROVIDERS } from "@/lib/pr-ai-review/providers";
 
 // Load the real primitives without the unrelated emoji picker barrel export.
 vi.mock("mangue-ui", async () => ({
@@ -20,8 +21,10 @@ vi.mock("mangue-ui", async () => ({
 vi.mock("@/components/ui/app-tooltip", () => ({
   AppTooltip: ({ children }: { children: ReactElement }) => children,
 }));
-vi.mock("@/components/numo-icon", () => ({ NumoIcon: () => null }));
-vi.mock("@/components/git/forge-user-avatar", () => ({ ForgeUserAvatar: () => null }));
+vi.mock("@/components/numo-icon", () => ({ NumoIcon: () => createElement("span", { "data-numo-icon": true }) }));
+vi.mock("@/components/git/forge-user-avatar", () => ({
+  ForgeUserAvatar: ({ user }: { user: { login: string } }) => createElement("span", { "data-reviewer-login": user.login }),
+}));
 
 function checks(...states: CheckState[]): ChecksSummary {
   return {
@@ -80,8 +83,12 @@ describe("pull request insight properties", () => {
   it("keeps checks and reviews available without empty conversation or Numo rows", async () => {
     props.checks = checks();
     await render();
-    expect(trigger("checks").textContent).toContain("No checks");
-    expect(trigger("reviews").textContent).toContain("No reviews yet");
+    expect(trigger("checks").textContent).toBe("");
+    expect(trigger("checks").getAttribute("aria-label")).toContain("No checks");
+    expect(trigger("checks").querySelector("circle")).not.toBeNull();
+    expect(trigger("reviews").textContent).toBe("");
+    expect(trigger("reviews").getAttribute("aria-label")).toContain("No reviews yet");
+    expect(trigger("reviews").querySelector("[data-numo-icon]")).not.toBeNull();
     expect(trigger("conversations")).toBeNull();
     expect(trigger("numo-review")).toBeNull();
     expect(document.querySelector('[data-testid="pr-card-numo-review"]')).toBeNull();
@@ -107,7 +114,7 @@ describe("pull request insight properties", () => {
     const group = document.querySelector('[data-testid="pr-insight-blockers"]')!;
     expect(group.contains(trigger("checks"))).toBe(true);
     expect(group.contains(trigger("reviews"))).toBe(false);
-    expect(trigger("checks").textContent).toContain("1 check failed");
+    expect(trigger("checks").getAttribute("aria-label")).toContain("1 check failed");
     expect(trigger("checks").className).not.toMatch(/bg-destructive|text-destructive/);
     const label = trigger("checks").closest(".min-h-9")!.firstElementChild!;
     expect(label.classList.contains("text-destructive")).toBe(true);
@@ -123,18 +130,18 @@ describe("pull request insight properties", () => {
     props.checks = checks("success", "success");
     await render();
     expect(trigger("checks")).toBe(before);
-    expect(trigger("checks").textContent).toContain("2 checks passed");
-    expect(trigger("checks").textContent).toContain("1 min 32s");
+    expect(trigger("checks").getAttribute("aria-label")).toContain("2 checks passed");
+    expect(trigger("checks").textContent).toBe("1 min 32s");
     expect(trigger("checks").querySelectorAll("circle")).toHaveLength(2);
   });
 
   it("does not count skipped checks as passed checks", async () => {
     props.checks = checks("success", "neutral");
     await render();
-    expect(trigger("checks").textContent).toContain("1 check passed");
+    expect(trigger("checks").getAttribute("aria-label")).toContain("1 check passed");
     props.checks = checks("neutral", "neutral");
     await render();
-    expect(trigger("checks").textContent).toContain("Skipped");
+    expect(trigger("checks").getAttribute("aria-label")).toContain("Skipped");
   });
 
   it("reopens the blocking group when another control opens the checks", async () => {
@@ -158,7 +165,9 @@ describe("pull request insight properties", () => {
     await render();
     const group = document.querySelector('[data-testid="pr-insight-blockers"]')!;
     expect(group.contains(trigger("reviews"))).toBe(true);
-    expect(trigger("reviews").textContent).toContain("Changes requested");
+    expect(trigger("reviews").textContent).toBe("");
+    expect(trigger("reviews").getAttribute("aria-label")).toContain("Changes requested");
+    expect(trigger("reviews").querySelector('[data-reviewer-login="reviewer"]')).not.toBeNull();
     await act(async () => trigger("reviews").click());
     expect(document.querySelector('[data-testid="pr-reviews-popover"]')!.textContent).toContain("Already reviewed by Numo");
   });
@@ -167,7 +176,9 @@ describe("pull request insight properties", () => {
     const onOpen = vi.fn();
     props.numoReview = { kind: "running", label: messages.PullRequests.numoReviewRunning, onOpen, startedAt: "2026-10-05T10:00:00Z", durationMs: null };
     await render();
-    expect(trigger("reviews").textContent).toContain("Numo is reviewing");
+    expect(trigger("reviews").textContent).toBe("");
+    expect(trigger("reviews").getAttribute("aria-label")).toContain("Numo is reviewing");
+    expect(trigger("reviews").querySelector("[data-numo-icon]")).not.toBeNull();
     expect(trigger("numo-review")).toBeNull();
     await act(async () => trigger("reviews").click());
     const detail = document.querySelector('[data-testid="pr-insight-detail-numo-review"]')!;
@@ -197,6 +208,37 @@ describe("pull request insight properties", () => {
     await act(async () => launch.click());
     expect(onLaunch).toHaveBeenCalledOnce();
     expect(launch.textContent).toBe("Launched");
+  });
+
+  it("shows check results and durations without details links in the popover", async () => {
+    props.checks = checks("success", "pending");
+    props.checks.checks[0].url = "https://github.com/test/repository/actions/runs/1";
+    props.checksOpen = true;
+    await render();
+    const popover = document.querySelector('[data-testid="pr-checks-popover"]')!;
+    expect(popover.querySelector("a")).toBeNull();
+    expect(popover.textContent).toContain("Check 1");
+    expect(popover.textContent).toContain("Passed");
+    expect(popover.textContent).toContain("Running");
+    expect(popover.textContent).toContain("1 min 32s");
+  });
+
+  it("shows human reviewer avatars and external logos without duplicate bot avatars", async () => {
+    const provider = AI_REVIEW_PROVIDERS[0];
+    const bot = { login: provider.githubLogins[0], avatar_url: null };
+    props.timeline = [
+      { id: "review:human", kind: "reviewed", actor: { login: "reviewer", avatar_url: null }, createdAt: null, reviewState: "commented" },
+      { id: "review:bot", kind: "reviewed", actor: bot, createdAt: null, reviewState: "commented" },
+    ];
+    props.requestedReviewers = [{ login: "reviewer", avatar_url: null }, { login: "pending-reviewer", avatar_url: null }];
+    props.aiReviews = [{ provider, state: "completed", startedAt: null, durationMs: 30_000, updatedAt: "2026-10-05T10:00:00Z", url: null }];
+    await render();
+    const button = trigger("reviews");
+    expect(button.textContent).toBe("");
+    expect(button.querySelectorAll('[data-reviewer-login="reviewer"]')).toHaveLength(1);
+    expect(button.querySelector('[data-reviewer-login="pending-reviewer"]')).not.toBeNull();
+    expect(button.querySelector(`[data-reviewer-login="${bot.login}"]`)).toBeNull();
+    expect(button.querySelector(`[data-testid="pr-review-provider-${provider.id}"]`)).not.toBeNull();
   });
 
 });
