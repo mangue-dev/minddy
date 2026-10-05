@@ -1,4 +1,4 @@
-type Slot = "query-cache" | "issue-drafts" | "objective-drafts" | "search-history" | "page-list-settings" | "status-history" | "window-tabs";
+type Slot = "query-cache" | "issue-drafts" | "objective-drafts" | "search-history" | "page-list-settings" | "window-tabs";
 type Snapshot = { format: "minddy-local-v1"; owner: string; expiresAt: number; ciphertext: string };
 let generation = 0;
 const revisions = new Map<string, number>();

@@ -1,7 +1,12 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowDown01Icon, Copy01Icon, FilterIcon, CheckIcon } from "@hugeicons/core-free-icons";
+import {
+  ArrowDown01Icon,
+  Copy01Icon,
+  FilterIcon,
+  CheckIcon,
+} from "@hugeicons/core-free-icons";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
@@ -25,6 +30,8 @@ import {
   Spinner,
   toast,
 } from "mangue-ui";
+import { ForgeUserAvatar } from "@/components/git/forge-user-avatar";
+import { GitLogin } from "@/components/git/git-login";
 import { NumoIcon } from "@/components/numo-icon";
 import {
   useReviewReplies,
@@ -34,6 +41,7 @@ import { ReviewConversationStack } from "@/components/pull-requests/pr-timeline"
 import type { PrEndpoint } from "@/lib/agent-api";
 import {
   buildPullRequestFeedbackPrompt,
+  conversationReviewerGroups,
   type PullRequestFeedbackContext,
   type PullRequestFeedbackThread,
 } from "@/lib/pr-unresolved-conversations";
@@ -73,9 +81,14 @@ export function PrUnresolvedConversations({
   const [resolvingAll, setResolvingAll] = useState(false);
   const replies = useReviewReplies(endpoint, onThreadChanged);
   const resolution = useThreadResolution(endpoint, onResolutionChanged);
-  const outdated = useMemo(
-    () => threads.filter((thread) => thread.resolution?.outdated),
+  const unresolved = useMemo(
+    () => threads.filter((thread) => thread.resolution?.resolved === false),
     [threads],
+  );
+  const groups = useMemo(() => conversationReviewerGroups(threads), [threads]);
+  const outdated = useMemo(
+    () => unresolved.filter((thread) => thread.resolution?.outdated),
+    [unresolved],
   );
 
   const copyPrompt = useCallback(
@@ -102,19 +115,10 @@ export function PrUnresolvedConversations({
     setConfirmOutdated(false);
     setResolvingOutdated(false);
     if (resolved > 0) {
-      if (resolved === threads.length) onOpenChange(false);
       toast.success(t("outdatedResolvedToast", { count: resolved }));
       await onResolutionChanged();
     }
-  }, [
-    onOpenChange,
-    onResolutionChanged,
-    outdated,
-    resolution,
-    resolvingOutdated,
-    t,
-    threads.length,
-  ]);
+  }, [onResolutionChanged, outdated, resolution, resolvingOutdated, t]);
 
   // Resolve EVERY open conversation at once — the gesture of a review
   // someone chose to settle by hand rather than fix in code. It asks for
@@ -124,19 +128,16 @@ export function PrUnresolvedConversations({
     if (resolvingAll) return;
     setResolvingAll(true);
     const results = await Promise.all(
-      threads.map((thread) => resolution.setResolved(thread, true, false)),
+      unresolved.map((thread) => resolution.setResolved(thread, true, false)),
     );
     const resolved = results.filter(Boolean).length;
     setConfirmResolveAll(false);
     setResolvingAll(false);
     if (resolved > 0) {
-      if (resolved === threads.length) onOpenChange(false);
       toast.success(t("allResolvedToast", { count: resolved }));
       await onResolutionChanged();
     }
-  }, [onOpenChange, onResolutionChanged, resolution, resolvingAll, t, threads]);
-
-  if (threads.length === 0) return null;
+  }, [onResolutionChanged, resolution, resolvingAll, t, unresolved]);
 
   return (
     <>
@@ -149,7 +150,7 @@ export function PrUnresolvedConversations({
             <HugeiconsIcon icon={FilterIcon} className="size-3" />
           </span>
           <span className="min-w-0 flex-1 text-sm font-medium">
-            {t("unresolvedWorkspaceTitle", { count: threads.length })}
+            {t("cardConversations", { count: threads.length })}
           </span>
           <Button
             data-testid="pr-unresolved-list-trigger"
@@ -158,7 +159,7 @@ export function PrUnresolvedConversations({
             className="shrink-0"
             onClick={() => onOpenChange(true)}
           >
-            {t("unresolvedViewList", { count: threads.length })}
+            {t("viewConversations")}
           </Button>
         </div>
       ) : null}
@@ -169,8 +170,10 @@ export function PrUnresolvedConversations({
           className="w-[min(760px,calc(100vw-2rem))]"
         >
           <SidePanelHeader className="px-4 py-4">
-            <SidePanelTitle>{t("unresolvedListTitle")}</SidePanelTitle>
-            <SidePanelDescription>{t("unresolvedListHint")}</SidePanelDescription>
+            <SidePanelTitle>{t("conversationsTitle")}</SidePanelTitle>
+            <SidePanelDescription>
+              {t("conversationsHint")}
+            </SidePanelDescription>
             <div className="flex flex-wrap items-center gap-2 pt-2">
               {canResolve && outdated.length > 0 ? (
                 <Button
@@ -183,58 +186,108 @@ export function PrUnresolvedConversations({
                   {t("resolveOutdated", { count: outdated.length })}
                 </Button>
               ) : null}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    data-testid="pr-fix-all"
-                    variant="outline"
-                    size="sm"
-                  >
-                    {t("fixAllConversations")}
-                    <HugeiconsIcon icon={ArrowDown01Icon} className="size-3.5" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start">
-                  <DropdownMenuItem onSelect={() => void copyPrompt(threads)}>
-                    <HugeiconsIcon icon={Copy01Icon} />
-                    {t("copyUnresolvedPrompt")}
-                  </DropdownMenuItem>
-                  {canLaunch ? (
-                    <DropdownMenuItem
-                      onSelect={() => {
-                        onOpenChange(false);
-                        onLaunch(buildPullRequestFeedbackPrompt(context, threads));
-                      }}
+              {unresolved.length > 0 ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      data-testid="pr-fix-all"
+                      variant="outline"
+                      size="sm"
                     >
-                      <NumoIcon animated={false} />
-                      {t("launchNumoUnresolved")}
-                    </DropdownMenuItem>
-                  ) : null}
-                  {canResolve ? (
+                      {t("fixAllConversations")}
+                      <HugeiconsIcon
+                        icon={ArrowDown01Icon}
+                        className="size-3.5"
+                      />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
                     <DropdownMenuItem
-                      data-testid="pr-fix-all-resolve"
-                      onSelect={() => setConfirmResolveAll(true)}
+                      onSelect={() => void copyPrompt(unresolved)}
                     >
-                      <HugeiconsIcon icon={CheckIcon} />
-                      {t("resolveAll")}
+                      <HugeiconsIcon icon={Copy01Icon} />
+                      {t("copyUnresolvedPrompt")}
                     </DropdownMenuItem>
-                  ) : null}
-                </DropdownMenuContent>
-              </DropdownMenu>
+                    {canLaunch ? (
+                      <DropdownMenuItem
+                        onSelect={() => {
+                          onOpenChange(false);
+                          onLaunch(
+                            buildPullRequestFeedbackPrompt(context, unresolved),
+                          );
+                        }}
+                      >
+                        <NumoIcon animated={false} />
+                        {t("launchNumoUnresolved")}
+                      </DropdownMenuItem>
+                    ) : null}
+                    {canResolve ? (
+                      <DropdownMenuItem
+                        data-testid="pr-fix-all-resolve"
+                        onSelect={() => setConfirmResolveAll(true)}
+                      >
+                        <HugeiconsIcon icon={CheckIcon} />
+                        {t("resolveAll")}
+                      </DropdownMenuItem>
+                    ) : null}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : null}
             </div>
           </SidePanelHeader>
 
           <SidePanelBody className="min-h-0 bg-background px-4 py-4">
-            {/* The same conversation stack as the Activity tab, without the
-                rail: each card stands alone, its own file header locates it. */}
-            <ReviewConversationStack
-              listTestId="pr-unresolved-conversations-list"
-              itemTestId="pr-unresolved-conversation"
-              threads={threads}
-              replies={replies}
-              resolution={canResolve ? resolution : undefined}
-              readOnly={!canComment}
-            />
+            {groups.length === 0 ? (
+              <p className="py-6 text-center text-sm text-muted-foreground">
+                {t("noConversations")}
+              </p>
+            ) : null}
+            <div
+              data-testid="pr-conversations-groups"
+              className="flex flex-col gap-5"
+            >
+              {groups.map((group, index) => (
+                <section
+                  key={group.key}
+                  data-resolved={group.resolved ?? "unknown"}
+                >
+                  {index === 0 ||
+                  groups[index - 1].resolved !== group.resolved ? (
+                    <h3 className="mb-3 text-xs font-medium text-muted-foreground">
+                      {t(
+                        group.resolved === undefined
+                          ? "unknownConversations"
+                          : group.resolved
+                            ? "resolvedConversations"
+                            : "openConversations",
+                      )}
+                    </h3>
+                  ) : null}
+                  <header className="mb-3 flex items-center gap-2 rounded-lg bg-muted/50 px-3 py-2">
+                    <ForgeUserAvatar user={group.reviewer} className="size-5" />
+                    {group.reviewer ? (
+                      <GitLogin
+                        login={group.reviewer.login}
+                        className="text-sm font-medium"
+                      />
+                    ) : (
+                      <span className="text-sm">{t("unknownReviewer")}</span>
+                    )}
+                    <span className="ml-auto text-xs text-muted-foreground">
+                      {group.threads.length}
+                    </span>
+                  </header>
+                  <ReviewConversationStack
+                    listTestId="pr-unresolved-conversations-list"
+                    itemTestId="pr-unresolved-conversation"
+                    threads={group.threads}
+                    replies={replies}
+                    resolution={canResolve ? resolution : undefined}
+                    readOnly={!canComment}
+                  />
+                </section>
+              ))}
+            </div>
           </SidePanelBody>
         </SidePanelContent>
       </SidePanel>
@@ -247,7 +300,9 @@ export function PrUnresolvedConversations({
           <DialogHeader>
             <DialogTitle>{t("resolveOutdatedDialogTitle")}</DialogTitle>
             <DialogDescription>
-              {t("resolveOutdatedDialogDescription", { count: outdated.length })}
+              {t("resolveOutdatedDialogDescription", {
+                count: outdated.length,
+              })}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -263,7 +318,11 @@ export function PrUnresolvedConversations({
               disabled={resolvingOutdated}
               onClick={() => void resolveOutdated()}
             >
-              {resolvingOutdated ? <Spinner /> : <HugeiconsIcon icon={CheckIcon} />}
+              {resolvingOutdated ? (
+                <Spinner />
+              ) : (
+                <HugeiconsIcon icon={CheckIcon} />
+              )}
               {t("resolveOutdatedConfirm", { count: outdated.length })}
             </Button>
           </DialogFooter>
@@ -277,7 +336,7 @@ export function PrUnresolvedConversations({
           <DialogHeader>
             <DialogTitle>{t("resolveAllDialogTitle")}</DialogTitle>
             <DialogDescription>
-              {t("resolveAllDialogDescription", { count: threads.length })}
+              {t("resolveAllDialogDescription", { count: unresolved.length })}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

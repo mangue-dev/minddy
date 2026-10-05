@@ -15,6 +15,7 @@ import {
   occurrencesForRoutine,
   type NumoRoutineOccurrence,
 } from "@/lib/server/routine-occurrences";
+import { routineOccurrenceSpend, type RoutineOccurrenceSpend } from "./routine-spend";
 import type { Routine } from "@/lib/server/routines";
 
 /**
@@ -83,11 +84,12 @@ function turnForConversation(
 interface OccurrenceContext {
   turns: Array<Record<string, unknown>>;
   workers: Map<string, Record<string, unknown>>;
+  spend: Map<string, RoutineOccurrenceSpend>;
 }
 
 function runSummary(
   occurrence: NumoRoutineOccurrence,
-  { turns, workers }: OccurrenceContext,
+  { turns, workers, spend }: OccurrenceContext,
 ): RoutineRunSummary {
   const turn = turnForConversation(turns, occurrence.conversation_id);
   const status = (turn?.status as NumoTurnStatus | undefined) ?? null;
@@ -104,7 +106,7 @@ function runSummary(
     waiting_input: status === "waiting_input",
     outcome: (turn?.outcome as string | null) ?? null,
     error_message: occurrence.error_message ?? (turn?.error_message as string | null) ?? null,
-    cost_usd: turn ? Number(turn.cost_usd ?? 0) : null,
+    cost_usd: turn ? spend.get(occurrence.conversation_id)?.totalUsd ?? 0 : null,
     started_at: (turn?.started_at as string | null) ?? null,
     completed_at: (turn?.completed_at as string | null) ?? null,
     conversation_id: occurrence.conversation_id,
@@ -127,7 +129,7 @@ async function occurrenceContext(
           "id, conversation_id, status, outcome, error_message, cost_usd, started_at, completed_at",
         )
         .in("conversation_id", conversationIds)
-        .order("created_at", { ascending: true })
+        .order("created_at", { ascending: false })
     : { data: [], error: null };
   if (turnResult.error) throw new Error(turnResult.error.message);
   const turns: Array<Record<string, unknown>> = await Promise.all(
@@ -156,7 +158,8 @@ async function occurrenceContext(
     const conversationId = turnConversation.get(worker.parent_numo_turn_id as string);
     if (conversationId) workers.set(conversationId, worker);
   }
-  return { turns, workers };
+  const spend = await routineOccurrenceSpend(service, conversationIds);
+  return { turns, workers, spend };
 }
 
 /** Run history of one routine, most recent first. Caller access is checked. */

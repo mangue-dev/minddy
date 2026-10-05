@@ -827,3 +827,72 @@ describe("Numo conversation settings", () => {
     expect(value.state.status).toBe("generating_server");
   });
 });
+
+
+describe("completed response notifications", () => {
+  it.each(["completed", "waiting_input", "idle"])("marks a successful %s streamed answer ready", async (status) => {
+    h.webFetch.mockResolvedValue(new Response(
+      'event: content_delta\ndata: {"delta":"Ready answer"}\n\n'
+      + 'event: message_complete\ndata: {"message_id":"answer"}\n\n'
+      + `event: done\ndata: {"status":"${status}"}\n\n`,
+      { headers: { "X-Numo-Conversation-Id": conversationId } },
+    ));
+    await act(async () => root.render(createElement(Probe)));
+    await act(async () => value.sendMessage(null, "Question"));
+    expect(value.state.completedResponse).toEqual({ conversationId, messageId: "answer" });
+    await act(async () => value.reset());
+    expect(value.state.completedResponse).toBeNull();
+  });
+
+  it.each(["stopped", "failed"])("does not mark a %s partial answer ready", async (status) => {
+    h.webFetch.mockResolvedValue(new Response(
+      'event: content_delta\ndata: {"delta":"Partial answer"}\n\n'
+      + 'event: message_complete\ndata: {"message_id":"partial"}\n\n'
+      + `event: ${status === "failed" ? "error" : "done"}\ndata: {"status":"${status}","message":"Failed"}\n\n`,
+      { headers: { "X-Numo-Conversation-Id": conversationId } },
+    ));
+    await act(async () => root.render(createElement(Probe)));
+    await act(async () => value.sendMessage(null, "Question"));
+    expect(value.state.completedResponse).toBeNull();
+  });
+
+  it.each(["ask_user", "propose_backlog"])("marks a completed %s interaction ready", async (name) => {
+    h.webFetch.mockResolvedValue(new Response(
+      `event: tool_call_start\ndata: {"id":"call","name":"${name}"}\n\n`
+      + `event: tool_call_complete\ndata: {"id":"call","name":"${name}","arguments":"{}"}\n\n`
+      + 'event: message_complete\ndata: {"message_id":"interaction"}\n\n'
+      + 'event: done\ndata: {"status":"waiting_input"}\n\n',
+      { headers: { "X-Numo-Conversation-Id": conversationId } },
+    ));
+    await act(async () => root.render(createElement(Probe)));
+    await act(async () => value.sendMessage(null, "Question"));
+    expect(value.state.completedResponse).toEqual({ conversationId, messageId: "interaction" });
+  });
+
+  it("does not mark an empty completed turn ready", async () => {
+    h.webFetch.mockResolvedValue(new Response(
+      'event: done\ndata: {"status":"completed"}\n\n',
+      { headers: { "X-Numo-Conversation-Id": conversationId } },
+    ));
+    await act(async () => root.render(createElement(Probe)));
+    await act(async () => value.sendMessage(null, "Question"));
+    expect(value.state.completedResponse).toBeNull();
+  });
+
+  it.each(["poll", "connection recovery"])("marks an answer ready after %s reloads final messages", async (path) => {
+    const answer = message("persisted-answer", "assistant", "2026-09-12T10:01:00.000Z", { content: "Final answer" });
+    h.webFetch.mockImplementation(async (url: string) => {
+      if (url === "/api/assistant/chat") {
+        return new Response(path === "poll" ? 'event: done\ndata: {"status":"waiting_work"}\n\n' : "", {
+          headers: { "X-Numo-Conversation-Id": conversationId },
+        });
+      }
+      if (url.includes("/status")) return Response.json({ status: "completed", activity: [] });
+      if (url.includes("/messages")) return Response.json([answer]);
+      throw new Error(`Unexpected request: ${url}`);
+    });
+    await act(async () => root.render(createElement(Probe)));
+    await act(async () => value.sendMessage(null, "Question"));
+    expect(value.state.completedResponse).toEqual({ conversationId, messageId: answer.id });
+  });
+});

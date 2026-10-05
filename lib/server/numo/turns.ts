@@ -600,6 +600,7 @@ async function buildExecutionInput(input: {
 - Complete the routine instruction as a Numo conversation. Use Minddy tools directly for triage, cycle, reporting, wiki, project, or other product work that does not require a repository.
 - Delegate with launch_code_agent only when repository inspection or code changes are actually necessary. The worker uses the owner's current Account code model; never ask for or choose a routine-specific worker model.
 - If a real decision or missing fact requires the owner, use ask_user. Leave the occurrence visibly waiting for input instead of guessing or failing silently.
+- When the instruction requests a pull request, set requires_pull_request: true and authorize manage_pull_request in the worker brief. Treat missing PR artifacts or partial worker results as incomplete delivery; finish the work or explain the concrete failure in the occurrence result.
 - A delegated worker result is intermediate. Interpret it and finish the occurrence in this conversation.`;
   }
 

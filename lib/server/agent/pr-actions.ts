@@ -1998,6 +1998,34 @@ async function propagatePrState(
   }
 }
 
+/** Request a repository member's review under the connected user's identity. */
+export async function prRequestReviewerResponse(scope: PrScope, login: unknown): Promise<NextResponse> {
+  if (typeof login !== "string" || !login.trim() || login.length > 255 || /[\s/]/.test(login)) {
+    return NextResponse.json({ error: "Invalid reviewer" }, { status: 400 });
+  }
+  const actor = await requireActor(scope, "write");
+  if (!actor.ok) return actor.response;
+  try {
+    return await withPrOperation(`request-reviewer:${scope.pr.id}`, async () => {
+      const pr = await scope.forge.getPullRequest(scope.call);
+      if (pr.state !== "open" || pr.merged) {
+        return NextResponse.json({ error: "Pull request is closed" }, { status: 409 });
+      }
+      if (pr.user?.login.toLowerCase() === login.toLowerCase()) {
+        return NextResponse.json({ error: "The author cannot review their own pull request" }, { status: 422 });
+      }
+      await scope.forge.requestPullRequestReviewer({ ...actorCall(actor.actor, scope), login });
+      broadcastPrChanged(scope.pr.id, ["pr", "conversation"]);
+      return NextResponse.json({ ok: true });
+    });
+  } catch (err) {
+    if (err instanceof Error && err.name === "PrOperationInProgress") {
+      return NextResponse.json({ error: "Review request already in progress" }, { status: 409 });
+    }
+    return forgeErrorResponse(err);
+  }
+}
+
 export interface PrActionBody {
   action?: string;
   message?: string;

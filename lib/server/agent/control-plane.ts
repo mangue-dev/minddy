@@ -1306,6 +1306,9 @@ async function runWebSearch(
     seq: WEB_SEARCH_SEQ_BASE + run.continuations * 100 + seqField(args.seq, 99),
     billTo: billToFor(run),
     projectId: run.project_id,
+    conversationId: run.parent_numo_conversation_id ?? run.conversation_id,
+    numoTurnId: run.parent_numo_turn_id,
+    routineId: run.routine_id,
   });
   return ok(outcome);
 }

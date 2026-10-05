@@ -19,6 +19,7 @@ import type { AiUsageInput } from "@/lib/server/ai-usage";
 
 const h = vi.hoisted(() => ({
   recorded: [] as AiUsageInput[],
+  search: vi.fn(async () => ({ result: { answer: "Search result" }, success: true })),
   streams: [] as Array<{ topic: string; event: string; text: unknown }>,
   /** The ENTIRE direct load — `streams` only keeps the text. */
   streamPayloads: [] as Array<Record<string, unknown>>,
@@ -80,6 +81,11 @@ const h = vi.hoisted(() => ({
 // `runKeyCapUsd` remains the TRUE: it is the arithmetic of the ceiling, and serving it
 // from this surface without exercising it would amount to testing nothing at all. Alone
 // the two calls that EXIT the process are mocked.
+vi.mock("@/lib/server/web-search", async (original) => ({
+  ...(await original<typeof import("@/lib/server/web-search")>()),
+  runWebSearchTool: h.search,
+}));
+
 vi.mock("./run-key", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./run-key")>()),
   mintRunKey: vi.fn(async (opts: { runId: string; capUsd: number }) => {
@@ -362,6 +368,7 @@ const OTHER_RUN = "99999999-8888-4777-8666-555555555555";
 
 beforeEach(() => {
   h.recorded.length = 0;
+  h.search.mockClear();
   h.streams.length = 0;
   h.streamPayloads.length = 0;
   h.events.length = 0;
@@ -427,6 +434,19 @@ const call = (
   body: Record<string, unknown> | null = null,
   runId = RUN_ID,
 ) => handleControlPlaneRequest({ runId, method, surface, body });
+
+describe("delegated search attribution", () => {
+  it("attaches worker searches to the parent routine operation", async () => {
+    h.run = { ...h.run!, parent_numo_turn_id: "parent-turn",
+      parent_numo_conversation_id: "parent-conversation", routine_id: "routine-1" };
+    expect((await call("POST", "/tool/web_search", { args: { query: "Provider docs" } })).status).toBe(200);
+    expect(h.search).toHaveBeenCalledWith(expect.objectContaining({
+      runId: h.run.run_id, numoTurnId: "parent-turn",
+      conversationId: "parent-conversation", routineId: "routine-1",
+      billTo: { userId: "user-owner" },
+    }));
+  });
+});
 
 describe("active authority revocation", () => {
   it("proactively revokes active rows during the membership removal lifecycle", async () => {

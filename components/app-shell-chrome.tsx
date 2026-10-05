@@ -1,6 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
+import { ContentToaster } from "@/components/content-toaster";
 import { Add01Icon, AiAutoRotateIcon as CycleIcon, Alert01Icon, ArrowLeft01Icon, BrushIcon, BubbleChatDelayIcon, CircleDotDashedIcon, Clock01Icon as FileClock, Delete02Icon, Download01Icon, File02Icon, GitPullRequestIcon, Home01Icon, InboxIcon, KeyboardIcon, Layout3ColumnIcon, MessageMultiple01Icon, Settings01Icon, StickyNote02Icon, Target01Icon, TaskEdit01Icon } from "@hugeicons/core-free-icons";
 import {
   startTransition,
@@ -1661,6 +1662,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       }
     >
       <div id="app-tab-content" role={appTabs ? "tabpanel" : undefined} aria-labelledby={activeAppTabId ? `app-tab-${activeAppTabId}` : undefined} className="h-full min-h-0">{appTabs ? <AppTabViewHost>{children}</AppTabViewHost> : children}</div>
+      <ContentToaster />
       {/* Command palette (⌘K / ⌘P / F, sidebar search) — same groups as
  mobile nav search, tickets enriched with actions (⌘;). The cross-project
  index also serves these actions: members and categories of the project

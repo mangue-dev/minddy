@@ -355,6 +355,8 @@ export interface VmJob {
   locale: Locale;
   /** LLM call ledger feature: `routine_code` for a routine pass. */
   feature: "agent_code" | "routine_code";
+  /** Server-owned PR delivery requirement and an already observed PR. */
+  pullRequestDelivery?: { required: boolean; delivered: boolean };
 }
 
 /**
@@ -413,6 +415,13 @@ export function parseVmJob(raw: unknown): VmJob {
     if (typeof job.llmRelayUrl !== "string" || !job.llmRelayUrl.trim()) {
       throw new Error("vm job: server execution requires an LLM relay URL");
     }
+  }
+  if (job.pullRequestDelivery !== undefined && (
+    !job.pullRequestDelivery ||
+    typeof job.pullRequestDelivery.required !== "boolean" ||
+    typeof job.pullRequestDelivery.delivered !== "boolean"
+  )) {
+    throw new Error("vm job: invalid pullRequestDelivery");
   }
   return job as VmJob;
 }

@@ -320,7 +320,7 @@ export function ReviewConversationStack({
   itemTestId?: string;
 }) {
   return (
-    <ul data-testid={listTestId} className="flex flex-col gap-3">
+    <ul data-testid={listTestId} className="ml-4 flex flex-col gap-3 sm:ml-8">
       {threads.map((thread) => (
         <li key={thread.id} data-testid={itemTestId}>
           <ReviewConversationCard

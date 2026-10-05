@@ -378,7 +378,7 @@ export async function landVmTurn(run: AgentRun, report: VmTurnReport): Promise<v
           report.errorCode === "providerUnavailable"
             ? "The model provider kept failing, so this turn was paused. Send a message to carry on."
             : report.errorCode === "replyIncomplete"
-              ? "The model ended before completing its work. Its checkpoint was kept and nothing was committed. Send a message to carry on."
+              ? report.errorMessage || "The model ended before completing its work. Its checkpoint was kept. Send a message to carry on."
             : "This turn reached its time limit. Send a message to carry on.",
       });
     }

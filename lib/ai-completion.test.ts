@@ -26,6 +26,10 @@ describe("completion announcements", () => {
     "I'll inspect the folder and check package.json.",
     "Hello ! Je vais regarder le dépôt puis lancer les tests.",
     "The key is untranslated. I am checking the other catalogs now.",
+    "Maintenant j'ouvre la PR.",
+    "Les tests passent. Ensuite, je vais créer la pull request.",
+    "The checks passed. Now I am opening the PR.",
+    "Next, I'll create the pull request.",
   ])("detects unfinished work after an observation: %s", (text) => {
     expect(looksLikePendingAction(text)).toBe(true);
   });

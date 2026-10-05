@@ -269,7 +269,8 @@ describe("conversation action targets", () => {
       objective: "Inspect and update the repository documentation.",
       source_references: [{ kind: "conversation", label: "User request" }],
       constraints: ["Keep the public API stable."],
-      authorized_work: ["read_repository", "modify_repository", "run_verification"],
+      authorized_work: ["read_repository", "modify_repository", "run_verification", "manage_pull_request"],
+      requires_pull_request: true,
     }, durable);
 
     expect(result).toMatchObject({
@@ -287,6 +288,7 @@ describe("conversation action targets", () => {
         parentTurnId: "parent-turn",
         toolCallId: "call-1",
         objective: "Inspect and update the repository documentation.",
+        requiresPullRequest: true,
         attachments: [expect.objectContaining({ file_name: "file.txt" })],
         sourceReferences: expect.arrayContaining([
           expect.objectContaining({ kind: "attachment", label: "file.txt" }),

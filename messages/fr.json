@@ -1,9 +1,4 @@
 {
-  "StatusLine": {
-    "bellLabel": "Erreurs récentes",
-    "historyTitle": "Erreurs récentes",
-    "clear": "Effacer"
-  },
   "Scratchpad": {
     "actions": "Actions du carnet",
     "title": "Carnet de tâches",
@@ -4105,7 +4100,28 @@
     "mergeGenerateThenMerge": "Générer puis fusionner",
     "numoMerging": "Numo rédige le commit de fusion…",
     "cardNumoMerging": "Fusion en cours",
-    "numoMergeFailed": "Numo n'a pas terminé la fusion. Réessaie."
+    "numoMergeFailed": "Numo n'a pas terminé la fusion. Réessaie.",
+    "cardConversations": "{count, plural, =0 {Conversations} one {# conversation} other {# conversations}}",
+    "conversationsProgress": "{resolved} sur {total} résolues",
+    "noConversations": "Aucune conversation pour le moment",
+    "viewConversations": "Voir les conversations",
+    "conversationsTitle": "Conversations",
+    "conversationsHint": "Les conversations ouvertes sont prioritaires. Les conversations résolues restent accessibles en dessous.",
+    "resolvedConversations": "Conversations résolues",
+    "openConversations": "Conversations ouvertes",
+    "unknownConversations": "État des conversations indisponible",
+    "unknownReviewer": "Reviewer inconnu",
+    "cardReviews": "{count, plural, =0 {Reviews} one {# review} other {# reviews}}",
+    "noReviews": "Aucune review pour le moment",
+    "viewReviews": "Voir les reviews",
+    "reviewsTitle": "Reviews",
+    "pendingReviewRequests": "Review demandée",
+    "requestReviewer": "Demander une review",
+    "requestReviewerHint": "Choisissez un membre du dépôt pour relire cette pull request.",
+    "searchReviewers": "Rechercher un reviewer",
+    "noReviewersFound": "Aucun reviewer disponible",
+    "reviewerRequestSent": "Review demandée à {reviewer}",
+    "reviewerRequestFailed": "Impossible de demander la review. Réessayez."
   },
   "Triage": {
     "projectNotFound": "Projet introuvable",

@@ -26,6 +26,36 @@ export function unresolvedReviewThreads(
   );
 }
 
+/** Group open, unknown and resolved conversations separately by root reviewer. */
+export function conversationReviewerGroups(threads: PullRequestFeedbackThread[]) {
+  const groups: Array<{
+    key: string;
+    resolved: boolean | undefined;
+    reviewer: PullRequestReviewComment["user"];
+    threads: PullRequestFeedbackThread[];
+  }> = [];
+  for (const resolved of [false, undefined, true]) {
+    const byReviewer = new Map<string, (typeof groups)[number]>();
+    for (const thread of threads) {
+      if (thread.resolution?.resolved !== resolved) continue;
+      const login = thread.root.user?.login.toLowerCase() ?? "";
+      let group = byReviewer.get(login);
+      if (!group) {
+        group = {
+          key: `${resolved ?? "unknown"}:${login}`,
+          resolved,
+          reviewer: thread.root.user,
+          threads: [],
+        };
+        byReviewer.set(login, group);
+        groups.push(group);
+      }
+      group.threads.push(thread);
+    }
+  }
+  return groups;
+}
+
 /** "path" or "path:line" where a review conversation sits — shared by the
     feedback prompt and the fix prompt, which both spell the threads out. */
 export function threadLocation(thread: PullRequestFeedbackThread): string {
