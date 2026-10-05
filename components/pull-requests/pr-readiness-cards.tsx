@@ -2,7 +2,7 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
-import { AlertCircleIcon, ArrowUpRight01Icon, GitBranchIcon, GitMergeIcon, GitPullRequestDraftIcon, Shield01Icon, CheckIcon, UserRoundCheckIcon as UserRoundCheck, ViewIcon, Wrench01Icon } from "@hugeicons/core-free-icons";
+import { AlertCircleIcon, ArrowUpRight01Icon, BubbleChatIcon, GitBranchIcon, GitMergeIcon, GitPullRequestDraftIcon, Shield01Icon, CheckIcon, UserRoundCheckIcon as UserRoundCheck, ViewIcon, Wrench01Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useState, type ReactNode } from "react";
 import { useFormatter, useNow, useTranslations } from "next-intl";
 import {
@@ -12,7 +12,10 @@ import {
   cn,
 } from "mangue-ui";
 
-import { PrReviewsCard } from "@/components/pull-requests/pr-reviews-card";
+import {
+  PrReviewsCard,
+  reviewCardTone,
+} from "@/components/pull-requests/pr-reviews-card";
 import type { PrTimelineEvent } from "@/lib/pr-timeline";
 import { AppTooltip } from "@/components/ui/app-tooltip";
 import { CheckLogo } from "@/components/pull-requests/pr-check-logo";
@@ -117,7 +120,6 @@ interface PrStatusCard {
   id: string;
   tone: PrStatusCardTone;
   title: string;
-  subtitle?: string;
   /** Final duration, frozen. `null` = the card carries no time. */
   durationMs: number | null;
   /** Live timer — the duration recomputes on every tick until it settles. */
@@ -231,23 +233,27 @@ export function PrStatusCards(props: PrStatusCardsProps) {
       data-testid="pr-status-cards"
       className="flex max-w-full flex-wrap items-stretch gap-2"
     >
-      {cards.map(({ card, checksCard }) => (
-        <PrStatusCardView
-          key={card.id}
-          card={card}
-          now={now}
-          checks={checksCard ? props.checks : null}
-          provider={props.provider}
-          checksOpen={props.checksOpen}
-          onChecksOpenChange={props.onChecksOpenChange}
-        />
-      ))}
-      <PrReviewsCard
-        timeline={props.timeline}
-        requestedReviewers={props.requestedReviewers}
-        canRequest={props.canRequestReviewer}
-        onRequest={props.onRequestReviewer}
-      />
+      {cards.map(({ card, checksCard }) =>
+        card.id === "reviews" ? (
+          <PrReviewsCard
+            key={card.id}
+            timeline={props.timeline}
+            requestedReviewers={props.requestedReviewers}
+            canRequest={props.canRequestReviewer}
+            onRequest={props.onRequestReviewer}
+          />
+        ) : (
+          <PrStatusCardView
+            key={card.id}
+            card={card}
+            now={now}
+            checks={checksCard ? props.checks : null}
+            provider={props.provider}
+            checksOpen={props.checksOpen}
+            onChecksOpenChange={props.onChecksOpenChange}
+          />
+        ),
+      )}
     </div>
   );
 }
@@ -688,13 +694,6 @@ function buildStatusCards(
           ? "success"
           : "progress",
     title: t("cardConversations", { count: conversationThreads.length }),
-    subtitle:
-      conversationThreads.length > 0
-        ? t("conversationsProgress", {
-            resolved: resolvedCount,
-            total: conversationThreads.length,
-          })
-        : t("noConversations"),
     durationMs: null,
     startedAt: null,
     donutParts:
@@ -712,15 +711,23 @@ function buildStatusCards(
     hoverLabel: t("viewConversations"),
     onSelect: props.onOpenConversations,
   });
+  push({
+    id: "reviews",
+    tone: reviewCardTone(props.timeline, props.requestedReviewers),
+    title: t("reviewsTitle"),
+    durationMs: null,
+    startedAt: null,
+    donutParts: null,
+    avatars: null,
+    iconKind: "review_requested",
+  });
 
   return cards.sort((a, b) => rankCard(a.card) - rankCard(b.card));
 }
 
-/** The reading order of the cards: a blocking fix leads, the unresolved
-    conversations follow (the human words blocking the merge come before any
-    machine state), then errors before in-progress work before settled
-    stories. The sort is stable, so cards of the same verdict keep the
-    order they were built in. */
+/** A blocking fix leads, then errors, in-progress work, success and neutral
+    cards. Numo verification closes the list. The stable sort preserves the
+    construction order within each tone. */
 const TONE_RANK: Record<PrStatusCardTone, number> = {
   danger: 20,
   progress: 30,
@@ -730,7 +737,7 @@ const TONE_RANK: Record<PrStatusCardTone, number> = {
 
 function rankCard(card: PrStatusCard): number {
   if (card.id === "fix") return 0;
-  if (card.iconKind === "conversations") return 10;
+  if (card.id === "numo-review") return 60;
   return TONE_RANK[card.tone];
 }
 
@@ -767,6 +774,8 @@ function HoverWordOverlay({
 }
 
 function blockerIcon(kind: ReadinessBlocker["kind"]) {  switch (kind) {
+    case "conversations":
+      return <HugeiconsIcon icon={BubbleChatIcon} />;
     case "draft":
       return <HugeiconsIcon icon={GitPullRequestDraftIcon} />;
     case "review_requested":
@@ -849,7 +858,6 @@ function PrStatusCardView({
           blockerIcon(card.iconKind)
         )}
       </span>
-      {card.subtitle ? <span className="text-xs text-muted-foreground">{card.subtitle}</span> : null}
       {/* Title and timer read together, in the same voice: the time is part
           of what the card says, not metadata. */}
       <p

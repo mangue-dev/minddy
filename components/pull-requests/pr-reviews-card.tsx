@@ -17,6 +17,21 @@ const VERDICT: Record<PrReviewState, MessageKey<"PullRequests">> = {
   dismissed: "timelineReviewDismissedState",
 };
 
+export function reviewCardTone(
+  timeline: PrTimelineEvent[],
+  requestedReviewers: { login: string; avatar_url: string | null }[],
+): "danger" | "success" | "neutral" {
+  const latest = reviewerReviewGroups(timeline).map((group) => group[0]);
+  if (latest.some((review) => review.reviewState === "changes_requested")) {
+    return "danger";
+  }
+  return latest.length > 0 &&
+    latest.every((review) => review.reviewState === "approved") &&
+    requestedReviewers.length === 0
+    ? "success"
+    : "neutral";
+}
+
 export function PrReviewsCard({
   timeline,
   requestedReviewers,
@@ -33,18 +48,12 @@ export function PrReviewsCard({
   const groups = reviewerReviewGroups(timeline);
   const count = groups.reduce((total, group) => total + group.length, 0);
   const latest = groups.map((group) => group[0]);
-  const danger = latest.some(
-    (review) => review.reviewState === "changes_requested",
-  );
-  const success =
-    latest.length > 0 &&
-    latest.every((review) => review.reviewState === "approved") &&
-    requestedReviewers.length === 0;
+  const tone = reviewCardTone(timeline, requestedReviewers);
   const className = cn(
     "flex h-24 min-w-40 max-w-full flex-col gap-2 rounded-xl p-3 text-left",
-    danger
+    tone === "danger"
       ? "bg-destructive/10 text-destructive"
-      : success
+      : tone === "success"
         ? "bg-emerald-600/10 text-emerald-700 dark:text-emerald-400"
         : "border border-border bg-card text-foreground",
   );
@@ -67,13 +76,6 @@ export function PrReviewsCard({
       </span>
       <span className="mt-auto text-[13px] font-medium">
         {t("cardReviews", { count })}
-      </span>
-      <span className="max-w-60 truncate text-xs text-muted-foreground">
-        {count === 0
-          ? t("noReviews")
-          : latest
-              .map((review) => review.actor?.login ?? t("unknownReviewer"))
-              .join(", ")}
       </span>
     </>
   );
