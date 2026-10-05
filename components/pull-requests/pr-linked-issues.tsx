@@ -6,7 +6,7 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button, Popover, PopoverContent, PopoverTrigger, Spinner } from "mangue-ui";
 import { AppTooltip } from "@/components/ui/app-tooltip";
-import { useUnlinkPullRequestIssue } from "@/lib/use-unlink-pull-request-issue";
+import { usePrUnlinkConfirmation } from "./pr-unlink-confirmation";
 import { issueIdentifier } from "@/lib/issue-constants";
 import type { PullRequestListItem } from "@/lib/agent-api";
 
@@ -22,7 +22,7 @@ export function PrLinkedIssues({ item, onOpenIssue }: {
   onOpenIssue: (issueId: string, projectId: string) => void;
 }) {
   const t = useTranslations("PullRequests");
-  const unlink = useUnlinkPullRequestIssue();
+  const unlink = usePrUnlinkConfirmation();
   const [open, setOpen] = useState(false);
   const issues = linkedIssues(item);
   const first = issues[0];
@@ -33,7 +33,7 @@ export function PrLinkedIssues({ item, onOpenIssue }: {
     return <AppTooltip label={label}>
       <Button variant="ghost" size="icon-sm" className="size-6 shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive focus-visible:text-destructive"
         aria-label={label} disabled={unlink.isPending}
-        onClick={() => unlink.mutate({ prId: item.prId, issueId: issue.id, identifier })}>
+        onClick={() => { setOpen(false); unlink.requestUnlink({ prId: item.prId, issueId: issue.id, identifier }); }}>
         {unlink.isPending && unlink.variables?.issueId === issue.id
           ? <Spinner className="size-3.5" />
           : <HugeiconsIcon icon={Cancel01Icon} className="size-3.5" aria-hidden />}

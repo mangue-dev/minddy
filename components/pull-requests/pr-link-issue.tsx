@@ -114,7 +114,7 @@ export function PrLinkIssue({
           <Button
             variant="ghost"
             size="sm"
-            className="h-6 gap-1 px-1.5 font-sans text-xs font-normal text-muted-foreground"
+            className="h-6 gap-1 px-1.5 font-sans text-xs font-normal text-muted-foreground hover:bg-muted hover:text-foreground"
           >
             <HugeiconsIcon icon={Link02Icon} className="size-3.5" />
             {t(linkedIssueIds.length > 0 ? "linkAnotherIssue" : "linkIssue")}

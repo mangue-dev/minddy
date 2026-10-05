@@ -169,7 +169,6 @@ interface PrInsightsProps {
   /** The merge-state control can also open the checks popover. */
   checksOpen: boolean;
   onChecksOpenChange: (open: boolean) => void;
-  onRequestReview: () => void;
   /** The fix gesture of a failing PR (MIN-548 review): copy the prompt, or
       hand the PR to Numo. `null` = nothing is failing. */
   fix: {
@@ -182,7 +181,15 @@ interface PrInsightsProps {
 /** Keep a fixed order within the blocking and non-blocking property groups. */
 export function PrInsights(props: PrInsightsProps) {
   const t = useTranslations("PullRequests");
-  const now = useNow({ updateInterval: 1_000 });
+  const initialNow = useNow();
+  const [now, setNow] = useState(initialNow);
+  useEffect(() => {
+    // Match server time during hydration, then synchronize immediately.
+    const sync = () => setNow(new Date());
+    sync();
+    const interval = setInterval(sync, 1_000);
+    return () => clearInterval(interval);
+  }, []);
   const insights = buildInsights(t, props);
   const fixInsight = insights.find(({ insight }) => insight.id === "fix")?.insight;
   const checksInsight = insights.find((entry) => entry.isChecks)!.insight;
@@ -195,8 +202,6 @@ export function PrInsights(props: PrInsightsProps) {
   const latest = groups.map((group) => group[0]);
   const humanTone = reviewCardTone(props.timeline, props.requestedReviewers);
   const externalReviews = props.aiReviews ?? [];
-  const reviewActive = props.numoReview?.kind === "running" ||
-    externalReviews.some((review) => review.state === "running" || review.state === "requested");
   const providerLogins = new Set(externalReviews.flatMap((review) =>
     review.provider.githubLogins.map((login) => login.toLowerCase()),
   ));
@@ -207,9 +212,7 @@ export function PrInsights(props: PrInsightsProps) {
     !providerLogins.has(user.login.toLowerCase()) &&
     users.findIndex((candidate) => candidate.login.toLowerCase() === user.login.toLowerCase()) === index,
   );
-  const showNumo = !!props.numoReview && (
-    props.numoReview.kind !== "requested" || (reviewerAvatars.length === 0 && externalReviews.length === 0)
-  );
+  const showNumo = !!props.numoReview && props.numoReview.kind !== "requested";
   const reviewTone = reviews.some(({ insight }) => insight.tone === "danger") ||
     humanTone === "danger"
     ? "danger"
@@ -249,7 +252,7 @@ export function PrInsights(props: PrInsightsProps) {
           onOpenChange={props.onChecksOpenChange}
           summary={<StatusSummary insight={checksInsight} now={now} compact />}
         >
-          <ChecksDetails checks={props.checks} provider={props.provider} />
+          <ChecksDetails checks={props.checks} provider={props.provider} now={now} />
         </PrInsightRow>
       ),
     },
@@ -290,12 +293,7 @@ export function PrInsights(props: PrInsightsProps) {
                 name: agent?.provider.name ?? (numo ? t("numoAuthor") : t("reviewsTitle")),
                 avatar: <StatusIcon insight={insight} />,
                 logins: agent?.provider.githubLogins,
-                action: numo && insight.action && !reviewActive ? (
-                  <Button variant="ghost" size="sm" data-testid={insight.action.testId} disabled={insight.action.disabled} onClick={insight.action.onClick}>
-                    {insight.action.label}
-                  </Button>
-                ) : undefined,
-                details: numo && insight.action ? undefined : <ReviewStatusDetails insight={insight} now={now} />,
+                details: <ReviewStatusDetails insight={insight} now={now} />,
               };
             })}
           />
@@ -493,36 +491,16 @@ function buildInsights(
 
   // Numo shares the reviews disclosure with human and external reviewers.
   const numoReview = props.numoReview;
-  if (numoReview) {
-    if (numoReview.kind === "requested") {
-      push({
-        id: "numo-review",
-        // The ask is a gesture, not a verdict: the insight carries no state
-        // color, the action alone speaks (MIN-548).
-        tone: "neutral",
-        title: numoReview.label,
-        durationMs: null,
-        startedAt: null,
-        donutParts: null,
-        iconKind: "mergeability",
-        action: {
-          label: t("aiReview"),
-          onClick: props.onRequestReview,
-          disabled: busy,
-          testId: "pr-card-numo-review",
-        },
-      });
-    } else {
-      push({
-        id: "numo-review",
-        tone: numoReview.kind === "running" ? "progress" : "success",
-        title: numoReview.label,
-        durationMs: numoReview.durationMs,
-        startedAt: numoReview.startedAt,
-        donutParts: null,
-        iconKind: "mergeability",
-      });
-    }
+  if (numoReview && numoReview.kind !== "requested") {
+    push({
+      id: "numo-review",
+      tone: numoReview.kind === "running" ? "progress" : "success",
+      title: numoReview.label,
+      durationMs: numoReview.durationMs,
+      startedAt: numoReview.startedAt,
+      donutParts: null,
+      iconKind: "mergeability",
+    });
   }
 
   // Corrections and merging remain separate from review work.
@@ -885,9 +863,8 @@ function StatusDetails({ insight, now }: { insight: PrInsight; now: Date }) {
   );
 }
 
-function ChecksDetails({ checks, provider }: { checks: ChecksSummary | null; provider: RepoProviderId }) {
+function ChecksDetails({ checks, provider, now }: { checks: ChecksSummary | null; provider: RepoProviderId; now: Date }) {
   const t = useTranslations("PullRequests");
-  const now = useNow({ updateInterval: 1_000 });
   const stateLabels: Record<CheckState, MessageKey<"PullRequests">> = {
     success: "checkStateSuccess", failure: "checkStateFailure",
     pending: "checkStatePending", neutral: "checkStateNeutral",

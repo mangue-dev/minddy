@@ -24,8 +24,8 @@ vi.mock("next/navigation", () => ({ useRouter: () => {
 vi.mock("@/lib/app-tabs-context", () => ({
   useOptionalAppTabSession: () => dependencies.hasAppTabs ? { create: dependencies.create, reuseDestination: dependencies.reuseDestination } : null,
 }));
-vi.mock("@/lib/use-unlink-pull-request-issue", () => ({
-  useUnlinkPullRequestIssue: () => ({ isPending: dependencies.isPending, mutate: dependencies.mutate }),
+vi.mock("@/components/pull-requests/pr-unlink-confirmation", () => ({
+  usePrUnlinkConfirmation: () => ({ isPending: dependencies.isPending, requestUnlink: dependencies.mutate }),
 }));
 vi.mock("@/components/numo-icon", () => ({ NumoIcon: () => null }));
 vi.mock("@/components/issue-indicators", () => ({ RelationIcon: () => null }));
@@ -96,10 +96,10 @@ describe("shared issue menu actions", () => {
 
   it("transfers focus only for actions opening another surface", () => {
     const { action } = build();
-    for (const id of ["set-objective", "set-due-date", "delete", ...RELATION_TYPES.map((type) => `relation-${type}`)]) {
+    for (const id of ["unlink-pr", "set-objective", "set-due-date", "delete", ...RELATION_TYPES.map((type) => `relation-${type}`)]) {
       expect(action(id).transfersFocus, id).toBe(true);
     }
-    for (const id of ["unlink-pr", "cycle-add", "open-pr-current-tab", "open-pr-new-tab"]) {
+    for (const id of ["cycle-add", "open-pr-current-tab", "open-pr-new-tab"]) {
       expect(action(id).transfersFocus, id).not.toBe(true);
     }
 

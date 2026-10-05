@@ -3,7 +3,7 @@ import { PrLinkedIssues, linkedIssues } from "./pr-linked-issues";
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
-import { ArrowDown01Icon, ArrowLeft01Icon, ArrowUp01Icon, Cancel01Icon, Copy01Icon, Edit04Icon, GitPullRequestDraftIcon, GitPullRequestIcon, HistoryIcon, LinkSquare01Icon, Message01Icon, MessageSquareQuoteIcon, MoreHorizontalIcon, CheckIcon, Undo02Icon, ViewIcon } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, ArrowLeft01Icon, ArrowUp01Icon, Cancel01Icon, Copy01Icon, Edit04Icon, HistoryIcon, LinkSquare01Icon, Message01Icon, MessageSquareQuoteIcon, MoreHorizontalIcon, CheckIcon, ViewIcon } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import {
@@ -47,7 +47,8 @@ import {
   type CommentReactions,
 } from "@/components/pull-requests/pr-review-comments";
 import { PrTimelineReview, PrTimelineRow } from "@/components/pull-requests/pr-timeline";
-import { PrStateBadge } from "@/components/pull-requests/pr-state-badge";
+import { PrStateControl } from "@/components/pull-requests/pr-state-badge";
+import { prStateTransitionActions, type EditablePrState, type PrStateAction } from "@/lib/pr-state-transition";
 import { PrReadinessBadge, PrReadinessControl } from "@/components/pull-requests/pr-readiness";
 import { PrInsights } from "@/components/pull-requests/pr-insights";
 import { PrRequestReview } from "@/components/pull-requests/pr-request-review";
@@ -740,7 +741,7 @@ export function PrDetail({
   // The merge is confirmed WITH its method: bring it to the confirmation state
   // prevents a click on “merge anyway” from falling back to the default squash.
   const [confirmAction, setConfirmAction] = useState<
-    null | { kind: "merge"; method?: MergeMethod } | { kind: "close" }
+    null | { kind: "merge"; method?: MergeMethod } | { kind: "state"; state: EditablePrState }
   >(null);
   const [mergeCommitDraft, setMergeCommitDraft] = useState<MergeCommitMessageDraft | null>(null);
   const [mergeCommitDraftEdited, setMergeCommitDraftEdited] = useState(false);
@@ -845,10 +846,6 @@ export function PrDetail({
   const isDraft = pr?.draft ?? item.pr_state === "draft";
   const isTerminal = item.pr_state === "merged" || item.pr_state === "closed";
   const badgeState = isDraft && !isTerminal ? "draft" : item.pr_state;
-  // Closed is not over: the two forges reopen, and a PR closed by
-  // error was only caught on github.com (MIN-164). Merged, in
-  // However, is definitive - the forge refuses, and there is nothing to offer.
-  const canReopen = canWrite && item.pr_state === "closed";
   // When Numo finishes (the active run disappears from the list), refresh diff +
   // comments. Line comments are one of them: Numo can have
   // answered, and a new push changes the rows they anchor to. THE
@@ -1101,20 +1098,22 @@ export function PrDetail({
       commitTitle?: string;
       commitMessage?: string;
     } = {},
+    followingActions: PrStateAction[] = [],
   ) => {
     if (acting) return;
+    const finalAction = followingActions.at(-1) ?? action;
     const optimisticState =
-      action === "merge"
+      finalAction === "merge"
         ? "merged"
-        : action === "close"
+        : finalAction === "close"
           ? "closed"
-          : action === "ready_for_review"
+          : finalAction === "ready_for_review"
             ? "open"
-            : action === "convert_to_draft"
+            : finalAction === "convert_to_draft"
               ? "draft"
-            : pr?.draft
-              ? "draft"
-              : "open";
+              : pr?.draft
+                ? "draft"
+                : "open";
     // The panel's own write starts HERE: any forge GET received before this
     // instant says nothing about the transition (see the propagation effect).
     lastLocalStateWriteAt.current = Date.now();
@@ -1122,16 +1121,19 @@ export function PrDetail({
     setActing(action);
     setConfirmAction(null);
     try {
-      const result = await actOnPullRequestApi(item.prId, action, mergeOptions);
+      let result = await actOnPullRequestApi(item.prId, action, mergeOptions);
+      for (const next of followingActions) {
+        result = await actOnPullRequestApi(item.prId, next);
+      }
       onStateChange(item.prId, result.pr_state);
       toast.success(
-        action === "merge"
+        finalAction === "merge"
           ? t("mergedToast")
-          : action === "close"
+          : finalAction === "close"
             ? t("closedToast")
-            : action === "reopen"
+            : finalAction === "reopen"
               ? t("reopenedToast")
-              : action === "convert_to_draft"
+              : finalAction === "convert_to_draft"
                 ? t("convertedToDraftToast")
                 : t("readyForReviewToast"),
       );
@@ -1141,6 +1143,7 @@ export function PrDetail({
       rollback();
       onRefetchList();
       toast.error((err as Error).message);
+      await refetchPr();
     } finally {
       setActing(null);
     }
@@ -1182,7 +1185,7 @@ export function PrDetail({
   const handleReadinessAction = async (blocker: ReadinessBlocker) => {
     if (maintenanceAction) return;
     if (blocker.action === "mark_ready") {
-      await act("ready_for_review");
+      setConfirmAction({ kind: "state", state: "open" });
       return;
     }
     if (blocker.action === "approve") {
@@ -1785,11 +1788,7 @@ export function PrDetail({
         ) : null}
 
         {loading ? <PrHeaderActionsSkeleton /> : isTerminal ? (
-          // End of line of a completed PR: the only gesture left to it — reopen,
-          // without confirmation, it does not destroy anything and the button next to it closes it
-          // — then its STATE, last. The badge closes the line in both cases,
-          // merged (nothing before it) as closed (the button before it): it is
-          // always in the same place that we read what became of her.
+          // Closed PRs can change state; merged PRs retain a fixed badge.
           <div className="ml-auto flex shrink-0 items-center gap-1.5">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -1828,18 +1827,8 @@ export function PrDetail({
                 ) : null}
               </DropdownMenuContent>
             </DropdownMenu>
-            {canReopen ? (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => void act("reopen")}
-                disabled={!!acting}
-              >
-                {acting === "reopen" ? <Spinner /> : <HugeiconsIcon icon={Undo02Icon} />}
-                {t("reopen")}
-              </Button>
-            ) : null}
-            <PrStateBadge state={badgeState} icon className="h-8" />
+            <PrStateControl state={badgeState} canChange={!!canWrite} disabled={!!acting || isWorking || readState !== "fresh"}
+              onChange={(state) => setConfirmAction({ kind: "state", state })} />
           </div>
         ) : (
           // Under `lg`, secondary actions move into the overflow menu. The
@@ -1879,23 +1868,10 @@ export function PrDetail({
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : null}
-
-              {canWrite ? (
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => setConfirmAction({ kind: "close" })}
-                  disabled={!!acting || isWorking}
-                >
-                  {acting === "close" ? <Spinner /> : <HugeiconsIcon icon={Cancel01Icon} />}
-                  {t("closePullRequest")}
-                </Button>
-              ) : null}
             </div>
 
             {/* On narrow screens, actions stay available in one unlabeled menu.
-                Numo work comes first, human review verdicts form the second
-                section, and the destructive close action stays isolated last. */}
+                Numo work comes first, followed by human review actions. */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -1953,50 +1929,15 @@ export function PrDetail({
                     </DropdownMenuItem>
                   </>
                 ) : null}
-                {canWrite ? (
-                  <>
-                    <DropdownMenuSeparator className="2xl:hidden" />
-                    {!isDraft ? (
-                      <DropdownMenuItem
-                        data-testid="pr-action-convert-to-draft"
-                        disabled={!!acting || isWorking}
-                        onSelect={() => void act("convert_to_draft")}
-                      >
-                        {acting === "convert_to_draft" ? <Spinner /> : <HugeiconsIcon icon={GitPullRequestDraftIcon} />}
-                        {t("convertToDraft")}
-                      </DropdownMenuItem>
-                    ) : null}
-                    <DropdownMenuItem
-                      data-testid="pr-action-close"
-                      className="2xl:hidden"
-                      variant="destructive"
-                      disabled={!!acting || isWorking}
-                      onSelect={() => setConfirmAction({ kind: "close" })}
-                    >
-                      <HugeiconsIcon icon={Cancel01Icon} />
-                      {t("closePullRequest")}
-                    </DropdownMenuItem>
-                  </>
-                ) : null}
               </DropdownMenuContent>
             </DropdownMenu>
 
             {/* Open state and merge state read side by side, AFTER the more
                 menu: first what we can do, then what the PR is, then what
                 still stands between it and the merge. */}
-            <PrStateBadge state={badgeState} icon className="h-8" />
-            {isDraft && canWrite ? (
-              <Button
-                data-testid="pr-ready-for-review"
-                size="sm"
-                variant="outline"
-                disabled={!!acting || isWorking}
-                onClick={() => void act("ready_for_review")}
-              >
-                {acting === "ready_for_review" ? <Spinner /> : <HugeiconsIcon icon={GitPullRequestIcon} />}
-                {t("openPullRequest")}
-              </Button>
-            ) : effectiveReadiness ? (
+            <PrStateControl state={badgeState} canChange={!!canWrite} disabled={!!acting || isWorking || readState !== "fresh"}
+              onChange={(state) => setConfirmAction({ kind: "state", state })} />
+            {!isDraft && effectiveReadiness ? (
               <PrReadinessControl
                 readiness={effectiveReadiness}
                 providerName={REPO_PROVIDERS[item.provider].displayName}
@@ -2148,6 +2089,9 @@ export function PrDetail({
             open={requestReviewOpen}
             onOpenChange={setRequestReviewOpen}
             onRequested={refreshReviewState}
+            canRequestHuman={!!canWrite && !isTerminal}
+            onRequestNumo={prPageContext && !isTerminal ? openAiReviewDialog : undefined}
+            numoDisabled={!canRelaunch || aiReviewActive || !!item.busyRunId}
           />
           {loading ? <PrStatusSkeleton /> : (
             <PrInsights
@@ -2158,7 +2102,7 @@ export function PrDetail({
               conversationThreads={conversationThreads}
               timeline={timeline}
               requestedReviewers={pr?.requestedReviewers ?? []}
-              canRequestReviewer={!!canWrite && pr?.state === "open" && !pr.merged}
+              canRequestReviewer={!isTerminal && (!!canWrite || !!prPageContext)}
               onRequestReviewer={() => setRequestReviewOpen(true)}
               canAct={canActOnBlocker}
               acting={maintenanceAction}
@@ -2174,7 +2118,6 @@ export function PrDetail({
               numoMerge={numoMerging ? { startedAt: numoMergeStartedAt } : null}
               checksOpen={checksDetailsOpen}
               onChecksOpenChange={setChecksDetailsOpen}
-              onRequestReview={openAiReviewDialog}
               fix={fixCard}
             />
           )}
@@ -2475,7 +2418,7 @@ export function PrDetail({
         </DialogContent>
       </Dialog>
 
-      {/* Confirmation fusionner / refuser */}
+      {/* Confirm merging or changing the pull request state. */}
       <Dialog
         open={!!confirmAction}
         onOpenChange={(next) => {
@@ -2492,7 +2435,7 @@ export function PrDetail({
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>
-              {confirmAction?.kind === "merge" ? t("confirmMergeTitle") : t("confirmCloseTitle")}
+              {confirmAction?.kind === "merge" ? t("confirmMergeTitle") : t("confirmStateChangeTitle")}
             </DialogTitle>
           </DialogHeader>
           {confirmAction?.kind === "merge" ? (
@@ -2602,19 +2545,28 @@ export function PrDetail({
           ) : (
             <>
           <p className="text-sm text-muted-foreground">
-            {t("confirmCloseDescription")}
+            {confirmAction?.kind === "state" ? t("confirmStateChangeDescription", {
+              currentState: t(badgeState === "draft" ? "stateDraft" : badgeState === "closed" ? "stateClosed" : "stateOpen"),
+              nextState: t(confirmAction.state === "draft" ? "stateDraft" : confirmAction.state === "closed" ? "stateClosed" : "stateOpen"),
+            }) : null}
           </p>
           <DialogFooter>
             <Button variant="outline" disabled={!!acting} onClick={() => setConfirmAction(null)}>
               {t("cancel")}
             </Button>
             <Button
-              variant="destructive"
+              variant={confirmAction?.kind === "state" && confirmAction.state === "closed" ? "destructive" : "default"}
               disabled={!!acting}
-              onClick={() => void act("close")}
+              data-testid="pr-confirm-state-change"
+              onClick={() => {
+                if (confirmAction?.kind !== "state" || badgeState === "merged") return;
+                const [first, ...following] = prStateTransitionActions(badgeState, confirmAction.state, isDraft);
+                if (first) void act(first, {}, following);
+                else setConfirmAction(null);
+              }}
             >
               {acting ? <Spinner /> : null}
-              {t("close")}
+              {t("confirmStateChange")}
             </Button>
           </DialogFooter>
             </>

@@ -5,6 +5,7 @@ import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { NextIntlClientProvider } from "next-intl";
 import { TooltipProvider } from "mangue-ui";
+import { PrUnlinkConfirmationProvider } from "@/components/pull-requests/pr-unlink-confirmation";
 import { PrLinkedIssues } from "@/components/pull-requests/pr-linked-issues";
 import { PrLinkIssue } from "@/components/pull-requests/pr-link-issue";
 import type { PullRequestListItem } from "./agent-api";
@@ -13,7 +14,7 @@ import fr from "@/messages/fr.json";
 
 const h = vi.hoisted(() => ({ unlink: vi.fn(), pending: false, issueId: "" }));
 vi.mock("@/lib/use-unlink-pull-request-issue", () => ({
-  useUnlinkPullRequestIssue: () => ({ mutate: h.unlink, isPending: h.pending, variables: { issueId: h.issueId } }),
+  useUnlinkPullRequestIssue: () => ({ mutateAsync: h.unlink, isPending: h.pending, variables: { issueId: h.issueId } }),
 }));
 vi.mock("@tanstack/react-query", () => ({ useQuery: () => ({ data: { issues: [] }, isPending: false }) }));
 // Import the actual primitives without the barrel's unrelated emoji JSON dependency.
@@ -36,7 +37,7 @@ let container: HTMLDivElement;
 
 async function render(element: ReturnType<typeof createElement>, locale: "en" | "fr" = "en") {
   await act(() => root.render(createElement(NextIntlClientProvider,
-    { locale, messages: locale === "fr" ? fr : en, children: createElement(TooltipProvider, null, element) },
+    { locale, messages: locale === "fr" ? fr : en, children: createElement(TooltipProvider, null, createElement(PrUnlinkConfirmationProvider, null, element)) },
   )));
 }
 
@@ -66,6 +67,10 @@ describe("PR linked issue header", () => {
     expect(unlinkButton.getAttribute("aria-label")).toBe("Unlink MIN-1 from this pull request");
     expect(unlinkButton.className).toContain("hover:text-destructive");
     await act(() => unlinkButton.click());
+    expect(h.unlink).not.toHaveBeenCalled();
+    const dialog = document.querySelector('[data-testid="pr-unlink-confirmation"]')!;
+    expect(dialog.textContent).toContain("MIN-1");
+    await act(async () => [...dialog.querySelectorAll("button")].find((button) => button.textContent === en.PullRequests.unlinkIssue)!.click());
     expect(h.unlink).toHaveBeenCalledWith({ prId: "pr", issueId: "issue-1", identifier: "MIN-1" });
   });
 
@@ -76,15 +81,20 @@ describe("PR linked issue header", () => {
     const trigger = container.querySelector("button")!;
     expect(trigger.textContent).toBe("3 linked issues");
     await act(() => trigger.click());
-    const dialog = document.querySelector('[role="dialog"]')!;
-    expect(dialog).not.toBeNull();
     for (const issue of issues) {
-      const button = dialog.querySelector<HTMLButtonElement>(`[aria-label="Unlink MIN-${issue.number} from this pull request"]`)!;
-      expect(button).not.toBeNull();
+      const popover = document.querySelector('[role="dialog"]')!;
+      const button = popover.querySelector<HTMLButtonElement>(`[aria-label="Unlink MIN-${issue.number} from this pull request"]`)!;
       await act(() => button.click());
-      expect(h.unlink).toHaveBeenLastCalledWith({ prId: "pr", issueId: issue.id, identifier: `MIN-${issue.number}` });
+      expect(document.body.contains(popover)).toBe(false);
+      expect(h.unlink).not.toHaveBeenCalled();
+      const confirmation = document.querySelector('[data-testid="pr-unlink-confirmation"]')!;
+      expect(confirmation.textContent).toContain(`MIN-${issue.number}`);
+      await act(() => [...confirmation.querySelectorAll("button")].find((button) => button.textContent === "Cancel")!.click());
+      expect(h.unlink).not.toHaveBeenCalled();
+      await act(() => trigger.click());
     }
-    const issueButton = [...dialog.querySelectorAll("button")].find((button) => button.textContent?.includes("Linked issue 1"))!;
+    const popover = document.querySelector('[role="dialog"]')!;
+    const issueButton = [...popover.querySelectorAll("button")].find((button) => button.textContent?.includes("Linked issue 1"))!;
     await act(() => issueButton.click());
     expect(open).toHaveBeenCalledWith("issue-1", "project");
     expect(document.querySelector('[role="dialog"]')).toBeNull();

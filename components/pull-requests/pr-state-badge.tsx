@@ -1,9 +1,10 @@
 "use client";
 
 import { AppIcon } from "@/components/icon";
-import { GitMergeIcon as GitMerge, GitPullRequestClosedIcon as GitPullRequestClosed, GitPullRequestDraftIcon as GitPullRequestDraft, GitPullRequestIcon as GitPullRequest } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, GitMergeIcon as GitMerge, GitPullRequestClosedIcon as GitPullRequestClosed, GitPullRequestDraftIcon as GitPullRequestDraft, GitPullRequestIcon as GitPullRequest } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
-import { Badge, cn } from "mangue-ui";
+import { Badge, Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, cn } from "mangue-ui";
+import type { EditablePrState } from "@/lib/pr-state-transition";
 import type { PullRequestListItem } from "@/lib/agent-api";
 
 /**
@@ -72,5 +73,46 @@ export function PrStateBadge({
     >
       {t(STATE_LABELS[state])}
     </Badge>
+  );
+}
+
+/** Editable detail status; merged and read-only PRs retain their badge. */
+export function PrStateControl({ state, canChange, disabled, onChange }: {
+  state: PrState;
+  canChange: boolean;
+  disabled: boolean;
+  onChange: (state: EditablePrState) => void;
+}) {
+  const t = useTranslations("PullRequests");
+  if (state === "merged" || !canChange) return <PrStateBadge state={state} icon className="h-8" />;
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="sm"
+          disabled={disabled}
+          data-testid="pr-state-control"
+          className={cn(PR_STATE_STYLES[state], state === "draft" && "bg-muted text-muted-foreground", "h-8 gap-1.5")}
+        >
+          <AppIcon icon={STATE_ICONS[state]} />
+          {t(STATE_LABELS[state])}
+          <AppIcon icon={ArrowDown01Icon} className="size-3.5" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        {(["open", "draft", "closed"] as const).map((next) => (
+          <DropdownMenuItem
+            key={next}
+            disabled={next === state}
+            onSelect={() => onChange(next)}
+            data-testid={`pr-state-${next}`}
+          >
+            <AppIcon icon={STATE_ICONS[next]} className={cn(PR_STATE_STYLES[next], "bg-transparent dark:bg-transparent")} />
+            {t(STATE_LABELS[next])}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

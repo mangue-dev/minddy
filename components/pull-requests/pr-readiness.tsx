@@ -443,7 +443,7 @@ export function PrReadinessControl({
                 onCheckedChange={(checked) => onToggleAutoMerge(checked === true)}
               />
               <span className="inline-flex min-w-0 items-center gap-1.5 text-sm">
-                {mergeFlowActive ? t("autoMergeOn") : t("autoMergeWhenReady")}
+                {t("autoMergeWhenReady")}
                 {autoMerging ? <Spinner className="size-3 shrink-0" /> : null}
               </span>
             </label>

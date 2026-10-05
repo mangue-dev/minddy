@@ -23,6 +23,7 @@ import { BulkActionsProvider } from "@/lib/bulk-actions-context";
 import { CurrentViewProvider } from "@/lib/current-view-context";
 import { AppTabsProvider } from "@/lib/app-tabs-context";
 import { IssuePanelProvider } from "@/lib/issue-panel-context";
+import { PrUnlinkConfirmationProvider } from "@/components/pull-requests/pr-unlink-confirmation";
 import { AppShellChrome } from "@/components/app-shell-chrome";
 import { AssistantFab } from "@/components/assistant-fab";
 import { AnalyticsProjectGroup } from "@/components/analytics-project-group";
@@ -99,7 +100,9 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
                           <UndoProvider>
                             <CreateProvider>
                               <BulkActionsProvider>
-                                <AppShellChrome>{children}</AppShellChrome>
+                                <PrUnlinkConfirmationProvider>
+                                  <AppShellChrome>{children}</AppShellChrome>
+                                </PrUnlinkConfirmationProvider>
                               </BulkActionsProvider>
                             </CreateProvider>
                             <AssistantPanel />

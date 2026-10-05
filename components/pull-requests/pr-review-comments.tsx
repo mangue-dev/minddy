@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowDown01Icon, ArrowRight01Icon, ArrowTurnDownIcon, CheckIcon, Copy01Icon, HappyIcon } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, ArrowRight01Icon, ArrowTurnDownIcon, CheckIcon, Copy01Icon, SmilePlusIcon } from "@hugeicons/core-free-icons";
 import { useCallback, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useFormatter, useNow, useTranslations } from "next-intl";
@@ -261,10 +261,10 @@ export function CommentReactionChips({
                   void reactions.toggle(commentId, reaction.content, !reaction.mine);
                 }}
                 className={cn(
-                  "flex h-7 items-center gap-1 rounded-full border px-2.5 text-xs tabular-nums transition-colors",
+                  "flex h-7 items-center gap-1 rounded-full px-2.5 text-xs tabular-nums transition-colors",
                   reaction.mine
-                    ? "border-primary/60 bg-primary/10 text-foreground"
-                    : "border-border text-muted-foreground hover:bg-muted",
+                    ? "bg-primary/10 text-foreground"
+                    : "text-muted-foreground hover:bg-muted",
                   locked && "cursor-default opacity-70",
                 )}
               >
@@ -328,7 +328,7 @@ export function ReactionPicker({
               aria-label={t("addReaction")}
               className={cn("size-7 rounded-full text-muted-foreground", className)}
             >
-              <HugeiconsIcon icon={HappyIcon} className="size-4" />
+              <HugeiconsIcon icon={SmilePlusIcon} className="size-4" />
             </Button>
           </PopoverTrigger>
         </TooltipTrigger>

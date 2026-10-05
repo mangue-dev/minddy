@@ -59,7 +59,7 @@ describe("pull request insight properties", () => {
       onOpenConversations: vi.fn(), onOpenReviewApprove: vi.fn(), onStartFileReview: vi.fn(),
       numoReview: { kind: "requested", label: messages.PullRequests.aiReview, onOpen: null, startedAt: null, durationMs: null },
       fixRun: null, numoMerge: null, checksOpen: false,
-      onChecksOpenChange: vi.fn(), onRequestReview: vi.fn(), fix: null,
+      onChecksOpenChange: vi.fn(), fix: null,
     };
   });
 
@@ -88,26 +88,22 @@ describe("pull request insight properties", () => {
     expect(trigger("checks").querySelector("circle")).not.toBeNull();
     expect(trigger("reviews").textContent).toBe("");
     expect(trigger("reviews").getAttribute("aria-label")).toContain("No reviews yet");
-    expect(trigger("reviews").querySelector("[data-numo-icon]")).not.toBeNull();
+    expect(trigger("reviews").querySelector("[data-numo-icon]")).toBeNull();
     expect(trigger("conversations")).toBeNull();
     expect(trigger("numo-review")).toBeNull();
     expect(document.querySelector('[data-testid="pr-card-numo-review"]')).toBeNull();
   });
 
-  it("opens a reviews popover with both human and Numo request actions", async () => {
+  it("opens one reviewer picker action and dismisses the popover", async () => {
     await render();
     await act(async () => trigger("reviews").click());
     const popover = document.querySelector('[data-testid="pr-reviews-popover"]');
     expect(popover).not.toBeNull();
     expect(container.contains(popover)).toBe(false);
-    const numo = popover!.querySelector<HTMLButtonElement>('[data-testid="pr-card-numo-review"]')!;
-    await act(async () => numo.click());
+    expect(popover!.querySelector('[data-testid="pr-card-numo-review"]')).toBeNull();
+    const request = popover!.querySelector<HTMLButtonElement>('[data-testid="pr-request-reviewer"]')!;
+    await act(async () => request.click());
     expect(document.querySelector('[data-testid="pr-reviews-popover"]')).toBeNull();
-    await act(async () => trigger("reviews").click());
-    const human = document.querySelector<HTMLButtonElement>('[data-testid="pr-request-reviewer"]')!;
-    await act(async () => human.click());
-    expect(document.querySelector('[data-testid="pr-reviews-popover"]')).toBeNull();
-    expect(props.onRequestReview).toHaveBeenCalledOnce();
     expect(props.onRequestReviewer).toHaveBeenCalledOnce();
   });
 
@@ -248,16 +244,37 @@ describe("pull request insight properties", () => {
     expect(button.querySelector(`[data-testid="pr-review-provider-${provider.id}"]`)).not.toBeNull();
   });
 
-  it("places the idle Numo action inside its reviewer banner", async () => {
+  it("does not display an idle Numo reviewer banner", async () => {
     await render();
     await act(async () => trigger("reviews").click());
-    const section = document.querySelector('[data-testid="pr-insight-detail-numo-review"]')!;
-    const action = section.querySelector<HTMLButtonElement>('[data-testid="pr-card-numo-review"]')!;
-    expect(section.querySelector("header")!.contains(action)).toBe(true);
-    expect(section.textContent).not.toContain("No reviews yet");
-    await act(async () => action.click());
-    expect(props.onRequestReview).toHaveBeenCalledOnce();
-    expect(document.querySelector('[data-testid="pr-reviews-popover"]')).toBeNull();
+    expect(document.querySelector('[data-testid="pr-insight-detail-numo-review"]')).toBeNull();
+    expect(document.querySelector('[data-testid="pr-card-numo-review"]')).toBeNull();
+  });
+
+  it("opens running checks with the page clock instead of resetting to provider time", async () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date("2026-10-05T10:05:00Z"));
+      props.checks = checks("pending");
+      props.checksOpen = true;
+      await render();
+      expect(document.querySelector('[data-testid="pr-check-row"] .font-mono')!.textContent).toBe("5 min 0s");
+      props.checksOpen = false;
+      await render();
+      await act(async () => vi.advanceTimersByTime(60_000));
+      props.checksOpen = true;
+      await render();
+      const duration = () => document.querySelector('[data-testid="pr-check-row"] .font-mono')!.textContent;
+      expect(duration()).toBe("6 min 0s");
+      props.checksOpen = false;
+      await render();
+      await act(async () => vi.advanceTimersByTime(60_000));
+      props.checksOpen = true;
+      await render();
+      expect(duration()).toBe("7 min 0s");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it.each(["requested", "running", "completed", "clean", "findings", "failed", "skipped"] as const)("groups %s agent metadata and verdicts below one banner without agent actions", async (state) => {
@@ -272,7 +289,7 @@ describe("pull request insight properties", () => {
     const header = section.querySelector("header")!;
     expect(header.textContent).toBe(provider.name);
     expect(section.querySelector("button")).toBeNull();
-    expect(document.querySelector('[data-testid="pr-card-numo-review"]') === null).toBe(state === "requested" || state === "running");
+    expect(document.querySelector('[data-testid="pr-card-numo-review"]')).toBeNull();
     expect(section.querySelector("time")).not.toBeNull();
     expect(section.textContent).toContain("approved");
     expect(header.textContent).not.toContain("approved");
