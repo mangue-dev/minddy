@@ -189,7 +189,11 @@ function toRow(input: AiUsageInput) {
     idempotency_key: input.generationId
       ? `${input.provider ?? "openrouter"}:generation:${input.generationId}`
       : `${input.runId}:${input.feature}:${seq}`,
-    feature: input.feature,
+    // Preserve the original idempotency identity above when correcting the
+    // display segment, so a retried search cannot create a second charge.
+    feature: input.routineId && ["agent_code", "numo_chat", "web_search", "sandbox_compute"].includes(input.feature)
+      ? input.feature === "sandbox_compute" ? "routine_compute" : "routine_code"
+      : input.feature,
     ...(input.provider ? { provider: input.provider } : {}),
     ...(input.keyMode ? { key_mode: input.keyMode } : {}),
     model: input.model ?? null,

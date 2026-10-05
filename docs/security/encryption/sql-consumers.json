@@ -9324,6 +9324,24 @@
         "api_keys"
       ],
       "functionReferences": []
+    },
+    "get_numo_routine_occurrence_spend(uuid[])": {
+      "sha256": "96cf450246fc268e0f39bc958164e03b9b98d2a7af201f98cb2f6dfe0a25edda",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "relations": [
+        "numo_routine_occurrences",
+        "numo_assistant_turns",
+        "ai_usage"
+      ],
+      "protectedRelations": [
+        "numo_routine_occurrences",
+        "numo_assistant_turns"
+      ],
+      "functionReferences": []
     }
   },
   "triggers": {

@@ -1584,6 +1584,12 @@ export async function executeAgentRun(
       ...(modelPricing ? { pricing: modelPricing } : {}),
       anchor,
       writesToRepo,
+      ...(run.delegation_brief?.requiresPullRequest ? {
+        pullRequestDelivery: {
+          required: true,
+          delivered: run.pr_number != null && run.pr_state !== "merged" && run.pr_state !== "closed",
+        },
+      } : {}),
       interactive: true,
       ...(run.parent_numo_turn_id && run.parent_numo_conversation_id
         ? {

@@ -198,6 +198,40 @@ describe("code delegation contracts", () => {
     });
   });
 
+  it("requires PR authorization and includes the delivery requirement in the prompt", () => {
+    expect(() => parseAgentDelegationBrief({ ...brief, requiresPullRequest: true })).toThrow(/authorization/);
+    expect(() => parseAgentDelegationBrief({ ...brief, requiresPullRequest: "true" })).toThrow(/boolean/);
+    const required = parseAgentDelegationBrief({
+      ...brief, requiresPullRequest: true,
+      authorizedWork: [...brief.authorizedWork, "manage_pull_request"],
+    });
+    expect(formatAgentDelegationPrompt(required)).toContain("Required delivery: call create_pr");
+  });
+
+  it("reports missing requested PRs even when the worker claims completion", () => {
+    const required = parseAgentDelegationBrief({ ...brief, requiresPullRequest: true,
+      authorizedWork: [...brief.authorizedWork, "manage_pull_request"] });
+    const result = buildAgentDelegationResult({
+      run: run({ delegation_brief: required, pr_number: null, pr_url: null }),
+      events: [{ seq: 0, type: "commit", payload: { sha: "abc123" } }],
+    });
+    expect(result.status).toBe("partial");
+    expect(result.summary).toContain("pull request was not delivered");
+    expect(result.unresolvedDecisions).toContainEqual(expect.stringContaining("pull request was not delivered"));
+    expect(result.artifacts).toContainEqual({ kind: "commit", ref: "abc123" });
+    expect(buildAgentDelegationResult({ run: run({ delegation_brief: required }), events: [] }).status).toBe("completed");
+    expect(buildAgentDelegationResult({ run: run({ pr_number: null, pr_url: null }), events: [] }).status).toBe("completed");
+  });
+
+  it("keeps interruption visible alongside an earlier successful outcome", () => {
+    const result = buildAgentDelegationResult({
+      run: run({ error_message: INTERRUPTED_DELEGATION_NOTE }), events: [],
+    });
+    expect(result.status).toBe("partial");
+    expect(result.summary).toContain(INTERRUPTED_DELEGATION_NOTE);
+    expect(result.unresolvedDecisions).toContain(INTERRUPTED_DELEGATION_NOTE);
+  });
+
   it("keeps a legacy suspended worker correlated by its question call id", () => {
     const result = buildAgentDelegationResult({
       run: run({ awaiting_input: true }),

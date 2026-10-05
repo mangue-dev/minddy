@@ -992,6 +992,7 @@ export async function runOpencodeTurn(
    * delivery. It is killed BEFORE staging, and the model learns it in the same
    * response — including when the push fails behind.
    */
+  let pullRequestDelivered = job.pullRequestDelivery?.delivered === true;
   const createPr: SupervisorTool | null =
     job.writesToRepo && job.authUrl
       ? async (args) => {
@@ -1034,6 +1035,11 @@ export async function runOpencodeTurn(
             ...(jobsNote ? { jobsNote } : {}),
             workBranch: job.workBranch,
           });
+          if (res.success && res.result && typeof res.result === "object" &&
+              typeof (res.result as Record<string, unknown>).url === "string" &&
+              (res.result as Record<string, unknown>).url) {
+            pullRequestDelivered = true;
+          }
           return { result: res.result, success: res.success };
         }
       : null;
@@ -2767,14 +2773,17 @@ export async function runOpencodeTurn(
           // A normal stop can still contain an action announcement. Conversely,
           // idle after a truncated, empty or malformed round is not completion.
           const stranded = outward(lastParentReply);
+          const missingPullRequest = job.pullRequestDelivery?.required === true && !pullRequestDelivered;
           if (
             !sessionError &&
-            (lastParentFinish !== "stop" || !stranded.trim() ||
+            (missingPullRequest || lastParentFinish !== "stop" || !stranded.trim() ||
               hasSerializedToolCall(stranded) || looksLikeUnexecutedPreamble(stranded))
           ) {
             if (completionRepairs >= MAX_COMPLETION_REPAIRS) {
               completionRejected = true;
-              sessionError = "The model repeatedly ended before completing its work. Its checkpoint was kept and nothing was committed.";
+              sessionError = missingPullRequest
+                ? "The requested pull request was not delivered after two corrective rounds. Partial work and the checkpoint were retained; inspect the branch and tool errors before resuming."
+                : "The model repeatedly ended before completing its work. Its checkpoint was kept and nothing was committed.";
               await cp.emit("error", { code: "replyIncomplete", message: sessionError });
               break;
             }
@@ -2796,7 +2805,9 @@ export async function runOpencodeTurn(
               reasoningMs: 0,
               ...liveEdits.payload(),
             });
-            await promptParent(OPENCODE_CONTINUATION_REPAIR);
+            await promptParent(missingPullRequest
+              ? "The requested pull request has not been delivered. Use create_pr now and check its actual result. Do not conclude with a branch, commit, or announcement. If the tool fails, inspect and fix the error before retrying; explain any remaining failure explicitly."
+              : OPENCODE_CONTINUATION_REPAIR);
             continue;
           }
           if (!sessionError) completionRepairPending = false;
