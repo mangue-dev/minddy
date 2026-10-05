@@ -10,13 +10,10 @@ import {
 import { SITE_URL } from "./site";
 
 /**
- * Contrat chat interne de minddy.
- *
- * Surfaces express an intention (`maxOutputTokens`, `reasoning`) and do not
- * never know the wire names of a supplier. Brand new option
- * commune must be entered here and then translated below; `extensions` remains
- * reserved for intentionally non-portable capabilities (OpenRouter web plugin,
- * par exemple).
+ * Shared chat contract for Numo, dictation, feedback, and integrations.
+ * Callers use provider-independent fields, translated below. Add common options
+ * here; reserve `extensions` for intentionally provider-specific capabilities,
+ * such as the OpenRouter web plugin.
  */
 export interface AiChatRequest {
   model: string;
@@ -56,13 +53,10 @@ function isManualThinkingClaude(model: string): boolean {
 }
 
 /**
- * Families where reasoning CANNOT be cut: `thinking: {type:
- * "disabled"}` returns to 400 (Fable 5, Mythos 5, Mythos Preview, and the
- * Claude 5.5 families). The mode "off" is not expressible there; we then do
- * not send any field, which lets the family default (thinking, anyway)
- * apply. Sonnet 5.5 knows a lower setting, `thinking: {type:
- * "between_tools"}`, but it only holds at effort `high` or below and minddy
- * never sends an effort value — omitting the field is the only safe "off".
+ * Families that reject `thinking: {type: "disabled"}` with a 400. At "off",
+ * omit the field and retain their default thinking behavior.
+ * Sonnet 5.5 also supports `between_tools` at effort `high` or below;
+ * this adapter conservatively preserves the family's default at "off".
  */
 function isAlwaysThinkingClaude(model: string): boolean {
   return (
@@ -77,11 +71,9 @@ function isGpt56(model: string): boolean {
 }
 
 /**
- * Families that reject forced tool choice (`tool_choice: "required"` or a
- * named tool) with a 400 on EVERY request, thinking on or off (Claude
- * Opus 5.5, Sonnet 5.5, Fable 5.1, Mythos 5.1). Anthropic's documented path
- * on those families is `auto` with strict tool use; minddy sends no strict
- * schemas, so the call degrades to `auto` instead of dying on a 400.
+ * Families that reject forced tool choice with a 400 on every request:
+ * Claude Opus 5.5, Sonnet 5.5, Fable 5.1, and Mythos 5.1. Downgrade to `auto`
+ * at the compatibility boundary to keep these requests usable.
  */
 function rejectsForcedToolChoice(model: string): boolean {
   return (
@@ -93,8 +85,23 @@ function rejectsForcedToolChoice(model: string): boolean {
 function isForcedOpenAiToolChoice(value: unknown): boolean {
   if (value === "required") return true;
   if (typeof value !== "object" || value === null) return false;
-  const type = (value as { type?: unknown }).type;
-  return type === "function" || type === "allowed_tools";
+  const choice = value as { type?: unknown; allowed_tools?: { mode?: unknown } };
+  return choice.type === "function" ||
+    (choice.type === "allowed_tools" && choice.allowed_tools?.mode === "required");
+}
+
+function normalizeProviderToolChoice(
+  body: Record<string, unknown>,
+  provider: AgentProviderId,
+): void {
+  if (
+    provider === "anthropic" &&
+    typeof body.model === "string" &&
+    rejectsForcedToolChoice(body.model) &&
+    isForcedOpenAiToolChoice(body.tool_choice)
+  ) {
+    body.tool_choice = "auto";
+  }
 }
 
 function anthropicReasoningFields(params: {
@@ -210,13 +217,7 @@ export function translateAiChatRequest(
     ),
   );
 
-  if (
-    provider === "anthropic" &&
-    rejectsForcedToolChoice(request.model) &&
-    isForcedOpenAiToolChoice(body.tool_choice)
-  ) {
-    body.tool_choice = "auto";
-  }
+  normalizeProviderToolChoice(body, provider);
 
   if (profile.usageAccounting) body.usage = { include: true };
   if (request.stream && profile.streamUsage) {
@@ -339,6 +340,8 @@ export function translateLegacyAiChatBody(
       ),
     );
   }
+
+  normalizeProviderToolChoice(body, provider);
 
   if (profile.usageAccounting && body.usage === undefined) body.usage = { include: true };
   // This border is only used by the opencode client, which streams all its rounds.

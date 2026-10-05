@@ -82,7 +82,13 @@ export async function transcribeAudio(
     const bytes = Uint8Array.from(Buffer.from(audioBase64, "base64"));
     directBody.append("file", new Blob([bytes]), `audio.${format}`);
     directBody.append("model", model);
-    if (options?.language) directBody.append("language", options.language);
+    if (options?.language) {
+      // GPT Transcribe replaces the legacy singular language hint with an array.
+      const languageField = providerId === "openai" && /^gpt-transcribe(?:-|$)/i.test(model)
+        ? "languages[]"
+        : "language";
+      directBody.append(languageField, options.language);
+    }
     if (options?.temperature !== undefined) {
       directBody.append("temperature", String(options.temperature));
     }

@@ -25,7 +25,7 @@ const CATALOGS = { en, fr } as const;
 type FieldEntry = { label?: string; desc?: string };
 type GroupEntry = { title?: string; desc?: string };
 
-describe("registre des réglages IA × catalogues i18n", () => {
+describe("AI settings registry and i18n catalogs", () => {
   for (const [locale, messages] of Object.entries(CATALOGS)) {
     const fields = messages.Admin.fields as Record<string, FieldEntry>;
     const groups = messages.Admin.groups as Record<string, GroupEntry>;
@@ -48,7 +48,7 @@ describe("registre des réglages IA × catalogues i18n", () => {
     });
   }
 
-  it("décrit un réglage dans les deux langues ou dans aucune", () => {
+  it("describes a setting in both languages or neither", () => {
     const enFields = en.Admin.fields as Record<string, FieldEntry>;
     const frFields = fr.Admin.fields as Record<string, FieldEntry>;
     const diverging = AI_MODEL_CONFIG_FIELDS.filter(
