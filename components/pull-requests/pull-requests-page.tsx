@@ -151,12 +151,14 @@ function PrFilterMenu({
   state,
   author,
   authors,
+  fetching,
   onStateChange,
   onAuthorChange,
 }: {
   state: PullRequestStateFilter;
   author: string;
   authors: { login: string; avatar_url: string | null }[];
+  fetching: boolean;
   onStateChange: (state: PullRequestStateFilter) => void;
   onAuthorChange: (author: string) => void;
 }) {
@@ -189,9 +191,14 @@ function PrFilterMenu({
           size="icon-sm"
           className={cn(SIDEBAR_COMPACT_CONTROL_CLASS, "-mr-2")}
           aria-label={t("filterTooltip", { state: stateLabel })}
+          aria-busy={fetching}
         >
           <span className="relative flex items-center justify-center">
-            <HugeiconsIcon icon={FilterIcon} className="size-[18px]" />
+            {fetching ? (
+              <Spinner aria-hidden className="size-[18px]" data-testid="pr-filter-loading" />
+            ) : (
+              <HugeiconsIcon icon={FilterIcon} className="size-[18px]" />
+            )}
             {active ? (
               /* The ring in the color of the bar detaches the pellet from the line
                  of the icon, which passes just below. */
@@ -805,6 +812,7 @@ function PullRequestsPageInner() {
             state={filter}
             author={author}
             authors={authors}
+            fetching={fetching}
             onStateChange={(next) => {
               // A manual lens pick: the deep link yields — the filter the
               // reader chose becomes the master rule (a merged target pinned
