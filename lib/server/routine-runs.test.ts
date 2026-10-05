@@ -24,6 +24,7 @@ const world = vi.hoisted(() => ({
   messages: [] as Array<Record<string, unknown>>,
   /** Whether the RLS client resolves the conversation identity. */
   identityResolvable: true,
+  spend: [] as Array<{ conversation_id: string; total_cost: number; platform_cost: number }>,
 }));
 
 type TableRow = Record<string, unknown>;
@@ -49,9 +50,9 @@ function chainedQuery(table: string) {
       rows = rows.filter((row) => values.includes(row[column] as string));
       return builder;
     },
-    order(column: string) {
+    order(column: string, options?: { ascending?: boolean }) {
       rows = [...rows].sort((left, right) =>
-        String(left[column]).localeCompare(String(right[column])),
+        String(left[column]).localeCompare(String(right[column])) * (options?.ascending === false ? -1 : 1),
       );
       return builder;
     },
@@ -112,6 +113,7 @@ function transcriptQuery(table: string) {
 vi.mock("@/lib/supabase-service", () => ({
   getServiceClient: () => ({
     from: (table: string) => chainedQuery(table),
+    rpc: async () => ({ data: world.spend, error: null }),
   }),
 }));
 
@@ -145,6 +147,7 @@ function occurrence(overrides: Partial<NumoRoutineOccurrence> = {}): NumoRoutine
 
 beforeEach(() => {
   world.tables = {};
+  world.spend = [];
   world.identityResolvable = true;
 });
 
@@ -160,6 +163,20 @@ describe("Numo routine run reads", () => {
     expect(routineRunStatus("completed")).toBe("completed");
     expect(routineRunStatus("failed")).toBe("failed");
     expect(routineRunStatus("stopped")).toBe("canceled");
+  });
+
+  it("reads the latest state and the complete ledger across resumed occurrence turns", async () => {
+    world.tables.numo_routine_occurrences = [occurrenceRow()];
+    world.tables.numo_assistant_turns = [
+      { id: TURN_A, conversation_id: CONVERSATION_A, created_at: "2026-09-21T09:00:00Z",
+        status: "waiting_input", cost_usd: 0.02 },
+      { id: TURN_B, conversation_id: CONVERSATION_A, created_at: "2026-09-21T10:00:00Z",
+        status: "waiting_work", cost_usd: 0.01, outcome: "Resuming the worker" },
+    ];
+    world.spend = [{ conversation_id: CONVERSATION_A, total_cost: 1.8, platform_cost: 1.3 }];
+    const { routineRunSummaries } = await import("./routine-runs");
+    const [summary] = await routineRunSummaries({ id: ROUTINE_ID } as never);
+    expect(summary).toMatchObject({ cost_usd: 1.8, numo_status: "waiting_work", waiting_input: false });
   });
 
   it("summarizes runs with state, outcome and the delegated pull request", async () => {
@@ -210,6 +227,10 @@ describe("Numo routine run reads", () => {
       },
     ];
 
+    world.spend = [
+      { conversation_id: CONVERSATION_A, total_cost: 1.42, platform_cost: 0.92 },
+      { conversation_id: CONVERSATION_B, total_cost: 0.8, platform_cost: 0.8 },
+    ];
     const { routineRunSummaries } = await import("./routine-runs");
     const runs = await routineRunSummaries({ id: ROUTINE_ID } as never, 20);
 
@@ -221,7 +242,7 @@ describe("Numo routine run reads", () => {
     expect(paused.status).toBe("running");
     expect(paused.waiting_input).toBe(true);
     expect(paused.numo_status).toBe("waiting_input");
-    expect(paused.cost_usd).toBe(0.42);
+    expect(paused.cost_usd).toBe(1.42);
     expect(paused.created_at).toBe("2026-09-21T09:00:00Z");
     const finished = runs[0];
     expect(finished.status).toBe("completed");
