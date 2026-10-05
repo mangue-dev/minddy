@@ -261,7 +261,7 @@ export function CommentReactionChips({
                   void reactions.toggle(commentId, reaction.content, !reaction.mine);
                 }}
                 className={cn(
-                  "flex h-7 items-center gap-1 rounded-full px-2.5 text-xs tabular-nums transition-colors",
+                  "flex h-7 items-center gap-1 rounded-full border-0 px-2.5 text-xs tabular-nums transition-colors",
                   reaction.mine
                     ? "bg-primary/10 text-foreground"
                     : "text-muted-foreground hover:bg-muted",
