@@ -1,9 +1,10 @@
 "use client";
 
+import { COMPLETED_PULL_REQUESTS_PAGE } from "./pull-request-sections";
 import { useAppTabActive, useAppTabActivation } from "./app-tab-route-context";
 
-import { useQuery, type QueryClient } from "@tanstack/react-query";
-import { useEffect, useRef } from "react";
+import { useInfiniteQuery, useQuery, type QueryClient } from "@tanstack/react-query";
+import { useEffect, useMemo, useRef } from "react";
 import { assertPullRequestReadBudget, pullRequestReadRetry, pullRequestQueryOptions, pullRequestReadState, pullRequestReadPrecedesActivation } from "./pull-request-query";
 import { nextReadActivationSequence, readActivationSession } from "./read-activation-sequence";
 import {
@@ -445,6 +446,25 @@ export function useAllPullRequestsQuery(
     fetching: isFetching,
     refetch,
   };
+}
+
+/** Completed PRs have their own offset and never replace the active queues. */
+export function useCompletedPullRequestsQuery(enabled: boolean) {
+  const query = useInfiniteQuery({
+    queryKey: ["pull-requests", "all", "completed", COMPLETED_PULL_REQUESTS_PAGE],
+    initialPageParam: 0,
+    queryFn: ({ client, pageParam }) => {
+      assertPullRequestReadBudget(client);
+      return fetchAllPullRequestsApi({ state: "completed", limit: COMPLETED_PULL_REQUESTS_PAGE, offset: pageParam });
+    },
+    getNextPageParam: (lastPage, _pages, lastOffset) => lastPage.hasMore ? lastOffset + COMPLETED_PULL_REQUESTS_PAGE : undefined,
+    enabled,
+    retry: pullRequestReadRetry,
+    refetchOnMount: "always",
+    refetchInterval: PULL_REQUEST_SETTLED_POLL_MS,
+  });
+  const pullRequests = useMemo(() => query.data?.pages.flatMap((page) => page.pullRequests) ?? [], [query.data]);
+  return { ...query, pullRequests };
 }
 
 /** Cache key for the global list of agent sessions (Agents page). */

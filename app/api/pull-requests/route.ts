@@ -21,6 +21,7 @@ import {
 import { sweepRepo } from "@/lib/server/agent/pull-requests-sweep";
 import { listUserIdentities } from "@/lib/server/git/user-identities";
 import { readReviewQueue } from "@/lib/server/agent/pull-request-review-queue";
+import { COMPLETED_PULL_REQUESTS_PAGE } from "@/lib/pull-request-sections";
 import { getRun } from "@/lib/server/agent/runs";
 
 /**
@@ -111,6 +112,7 @@ const STATE_FILTERS: Record<string, PullRequestState[]> = {
   open: ["open", "draft"],
   merged: ["merged"],
   closed: ["closed"],
+  completed: ["merged", "closed"],
 };
 
 /**
@@ -159,8 +161,10 @@ export async function GET(request: NextRequest) {
   const states = STATE_FILTERS[stateParam] ?? null; // null = all states
   const limit = Math.min(
     Math.max(Number.parseInt(params.get("limit") ?? "", 10) || DEFAULT_LIMIT, 1),
-    MAX_LIMIT,
+    stateParam === "completed" ? COMPLETED_PULL_REQUESTS_PAGE : MAX_LIMIT,
   );
+  const offset = stateParam === "completed"
+    ? Math.max(Number.parseInt(params.get("offset") ?? "", 10) || 0, 0) : 0;
 
   const [repos, identities] = await Promise.all([
     listVisibleRepos(auth.supabase),
@@ -186,6 +190,7 @@ export async function GET(request: NextRequest) {
     readRepoSyncStates(repos),
     listPullRequestsForUser(auth.supabase, repos, {
       limit: limit + 1,
+      ...(offset ? { offset } : {}),
       states: states ?? undefined,
     }).catch((err: unknown) => err as Error),
   ]);
@@ -215,6 +220,7 @@ export async function GET(request: NextRequest) {
       // The sweep may have discovered new PRs or changed existing states.
       rows = await listPullRequestsForUser(auth.supabase, repos, {
         limit: limit + 1,
+        ...(offset ? { offset } : {}),
         states: states ?? undefined,
       });
     } catch (err) {

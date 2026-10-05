@@ -9,7 +9,7 @@ import { useOptionalAppTabNavigation } from "@/lib/app-tab-navigation-context";
 import { canConsumePrDeepLink } from "@/lib/pr-navigation";
 import { AppTabRouteBoundary, useAppTabRoute } from "@/lib/app-tab-route-context";
 import { useFormatter, useTranslations } from "next-intl";
-import { useQueryClient } from "@tanstack/react-query";
+import { type InfiniteData, useQueryClient } from "@tanstack/react-query";
 import {
   Button,
   CommandGroup,
@@ -48,6 +48,7 @@ import {
 import {
   PULL_REQUESTS_PAGE,
   useAllPullRequestsQuery,
+  useCompletedPullRequestsQuery,
   usePullRequestReadinessBatchQuery,
 } from "@/lib/use-agent-runs";
 import { useAssistantContext } from "@/lib/assistant-panel-context";
@@ -285,6 +286,9 @@ function PrGroupRows({
   onToggle,
   onShowAll,
   onSelect,
+  hasNextPage,
+  fetchingNextPage,
+  onLoadNextPage,
 }: {
   group: { key: PullRequestSection; items: PullRequestListItem[] };
   readinessByPrId: Record<string, NonNullable<AgentRunPrResponse["readiness"]>>;
@@ -298,6 +302,9 @@ function PrGroupRows({
   onToggle: () => void;
   onShowAll: () => void;
   onSelect: (prId: string) => void;
+  hasNextPage: boolean;
+  fetchingNextPage: boolean;
+  onLoadNextPage: () => void;
 }) {
   const tCommon = useTranslations("Common");
   const t = useTranslations("PullRequests");
@@ -306,7 +313,7 @@ function PrGroupRows({
   // The OPEN PR remains visible: if it is beyond the first five, the
   // cut goes down to it rather than hiding it.
   const selectedIndex = prs.findIndex((p) => p.prId === selectedId);
-  const shown = showAll
+  const shown = showAll || group.key === "completed"
     ? prs
     : prs.slice(0, Math.max(PROJECT_GROUP_LIMIT, selectedIndex + 1));
 
@@ -338,6 +345,13 @@ function PrGroupRows({
           onSelect={() => onSelect(pr.prId)}
         />
       ))}
+      {group.key === "completed" && hasNextPage ? (
+        <Button variant="ghost" size="sm" className="self-start ml-8" disabled={fetchingNextPage}
+          onClick={onLoadNextPage} data-testid="pr-completed-load-more">
+          {fetchingNextPage ? <Spinner /> : null}
+          {tCommon("showMore")}
+        </Button>
+      ) : null}
     </SidebarProjectGroup>
   );
 }
@@ -388,7 +402,6 @@ function PullRequestsPageInner() {
   }, [deepLink, navigation, router, searchParams]);
 
   const [sections, setSections] = useState<ReadonlySet<string>>(() => new Set(DEFAULT_PULL_REQUEST_SECTIONS));
-  const filter = sections.has("completed") ? "all" : "open";
   const [query, setQuery] = useState("");
   const [limit, setLimit] = useState(PULL_REQUESTS_PAGE);
   const [selectedPrId, setSelectedPrId] = useState<string | null>(prParam);
@@ -418,8 +431,18 @@ function PullRequestsPageInner() {
   // The pin lives only as long as the link does: once consumed, the address
   // stops carrying `pr`/`run` and the lens decides who belongs to the list.
   const pin = useMemo(() => ({ pr: prParam, run: runParam }), [prParam, runParam]);
-  const { pullRequests, hasMore, truncated, repoCount, anyPr, loading, fetching, refetch } =
-    useAllPullRequestsQuery(filter, limit, pin);
+  const active = useAllPullRequestsQuery("open", limit, pin);
+  const completed = useCompletedPullRequestsQuery(sections.has("completed"));
+  const { hasMore, repoCount, anyPr, loading } = active;
+  const fetching = active.fetching || completed.isFetching;
+  const truncated = active.truncated || completed.data?.pages.some((page) => page.truncated);
+  const pullRequests = useMemo(() => [...new Map([
+    ...active.pullRequests, ...completed.pullRequests,
+  ].map((pr) => [pr.prId, pr])).values()], [active.pullRequests, completed.pullRequests]);
+  const refetch = () => {
+    void active.refetch();
+    if (sections.has("completed")) void completed.refetch();
+  };
 
   // Tracks param changes (client navigation to another PR).
   useEffect(() => {
@@ -492,7 +515,7 @@ function PullRequestsPageInner() {
   // ultimately refuses the action (branch protection, rights withdrawn, etc.).
   const applyOptimisticState = useCallback(
     (prId: string, state: PullRequestListItem["pr_state"]) => {
-      const previous = queryClient.getQueriesData<PullRequestListResponse>({
+      const previous = queryClient.getQueriesData<PullRequestListResponse | InfiniteData<PullRequestListResponse>>({
         queryKey: ALL_PULL_REQUESTS_QUERY_KEY,
       });
       const previousDetail = queryClient.getQueryData<AgentRunPrResponse>([
@@ -712,7 +735,7 @@ function PullRequestsPageInner() {
           />
         }
       >
-        {loading ? (
+        {loading || (sections.has("completed") && completed.isPending && visible.length === 0) ? (
           <PrListSkeleton />
         ) : visible.length === 0 ? (
           <EmptyScene
@@ -752,6 +775,9 @@ function PullRequestsPageInner() {
                 collapsible={!filtering}
                 selectedId={selectedId}
                 fmtDay={fmtDay}
+                hasNextPage={completed.hasNextPage}
+                fetchingNextPage={completed.isFetchingNextPage}
+                onLoadNextPage={() => void completed.fetchNextPage()}
                 onToggle={() => toggleGroup(g.key)}
                 onShowAll={() => setExpandedGroups((prev) => toggledSet(prev, g.key))}
                 onSelect={(prId) => {

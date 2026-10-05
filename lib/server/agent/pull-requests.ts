@@ -988,7 +988,7 @@ export async function pullRequestIssueIds(prId: string): Promise<string[]> {
 export async function listPullRequestsForUser(
   supabase: SupabaseClient,
   repos: VisibleRepo[],
-  opts?: { limit?: number; states?: PullRequestState[] },
+  opts?: { limit?: number; offset?: number; states?: PullRequestState[] },
 ): Promise<PullRequestWithIssue[]> {
   if (repos.length === 0) return [];
   const service = getServiceClient();
@@ -1004,9 +1004,11 @@ export async function listPullRequestsForUser(
     .from("pull_requests")
     .select(PR_COLUMNS)
     .in("repo_full_name", names)
-    .order("updated_at", { ascending: false });
+    .order("updated_at", { ascending: false })
+    .order("id", { ascending: false });
   if (opts?.states) query = query.in("state", opts.states);
-  if (opts?.limit) query = query.limit(opts.limit);
+  if (opts?.offset) query = query.range(opts.offset, opts.offset + (opts.limit ?? 100) - 1);
+  else if (opts?.limit) query = query.limit(opts.limit);
 
   const { data, error } = await query;
   if (error) throw new Error(error.message);

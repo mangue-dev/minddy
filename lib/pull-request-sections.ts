@@ -1,5 +1,6 @@
 import type { PullRequestListItem } from "./agent-api";
 
+export const COMPLETED_PULL_REQUESTS_PAGE = 10;
 export const PULL_REQUEST_SECTIONS = ["created", "review", "team", "completed"] as const;
 export type PullRequestSection = typeof PULL_REQUEST_SECTIONS[number];
 export const DEFAULT_PULL_REQUEST_SECTIONS: readonly PullRequestSection[] = ["created", "review", "team"];

@@ -139,3 +139,17 @@ it("counts Numo PRs as mine only when my run actually opened the PR", async () =
   expect(body.pullRequests.map((pr: { createdByMe: boolean; numoOpened: boolean }) => [pr.createdByMe, pr.numoOpened]))
     .toEqual([[true, true], [false, false], [false, true]]);
 });
+
+it("caps completed PRs at ten and requests the next ten independently of open PRs", async () => {
+  mocks.syncs.mockResolvedValue(new Map([["github:acme/app", { synced_at: "fresh" }]]));
+  mocks.list.mockResolvedValue(Array.from({ length: 11 }, (_, index) => ({
+    ...row, id: `completed-${index}`, number: index + 1, state: index % 2 ? "closed" : "merged",
+  })));
+  const body = await (await GET(new NextRequest("http://localhost/api/pull-requests?state=completed&limit=100&offset=10"))).json();
+  expect(body.pullRequests).toHaveLength(10);
+  expect(body.hasMore).toBe(true);
+  expect(mocks.list).toHaveBeenCalledWith(expect.anything(), expect.anything(), {
+    limit: 11, offset: 10, states: ["merged", "closed"],
+  });
+  expect(mocks.queue).not.toHaveBeenCalled();
+});

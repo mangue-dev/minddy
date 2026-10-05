@@ -1,4 +1,5 @@
-import type { QueryClient, QueryKey } from "@tanstack/react-query";
+import { COMPLETED_PULL_REQUESTS_PAGE } from "./pull-request-sections";
+import type { InfiniteData, QueryClient, QueryKey } from "@tanstack/react-query";
 
 import type {
   AgentRunPrResponse,
@@ -23,6 +24,7 @@ export function matchesStateFilter(
 ): boolean {
   return (
     filter === "all" ||
+    (filter === "completed" && (state === "closed" || state === "merged")) ||
     (filter === "open" && (state === "open" || state === "draft")) ||
     filter === state
   );
@@ -42,15 +44,32 @@ export function updateCachedPullRequestState(
   prId: string,
   state: PullRequestListItem["pr_state"],
 ): void {
-  for (const [key, data] of queryClient.getQueriesData<PullRequestListResponse>({
+  const entries = queryClient.getQueriesData<PullRequestListResponse | InfiniteData<PullRequestListResponse>>({
     queryKey: ALL_PULL_REQUESTS_QUERY_KEY,
-  })) {
-    if (!data || !data.pullRequests.some((pr) => pr.prId === prId)) continue;
+  });
+  const source = entries.flatMap(([, data]) => !data ? [] :
+    "pages" in data ? data.pages.flatMap((page) => page.pullRequests) : data.pullRequests,
+  ).find((pr) => pr.prId === prId);
+  for (const [key, data] of entries) {
+    if (!data) continue;
     const filter = (key as QueryKey)[2];
-    const pullRequests = matchesStateFilter(state, filter)
-      ? data.pullRequests.map((pr) => (pr.prId === prId ? { ...pr, pr_state: state } : pr))
-      : data.pullRequests.filter((pr) => pr.prId !== prId);
-    queryClient.setQueryData(key, { ...data, pullRequests });
+    const updatePage = (page: PullRequestListResponse) => ({
+      ...page,
+      pullRequests: matchesStateFilter(state, filter)
+        ? page.pullRequests.map((pr) => pr.prId === prId ? { ...pr, pr_state: state } : pr)
+        : page.pullRequests.filter((pr) => pr.prId !== prId),
+    });
+    if ("pages" in data) {
+      const pages = data.pages.map(updatePage);
+      if (source && filter === "completed" && matchesStateFilter(state, filter) && pages[0] &&
+          !pages.some((page) => page.pullRequests.some((pr) => pr.prId === prId))) {
+        const items = [{ ...source, pr_state: state }, ...pages[0].pullRequests];
+        pages[0] = { ...pages[0], pullRequests: items.slice(0, COMPLETED_PULL_REQUESTS_PAGE), hasMore: pages[0].hasMore || items.length > COMPLETED_PULL_REQUESTS_PAGE };
+      }
+      queryClient.setQueryData(key, { ...data, pages });
+    } else if (data.pullRequests.some((pr) => pr.prId === prId)) {
+      queryClient.setQueryData(key, updatePage(data));
+    }
   }
 
   // The detail has its own cache, served by the forge. Let it wait for its
