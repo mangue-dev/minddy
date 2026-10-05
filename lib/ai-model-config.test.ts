@@ -25,7 +25,7 @@ const CATALOGS = { en, fr } as const;
 type FieldEntry = { label?: string; desc?: string };
 type GroupEntry = { title?: string; desc?: string };
 
-describe("registre des réglages IA × catalogues i18n", () => {
+describe("AI settings registry and i18n catalogs", () => {
   for (const [locale, messages] of Object.entries(CATALOGS)) {
     const fields = messages.Admin.fields as Record<string, FieldEntry>;
     const groups = messages.Admin.groups as Record<string, GroupEntry>;
@@ -48,7 +48,7 @@ describe("registre des réglages IA × catalogues i18n", () => {
     });
   }
 
-  it("décrit un réglage dans les deux langues ou dans aucune", () => {
+  it("describes a setting in both languages or neither", () => {
     const enFields = en.Admin.fields as Record<string, FieldEntry>;
     const frFields = fr.Admin.fields as Record<string, FieldEntry>;
     const diverging = AI_MODEL_CONFIG_FIELDS.filter(
@@ -76,5 +76,13 @@ describe("registre des réglages IA × catalogues i18n", () => {
     expect(keys.has("byok_default_anthropic_transcription_model")).toBe(false);
     expect(keys.has("byok_default_anthropic_feedback_embedding_model")).toBe(false);
     expect(keys.has("byok_default_google_feedback_embedding_model")).toBe(true);
+  });
+
+  it("defaults the OpenAI transcription fallback to a non-deprecated model", () => {
+    // `gpt-4o-mini-transcribe` was deprecated on 2026-08-26 (shutdown
+    // 2027-02-26); the OpenAI changelog names `gpt-transcribe` as its
+    // replacement on the same /audio/transcriptions endpoint.
+    const byKey = new Map(AI_MODEL_CONFIG_FIELDS.map((field) => [field.key, field]));
+    expect(byKey.get("byok_default_openai_transcription_model")?.fallback).toBe("gpt-transcribe");
   });
 });

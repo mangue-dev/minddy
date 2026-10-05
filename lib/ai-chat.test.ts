@@ -17,7 +17,7 @@ const base = {
 };
 
 describe("translateAiChatRequest", () => {
-  it("traduit OpenAI sans laisser passer le max_tokens historique", () => {
+  it("translates OpenAI without retaining the legacy max_tokens field", () => {
     const body = translateAiChatRequest({ ...base, stream: true }, "openai");
     expect(body).toMatchObject({
       max_completion_tokens: 1234,
@@ -59,7 +59,7 @@ describe("translateAiChatRequest", () => {
     expect(body).not.toHaveProperty("reasoning_effort");
   });
 
-  it("traduit Anthropic vers thinking, y compris via la couche compatible", () => {
+  it("translates Anthropic reasoning through the compatibility layer", () => {
     const body = translateAiChatRequest({ ...base, model: "claude-sonnet-5" }, "anthropic");
     expect(body).toMatchObject({
       max_completion_tokens: 1234,
@@ -69,7 +69,7 @@ describe("translateAiChatRequest", () => {
     expect(body).not.toHaveProperty("reasoning_effort");
   });
 
-  it("garde les variantes Anthropic model-aware", () => {
+  it("selects Anthropic reasoning settings by model family", () => {
     expect(
       translateAiChatRequest(
         { ...base, model: "claude-opus-4-6", reasoning: { effort: "medium" } },
@@ -100,7 +100,7 @@ describe("translateAiChatRequest", () => {
         "anthropic",
       ),
     ).toMatchObject({ thinking: { type: "disabled" } });
-    // Fable 5 / Mythos 5 / Mythos Preview refusent `thinking: {type: "disabled"}`
+    // Fable 5 / Mythos 5 / Mythos Preview reject `thinking: {type: "disabled"}`
     // (400): “off” does not send ANY fields, the model keeps its default.
     for (const model of [
       "claude-fable-5",
@@ -123,6 +123,60 @@ describe("translateAiChatRequest", () => {
     ).toMatchObject({ thinking: { type: "disabled" } });
   });
 
+  it("keeps Claude 5.5 families on their default when reasoning is off", () => {
+    // Claude Opus 5.5 / Sonnet 5.5 reject `thinking: {type: "disabled"}` with
+    // a 400 (Anthropic thinking page, per-model table): "off" sends nothing,
+    // the model keeps its always-on adaptive thinking.
+    for (const model of ["claude-opus-5-5", "claude-sonnet-5-5"]) {
+      expect(
+        translateAiChatRequest(
+          { ...base, model, reasoning: { effort: "off" } },
+          "anthropic",
+        ),
+      ).not.toHaveProperty("thinking");
+    }
+  });
+
+  it("downgrades forced tool choice on Anthropic families that reject it", () => {
+    const tools = [{ type: "function", function: { name: "write_tasks" } }];
+    const forced = { type: "function", function: { name: "write_tasks" } };
+    // Claude Opus 5.5 / Sonnet 5.5 / Fable 5.1 / Mythos 5.1 return a 400 for
+    // forced tool choice on every request; the documented path is `auto`.
+    for (const model of [
+      "claude-opus-5-5",
+      "claude-sonnet-5-5",
+      "claude-fable-5-1",
+      "claude-mythos-5-1",
+    ]) {
+      expect(
+        translateAiChatRequest(
+          { ...base, model, tools, toolChoice: forced },
+          "anthropic",
+        ).tool_choice,
+      ).toBe("auto");
+      expect(
+        translateAiChatRequest(
+          { ...base, model, tools, toolChoice: "required" },
+          "anthropic",
+        ).tool_choice,
+      ).toBe("auto");
+    }
+    // Families that still accept forced tool use keep it untouched.
+    expect(
+      translateAiChatRequest(
+        { ...base, model: "claude-fable-5", tools, toolChoice: forced },
+        "anthropic",
+      ).tool_choice,
+    ).toEqual(forced);
+    // "none" is never forced and must survive untouched.
+    expect(
+      translateAiChatRequest(
+        { ...base, model: "claude-opus-5-5", tools, toolChoice: "none" },
+        "anthropic",
+      ).tool_choice,
+    ).toBe("none");
+  });
+
   it("translates Gemini to reasoning_effort and its supported stream usage", () => {
     const body = translateAiChatRequest({ ...base, stream: true }, "google");
     expect(body).toMatchObject({
@@ -131,6 +185,26 @@ describe("translateAiChatRequest", () => {
       stream_options: { include_usage: true },
     });
     expect(body).not.toHaveProperty("usage");
+  });
+
+  it("preserves non-forced choices and other providers' tool restrictions", () => {
+    const tools = [{ type: "function", function: { name: "write_tasks" } }];
+    const request = { ...base, model: "claude-opus-5-5", tools };
+    for (const toolChoice of [
+      "auto",
+      "none",
+      { type: "allowed_tools", allowed_tools: { mode: "auto", tools } },
+    ]) {
+      expect(translateAiChatRequest({ ...request, toolChoice }, "anthropic").tool_choice)
+        .toEqual(toolChoice);
+    }
+    const required = { type: "allowed_tools", allowed_tools: { mode: "required", tools } };
+    expect(translateAiChatRequest({ ...request, toolChoice: required }, "anthropic").tool_choice)
+      .toBe("auto");
+    for (const provider of ["openai", "openrouter", "generic"] as const) {
+      expect(translateAiChatRequest({ ...request, toolChoice: required }, provider).tool_choice)
+        .toEqual(required);
+    }
   });
 
   it("stays conservative for a generic endpoint", () => {
@@ -162,7 +236,7 @@ describe("translateAiChatRequest", () => {
 });
 
 describe("translateLegacyAiChatBody", () => {
-  it("absorbe les alias d'opencode avant de les traduire", () => {
+  it("normalizes opencode aliases before translating them", () => {
     const body = translateLegacyAiChatBody(
       {
         model: "gpt-x",
@@ -185,10 +259,37 @@ describe("translateLegacyAiChatBody", () => {
     expect(body).not.toHaveProperty("reasoning");
     expect(body).not.toHaveProperty("usage");
   });
+
+  it("avoids rejected forced tool choices in Anthropic code-worker requests", () => {
+    const tools = [{ type: "function", function: { name: "write_tasks" } }];
+    for (const model of [
+      "claude-opus-5-5",
+      "claude-sonnet-5-5",
+      "claude-fable-5-1",
+      "claude-mythos-5-1",
+    ]) {
+      for (const tool_choice of ["required", tools[0]]) {
+        const body = translateLegacyAiChatBody(
+          { model, messages: [], tools, tool_choice }, "anthropic", "off",
+        );
+        expect(body.tool_choice).toBe("auto");
+        expect(body).not.toHaveProperty("thinking");
+        expect(body.tools).toEqual(tools);
+      }
+    }
+    expect(translateLegacyAiChatBody(
+      { model: "claude-fable-5", messages: [], tools, tool_choice: "required" },
+      "anthropic", "off",
+    ).tool_choice).toBe("required");
+    expect(translateLegacyAiChatBody(
+      { model: "claude-opus-5-5", messages: [], tools, tool_choice: "none" },
+      "anthropic",
+    ).tool_choice).toBe("none");
+  });
 });
 
 describe("alternateOutputTokenBody", () => {
-  it("change seulement l'alias explicitement rejeté", () => {
+  it("changes only the explicitly rejected alias", () => {
     expect(
       JSON.parse(
         alternateOutputTokenBody(
@@ -227,7 +328,7 @@ describe("repairRejectedAiChatBody", () => {
 });
 
 describe("aiChatProviderHeaders", () => {
-  it("n'ajoute que les en-têtes documentés par le profil", () => {
+  it("adds only the headers documented by the provider profile", () => {
     expect(aiChatProviderHeaders("openai", "x")).toEqual({});
     expect(aiChatProviderHeaders("anthropic", "x")).toEqual({});
     expect(aiChatProviderHeaders("openrouter", "Minddy")).toMatchObject({

@@ -10,13 +10,10 @@ import {
 import { SITE_URL } from "./site";
 
 /**
- * Contrat chat interne de minddy.
- *
- * Surfaces express an intention (`maxOutputTokens`, `reasoning`) and do not
- * never know the wire names of a supplier. Brand new option
- * commune must be entered here and then translated below; `extensions` remains
- * reserved for intentionally non-portable capabilities (OpenRouter web plugin,
- * par exemple).
+ * Shared chat contract for Numo, dictation, feedback, and integrations.
+ * Callers use provider-independent fields, translated below. Add common options
+ * here; reserve `extensions` for intentionally provider-specific capabilities,
+ * such as the OpenRouter web plugin.
  */
 export interface AiChatRequest {
   model: string;
@@ -56,20 +53,55 @@ function isManualThinkingClaude(model: string): boolean {
 }
 
 /**
- * Families where reasoning CANNOT be cut: `thinking: {type:
- * "disabled"}` returns to 400 (Fable 5, Mythos 5, Mythos Preview). The mode
- * “off” is not expressible there; we then do not send any field, which
- * lets the family default (thinking, anyway) apply.
+ * Families that reject `thinking: {type: "disabled"}` with a 400. At "off",
+ * omit the field and retain their default thinking behavior.
+ * Sonnet 5.5 also supports `between_tools` at effort `high` or below;
+ * this adapter conservatively preserves the family's default at "off".
  */
 function isAlwaysThinkingClaude(model: string): boolean {
   return (
     /^claude-(?:fable|mythos)-5(?:-|$)/i.test(model) ||
+    /^claude-(?:opus|sonnet)-5-5(?:-|$)/i.test(model) ||
     /^claude-mythos-preview(?:-|$)/i.test(model)
   );
 }
 
 function isGpt56(model: string): boolean {
   return /^gpt-5\.6(?:-|$)/i.test(model);
+}
+
+/**
+ * Families that reject forced tool choice with a 400 on every request:
+ * Claude Opus 5.5, Sonnet 5.5, Fable 5.1, and Mythos 5.1. Downgrade to `auto`
+ * at the compatibility boundary to keep these requests usable.
+ */
+function rejectsForcedToolChoice(model: string): boolean {
+  return (
+    /^claude-(?:opus|sonnet)-5-5(?:-|$)/i.test(model) ||
+    /^claude-(?:fable|mythos)-5-1(?:-|$)/i.test(model)
+  );
+}
+
+function isForcedOpenAiToolChoice(value: unknown): boolean {
+  if (value === "required") return true;
+  if (typeof value !== "object" || value === null) return false;
+  const choice = value as { type?: unknown; allowed_tools?: { mode?: unknown } };
+  return choice.type === "function" ||
+    (choice.type === "allowed_tools" && choice.allowed_tools?.mode === "required");
+}
+
+function normalizeProviderToolChoice(
+  body: Record<string, unknown>,
+  provider: AgentProviderId,
+): void {
+  if (
+    provider === "anthropic" &&
+    typeof body.model === "string" &&
+    rejectsForcedToolChoice(body.model) &&
+    isForcedOpenAiToolChoice(body.tool_choice)
+  ) {
+    body.tool_choice = "auto";
+  }
 }
 
 function anthropicReasoningFields(params: {
@@ -79,9 +111,10 @@ function anthropicReasoningFields(params: {
   maxOutputTokens?: number;
 }): Record<string, unknown> {
   if (params.effort === "off") {
-    // Fable 5 / Mythos 5 / Mythos Preview refusent `thinking: {type: "disabled"}`
-    // (400): reasoning is inexhaustible on these families, we therefore do not pose
-    // no field — the model falls back on its default (thinking).
+    // Fable 5 / Mythos 5 / Mythos Preview and the Claude 5.5 families refuse
+    // `thinking: {type: "disabled"}` (400): reasoning cannot be turned off on
+    // these families, so we send no field — the model falls back on its
+    // default (adaptive thinking).
     if (isAlwaysThinkingClaude(params.model)) return {};
     return isAdaptiveClaude(params.model) || isManualThinkingClaude(params.model)
       ? { thinking: { type: "disabled" } }
@@ -183,6 +216,8 @@ export function translateAiChatRequest(
       Boolean(request.tools?.length),
     ),
   );
+
+  normalizeProviderToolChoice(body, provider);
 
   if (profile.usageAccounting) body.usage = { include: true };
   if (request.stream && profile.streamUsage) {
@@ -305,6 +340,8 @@ export function translateLegacyAiChatBody(
       ),
     );
   }
+
+  normalizeProviderToolChoice(body, provider);
 
   if (profile.usageAccounting && body.usage === undefined) body.usage = { include: true };
   // This border is only used by the opencode client, which streams all its rounds.
