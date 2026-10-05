@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Add01Icon, FilterIcon, GitPullRequestIcon, Link02Icon, UserIcon, UserGroupIcon, TaskDone01Icon } from "@hugeicons/core-free-icons";
+import { Add01Icon, FilterIcon, GitPullRequestIcon, Link02Icon, UserGroupIcon, TaskDone01Icon } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
@@ -20,6 +20,8 @@ import {
 import { PrDetailSkeleton, PrListSkeleton } from "@/components/pull-requests/pr-loading-skeleton";
 import { EmptyScene } from "@/components/empty-scene";
 import { GitLogin } from "@/components/git/git-login";
+import { UserAvatar } from "@/components/user-avatar";
+import { useMyAvatarSource } from "@/lib/use-my-avatar";
 import { ForgeUserAvatar } from "@/components/git/forge-user-avatar";
 import { NumoIcon } from "@/components/numo-icon";
 import { linkedIssues } from "./pr-linked-issues";
@@ -103,11 +105,21 @@ const SECTION_LABELS: Record<PullRequestSection, MessageKey<"PullRequests">> = {
   completed: "sectionCompleted",
 };
 const SECTION_ICONS = {
-  created: UserIcon,
   review: GitPullRequestIcon,
   team: UserGroupIcon,
   completed: TaskDone01Icon,
 };
+
+function PrCreatedSectionAvatar() {
+  const source = useMyAvatarSource();
+  return <UserAvatar seed={source} className="size-4 shrink-0" />;
+}
+
+function PrSectionIcon({ section, className = "size-4 shrink-0 text-muted-foreground" }: { section: PullRequestSection; className?: string }) {
+  return section === "created"
+    ? <PrCreatedSectionAvatar />
+    : <HugeiconsIcon icon={SECTION_ICONS[section]} className={className} />;
+}
 
 /** Sections are independent toggles; changing one keeps the menu open. */
 function PrFilterMenu({
@@ -152,7 +164,7 @@ function PrFilterMenu({
             onSelect={() => onToggle(section)}
             {...checkedProps(sections.has(section))}
           >
-            <HugeiconsIcon icon={SECTION_ICONS[section]} className="size-4" />
+            <PrSectionIcon section={section} className="size-4" />
             <span className="truncate">{t(SECTION_LABELS[section])}</span>
           </CommandItem>
         ))}
@@ -317,7 +329,7 @@ function PrGroupRows({
     <SidebarProjectGroup
       project={null}
       fallbackLabel={t(SECTION_LABELS[group.key])}
-      headerIcon={<HugeiconsIcon icon={SECTION_ICONS[group.key]} className="size-4 shrink-0 text-muted-foreground" />}
+      headerIcon={<PrSectionIcon section={group.key} />}
       open={open}
       collapsible={collapsible}
       onToggle={onToggle}
