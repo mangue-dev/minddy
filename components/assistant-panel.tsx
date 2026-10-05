@@ -39,7 +39,7 @@ export function AssistantPanel() {
   // fall back to the ambient context of the page the user is on.
   const effectivePageContext = activePageContext ?? ambientContext;
   // The provider resolves the next message context and preserves the live response.
-  const { scopeProjectId, isBusy, restoring, loadConversation } =
+  const { state, scopeProjectId, isBusy, restoring, loadConversation } =
     useAssistantChatContext();
   const { projects } = useProjects();
 
@@ -188,6 +188,7 @@ export function AssistantPanel() {
             projectId={scopeProjectId}
             mobileSubtitle={activeProject?.name}
             compact
+            visible={isOpen && (!pendingOptions?.conversationId || pendingOptions.conversationId === state.conversationId)}
             displayMode={displayMode}
             onToggleDisplayMode={toggleDisplayMode}
             onClose={close}

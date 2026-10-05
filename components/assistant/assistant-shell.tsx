@@ -152,6 +152,8 @@ export interface AssistantShellProps {
   pageContext?: AssistantPageContext | null;
   /** Render one durable conversation inside another page without history chrome. */
   embeddedConversationId?: string | null;
+  /** False while the panel closes or prepares another conversation. */
+  visible?: boolean;
 }
 
 export const AssistantShell = forwardRef<
@@ -167,6 +169,7 @@ export const AssistantShell = forwardRef<
     onClose,
     pageContext = null,
     embeddedConversationId = null,
+    visible = true,
   },
   ref
 ) {
@@ -192,6 +195,7 @@ export const AssistantShell = forwardRef<
     abort,
     restoring,
     requestRestore,
+    markResponseRead,
     pinned,
     setPinned,
   } = useAssistantChatContext();
@@ -211,6 +215,12 @@ export const AssistantShell = forwardRef<
     }
     requestRestore();
   }, [embeddedConversationId, loadConversation, requestRestore, state.conversationId]);
+  useEffect(() => {
+    if (!visible || restoring || state.status !== "idle" || !state.conversationId) return;
+    if (embeddedConversationId && embeddedConversationId !== state.conversationId) return;
+    markResponseRead(state.conversationId);
+  }, [visible, restoring, state.status, state.conversationId, embeddedConversationId, markResponseRead]);
+
   // Portal target for the history popover. When the shell lives inside a modal
   // Sheet/Dialog, Radix's `react-remove-scroll` blocks wheel/touch scrolling on
   // anything portaled to <body> (outside its allowed subtree). Resolving the
