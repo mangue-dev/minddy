@@ -812,6 +812,7 @@ function PrInsightView({ insight, now }: { insight: PrInsight; now: Date }) {
       label={label}
       tone={insight.tone}
       testId={`pr-status-card-${insight.id}`}
+      showTitle={insight.id !== "deployment"}
       summary={<StatusSummary insight={insight} now={now} />}
     >
       <StatusDetails insight={insight} now={now} />
