@@ -2656,7 +2656,7 @@ html[data-desktop-platform="darwin"]
 /* ─── Toasts (sonner) — Geist-style solid status pills ──────────────────────
    Repaints every typed toast as a self-contained colored pill with white
    icon + text, after Vercel's Geist design system: blue for informational,
-   green for success, orange for warning, red for error — instantly
+   blue for confirmations, orange for warning, red for error — instantly
    scannable instead of the previous neutral card look shared by all types.
 
    HOW: sonner gates its per-type colors behind `richColors` and injects its
@@ -2674,7 +2674,7 @@ html[data-desktop-platform="darwin"]
    One palette for both themes: the pill carries its own foreground, so it
    interacts with neither page. Retune here, everything follows.
    Reference for design handoff:
-     info    #0070F3 · success #15803D · warning #DC5A00 · error #EE0000 */
+     info    #0070F3 · success #0070F3 · warning #DC5A00 · error #EE0000 */
 :root {
   --toast-info: #0070f3;
   --toast-success: #0070f3;
@@ -2719,6 +2719,8 @@ html[data-desktop-platform="darwin"]
 }
 
 [data-sonner-toaster]
+  [data-sonner-toast][data-styled="true"]:not([data-type]),
+[data-sonner-toaster]
   [data-sonner-toast][data-styled="true"][data-type="default"] {
   background: var(--toast-info);
   border-color: var(--toast-info);
@@ -2751,6 +2753,70 @@ html[data-desktop-platform="darwin"]
   background: var(--toast-error);
   border-color: var(--toast-error);
   color: #fff;
+}
+
+/* The portal lands in the pane, outside <main>, so scrolling never moves it.
+   Sidebar resizing and the ultrawide canvas resize this containing block. */
+.app-shell > div.flex.min-h-0.min-w-0.flex-1.flex-col {
+  position: relative;
+}
+
+.content-toaster[data-sonner-toaster][data-x-position="center"] {
+  position: absolute;
+  left: 50%;
+  right: auto;
+  bottom: 1rem;
+  width: calc(100% - 2rem);
+  max-width: 26rem;
+  transform: translateX(-50%);
+  /* Keep action feedback readable above elevated dialogs and menus. */
+  z-index: 1200;
+}
+
+.content-toaster[data-sonner-toaster] [data-sonner-toast][data-styled="true"] {
+  left: 50%;
+  right: auto;
+  translate: -50% 0;
+  width: fit-content;
+  max-width: 100%;
+  min-height: 32px;
+  padding: 6px 40px 6px 12px;
+  gap: 8px;
+  border-radius: 9999px;
+}
+
+.content-toaster[data-sonner-toaster] [data-sonner-toast][data-styled="true"] [data-content] {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+.content-toaster[data-sonner-toaster] [data-sonner-toast][data-styled="true"] [data-title],
+.content-toaster[data-sonner-toaster] [data-sonner-toast][data-styled="true"] [data-description] {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  line-height: 20px;
+  color: inherit;
+}
+
+.content-toaster[data-sonner-toaster] [data-icon],
+.content-toaster[data-sonner-toaster] [data-button] {
+  flex-shrink: 0;
+}
+
+@media (width < 768px) {
+  .content-toaster[data-sonner-toaster][data-x-position="center"] {
+    bottom: calc(var(--mobile-nav-clearance) + 1rem);
+  }
 }
 
 /* The full-width application bar and lower workspace share one viewport. */

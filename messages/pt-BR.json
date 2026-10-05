@@ -1,9 +1,4 @@
 {
-  "StatusLine": {
-    "bellLabel": "Erros recentes",
-    "historyTitle": "Erros recentes",
-    "clear": "Limpar"
-  },
   "Scratchpad": {
     "actions": "Ações do caderno",
     "title": "Caderno de tarefas",
