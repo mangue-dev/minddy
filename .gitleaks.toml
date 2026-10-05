@@ -1,6 +1,14 @@
 title = "Minddy public-repository secret and data-marker policy"
 
 [[allowlists]]
+description = "Exact illustrative invitation address in the Numo audit, not an account or contact."
+targetRules = ["minddy-personal-email-marker"]
+condition = "AND"
+paths = ['''(?:^|/)docs/audits/numo-2026-10-05\.md$''']
+regexTarget = "secret"
+regexes = ['''^paul@nouveau-domaine\.com$''']
+
+[[allowlists]]
 description = "Exact synthetic key sentinel in the production key-provisioning regression."
 targetRules = ["generic-api-key"]
 condition = "AND"
