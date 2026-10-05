@@ -77,4 +77,12 @@ describe("registre des réglages IA × catalogues i18n", () => {
     expect(keys.has("byok_default_anthropic_feedback_embedding_model")).toBe(false);
     expect(keys.has("byok_default_google_feedback_embedding_model")).toBe(true);
   });
+
+  it("defaults the OpenAI transcription fallback to a non-deprecated model", () => {
+    // `gpt-4o-mini-transcribe` was deprecated on 2026-08-26 (shutdown
+    // 2027-02-26); the OpenAI changelog names `gpt-transcribe` as its
+    // replacement on the same /audio/transcriptions endpoint.
+    const byKey = new Map(AI_MODEL_CONFIG_FIELDS.map((field) => [field.key, field]));
+    expect(byKey.get("byok_default_openai_transcription_model")?.fallback).toBe("gpt-transcribe");
+  });
 });

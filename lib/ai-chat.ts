@@ -57,19 +57,44 @@ function isManualThinkingClaude(model: string): boolean {
 
 /**
  * Families where reasoning CANNOT be cut: `thinking: {type:
- * "disabled"}` returns to 400 (Fable 5, Mythos 5, Mythos Preview). The mode
- * “off” is not expressible there; we then do not send any field, which
- * lets the family default (thinking, anyway) apply.
+ * "disabled"}` returns to 400 (Fable 5, Mythos 5, Mythos Preview, and the
+ * Claude 5.5 families). The mode "off" is not expressible there; we then do
+ * not send any field, which lets the family default (thinking, anyway)
+ * apply. Sonnet 5.5 knows a lower setting, `thinking: {type:
+ * "between_tools"}`, but it only holds at effort `high` or below and minddy
+ * never sends an effort value — omitting the field is the only safe "off".
  */
 function isAlwaysThinkingClaude(model: string): boolean {
   return (
     /^claude-(?:fable|mythos)-5(?:-|$)/i.test(model) ||
+    /^claude-(?:opus|sonnet)-5-5(?:-|$)/i.test(model) ||
     /^claude-mythos-preview(?:-|$)/i.test(model)
   );
 }
 
 function isGpt56(model: string): boolean {
   return /^gpt-5\.6(?:-|$)/i.test(model);
+}
+
+/**
+ * Families that reject forced tool choice (`tool_choice: "required"` or a
+ * named tool) with a 400 on EVERY request, thinking on or off (Claude
+ * Opus 5.5, Sonnet 5.5, Fable 5.1, Mythos 5.1). Anthropic's documented path
+ * on those families is `auto` with strict tool use; minddy sends no strict
+ * schemas, so the call degrades to `auto` instead of dying on a 400.
+ */
+function rejectsForcedToolChoice(model: string): boolean {
+  return (
+    /^claude-(?:opus|sonnet)-5-5(?:-|$)/i.test(model) ||
+    /^claude-(?:fable|mythos)-5-1(?:-|$)/i.test(model)
+  );
+}
+
+function isForcedOpenAiToolChoice(value: unknown): boolean {
+  if (value === "required") return true;
+  if (typeof value !== "object" || value === null) return false;
+  const type = (value as { type?: unknown }).type;
+  return type === "function" || type === "allowed_tools";
 }
 
 function anthropicReasoningFields(params: {
@@ -79,9 +104,10 @@ function anthropicReasoningFields(params: {
   maxOutputTokens?: number;
 }): Record<string, unknown> {
   if (params.effort === "off") {
-    // Fable 5 / Mythos 5 / Mythos Preview refusent `thinking: {type: "disabled"}`
-    // (400): reasoning is inexhaustible on these families, we therefore do not pose
-    // no field — the model falls back on its default (thinking).
+    // Fable 5 / Mythos 5 / Mythos Preview and the Claude 5.5 families refuse
+    // `thinking: {type: "disabled"}` (400): reasoning cannot be turned off on
+    // these families, so we send no field — the model falls back on its
+    // default (adaptive thinking).
     if (isAlwaysThinkingClaude(params.model)) return {};
     return isAdaptiveClaude(params.model) || isManualThinkingClaude(params.model)
       ? { thinking: { type: "disabled" } }
@@ -183,6 +209,14 @@ export function translateAiChatRequest(
       Boolean(request.tools?.length),
     ),
   );
+
+  if (
+    provider === "anthropic" &&
+    rejectsForcedToolChoice(request.model) &&
+    isForcedOpenAiToolChoice(body.tool_choice)
+  ) {
+    body.tool_choice = "auto";
+  }
 
   if (profile.usageAccounting) body.usage = { include: true };
   if (request.stream && profile.streamUsage) {

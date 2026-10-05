@@ -123,6 +123,60 @@ describe("translateAiChatRequest", () => {
     ).toMatchObject({ thinking: { type: "disabled" } });
   });
 
+  it("keeps Claude 5.5 families on their default when reasoning is off", () => {
+    // Claude Opus 5.5 / Sonnet 5.5 reject `thinking: {type: "disabled"}` with
+    // a 400 (Anthropic thinking page, per-model table): "off" sends nothing,
+    // the model keeps its always-on adaptive thinking.
+    for (const model of ["claude-opus-5-5", "claude-sonnet-5-5"]) {
+      expect(
+        translateAiChatRequest(
+          { ...base, model, reasoning: { effort: "off" } },
+          "anthropic",
+        ),
+      ).not.toHaveProperty("thinking");
+    }
+  });
+
+  it("downgrades forced tool choice on Anthropic families that reject it", () => {
+    const tools = [{ type: "function", function: { name: "write_tasks" } }];
+    const forced = { type: "function", function: { name: "write_tasks" } };
+    // Claude Opus 5.5 / Sonnet 5.5 / Fable 5.1 / Mythos 5.1 return a 400 for
+    // forced tool choice on every request; the documented path is `auto`.
+    for (const model of [
+      "claude-opus-5-5",
+      "claude-sonnet-5-5",
+      "claude-fable-5-1",
+      "claude-mythos-5-1",
+    ]) {
+      expect(
+        translateAiChatRequest(
+          { ...base, model, tools, toolChoice: forced },
+          "anthropic",
+        ).tool_choice,
+      ).toBe("auto");
+      expect(
+        translateAiChatRequest(
+          { ...base, model, tools, toolChoice: "required" },
+          "anthropic",
+        ).tool_choice,
+      ).toBe("auto");
+    }
+    // Families that still accept forced tool use keep it untouched.
+    expect(
+      translateAiChatRequest(
+        { ...base, model: "claude-fable-5", tools, toolChoice: forced },
+        "anthropic",
+      ).tool_choice,
+    ).toEqual(forced);
+    // "none" is never forced and must survive untouched.
+    expect(
+      translateAiChatRequest(
+        { ...base, model: "claude-opus-5-5", tools, toolChoice: "none" },
+        "anthropic",
+      ).tool_choice,
+    ).toBe("none");
+  });
+
   it("translates Gemini to reasoning_effort and its supported stream usage", () => {
     const body = translateAiChatRequest({ ...base, stream: true }, "google");
     expect(body).toMatchObject({

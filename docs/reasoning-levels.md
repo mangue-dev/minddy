@@ -63,8 +63,13 @@ no longer carries a decision specific to a surface.
 | **Generic** (OpenAI-compatible) | base URL entered | *(none)* | **nothing, never** |
 
 At `off`, no fields are sent to OpenRouter/OpenAI/Gemini/generic. On a
-Claude family recognized, the adapter explicitly sends
+Claude family that accepts it, the adapter explicitly sends
 `thinking: { type: "disabled" }`, because Claude 5 can reason by default.
+The families that refuse the field with a 400 (Fable 5, Mythos 5, Mythos
+Preview, Claude Opus 5.5, Claude Sonnet 5.5) get no field at all: their
+default thinking stays on. On those same families the adapter also
+rewrites a forced `tool_choice` (`required` or a named tool) to `auto`,
+because they reject forced tool use with a 400 on every request.
 
 OpenAI GPT-5.6 exception: as soon as Chat Completions contains function tools,
 the adapter sends `reasoning_effort: "none"`, regardless of the level chosen.
