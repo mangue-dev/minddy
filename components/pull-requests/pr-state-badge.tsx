@@ -107,7 +107,7 @@ export function PrStateControl({ state, canChange, disabled, onChange }: {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        {(["open", "draft", "closed"] as const).map((next) => (
+        {(["draft", "open", "closed"] as const).map((next) => (
           <DropdownMenuItem
             key={next}
             disabled={next === state}
