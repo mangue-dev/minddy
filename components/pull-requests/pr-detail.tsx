@@ -37,7 +37,7 @@ import { ProjectOrb } from "@/components/project-orb";
 import { projectOrbSeed } from "@/lib/project-orb-colors";
 import { PrActivitySkeleton, PrFilesSkeleton, PrHeaderActionsSkeleton, PrMetadataSkeleton, PrStatusSkeleton } from "@/components/pull-requests/pr-loading-skeleton";
 import { QueryReadBoundary } from "@/components/query-read-boundary";
-import { PrCommits } from "@/components/pull-requests/pr-commits";
+import { PrCommitsPopover } from "@/components/pull-requests/pr-commits";
 import { PrCommentComposer } from "@/components/pull-requests/pr-comment-composer";
 import { PrDiff } from "@/components/pull-requests/pr-diff";
 import { PrLinkIssue } from "@/components/pull-requests/pr-link-issue";
@@ -144,8 +144,8 @@ import {
 
 /**
  * PR detail panel (MIN-66 + MIN-138 + MIN-143): header (ticket +
- * status + actions), insight properties, standalone description, and tabs
- * for activity, commits, and modified files.
+ * status + actions), insight properties, and tabs for description/activity
+ * and changes, with commits in the diff toolbar.
  * Everything is controlled by `item.prId`: since MIN-143 the PR no longer belongs to the run
  * who opened it, and a human PR has none.
  *
@@ -1977,8 +1977,8 @@ export function PrDetail({
           diff file should otherwise stop 2rem lower to remain clear,
           and a header that floats 32 px from the edge is seen. The fade says “there is
           text above” — the sticky header says it better, and naming the
-          file. Under the other two tabs it remains, there is nothing sticking
-          to protect.
+          file. The description/activity tab keeps the fade because it has
+          no sticky file headers.
 
           `onScroll` continues to run: the measure costs nothing and the fade
           just returns, without missed transitions, as soon as you change tabs. */}
@@ -2132,46 +2132,7 @@ export function PrDetail({
             />
           )}
 
-          {!loading && prDescription ? (
-            <ThreadComment
-              presentation="description"
-              endpoint={prEndpoint(item.prId)}
-              commentId={PR_BODY_COMMENT_ID}
-              user={pr?.user ?? null}
-              createdAt={pr?.createdAt ?? null}
-              updatedAt={pr?.updatedAt ?? null}
-              body={prDescription}
-              // Like on the forge: the AUTHOR rewrites the
-              // description — Numo's PRs stay read-only, the agent
-              // retells them himself.
-              canEdit={
-                canComment &&
-                !!viewer?.login &&
-                !!pr?.user?.login &&
-                pr.user.login.toLowerCase() === viewer.login.toLowerCase() &&
-                !item.runId
-              }
-              onSave={async (next) => {
-                await maintainPullRequestApi(item.prId, "update_body", {
-                  body: next,
-                });
-              }}
-              onEdited={() => void refetchPr()}
-              // Quoting returns to the activity tab, where the composer lives.
-              onQuoteReply={
-                canComment
-                  ? () => {
-                    setTab("activity");
-                    quoteReply(prDescription, pr?.user?.login);
-                  }
-                  : undefined
-              }
-              reactions={threadReactions}
-              forceBot={!!item.runId}
-            />
-          ) : null}
-
-          {/* GitHub style tabs: the thread on one side, the code on the other. */}
+          {/* Navigation precedes both panels, regardless of description length. */}
           <Tabs
             value={tab}
             onValueChange={(v) => {
@@ -2183,123 +2144,144 @@ export function PrDetail({
           >
             <TabsList variant="line" className={TAB_LIST_DENSE}>
               <TabsTrigger value="activity" className={cn(TAB_TRIGGER_DENSE, "gap-1.5")}>
-                {t("tabActivity")}
+                {t("tabDescriptionActivity")}
                 {conversationCount > 0 ? (
                   <span className="text-xs text-muted-foreground">{conversationCount}</span>
                 ) : null}
               </TabsTrigger>
-              {/* Commits BEFORE files, like on GitHub: we read what
-                  dials the PR before entering the code it changes. */}
-              <TabsTrigger value="commits" className={cn(TAB_TRIGGER_DENSE, "gap-1.5")}>
-                {t("tabCommits")}
-                {commits.length > 0 ? (
-                  <span className="text-xs text-muted-foreground">{commits.length}</span>
-                ) : null}
-              </TabsTrigger>
               <TabsTrigger value="files" className={cn(TAB_TRIGGER_DENSE, "gap-1.5")}>
-                {t("tabFiles")}
+                {t("tabChanges")}
                 {files.length > 0 ? (
                   <span className="text-xs text-muted-foreground">{files.length}</span>
                 ) : null}
               </TabsTrigger>
             </TabsList>
 
-            {/* Activity contains forge events and comments, followed by the composer. */}
-            <TabsContent value="activity" className="mt-4 flex flex-col gap-3">
-              {loading || commentsLoading ? (
-                <PrActivitySkeleton />
-              ) : feed.length === 0 && !reviewCommentsLoading ? (
-                <p className="text-sm text-muted-foreground">{t("noComments")}</p>
-              ) : (
-                // MIN-548: the activity is a plain stack of cards and lines —
-                // no vertical rail, no markers. The one line of an event reads
-                // from left to right, and a card is a card, like the ticket
-                // timeline.
-                <div data-testid="pr-activity-timeline" className="flex flex-col gap-3">
-                  {feed.map((entry) => {
-                    if (entry.kind === "event") {
-                      return <PrTimelineRow key={entry.key} event={entry.event} />;
-                    }
-                    if (entry.kind === "review") {
-                      return (
-                        <PrTimelineReview
-                          key={entry.key}
-                          event={entry.event}
-                          comments={entry.comments}
-                          endpoint={prEndpoint(item.prId)}
-                          threadStates={reviewThreads}
-                          canComment={!!canComment}
-                          canResolve={!!canWrite}
-                          onChanged={refreshReviewState}
-                          onResolutionChanged={refetchPr}
-                        />
-                      );
-                    }
-                    const c = entry.comment;
-                    // Editing stays on the person's OWN message (MIN-548):
-                    // same login at the forge, a connected account, and never
-                    // a bot's — Numo's messages are read-only.
-                    // Forge logins are CASE-INSENSITIVE (GitHub normalizes
-                    // nothing in its payloads): compare lowercased, or an
-                    // author whose login capitalizes differently would lose
-                    // the edit gesture on their own words.
-                    const canEdit =
-                      canComment &&
-                      !!viewer?.login &&
-                      c.user?.login?.toLowerCase() === viewer.login.toLowerCase() &&
-                      !isNumoComment(c.user?.login);
-                    return (
-                      <ThreadComment
-                        key={entry.key}
-                        endpoint={prEndpoint(item.prId)}
-                        commentId={c.id}
-                        user={c.user}
-                        createdAt={c.created_at}
-                        updatedAt={c.updated_at}
-                        body={c.body}
-                        canEdit={canEdit}
-                        onEdited={() => void refetchComments()}
-                        onQuoteReply={
-                          canComment
-                            ? () => quoteReply(c.body ?? "", c.user?.login)
-                            : undefined
-                        }
-                        quotingNumo={isNumoComment(c.user?.login)}
-                        forceBot={isNumoComment(c.user?.login)}
-                        reactions={threadReactions}
-                      />
-                    );
-                   })}
-                 </div>
-               )}
-
-              {!loading && !commentsLoading && reviewCommentsLoading ? <PrActivitySkeleton /> : null}
-
-              {canComment ? (
-                <div data-testid="pr-comment-composer-region" className="pt-1">
-                  <PrCommentComposer
-                    endpoint={prEndpoint(item.prId)}
-                    value={commentBody}
-                    onChange={setCommentBody}
-                    onSubmit={() => void submitComment()}
-                    posting={posting}
-                    placeholder={t("commentPlaceholder")}
-                    submitLabel={t("postComment")}
-                    focusSignal={quoteFocus}
-                  />
-                </div>
+            <TabsContent value="activity" className="mt-4 flex flex-col gap-6">
+              {!loading && prDescription ? (
+                <ThreadComment
+                  presentation="description"
+                  endpoint={prEndpoint(item.prId)}
+                  commentId={PR_BODY_COMMENT_ID}
+                  user={pr?.user ?? null}
+                  createdAt={pr?.createdAt ?? null}
+                  updatedAt={pr?.updatedAt ?? null}
+                  body={prDescription}
+                  // Like on the forge: the AUTHOR rewrites the
+                  // description — Numo's PRs stay read-only, the agent
+                  // retells them himself.
+                  canEdit={
+                    canComment &&
+                    !!viewer?.login &&
+                    !!pr?.user?.login &&
+                    pr.user.login.toLowerCase() === viewer.login.toLowerCase() &&
+                    !item.runId
+                  }
+                  onSave={async (next) => {
+                    await maintainPullRequestApi(item.prId, "update_body", {
+                      body: next,
+                    });
+                  }}
+                  onEdited={() => void refetchPr()}
+                  // Quoting returns to the activity tab, where the composer lives.
+                  onQuoteReply={
+                    canComment
+                      ? () => {
+                        setTab("activity");
+                        quoteReply(prDescription, pr?.user?.login);
+                      }
+                      : undefined
+                  }
+                  reactions={threadReactions}
+                  forceBot={!!item.runId}
+                />
               ) : null}
 
-            </TabsContent>
+              <div className="flex flex-col gap-3">
+                {loading || commentsLoading ? (
+                  <PrActivitySkeleton />
+                ) : feed.length === 0 && !reviewCommentsLoading ? (
+                  <p className="text-sm text-muted-foreground">{t("noComments")}</p>
+                ) : (
+                  // MIN-548: the activity is a plain stack of cards and lines —
+                  // no vertical rail, no markers. The one line of an event reads
+                  // from left to right, and a card is a card, like the ticket
+                  // timeline.
+                  <div data-testid="pr-activity-timeline" className="flex flex-col gap-3">
+                    {feed.map((entry) => {
+                      if (entry.kind === "event") {
+                        return <PrTimelineRow key={entry.key} event={entry.event} />;
+                      }
+                      if (entry.kind === "review") {
+                        return (
+                          <PrTimelineReview
+                            key={entry.key}
+                            event={entry.event}
+                            comments={entry.comments}
+                            endpoint={prEndpoint(item.prId)}
+                            threadStates={reviewThreads}
+                            canComment={!!canComment}
+                            canResolve={!!canWrite}
+                            onChanged={refreshReviewState}
+                            onResolutionChanged={refetchPr}
+                          />
+                        );
+                      }
+                      const c = entry.comment;
+                      // Editing stays on the person's OWN message (MIN-548):
+                      // same login at the forge, a connected account, and never
+                      // a bot's — Numo's messages are read-only.
+                      // Forge logins are CASE-INSENSITIVE (GitHub normalizes
+                      // nothing in its payloads): compare lowercased, or an
+                      // author whose login capitalizes differently would lose
+                      // the edit gesture on their own words.
+                      const canEdit =
+                        canComment &&
+                        !!viewer?.login &&
+                        c.user?.login?.toLowerCase() === viewer.login.toLowerCase() &&
+                        !isNumoComment(c.user?.login);
+                      return (
+                        <ThreadComment
+                          key={entry.key}
+                          endpoint={prEndpoint(item.prId)}
+                          commentId={c.id}
+                          user={c.user}
+                          createdAt={c.created_at}
+                          updatedAt={c.updated_at}
+                          body={c.body}
+                          canEdit={canEdit}
+                          onEdited={() => void refetchComments()}
+                          onQuoteReply={
+                            canComment
+                              ? () => quoteReply(c.body ?? "", c.user?.login)
+                              : undefined
+                          }
+                          quotingNumo={isNumoComment(c.user?.login)}
+                          forceBot={isNumoComment(c.user?.login)}
+                          reactions={threadReactions}
+                        />
+                      );
+                    })}
+                  </div>
+                )}
 
-            <TabsContent value="commits" className="mt-4">
-              <PrCommits
-                prId={item.prId}
-                commits={commits}
-                truncated={commitsTruncated}
-                loading={commitsLoading}
-                provider={item.provider}
-              />
+                {!loading && !commentsLoading && reviewCommentsLoading ? <PrActivitySkeleton /> : null}
+
+                {canComment ? (
+                  <div data-testid="pr-comment-composer-region" className="pt-1">
+                    <PrCommentComposer
+                      endpoint={prEndpoint(item.prId)}
+                      value={commentBody}
+                      onChange={setCommentBody}
+                      onSubmit={() => void submitComment()}
+                      posting={posting}
+                      placeholder={t("commentPlaceholder")}
+                      submitLabel={t("postComment")}
+                      focusSignal={quoteFocus}
+                    />
+                  </div>
+                ) : null}
+              </div>
             </TabsContent>
 
             <TabsContent value="files" className="mt-4">
@@ -2330,6 +2312,16 @@ export function PrDetail({
                     reviewReactions={reviewReactions}
                     onCommentPosted={refreshReviewState}
                     onThreadResolved={refetchPr}
+                    toolbarActions={
+                      <PrCommitsPopover
+                        prId={item.prId}
+                        commits={commits}
+                        commitCount={pr.commitCount}
+                        truncated={commitsTruncated}
+                        loading={commitsLoading}
+                        provider={item.provider}
+                      />
+                    }
                     reviewControls={
                       canComment ? (
                         <div data-testid="pr-file-review-toolbar" className="flex items-center gap-2">

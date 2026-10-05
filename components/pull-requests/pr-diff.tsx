@@ -887,6 +887,7 @@ export function PrDiff({
   reviewedFiles,
   onFileReviewedChange,
   reviewControls,
+  toolbarActions,
   expandableContext = true,
   canResolve = !readOnly,
   reviewComments = NO_COMMENTS,
@@ -913,6 +914,8 @@ export function PrDiff({
       count — the PR page puts its review toggle there so the whole Files
       tab stays one compact line instead of stacking a second bar. */
   reviewControls?: ReactNode;
+  /** Additional navigation actions, such as the PR commits popover. */
+  toolbarActions?: ReactNode;
   /** Allow lazy loading of context out of hunk. */
   expandableContext?: boolean;
   /** Solve a thread, governed APART (MIN-144): comment request `read` on
@@ -1084,6 +1087,7 @@ export function PrDiff({
               totalDeletions={totalDel}
               onSelect={jumpToFile}
             />
+            {toolbarActions}
             {reviewControls}
             <div className="ml-auto flex shrink-0 items-center gap-2">
               <AppTooltip label={t("wrapLines")}>

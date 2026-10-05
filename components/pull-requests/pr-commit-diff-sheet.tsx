@@ -1,5 +1,6 @@
 "use client";
 
+import type { ComponentProps } from "react";
 import { useTranslations } from "next-intl";
 import {
   SidePanel,
@@ -35,6 +36,7 @@ export function PrCommitDiffSheet({
   open,
   provider,
   onOpenChange,
+  onCloseAutoFocus,
 }: {
   prId: string;
   /**
@@ -46,6 +48,7 @@ export function PrCommitDiffSheet({
   open: boolean;
   provider: RepoProviderId;
   onOpenChange: (open: boolean) => void;
+  onCloseAutoFocus?: ComponentProps<typeof SidePanelContent>["onCloseAutoFocus"];
 }) {
   const t = useTranslations("PullRequests");
   // `enabled` on `open`: close should not restart the request, but
@@ -58,6 +61,7 @@ export function PrCommitDiffSheet({
     <SidePanel open={open} onOpenChange={onOpenChange}>
       <SidePanelContent
         side="right"
+        onCloseAutoFocus={onCloseAutoFocus}
         className="w-[min(880px,calc(100vw-2rem))]"
       >
         <SidePanelHeader>

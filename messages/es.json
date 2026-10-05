@@ -3718,6 +3718,8 @@
     "close": "Cerrar",
     "closePullRequest": "Cerrar pull request",
     "prUnavailable": "Esta pull request no está disponible.",
+    "tabDescriptionActivity": "Descripción y actividad",
+    "tabChanges": "Cambios",
     "tabActivity": "Actividad",
     "tabCommits": "Commits",
     "tabFiles": "Archivos cambiados",

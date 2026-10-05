@@ -715,12 +715,8 @@ async function capture({ locale, theme }) {
 
     }
 
-    // Files tab: designated by its translated label, which carries the file
-    // counter reconstructed from the fixture. A raw rank no longer works:
-    // the sidebar's PR list item now carries the `tab` role too, so the
-    // Files tab is the FOURTH `tab` — rank 3 opens the commits list and the
-    // diff check fails without saying why.
-    const filesLabel = (await catalog(locale)).PullRequests.tabFiles;
+    // Select Changes by its translated label: sidebar items also use the tab role.
+    const filesLabel = (await catalog(locale)).PullRequests.tabChanges;
     const filesTab = page.getByRole("tab", { name: new RegExp(filesLabel.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")) });
     await filesTab.click();
     if ((await filesTab.getAttribute("aria-selected")) !== "true") {
