@@ -1,6 +1,6 @@
 # Numo code-worker reasoning, provider by provider
 
-> **Date**: 2026-07-29, reviewed on 2026-08-11 · **Ticket**: MIN-122
+> **Date**: 2026-07-29, reviewed on 2026-10-05 · **Ticket**: MIN-122
 >
 > What the user chooses, what really goes on the thread, and what is
 > passes when the model in front does not want it.
@@ -63,8 +63,16 @@ no longer carries a decision specific to a surface.
 | **Generic** (OpenAI-compatible) | base URL entered | *(none)* | **nothing, never** |
 
 At `off`, no fields are sent to OpenRouter/OpenAI/Gemini/generic. On a
-Claude family recognized, the adapter explicitly sends
+Claude family that accepts it, the adapter explicitly sends
 `thinking: { type: "disabled" }`, because Claude 5 can reason by default.
+The families that refuse the field with a 400 (Fable 5, Mythos 5, Mythos
+Preview, Claude Opus 5.5, Claude Sonnet 5.5) get no field at all: their
+default thinking stays on. Claude Opus 5.5, Sonnet 5.5, Fable 5.1, and Mythos 5.1
+also reject forced tool use on every request. Both the shared chat adapter and
+the code-worker compatibility adapter downgrade forced `tool_choice` to `auto`
+on those families; non-forced choices remain unchanged. Earlier Fable 5 and
+Mythos 5 keep forced tool use. See the
+[Anthropic thinking reference](https://platform.claude.com/docs/en/build-with-claude/thinking).
 
 OpenAI GPT-5.6 exception: as soon as Chat Completions contains function tools,
 the adapter sends `reasoning_effort: "none"`, regardless of the level chosen.
