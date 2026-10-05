@@ -423,7 +423,7 @@ export function useAllPullRequestsQuery(
   limit: number = PULL_REQUESTS_PAGE,
   pin?: PullRequestPin,
 ) {
-  const { data, isPending, isFetching, refetch } = useQuery({
+  const { data, isPending, isFetching, isPlaceholderData, refetch } = useQuery({
     queryKey: allPullRequestsQueryKey(state, limit, pin),
     queryFn: ({ client }) => { assertPullRequestReadBudget(client); return fetchAllPullRequestsApi({ state, limit, pin }); },
     retry: pullRequestReadRetry,
@@ -440,6 +440,7 @@ export function useAllPullRequestsQuery(
     pullRequests: data?.pullRequests ?? [],
     hasMore: data?.hasMore ?? false,
     truncated: data?.truncated ?? false,
+    loadingMore: isFetching && isPlaceholderData,
     repoCount: data?.repoCount ?? 0,
     anyPr: data?.anyPr ?? false,
     loading: isPending,

@@ -8,14 +8,19 @@ function Skeleton({ className, ...props }: ComponentProps<typeof BaseSkeleton>) 
 }
 
 /** Match the grouped sidebar rows, including their metadata and status badges. */
-export function PrListSkeleton() {
+export function PrListSkeleton({
+  rows = 5,
+  showHeading = true,
+}: { rows?: number; showHeading?: boolean }) {
   return (
     <div aria-hidden data-testid="pr-list-skeleton" className="flex flex-col gap-2 pt-2 pb-4">
-      <div className="flex items-center gap-2 px-2 py-1">
-        <Skeleton className="size-4 rounded" />
-        <Skeleton className="h-4 w-28" />
-      </div>
-      {Array.from({ length: 5 }, (_, i) => (
+      {showHeading ? (
+        <div className="flex items-center gap-2 px-2 py-1">
+          <Skeleton className="size-4 rounded" />
+          <Skeleton className="h-4 w-28" />
+        </div>
+      ) : null}
+      {Array.from({ length: rows }, (_, i) => (
         <div key={i} className="flex flex-col gap-2 rounded-lg py-2 pr-2 pl-8">
           <div className="flex items-center justify-between gap-3">
             <Skeleton className="h-3 w-20" />

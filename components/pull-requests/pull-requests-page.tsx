@@ -30,6 +30,7 @@ import { AppTooltip } from "@/components/ui/app-tooltip";
 import { ProjectOrb } from "@/components/project-orb";
 import { projectOrbSeed } from "@/lib/project-orb-colors";
 import {
+  COMPLETED_PULL_REQUESTS_PAGE,
   DEFAULT_PULL_REQUEST_SECTIONS,
   PULL_REQUEST_SECTIONS,
   pullRequestSection,
@@ -111,11 +112,9 @@ const SECTION_ICONS = {
 /** Sections are independent toggles; changing one keeps the menu open. */
 function PrFilterMenu({
   sections,
-  fetching,
   onToggle,
 }: {
   sections: ReadonlySet<string>;
-  fetching: boolean;
   onToggle: (section: PullRequestSection) => void;
 }) {
   const t = useTranslations("PullRequests");
@@ -134,14 +133,9 @@ function PrFilterMenu({
           size="icon-sm"
           className={cn(SIDEBAR_COMPACT_CONTROL_CLASS, "-mr-2")}
           aria-label={t("filterSections")}
-          aria-busy={fetching}
         >
           <span className="relative flex items-center justify-center">
-            {fetching ? (
-              <Spinner aria-hidden className="size-[18px]" data-testid="pr-filter-loading" />
-            ) : (
-              <HugeiconsIcon icon={FilterIcon} className="size-[18px]" />
-            )}
+            <HugeiconsIcon icon={FilterIcon} className="size-[18px]" />
             {active ? (
               <span aria-hidden className="absolute -top-0.5 -right-0.5 size-1.5 rounded-full bg-primary ring-2 ring-sidebar" />
             ) : null}
@@ -288,6 +282,7 @@ function PrGroupRows({
   onSelect,
   hasNextPage,
   fetchingNextPage,
+  loadingInitialPage,
   onLoadNextPage,
 }: {
   group: { key: PullRequestSection; items: PullRequestListItem[] };
@@ -304,6 +299,7 @@ function PrGroupRows({
   onSelect: (prId: string) => void;
   hasNextPage: boolean;
   fetchingNextPage: boolean;
+  loadingInitialPage: boolean;
   onLoadNextPage: () => void;
 }) {
   const tCommon = useTranslations("Common");
@@ -345,10 +341,14 @@ function PrGroupRows({
           onSelect={() => onSelect(pr.prId)}
         />
       ))}
+      {group.key === "completed" && (loadingInitialPage || fetchingNextPage) ? (
+        <div aria-busy="true" data-testid="pr-sidebar-loading">
+          <PrListSkeleton rows={COMPLETED_PULL_REQUESTS_PAGE} showHeading={false} />
+        </div>
+      ) : null}
       {group.key === "completed" && hasNextPage ? (
         <Button variant="ghost" size="sm" className="self-start ml-8" disabled={fetchingNextPage}
           onClick={onLoadNextPage} data-testid="pr-completed-load-more">
-          {fetchingNextPage ? <Spinner /> : null}
           {tCommon("showMore")}
         </Button>
       ) : null}
@@ -644,10 +644,13 @@ function PullRequestsPageInner() {
       : null,
   );
 
-  const groups = useMemo(
-    () => groupPullRequestsBySection(visible),
-    [visible],
-  );
+  const groups = useMemo(() => {
+    const grouped = groupPullRequestsBySection(visible);
+    if (sections.has("completed") && completed.isPending && !grouped.some((group) => group.key === "completed")) {
+      grouped.push({ key: "completed", items: [] });
+    }
+    return grouped;
+  }, [visible, sections, completed.isPending]);
   // A filter in progress UNFOLDS everything and lifts the cup of five: searching is
   // ask to see what fits, not to know where it is stored.
   const filtering = query.trim().length > 0;
@@ -724,7 +727,6 @@ function PullRequestsPageInner() {
         actions={
           <PrFilterMenu
             sections={sections}
-            fetching={fetching}
             onToggle={(section) => {
               consumeDeepLink();
               // Settle before toggling so a pinned target cannot restore a hidden section.
@@ -735,9 +737,11 @@ function PullRequestsPageInner() {
           />
         }
       >
-        {loading || (sections.has("completed") && completed.isPending && visible.length === 0) ? (
-          <PrListSkeleton />
-        ) : visible.length === 0 ? (
+        {loading ? (
+          <div aria-busy="true" data-testid="pr-sidebar-loading">
+            <PrListSkeleton />
+          </div>
+        ) : groups.length === 0 ? (
           <EmptyScene
             size="compact"
             icon={GitPullRequestIcon}
@@ -777,6 +781,7 @@ function PullRequestsPageInner() {
                 fmtDay={fmtDay}
                 hasNextPage={completed.hasNextPage}
                 fetchingNextPage={completed.isFetchingNextPage}
+                loadingInitialPage={completed.isPending}
                 onLoadNextPage={() => void completed.fetchNextPage()}
                 onToggle={() => toggleGroup(g.key)}
                 onShowAll={() => setExpandedGroups((prev) => toggledSet(prev, g.key))}
@@ -787,15 +792,19 @@ function PullRequestsPageInner() {
               />
             ))}
 
+            {active.loadingMore ? (
+              <div aria-busy="true" data-testid="pr-sidebar-loading">
+                <PrListSkeleton showHeading={false} />
+              </div>
+            ) : null}
             {hasMore ? (
               <Button
                 variant="ghost"
                 size="sm"
                 className="mt-2 self-center"
-                disabled={fetching}
+                disabled={active.fetching}
                 onClick={() => setLimit((n) => n + PULL_REQUESTS_PAGE)}
               >
-                {fetching ? <Spinner /> : null}
                 {t("loadMore")}
               </Button>
             ) : null}
