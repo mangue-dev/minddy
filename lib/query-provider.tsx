@@ -5,7 +5,6 @@ import { persistQueryClientRestore } from "@tanstack/react-query-persist-client"
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createQueryStorage, subscribeToQueryPersistence } from "./query-persistence";
 import { invalidateLocalSnapshotWrites } from "./local-snapshots";
-import { clearErrorHistory } from "./status-history";
 
 /**
  * The cache is persisted as a server-sealed account envelope in localStorage.
@@ -149,7 +148,6 @@ export function wasRestoredBeforeMount(
  */
 export function clearPersistedQueryCache() {
   invalidateLocalSnapshotWrites();
-  clearErrorHistory();
   // Cancel queued snapshots before removing storage. Otherwise a delayed write
   // or pagehide flush could restore the departing account's data after logout.
   for (const stop of persistenceStops) stop();
@@ -157,6 +155,7 @@ export function clearPersistedQueryCache() {
   if (typeof window === "undefined") return;
   try {
     window.localStorage.removeItem(QUERY_CACHE_STORAGE_KEY);
+    window.localStorage.removeItem("minddy:status-errors");
     window.localStorage.removeItem("minddy:drafts:issue");
     window.localStorage.removeItem("minddy:drafts:objective");
     for (const key of Object.keys(window.localStorage)) {

@@ -236,5 +236,6 @@
   "20270109200024_numo_completion_repairs.sql": "f400ee68518c8997833a26ca40606e6598e4dd438b1159541b58f26cdf277dd9",
   "20270109200025_indexed_backfill_progress.sql": "41b6e468d09252a82920fa384631bb8ca098aea1e8533c21a4538dd8987df73a",
   "20270109200026_oauth_activity_bookkeeping.sql": "655a0b5cb3e7ce9eca10d5abcdbeb8a45751dfeb74feab77914acde8c42b67c0",
-  "20270109200027_rules_only_smart_triage.sql": "c2afd2039fab89a1e9b9dd0a320289582a9d24cb5810bedca9b3ab09d70680bf"
+  "20270109200027_rules_only_smart_triage.sql": "c2afd2039fab89a1e9b9dd0a320289582a9d24cb5810bedca9b3ab09d70680bf",
+  "20270109200028_routine_worker_usage.sql": "e4f125f8b4531c9b8b84b6c1077cd4d48a13e4572d7a0f6cc7c5423931b68833"
 }

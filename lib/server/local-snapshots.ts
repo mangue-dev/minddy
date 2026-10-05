@@ -8,7 +8,6 @@ export const LOCAL_SNAPSHOT_TTL = {
   "objective-drafts": 30 * 24 * 60 * 60 * 1000,
   "search-history": 24 * 60 * 60 * 1000,
   "page-list-settings": 30 * 24 * 60 * 60 * 1000,
-  "status-history": 24 * 60 * 60 * 1000,
   "window-tabs": 24 * 60 * 60 * 1000,
 } as const;
 export type LocalSnapshotSlot = keyof typeof LOCAL_SNAPSHOT_TTL;

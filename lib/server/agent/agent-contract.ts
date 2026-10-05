@@ -280,6 +280,8 @@ export interface AgentDelegationBrief {
   constraints: string[];
   authorizedWork: AgentDelegationAuthorization[];
   expectedOutput: string[];
+  /** A requested PR must be observed before this task is considered delivered. */
+  requiresPullRequest?: boolean;
 }
 
 export type AgentDelegationResultStatus =
@@ -421,6 +423,12 @@ export function parseAgentDelegationBrief(raw: unknown): AgentDelegationBrief {
   if (authorizedWork.length === 0) {
     throw new Error("authorizedWork must contain at least one authorization");
   }
+  if (value.requiresPullRequest !== undefined && typeof value.requiresPullRequest !== "boolean") {
+    throw new Error("requiresPullRequest must be a boolean");
+  }
+  if (value.requiresPullRequest === true && !authorizedWork.includes("manage_pull_request")) {
+    throw new Error("PR delivery requires manage_pull_request authorization");
+  }
   const expectedOutput = contractStrings(value.expectedOutput, "expectedOutput");
   if (expectedOutput.length === 0) {
     throw new Error("expectedOutput must contain at least one requirement");
@@ -450,6 +458,7 @@ export function parseAgentDelegationBrief(raw: unknown): AgentDelegationBrief {
     constraints: contractStrings(value.constraints, "constraints"),
     authorizedWork,
     expectedOutput,
+    ...(value.requiresPullRequest !== undefined ? { requiresPullRequest: value.requiresPullRequest as boolean } : {}),
   };
 }
 

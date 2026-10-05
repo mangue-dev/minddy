@@ -46,6 +46,7 @@ export function buildAgentDelegationBrief(input: {
   constraints: string[];
   authorizedWork: AgentDelegationAuthorization[];
   expectedOutput?: string[];
+  requiresPullRequest?: boolean;
 }): AgentDelegationBrief {
   return parseAgentDelegationBrief({
     version: AGENT_DELEGATION_CONTRACT_VERSION,
@@ -59,6 +60,7 @@ export function buildAgentDelegationBrief(input: {
     sourceReferences: input.sourceReferences,
     constraints: input.constraints,
     authorizedWork: input.authorizedWork,
+    ...(input.requiresPullRequest !== undefined ? { requiresPullRequest: input.requiresPullRequest } : {}),
     expectedOutput: input.expectedOutput?.length
       ? input.expectedOutput
       : [...EXPECTED_DELEGATION_OUTPUT],
@@ -102,7 +104,7 @@ ${authorized || "- read_repository"}
 Expected handoff to Numo:
 ${expected}
 
-Complete only the authorized work. In your final answer, report the expected handoff facts accurately; Numo will validate them against the durable run, repository events and artifacts before replying to the user.
+${brief.requiresPullRequest ? "Required delivery: call create_pr and confirm its actual PR URL before concluding. A branch or commit alone does not complete this task. If delivery fails, report the failure explicitly.\n\n" : ""}Complete only the authorized work. In your final answer, report the expected handoff facts accurately; Numo will validate them against the durable run, repository events and artifacts before replying to the user.
 </numo-delegation>`;
 }
 
@@ -171,7 +173,7 @@ function collectUnresolvedDecisions(run: AgentRun, events: RunEvent[]): string[]
     const fallback = eventString(payload, "question", "message", "text");
     if (fallback) unresolved.add(fallback);
   }
-  if ((run.status === "failed" || run.status === "canceled") && run.error_message?.trim()) {
+  if (run.error_message?.trim()) {
     unresolved.add(run.error_message.trim());
   }
   if (run.awaiting_input && run.outcome?.trim()) unresolved.add(run.outcome.trim());
@@ -313,27 +315,31 @@ export function buildAgentDelegationResult(input: {
       ...(eventString(payload, "url") ? { url: eventString(payload, "url")! } : {}),
     });
   }
+  const missingPr = brief.requiresPullRequest === true
+    && !artifacts.some((artifact) => artifact.kind === "pull_request");
+  const deliveryError = missingPr
+    ? "The requested pull request was not delivered. Branches and commits alone do not complete this task."
+    : null;
   const failed = run.status === "failed" || run.status === "canceled";
   const inputRequest = collectInputRequest(run, events);
   const status = failed
     ? "failed"
     : run.awaiting_input
       ? "needs_input"
-      : run.error_message?.trim()
+      : deliveryError || run.error_message?.trim()
         ? "partial"
         : "completed";
   return parseAgentDelegationResult({
     version: AGENT_DELEGATION_CONTRACT_VERSION,
     status,
-    summary: run.outcome?.trim()
-      || run.error_message?.trim()
+    summary: [deliveryError, run.error_message?.trim(), run.outcome?.trim()].filter(Boolean).join("\n")
       || (failed
         ? `The code worker failed before completing: ${brief.objective}`
         : `The code worker completed: ${brief.objective}`),
     changedFiles: collectChangedFiles(events),
     verificationPerformed: collectVerification(events),
     artifacts,
-    unresolvedDecisions: collectUnresolvedDecisions(run, events),
+    unresolvedDecisions: [...(deliveryError ? [deliveryError] : []), ...collectUnresolvedDecisions(run, events)],
     ...(inputRequest ? { inputRequest } : {}),
   });
 }

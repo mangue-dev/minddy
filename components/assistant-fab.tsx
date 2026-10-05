@@ -4,15 +4,14 @@ import { useTranslations } from "next-intl";
 import { AnimatePresence, motion } from "framer-motion";
 import { cn } from "mangue-ui";
 import { Kbd, KbdSequence } from "@/components/ui/kbd";
-import { NumoIcon } from "@/components/numo-icon";
+import { NumoLauncherIcon } from "@/components/assistant/numo-launcher-icon";
 import { AgentBeam } from "@/components/agent-beam";
 import { ScratchpadTrigger } from "@/components/scratchpad/scratchpad-trigger";
 import { useAssistantPanelActions, useAssistantPanel } from "@/lib/assistant-panel-context";
-import { useAssistantBusy } from "@/lib/assistant-chat-context";
+import { useAssistantBusy, useAssistantUnreadResponseConversationId } from "@/lib/assistant-chat-context";
 import { useAgentSessionsQuery } from "@/lib/use-agent-runs";
 import { useChordPrefix, CHORD_PREFIX } from "@/lib/keyboard/keyboard-context";
 import { transitions } from "@/lib/motion";
-import { StatusLine } from "@/components/status-line";
 import {
   Tooltip,
   TooltipContent,
@@ -20,15 +19,12 @@ import {
 } from "@/components/ui/tooltip";
 
 /**
- * Chrome-style bottom-right chrome buttons of the band: the status line first
- * (MIN-555, only when something is to show), then Numo's opener, then the
- * task-notebook ("chrome" pill). Always visible.
+ * Bottom-right chrome buttons: Numo's opener and the task notebook.
  *
  * Closing the panel during a turn no longer stops Numo (the conversation lives in
  * AssistantChatProvider): the Numo button then carries the shared animated border of the app
- * as long as it works, and becomes inert again as soon as it is finished. It's his ONLY
- * signal — no context badge: what Numo is looking at can be read in the
- * panel, above the composer, not on the button that opens it.
+ * while it works. A completed, unread response adds a static blue dot to the
+ * icon until the conversation is displayed again.
  *
  * The border must survive navigation and delegation alike: a Numo answer OR a
  * delegated code run keeps it on. The sessions list is the global, cached signal
@@ -38,11 +34,12 @@ import {
  */
 
 export function AssistantFab() {
-  const { toggle } = useAssistantPanelActions();
+  const { toggle, open } = useAssistantPanelActions();
   // The boolean alone, not the entire conversation context (MIN-323): `state`
   // changes with each SSE token, and the button returns at this rate
   // to read a value that only moves twice per revolution.
   const chatBusy = useAssistantBusy();
+  const unreadConversationId = useAssistantUnreadResponseConversationId();
   // Same cache as the sidebar: no extra request, and the 5 s poll of a
   // working session keeps the border honest for the whole run.
   const { sessions } = useAgentSessionsQuery();
@@ -51,9 +48,11 @@ export function AssistantFab() {
   // user is NOT looking at. Panel open → the activity is already on screen;
   // the border would only re-signal what the user is watching.
   const beamActive = (chatBusy || sessions.some((session) => session.working)) && !isOpen;
+  const unread = !!unreadConversationId && !isOpen && !beamActive;
   const chordArmed = useChordPrefix() === CHORD_PREFIX;
   const t = useTranslations("Assistant");
   const tk = useTranslations("Keyboard");
+  const label = unread ? `${t("title")} — ${t("unreadConversation")}` : t("title");
 
   return (
     <AnimatePresence>
@@ -79,10 +78,6 @@ export function AssistantFab() {
             "pb-[env(safe-area-inset-bottom)]",
           )}
         >
-          {/* The toast replacement (MIN-555): one status line, the pill just
-  before Numo, plus the error-history bell. Renders nothing until a
-  `toast.*` call fires. */}
-          <StatusLine />
           <div className="relative">
             {/* `keepMounted`: the button must not be raised when the border
  turns on or off — otherwise its entry animation would replay
@@ -97,8 +92,11 @@ export function AssistantFab() {
                 <TooltipTrigger asChild>
                   <motion.button
                     type="button"
-                    onClick={() => toggle()}
-                    aria-label={t("title")}
+                    onClick={() => {
+                      if (unread && unreadConversationId) open({ conversationId: unreadConversationId });
+                      else toggle();
+                    }}
+                    aria-label={label}
                     whileTap={{ scale: 0.97, transition: transitions.snappy }}
                     className={cn(
                       // Chrome-style pill on the band surface: Numo's face and the
@@ -114,7 +112,7 @@ export function AssistantFab() {
  SVG attributes loop, including masking under 768 px
  (`max-desktop:hidden` mask without unmounting). The activity signal
  already passes through the `AgentBeam` above. */}
-                    <NumoIcon animated={false} className="size-4" />
+                    <NumoLauncherIcon unread={unread} className="size-4" />
                     <span className="text-[13px] font-medium leading-none">Numo</span>
                   </motion.button>
                 </TooltipTrigger>
@@ -123,7 +121,7 @@ export function AssistantFab() {
                   sideOffset={10}
                   className="flex items-center gap-2 max-w-none"
                 >
-                  <span>{t("title")}</span>
+                  <span>{label}</span>
                   <KbdSequence
                     keys={[["G"], ["A"]]}
                     size="sm"

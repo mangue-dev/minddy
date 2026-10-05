@@ -12,6 +12,8 @@ import { shouldProtectNumoToolContent } from
 import { shouldProtectNumoFinalContent } from
   "@/lib/server/numo/final-content";
 
+import { routineOccurrenceSpend } from "./routine-spend";
+
 import { randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -284,21 +286,8 @@ export async function routineContinuationForConversation(
       remainingBudgetUsd: null,
     };
   }
-  const { data: turns, error: turnsError } = await service
-    .from("numo_assistant_turns")
-    .select("id")
-    .eq("conversation_id", conversationId);
-  if (turnsError) throw new Error(turnsError.message);
-  const turnIds = (turns ?? []).map((turn) => turn.id as string);
-  let spent = 0;
-  if (turnIds.length > 0) {
-    const { data: usage, error: usageError } = await service
-      .from("ai_usage")
-      .select("cost")
-      .in("numo_turn_id", turnIds);
-    if (usageError) throw new Error(usageError.message);
-    spent = (usage ?? []).reduce((total, row) => total + Number(row.cost ?? 0), 0);
-  }
+  const spend = await routineOccurrenceSpend(service, [conversationId]);
+  const spent = spend.get(conversationId)?.totalUsd ?? 0;
   return {
     occurrence: decodedOccurrence,
     routine: plainRoutine,

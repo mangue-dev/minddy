@@ -7,6 +7,7 @@ import { agentRunCanResume } from "@/lib/agent-run-resumability";
 import { getResolvedBilling } from "@/lib/server/billing-accounts";
 import { routineRunUsagePercent } from "@/lib/routine-run-metrics";
 import { occurrencesForRoutine } from "@/lib/server/routine-occurrences";
+import { routineOccurrenceSpend } from "@/lib/server/routine-spend";
 import { getServiceClient } from "@/lib/supabase-service";
 import type { NumoTurnStatus } from "@/lib/assistant-types";
 import { decodeAgentPrUrl } from "@/lib/server/agent/run-pr-url-content";
@@ -110,21 +111,16 @@ export async function GET(request: NextRequest, ctx: RouteContext) {
   if (turnResult.error) throw new Error(turnResult.error.message);
   const allTurns = (turnResult.data ?? []) as Array<Record<string, unknown>>;
   const turnIds = allTurns.map((turn) => turn.id as string);
-  const [workerResult, usageResult] = await Promise.all([
+  const [workerResult, spend] = await Promise.all([
     turnIds.length
       ? service.from("agent_runs")
           .select("id, project_id, parent_numo_turn_id, conversation_id, pr_number, pr_url, pr_state")
           .in("parent_numo_turn_id", turnIds)
           .order("created_at", { ascending: false })
       : Promise.resolve({ data: [], error: null }),
-    found.isOwner && turnIds.length
-      ? service.from("ai_usage")
-          .select("numo_turn_id, key_mode, cost")
-          .in("numo_turn_id", turnIds)
-      : Promise.resolve({ data: [], error: null }),
+    routineOccurrenceSpend(service, conversationIds),
   ]);
   if (workerResult.error) throw new Error(workerResult.error.message);
-  if (usageResult.error) throw new Error(usageResult.error.message);
   const turns = new Map<string, Record<string, unknown>>();
   const turnConversation = new Map<string, string>();
   for (const turn of allTurns) {
@@ -145,17 +141,6 @@ export async function GET(request: NextRequest, ctx: RouteContext) {
       workers.set(conversationId, worker);
     }
   }
-  const platformSpend = new Map<string, number>();
-  for (const usage of (usageResult.data ?? []) as Array<Record<string, unknown>>) {
-    if (usage.key_mode !== "platform") continue;
-    const conversationId = turnConversation.get(usage.numo_turn_id as string);
-    if (!conversationId) continue;
-    platformSpend.set(
-      conversationId,
-      (platformSpend.get(conversationId) ?? 0) + Number(usage.cost ?? 0),
-    );
-  }
-
   const numoRuns = await Promise.all(occurrences.map(async (occurrence) => {
     const turn = turns.get(occurrence.conversation_id) ?? null;
     const status = (turn?.status as NumoTurnStatus | undefined) ?? null;
@@ -182,7 +167,7 @@ export async function GET(request: NextRequest, ctx: RouteContext) {
       pr_url: worker?.pr_url ?? null,
       pr_state: worker?.pr_state ?? null,
       continuations: 0,
-      cost_usd: Number(turn?.cost_usd ?? 0),
+      cost_usd: spend.get(occurrence.conversation_id)?.totalUsd ?? 0,
       outcome: turn ? await decodeNumoTurnOutcome(found.routine.owner_id,
         turn.id as string, turn.outcome as string | null, auth.user.id) : null,
       error_message: occurrence.error_message ?? (turn
@@ -203,7 +188,7 @@ export async function GET(request: NextRequest, ctx: RouteContext) {
       work_run_id: worker?.id ?? null,
       usage_percent: found.isOwner && turn
         ? routineRunUsagePercent({
-            costUsd: platformSpend.get(occurrence.conversation_id) ?? 0,
+            costUsd: spend.get(occurrence.conversation_id)?.platformUsd ?? 0,
             includedUsageUsd,
             keyMode: "platform",
             isOwner: true,

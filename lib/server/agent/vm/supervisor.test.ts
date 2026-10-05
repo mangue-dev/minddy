@@ -183,6 +183,7 @@ const h = {
   interruptCleared: 0,
   /** Prompts posted to the session, in order. */
   prompts: [] as string[],
+  onPrompt: null as (() => Promise<void>) | null,
   /** How many times the session was cut. */
   aborts: 0,
   /** Whether OpenCode refuses to acknowledge an abort request. */
@@ -413,6 +414,7 @@ function fakeFetch(): typeof fetch {
       h.prompts.push(
         (body.parts ?? []).map((part) => part.text ?? "").join(""),
       );
+      await h.onPrompt?.();
       return new Response(null, { status: 204 });
     }
     if (path.startsWith("/permission/") && path.endsWith("/reply")) {
@@ -782,6 +784,7 @@ beforeEach(() => {
   h.interrupt = false;
   h.interruptCleared = 0;
   h.prompts = [];
+  h.onPrompt = null;
   h.aborts = 0;
   h.abortFails = false;
   h.permissionReplies = [];
@@ -1148,6 +1151,65 @@ describe("le tour", () => {
     ]);
     expect(report.status).toBe("completed");
     expect(report.pushed?.committed).toBe(true);
+  });
+
+  it("executes PR delivery after repairing the recorded announcement", async () => {
+    // French fixture reproduces MIN-649's closing announcement.
+    h.extraFrames = [
+      parentText("prt_pr_pending", "msg_pr_pending", "Maintenant j'ouvre la PR."),
+      parentRound("msg_pr_pending", "stop"), idleFrame(),
+      parentText("prt_pr_done", "msg_pr_done", "The PR is ready: https://forge/pr/7"),
+      parentRound("msg_pr_done", "stop"),
+    ];
+    h.onPrompt = async () => {
+      if (h.prompts.length === 2) await h.supervisorTools.create_pr({ title: "Deliver the verified changes" });
+    };
+    const report = await run({ pullRequestDelivery: { required: true, delivered: false } });
+    expect(h.prompts).toHaveLength(2);
+    expect(h.toolCalls.filter((call) => call.name === "create_pr")).toHaveLength(1);
+    expect(report.status).toBe("completed");
+    expect(report.reply).toContain("https://forge/pr/7");
+  });
+
+  it("rejects claimed success without the required PR artifact after bounded retries", async () => {
+    h.extraFrames = [0, 1, 2].flatMap((index) => [
+      parentText(`prt_claim_${index}`, `msg_claim_${index}`, "All changes are committed and the checks passed."),
+      parentRound(`msg_claim_${index}`, "stop"), idleFrame(),
+    ]);
+    const report = await run({ pullRequestDelivery: { required: true, delivered: false } });
+    expect(h.prompts).toHaveLength(3);
+    expect(report.status).toBe("error");
+    expect(report.errorCode).toBe("replyIncomplete");
+    expect(report.errorMessage).toContain("pull request was not delivered");
+    expect(report.reply).toBeUndefined();
+    expect(report.checkpoint).toBeDefined();
+    expect(h.events.some((event) => event.type === "summary")).toBe(false);
+  });
+
+  it.each([
+    { success: false, result: { error: "Forge refused the PR", url: "https://forge/pr/7" } },
+    { success: true, result: { note: "No PR was opened" } },
+  ])("does not accept a PR tool result without successful delivery: %j", async (toolResult) => {
+    h.extraFrames = [0, 1, 2].flatMap((index) => [
+      parentText(`prt_failed_pr_${index}`, `msg_failed_pr_${index}`, "The changes are ready."),
+      parentRound(`msg_failed_pr_${index}`, "stop"), idleFrame(),
+    ]);
+    h.onPrompt = async () => {
+      if (h.prompts.length > 1) await h.supervisorTools.create_pr({ title: "Deliver the changes" });
+    };
+    const report = await run({ pullRequestDelivery: { required: true, delivered: false } }, {}, {
+      callTool: async () => toolResult,
+    });
+    expect(report.status).toBe("error");
+    expect(report.errorMessage).toContain("pull request was not delivered");
+    expect(report.reply).toBeUndefined();
+  });
+
+  it("accepts delivery on an already observed PR without creating another", async () => {
+    const report = await run({ pullRequestDelivery: { required: true, delivered: true } });
+    expect(report.status).toBe("completed");
+    expect(h.prompts).toHaveLength(1);
+    expect(h.toolCalls.some((call) => call.name === "create_pr")).toBe(false);
   });
 
   it.each(["length", "max_tokens", "tool-calls", "unknown", "stop"])(

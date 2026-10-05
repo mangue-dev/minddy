@@ -199,3 +199,23 @@ describe("imputation des lignes ai_usage", () => {
     ]);
   });
 });
+
+// Routine charges retain their cost and deduplication key while moving segments.
+describe("routine usage attribution", () => {
+  it.each([
+    ["agent_code", "routine_code"], ["numo_chat", "routine_code"],
+    ["web_search", "routine_code"], ["sandbox_compute", "routine_compute"],
+  ] as const)("records routine-owned %s under %s", async (feature, expected) => {
+    await recordAiUsage({ runId: "worker-ledger", seq: 12, feature,
+      billTo: { userId: OWNER }, numoTurnId: "parent-turn", routineId: "routine-1", cost: 0.3 });
+    expect(inserted[0]).toMatchObject({ feature: expected, cost: 0.3,
+      numo_turn_id: "parent-turn", routine_id: "routine-1",
+      idempotency_key: `worker-ledger:${feature}:12` });
+  });
+
+  it("keeps standalone worker search charges in their existing segment", async () => {
+    await recordAiUsage({ runId: "worker-ledger", feature: "web_search",
+      billTo: { userId: OWNER }, cost: 0.3 });
+    expect(inserted[0].feature).toBe("web_search");
+  });
+});

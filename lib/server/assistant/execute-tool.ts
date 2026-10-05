@@ -2018,6 +2018,10 @@ export async function executeTool(
         const constraints = delegationStrings(args.constraints);
         const authorizedWork = delegationAuthorizations(args.authorized_work);
         const expectedOutput = delegationStrings(args.expected_output);
+        const requiresPullRequest = args.requires_pull_request === true;
+        if (requiresPullRequest && !authorizedWork.includes("manage_pull_request")) {
+          return toolError("PR delivery requires manage_pull_request authorization.");
+        }
         if (durableDelegation && !objective) {
           return toolError("A complete objective is required for delegated code work.");
         }
@@ -2152,7 +2156,9 @@ export async function executeTool(
           typeof args.continuation_run_id === "string"
             ? args.continuation_run_id.trim()
             : "";
-        if (durableDelegation && continuationRunId && objective) {
+        // PR-required follow-ups use the lineage launcher so the new delivery
+        // contract is persisted before work resumes on the existing branch.
+        if (durableDelegation && continuationRunId && objective && !requiresPullRequest) {
           launchStage = "resume_worker";
           const relaunch = await relaunchNumoWorkerRun({
             conversationId: ctx.conversationId!,
@@ -2210,6 +2216,7 @@ export async function executeTool(
                   sourceReferences,
                   constraints,
                   authorizedWork,
+                  requiresPullRequest,
                   ...(expectedOutput.length ? { expectedOutput } : {}),
                   attachments,
                 },

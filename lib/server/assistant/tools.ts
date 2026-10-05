@@ -2197,6 +2197,11 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
             description:
               "Explicit work Numo authorizes for this task. Grant only what the user's request requires.",
           },
+          requires_pull_request: {
+            type: "boolean",
+            description:
+              "Set true when the user or routine requests delivery through a pull request. Requires manage_pull_request authorization. The worker must produce a real PR or return an explicit delivery failure; a branch alone is insufficient. Set false for inspection or work without requested PR delivery.",
+          },
           expected_output: {
             type: "array",
             items: { type: "string" },
@@ -2212,7 +2217,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
         // `mode` is REQUIRED: on a small model, an optional field is not
         // simply not filled in — the choice of job would then always be 'custom'
         // by default, and the three native instructions would never be used.
-        required: ["mode", "objective", "source_references", "constraints", "authorized_work"],
+        required: ["mode", "objective", "source_references", "constraints", "authorized_work", "requires_pull_request"],
       },
     },
   },

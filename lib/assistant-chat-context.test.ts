@@ -12,6 +12,7 @@ const h = vi.hoisted(() => ({
     conversationProjectId: "a",
     messages: [{ role: "user", content: "Earlier message" }],
     status: "idle",
+    completedResponse: null as { conversationId: string; messageId: string } | null,
     routineOccurrence: null as {
       id: string;
       routine_id: string;
@@ -20,7 +21,7 @@ const h = vi.hoisted(() => ({
       created_at: string;
     } | null,
   },
-  load: vi.fn(), reset: vi.fn(), send: vi.fn(), abort: vi.fn(), active: vi.fn(), pointer: vi.fn(),
+  read: vi.fn(), load: vi.fn(), reset: vi.fn(), send: vi.fn(), abort: vi.fn(), active: vi.fn(), pointer: vi.fn(),
   queryClient: { invalidateQueries: vi.fn() },
   chatOptions: null as { onToolResult?: (name: string, success: boolean, result: unknown) => void } | null,
   router: { push: vi.fn(), refresh: vi.fn() },
@@ -28,7 +29,7 @@ const h = vi.hoisted(() => ({
 }));
 vi.mock("./assistant-panel-context", () => ({ useAssistantPanel: () => h.panel }));
 vi.mock("./use-assistant-chat", () => ({ useAssistantChat: (options: { onToolResult?: (name: string, success: boolean, result: unknown) => void }) => { h.chatOptions = options; return { state: h.state, loadConversation: h.load, reset: h.reset, sendMessage: h.send, abort: h.abort }; } }));
-vi.mock("./assistant-api", () => ({ fetchActiveConversation: h.active, setActiveConversation: h.pointer, updateConversation: async () => true }));
+vi.mock("./assistant-api", () => ({ fetchActiveConversation: h.active, setActiveConversation: h.pointer, updateConversation: h.read }));
 vi.mock("./use-agent-runs", () => ({ allAgentSessionsQueryKey: ["agent-sessions", "all"] as const }));
 vi.mock("@tanstack/react-query", () => ({ useQueryClient: () => h.queryClient }));
 vi.mock("./auth-context", () => ({ useAuth: () => h.auth }));
@@ -36,11 +37,13 @@ vi.mock("next-intl", () => ({ useLocale: () => "en" }));
 vi.mock("next/navigation", () => ({ useRouter: () => h.router }));
 vi.mock("mangue-ui/components/theme-provider", () => ({ useTheme: () => h.theme }));
 vi.mock("./set-locale", () => ({ setLocaleCookie: async () => {} }));
-import { AssistantChatProvider, useAssistantChatContext } from "./assistant-chat-context";
+import { AssistantChatProvider, useAssistantChatContext, useAssistantUnreadResponseConversationId } from "./assistant-chat-context";
 
 let root: Root;
 let value: AssistantChatContextValue;
-function Probe() { value = useAssistantChatContext(); return null; }
+let unread: boolean;
+let unreadConversationId: string | null;
+function Probe() { value = useAssistantChatContext(); unreadConversationId = useAssistantUnreadResponseConversationId(); unread = !!unreadConversationId; return null; }
 async function render(show = true) {
   await act(async () => root.render(createElement(AssistantChatProvider, { children: show ? createElement(Probe) : null })));
 }
@@ -48,13 +51,72 @@ beforeEach(() => {
   vi.clearAllMocks();
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
   h.panel = { ...h.panel, isOpen: true, pendingOptions: null, routeProjectId: "a" };
-  h.state = { ...h.state, status: "idle", routineOccurrence: null };
+  h.state = { ...h.state, status: "idle", routineOccurrence: null, completedResponse: null };
+  h.read.mockResolvedValue(true);
   h.active.mockResolvedValue({ conversationId: "conversation", projectId: "a" });
   root = createRoot(document.createElement("div"));
 });
 afterEach(() => { act(() => root.unmount()); });
 
 describe("persistent conversation context", () => {
+  it("keeps a background answer unread across navigation and opening until displayed", async () => {
+    h.panel.isOpen = false;
+    await render();
+    expect(unread).toBe(false);
+    h.state = { ...h.state, completedResponse: { conversationId: "conversation", messageId: "answer" } };
+    await render();
+    expect(unread).toBe(true);
+    h.state = { ...h.state, completedResponse: null };
+    h.panel = { ...h.panel, routeProjectId: "b", isOpen: true };
+    await render();
+    expect(unread).toBe(true);
+    await act(async () => value.markResponseRead("other-conversation"));
+    expect(unread).toBe(true);
+    expect(h.read).not.toHaveBeenCalled();
+    await act(async () => value.markResponseRead("conversation"));
+    expect(unread).toBe(false);
+    expect(h.read).toHaveBeenCalledWith("conversation", { read: true });
+    h.panel.isOpen = false;
+    await render();
+    expect(unread).toBe(false);
+    h.state = { ...h.state, completedResponse: { conversationId: "conversation", messageId: "next-answer" } };
+    await render();
+    expect(unread).toBe(true);
+  });
+
+  it("retains unread responses when another conversation is loaded or completed", async () => {
+    h.panel.isOpen = false;
+    h.state = { ...h.state, completedResponse: { conversationId: "first", messageId: "answer-1" } };
+    await render();
+    h.state = { ...h.state, completedResponse: null };
+    await render();
+    expect(unread).toBe(true);
+    await act(async () => value.markResponseRead("other"));
+    expect(unread).toBe(true);
+    h.state = { ...h.state, completedResponse: { conversationId: "second", messageId: "answer-2" } };
+    await render();
+    await act(async () => value.markResponseRead("second"));
+    expect(unread).toBe(true);
+    await act(async () => value.markResponseRead("first"));
+    expect(unread).toBe(false);
+    // A repeated completion replay must not resurrect a response already read.
+    h.state = { ...h.state, completedResponse: { conversationId: "first", messageId: "answer-1" } };
+    await render();
+    expect(unread).toBe(false);
+  });
+
+  it("does not notify on busy-to-idle transitions without a completed answer", async () => {
+    h.panel.isOpen = false;
+    h.state = { ...h.state, status: "streaming" };
+    await render();
+    h.state = { ...h.state, status: "idle" };
+    await render();
+    expect(unread).toBe(false);
+    h.state = { ...h.state, status: "error" };
+    await render();
+    expect(unread).toBe(false);
+  });
+
   it("lets the full page request the same lazy restore while the panel is closed", async () => {
     h.panel.isOpen = false;
     await render();

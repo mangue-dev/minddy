@@ -50,6 +50,8 @@ import { PrTimelineReview, PrTimelineRow } from "@/components/pull-requests/pr-t
 import { PrStateBadge } from "@/components/pull-requests/pr-state-badge";
 import { PrReadinessBadge, PrReadinessControl } from "@/components/pull-requests/pr-readiness";
 import { PrStatusCards } from "@/components/pull-requests/pr-readiness-cards";
+import { PrRequestReview } from "@/components/pull-requests/pr-request-review";
+import { groupReviewThreads } from "@/lib/pr-review-threads";
 import { PrUnresolvedConversations } from "@/components/pull-requests/pr-unresolved-conversations";
 import { PrViewerCallout } from "@/components/pull-requests/pr-viewer-callout";
 import { FormDialog } from "@/components/form-dialog";
@@ -684,6 +686,8 @@ export function PrDetail({
     timeline, reviewComments, reviewThreads, reactions: commentReactions,
     prUrl: pr?.url ?? item.pr_url,
   }), [item.provider, item.pr_url, pr?.url, comments, requestedReviewComments, timeline, reviewComments, reviewThreads, commentReactions]);
+  const conversationThreads = useMemo(() => groupReviewThreads(reviewComments, reviewThreads), [reviewComments, reviewThreads]);
+  const [requestReviewOpen, setRequestReviewOpen] = useState(false);
   const unresolvedThreads = useMemo(
     () => unresolvedReviewThreads(reviewComments, reviewThreads),
     [reviewComments, reviewThreads],
@@ -2125,7 +2129,7 @@ export function PrDetail({
           <PrUnresolvedConversations
             endpoint={prEndpoint(item.prId)}
             context={feedbackContext}
-            threads={unresolvedThreads}
+            threads={conversationThreads}
             canComment={!!canComment}
             canResolve={!!canWrite}
             canLaunch={canRelaunch && !item.busyRunId}
@@ -2137,13 +2141,25 @@ export function PrDetail({
             showBar={false}
           />
 
+          <PrRequestReview
+            prId={item.prId}
+            author={pr?.user?.login ?? null}
+            requestedReviewers={pr?.requestedReviewers ?? []}
+            open={requestReviewOpen}
+            onOpenChange={setRequestReviewOpen}
+            onRequested={refreshReviewState}
+          />
           {loading ? <PrStatusSkeleton /> : (
             <PrStatusCards
               readiness={effectiveReadiness}
               checks={checks}
               provider={item.provider}
               deployment={deploymentStory}
-              unresolvedThreads={unresolvedThreads}
+              conversationThreads={conversationThreads}
+              timeline={timeline}
+              requestedReviewers={pr?.requestedReviewers ?? []}
+              canRequestReviewer={!!canWrite && pr?.state === "open" && !pr.merged}
+              onRequestReviewer={() => setRequestReviewOpen(true)}
               canAct={canActOnBlocker}
               acting={maintenanceAction}
               onAction={(blocker) => void handleReadinessAction(blocker)}

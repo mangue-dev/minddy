@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { getPullRequest } from "./pr";
+import { getPullRequest, requestPullRequestReviewer as requestGithubReviewer } from "./pr";
+
+import { requestPullRequestReviewer as requestGitlabReviewer, getMergeRequest } from "./mr";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -59,5 +61,119 @@ describe("getPullRequest review requests", () => {
         number: 119,
       }),
     ).resolves.toMatchObject({ headFromBaseRepository: same });
+  });
+});
+
+
+describe("requesting a reviewer", () => {
+  it("uses the supplied human token and GitHub's additive reviewer request", async () => {
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(Response.json({}));
+    vi.stubGlobal("fetch", fetchMock);
+    await requestGithubReviewer({
+      token: "human-token",
+      repoFullName: "acme/app",
+      number: 42,
+      login: "ada",
+    });
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toContain("/pulls/42/requested_reviewers");
+    expect(init?.method).toBe("POST");
+    expect(init?.headers).toMatchObject({
+      Authorization: "Bearer human-token",
+    });
+    expect(JSON.parse(init?.body as string)).toEqual({ reviewers: ["ada"] });
+  });
+
+  it("preserves existing GitLab reviewers when assigning a new reviewer", async () => {
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(Response.json([{ id: 12, username: "Ada" }]))
+      .mockResolvedValueOnce(
+        Response.json({ reviewers: [{ id: 7 }] }),
+      )
+      .mockResolvedValueOnce(Response.json({}));
+    vi.stubGlobal("fetch", fetchMock);
+    await requestGitlabReviewer({
+      token: "human-token",
+      repoFullName: "group/app",
+      number: 42,
+      login: "ada",
+    });
+    const [url, init] = fetchMock.mock.calls[2];
+    expect(url).toContain("group%2Fapp/merge_requests/42");
+    expect(init?.method).toBe("PUT");
+    expect(JSON.parse(init?.body as string)).toEqual({ reviewer_ids: [7, 12] });
+  });
+
+  it("re-requests an existing GitLab reviewer through a quick action with the human token", async () => {
+    const fetchMock = vi.fn<typeof fetch>()
+      .mockResolvedValueOnce(Response.json([{ id: 12, username: "Ada" }]))
+      .mockResolvedValueOnce(Response.json({ reviewers: [{ id: 7 }, { id: 12 }] }))
+      .mockResolvedValueOnce(Response.json({}));
+    vi.stubGlobal("fetch", fetchMock);
+    await requestGitlabReviewer({ token: "human-token", repoFullName: "group/app", number: 42, login: "ada" });
+    const [url, init] = fetchMock.mock.calls[2];
+    expect(url).toContain("group%2Fapp/merge_requests/42/notes");
+    expect(init?.method).toBe("POST");
+    expect(init?.headers).toMatchObject({ Authorization: "Bearer human-token" });
+    expect(JSON.parse(init?.body as string)).toEqual({ body: "/request_review @Ada" });
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it("propagates a failed GitLab re-request instead of replacing reviewer assignments", async () => {
+    const fetchMock = vi.fn<typeof fetch>()
+      .mockResolvedValueOnce(Response.json([{ id: 12, username: "ada" }]))
+      .mockResolvedValueOnce(Response.json({ reviewers: [{ id: 12 }] }))
+      .mockResolvedValueOnce(Response.json({ message: "Forbidden" }, { status: 403 }));
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(requestGitlabReviewer({ token: "token", repoFullName: "group/app", number: 42, login: "ada" })).rejects.toThrow("Forbidden");
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it("does not clear GitLab reviewers when the requested login cannot be found", async () => {
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(Response.json([]));
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(
+      requestGitlabReviewer({
+        token: "token",
+        repoFullName: "group/app",
+        number: 42,
+        login: "missing",
+      }),
+    ).rejects.toThrow("Reviewer not found");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("only exposes unreviewed GitLab requests as pending in the PR detail", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn<typeof fetch>().mockImplementation(async (url) => {
+        if (String(url).includes("graphql"))
+          return Response.json({ data: { project: { mergeRequest: null } } });
+        if (String(url).endsWith("/reviewers"))
+          return Response.json([
+            { state: "unreviewed", user: { username: "ada" } },
+            { state: "reviewed", user: { username: "grace" } },
+          ]);
+        return Response.json({
+          iid: 42,
+          state: "opened",
+          reviewers: [{ id: 12, username: "ada", avatar_url: null }],
+        });
+      }),
+    );
+    await expect(
+      getMergeRequest({
+        token: "token",
+        repoFullName: "group/app",
+        number: 42,
+      }),
+    ).resolves.toMatchObject({
+      requestedReviewers: [{ login: "ada", avatar_url: null }],
+    });
   });
 });

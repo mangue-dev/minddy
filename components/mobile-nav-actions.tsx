@@ -10,31 +10,44 @@ import {
   DropdownMenuItem,
   MobileNavItem,
 } from "mangue-ui";
-import { NumoIcon } from "@/components/numo-icon";
+import { NumoLauncherIcon } from "@/components/assistant/numo-launcher-icon";
+import { useAssistantBusy, useAssistantUnreadResponseConversationId } from "@/lib/assistant-chat-context";
 import { AppIcon } from "@/components/icon";
-import { useAssistantPanelActions } from "@/lib/assistant-panel-context";
+import { useAssistantPanel, useAssistantPanelActions } from "@/lib/assistant-panel-context";
 import { useCreateActions } from "@/components/new-menu";
 
 /**
  * Custom actions for the mobile bottom navbar (passed to <MobileNav actions>):
  * a Numo (assistant) launcher and a "+" create menu — the mobile replacements
- * for the desktop assistant FAB and the header "Nouveau" button. Rendered
+ * for the desktop assistant FAB and the header "New" button. Rendered
  * between the navbar's Search and "More" buttons. Mirrors AutoKap's mobile nav.
  */
 export function MobileNavActions() {
   const tk = useTranslations("Keyboard.shortcuts");
   const tn = useTranslations("Nav");
-  const { toggle } = useAssistantPanelActions();
+  const ta = useTranslations("Assistant");
+  const { isOpen } = useAssistantPanel();
+  const busy = useAssistantBusy();
+  const unreadConversationId = useAssistantUnreadResponseConversationId();
+  const unread = !!unreadConversationId && !isOpen && !busy;
+  const numoLabel = unread ? `${tk("navAssistant")} — ${ta("unreadConversation")}` : tk("navAssistant");
+  const { toggle, open } = useAssistantPanelActions();
   const actions = useCreateActions();
 
   return (
     <>
       {/* Numo — opens the full-bleed assistant panel. No context tag: the context of the page is read in the panel (the bullet
  above the composer), not on the button that opens it. */}
-      <MobileNavItem label={tk("navAssistant")} onClick={() => toggle()}>
+      <MobileNavItem
+        label={numoLabel}
+        onClick={() => {
+          if (unread && unreadConversationId) open({ conversationId: unreadConversationId });
+          else toggle();
+        }}
+      >
         {/* Static: an animation of SVG attributes looping on a navigation bar
  says nothing, and even runs hidden (MIN-323). */}
-        <NumoIcon animated={false} className="size-[22px] text-foreground" />
+        <NumoLauncherIcon unread={unread} className="size-[22px] text-foreground" />
       </MobileNavItem>
 
       {/* Hairline divider (matches mangue-ui's internal PileDivider). */}

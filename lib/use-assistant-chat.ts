@@ -94,6 +94,8 @@ function buildToolCallResultsFromMessages(messages: AssistantMessage[]): Map<str
 
 export interface AssistantChatState {
   status: AssistantStatus;
+  /** Last successfully completed answer, independent of working/idle transitions. */
+  completedResponse: { conversationId: string; messageId: string } | null;
   messages: AssistantMessage[];
   streamingContent: string;
   streamingReasoning: StreamingAssistantReasoning | null;
@@ -118,6 +120,7 @@ export interface AssistantChatState {
 
 const initialState: AssistantChatState = {
   status: "idle",
+  completedResponse: null,
   messages: [],
   streamingContent: "",
   streamingReasoning: null,
@@ -178,7 +181,7 @@ type Action =
       mentions?: AssistantMention[];
       skills?: AssistantSkillSelection[];
     }
-  | { type: "DONE" }
+  | { type: "DONE"; responseReady?: boolean }
   | { type: "GENERATING_SERVER" }
   | {
       type: "SET_PENDING_WORKER_INPUT";
@@ -407,15 +410,27 @@ function reducer(
       return { ...state, messages: [...state.messages, userMsg] };
     }
 
-    case "DONE":
+    case "DONE": {
+      // Tool narration, an empty turn and an explicit stop are not ready answers.
+      const answer = action.responseReady
+        ? state.messages.findLast((message) => message.role !== "tool")
+        : null;
+      const hasAnswer = answer?.role === "assistant" && (
+        (!answer.tool_calls?.length && !!answer.content?.trim()) ||
+        answer.tool_calls?.some((call) => ["ask_user", "propose_backlog"].includes(call.function.name))
+      );
       return {
         ...state,
         status: "idle",
+        completedResponse: hasAnswer && state.conversationId
+          ? { conversationId: state.conversationId, messageId: answer.id }
+          : state.completedResponse,
         streamingContent: "",
         streamingReasoning: null,
         activeToolCalls: [],
         turnStatus: null,
       };
+    }
 
     case "GENERATING_SERVER":
       return {
@@ -449,6 +464,9 @@ function reducer(
         ...state,
         status: "idle",
         messages: action.messages,
+        completedResponse: action.conversationId === state.conversationId
+          ? state.completedResponse
+          : null,
         streamingContent: "",
         streamingReasoning: null,
         activeToolCalls: [],
@@ -712,7 +730,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
               conversationId,
               projectId,
             });
-            dispatch({ type: "DONE" });
+            dispatch({ type: "DONE", responseReady: status !== "stopped" });
             return;
           }
 
@@ -810,7 +828,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
           conversationId: convId,
           projectId: convProjectId,
         });
-        dispatch({ type: "DONE" });
+        dispatch({ type: "DONE", responseReady: status !== "stopped" });
         return true;
       }
       if (status === "error" || status === "failed" || status === "reconciling") {
@@ -1433,7 +1451,10 @@ function handleSSEEvent(
       if (data.status === "waiting_work" || data.status === "queued" || data.status === "running") {
         dispatch({ type: "GENERATING_SERVER" });
       } else {
-        dispatch({ type: "DONE" });
+        dispatch({
+          type: "DONE",
+          responseReady: data.status === "completed" || data.status === "idle" || data.status === "waiting_input",
+        });
       }
       break;
     case "error":
