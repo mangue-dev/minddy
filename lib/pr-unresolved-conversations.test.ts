@@ -127,12 +127,24 @@ describe("conversationReviewerGroups", () => {
         group.threads.map((thread) => thread.id),
       ]),
     ).toEqual([
-      [false, [1, 4]],
+      [false, [1]],
       [false, [5]],
+      [undefined, [4]],
       [true, [3]],
     ]);
     expect(groups[0].threads[0].comments).toHaveLength(2);
     expect(conversationReviewerGroups([])).toEqual([]);
     expect(threads.map((thread) => thread.id)).toEqual([3, 1, 4, 5]);
+  });
+
+  it("does not label conversations open when all thread states are unavailable", () => {
+    const threads = [
+      { id: 1, root: comment(1, "State unavailable"), comments: [comment(1, "State unavailable")] },
+      { id: 2, root: comment(2, "Also unavailable"), comments: [comment(2, "Also unavailable")] },
+    ];
+    const groups = conversationReviewerGroups(threads);
+    expect(groups).toHaveLength(1);
+    expect(groups[0].resolved).toBeUndefined();
+    expect(groups[0].threads).toHaveLength(2);
   });
 });

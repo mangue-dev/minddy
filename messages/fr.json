@@ -4109,6 +4109,7 @@
     "conversationsHint": "Les conversations ouvertes sont prioritaires. Les conversations résolues restent accessibles en dessous.",
     "resolvedConversations": "Conversations résolues",
     "openConversations": "Conversations ouvertes",
+    "unknownConversations": "État des conversations indisponible",
     "unknownReviewer": "Reviewer inconnu",
     "cardReviews": "{count, plural, =0 {Reviews} one {# review} other {# reviews}}",
     "noReviews": "Aucune review pour le moment",

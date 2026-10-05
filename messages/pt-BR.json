@@ -4109,6 +4109,7 @@
     "conversationsHint": "As conversas abertas aparecem primeiro. As resolvidas continuam disponíveis abaixo.",
     "resolvedConversations": "Conversas resolvidas",
     "openConversations": "Conversas abertas",
+    "unknownConversations": "Status das conversas indisponível",
     "unknownReviewer": "Revisor desconhecido",
     "cardReviews": "{count, plural, =0 {Revisões} one {# revisão} other {# revisões}}",
     "noReviews": "Nenhuma revisão ainda",

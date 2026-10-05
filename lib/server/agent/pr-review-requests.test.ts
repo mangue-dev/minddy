@@ -86,12 +86,12 @@ describe("requesting a reviewer", () => {
     expect(JSON.parse(init?.body as string)).toEqual({ reviewers: ["ada"] });
   });
 
-  it("preserves existing GitLab reviewers and deduplicates requests", async () => {
+  it("preserves existing GitLab reviewers when assigning a new reviewer", async () => {
     const fetchMock = vi
       .fn<typeof fetch>()
       .mockResolvedValueOnce(Response.json([{ id: 12, username: "Ada" }]))
       .mockResolvedValueOnce(
-        Response.json({ reviewers: [{ id: 7 }, { id: 12 }] }),
+        Response.json({ reviewers: [{ id: 7 }] }),
       )
       .mockResolvedValueOnce(Response.json({}));
     vi.stubGlobal("fetch", fetchMock);
@@ -105,6 +105,31 @@ describe("requesting a reviewer", () => {
     expect(url).toContain("group%2Fapp/merge_requests/42");
     expect(init?.method).toBe("PUT");
     expect(JSON.parse(init?.body as string)).toEqual({ reviewer_ids: [7, 12] });
+  });
+
+  it("re-requests an existing GitLab reviewer through a quick action with the human token", async () => {
+    const fetchMock = vi.fn<typeof fetch>()
+      .mockResolvedValueOnce(Response.json([{ id: 12, username: "Ada" }]))
+      .mockResolvedValueOnce(Response.json({ reviewers: [{ id: 7 }, { id: 12 }] }))
+      .mockResolvedValueOnce(Response.json({}));
+    vi.stubGlobal("fetch", fetchMock);
+    await requestGitlabReviewer({ token: "human-token", repoFullName: "group/app", number: 42, login: "ada" });
+    const [url, init] = fetchMock.mock.calls[2];
+    expect(url).toContain("group%2Fapp/merge_requests/42/notes");
+    expect(init?.method).toBe("POST");
+    expect(init?.headers).toMatchObject({ Authorization: "Bearer human-token" });
+    expect(JSON.parse(init?.body as string)).toEqual({ body: "/request_review @Ada" });
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it("propagates a failed GitLab re-request instead of replacing reviewer assignments", async () => {
+    const fetchMock = vi.fn<typeof fetch>()
+      .mockResolvedValueOnce(Response.json([{ id: 12, username: "ada" }]))
+      .mockResolvedValueOnce(Response.json({ reviewers: [{ id: 12 }] }))
+      .mockResolvedValueOnce(Response.json({ message: "Forbidden" }, { status: 403 }));
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(requestGitlabReviewer({ token: "token", repoFullName: "group/app", number: 42, login: "ada" })).rejects.toThrow("Forbidden");
+    expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 
   it("does not clear GitLab reviewers when the requested login cannot be found", async () => {

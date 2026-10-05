@@ -12,10 +12,8 @@ import {
   cn,
 } from "mangue-ui";
 
-import {
-  PrReviewsCard,
-  reviewCardTone,
-} from "@/components/pull-requests/pr-reviews-card";
+import { PrReviewsCard } from "@/components/pull-requests/pr-reviews-card";
+import { reviewCardTone } from "@/lib/pr-review-request";
 import type { PrTimelineEvent } from "@/lib/pr-timeline";
 import { AppTooltip } from "@/components/ui/app-tooltip";
 import { CheckLogo } from "@/components/pull-requests/pr-check-logo";

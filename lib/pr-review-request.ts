@@ -13,7 +13,7 @@ export function viewerReviewIsRequested(
   );
 }
 
-/** Submitted reviews grouped by reviewer, newest verdict first within each group. */
+/** Submitted reviews grouped by reviewer, newest review first within each group. */
 export function reviewerReviewGroups(timeline: PrTimelineEvent[]) {
   const groups = new Map<string, PrTimelineEvent[]>();
   const reviews = timeline
@@ -26,4 +26,26 @@ export function reviewerReviewGroups(timeline: PrTimelineEvent[]) {
     else groups.set(key, [review]);
   }
   return [...groups.values()];
+}
+
+/** Comment-only reviews do not replace an earlier approval or change request. */
+export function reviewCardTone(
+  timeline: PrTimelineEvent[],
+  requestedReviewers: { login: string; avatar_url: string | null }[],
+): "danger" | "success" | "neutral" {
+  const verdicts = reviewerReviewGroups(timeline).map(
+    (group) =>
+      group.find(
+        (review) =>
+          review.reviewState === "approved" || review.reviewState === "changes_requested",
+      ) ?? group[0],
+  );
+  if (verdicts.some((review) => review.reviewState === "changes_requested")) {
+    return "danger";
+  }
+  return verdicts.length > 0 &&
+    verdicts.every((review) => review.reviewState === "approved") &&
+    requestedReviewers.length === 0
+    ? "success"
+    : "neutral";
 }

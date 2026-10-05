@@ -8,7 +8,7 @@ import { ForgeUserAvatar } from "@/components/git/forge-user-avatar";
 import { GitLogin } from "@/components/git/git-login";
 import type { PrReviewState, PrTimelineEvent } from "@/lib/pr-timeline";
 import type { MessageKey } from "@/lib/i18n-keys";
-import { reviewerReviewGroups } from "@/lib/pr-review-request";
+import { reviewerReviewGroups, reviewCardTone } from "@/lib/pr-review-request";
 
 const VERDICT: Record<PrReviewState, MessageKey<"PullRequests">> = {
   approved: "timelineReviewApproved",
@@ -16,21 +16,6 @@ const VERDICT: Record<PrReviewState, MessageKey<"PullRequests">> = {
   commented: "timelineReviewCommented",
   dismissed: "timelineReviewDismissedState",
 };
-
-export function reviewCardTone(
-  timeline: PrTimelineEvent[],
-  requestedReviewers: { login: string; avatar_url: string | null }[],
-): "danger" | "success" | "neutral" {
-  const latest = reviewerReviewGroups(timeline).map((group) => group[0]);
-  if (latest.some((review) => review.reviewState === "changes_requested")) {
-    return "danger";
-  }
-  return latest.length > 0 &&
-    latest.every((review) => review.reviewState === "approved") &&
-    requestedReviewers.length === 0
-    ? "success"
-    : "neutral";
-}
 
 export function PrReviewsCard({
   timeline,

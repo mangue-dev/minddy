@@ -247,14 +247,19 @@ export function PrUnresolvedConversations({
               className="flex flex-col gap-5"
             >
               {groups.map((group, index) => (
-                <section key={group.key} data-resolved={group.resolved}>
+                <section
+                  key={group.key}
+                  data-resolved={group.resolved ?? "unknown"}
+                >
                   {index === 0 ||
                   groups[index - 1].resolved !== group.resolved ? (
                     <h3 className="mb-3 text-xs font-medium text-muted-foreground">
                       {t(
-                        group.resolved
-                          ? "resolvedConversations"
-                          : "openConversations",
+                        group.resolved === undefined
+                          ? "unknownConversations"
+                          : group.resolved
+                            ? "resolvedConversations"
+                            : "openConversations",
                       )}
                     </h3>
                   ) : null}

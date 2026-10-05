@@ -731,7 +731,7 @@ export async function listBranches(opts: {
 /** Same ceiling as `pr.ts` (MAX_MEMBER_PAGES). */
 const MAX_MEMBER_PAGES = 2;
 
-/** GitLab replaces reviewer_ids, so preserve everyone already assigned. */
+/** Preserve assigned reviewers and explicitly re-request completed reviews. */
 export async function requestPullRequestReviewer(opts: {
   token: string; repoFullName: string; number: number; login: string;
 }): Promise<void> {
@@ -742,6 +742,14 @@ export async function requestPullRequestReviewer(opts: {
   const user = users.find((candidate) => candidate.username.toLowerCase() === opts.login.toLowerCase());
   if (!user) throw new GitlabApiError("Reviewer not found", 422);
   const mr = await glJson<RawMr>(url, opts.token);
+  if (mr.reviewers?.some((reviewer) => reviewer.id === user.id)) {
+    await glJson(`${url}/notes`, opts.token, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ body: `/request_review @${user.username}` }),
+    });
+    return;
+  }
   const reviewerIds = [...new Set([...(mr.reviewers ?? []).map((reviewer) => reviewer.id), user.id])];
   await glJson(url, opts.token, {
     method: "PUT", headers: { "Content-Type": "application/json" },

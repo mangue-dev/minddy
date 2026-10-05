@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import type { PrViewer, PullRequestRef } from "./agent-api";
-import { reviewerReviewGroups, viewerReviewIsRequested } from "./pr-review-request";
+import { reviewerReviewGroups, reviewCardTone, viewerReviewIsRequested } from "./pr-review-request";
+import type { PrReviewState, PrTimelineEvent } from "./pr-timeline";
 
 const viewer: PrViewer = {
   provider: "github",
@@ -36,7 +37,7 @@ describe("viewerReviewIsRequested", () => {
 
 
 describe("reviewerReviewGroups", () => {
-  it("preserves review history while using the latest verdict for each reviewer", () => {
+  it("preserves chronological review history for each reviewer", () => {
     const timeline: import("./pr-timeline").PrTimelineEvent[] = [
       {
         id: "old",
@@ -68,5 +69,43 @@ describe("reviewerReviewGroups", () => {
     ).toEqual([["new", "old"], ["other"]]);
     expect(timeline[0].id).toBe("old");
     expect(reviewerReviewGroups([])).toEqual([]);
+  });
+});
+
+describe("reviewCardTone", () => {
+  function review(id: number, state: PrReviewState, login = "ada"): PrTimelineEvent {
+    return {
+      id: String(id), kind: "reviewed", actor: { login, avatar_url: null },
+      reviewState: state, createdAt: `2026-10-0${id}T10:00:00Z`,
+    };
+  }
+
+  it.each([
+    ["approved", "success"],
+    ["changes_requested", "danger"],
+  ] as const)("preserves %s after a comment-only review", (verdict, tone) => {
+    const timeline = [review(1, verdict, "Ada"), review(2, "commented", "ada")];
+    expect(reviewCardTone(timeline, [])).toBe(tone);
+    expect(reviewerReviewGroups(timeline)[0].map((event) => event.id)).toEqual(["2", "1"]);
+  });
+
+  it("uses the newest decisive verdict even when later comments follow it", () => {
+    expect(reviewCardTone([
+      review(1, "changes_requested"), review(2, "approved"), review(3, "commented"),
+    ], [])).toBe("success");
+    expect(reviewCardTone([
+      review(1, "approved"), review(2, "changes_requested"), review(3, "commented"),
+    ], [])).toBe("danger");
+  });
+
+  it("keeps comment-only reviewers and pending requests neutral", () => {
+    expect(reviewCardTone([], [])).toBe("neutral");
+    expect(reviewCardTone([review(1, "commented")], [])).toBe("neutral");
+    expect(reviewCardTone([review(1, "approved")], [{ login: "grace", avatar_url: null }])).toBe("neutral");
+    expect(reviewCardTone([review(1, "approved"), review(2, "commented", "grace")], [])).toBe("neutral");
+  });
+
+  it("does not reactivate a dismissed review", () => {
+    expect(reviewCardTone([review(1, "dismissed"), review(2, "commented")], [])).toBe("neutral");
   });
 });
