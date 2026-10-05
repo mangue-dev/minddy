@@ -2,7 +2,7 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
-import { AlertCircleIcon, ArrowDown01Icon, ArrowUpRight01Icon, BubbleChatIcon, GitBranchIcon, GitMergeIcon, GitPullRequestDraftIcon, Shield01Icon, CheckIcon, UserRoundCheckIcon as UserRoundCheck, ViewIcon, Wrench01Icon } from "@hugeicons/core-free-icons";
+import { AlertCircleIcon, ArrowDown01Icon, Copy01Icon, LinkSquare01Icon, ArrowUpRight01Icon, BubbleChatIcon, GitBranchIcon, GitMergeIcon, GitPullRequestDraftIcon, Shield01Icon, CheckIcon, UserRoundCheckIcon as UserRoundCheck, ViewIcon, Wrench01Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useState } from "react";
 import { useFormatter, useNow, useTranslations } from "next-intl";
 import {
@@ -10,8 +10,6 @@ import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-  Popover,
-  PopoverContent,
   PopoverTrigger,
   cn,
 } from "mangue-ui";
@@ -20,7 +18,7 @@ import { PrReviewsDetails, type PrReviewerDetails } from "@/components/pull-requ
 import { reviewerReviewGroups, reviewCardTone } from "@/lib/pr-review-request";
 import type { PrTimelineEvent } from "@/lib/pr-timeline";
 import { AppTooltip } from "@/components/ui/app-tooltip";
-import { PrInsightRow, type PrInsightTone } from "@/components/pull-requests/pr-insight-row";
+import { PrInsightRow, PrInsightPopover, PrInsightPopoverContent, type PrInsightTone } from "@/components/pull-requests/pr-insight-row";
 import { CheckLogo } from "@/components/pull-requests/pr-check-logo";
 import { NumoIcon } from "@/components/numo-icon";
 import { ForgeUserAvatar } from "@/components/git/forge-user-avatar";
@@ -252,6 +250,7 @@ export function PrInsights(props: PrInsightsProps) {
           tone={checksInsight.tone}
           testId="pr-status-card-checks"
           detailsTestId="pr-checks-popover"
+          showTitle={false}
           ariaLabel={`${t("viewChecks")}: ${checksInsight.title}`}
           showChevron={false}
           open={props.checksOpen}
@@ -329,7 +328,7 @@ export function PrInsights(props: PrInsightsProps) {
               {blocked.length > 0 ? <span className="text-xs tabular-nums">{blocked.length}</span> : null}
             </CollapsibleTrigger>
             {fixInsight ? (
-              <Popover>
+              <PrInsightPopover>
                 <PopoverTrigger asChild>
                   <Button variant="ghost" size="sm" data-testid="pr-fix-action" className="min-w-0">
                     <HugeiconsIcon icon={Wrench01Icon} className="size-4 shrink-0" />
@@ -337,10 +336,10 @@ export function PrInsights(props: PrInsightsProps) {
                     <HugeiconsIcon icon={ArrowDown01Icon} aria-hidden className="size-3.5 shrink-0" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent align="end" data-testid="pr-fix-popover" className="w-[min(26rem,calc(100vw-2rem))] p-3">
+                <PrInsightPopoverContent align="end" data-testid="pr-fix-popover" className="w-[min(26rem,calc(100vw-2rem))] p-3">
                   <StatusDetails insight={fixInsight} now={now} />
-                </PopoverContent>
-              </Popover>
+                </PrInsightPopoverContent>
+              </PrInsightPopover>
             ) : null}
           </div>
           <CollapsibleContent>
@@ -872,9 +871,11 @@ function StatusDetails({ insight, now }: { insight: PrInsight; now: Date }) {
                 variant="outline"
                 size="sm"
                 data-testid={action.testId}
+                data-keep-popover-open={action.feedback === "copied" ? "" : undefined}
                 disabled={which === "bottom" && actions.bottom.disabled}
                 onClick={() => { setPressed(which); action.onClick(); }}
               >
+                {insight.id === "deployment" ? <HugeiconsIcon icon={which === "top" ? Copy01Icon : LinkSquare01Icon} aria-hidden className="size-4" /> : null}
                 {pressed === which && action.feedback ? t(FEEDBACK_KEYS[action.feedback]) : action.label}
               </Button>
             );

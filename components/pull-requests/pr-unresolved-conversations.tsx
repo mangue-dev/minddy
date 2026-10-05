@@ -167,6 +167,7 @@ export function PrUnresolvedConversations({
       <SidePanel open={open} onOpenChange={onOpenChange}>
         <SidePanelContent
           side="right"
+          autoFocusOnOpen
           className="w-[min(760px,calc(100vw-2rem))]"
         >
           <SidePanelHeader className="px-4 py-4">

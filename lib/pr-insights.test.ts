@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PrInsights } from "@/components/pull-requests/pr-insights";
 import type { CheckState, ChecksSummary } from "@/lib/agent-api";
 import messages from "@/messages/en.json";
+import { groupReviewThreads } from "@/lib/pr-review-threads";
 import { AI_REVIEW_PROVIDERS } from "@/lib/pr-ai-review/providers";
 
 // Load the real primitives without the unrelated emoji picker barrel export.
@@ -101,9 +102,12 @@ describe("pull request insight properties", () => {
     expect(popover).not.toBeNull();
     expect(container.contains(popover)).toBe(false);
     const numo = popover!.querySelector<HTMLButtonElement>('[data-testid="pr-card-numo-review"]')!;
-    const human = popover!.querySelector<HTMLButtonElement>('[data-testid="pr-request-reviewer"]')!;
     await act(async () => numo.click());
+    expect(document.querySelector('[data-testid="pr-reviews-popover"]')).toBeNull();
+    await act(async () => trigger("reviews").click());
+    const human = document.querySelector<HTMLButtonElement>('[data-testid="pr-request-reviewer"]')!;
     await act(async () => human.click());
+    expect(document.querySelector('[data-testid="pr-reviews-popover"]')).toBeNull();
     expect(props.onRequestReview).toHaveBeenCalledOnce();
     expect(props.onRequestReviewer).toHaveBeenCalledOnce();
   });
@@ -210,7 +214,7 @@ describe("pull request insight properties", () => {
     expect(copy.textContent).toBe("Copied");
     await act(async () => launch.click());
     expect(onLaunch).toHaveBeenCalledOnce();
-    expect(launch.textContent).toBe("Launched");
+    expect(document.querySelector('[data-testid="pr-fix-popover"]')).toBeNull();
   });
 
   it("shows check results and durations without details links in the popover", async () => {
@@ -220,6 +224,8 @@ describe("pull request insight properties", () => {
     await render();
     const popover = document.querySelector('[data-testid="pr-checks-popover"]')!;
     expect(popover.querySelector("a")).toBeNull();
+    expect(popover.querySelector("h3")).toBeNull();
+    expect(popover.getAttribute("aria-label")).toBe("Checks");
     expect(popover.textContent).toContain("Check 1");
     expect(popover.textContent).toContain("Passed");
     expect(popover.textContent).toContain("Running");
@@ -250,9 +256,10 @@ describe("pull request insight properties", () => {
     const section = document.querySelector('[data-testid="pr-insight-detail-numo-review"]')!;
     const action = section.querySelector<HTMLButtonElement>('[data-testid="pr-card-numo-review"]')!;
     expect(section.querySelector("header")!.contains(action)).toBe(true);
+    expect(section.textContent).not.toContain("No reviews yet");
     await act(async () => action.click());
     expect(props.onRequestReview).toHaveBeenCalledOnce();
-    expect(document.querySelector('[data-testid="pr-reviews-details"]')!.textContent).not.toContain("No reviews yet");
+    expect(document.querySelector('[data-testid="pr-reviews-popover"]')).toBeNull();
   });
 
   it.each(["requested", "running", "completed", "clean", "findings", "failed", "skipped"] as const)("groups %s agent metadata and verdicts below one banner without agent actions", async (state) => {
@@ -274,6 +281,50 @@ describe("pull request insight properties", () => {
     expect(document.querySelector('[data-testid="pr-reviews-details"]')!.querySelectorAll(`[data-reviewer-login="${provider.githubLogins[0]}"]`)).toHaveLength(0);
     const pending = document.querySelector('[data-testid="pr-reviews-details"] [data-reviewer-login="pending-reviewer"]')!;
     expect(pending.closest("header")).not.toBeNull();
+  });
+
+  it("closes the conversation popover when opening the feedback sidebar", async () => {
+    props.conversationThreads = groupReviewThreads([{
+      id: 1, body: "Review feedback", path: "app.tsx", line: 1, original_line: 1,
+      side: "RIGHT", start_line: null, original_start_line: null, start_side: null,
+      in_reply_to_id: null, review_id: 1, diff_hunk: "@@ -1 +1 @@", user: { login: "reviewer", avatar_url: null },
+      created_at: "2026-10-05T10:00:00Z", html_url: "https://example.test/review/1",
+    }]);
+    await render();
+    await act(async () => trigger("conversations").click());
+    const popover = document.querySelector('[data-testid="pr-insight-detail-conversations"]')!.closest('[data-slot="popover-content"]')!;
+    await act(async () => popover.querySelector<HTMLButtonElement>("button")!.click());
+    expect(props.onOpenConversations).toHaveBeenCalledOnce();
+    expect(document.contains(popover)).toBe(false);
+    expect(trigger("conversations").getAttribute("aria-expanded")).toBe("false");
+  });
+
+  it("keeps deployment copy feedback visible and closes the popover when viewing the deployment", async () => {
+    const url = "https://preview.example.test";
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    const open = vi.spyOn(window, "open").mockImplementation(() => null);
+    const originalClipboard = Object.getOwnPropertyDescriptor(navigator, "clipboard");
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+    try {
+      props.deployment = { status: "success", url, startedAt: null, durationMs: 30_000 };
+      await render();
+      await act(async () => trigger("deployment").click());
+      const copy = document.querySelector<HTMLButtonElement>('[data-testid="pr-card-copy-deployment"]')!;
+      const view = document.querySelector<HTMLButtonElement>('[data-testid="pr-card-view-deployment"]')!;
+      expect(copy.querySelector("svg")).not.toBeNull();
+      expect(view.querySelector("svg")).not.toBeNull();
+      await act(async () => copy.click());
+      expect(writeText).toHaveBeenCalledWith(url);
+      expect(copy.textContent).toBe("Copied");
+      expect(document.contains(copy)).toBe(true);
+      await act(async () => view.click());
+      expect(open).toHaveBeenCalledWith(url, "_blank", "noreferrer");
+      expect(document.contains(view)).toBe(false);
+    } finally {
+      open.mockRestore();
+      if (originalClipboard) Object.defineProperty(navigator, "clipboard", originalClipboard);
+      else Reflect.deleteProperty(navigator, "clipboard");
+    }
   });
 
 });
