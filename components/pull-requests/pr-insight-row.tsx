@@ -11,6 +11,7 @@ export type PrInsightTone = "danger" | "progress" | "success" | "neutral";
 /** Match ticket property values while keeping details outside the page flow. */
 export function PrInsightRow({
   label,
+  tone,
   summary,
   children,
   testId,
@@ -19,6 +20,7 @@ export function PrInsightRow({
   onOpenChange,
 }: {
   label: string;
+  tone?: PrInsightTone;
   summary: ReactNode;
   children: ReactNode;
   testId: string;
@@ -27,7 +29,7 @@ export function PrInsightRow({
   onOpenChange?: (open: boolean) => void;
 }) {
   return (
-    <PropertyRow label={label}>
+    <PropertyRow label={label} labelClassName={tone === "danger" ? "text-destructive" : undefined}>
       <Popover open={open} onOpenChange={onOpenChange}>
         <PopoverTrigger asChild>
           <button

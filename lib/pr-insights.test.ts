@@ -109,6 +109,10 @@ describe("pull request insight properties", () => {
     expect(group.contains(trigger("reviews"))).toBe(false);
     expect(trigger("checks").textContent).toContain("1 check failed");
     expect(trigger("checks").className).not.toMatch(/bg-destructive|text-destructive/);
+    const label = trigger("checks").closest(".min-h-9")!.firstElementChild!;
+    expect(label.classList.contains("text-destructive")).toBe(true);
+    const reviewLabel = trigger("reviews").closest(".min-h-9")!.firstElementChild!;
+    expect(reviewLabel.classList.contains("text-destructive")).toBe(false);
   });
 
   it("retains the checks row and completion circle when a suite settles", async () => {
@@ -171,12 +175,20 @@ describe("pull request insight properties", () => {
     expect(onOpen).toHaveBeenCalledOnce();
   });
 
-  it("keeps correction actions visible in a popover on click", async () => {
+  it("opens global correction actions from the header without expanding the group", async () => {
     const onCopy = vi.fn();
     const onLaunch = vi.fn();
     props.fix = { canLaunch: true, onCopy, onLaunch };
     await render();
-    await act(async () => trigger("fix").click());
+    const header = document.querySelector('[data-testid="pr-insight-blockers-header"]')!;
+    const action = header.querySelector<HTMLButtonElement>('[data-testid="pr-fix-action"]')!;
+    const toggle = header.querySelector<HTMLButtonElement>("button")!;
+    expect(trigger("fix")).toBeNull();
+    await act(async () => toggle.click());
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+    await act(async () => action.click());
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+    expect(document.querySelector('[data-testid="pr-fix-popover"]')).not.toBeNull();
     const copy = document.querySelector<HTMLButtonElement>('[data-testid="pr-card-fix-copy"]')!;
     const launch = document.querySelector<HTMLButtonElement>('[data-testid="pr-card-fix-launch"]')!;
     await act(async () => copy.click());

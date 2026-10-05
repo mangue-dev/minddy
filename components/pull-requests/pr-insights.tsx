@@ -10,6 +10,9 @@ import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
   cn,
 } from "mangue-ui";
 
@@ -187,6 +190,7 @@ export function PrInsights(props: PrInsightsProps) {
   const now = useNow({ updateInterval: 1_000 });
   const [blockersOpen, setBlockersOpen] = useState(true);
   const insights = buildInsights(t, props);
+  const fixInsight = insights.find(({ insight }) => insight.id === "fix")?.insight;
   const checksInsight = insights.find((entry) => entry.isChecks)!.insight;
   const reviews = insights.filter(({ insight }) =>
     insight.id !== "reviews" && (insight.id === "numo-review" || insight.id.startsWith("ai-review-") ||
@@ -218,7 +222,7 @@ export function PrInsights(props: PrInsightsProps) {
           ? t("approvals", { count: latest.filter((review) => review.reviewState === "approved").length })
           : count > 0 ? t("cardReviews", { count }) : t("noReviews")
   );
-  const other = insights.filter((entry) => !entry.isChecks && entry.insight.id !== "reviews" && !reviews.includes(entry));
+  const other = insights.filter((entry) => !entry.isChecks && entry.insight.id !== "fix" && entry.insight.id !== "reviews" && !reviews.includes(entry));
   const rest = [...other.filter(({ insight }) => insight.id === "conversations"), ...other.filter(({ insight }) => insight.id !== "conversations")];
 
   useEffect(() => {
@@ -232,6 +236,7 @@ export function PrInsights(props: PrInsightsProps) {
       content: (
         <PrInsightRow
           label={t("insightChecks")}
+          tone={checksInsight.tone}
           testId="pr-status-card-checks"
           detailsTestId="pr-checks-popover"
           open={props.checksOpen}
@@ -248,6 +253,7 @@ export function PrInsights(props: PrInsightsProps) {
       content: (
         <PrInsightRow
           label={t("reviewsTitle")}
+          tone={reviewTone}
           testId="pr-status-card-reviews"
           detailsTestId="pr-reviews-popover"
           summary={
@@ -280,14 +286,29 @@ export function PrInsights(props: PrInsightsProps) {
 
   return (
     <div data-testid="pr-insights" className="flex w-full min-w-0 flex-col gap-2">
-      {blocked.length > 0 ? (
+      {blocked.length > 0 || fixInsight ? (
         <Collapsible open={blockersOpen} onOpenChange={setBlockersOpen} data-testid="pr-insight-blockers">
-          <CollapsibleTrigger className="group flex w-full items-center gap-2 rounded py-1 text-left text-sm font-medium text-destructive outline-none focus-visible:ring-2 focus-visible:ring-ring">
-            <HugeiconsIcon icon={AlertCircleIcon} className="size-4 shrink-0" />
-            <span>{t("insightBlockers")}</span>
-            <span className="text-xs tabular-nums">{blocked.length}</span>
-            <HugeiconsIcon icon={ArrowDown01Icon} aria-hidden className="ml-auto size-3.5 shrink-0 transition-transform group-data-[state=open]:rotate-180" />
-          </CollapsibleTrigger>
+          <div data-testid="pr-insight-blockers-header" className="flex min-w-0 items-center gap-2">
+            <CollapsibleTrigger className="group flex min-w-0 flex-1 items-center gap-2 rounded py-1 text-left text-sm font-medium text-destructive outline-none focus-visible:ring-2 focus-visible:ring-ring">
+              <HugeiconsIcon icon={AlertCircleIcon} className="size-4 shrink-0" />
+              <span className="shrink-0">{t("insightBlockers")}</span>
+              {blocked.length > 0 ? <span className="text-xs tabular-nums">{blocked.length}</span> : null}
+              <HugeiconsIcon icon={ArrowDown01Icon} aria-hidden className="ml-auto size-3.5 shrink-0 transition-transform group-data-[state=open]:rotate-180" />
+            </CollapsibleTrigger>
+            {fixInsight ? (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="ghost" size="sm" data-testid="pr-fix-action" className="min-w-0">
+                    <HugeiconsIcon icon={Wrench01Icon} className="size-4 shrink-0" />
+                    <span className="min-w-0 truncate">{t("cardFix")}</span>
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="end" data-testid="pr-fix-popover" className="w-[min(26rem,calc(100vw-2rem))] p-3">
+                  <StatusDetails insight={fixInsight} now={now} />
+                </PopoverContent>
+              </Popover>
+            ) : null}
+          </div>
           <CollapsibleContent>
             <div className="flex min-w-0 flex-col pt-2">
               {blocked.map((row) => <div key={row.id}>{row.content}</div>)}
@@ -772,6 +793,7 @@ function PrInsightView({ insight, now }: { insight: PrInsight; now: Date }) {
   return (
     <PrInsightRow
       label={label}
+      tone={insight.tone}
       testId={`pr-status-card-${insight.id}`}
       summary={<StatusSummary insight={insight} now={now} />}
     >
