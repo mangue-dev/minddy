@@ -2,8 +2,8 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
-import { AlertCircleIcon, ArrowUpRight01Icon, GitBranchIcon, GitMergeIcon, GitPullRequestDraftIcon, Shield01Icon, CheckIcon, UserRoundCheckIcon as UserRoundCheck, ViewIcon, Wrench01Icon } from "@hugeicons/core-free-icons";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { AlertCircleIcon, ArrowUpRight01Icon, BubbleChatIcon, GitBranchIcon, GitMergeIcon, GitPullRequestDraftIcon, Shield01Icon, CheckIcon, UserRoundCheckIcon as UserRoundCheck, ViewIcon, Wrench01Icon } from "@hugeicons/core-free-icons";
+import { useEffect, useState, type ReactNode } from "react";
 import { useFormatter, useNow, useTranslations } from "next-intl";
 import {
   Popover,
@@ -12,6 +12,9 @@ import {
   cn,
 } from "mangue-ui";
 
+import { PrReviewsCard } from "@/components/pull-requests/pr-reviews-card";
+import { reviewCardTone } from "@/lib/pr-review-request";
+import type { PrTimelineEvent } from "@/lib/pr-timeline";
 import { AppTooltip } from "@/components/ui/app-tooltip";
 import { CheckLogo } from "@/components/pull-requests/pr-check-logo";
 import { NumoIcon } from "@/components/numo-icon";
@@ -176,7 +179,11 @@ interface PrStatusCardsProps {
   /** The deployment story as the forge reported it, made sticky by the
       caller — the card never tears down mid-build. */
   deployment: PrDeploymentStory | null;
-  unresolvedThreads: PullRequestFeedbackThread[];
+  conversationThreads: PullRequestFeedbackThread[];
+  timeline: PrTimelineEvent[];
+  requestedReviewers: { login: string; avatar_url: string | null }[];
+  canRequestReviewer: boolean;
+  onRequestReviewer: () => void;
   canAct: (blocker: ReadinessBlocker) => boolean;
   acting: ReadinessAction | null;
   onAction: (blocker: ReadinessBlocker) => void;
@@ -212,25 +219,7 @@ interface PrStatusCardsProps {
 export function PrStatusCards(props: PrStatusCardsProps) {
   const t = useTranslations("PullRequests");
   const now = useNow({ updateInterval: 1_000 });
-  const cards = useMemo(
-    () => buildStatusCards(t, props),
-    // `now` only drives the ticking durations, not the card set.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [
-      props.readiness,
-      props.checks,
-      props.deployment,
-      props.unresolvedThreads,
-      props.acting,
-      props.numoReview,
-      props.aiReviews,
-      props.requestingReviewer,
-      props.onRequestAiReview,
-      props.fixRun,
-      props.numoMerge,
-      props.fix,
-    ],
-  );
+  const cards = buildStatusCards(t, props);
   if (cards.length === 0) return null;
 
   return (
@@ -242,17 +231,27 @@ export function PrStatusCards(props: PrStatusCardsProps) {
       data-testid="pr-status-cards"
       className="flex max-w-full flex-wrap items-stretch gap-2"
     >
-      {cards.map(({ card, checksCard }) => (
-        <PrStatusCardView
-          key={card.id}
-          card={card}
-          now={now}
-          checks={checksCard ? props.checks : null}
-          provider={props.provider}
-          checksOpen={props.checksOpen}
-          onChecksOpenChange={props.onChecksOpenChange}
-        />
-      ))}
+      {cards.map(({ card, checksCard }) =>
+        card.id === "reviews" ? (
+          <PrReviewsCard
+            key={card.id}
+            timeline={props.timeline}
+            requestedReviewers={props.requestedReviewers}
+            canRequest={props.canRequestReviewer}
+            onRequest={props.onRequestReviewer}
+          />
+        ) : (
+          <PrStatusCardView
+            key={card.id}
+            card={card}
+            now={now}
+            checks={checksCard ? props.checks : null}
+            provider={props.provider}
+            checksOpen={props.checksOpen}
+            onChecksOpenChange={props.onChecksOpenChange}
+          />
+        ),
+      )}
     </div>
   );
 }
@@ -269,7 +268,7 @@ function buildStatusCards(
   props: PrStatusCardsProps,
 ): { card: PrStatusCard; checksCard: boolean }[] {
   const cards: { card: PrStatusCard; checksCard: boolean }[] = [];
-  const { readiness, checks, unresolvedThreads } = props;
+  const { readiness, checks, conversationThreads } = props;
   const blockers = readiness?.blockers ?? [];
   const push = (card: PrStatusCard, checksCard = false) =>
     cards.push({ card, checksCard });
@@ -608,31 +607,8 @@ function buildStatusCards(
             : undefined,
         });
         break;
-      case "conversations": {
-        const authors = unresolvedThreads
-          .map((thread) => thread.root.user)
-          .filter(
-            (user): user is { login: string; avatar_url: string | null } =>
-              !!user,
-          );
-        const unique = authors.filter(
-          (user, index) =>
-            authors.findIndex((other) => other.login === user.login) === index,
-        );
-        push({
-          id: blocker.id,
-          tone,
-          title: t("cardUnresolvedConversations", { count: blocker.count ?? 0 }),
-          durationMs: null,
-          startedAt: null,
-          donutParts: null,
-          avatars: unique.slice(0, 4),
-          iconKind: blocker.kind,
-          hoverLabel: t("blockerActionResolve"),
-          onSelect: props.onOpenConversations,
-        });
+      case "conversations":
         break;
-      }
       case "branch":
         push({
           id: blocker.id,
@@ -701,14 +677,55 @@ function buildStatusCards(
     }
   }
 
+  const resolvedCount = conversationThreads.filter(
+    (thread) => thread.resolution?.resolved === true,
+  ).length;
+  const allResolved =
+    conversationThreads.length > 0 &&
+    resolvedCount === conversationThreads.length;
+  push({
+    id: "conversations",
+    tone:
+      conversationThreads.length === 0
+        ? "neutral"
+        : allResolved
+          ? "success"
+          : "progress",
+    title: t("cardConversations", { count: conversationThreads.length }),
+    durationMs: null,
+    startedAt: null,
+    donutParts:
+      conversationThreads.length > 0 && !allResolved
+        ? conversationThreads.map((thread) =>
+            thread.resolution?.resolved === true
+              ? "success"
+              : thread.resolution?.resolved === false
+                ? "pending"
+                : "neutral",
+          )
+        : null,
+    avatars: null,
+    iconKind: "conversations",
+    hoverLabel: t("viewConversations"),
+    onSelect: props.onOpenConversations,
+  });
+  push({
+    id: "reviews",
+    tone: reviewCardTone(props.timeline, props.requestedReviewers),
+    title: t("reviewsTitle"),
+    durationMs: null,
+    startedAt: null,
+    donutParts: null,
+    avatars: null,
+    iconKind: "review_requested",
+  });
+
   return cards.sort((a, b) => rankCard(a.card) - rankCard(b.card));
 }
 
-/** The reading order of the cards: a blocking fix leads, the unresolved
-    conversations follow (the human words blocking the merge come before any
-    machine state), then errors before in-progress work before settled
-    stories. The sort is stable, so cards of the same verdict keep the
-    order they were built in. */
+/** A blocking fix leads, then errors, in-progress work, success and neutral
+    cards. Numo verification closes the list. The stable sort preserves the
+    construction order within each tone. */
 const TONE_RANK: Record<PrStatusCardTone, number> = {
   danger: 20,
   progress: 30,
@@ -718,7 +735,7 @@ const TONE_RANK: Record<PrStatusCardTone, number> = {
 
 function rankCard(card: PrStatusCard): number {
   if (card.id === "fix") return 0;
-  if (card.iconKind === "conversations") return 10;
+  if (card.id === "numo-review") return 60;
   return TONE_RANK[card.tone];
 }
 
@@ -755,6 +772,8 @@ function HoverWordOverlay({
 }
 
 function blockerIcon(kind: ReadinessBlocker["kind"]) {  switch (kind) {
+    case "conversations":
+      return <HugeiconsIcon icon={BubbleChatIcon} />;
     case "draft":
       return <HugeiconsIcon icon={GitPullRequestDraftIcon} />;
     case "review_requested":
@@ -823,7 +842,7 @@ function PrStatusCardView({
           <ChecksDonut parts={card.donutParts} />
         ) : card.avatars ? (
           <AvatarCascade users={card.avatars} />
-        ) : card.id === "checks-passed" ? (
+        ) : card.id === "checks-passed" || (card.id === "conversations" && card.tone === "success") ? (
           <HugeiconsIcon icon={CheckIcon} />
         ) : card.id === "deployment" ? (
           <HugeiconsIcon icon={ArrowUpRight01Icon} />
@@ -1106,7 +1125,7 @@ export function ChecksDonut({ parts }: { parts: CheckState[] }) {
       className="size-4 shrink-0"
       aria-hidden
     >
-      {parts.slice(0, 12).map((state, index) => (
+      {parts.map((state, index) => (
         <circle
           key={index}
           cx={size / 2}

@@ -193,6 +193,7 @@ interface RawMr {
   target_project_id?: number | null;
   sha?: string | null;
   diff_refs?: { base_sha?: string; start_sha?: string; head_sha?: string } | null;
+  reviewers?: Array<{ id: number; username: string; avatar_url?: string | null }>;
   author?: { username?: string; avatar_url?: string | null } | null;
   created_at?: string;
   updated_at?: string;
@@ -394,8 +395,17 @@ export async function getMergeRequest(opts: {
       .then((data) => data.project?.mergeRequest ?? null)
       .catch(() => null),
   ]);
+  // Assigned GitLab reviewers stay assigned after reviewing. Only unreviewed
+  // requests may block the viewer's merge action or appear as pending.
+  const reviewers = mr.reviewers?.length
+    ? await glJson<Array<{ state: string; user: { username: string; avatar_url?: string | null } }>>(
+        `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}/merge_requests/${opts.number}/reviewers`,
+        opts.token,
+      ).catch(() => [])
+    : [];
   return {
     ...toRef(mr),
+    requestedReviewers: reviewers.filter((reviewer) => reviewer.state === "unreviewed").map((reviewer) => ({ login: reviewer.user.username, avatar_url: reviewer.user.avatar_url ?? null })),
     defaultMergeCommitMessage: defaults?.defaultMergeCommitMessage ?? null,
     defaultSquashCommitMessage: defaults?.defaultSquashCommitMessage ?? null,
   };
@@ -720,6 +730,32 @@ export async function listBranches(opts: {
 
 /** Same ceiling as `pr.ts` (MAX_MEMBER_PAGES). */
 const MAX_MEMBER_PAGES = 2;
+
+/** Preserve assigned reviewers and explicitly re-request completed reviews. */
+export async function requestPullRequestReviewer(opts: {
+  token: string; repoFullName: string; number: number; login: string;
+}): Promise<void> {
+  const url = `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}/merge_requests/${opts.number}`;
+  const users = await glJson<Array<{ id: number; username: string }>>(
+    `${GITLAB_API_BASE}/users?username=${encodeURIComponent(opts.login)}`, opts.token,
+  );
+  const user = users.find((candidate) => candidate.username.toLowerCase() === opts.login.toLowerCase());
+  if (!user) throw new GitlabApiError("Reviewer not found", 422);
+  const mr = await glJson<RawMr>(url, opts.token);
+  if (mr.reviewers?.some((reviewer) => reviewer.id === user.id)) {
+    await glJson(`${url}/notes`, opts.token, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ body: `/request_review @${user.username}` }),
+    });
+    return;
+  }
+  const reviewerIds = [...new Set([...(mr.reviewers ?? []).map((reviewer) => reviewer.id), user.id])];
+  await glJson(url, opts.token, {
+    method: "PUT", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ reviewer_ids: reviewerIds }),
+  });
+}
 
 /**
  * GitLab accounts that can be mentioned on this project (MIN-162).

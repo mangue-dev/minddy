@@ -101,6 +101,8 @@ export interface Forge {
   mergeMethods: readonly MergeMethod[];
   /** Names of the repository branches (basic branch picker at launch). */
   listBranches(opts: { token: string; repoFullName: string }): Promise<string[]>;
+  /** Request a review using the connected human account, preserving other requests. */
+  requestPullRequestReviewer(opts: { token: string; repoFullName: string; number: number; login: string }): Promise<void>;
   /**
  * The FORGE accounts that can be mentioned on this repository (MIN-162) — not
  * minddy members: a `@` in a PR comment ends up at the forge,
@@ -546,6 +548,7 @@ const githubForge: Forge = {
   mergeMethods: ["squash", "merge", "rebase"],
   listBranches: github.listBranches,
   listRepoMembers: github.listRepoMembers,
+  requestPullRequestReviewer: github.requestPullRequestReviewer,
   listPullRequests: github.listPullRequests,
   deleteBranch: github.deleteBranch,
   ensurePullRequest: github.ensurePullRequest,
@@ -643,6 +646,7 @@ const gitlabForge: Forge = {
   mergeMethods: ["squash", "merge"],
   listBranches: gitlab.listBranches,
   listRepoMembers: gitlab.listRepoMembers,
+  requestPullRequestReviewer: gitlab.requestPullRequestReviewer,
   listPullRequests: gitlab.listPullRequests,
   deleteBranch: gitlab.deleteBranch,
   ensurePullRequest: gitlab.ensureMergeRequest,
