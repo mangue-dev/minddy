@@ -3,11 +3,10 @@
 import { PrCommitsSkeleton } from "@/components/pull-requests/pr-loading-skeleton";
 import { useMemo, useRef, useState } from "react";
 import { AppIcon } from "@/components/icon";
-import { ArrowDown01Icon, GitCommitIcon, ShieldCheckIcon as ShieldCheck } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, ShieldCheckIcon as ShieldCheck } from "@hugeicons/core-free-icons";
 import { useFormatter, useTranslations } from "next-intl";
 import {
   Badge,
-  Button,
   Popover,
   PopoverContent,
   PopoverTrigger,
@@ -314,14 +313,22 @@ export function PrCommitsPopover({
   return (
     <>
       <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button ref={triggerRef} data-testid="pr-commits-trigger" variant="ghost" size="sm" className="gap-1.5 text-muted-foreground">
-            <AppIcon icon={GitCommitIcon} className="size-3.5" />
-            {t("tabCommits")}
-            {count != null ? <span className="text-xs tabular-nums">{count}</span> : null}
-            <AppIcon icon={ArrowDown01Icon} className="size-3.5" />
-          </Button>
-        </PopoverTrigger>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <PopoverTrigger asChild>
+              <button
+                ref={triggerRef}
+                data-testid="pr-commits-trigger"
+                type="button"
+                className="group -mx-1.5 flex min-w-0 items-center rounded-md px-1.5 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:bg-muted focus-visible:text-foreground data-[state=open]:bg-muted data-[state=open]:text-foreground"
+              >
+                <span className="truncate">{count != null ? t("commitCount", { count }) : t("tabCommits")}</span>
+                <AppIcon icon={ArrowDown01Icon} className="ml-1 size-3.5 shrink-0 transition-transform group-data-[state=open]:rotate-180" />
+              </button>
+            </PopoverTrigger>
+          </TooltipTrigger>
+          <TooltipContent>{t("commitsHint")}</TooltipContent>
+        </Tooltip>
         <PopoverContent
           data-testid="pr-commits-popover"
           align="start"

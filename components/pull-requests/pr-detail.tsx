@@ -2289,11 +2289,10 @@ export function PrDetail({
                 <PrFilesSkeleton />
               ) : pr ? (
                 <div className="flex flex-col gap-3">
-                  {/* MIN-548: the review mode lives INSIDE the diff toolbar —
-                      one single line under the tab, with the file count, the
-                      display switches and the review toggle. */}
+                  {/* Review actions sit above the display controls in the diff toolbar. */}
                   <PrDiff
                     files={files}
+                    showFileTreeTotals={false}
                     endpoint={prEndpoint(item.prId)}
                     prUrl={pr.url}
                     provider={item.provider}
@@ -2324,7 +2323,7 @@ export function PrDetail({
                     }
                     reviewControls={
                       canComment ? (
-                        <div data-testid="pr-file-review-toolbar" className="flex items-center gap-2">
+                        <div data-testid="pr-file-review-toolbar" className="flex flex-wrap items-center justify-end gap-2">
                           {fileReviewActive ? (
                             <span className="text-xs text-muted-foreground">
                               {t("reviewFileProgress", {

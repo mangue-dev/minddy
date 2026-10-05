@@ -170,11 +170,14 @@ export function PrFileTreeButton({
   files,
   totalAdditions,
   totalDeletions,
+  showTotals = true,
   onSelect,
 }: {
   files: PullRequestFile[];
   totalAdditions: number;
   totalDeletions: number;
+  /** Keep aggregate counts in standalone diffs that have no PR header. */
+  showTotals?: boolean;
   /** Takes to the file: the parent unfolds the card, then scrolls through it. */
   onSelect: (path: string) => void;
 }) {
@@ -238,18 +241,23 @@ export function PrFileTreeButton({
           <PopoverTrigger asChild>
             <button
               ref={triggerRef}
+              data-testid="pr-file-tree-trigger"
               type="button"
-              className="group -mx-1.5 flex min-w-0 items-center rounded-md px-1.5 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground data-[state=open]:bg-muted data-[state=open]:text-foreground"
+              className="group -mx-1.5 flex min-w-0 items-center rounded-md px-1.5 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:bg-muted focus-visible:text-foreground data-[state=open]:bg-muted data-[state=open]:text-foreground"
             >
               <span className="truncate">
                 {t("fileCount", { count: files.length })}
               </span>
-              <span className="ml-2 shrink-0 tabular-nums text-emerald-600 dark:text-emerald-400">
-                +{totalAdditions}
-              </span>
-              <span className="ml-1 shrink-0 tabular-nums text-red-600 dark:text-red-400">
-                −{totalDeletions}
-              </span>
+              {showTotals ? (
+                <>
+                  <span className="ml-2 shrink-0 tabular-nums text-emerald-600 dark:text-emerald-400">
+                    +{totalAdditions}
+                  </span>
+                  <span className="ml-1 shrink-0 tabular-nums text-red-600 dark:text-red-400">
+                    −{totalDeletions}
+                  </span>
+                </>
+              ) : null}
               <HugeiconsIcon icon={ArrowDown01Icon} className="ml-1 size-3.5 shrink-0 transition-transform group-data-[state=open]:rotate-180" />
             </button>
           </PopoverTrigger>
@@ -257,6 +265,7 @@ export function PrFileTreeButton({
         <TooltipContent>{t("fileTreeHint")}</TooltipContent>
       </Tooltip>
       <PopoverContent
+        data-testid="pr-file-tree-popover"
         align="start"
         container={container}
         onCloseAutoFocus={(event) => {

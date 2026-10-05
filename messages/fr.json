@@ -3722,6 +3722,8 @@
     "tabChanges": "Changements",
     "tabActivity": "Activité",
     "tabCommits": "Commits",
+    "commitCount": "{count, plural, one {# commit} other {# commits}}",
+    "commitsHint": "Parcourir les commits",
     "tabFiles": "Fichiers modifiés",
     "noCommits": "Aucun commit sur cette pull request.",
     "commitsOnDate": "Commits du {date}",
