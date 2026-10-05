@@ -2,11 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   DEFAULT_SMART_TRIAGE_MODE,
-  MAX_TRIAGE_TICKETS_PER_DECISION,
-  TRIAGE_NEUTRAL_SCORE,
-  jevTriageOrder,
   parseSmartTriageMode,
-  triageAgeDays,
   triageIssueComparator,
   boardComparatorFactory,
   type TriageIssue,
@@ -46,9 +42,9 @@ function order(issues: TriageIssue[], ctx: Omit<Parameters<typeof triageIssueCom
 }
 
 describe("parseSmartTriageMode", () => {
-  it("accepts the two known values only (MIN-575: off is retired)", () => {
+  it("accepts rules and rejects retired or unknown modes", () => {
     expect(parseSmartTriageMode("rules")).toBe("rules");
-    expect(parseSmartTriageMode("jev")).toBe("jev");
+    expect(parseSmartTriageMode("jev")).toBeNull();
     expect(parseSmartTriageMode("off")).toBeNull();
     expect(parseSmartTriageMode("smart")).toBeNull();
     expect(parseSmartTriageMode(undefined)).toBeNull();
@@ -227,65 +223,6 @@ describe("triageIssueComparator — objectives stay together", () => {
   });
 });
 
-describe("jevTriageOrder", () => {
-  it("orders by score, highest first, oldest first on ties", () => {
-    const issues = [
-      ticket({ id: "a", created_at: "2026-09-10T10:00:00Z" }),
-      ticket({ id: "b", created_at: "2026-09-01T10:00:00Z" }),
-      ticket({ id: "c", created_at: "2026-09-05T10:00:00Z" }),
-    ];
-    const scores = new Map([
-      ["a", 3],
-      ["b", 5],
-      ["c", 3],
-    ]);
-    expect(jevTriageOrder(issues, scores).map((i) => i.id)).toEqual([
-      "b",
-      "c",
-      "a",
-    ]);
-  });
-
-  it("reads a missing score as neutral, never as first or last", () => {
-    const issues = [
-      ticket({ id: "unscored", created_at: "2026-09-01T10:00:00Z" }),
-      ticket({ id: "high", created_at: "2026-09-10T10:00:00Z" }),
-      ticket({ id: "low", created_at: "2026-09-10T10:00:00Z" }),
-    ];
-    const scores = new Map<string, number | null>([
-      ["high", 5],
-      ["low", 1],
-      ["unscored", null],
-    ]);
-    expect(jevTriageOrder(issues, scores).map((i) => i.id)).toEqual([
-      "high",
-      "unscored",
-      "low",
-    ]);
-    expect(TRIAGE_NEUTRAL_SCORE).toBe(3);
-  });
-});
-
-describe("triageAgeDays", () => {
-  it("counts whole calendar days waited", () => {
-    // 2026-09-14 → 2026-09-10: four days.
-    expect(triageAgeDays("2026-09-10T10:00:00Z", Date.parse("2026-09-14T12:00:00Z"))).toBe(4);
-  });
-
-  it("clamps a future (or unparseable) creation to zero", () => {
-    expect(triageAgeDays("2026-09-20T10:00:00Z", Date.parse("2026-09-14T12:00:00Z"))).toBe(0);
-    expect(triageAgeDays("not-a-date", Date.parse("2026-09-14T12:00:00Z"))).toBe(0);
-  });
-});
-
-describe("MAX_TRIAGE_TICKETS_PER_DECISION", () => {
-  it("keeps one decision inside both engines' reach", () => {
-    // The LLM fallback answers one score per ticket in a single forced call;
-    // past a few dozen the tool schema (and the bill) stop making sense.
-    expect(MAX_TRIAGE_TICKETS_PER_DECISION).toBeLessThanOrEqual(50);
-  });
-});
-
 describe("boardComparatorFactory (MIN-576)", () => {
   const NOW = Date.parse("2026-09-14T12:00:00Z");
 
@@ -331,21 +268,6 @@ describe("boardComparatorFactory (MIN-576)", () => {
     expect(columnB).toEqual(["z"]);
   });
 
-  it("hybrid: ranked tickets compare by score, the others keep the rules ranking", () => {
-    const issues = [
-      boardTicket({ id: "a", priority: "urgent", position: 10 }),
-      boardTicket({ id: "b", priority: "low", position: 20 }),
-      boardTicket({ id: "c", priority: "low", due_date: "2026-09-15", position: 30 }),
-      boardTicket({ id: "d", priority: "medium", position: 40 }),
-    ];
-    const scores = new Map<string, number | null>([["d", 2]]);
-    const ordered = sorted(issues, "smart", { jevScores: scores });
-    // d (scored, even at a low 2) outranks the unranked ones; among them
-    // the rules stand (a's urgent tier, then c's imminent due date passing
-    // b's plain low) — NOT age/position.
-    expect(ordered).toEqual(["d", "a", "c", "b"]);
-  });
-
   it("delegates the other sorts to the view comparator, column-blind", () => {
     const issues = [
       boardTicket({ id: "a", position: 20 }),
@@ -354,40 +276,34 @@ describe("boardComparatorFactory (MIN-576)", () => {
     expect(sorted(issues, "manual")).toEqual(["b", "a"]);
   });
 
-  it.each(["rules", "scored", "partially scored"] as const)(
-    "%s: keeps a member blocked by its own objective below actionable work until the objective closes",
-    (engine) => {
-      const issues = [
-        boardTicket({ id: "member", objective_id: "obj-1", priority: "urgent", effort: "xs", position: 10 }),
-        boardTicket({ id: "target", priority: "high", position: 20 }),
-        boardTicket({ id: "free", priority: "low", position: 30 }),
-      ];
-      const storedRelations: IssueRelation[] = [
-        { id: "objective-block", source_id: "obj-1", source_type: "objective", target_id: "member", type: "blocks" },
-        { id: "member-block", source_id: "member", target_id: "target", type: "blocks" },
-      ];
-      const jevScores = engine === "rules" ? undefined : new Map<string, number | null>([
-        ["member", 5], ["target", 4], ["free", engine === "scored" ? 1 : null],
+  it("keeps a member blocked by its own objective below actionable work until the objective closes", () => {
+    const issues = [
+      boardTicket({ id: "member", objective_id: "obj-1", priority: "urgent", effort: "xs", position: 10 }),
+      boardTicket({ id: "target", priority: "high", position: 20 }),
+      boardTicket({ id: "free", priority: "low", position: 30 }),
+    ];
+    const storedRelations: IssueRelation[] = [
+      { id: "objective-block", source_id: "obj-1", source_type: "objective", target_id: "member", type: "blocks" },
+      { id: "member-block", source_id: "member", target_id: "target", type: "blocks" },
+    ];
+    for (const status of ["planned", "in_progress", "done", "canceled"] as const) {
+      const { relations, objectiveStatuses } = cycleBlockingRelations(
+        storedRelations,
+        new Map([["obj-1", ["member"]]]),
+        new Map([["obj-1", status]]),
+      );
+      const statusById = new Map<string, IssueStatus>([
+        ...issues.map((issue) => [issue.id, "todo"] as const),
+        ...objectiveStatuses,
       ]);
-      for (const status of ["planned", "in_progress", "done", "canceled"] as const) {
-        const { relations, objectiveStatuses } = cycleBlockingRelations(
-          storedRelations,
-          new Map([["obj-1", ["member"]]]),
-          new Map([["obj-1", status]]),
-        );
-        const statusById = new Map<string, IssueStatus>([
-          ...issues.map((issue) => [issue.id, "todo"] as const),
-          ...objectiveStatuses,
-        ]);
-        const result = sorted(issues, "smart", { relations, statusById, jevScores });
-        if (status === "planned" || status === "in_progress") {
-          expect(result).toEqual(["free", "member", "target"]);
-        } else {
-          expect(result).toEqual(["member", "free", "target"]);
-        }
+      const result = sorted(issues, "smart", { relations, statusById });
+      if (status === "planned" || status === "in_progress") {
+        expect(result).toEqual(["free", "member", "target"]);
+      } else {
+        expect(result).toEqual(["member", "free", "target"]);
       }
-    },
-  );
+    }
+  });
 
   it("sinks a self-block created by folding a member's block on its own objective", () => {
     const issues = [

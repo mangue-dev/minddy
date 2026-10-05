@@ -1,21 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-/**
- * Smart Triage orchestration (MIN-566) — the server half of the button.
- *
- * Pinned here: `rules` orders through the pure comparator and rewrites
- * the positions inside each column's current range; `jev` pre-flights the
- * ACTOR's budget, runs ONE decision per column, orders by score and keeps the
- * rules order when both engines fail. Access is enforced here (the service
- * client bypasses RLS). There is no "off" mode (MIN-575) — a retired `off`
- * value on a row reads as the default, rules.
- */
-
 const {
   getProjectAccessMock,
   ensureUsageBudgetMock,
   runDecisionMock,
-  buildSmartTriageSpecMock,
   fromMock,
   rpcMock,
 } = vi.hoisted(() => ({
@@ -29,7 +17,6 @@ const {
       input: { billTo: unknown; projectId?: string | null }
     ) => Promise<unknown>
   >(),
-  buildSmartTriageSpecMock: vi.fn<(input: unknown) => unknown>(),
   fromMock: vi.fn<(table: string) => unknown>(),
   rpcMock: vi.fn<
     (name: string, params: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>
@@ -48,27 +35,7 @@ vi.mock("@/lib/server/usage", () => ({
 vi.mock("@/lib/server/decisions/runner", () => ({
   runDecision: runDecisionMock,
 }));
-vi.mock("@/lib/server/decisions/prepare", () => ({
-  buildSmartTriageSpec: buildSmartTriageSpecMock,
-}));
-
 import { runSmartTriage } from "./smart-triage";
-
-/** The prepare builder is mocked, but the orchestration must still drive a
- * REAL spec shape through the runner: one score question per ticket id. */
-function fakeSpec(input: {
-  tickets: Array<{ id: string }>;
-}): { useCase: string; state: unknown; questions: Array<{ key: string; kind: string }>; llm: unknown } {
-  return {
-    useCase: "smart_triage",
-    state: { tickets: input.tickets },
-    questions: input.tickets.map((ticket) => ({
-      key: ticket.id,
-      kind: "score",
-    })),
-    llm: {},
-  };
-}
 
 const DB = {
   project: {
@@ -159,12 +126,12 @@ beforeEach(() => {
   getProjectAccessMock.mockResolvedValue({ isOwner: true });
   ensureUsageBudgetMock.mockResolvedValue({});
   runDecisionMock.mockResolvedValue(null);
-  buildSmartTriageSpecMock.mockImplementation((input) => fakeSpec(input as Parameters<typeof fakeSpec>[0]));
 });
 
-describe("runSmartTriage — retired off value", () => {
-  it("reads a legacy `off` row as the default (rules), never as a no-op", async () => {
-    DB.project.smart_triage_mode = "off";
+describe("runSmartTriage — retired modes", () => {
+  it.each(["off", "jev"])("uses rules for a legacy %s project without consulting AI or usage", async (mode) => {
+    DB.project.smart_triage_mode = mode;
+    ensureUsageBudgetMock.mockRejectedValue(new Error("Budget exhausted"));
     DB.issues = [issue({ id: "a" }), issue({ id: "b" })];
     const result = await runSmartTriage({ projectId: "project-1", actorId: "user-1" });
     expect(result.ok).toBe(true);
@@ -275,10 +242,6 @@ describe("runSmartTriage — objective blocking (MIN-604)", () => {
       { id: "r1", source_id: "obj-1", source_type: "objective", target_id: "member", target_type: "issue", type: "blocks" },
       { id: "r2", source_id: "member", source_type: "issue", target_id: "target", target_type: "issue", type: "blocks" },
     ];
-    runDecisionMock.mockResolvedValue({
-      engine: "jev",
-      answers: { member: { value: 5 }, target: { value: 4 }, free: { value: 1 } },
-    });
 
     const result = await runSmartTriage({ projectId: "project-1", actorId: "user-1" });
     expect(result.ok).toBe(true);
@@ -291,15 +254,6 @@ describe("runSmartTriage — objective blocking (MIN-604)", () => {
     expect(ordered).toEqual(status === "planned" || status === "in_progress"
       ? ["free", "member", "target"]
       : ["member", "free", "target"]);
-    if (mode === "jev") {
-      expect(buildSmartTriageSpecMock).toHaveBeenCalledWith(expect.objectContaining({
-        tickets: expect.arrayContaining([expect.objectContaining({
-          id: "member",
-          blocksOpen: 1,
-          blockedByOpen: status === "planned" || status === "in_progress" ? 1 : 0,
-        })]),
-      }));
-    }
   });
 
   it.each(["rules", "jev"])("%s: sinks a member blocking its own objective", async (mode) => {
@@ -312,134 +266,21 @@ describe("runSmartTriage — objective blocking (MIN-604)", () => {
     DB.relations = [
       { id: "r", source_id: "member", source_type: "issue", target_id: "obj-1", target_type: "objective", type: "blocks" },
     ];
-    runDecisionMock.mockResolvedValue({
-      engine: "jev",
-      answers: { member: { value: 5 }, free: { value: 1 } },
-    });
     const result = await runSmartTriage({ projectId: "project-1", actorId: "user-1" });
     expect(result.ok).toBe(true);
     expect(writtenMoves).toEqual([{ id: "free", position: 10 }, { id: "member", position: 20 }]);
   });
 });
 
-describe("runSmartTriage — jev mode", () => {
-  beforeEach(() => {
-    DB.project.smart_triage_mode = "jev";
-    DB.issues = [
-      issue({ id: "a", position: 10, created_at: "2026-09-10T10:00:00Z" }),
-      issue({ id: "b", position: 20, created_at: "2026-09-05T10:00:00Z" }),
-      issue({ id: "c", position: 30, created_at: "2026-09-01T10:00:00Z" }),
-    ];
-  });
-
-  it("pre-flights the ACTOR's budget, scores the column and orders by score", async () => {
-    runDecisionMock.mockResolvedValue({
-      engine: "jev",
-      answers: {
-        a: { value: 1, probability: null, confidence: 0.9 },
-        b: { value: 5, probability: null, confidence: 0.9 },
-        c: { value: 3, probability: null, confidence: 0.9 },
-      },
-      confidence: 0.9,
-      fallbackReason: null,
-    });
-
-    const result = await runSmartTriage({ projectId: "project-1", actorId: "user-9" });
-    expect(result.ok).toBe(true);
-    if (!result.ok) return;
-    expect(result.scored).toBe(true);
-    expect(ensureUsageBudgetMock).toHaveBeenCalledWith("user-9", "automations");
-    // ONE decision for the whole column, billed to the actor.
-    expect(runDecisionMock).toHaveBeenCalledTimes(1);
-    const [spec, input] = runDecisionMock.mock.calls[0];
-    expect(input).toEqual({ billTo: { userId: "user-9" }, projectId: "project-1" });
-    // The state paints the tickets with the facts the rules weigh.
-    const state = (spec as { state: Record<string, unknown> }).state;
-    expect(state.tickets).toHaveLength(3);
-
-    const positionOf = (id: string): number =>
-      writtenMoves.find((m) => m.id === id)!.position;
-    expect(positionOf("b")).toBeLessThan(positionOf("c"));
-    expect(positionOf("c")).toBeLessThan(positionOf("a"));
-  });
-
-  it("degrades to the rules order when both engines fail, and says so", async () => {
-    runDecisionMock.mockResolvedValue(null);
-    const result = await runSmartTriage({ projectId: "project-1", actorId: "user-9" });
-    expect(result.ok).toBe(true);
-    if (!result.ok) return;
-    expect(result.scored).toBe(false);
-    // Still a reorder: the rules order IS the degradation.
-    expect(rpcMock).toHaveBeenCalledTimes(1);
-  });
-
-  it("caps the scored head and keeps the rules order for the tail", async () => {
-    DB.issues = Array.from({ length: 45 }, (_, i) =>
-      issue({ id: `t${i}`, position: 100 + i, created_at: `2026-09-01T00:00:${String(i % 60).padStart(2, "0")}Z` })
-    );
-    runDecisionMock.mockImplementation(async (spec: unknown) => {
-      const questions = (spec as { questions: Array<{ key: string }> }).questions;
-      const answers: Record<string, { value: number }> = {};
-      for (const q of questions) answers[q.key] = { value: 5 };
-      return {
-        engine: "llm",
-        answers,
-        confidence: 0.9,
-        fallbackReason: "jev_low_confidence",
-      };
-    });
-    const result = await runSmartTriage({ projectId: "project-1", actorId: "user-9" });
-    expect(result.ok).toBe(true);
-    if (!result.ok) return;
-    const spec = runDecisionMock.mock.calls[0][0] as {
-      questions: unknown[];
-      state: { tickets: unknown[] };
-    };
-    expect(spec.questions).toHaveLength(40);
-    expect(spec.state.tickets).toHaveLength(40);
-  });
-
-  it("scores WITHOUT writing when persist is false — the Smart sort's call (MIN-576)", async () => {
-    runDecisionMock.mockResolvedValue({
-      engine: "jev",
-      answers: {
-        a: { value: 5, probability: null, confidence: 0.9 },
-        b: { value: 1, probability: null, confidence: 0.9 },
-        c: { value: 3, probability: null, confidence: 0.9 },
-      },
-      confidence: 0.9,
-      fallbackReason: null,
-    });
-
-    const result = await runSmartTriage({
-      projectId: "project-1",
-      actorId: "user-9",
-      persist: false,
-    });
-    expect(result.ok).toBe(true);
-    if (!result.ok) return;
-    expect(result.scored).toBe(true);
-    // Nothing written: the view sort carries the order, the manual drag
-    // order stays untouched.
-    expect(result.moves).toEqual([]);
+describe("runSmartTriage — read-only requests", () => {
+  it.each(["rules", "jev"])("preserves manual positions for a %s project when persist=false", async (mode) => {
+    DB.project.smart_triage_mode = mode;
+    DB.issues = [issue({ id: "a", priority: "low", position: 10 }), issue({ id: "b", priority: "urgent", position: 20 })];
+    const result = await runSmartTriage({ projectId: "project-1", actorId: "user-1", persist: false });
+    expect(result).toEqual({ ok: true, mode: "rules", columns: 1, moves: [], scored: false, scores: null });
     expect(rpcMock).not.toHaveBeenCalled();
-    // The scores ride back to the client's comparator.
-    expect(result.scores).toEqual({ a: 5, b: 1, c: 3 });
-  });
-
-  it("answers null scores in rules mode — the client comparator needs nothing", async () => {
-    DB.project.smart_triage_mode = "rules";
-    DB.issues = [issue({ id: "a", position: 10 }), issue({ id: "b", position: 20 })];
-    const result = await runSmartTriage({
-      projectId: "project-1",
-      actorId: "user-1",
-      persist: false,
-    });
-    expect(result.ok).toBe(true);
-    if (!result.ok) return;
-    expect(result.scored).toBe(false);
-    expect(result.scores).toBeNull();
-    expect(result.moves).toEqual([]);
-    expect(rpcMock).not.toHaveBeenCalled();
+    expect(runDecisionMock).not.toHaveBeenCalled();
+    expect(ensureUsageBudgetMock).not.toHaveBeenCalled();
+    expect(fromMock).not.toHaveBeenCalledWith("categories");
   });
 });

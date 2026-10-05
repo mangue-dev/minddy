@@ -16,7 +16,7 @@ import {
   useState,
 } from "react";
 import dynamic from "next/dynamic";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAppNavigation, useAppRouter } from "@/lib/use-app-router";
 import Link from "@/components/app-link";
 import {
@@ -81,14 +81,13 @@ const IssueSidePanel = dynamic(
   { ssr: false },
 );
 import { takeSeedHandoff } from "@/lib/project-seed-handoff";
-import { createIssueApi, smartTriageApi } from "@/lib/issues-api";
+import { createIssueApi } from "@/lib/issues-api";
 import {
   insertIssueEverywhere,
   issueWrites,
   mergeServerIssue,
   removeIssueEverywhere,
 } from "@/lib/optimistic/issue-writes";
-import { trackEvent } from "@/lib/analytics";
 import { createIssueDeferred } from "@/lib/create-issue-deferred";
 import { buildOptimisticIssue } from "@/lib/optimistic-issue";
 import { useUndoHistory } from "@/lib/undo/undo-context";
@@ -156,7 +155,6 @@ function ProjectBoard() {
   const isOwner = !!project && project.owner_id === myUserId;
   // Smart triage mode (MIN-566) — read once so the toolbar prop narrows off
   // cleanly (`off` renders no button at all).
-  const smartTriageMode = project?.smart_triage_mode ?? "rules";
   const { open: openAssistant, openIntent } = useAssistantPanelActions();
   const appTabs = useOptionalAppTabSession();
 
@@ -471,62 +469,6 @@ function ProjectBoard() {
     (activeFamily || activeObjective) && config.sort === "manual"
       ? "smart"
       : config.sort;
-  // The scoring INPUTS (created, edited, deleted tickets) age the scores:
-  // a fingerprint over the board's rows rides the refetch decision below —
-  // NOT the query key (a new key would bill a pass on every keystroke).
-  const scoringFingerprint = useMemo(() => {
-    let latest = "";
-    for (const issue of issues) {
-      if (issue.updated_at > latest) latest = issue.updated_at;
-    }
-    return `${issues.length}:${latest}`;
-  }, [issues]);
-  const fetchedFingerprintRef = useRef<string | null>(null);
-  const lastFetchAtRef = useRef(0);
-  const smartScoresQuery = useQuery({
-    queryKey: ["smart-triage-scores", project?.id ?? null],
-    queryFn: async () => {
-      if (!project) return null;
-      const result = await smartTriageApi(project.id, { persist: false });
-      fetchedFingerprintRef.current = scoringFingerprint;
-      lastFetchAtRef.current = Date.now();
-      trackEvent("smart_triage_ran", {
-        mode: result.mode,
-        scored: result.scored,
-        columns: result.columns,
-        issues: Object.keys(result.scores ?? {}).length,
-        scope: "project",
-      });
-      return result.scores;
-    },
-    enabled: !!project && sort === "smart" && smartTriageMode === "jev",
-    staleTime: 5 * 60_000,
-    refetchOnWindowFocus: false,
-    retry: false,
-  });
-  // A changed fingerprint (tickets created, edited, deleted) refetches the
-  // scores — throttled to one pass a minute so an editing burst cannot
-  // churn billed passes; a continuously mounted board never keeps scores
-  // that predate its tickets.
-  useEffect(() => {
-    if (sort !== "smart" || smartTriageMode !== "jev") return;
-    if (fetchedFingerprintRef.current === scoringFingerprint) return;
-    if (Date.now() - lastFetchAtRef.current < 60_000) return;
-    if (smartScoresQuery.isFetching) return;
-    void smartScoresQuery.refetch();
-  }, [scoringFingerprint, sort, smartTriageMode, smartScoresQuery]);
-  const smartScores = useMemo(() => {
-    // Gated on the MODE, not just the query's enabled flag: a cached score
-    // map must not outlive the project's switch back to rules (the query
-    // keeps its data while disabled). A FAILED refresh is dropped too —
-    // expired scores must not pose as current evidence; the rules order
-    // stands until a pass succeeds again.
-    if (smartTriageMode !== "jev" || smartScoresQuery.isError) return null;
-    const scores = smartScoresQuery.data;
-    if (!scores) return null;
-    return new Map(Object.entries(scores));
-  }, [smartScoresQuery.data, smartScoresQuery.isError, smartTriageMode]);
-
   const handleAskNumoForIssues = useCallback(
     (selectedIssues: Issue[]) => {
       if (!project) return;
@@ -880,9 +822,6 @@ function ProjectBoard() {
               statuses={statuses}
               sort={sort}
               sortDirection={config.display.sortDirection}
-              // The Smart sort's AI scores (project mode jev, MIN-576): the
-              // comparator orders by urgency when the view sort is "smart".
-              smartScores={smartScores}
               buildMenuActions={buildIssueMenuActions}
               currentCycleId={currentCycle?.id ?? null}
               onSetCycle={onSetIssueCycle}

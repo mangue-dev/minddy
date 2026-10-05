@@ -1,24 +1,14 @@
 import { issueStore } from "@/lib/server/issue-store";
-import { categoryStore } from "@/lib/server/category-store";
 import { objectiveStore } from "@/lib/server/objective-store";
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
 import { getProjectAccess } from "@/lib/server/project-access";
-import { decodeProjectName } from "@/lib/server/project-content";
-import { ensureUsageBudget } from "@/lib/server/usage";
-import { buildSmartTriageSpec } from "@/lib/server/decisions/prepare";
-import { runDecision } from "@/lib/server/decisions/runner";
 import { isClosedStatus, STATUSES, type IssueEffort, type IssuePriority, type IssueStatus } from "@/lib/issue-constants";
 import type { ObjectiveStatus } from "@/lib/objective-constants";
 import { cycleBlockingRelations } from "@/lib/cycle";
 import {
-  jevTriageOrder,
-  MAX_TRIAGE_TICKETS_PER_DECISION,
-  parseSmartTriageMode,
   DEFAULT_SMART_TRIAGE_MODE,
-  triageAgeDays,
-  triageBlockedComparator,
   triageIssueComparator,
   type SmartTriageMove,
   type SmartTriageMode,
@@ -26,49 +16,15 @@ import {
 } from "@/lib/smart-triage";
 import type { IssueRelation } from "@/lib/types";
 
-/**
- * Smart Triage orchestration (MIN-566) — the server half of the board's
- * "Smart triage" button. ONE call reorders ONE project's open columns:
- *
- *   rules mode → the static rules (`triageIssueComparator`), pure and free;
- *   jev mode   → ONE decision per column (`buildSmartTriageSpec` through the
- *                runner, billed to the ACTOR in Automations), score-ordered,
- *                with the rules order as the degradation when both engines
- *                fail — a decision never blocks the user.
- *
- * Everything here is a gesture, never a background pass: the button triggers
- * it, the positions are rewritten, and the manual drag order stays editable.
- * There is no "off" mode (MIN-575): the triage is always available, the
- * project setting only chooses the engine.
- *
- * Closed columns are never reordered: triaging a graveyard is churn, not
- * signal. Only backlog / todo / in_progress / in_review move.
- */
-
-/** How a column's status reads to the scoring engines — the same meaning the
-    board's column headers carry, in the engines' English. */
-const COLUMN_MEANINGS: Record<IssueStatus, string> = {
-  triage: "arrival zone, candidates to be sorted",
-  backlog: "later, not scheduled yet",
-  todo: "next work, in order",
-  in_progress: "work in flight",
-  in_review: "waiting for review",
-  done: "finished",
-  canceled: "abandoned",
-  duplicate: "closed as a duplicate",
-};
-
 /** The open statuses a triage may reorder — the board's columns minus the
     closed ones. */
 export const TRIAGE_STATUSES: IssueStatus[] = STATUSES.map((s) => s.value).filter(
   (status) => !isClosedStatus(status)
 );
 
-/** A lean ticket — the fields the rules and the scoring read. */
+/** A lean ticket — the metadata required by the rules. */
 interface TriageIssueRow extends TriageIssue {
-  title: string;
   status: IssueStatus;
-  category_ids: string[];
 }
 
 export type SmartTriageResult =
@@ -79,28 +35,11 @@ export type SmartTriageResult =
       moves: SmartTriageMove[];
       /** How many columns actually carried an order to decide (≥ 2 tickets). */
       columns: number;
-      /** Whether at least one column was ranked by a decision engine (jev
-          mode) rather than by the rules. Feedback + metrics only. */
-      scored: boolean;
-      /**
-       * Per-ticket urgency scores of the scored columns, when the run
-       * scored (`jev` mode). `null` in rules mode — the client's Smart sort
-       * reads them (MIN-576); missing tickets read as the neutral score.
-       */
-      scores: Record<string, number> | null;
+      scored: false;
+      scores: null;
     };
 
-/**
- * Reorder the open columns of one project, according to its
- * `smart_triage_mode`. Throws a `PlanLimitError` in jev mode when the ACTOR's
- * budget is dry (the route maps it) — arming Jev then triaging with an empty
- * budget must say so, not silently fall back to the rules.
- *
- * `persist` (MIN-576): the board's Smart sort scores WITHOUT writing — the
- * display order lives in the view sort, the manual drag order stays
- * untouched — while the persisted mode keeps the write for a caller that
- * wants the computed order to become the board's baseline.
- */
+/** Reorder open columns using free rules, regardless of any legacy project mode. */
 export async function runSmartTriage({
   projectId,
   actorId,
@@ -108,7 +47,7 @@ export async function runSmartTriage({
   persist = true,
 }: {
   projectId: string;
-  /** Who clicked — the payer of the Jev pass in jev mode. */
+  /** The caller whose project access is checked. */
   actorId: string;
   /** Columns to reorder (open ones). Default: every open column. */
   statuses?: unknown;
@@ -121,15 +60,12 @@ export async function runSmartTriage({
 
   const { data: project } = await service
     .from("projects")
-    .select("id, name, smart_triage_mode, encrypted_content, encryption_version")
+    .select("id")
     .eq("id", projectId)
     .is("deleted_at", null)
     .maybeSingle();
   if (!project) return { ok: false, status: 404, errorKey: "projectNotFound" };
-  // A retired value (`off`, MIN-575) reads as the default: rules. There is
-  // no "off" mode anymore — the triage is always available.
-  const mode =
-    parseSmartTriageMode(project.smart_triage_mode) ?? DEFAULT_SMART_TRIAGE_MODE;
+  const mode = DEFAULT_SMART_TRIAGE_MODE;
 
   const requested = Array.isArray(statuses)
     ? (statuses.filter(
@@ -140,11 +76,9 @@ export async function runSmartTriage({
   if (requested.length === 0)
     return { ok: true, mode, moves: [], columns: 0, scored: false, scores: null };
 
-  if (mode === "jev") await ensureUsageBudget(actorId, "automations");
-
-  const [issueRows, relationRows, objectiveRows, categoryRows] = await Promise.all([
+  const [issueRows, relationRows, objectiveRows] = await Promise.all([
     issueStore(service).select(
-        "id, title, status, priority, effort, due_date, created_at, position, objective_id, issue_categories(category_id)"
+        "id, status, priority, effort, due_date, created_at, position, objective_id"
       )
       .is("deleted_at", null)
       .eq("project_id", projectId)
@@ -154,11 +88,8 @@ export async function runSmartTriage({
       .select("id, source_id, source_type, target_id, target_type, type")
       .eq("project_id", projectId),
     objectiveStore(service)
-      .select("id, name, status")
+      .select("id, status")
       .is("deleted_at", null)
-      .eq("project_id", projectId),
-    categoryStore(service)
-      .select("id, name")
       .eq("project_id", projectId),
   ]);
   if (issueRows.error) {
@@ -166,12 +97,10 @@ export async function runSmartTriage({
     throw new Error(issueRows.error.message);
   }
   if (objectiveRows.error) throw new Error("Unable to read smart-triage objective context");
-  if (categoryRows.error) throw new Error("Unable to read smart-triage category context");
 
   const issues = (issueRows.data ?? []).map(
     (row): TriageIssueRow => ({
       id: row.id as string,
-      title: row.title as string,
       status: row.status as IssueStatus,
       priority: row.priority as IssuePriority,
       effort: (row.effort ?? null) as IssueEffort | null,
@@ -179,9 +108,6 @@ export async function runSmartTriage({
       created_at: row.created_at as string,
       position: row.position as number,
       objective_id: (row.objective_id ?? null) as string | null,
-      category_ids: ((row.issue_categories ?? []) as Array<{ category_id: string }>).map(
-        (c) => c.category_id
-      ),
     })
   );
 
@@ -242,22 +168,9 @@ export async function runSmartTriage({
       (statusById.has(r.source_id) && statusById.has(r.target_id))
   );
 
-  const objectiveNameById = new Map<string, string>(
-    ((objectiveRows.data ?? []) as Array<{ id: string; name: string }>).map(
-      (o) => [o.id, o.name]
-    )
-  );
-  const categoryNameById = new Map<string, string>(
-    ((categoryRows.data ?? []) as Array<{ id: string; name: string }>).map(
-      (c) => [c.id, c.name]
-    )
-  );
-
   const now = Date.now();
   const moves: SmartTriageMove[] = [];
-  const scores: Record<string, number> = {};
   let columns = 0;
-  let scored = false;
 
   for (const status of requested) {
     const column = issues
@@ -273,44 +186,7 @@ export async function runSmartTriage({
       statusById,
       now,
     };
-    const rulesOrder = [...column].sort(triageIssueComparator(ctx));
-
-    let ordered: TriageIssueRow[];
-    if (mode === "jev") {
-      const decision = await scoreColumn({
-        projectId,
-        projectName: await decodeProjectName(project, actorId),
-        status,
-        tickets: rulesOrder,
-        relations,
-        statusById,
-        objectiveNameById,
-        categoryNameById,
-        actorId,
-        now,
-      });
-      if (decision) {
-        scored = true;
-        // The cap head is score-ordered; past the cap the rules order stands.
-        // `jevTriageOrder` copies its input, so the head rows keep their
-        // `category_ids`/`title` for the writes below.
-        const orderedHead = jevTriageOrder(decision.head, decision.scores);
-        // A score cannot make blocked work actionable, including when an
-        // unscored ticket sits beyond the decision cap. Keep the engine's
-        // order within the actionable and blocked groups.
-        ordered = [...orderedHead, ...rulesOrder.slice(decision.head.length)]
-          .sort(triageBlockedComparator(ctx)) as TriageIssueRow[];
-        for (const [id, score] of decision.scores) {
-          if (score !== null) scores[id] = score;
-        }
-      } else {
-        // Both engines failed: the rules order IS the degradation. The column
-        // still gets reordered — the user asked for a triage, not an error.
-        ordered = rulesOrder;
-      }
-    } else {
-      ordered = rulesOrder;
-    }
+    const ordered = [...column].sort(triageIssueComparator(ctx));
 
     // Rewrite the positions INSIDE the column's current [min, max] range: the
     // order is what changes, not the column's place in the cross-project
@@ -327,8 +203,7 @@ export async function runSmartTriage({
     }
   }
 
-  // The Smart sort scores WITHOUT writing (persist=false, MIN-576): the
-  // computed order is returned, the positions stay the manual drag order.
+  // Read-only calls preserve the manual positions; boards apply rules locally.
   if (persist && moves.length > 0) {
     // ONE atomic write: the batch commits together or not at all — a
     // half-reordered board would disagree with the client until the next
@@ -355,90 +230,7 @@ export async function runSmartTriage({
     mode,
     moves: persist ? moves : [],
     columns,
-    scored,
-    scores: scored ? scores : null,
+    scored: false,
+    scores: null,
   };
-}
-
-/** The per-ticket open-blocks counts the state paints, from the folded edges. */
-function blockCounts(
-  issueId: string,
-  relations: IssueRelation[],
-  statusById: Map<string, IssueStatus>
-): { blocksOpen: number; blockedByOpen: number } {
-  let blocksOpen = 0;
-  let blockedByOpen = 0;
-  for (const r of relations) {
-    if (r.type !== "blocks") continue;
-    const sourceOpen = (() => {
-      const s = statusById.get(r.source_id);
-      return s === undefined ? true : !isClosedStatus(s);
-    })();
-    const targetOpen = (() => {
-      const s = statusById.get(r.target_id);
-      return s === undefined ? true : !isClosedStatus(s);
-    })();
-    if (sourceOpen && r.target_id === issueId) blockedByOpen++;
-    if (targetOpen && r.source_id === issueId) blocksOpen++;
-  }
-  return { blocksOpen, blockedByOpen };
-}
-
-/**
- * One scoring decision for one column. Returns the capped head (in rules
- * order — the input order) and the per-ticket scores whichever engine
- * produced; `null` when both engines failed (the caller keeps the rules
- * order). The head comes back in rules order: `jevTriageOrder` re-sorts it by
- * score, so the caller's slice semantics hold either way.
- */
-async function scoreColumn(input: {
-  projectId: string;
-  projectName: string;
-  status: IssueStatus;
-  tickets: TriageIssueRow[];
-  relations: IssueRelation[];
-  statusById: Map<string, IssueStatus>;
-  objectiveNameById: Map<string, string>;
-  categoryNameById: Map<string, string>;
-  actorId: string;
-  now: number;
-}): Promise<{ head: TriageIssueRow[]; scores: Map<string, number | null> } | null> {
-  const head = input.tickets.slice(0, MAX_TRIAGE_TICKETS_PER_DECISION);
-  // Empty state is refused by the spec validation — and there is nothing to
-  // score with fewer than two tickets, which the caller never sends.
-  if (head.length < 2) return null;
-  const spec = buildSmartTriageSpec({
-    projectName: input.projectName,
-    column: { status: input.status, meaning: COLUMN_MEANINGS[input.status] },
-    tickets: head.map((issue) => ({
-      id: issue.id,
-      title: issue.title,
-      priority: issue.priority,
-      effort: issue.effort,
-      due: issue.due_date,
-      ageDays: triageAgeDays(issue.created_at, input.now),
-      objective: issue.objective_id
-        ? input.objectiveNameById.get(issue.objective_id) ?? null
-        : null,
-      categories: issue.category_ids
-        .map((id) => input.categoryNameById.get(id))
-        .filter((name): name is string => Boolean(name))
-        .join(", "),
-      ...blockCounts(issue.id, input.relations, input.statusById),
-    })),
-  });
-  const outcome = await runDecision(spec, {
-    billTo: { userId: input.actorId },
-    projectId: input.projectId,
-  });
-  if (!outcome) return null;
-  const scores = new Map<string, number | null>();
-  for (const ticket of head) {
-    const answer = outcome.answers[ticket.id];
-    scores.set(
-      ticket.id,
-      typeof answer?.value === "number" ? answer.value : null
-    );
-  }
-  return { head, scores };
 }

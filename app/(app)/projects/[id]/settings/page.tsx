@@ -152,7 +152,7 @@ export default function ProjectSettingsPage() {
       value: "smart-triage",
       label: t("smartTriageTab"),
       icon: ListOrdered,
-      content: <SmartTriageSection project={project} isOwner={isOwner} />,
+      content: <SmartTriageSection />,
     },
     {
       value: "feedback",

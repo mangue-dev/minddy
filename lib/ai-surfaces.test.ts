@@ -27,6 +27,11 @@ describe("AI surfaces", () => {
     expect(parseByokFeatureModels({ mystery_model: "x" })).toBeNull();
   });
 
+  it("drops a retired triage override when an older client saves its other models", () => {
+    expect(parseByokFeatureModels({ smart_triage_model: "old-model", assistant_model: "current-model" }))
+      .toEqual({ assistant_model: "current-model" });
+  });
+
   it("relie chaque modèle à sa surface et à sa clé admin", () => {
     expect(surfaceForModelKey("smart_fill_model")).toBe("automations");
     expect(surfaceForModelKey("feedback_embedding_model")).toBe("feedback");

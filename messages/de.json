@@ -178,7 +178,6 @@
     "ownerOnly": "Dies kann nur der Projektinhaber tun.",
     "smartAssignNotAllowed": "Ihr KI-Nutzungsbudget ist aufgebraucht. Smart Assign wird im nächsten Zeitraum fortgesetzt.",
     "invalidSmartTriageMode": "Unbekannter Smart-Triage-Modus.",
-    "smartTriageNotAllowed": "Dein KI-Nutzungsbudget ist aufgebraucht. Smart Triage (KI) läuft in der nächsten Periode weiter.",
     "automationsNotAllowed": "Numo ist für dieses Konto nicht verfügbar oder dein KI-Budget ist aufgebraucht. Automatisierungen werden fortgesetzt, sobald sich dies ändert.",
     "missingParameter": "Ungültige Anfrage.",
     "systemViewLocked": "Die Ansicht „Meine Probleme“ kann nicht umbenannt oder gelöscht werden.",
@@ -2998,13 +2997,8 @@
     "recurrencesTab": "Wiederholungen",
     "smartAssignTab": "Intelligente Zuweisung",
     "smartTriageTab": "Smart-Triage",
-    "smartTriageDescription": "Wendet die Board-Ordnung über die „Smart“-Sortierung der Ansicht an: die statischen Regeln gratis, oder ein KI-Dringlichkeitswert, wenn der Modus des Projekts KI ist (verbraucht die KI-Nutzung des Betrachters). Die manuelle Zieh-Reihenfolge bleibt unberührt.",
-    "smartTriageModeLabel": "Neuordnung-Modus",
-    "smartTriageModeRules": "Regeln",
-    "smartTriageModeJev": "KI",
-    "smartTriageModeRulesDesc": "Statische Regeln, gratis: Blockierer zuerst, dann Quick Wins (Priorität, Aufwand, Fälligkeit), Ziele zusammengehalten.",
-    "smartTriageModeJevDesc": "Ein KI-Dringlichkeitswert pro Ticket, angewendet durch die „Smart“-Sortierung der Ansicht (verbraucht deine KI-Nutzung).",
-    "smartTriageSavedToast": "Smart-Triage-Modus gespeichert.",
+    "smartTriageDescription": "Die „Smart“-Sortierung des Boards nutzt kostenlose, feste Regeln. Deine manuelle Reihenfolge bleibt erhalten.",
+    "smartTriageModeRulesDesc": "Zuerst Blockierer, dann schnell erledigte Aufgaben nach Priorität, Aufwand und Fälligkeit. Tickets mit demselben Ziel bleiben zusammen.",
     "smartAssignToggleLabel": "Smart Assign aktivieren",
     "smartAssignToggleHint": "Smart Assign weist einem Mitglied jedes Problem zu, das ohne Zuweisung außerhalb der Triage landet, unabhängig davon, ob es gerade erst erstellt wurde oder die Triage gerade verlassen hat.",
     "smartAssignSoloHint": "Sie sind das einzige Mitglied: Berechtigte Probleme werden Ihnen automatisch zugewiesen.",
@@ -4299,10 +4293,6 @@
         "label": "Smart-Fill-Modell",
         "desc": "Liest den Titel und die Beschreibung eines neuen Problems und füllt seine Felder aus. Jemand wartet darauf: Wählen Sie ein schnelles Modell."
       },
-      "smart_triage_model": {
-        "label": "Smart-Triage-Modell",
-        "desc": "Die KI-Bewertungspasse einer Spalten-Neuordnung (ein Aufruf pro Spalte, ein Dringlichkeitswert pro Ticket). Jemand wartet darauf: schnelles Modell wählen."
-      },
       "conversation_title_model": {
         "label": "Konversationstitel",
         "desc": "Benennt eine Numo Konversation in wenigen Worten, beginnend mit der ersten Nachricht. Ein kleines Modell reicht aus."
@@ -5062,7 +5052,7 @@
     "feature_smartFill_title": "Smart Fill",
     "feature_smartFill_body": "Wenn eine Aufgabe ankommt, liest minddy Titel und Beschreibung und ergänzt, was fehlt: Priorität, Aufwand, Kategorien und Ziel. Status, zuständige Person und Fälligkeit bleiben deine.",
     "feature_smartTriage_title": "Smart Triage",
-    "feature_smartTriage_body": "Ordnet dir die Triage-Spalte: Blockierer zuerst, dann Quick Wins, per Regeln oder mit einem KI-Dringlichkeitswert.",
+    "feature_smartTriage_body": "Sortiert die Triage-Spalte nach festen Regeln: zuerst Blockierer, dann schnell erledigte Aufgaben.",
     "smartTitle": "Smart Fill, Assign und Triage",
     "smartSubtitle": "minddy ergänzt, was bei neuen Aufgaben fehlt, wählt anhand deiner Regeln die passende Person und hält die Triage geordnet.",
     "smartFigureHeader": "Wenn eine Aufgabe ankommt",
