@@ -178,7 +178,6 @@
     "ownerOnly": "Action réservée au propriétaire du projet.",
     "smartAssignNotAllowed": "Votre budget d'usage IA est épuisé. Smart Assign reprendra à la prochaine période.",
     "invalidSmartTriageMode": "Mode de tri intelligent inconnu.",
-    "smartTriageNotAllowed": "Votre budget d’usage IA est épuisé. Le tri intelligent (IA) reprendra à la prochaine période.",
     "automationsNotAllowed": "Numo n’est pas disponible sur ce compte ou votre budget IA est épuisé. Les automatisations reprendront lorsque la situation changera.",
     "missingParameter": "Requête invalide.",
     "systemViewLocked": "La vue « Mes tickets » ne peut pas être renommée ou supprimée.",
@@ -2997,14 +2996,6 @@
     "webhookNoDelivery": "Aucune livraison pour le moment",
     "recurrencesTab": "Récurrences",
     "smartAssignTab": "Smart Assign",
-    "smartTriageTab": "Tri intelligent",
-    "smartTriageDescription": "Applique le tri de vue « Smart » au board : règles statiques gratuites, ou score d'urgence IA en mode IA (consomme votre usage IA). L'ordre manuel reste en place.",
-    "smartTriageModeLabel": "Mode de réordonnancement",
-    "smartTriageModeRules": "Règles",
-    "smartTriageModeJev": "IA",
-    "smartTriageModeRulesDesc": "Règles statiques gratuites : bloquants d'abord, puis gains rapides, objectifs regroupés.",
-    "smartTriageModeJevDesc": "Un score d'urgence IA par ticket (consomme votre usage IA).",
-    "smartTriageSavedToast": "Mode du tri intelligent enregistré.",
     "smartAssignToggleLabel": "Activer Smart Assign",
     "smartAssignToggleHint": "Smart Assign attribue un membre à tout ticket qui se retrouve hors triage sans assigné, qu'il vienne d'être créé ou de sortir du triage.",
     "smartAssignSoloHint": "Vous êtes le seul membre : les tickets éligibles vous seront attribués automatiquement.",
@@ -4299,10 +4290,6 @@
         "label": "Modèle Smart-fill",
         "desc": "Lit le titre et la description d'un ticket neuf et remplit ses champs. Quelqu'un l'attend : prendre un modèle rapide."
       },
-      "smart_triage_model": {
-        "label": "Modèle Smart Triage",
-        "desc": "La passe LLM de notation du tri d’une colonne (un appel par colonne, un score d’urgence par ticket). Quelqu’un l’attend : prendre un modèle rapide."
-      },
       "conversation_title_model": {
         "label": "Titres des conversations",
         "desc": "Nomme une conversation de Numo en quelques mots, d'après son premier message. Un petit modèle suffit."
@@ -5062,7 +5049,7 @@
     "feature_smartFill_title": "Smart Fill",
     "feature_smartFill_body": "Quand une tâche arrive, minddy lit son titre et sa description et complète ce qui manque : priorité, effort, catégories et objectif. Le statut, le responsable et l’échéance restent les vôtres.",
     "feature_smartTriage_title": "Smart Triage",
-    "feature_smartTriage_body": "Ordonne le triage pour vous : les bloquants d’abord, puis les gains rapides, par vos règles ou avec un score d’urgence IA.",
+    "feature_smartTriage_body": "Trie la colonne de triage avec des règles déterministes : les tickets bloquants en premier, puis les gains rapides.",
     "smartTitle": "Smart Fill, Assign et Triage",
     "smartSubtitle": "minddy complète ce qui manque sur les nouvelles tâches, choisit le bon responsable d’après vos règles et garde le triage ordonné.",
     "smartFigureHeader": "Quand une tâche arrive",

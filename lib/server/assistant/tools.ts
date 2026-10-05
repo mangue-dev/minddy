@@ -1297,7 +1297,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
             type: "string",
             enum: [...SMART_TRIAGE_MODES],
             description:
-              "Smart Triage's engine for the board's 'Smart' sort and triage button: 'rules' is the free, deterministic static rules; 'jev' is the AI urgency scoring pass (shown as 'AI' in the interface). Arming 'jev' consumes the owner's AI usage and can be refused when their budget is dry — 'rules' is free and always passes.",
+              "Smart Triage uses free, deterministic rules for the board's 'Smart' sort. Only 'rules' is supported.",
           },
           automations_enabled: {
             type: "boolean",

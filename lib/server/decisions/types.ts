@@ -2,7 +2,7 @@
  * Contract of a structured AI decision (MIN-557/MIN-562).
  *
  * Every AI decision of the first lot (Smart Fill, Smart Assign, feedback AI
- * review, later Triage Smart) flows through ONE shape: the use case prepares
+ * review) flows through ONE shape: the use case prepares
  * its data as a `DecisionSpec` (pure builder, `prepare.ts`), the runner
  * (`runner.ts`) asks Jev first and falls back to the existing LLM pass
  * (`llm.ts`), and the use case applies its own degradation when the runner
@@ -20,15 +20,13 @@
 export type DecisionUseCase =
   | "smart_fill"
   | "smart_assign"
-  | "feedback_review"
-  | "smart_triage";
+  | "feedback_review";
 
 /** Every known use case, for config parsing (`jev_llm_first`, MIN-567). */
 export const DECISION_USE_CASES: DecisionUseCase[] = [
   "smart_fill",
   "smart_assign",
   "feedback_review",
-  "smart_triage",
 ];
 
 /** Which engine produced the answers of a decision. */

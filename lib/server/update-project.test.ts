@@ -1,13 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-/**
- * The `smart_triage_mode` validation of the project settings (MIN-566):
- * only the two known values pass (MIN-575 — there is no "off"), `rules`
- * costs nothing, arming `jev` requires the owner's usage budget (the
- * scoring passes bill it), and a member's write is refused before anything
- * else.
- */
-
 const {
   getProjectAccessMock,
   canUseSmartAssignMock,
@@ -78,8 +70,8 @@ beforeEach(() => {
 });
 
 describe("updateProjectSettings — smart_triage_mode", () => {
-  it("accepts the two known values (MIN-575: there is no off)", async () => {
-    for (const mode of ["rules", "jev"] as const) {
+  it("accepts deterministic rules", async () => {
+    for (const mode of ["rules"] as const) {
       const result = await updateProjectSettings({
         projectId: "project-1",
         actorId: "user-owner",
@@ -91,7 +83,7 @@ describe("updateProjectSettings — smart_triage_mode", () => {
   });
 
   it("refuses an unknown mode as a client bug, without coercing it", async () => {
-    for (const bad of ["off", "smart", "RULES", "", null, 1]) {
+    for (const bad of ["jev", "off", "smart", "RULES", "", null, 1]) {
       const result = await updateProjectSettings({
         projectId: "project-1",
         actorId: "user-owner",
@@ -106,26 +98,11 @@ describe("updateProjectSettings — smart_triage_mode", () => {
     }
   });
 
-  it("gates arming jev on the owner's usage budget, rules stays free", async () => {
+  it("keeps rules available with an exhausted AI budget", async () => {
     hasUsageBudgetMock.mockResolvedValue(false);
-    const jev = await updateProjectSettings({
-      projectId: "project-1",
-      actorId: "user-owner",
-      input: { smart_triage_mode: "jev" },
-    });
-    expect(jev).toEqual({ ok: false, status: 403, errorKey: "smartTriageNotAllowed" });
-    // The AUTOMATIONS surface rides along: an owner whose BYOK key covers
-    // Automations can arm Jev even with the managed budget dry — the same
-    // surface the run-time preflight reads.
-    expect(hasUsageBudgetMock).toHaveBeenCalledWith("user-owner", "automations");
-    expect(updated).toBeNull();
-
-    const result = await updateProjectSettings({
-      projectId: "project-1",
-      actorId: "user-owner",
-      input: { smart_triage_mode: "rules" },
-    });
+    const result = await updateProjectSettings({ projectId: "project-1", actorId: "user-owner", input: { smart_triage_mode: "rules" } });
     expect(result.ok).toBe(true);
+    expect(hasUsageBudgetMock).not.toHaveBeenCalled();
   });
 
   it("refuses a member before anything else", async () => {

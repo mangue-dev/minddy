@@ -235,5 +235,6 @@
   "20270109200023_usage_daily_analytics.sql": "9d49751c8aa1f77291bccc3ade186306aee4644772b7e4c50ab07888bf73755a",
   "20270109200024_numo_completion_repairs.sql": "f400ee68518c8997833a26ca40606e6598e4dd438b1159541b58f26cdf277dd9",
   "20270109200025_indexed_backfill_progress.sql": "41b6e468d09252a82920fa384631bb8ca098aea1e8533c21a4538dd8987df73a",
-  "20270109200026_oauth_activity_bookkeeping.sql": "655a0b5cb3e7ce9eca10d5abcdbeb8a45751dfeb74feab77914acde8c42b67c0"
+  "20270109200026_oauth_activity_bookkeeping.sql": "655a0b5cb3e7ce9eca10d5abcdbeb8a45751dfeb74feab77914acde8c42b67c0",
+  "20270109200027_rules_only_smart_triage.sql": "c2afd2039fab89a1e9b9dd0a320289582a9d24cb5810bedca9b3ab09d70680bf"
 }

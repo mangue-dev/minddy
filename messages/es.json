@@ -178,7 +178,6 @@
     "ownerOnly": "Solo la persona propietaria del proyecto puede hacer esto.",
     "smartAssignNotAllowed": "Tu presupuesto de uso de IA se ha agotado. La asignación inteligente se reanudará en el próximo periodo.",
     "invalidSmartTriageMode": "Modo de triage inteligente desconocido.",
-    "smartTriageNotAllowed": "Tu presupuesto de uso de IA está agotado. El triage inteligente (IA) se reanudará el próximo periodo.",
     "automationsNotAllowed": "Numo no está disponible en esta cuenta o has agotado el presupuesto de IA. Las automatizaciones se reanudarán cuando cambie una de estas condiciones.",
     "missingParameter": "Solicitud inválida.",
     "systemViewLocked": "La vista «Mis incidencias» no se puede renombrar ni eliminar.",
@@ -2997,14 +2996,6 @@
     "webhookNoDelivery": "Todavía no se ha entregado",
     "recurrencesTab": "Recurrencias",
     "smartAssignTab": "Asignar inteligentemente",
-    "smartTriageTab": "Triage inteligente",
-    "smartTriageDescription": "Aplica el orden del tablero mediante la ordenación «Inteligente» de la vista: las reglas estáticas gratis, o una puntuación de urgencia de IA cuando el modo del proyecto es IA (consume el uso de IA de quien mira). El orden manual de arrastre queda intacto.",
-    "smartTriageModeLabel": "Modo de reordenación",
-    "smartTriageModeRules": "Reglas",
-    "smartTriageModeJev": "IA",
-    "smartTriageModeRulesDesc": "Reglas estáticas, gratis: bloqueantes primero, luego victorias rápidas (prioridad, esfuerzo, fecha límite), objetivos agrupados.",
-    "smartTriageModeJevDesc": "Una puntuación de urgencia de IA por ticket, aplicada por la ordenación «Inteligente» de la vista (consume tu uso de IA).",
-    "smartTriageSavedToast": "Modo de triage inteligente guardado.",
     "smartAssignToggleLabel": "Activar la asignación inteligente",
     "smartAssignToggleHint": "La asignación inteligente asigna a un miembro cualquier incidencia que termine fuera de Clasificación sin persona asignada, tanto si acaba de crearse como si acaba de salir de Clasificación.",
     "smartAssignSoloHint": "Eres el único miembro: las incidencias que cumplan los requisitos se te asignarán automáticamente.",
@@ -4299,10 +4290,6 @@
         "label": "Modelo de llenado inteligente",
         "desc": "Lee el título y la descripción de una incidencia nueva y completa sus campos. Hay alguien esperando el resultado: elige un modelo rápido."
       },
-      "smart_triage_model": {
-        "label": "Modelo de triage inteligente",
-        "desc": "La pasada de puntuación de IA de una reordenación de columna (una llamada por columna, una puntuación de urgencia por ticket). Alguien espera: elige un modelo rápido."
-      },
       "conversation_title_model": {
         "label": "Títulos de conversación",
         "desc": "Nombres de una conversación de Numo en unas pocas palabras, desde su primer mensaje. Un pequeño modelo es suficiente."
@@ -5062,7 +5049,7 @@
     "feature_smartFill_title": "Smart Fill",
     "feature_smartFill_body": "Cuando llega una tarea, minddy lee su título y descripción y completa lo que falta: prioridad, esfuerzo, categorías y objetivo. El estado, la persona asignada y la fecha límite siguen siendo tuyos.",
     "feature_smartTriage_title": "Smart Triage",
-    "feature_smartTriage_body": "Ordena la columna por ti: bloqueantes primero, luego victorias rápidas, con tus reglas o con una puntuación de urgencia de IA.",
+    "feature_smartTriage_body": "Ordena la columna de triage con reglas deterministas: primero los bloqueos, luego las tareas rápidas.",
     "smartTitle": "Smart Fill, Assign y Triage",
     "smartSubtitle": "minddy completa lo que falta en las tareas nuevas, elige a la persona adecuada según tus reglas y mantiene la clasificación ordenada.",
     "smartFigureHeader": "Cuando llega una tarea",

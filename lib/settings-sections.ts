@@ -1,6 +1,6 @@
 import type { AppIcon } from "@/components/icon";
 import { useMemo } from "react";
-import { AppWindowIcon as AppWindow, AiAutoRotateIcon as CycleIcon, BarChartIcon, BellRingIcon as BellRing, BotIcon as Bot, CalendarClockIcon, CodeSimpleIcon as Code2, Download, FlowIcon as Workflow, FolderKanbanIcon, GitBranchIcon as GitBranch, ImportIcon, InboxIcon as Inbox, Keyboard, KeyRoundIcon as KeyRound, Languages, ListOrderedIcon as ListOrdered, ListPlus, LockIcon, LogOut, MessageMultiple01Icon as MessagesSquare, Palette, PlugIcon as Plug, RepeatIcon as Repeat, Settings02Icon as Settings2, ShieldOff, Sparkles, TagsIcon as Tags, TicketIcon as Ticket, Trash2, TriangleAlertIcon, Upload04Icon as Upload, UserGroupIcon as Users, UserIcon as User } from "@hugeicons/core-free-icons";
+import { AppWindowIcon as AppWindow, AiAutoRotateIcon as CycleIcon, BarChartIcon, BellRingIcon as BellRing, BotIcon as Bot, CalendarClockIcon, CodeSimpleIcon as Code2, Download, FlowIcon as Workflow, FolderKanbanIcon, GitBranchIcon as GitBranch, ImportIcon, InboxIcon as Inbox, Keyboard, KeyRoundIcon as KeyRound, Languages, ListPlus, LockIcon, LogOut, MessageMultiple01Icon as MessagesSquare, Palette, PlugIcon as Plug, RepeatIcon as Repeat, Settings02Icon as Settings2, ShieldOff, Sparkles, TagsIcon as Tags, TicketIcon as Ticket, Trash2, TriangleAlertIcon, Upload04Icon as Upload, UserGroupIcon as Users, UserIcon as User } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
 import { SmartAssignIcon } from "@/components/smart-icons";
 
@@ -44,7 +44,6 @@ export type ProjectSettingsTab =
   | "members"
   | "recurrences"
   | "smart-assign"
-  | "smart-triage"
   | "feedback"
   | "git"
   | "import"
@@ -88,7 +87,6 @@ export const SETTINGS_SECTIONS = {
   projectMembers: "project-members",
   projectRecurrences: "project-recurrences",
   projectSmartAssign: "project-smart-assign",
-  projectSmartTriage: "project-smart-triage",
   projectFeedbackBoard: "project-feedback-board",
   projectFeedbackApi: "project-feedback-api",
   projectFeedbackReview: "project-feedback-review",
@@ -186,7 +184,6 @@ export function useSettingsSections(): SettingsSection[] {
       members: tSettings("membersTab"),
       recurrences: tSettings("recurrencesTab"),
       "smart-assign": tSettings("smartAssignTab"),
-      "smart-triage": tSettings("smartTriageTab"),
       feedback: tSettings("feedbackTab"),
       git: tSettings("gitTab"),
       import: tSettings("importTab"),
@@ -547,19 +544,6 @@ export function useSettingsSections(): SettingsSection[] {
           "smart assign", "assignation", "assignment", "assigné", "assigne",
           "assignee", "règles", "regles", "rules", "répartition",
           "repartition", "automatique", "automatic",
-        ],
-      }),
-      project({
-        id: SETTINGS_SECTIONS.projectSmartTriage,
-        tab: "smart-triage",
-        icon: ListOrdered,
-        title: tSettings("smartTriageTab"),
-        audience: "owner",
-        keywords: [
-          "tri", "trier", "triage", "smart triage", "trier", "order", "ordre",
-          "réordonner", "reordonner", "reorder", "prioriser", "prioritize",
-          "quick wins", "priorité", "priorite", "priority", "effort",
-          "blocants", "blockers", "colonnes", "columns", "board", "jev",
         ],
       }),
       project({

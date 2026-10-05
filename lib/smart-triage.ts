@@ -1,108 +1,38 @@
 import type { IssueEffort, IssuePriority, IssueStatus } from "@/lib/issue-constants";
 import { isClosedStatus } from "@/lib/issue-constants";
-import { calendarDaysBetween } from "@/lib/due-date";
 import type { Issue, IssueRelation, SortDirection, ViewSort } from "@/lib/types";
 import { dueBoost, issueComparator, PRIORITY_ORDER } from "@/lib/view-filter";
-import { triageScoreComparator } from "@/lib/triage-score-order";
 
-/**
- * Smart Triage (MIN-566) — the on-demand reorder of a board column, ALWAYS
- * available; the project only chooses the engine (MIN-575: no "off" mode —
- * a switch that says "disabled" while the smart view sort keeps reordering
- * by rules is a lie). The mode lives on the project row
- * (`smart_triage_mode`), never on a platform switch (MIN-557):
- *
- * - `rules` — the static rules (Phase A): relations decide first (a ticket that
- *   blocks open work on top, a blocked ticket at the bottom), then the
- *   quick wins (low effort buys back priority tiers), objective tickets kept
- *   together, due dates and age as tie-breaks. Free, deterministic, testable.
- * - `jev` — Phase B: one decision-layer scoring pass per column (System One
- *   first, the LLM scoring pass as fallback) replaces the rules RANKING with a
- *   per-ticket urgency score; blocked tickets still sink. Named "AI" in
- *   the interface — the engine's name is an internal detail.
- *
- * Either way the reorder is a gesture: someone clicks "Smart triage", the
- * server rewrites the column's positions, and the manual drag order remains
- * fully editable afterwards. No background pass, no hidden automation.
- *
- * This module is the PURE half (shared client/server): the mode vocabulary and
- * the orderings. The orchestration (fetch, decisions, writes) lives in
- * `lib/server/smart-triage.ts`.
- */
-
-export const SMART_TRIAGE_MODES = ["rules", "jev"] as const;
-
+/** Smart Triage uses deterministic rules shared by the boards and server. */
+export const SMART_TRIAGE_MODES = ["rules"] as const;
 export type SmartTriageMode = (typeof SMART_TRIAGE_MODES)[number];
-
-/** The mode of every project that has not chosen: rules — the free engine,
- * never the AI pass by accident. */
 export const DEFAULT_SMART_TRIAGE_MODE: SmartTriageMode = "rules";
 
-/** `null` on anything but the two known values — a bad payload is refused,
- * never coerced into a mode that runs AI where none was asked. The retired
- * `off` value reads as `null` too: read sites fall back to the default, so a
- * row that predates MIN-575 keeps working. */
+/** Reject retired modes on writes. Legacy rows still sort by rules. */
 export function parseSmartTriageMode(value: unknown): SmartTriageMode | null {
-  return (SMART_TRIAGE_MODES as readonly unknown[]).includes(value)
-    ? (value as SmartTriageMode)
-    : null;
+  return value === "rules" ? "rules" : null;
 }
 
-/**
- * The board's per-column comparator factory (MIN-576) — the ONE ordering the
- * Smart view sort reads, whichever engine the project's mode named:
- *
- * - `smart` — the FULL triage rules per column (`triageIssueComparator`:
- *   relations tier first, quick wins, objectives kept together — the same
- *   rules the server's reorder applies, so the two orders can never drift);
- *   with AI scores in the context, a presence-based hybrid rides on top:
- *   the tickets a scoring pass ranked compare by score among themselves,
- *   the others (a failed column, the capped tail) keep the rules ranking
- *   among themselves, and a ranked ticket outranks an unranked one. Active
- *   blockers keep blocked tickets below actionable work in either engine.
- * - any other sort — the view sort's own comparator, column-blind.
- *
- * Per COLUMN because the rules group objectives over the column's own issue
- * set — one global comparator would tear an objective across statuses.
- */
+/** Build the Smart rules ordering separately for each column's objectives. */
 export function boardComparatorFactory(
   sort: ViewSort,
   ctx: {
     relations?: IssueRelation[];
     statusById?: Map<string, IssueStatus>;
     now?: number;
-    jevScores?: Map<string, number | null>;
   },
-  /** Direction of the sort (MIN-592) — only the directional sorts reverse;
-      "smart" and "manual" carry their own order. */
   direction: SortDirection = "asc"
 ): (columnIssues: Issue[]) => (a: Issue, b: Issue) => number {
   if (sort !== "smart") {
     const comparator = issueComparator(sort, ctx, direction);
     return () => comparator;
   }
-  const scores = ctx.jevScores;
-  const scored = scores ? triageScoreComparator(scores) : null;
-  const blockedOrder = triageBlockedComparator(ctx);
-  return (columnIssues) => {
-    const rules = triageIssueComparator({
-      issues: columnIssues,
-      relations: ctx.relations,
-      statusById: ctx.statusById,
-      now: ctx.now,
-    });
-    if (!scored) return rules;
-    return (a, b) => {
-      const blockedDiff = blockedOrder(a, b);
-      if (blockedDiff !== 0) return blockedDiff;
-      const aScore = scores?.get(a.id);
-      const bScore = scores?.get(b.id);
-      if (aScore != null && bScore != null) return scored(a, b);
-      if (aScore == null && bScore == null) return rules(a, b);
-      // Mixed pair: the ranked ticket first — the AI put it there.
-      return aScore != null ? -1 : 1;
-    };
-  };
+  return (columnIssues) => triageIssueComparator({
+    issues: columnIssues,
+    relations: ctx.relations,
+    statusById: ctx.statusById,
+    now: ctx.now,
+  });
 }
 
 /** One position the server rewrote — applied optimistically by the client. */
@@ -219,14 +149,6 @@ function activelyBlocked(
   return ids;
 }
 
-/** Keep blocked work last, preserving the engine's order within each group. */
-export function triageBlockedComparator(
-  ctx: Pick<TriageContext, "relations" | "statusById">
-): (a: { id: string }, b: { id: string }) => number {
-  const blocked = activelyBlocked(ctx.relations, ctx.statusById);
-  return (a, b) => Number(blocked.has(a.id)) - Number(blocked.has(b.id));
-}
-
 /** Sooner due date first, undated last — the tie-break under equal ranks. */
 function dueTiebreak(a: TriageIssue, b: TriageIssue): number {
   if (!a.due_date && !b.due_date) return 0;
@@ -322,38 +244,4 @@ function blockTiebreak(a: TriageIssue[], b: TriageIssue[], now: number): number 
   const positionDiff = aBest.position - bBest.position;
   if (positionDiff !== 0) return positionDiff;
   return aBest.id < bBest.id ? -1 : aBest.id > bBest.id ? 1 : 0;
-}
-
-/**
- * The Jev ordering of one column: the per-ticket urgency score (1–5) decides,
- * highest first; ties and unscored tickets (the LLM pass may answer only part
- * of the column) fold back on the age-then-position tie-break, never on a
- * guessed score. Pure — the orchestration hands it the answers whichever
- * engine produced them. The comparison itself lives in
- * `lib/triage-score-order.ts` (shared with the Smart view sort, MIN-576).
- */
-export { TRIAGE_NEUTRAL_SCORE, triageScoreOrder as jevTriageOrder } from "./triage-score-order";
-
-/** The urgency scale a triage decision asks for — shared by the state builder
-    (prepare.ts) and the score consumers, so both engines answer the same
-    vocabulary. Ordered lowest → highest. */
-export const TRIAGE_SCORE_LEVELS = [
-  { value: 1, label: "later" },
-  { value: 2, label: "low" },
-  { value: 3, label: "maybe" },
-  { value: 4, label: "high" },
-  { value: 5, label: "next" },
-] as const;
-
-/** One decision scores at most this many tickets: beyond, the column keeps its
-    rules order for the tail. Bounds the state AND the LLM fallback's tool
-    schema — a 200-card column would ask both engines for a 200-score answer. */
-export const MAX_TRIAGE_TICKETS_PER_DECISION = 40;
-
-/** Whole days a ticket has waited — the age the state paints. A
-    creation in the future (clock skew, import) has waited zero. */
-export function triageAgeDays(createdAt: string, now: number): number {
-  const created = new Date(createdAt);
-  if (Number.isNaN(created.getTime())) return 0;
-  return Math.max(0, Math.round(calendarDaysBetween(created, new Date(now))));
 }

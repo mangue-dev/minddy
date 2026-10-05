@@ -178,7 +178,6 @@
     "ownerOnly": "Solo il proprietario del progetto può farlo.",
     "smartAssignNotAllowed": "Il budget di utilizzo dell'AI è esaurito. Smart Assign riprenderà nel prossimo periodo.",
     "invalidSmartTriageMode": "Modalità di triage intelligente sconosciuta.",
-    "smartTriageNotAllowed": "Il tuo budget di utilizzo IA è esaurito. Il triage intelligente (IA) riprenderà nel prossimo periodo.",
     "automationsNotAllowed": "Numo non è disponibile per questo account oppure il budget IA è esaurito. Le automazioni riprenderanno quando una delle due condizioni cambierà.",
     "missingParameter": "Richiesta non valida.",
     "systemViewLocked": "La vista «I miei ticket» non può essere rinominata o eliminata.",
@@ -2997,14 +2996,6 @@
     "webhookNoDelivery": "Nessuna consegna ancora",
     "recurrencesTab": "Ricorrenze",
     "smartAssignTab": "Assegna intelligente",
-    "smartTriageTab": "Triage intelligente",
-    "smartTriageDescription": "Applica l'ordine della board attraverso l'ordinamento «Smart» della vista: le regole statiche gratis, oppure un punteggio di urgenza IA quando la modalità del progetto è IA (consuma l'utilizzo IA di chi guarda). L'ordine manuale del trascinamento resta intatto.",
-    "smartTriageModeLabel": "Modalità di riordino",
-    "smartTriageModeRules": "Regole",
-    "smartTriageModeJev": "IA",
-    "smartTriageModeRulesDesc": "Regole statiche, gratuite: bloccanti prima, poi vittorie rapide (priorità, sforzo, scadenza), obiettivi tenuti insieme.",
-    "smartTriageModeJevDesc": "Un punteggio di urgenza IA per ticket, applicato dall'ordinamento «Smart» della vista (consuma il tuo utilizzo IA).",
-    "smartTriageSavedToast": "Modalità di triage intelligente salvata.",
     "smartAssignToggleLabel": "Abilita Smart Assign",
     "smartAssignToggleHint": "Smart Assign dà un membro a qualsiasi ticket che finisce fuori triage senza assegnato, sia che sia stato appena creato o appena lasciato triage.",
     "smartAssignSoloHint": "Sei l'unico membro: i ticket idonei ti verranno assegnati automaticamente.",
@@ -4299,10 +4290,6 @@
         "label": "Modello Smart-fill",
         "desc": "Legge il titolo e la descrizione di un nuovo ticket e ne compila i campi. Qualcuno ne attende il risultato: scegli un modello veloce."
       },
-      "smart_triage_model": {
-        "label": "Modelo triage intelligente",
-        "desc": "La passata di punteggio IA di un riordino di colonna (una chiamata per colonna, un punteggio di urgenza per ticket). Qualcuno attende: scegliere un modello veloce."
-      },
       "conversation_title_model": {
         "label": "Titoli di conversazione",
         "desc": "Nomina una conversazione di Numo in poche parole, dal suo primo messaggio. Un piccolo modello è sufficiente."
@@ -5062,7 +5049,7 @@
     "feature_smartFill_title": "Smart Fill",
     "feature_smartFill_body": "Quando arriva un’attività, minddy ne legge titolo e descrizione e completa ciò che manca: priorità, sforzo, categorie e obiettivo. Stato, assegnatario e scadenza restano tuoi.",
     "feature_smartTriage_title": "Smart Triage",
-    "feature_smartTriage_body": "Ordina la colonna per te: bloccanti prima, poi vittorie rapide, con le tue regole o con un punteggio di urgenza IA.",
+    "feature_smartTriage_body": "Ordina la colonna di triage con regole deterministiche: prima i ticket bloccanti, poi le attività rapide.",
     "smartTitle": "Smart Fill, Assign e Triage",
     "smartSubtitle": "minddy completa ciò che manca nelle nuove attività, sceglie la persona giusta in base alle tue regole e tiene il triage in ordine.",
     "smartFigureHeader": "Quando arriva un’attività",

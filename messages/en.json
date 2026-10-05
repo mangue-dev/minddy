@@ -178,7 +178,6 @@
     "ownerOnly": "Only the project owner can do this.",
     "smartAssignNotAllowed": "Your AI usage budget is used up. Smart Assign resumes next period.",
     "invalidSmartTriageMode": "Unknown Smart Triage mode.",
-    "smartTriageNotAllowed": "Your AI usage budget is used up. Smart Triage (AI) resumes next period.",
     "automationsNotAllowed": "Numo is unavailable on this account, or your AI usage budget is used up. Automations resume when one of the two changes.",
     "missingParameter": "Invalid request.",
     "systemViewLocked": "The “My issues” view cannot be renamed or deleted.",
@@ -2997,14 +2996,6 @@
     "webhookNoDelivery": "No delivery yet",
     "recurrencesTab": "Recurrences",
     "smartAssignTab": "Smart Assign",
-    "smartTriageTab": "Smart Triage",
-    "smartTriageDescription": "Applies the view's “Smart” sort to the board order: free static rules, or an AI urgency score in AI mode (uses your AI usage). Manual drag order is kept.",
-    "smartTriageModeLabel": "Reorder mode",
-    "smartTriageModeRules": "Rules",
-    "smartTriageModeJev": "AI",
-    "smartTriageModeRulesDesc": "Free static rules: blockers first, then quick wins, objectives together.",
-    "smartTriageModeJevDesc": "An AI urgency score per ticket (uses your AI usage).",
-    "smartTriageSavedToast": "Smart Triage mode saved.",
     "smartAssignToggleLabel": "Enable Smart Assign",
     "smartAssignToggleHint": "Smart Assign gives a member to any issue that ends up outside triage with no assignee, whether it was just created or just left triage.",
     "smartAssignSoloHint": "You are the only member: eligible issues will be assigned to you automatically.",
@@ -4299,10 +4290,6 @@
         "label": "Smart-fill model",
         "desc": "Reads a new issue's title and description and fills its fields. Someone is waiting on it: pick a fast model."
       },
-      "smart_triage_model": {
-        "label": "Smart Triage model",
-        "desc": "The LLM scoring pass of a column reorder (one call per column, one urgency score per ticket). Someone is waiting on it: pick a fast model."
-      },
       "conversation_title_model": {
         "label": "Conversation titles",
         "desc": "Names a Numo conversation in a few words, from its first message. A small model is enough."
@@ -5062,7 +5049,7 @@
     "feature_smartFill_title": "Smart Fill",
     "feature_smartFill_body": "When a task arrives, minddy reads its title and description and fills in what’s missing: priority, effort, categories, and objective. Status, assignee, and due date stay yours.",
     "feature_smartTriage_title": "Smart Triage",
-    "feature_smartTriage_body": "Orders the triage column for you: blockers first and quick wins next, with your rules or an AI urgency score.",
+    "feature_smartTriage_body": "Orders the triage column with deterministic rules: blockers first, then quick wins.",
     "smartTitle": "Smart Fill, Assign and Triage",
     "smartSubtitle": "minddy fills in what’s missing on new tasks, picks the right teammate from your rules, and keeps the triage column ordered.",
     "smartFigureHeader": "When a task arrives",

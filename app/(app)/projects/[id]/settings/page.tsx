@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { GitBranchIcon as GitBranch, ImportIcon, ListOrderedIcon as ListOrdered, MessageMultiple01Icon as MessagesSquare, PlugIcon as Plug, RepeatIcon as Repeat, Settings02Icon as Settings2, TagsIcon as Tags, UserGroupIcon as Users } from "@hugeicons/core-free-icons";
+import { GitBranchIcon as GitBranch, ImportIcon, MessageMultiple01Icon as MessagesSquare, PlugIcon as Plug, RepeatIcon as Repeat, Settings02Icon as Settings2, TagsIcon as Tags, UserGroupIcon as Users } from "@hugeicons/core-free-icons";
 import { useParams } from "next/navigation";
 import { useAppRouter } from "@/lib/use-app-router";
 import Link from "@/components/app-link";
@@ -20,7 +20,6 @@ import { ProjectGitSection } from "@/components/settings/project-git-section";
 import { ProjectImportSection } from "@/components/settings/project-import-section";
 import { ProjectRecurrencesSection } from "@/components/settings/project-recurrences-section";
 import { SmartAssignSection } from "@/components/settings/smart-assign-section";
-import { SmartTriageSection } from "@/components/settings/smart-triage-section";
 import { SettingsGroup } from "@/components/settings/settings-ui";
 import {
   PROJECT_SETTINGS_DEFAULT_TAB,
@@ -147,12 +146,6 @@ export default function ProjectSettingsPage() {
         ? t("smartAssignIncompleteTab")
         : undefined,
       content: <SmartAssignSection project={project} isOwner={isOwner} />,
-    },
-    {
-      value: "smart-triage",
-      label: t("smartTriageTab"),
-      icon: ListOrdered,
-      content: <SmartTriageSection project={project} isOwner={isOwner} />,
     },
     {
       value: "feedback",

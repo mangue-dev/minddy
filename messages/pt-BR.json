@@ -178,7 +178,6 @@
     "ownerOnly": "Somente o proprietário do projeto pode fazer isso.",
     "smartAssignNotAllowed": "Seu orçamento de uso de IA está esgotado. O Smart Assign será retomado no próximo período.",
     "invalidSmartTriageMode": "Modo de triagem inteligente desconhecido.",
-    "smartTriageNotAllowed": "Seu orçamento de uso de IA acabou. A triagem inteligente (IA) retomará no próximo período.",
     "automationsNotAllowed": "O Numo não está disponível nesta conta ou seu orçamento de IA acabou. As automações serão retomadas quando uma dessas condições mudar.",
     "missingParameter": "Solicitação inválida.",
     "systemViewLocked": "A visualização \"Meus problemas\" não pode ser renomeada ou excluída.",
@@ -2997,14 +2996,6 @@
     "webhookNoDelivery": "Nenhuma entrega ainda",
     "recurrencesTab": "Recorrências",
     "smartAssignTab": "Inteligente Atribuir",
-    "smartTriageTab": "Triagem inteligente",
-    "smartTriageDescription": "Aplica a ordem do board pela classificação «Smart» da visão: as regras estáticas de graça, ou uma pontuação de urgência de IA quando o modo do projeto é IA (consome o uso de IA de quem está vendo). A ordem manual de arrastar fica intacta.",
-    "smartTriageModeLabel": "Modo de reordenação",
-    "smartTriageModeRules": "Regras",
-    "smartTriageModeJev": "IA",
-    "smartTriageModeRulesDesc": "Regras estáticas, grátis: bloqueadores primeiro, depois ganhos rápidos (prioridade, esforço, prazo), objetivos agrupados.",
-    "smartTriageModeJevDesc": "Uma pontuação de urgência de IA por ticket, aplicada pela classificação «Smart» da visão (consome seu uso de IA).",
-    "smartTriageSavedToast": "Modo de triagem inteligente salvo.",
     "smartAssignToggleLabel": "Ativar o Smart Assign",
     "smartAssignToggleHint": "O Smart Assign oferece ao membro qualquer problema que acabe fora da triagem sem nenhum responsável, seja ele recém-criado ou recém-saído da triagem.",
     "smartAssignSoloHint": "Você é o único membro: os problemas qualificados serão atribuídos a você automaticamente.",
@@ -4299,10 +4290,6 @@
         "label": "Modelo de preenchimento inteligente",
         "desc": "Lê o título e a descrição de um novo problema e preenche seus campos. Alguém está esperando pelo resultado: escolha um modelo rápido."
       },
-      "smart_triage_model": {
-        "label": "Modelo de triagem inteligente",
-        "desc": "A passada de pontuação de IA de uma reordenação de coluna (uma chamada por coluna, uma pontuação de urgência por ticket). Alguém espera: escolha um modelo rápido."
-      },
       "conversation_title_model": {
         "label": "Títulos de conversas",
         "desc": "Nomeia uma conversa Numo em poucas palavras, desde sua primeira mensagem. Um modelo pequeno é suficiente."
@@ -5062,7 +5049,7 @@
     "feature_smartFill_title": "Smart Fill",
     "feature_smartFill_body": "Quando chega uma tarefa, o minddy lê o título e a descrição e preenche o que falta: prioridade, esforço, categorias e objetivo. O status, o responsável e o prazo continuam sendo seus.",
     "feature_smartTriage_title": "Smart Triage",
-    "feature_smartTriage_body": "Ordena a coluna por você: bloqueadores primeiro, depois ganhos rápidos, por suas regras ou com uma pontuação de urgência de IA.",
+    "feature_smartTriage_body": "Ordena a coluna de triagem com regras determinísticas: primeiro os bloqueadores, depois as tarefas rápidas.",
     "smartTitle": "Smart Fill, Assign e Triage",
     "smartSubtitle": "O minddy preenche o que falta nas tarefas novas, escolhe a pessoa certa de acordo com suas regras e mantém a triagem ordenada.",
     "smartFigureHeader": "Quando chega uma tarefa",

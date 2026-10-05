@@ -80,7 +80,6 @@ export const KanbanBoard = memo(function KanbanBoard({
   statuses,
   sort,
   sortDirection,
-  smartScores,
   projectId,
   projectKey,
   members,
@@ -111,12 +110,6 @@ export const KanbanBoard = memo(function KanbanBoard({
   /** Direction of the sort (MIN-592) — reversed by the invert button for the
       directional sorts; ignored by "smart" and "manual". */
   sortDirection?: SortDirection;
-  /**
-   * The project's AI urgency scores (project mode `jev`, MIN-576): when
-   * present, the "smart" sort orders by score. `null` = rules mode, a
-   * pending/failed scoring pass — the rules order stands.
-   */
-  smartScores?: Map<string, number | null> | null;
   projectId: string;
   projectKey: string;
   members: Member[];
@@ -220,11 +213,10 @@ export const KanbanBoard = memo(function KanbanBoard({
         {
           relations: triageContext.relations,
           statusById: triageContext.statusById,
-          jevScores: smartScores ?? undefined,
         },
         sortDirection ?? "asc"
       ),
-    [sort, sortDirection, triageContext, smartScores],
+    [sort, sortDirection, triageContext],
   );
   const columns = useMemo(
     () => buildColumns(statuses, issues, makeComparator),

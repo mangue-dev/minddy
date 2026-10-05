@@ -522,9 +522,10 @@ queries do not decrypt. Exact-name resolution still compares authorized decoded
 rows in the application. Assistant comment triggers read routing metadata and
 check project access before decrypting the objective. Account imports encode both
 fields and compare revisions when replacing an existing row.
-Objective reads for prompt context, smart fill and smart triage stop before model
-execution when the repository reports a storage failure, instead of presenting
-an incomplete objective list as if it were authoritative.
+Objective reads for prompt context and smart fill stop before model execution
+when the repository reports a storage failure, instead of presenting an incomplete
+objective list as if it were authoritative. Smart triage only reads objective
+IDs and statuses for deterministic dependency rules; it does not execute a model.
 
 The guarded create/update RPCs keep project and lead membership checks. Creation
 assigns the row ID before encryption; protected edits merge complete content

@@ -22,7 +22,6 @@ export const BYOK_MODEL_KEYS = [
   "web_search_model",
   "smart_assign_model",
   "smart_fill_model",
-  "smart_triage_model",
   "import_map_model",
   "brief_model",
   "dictate_model",
@@ -52,7 +51,6 @@ export const AI_SURFACE_DEFINITIONS: readonly AiSurfaceDefinition[] = [
     modelKeys: [
       "smart_assign_model",
       "smart_fill_model",
-      "smart_triage_model",
       "import_map_model",
       "brief_model",
     ],
@@ -99,6 +97,8 @@ export function parseByokFeatureModels(value: unknown): ByokFeatureModels | null
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const result: ByokFeatureModels = {};
   for (const [key, raw] of Object.entries(value)) {
+    // Older clients may resend this retired override while saving another model.
+    if (key === "smart_triage_model") continue;
     if (!isByokModelKey(key) || typeof raw !== "string" || raw.length > 300) return null;
     const model = raw.trim();
     if (model) result[key] = model;
