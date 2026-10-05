@@ -15,10 +15,10 @@ import { decodeDefaultBranch } from "@/lib/server/git/default-branch-content";
  * The latter remains in trusted function/runner infrastructure for sandbox
  * execution; desktop-local execution may use it on the user's own machine.
  *
- * We read directly `project_git_links` (which denormalizes `installation_id`)
- * rather than getProjectLink(), because the latter does not return the installation_id
- * required to mint the token. Call again before a later network operation when
- * the short-lived credential may have expired.
+ * Read `project_git_links` with its bound connection rather than getProjectLink(),
+ * which does not return the installation ID required to mint the token. Older
+ * links may omit that denormalized ID even when the connection still has it.
+ * Call again before a later network operation when the credential may have expired.
  *
  * Since MIN-327, GitHub tokens are scoped to the linked repository and their
  * permission level depends on the operation; see `RepoTokenAccess` below.
@@ -128,6 +128,12 @@ export interface RepoCloneTarget {
   externalRepoId: string;
 }
 
+interface LinkConnection {
+  provider: string;
+  source: string | null;
+  installation_id: number | null;
+}
+
 interface GitLinkRow {
   id: string;
   provider: string;
@@ -139,21 +145,30 @@ interface GitLinkRow {
   project_id?: string;
   /** Embedded from git_connections; PostgREST types it as an array, the
    * runtime serves a to-one object. */
-  git_connections?: { source: string } | { source: string }[] | null;
+  git_connections?: LinkConnection | LinkConnection[] | null;
 }
 
-function linkConnectionSource(row: GitLinkRow): string | null {
+function linkConnection(row: GitLinkRow): LinkConnection | null {
   const embedded = row.git_connections;
   if (!embedded) return null;
-  return Array.isArray(embedded) ? (embedded[0]?.source ?? null) : embedded.source;
+  return Array.isArray(embedded) ? (embedded[0] ?? null) : embedded;
+}
+
+function githubInstallationId(row: GitLinkRow): number | null {
+  const connection = linkConnection(row);
+  // Recover only from the connection bound by this link's foreign key. Never
+  // search another account or installation by repository name.
+  const id = row.installation_id ?? (connection?.provider === "github"
+    ? connection.installation_id : null);
+  return id != null && Number.isSafeInteger(id) && id > 0 ? id : null;
 }
 
 const GIT_LINK_COLUMNS =
-  "id, project_id, provider, connection_id, installation_id, external_repo_id, repo_full_name, default_branch, git_connections(source)";
+  "id, project_id, provider, connection_id, installation_id, external_repo_id, repo_full_name, default_branch, git_connections(source, provider, installation_id)";
 
 /**
- * Clone target of the project, or null if it has no repository linked to it. Raise if the link
- * is incomplete (installation_id GitHub missing) or if the provider is unknown.
+ * Clone target of the project, or null if no repository is linked or its GitHub
+ * installation is unavailable. Other malformed links and unknown providers raise.
  */
 export async function resolveRepoCloneTarget(
   projectId: string,
@@ -179,8 +194,8 @@ export async function resolveRepoCloneTarget(
  * Without this filter, we would mint a token in the name of a project that it cannot
  * see: the member of a project would be enough to act on a repository linked elsewhere.
  *
- * Returns null when no accessible project links this repository — calling it
- * fait un 404, comme partout ailleurs.
+ * Returns null when no accessible project has a usable link to this repository;
+ * callers respond with the same 404 used for an inaccessible repository.
  */
 export async function resolveRepoCloneTargetForRepo(opts: {
   userId: string;
@@ -234,6 +249,9 @@ export async function resolveProjectLinkForRepo(opts: {
     if (!row.project_id || !row.repo_full_name) continue;
     const access = await getProjectAccess(opts.userId, row.project_id);
     if (!access) continue;
+    // An incomplete link must not hide a usable link in another accessible
+    // project, or turn every PR read into an unhandled server exception.
+    if (row.provider === "github" && githubInstallationId(row) == null) continue;
     return {
       linkId: row.id,
       connectionId: row.connection_id,
@@ -272,7 +290,11 @@ export async function resolveProjectLinkForRepo(opts: {
 async function targetFromLink(
   row: GitLinkRow,
   access: RepoTokenAccess = "full",
-): Promise<RepoCloneTarget> {
+): Promise<RepoCloneTarget | null> {
+  const installationId = githubInstallationId(row);
+  // Inert fixtures and disconnected installations carry no forge authority.
+  // Treat them as unavailable instead of minting a token or throwing a 500.
+  if (row.provider === "github" && installationId == null) return null;
   if (!row.repo_full_name) {
     throw new Error("Project git link is missing repo_full_name");
   }
@@ -282,12 +304,9 @@ async function targetFromLink(
   // Token source behind the ForgeProvider seam (docs/managed-forge-relay-plan.md):
   // the connection's `source` marker decides — "relay" connections mint their
   // GitHub tokens through the Cloud control plane, everything else stays local.
-  const provider = forgeProviderForConnection(linkConnectionSource(row));
+  const provider = forgeProviderForConnection(linkConnection(row)?.source ?? null);
 
   if (row.provider === "github") {
-    if (row.installation_id == null) {
-      throw new Error("GitHub link is missing its installation id");
-    }
     const repositoryId = Number(row.external_repo_id);
     if (!Number.isSafeInteger(repositoryId) || repositoryId <= 0) {
       throw new Error("GitHub link is missing a stable repository id");
@@ -298,7 +317,7 @@ async function targetFromLink(
      * if an old owner/name is reused.
      */
     const { token } = await provider.getInstallationToken({
-      installationId: row.installation_id,
+      installationId: installationId!,
       scope: {
         repositoryIds: [repositoryId],
         permissions: GITHUB_PERMISSIONS_BY_ACCESS[access],
