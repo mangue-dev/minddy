@@ -2,7 +2,7 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
-import { AlertCircleIcon, ArrowUpRight01Icon, BubbleChatIcon, GitBranchIcon, GitMergeIcon, GitPullRequestDraftIcon, Shield01Icon, CheckIcon, UserRoundCheckIcon as UserRoundCheck, ViewIcon, Wrench01Icon } from "@hugeicons/core-free-icons";
+import { AlertCircleIcon, ArrowDown01Icon, ArrowUpRight01Icon, BubbleChatIcon, GitBranchIcon, GitMergeIcon, GitPullRequestDraftIcon, Shield01Icon, CheckIcon, UserRoundCheckIcon as UserRoundCheck, ViewIcon, Wrench01Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useState } from "react";
 import { useFormatter, useNow, useTranslations } from "next-intl";
 import {
@@ -310,7 +310,6 @@ export function PrInsights(props: PrInsightsProps) {
         <Collapsible open={blockersOpen} onOpenChange={setBlockersOpen} data-testid="pr-insight-blockers">
           <div data-testid="pr-insight-blockers-header" className="flex min-w-0 items-center gap-2">
             <CollapsibleTrigger className="flex min-w-0 flex-1 items-center gap-2 rounded py-1 text-left text-sm font-medium text-destructive outline-none focus-visible:ring-2 focus-visible:ring-ring">
-              <HugeiconsIcon icon={AlertCircleIcon} className="size-4 shrink-0" />
               <span className="shrink-0">{t("insightBlockers")}</span>
               {blocked.length > 0 ? <span className="text-xs tabular-nums">{blocked.length}</span> : null}
             </CollapsibleTrigger>
@@ -320,6 +319,7 @@ export function PrInsights(props: PrInsightsProps) {
                   <Button variant="ghost" size="sm" data-testid="pr-fix-action" className="min-w-0">
                     <HugeiconsIcon icon={Wrench01Icon} className="size-4 shrink-0" />
                     <span className="min-w-0 truncate">{t("cardFix")}</span>
+                    <HugeiconsIcon icon={ArrowDown01Icon} aria-hidden className="size-3.5 shrink-0" />
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent align="end" data-testid="pr-fix-popover" className="w-[min(26rem,calc(100vw-2rem))] p-3">
