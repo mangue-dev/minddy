@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { ByokModelKey } from "@/lib/ai-surfaces";
+import type { ReasoningLevel } from "@/lib/agent-reasoning";
 import type { AiFeature } from "@/lib/server/ai-usage-shape";
 import { forcedToolCall } from "@/lib/server/feedback/forced-tool-call";
 import { resolveConfiguredModel } from "@/lib/server/model-config";
@@ -30,6 +31,7 @@ interface LlmPassProfile {
   logPrefix: string;
   maxTokens?: number;
   timeoutMs?: number;
+  reasoning?: ReasoningLevel;
 }
 
 /** The existing pass of each use case, unchanged (model, tool, billing feature). */
@@ -39,7 +41,10 @@ const LLM_PASSES: Record<DecisionSpec["useCase"], LlmPassProfile> = {
     feature: "smart_fill",
     xTitle: "minddy Smart-fill",
     logPrefix: "smart-fill",
-    maxTokens: 256,
+    // Reasoning tokens share the output budget with the four-field tool call.
+    // Keep the model's reasoning bounded and leave room for both outputs.
+    maxTokens: 2_048,
+    reasoning: "low",
     // Someone is waiting in front of their screen: the same ceiling as the pass.
     timeoutMs: 20_000,
   },
@@ -179,6 +184,7 @@ export async function runLlmDecision(
       modelKey: profile.modelKey,
       ...(profile.maxTokens !== undefined ? { maxTokens: profile.maxTokens } : {}),
       ...(profile.timeoutMs !== undefined ? { timeoutMs: profile.timeoutMs } : {}),
+      ...(profile.reasoning !== undefined ? { reasoning: profile.reasoning } : {}),
       record: {
         // The shadow replay (MIN-567) overrides the feature so the sampling
         // delta does not read as a real pass of the use case.
