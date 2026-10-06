@@ -3,7 +3,7 @@ import { PrLinkedIssues, linkedIssues } from "./pr-linked-issues";
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
-import { ArrowDown01Icon, ArrowLeft01Icon, ArrowUp01Icon, Cancel01Icon, Copy01Icon, Edit04Icon, HistoryIcon, LinkSquare01Icon, Message01Icon, MessageSquareQuoteIcon, MoreHorizontalIcon, CheckIcon, ViewIcon } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, ArrowLeft01Icon, ArrowUp01Icon, Cancel01Icon, Copy01Icon, Edit04Icon, HistoryIcon, Link02Icon, LinkSquare01Icon, Message01Icon, MessageSquareQuoteIcon, MoreHorizontalIcon, CheckIcon, ViewIcon } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import {
@@ -747,6 +747,14 @@ export function PrDetail({
     );
   }, [pr]);
   const [editingTitle, setEditingTitle] = useState(false);
+  const [linkIssueOpen, setLinkIssueOpen] = useState(false);
+  const [linkIssuePosition, setLinkIssuePosition] = useState<{ x: number; y: number }>();
+  const moreActionsRef = useRef<HTMLButtonElement>(null);
+  const openLinkIssueFromMenu = () => {
+    const bounds = moreActionsRef.current?.getBoundingClientRect();
+    if (!bounds) return;
+    setLinkIssuePosition({ x: bounds.right, y: bounds.bottom });
+  };
   const [titleDraft, setTitleDraft] = useState("");
   // The merge is confirmed WITH its method: bring it to the confirmation state
   // prevents a click on “merge anyway” from falling back to the default squash.
@@ -1771,6 +1779,16 @@ export function PrDetail({
           <PrLinkedIssues item={item} onOpenIssue={onOpenIssue} />
           {item.project ? (
             <PrLinkIssue
+              open={linkIssueOpen}
+              onOpenChange={(open) => {
+                setLinkIssueOpen(open);
+                if (!open && linkIssuePosition) {
+                  setLinkIssuePosition(undefined);
+                  moreActionsRef.current?.focus();
+                }
+              }}
+              position={linkIssuePosition}
+              triggerClassName="hidden 2xl:inline-flex"
               prId={item.prId}
               linkedIssueIds={linkedIssues(item).map((issue) => issue.id)}
               prState={item.pr_state}
@@ -1804,6 +1822,7 @@ export function PrDetail({
               <DropdownMenuTrigger asChild>
                 <Button
                   data-testid="pr-more-actions"
+                  ref={moreActionsRef}
                   variant="outline"
                   size="icon-sm"
                   aria-label={t("moreActions")}
@@ -1811,7 +1830,18 @@ export function PrDetail({
                   <HugeiconsIcon icon={MoreHorizontalIcon} />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
+              <DropdownMenuContent align="end" onCloseAutoFocus={(event) => {
+                if (linkIssuePosition) {
+                  event.preventDefault();
+                  setLinkIssueOpen(true);
+                }
+              }}>
+                {item.project ? (
+                  <DropdownMenuItem className="2xl:hidden" onSelect={openLinkIssueFromMenu}>
+                    <HugeiconsIcon icon={Link02Icon} />
+                    {t(linkedIssues(item).length > 0 ? "linkAnotherIssue" : "linkIssue")}
+                  </DropdownMenuItem>
+                ) : null}
                 {forgeUrl ? (
                   <DropdownMenuItem asChild>
                     <a
@@ -1841,7 +1871,7 @@ export function PrDetail({
               onChange={(state) => setConfirmAction({ kind: "state", state })} />
           </div>
         ) : (
-          // Under `lg`, secondary actions move into the overflow menu. The
+          // Under `2xl`, secondary actions move into the overflow menu. The
           // remaining actions stay on the shared 60 px header line; if a long
           // translation still exceeds the pane, the header remains horizontally
           // reachable instead of growing vertically.
@@ -1886,6 +1916,7 @@ export function PrDetail({
               <DropdownMenuTrigger asChild>
                 <Button
                   data-testid="pr-more-actions"
+                  ref={moreActionsRef}
                   variant="outline"
                   size="icon-sm"
                   aria-label={t("moreActions")}
@@ -1893,7 +1924,18 @@ export function PrDetail({
                   <HugeiconsIcon icon={MoreHorizontalIcon} />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
+              <DropdownMenuContent align="end" onCloseAutoFocus={(event) => {
+                if (linkIssuePosition) {
+                  event.preventDefault();
+                  setLinkIssueOpen(true);
+                }
+              }}>
+                {item.project ? (
+                  <DropdownMenuItem className="2xl:hidden" onSelect={openLinkIssueFromMenu}>
+                    <HugeiconsIcon icon={Link02Icon} />
+                    {t(linkedIssues(item).length > 0 ? "linkAnotherIssue" : "linkIssue")}
+                  </DropdownMenuItem>
+                ) : null}
                 {forgeUrl ? (
                   <DropdownMenuItem asChild>
                     <a
