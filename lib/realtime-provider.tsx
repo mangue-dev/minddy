@@ -263,6 +263,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       let authRetry: ReturnType<typeof setTimeout> | null = null;
       let authAttempts = 0;
       let connectVersion = 0;
+      let accessDenied = false;
 
       // Deterministically push the session token to the socket before joining:
       // supabase-js only re-sends it on SIGNED_IN/TOKEN_REFRESHED, never on
@@ -273,8 +274,10 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
         void (async () => {
           try {
             await supabase.realtime.setAuth();
+            if (cancelled || version !== connectVersion) return;
             const resolvedTopic = await resolveRealtimeTopic(supabase, topic);
             if (cancelled || version !== connectVersion) return;
+            accessDenied = false;
             authAttempts = 0;
             const next = supabase.channel(resolvedTopic, {
               config: { private: true },
@@ -308,10 +311,17 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
               }
             });
             channel = next;
-          } catch {
+          } catch (error) {
             if (cancelled || version !== connectVersion) return;
             needsCatchUp = true;
             catchUp(scopeKeys);
+            if (error && typeof error === "object" && "code" in error &&
+                error.code === "42501") {
+              // A revoked or inaccessible scope cannot recover on a timer.
+              // Retry only when credentials, membership, or foreground state change.
+              accessDenied = true;
+              return;
+            }
             authAttempts += 1;
             const delay = Math.min(1_000 * 2 ** (authAttempts - 1), 10_000);
             authRetry = setTimeout(connect, delay);
@@ -321,6 +331,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
 
       const reconnect = () => {
         if (cancelled) return;
+        accessDenied = false;
         needsCatchUp = true;
         connectVersion += 1;
         if (authRetry) {
@@ -334,6 +345,13 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
         }
         connect();
       };
+      // Routine token refreshes only wake denied scopes, preserving live channels.
+      const { data: { subscription: authSubscription } } =
+        supabase.auth.onAuthStateChange((event) => {
+          if (accessDenied && (event === "SIGNED_IN" || event === "TOKEN_REFRESHED")) {
+            queueMicrotask(reconnect);
+          }
+        });
       const stopRekey = onRealtimeRekey(reconnect);
       connect();
 
@@ -341,6 +359,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
         cancelled = true;
         connectVersion += 1;
         stopRekey();
+        authSubscription.unsubscribe();
         if (authRetry) clearTimeout(authRetry);
         if (channel) void getSupabase().removeChannel(channel);
       };
