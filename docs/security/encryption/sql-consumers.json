@@ -6074,27 +6074,32 @@
       ],
       "functionReferences": []
     },
-    "get_admin_users_overview(text,integer,integer)": {
-      "sha256": "4ac17d09df01119a689775a2fabd56ce54c76a020a8ee7fd31488d5821e359ab",
+    "get_admin_account(text,uuid)": {
+      "sha256": "a3713505cc53fbd8aff63f1ec7972617b48618e1e0e666b3cfa4e58cfb3806f0",
       "securityDefiner": true,
       "configuration": [
-        "search_path=public"
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "relations": [],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
+    "get_admin_onboarding_signals(integer,integer)": {
+      "sha256": "530ca712a28a41c6d2b43537dd34eff82ee5bc2f4518de7a520f081363e2d364",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
       ],
       "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "issues",
-        "ai_usage",
-        "comments",
         "projects",
-        "stat_events",
-        "project_members",
-        "agent_quota_resets"
+        "project_members"
       ],
       "protectedRelations": [
         "issues",
-        "comments",
-        "projects",
-        "stat_events"
+        "projects"
       ],
       "functionReferences": []
     },

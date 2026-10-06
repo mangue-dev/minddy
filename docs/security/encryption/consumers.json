@@ -192,21 +192,21 @@
     "file": "app/api/admin/agent-quota/route.ts",
     "operation": "from",
     "resource": "agent_quota_resets",
-    "line": 59,
+    "line": 37,
     "storage": false
   },
   {
     "file": "app/api/admin/agent-quota/route.ts",
     "operation": "from",
     "resource": "agent_quota_resets",
-    "line": 122,
+    "line": 100,
     "storage": false
   },
   {
     "file": "app/api/admin/agent-quota/route.ts",
     "operation": "from",
     "resource": "agent_quota_resets",
-    "line": 154,
+    "line": 132,
     "storage": false
   },
   {
@@ -224,17 +224,17 @@
     "storage": false
   },
   {
-    "file": "app/api/admin/decisions-quality/route.ts",
-    "operation": "from",
-    "resource": "ai_decision_evaluations_weekly",
-    "line": 31,
-    "storage": false
-  },
-  {
     "file": "app/api/admin/overview/route.ts",
     "operation": "rpc",
     "resource": "get_admin_user_totals",
-    "line": 61,
+    "line": 48,
+    "storage": false
+  },
+  {
+    "file": "app/api/admin/users/route.ts",
+    "operation": "rpc",
+    "resource": "get_user_usage_since",
+    "line": 63,
     "storage": false
   },
   {
@@ -2025,15 +2025,15 @@
   {
     "file": "lib/server/admin-users.ts",
     "operation": "rpc",
-    "resource": "get_admin_users_overview",
-    "line": 56,
+    "resource": "get_admin_onboarding_signals",
+    "line": 25,
     "storage": false
   },
   {
     "file": "lib/server/admin-users.ts",
-    "operation": "from",
-    "resource": "user_ai_keys",
-    "line": 106,
+    "operation": "rpc",
+    "resource": "get_admin_account",
+    "line": 56,
     "storage": false
   },
   {
