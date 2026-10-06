@@ -845,6 +845,10 @@ function StatusDetails({ insight, now }: { insight: PrInsight; now: Date }) {
                 onClick={() => { setPressed(which); action.onClick(); }}
               >
                 {insight.id === "deployment" ? <HugeiconsIcon icon={which === "top" ? Copy01Icon : LinkSquare01Icon} aria-hidden className="size-4" /> : null}
+                {insight.id === "fix" ? which === "top"
+                  ? <HugeiconsIcon icon={Copy01Icon} aria-hidden className="size-4" />
+                  : <NumoIcon animated={false} />
+                  : null}
                 {pressed === which && action.feedback ? t(FEEDBACK_KEYS[action.feedback]) : action.label}
               </Button>
             );

@@ -19,14 +19,15 @@ vi.mock("@/lib/use-unlink-pull-request-issue", () => ({
 vi.mock("@tanstack/react-query", () => ({ useQuery: () => ({ data: { issues: [] }, isPending: false }) }));
 // Import the actual primitives without the barrel's unrelated emoji JSON dependency.
 vi.mock("mangue-ui", async () => ({
+  ...(await vi.importActual<Record<string, unknown>>("mangue-ui/lib/utils.ts")),
   ...(await vi.importActual<Record<string, unknown>>("mangue-ui/components/ui/button.tsx")),
+  ...(await vi.importActual<Record<string, unknown>>("mangue-ui/components/ui/command.tsx")),
   ...(await vi.importActual<Record<string, unknown>>("mangue-ui/components/ui/popover.tsx")),
   ...(await vi.importActual<Record<string, unknown>>("mangue-ui/components/ui/tooltip.tsx")),
   ...(await vi.importActual<Record<string, unknown>>("mangue-ui/components/ui/spinner.tsx")),
   ...(await vi.importActual<Record<string, unknown>>("mangue-ui/components/ui/dialog.tsx")),
   toast: { success: vi.fn(), error: vi.fn() },
 }));
-vi.mock("@/components/search-select", () => ({ SearchSelect: ({ trigger }: { trigger: ReturnType<typeof createElement> }) => trigger }));
 
 const issues = [1, 2, 3].map((number) => ({
   id: `issue-${number}`, number, title: `Linked issue ${number}`, project_id: "project", project_key: "MIN",
