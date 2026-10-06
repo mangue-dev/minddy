@@ -1,4 +1,4 @@
-import type { QueryClient, QueryObserverOptions } from "@tanstack/react-query";
+import { notifyManager, type QueryClient, type QueryObserverOptions } from "@tanstack/react-query";
 import type { RetainedAppView } from "./retained-app-views";
 
 export function retainedBoardKeys(view: RetainedAppView): readonly (readonly unknown[])[] {
@@ -6,12 +6,20 @@ export function retainedBoardKeys(view: RetainedAppView): readonly (readonly unk
   return ["issues", "members", "categories", "objectives", "integrations", "issue-relations", "views"].map((prefix) => [prefix, view.route.projectId]);
 }
 
-/** Notify the board immediately when one of its prerequisites changes. */
+/** Query observers can emit cache events during render; defer React notifications. */
 export function subscribeRetainedBoardReadState(client: QueryClient, view: RetainedAppView, notify: () => void) {
   const keys = retainedBoardKeys(view);
-  return client.getQueryCache().subscribe((event) => {
-    if (keys.some((key) => key.length === event.query.queryKey.length && key.every((part, index) => part === event.query.queryKey[index]))) notify();
+  let stopped = false;
+  const scheduledNotify = notifyManager.batchCalls(() => {
+    if (!stopped) notify();
   });
+  const unsubscribe = client.getQueryCache().subscribe((event) => {
+    if (keys.some((key) => key.length === event.query.queryKey.length && key.every((part, index) => part === event.query.queryKey[index]))) scheduledNotify();
+  });
+  return () => {
+    stopped = true;
+    unsubscribe();
+  };
 }
 
 function expiredBoardQuery(client: QueryClient, key: readonly unknown[]) {
