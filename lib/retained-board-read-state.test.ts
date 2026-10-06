@@ -4,7 +4,8 @@ import { refreshRetainedBoard, retainedBoardKeys, retainedBoardReadState, subscr
 import type { RetainedAppView } from "./retained-app-views";
 const view: RetainedAppView = { key: "g", tabId: "g", kind: "global-board", route: { pathname: "/all", search: "", projectId: null } };
 
-it.each([view, { ...view, kind: "project-board" as const, route: { pathname: "/projects/p", projectId: "p", search: "" } }])("notifies an expired $kind activation synchronously and ignores unrelated queries", async (board) => {
+it.each([view, { ...view, kind: "project-board" as const, route: { pathname: "/projects/p", projectId: "p", search: "" } }])("defers $kind notifications while keeping activation snapshots current and ignoring unrelated queries", async (board) => {
+  vi.useFakeTimers();
   const now = vi.spyOn(Date, "now").mockReturnValue(1000);
   const client = new QueryClient({ defaultOptions: { queries: { staleTime: 300_000 } } });
   const pending: ((rows: string[]) => void)[] = [];
@@ -17,21 +18,40 @@ it.each([view, { ...view, kind: "project-board" as const, route: { pathname: "/p
     stop = subscribeRetainedBoardReadState(client, board, notify);
     client.setQueryData(["avatar", "user"], []);
     client.setQueryData([...retainedBoardKeys(board)[0], "unrelated"], []);
+    await vi.advanceTimersByTimeAsync(0);
     expect(notify).not.toHaveBeenCalled();
     now.mockReturnValue(302_000);
     activating = true;
     const refresh = refreshRetainedBoard(client, board);
-    // No await or timer flush: the layout effect must notify before returning.
+    expect(retainedBoardReadState(client, board)).toBe("refreshing");
+    expect(notify).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(0);
     expect(notify).toHaveBeenCalled();
     expect(notify.mock.results.every((result) => result.value === "refreshing")).toBe(true);
     for (const finish of pending) finish(["Current rows"]);
     await refresh;
+    await vi.advanceTimersByTimeAsync(0);
     expect(notify.mock.results.at(-1)?.value).toBe("fresh");
     stop();
     notify.mockClear();
     client.setQueryData(retainedBoardKeys(board)[0], ["Updated after unsubscribe"]);
+    await vi.advanceTimersByTimeAsync(0);
     expect(notify).not.toHaveBeenCalled();
-  } finally { stop(); client.clear(); now.mockRestore(); }
+  } finally { stop(); client.clear(); now.mockRestore(); vi.useRealTimers(); }
+});
+
+it("drops notifications queued before unsubscribe", async () => {
+  vi.useFakeTimers();
+  const client = new QueryClient();
+  const notify = vi.fn();
+  const stop = subscribeRetainedBoardReadState(client, view, notify);
+  try {
+    client.setQueryData(retainedBoardKeys(view)[0], []);
+    expect(notify).not.toHaveBeenCalled();
+    stop();
+    await vi.runAllTimersAsync();
+    expect(notify).not.toHaveBeenCalled();
+  } finally { stop(); client.clear(); vi.useRealTimers(); }
 });
 
 it.each([view, { ...view, kind: "project-board" as const, route: { pathname: "/projects/p", projectId: "p", search: "" } }])("waits for every prerequisite of a $kind, including absent queries", (board) => {
