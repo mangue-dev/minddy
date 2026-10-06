@@ -67,25 +67,56 @@ function validTimestamp(value: string | null | undefined): number | null {
   return Number.isFinite(timestamp) ? timestamp : null;
 }
 
-function endOfTargetDay(value: string): number | null {
+function endOfTargetDay(value: string, timeZone: string): number | null {
   const dateOnly = /^\d{4}-\d{2}-\d{2}$/.test(value);
-  if (dateOnly) {
-    const timestamp = new Date(`${value}T23:59:59.999`).getTime();
-    return Number.isFinite(timestamp) ? timestamp : null;
+  const targetAt = validTimestamp(dateOnly ? `${value}T00:00:00.000Z` : value);
+  if (targetAt === null) return null;
+
+  // Use the formatter's explicit zone, never the renderer's implicit zone.
+  // SSR and initial hydration inherit the same next-intl configuration; later
+  // browser-zone changes update both deadline arithmetic and labels together.
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  });
+  const partsAt = (timestamp: number) => {
+    const parts = formatter.formatToParts(timestamp);
+    const part = (type: Intl.DateTimeFormatPartTypes) =>
+      Number(parts.find((part) => part.type === type)?.value);
+    return {
+      year: part("year"), month: part("month"), day: part("day"),
+      hour: part("hour"), minute: part("minute"), second: part("second"),
+    };
+  };
+  const parts = partsAt(targetAt);
+  if (!dateOnly && (parts.hour !== 0 || parts.minute !== 0 || parts.second !== 0 || targetAt % 1000 !== 0)) {
+    return targetAt;
   }
 
-  // DateTimePicker stores a date-only selection as local midnight serialized
-  // through toISOString(). Rebuild the end of that same local calendar day;
-  // comparing the serialized midnight directly would mark it overdue at 00:00.
-  const target = new Date(value);
-  if (!Number.isFinite(target.getTime())) return null;
-  const isLocalMidnight =
-    target.getHours() === 0 &&
-    target.getMinutes() === 0 &&
-    target.getSeconds() === 0 &&
-    target.getMilliseconds() === 0;
-  if (isLocalMidnight) target.setHours(23, 59, 59, 999);
-  return target.getTime();
+  // Bare dates carry their own calendar day. ISO midnight selections carry
+  // an instant, so recover the day in the same zone used to display it.
+  const date = new Date(targetAt);
+  const endOfDay = dateOnly
+    ? Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), 23, 59, 59, 999)
+    : Date.UTC(parts.year, parts.month - 1, parts.day, 23, 59, 59, 999);
+  let result = endOfDay;
+  // Resolve the offset at the end of the day, rather than adding 24 hours to
+  // midnight: daylight-saving days can contain 23 or 25 hours.
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const p = partsAt(result);
+    const offset = Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute, p.second)
+      - (result - new Date(result).getUTCMilliseconds());
+    const next = endOfDay - offset;
+    if (next === result) break;
+    result = next;
+  }
+  return result;
 }
 
 function momentumState({
@@ -126,11 +157,12 @@ export function objectiveMomentum(
   objective: ObjectiveMomentumSource,
   issues: ObjectiveMomentumIssue[],
   now: Date = new Date(),
+  timeZone: string = "UTC",
 ): ObjectiveMomentumInsight {
   const nowMs = now.getTime();
   const createdAt = validTimestamp(objective.created_at) ?? nowMs;
   const targetAt = objective.target_date
-    ? endOfTargetDay(objective.target_date)
+    ? endOfTargetDay(objective.target_date, timeZone)
     : null;
   const period =
     targetAt !== null && targetAt > createdAt

@@ -111,56 +111,115 @@ describe("objectiveMomentum", () => {
     expect(result.targetPace).toBe("at_risk");
   });
 
-  it("keeps a local-midnight ISO target valid through the full target day", () => {
-    const now = new Date(2026, 8, 2, 12, 0, 0, 0);
-    const target = new Date(2026, 8, 2, 0, 0, 0, 0).toISOString();
+  it("keeps an ISO midnight target valid through the full day in its explicit zone", () => {
+    const now = new Date("2026-09-02T16:00:00.000Z");
+    const target = "2026-09-02T04:00:00.000Z";
     const result = objectiveMomentum(
       { ...OBJECTIVE, target_date: target },
       [issue({ id: 1, status: "todo" })],
       now,
+      "America/New_York",
     );
 
     expect(result.targetPace).toBe("at_risk");
+    expect(result.period?.end).toBe("2026-09-03T03:59:59.999Z");
   });
 
   it("preserves an explicitly selected target time", () => {
-    const now = new Date(2026, 8, 2, 12, 0, 0, 0);
-    const target = new Date(2026, 8, 2, 10, 0, 0, 0).toISOString();
+    const now = new Date("2026-09-02T16:00:00.000Z");
+    const target = "2026-09-02T14:00:00.000Z";
     const result = objectiveMomentum(
       { ...OBJECTIVE, target_date: target },
       [issue({ id: 1, status: "todo" })],
       now,
+      "America/New_York",
     );
 
     expect(result.targetPace).toBe("overdue");
+    expect(result.period?.end).toBe(target);
   });
 
   it("keeps a same-day forecast on track for an ISO target", () => {
-    const now = new Date(2026, 8, 2, 12, 0, 0, 0);
+    const now = new Date("2026-09-02T16:00:00.000Z");
     const result = objectiveMomentum(
       {
         ...OBJECTIVE,
-        created_at: new Date(2026, 7, 26, 12, 0, 0, 0).toISOString(),
-        target_date: new Date(2026, 8, 3, 0, 0, 0, 0).toISOString(),
+        created_at: "2026-08-26T16:00:00.000Z",
+        target_date: "2026-09-03T04:00:00.000Z",
       },
       [
         issue({
           id: 1,
-          completedAt: new Date(2026, 7, 30, 8, 0, 0, 0).toISOString(),
+          completedAt: "2026-08-30T12:00:00.000Z",
           effort: "xl",
         }),
         issue({
           id: 2,
-          completedAt: new Date(2026, 8, 1, 8, 0, 0, 0).toISOString(),
+          completedAt: "2026-09-01T12:00:00.000Z",
           effort: "xl",
         }),
         issue({ id: 3, status: "todo", effort: "xs" }),
       ],
       now,
+      "America/New_York",
     );
 
     expect(result.forecastDays).toBe(1);
     expect(result.targetPace).toBe("on_track");
+  });
+
+  it.each([
+    ["UTC", "2026-09-30T00:00:00.000Z", "2026-09-30T23:59:59.999Z"],
+    ["America/New_York", "2026-09-30T04:00:00.000Z", "2026-10-01T03:59:59.999Z"],
+    ["Europe/Paris", "2026-09-29T22:00:00.000Z", "2026-09-30T21:59:59.999Z"],
+    ["Asia/Kolkata", "2026-09-29T18:30:00.000Z", "2026-09-30T18:29:59.999Z"],
+    ["Pacific/Kiritimati", "2026-09-29T10:00:00.000Z", "2026-09-30T09:59:59.999Z"],
+  ])("normalizes bare and ISO calendar dates in %s independently of the host zone", (timeZone, target, end) => {
+    const source = { ...OBJECTIVE, target_date: target };
+    const iso = objectiveMomentum(source, [issue({ id: 1, status: "todo" })], NOW, timeZone);
+    const bare = objectiveMomentum({ ...source, target_date: "2026-09-30" }, [issue({ id: 1, status: "todo" })], NOW, timeZone);
+
+    expect(iso.period?.end).toBe(end);
+    expect(bare).toEqual(iso);
+  });
+
+  it.each([
+    ["2026-03-08T05:00:00.000Z", "2026-03-09T03:59:59.999Z", 23],
+    ["2026-11-01T04:00:00.000Z", "2026-11-02T04:59:59.999Z", 25],
+  ])("uses the deadline day's final offset across DST for %s", (target, end, hours) => {
+    const result = objectiveMomentum(
+      { ...OBJECTIVE, created_at: "2026-01-01T00:00:00.000Z", target_date: target },
+      [issue({ id: 1, status: "todo" })],
+      new Date(target),
+      "America/New_York",
+    );
+
+    expect(result.period?.end).toBe(end);
+    expect(new Date(end).getTime() + 1 - new Date(target).getTime()).toBe(Number(hours) * 3_600_000);
+  });
+
+  it("does not expand a timestamp that is midnight only in a different zone", () => {
+    const target = "2026-09-30T00:00:00.000Z";
+    const result = objectiveMomentum(
+      { ...OBJECTIVE, target_date: target },
+      [issue({ id: 1, status: "todo" })],
+      NOW,
+      "America/New_York",
+    );
+
+    expect(result.period?.end).toBe(target);
+  });
+
+  it("keeps a sub-second midnight deadline as an explicit instant", () => {
+    const target = "2026-09-30T04:00:00.001Z";
+    const result = objectiveMomentum(
+      { ...OBJECTIVE, target_date: target },
+      [issue({ id: 1, status: "todo" })],
+      NOW,
+      "America/New_York",
+    );
+
+    expect(result.period?.end).toBe(target);
   });
 
   it("does not forecast from a single completion", () => {

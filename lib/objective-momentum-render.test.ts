@@ -1,7 +1,10 @@
-import { createElement, type PropsWithChildren } from "react";
+// @vitest-environment jsdom
+
+import { act, createElement, type PropsWithChildren } from "react";
+import { hydrateRoot, type Root } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
 import { NextIntlClientProvider } from "next-intl";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { ObjectiveMomentum } from "@/components/objective-momentum";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import en from "@/messages/en.json";
@@ -31,24 +34,70 @@ const issues = [
   { objective_id: objective.id, status: "todo", effort: "m", completed_at: null },
 ] as Issue[];
 
-function render(source = objective, locale: "en" | "fr" = "en") {
-  return renderToStaticMarkup(createElement(
+function card(source = objective, locale: "en" | "fr" = "en", timeZone = "Europe/Paris") {
+  return createElement(
     NextIntlClientProvider,
     {
       locale,
       messages: locale === "en" ? en : fr,
       now: NOW,
-      timeZone: "Europe/Paris",
+      timeZone,
       children: createElement(
         TooltipProvider,
         null,
         createElement(ObjectiveMomentum, { objective: source, issues }),
       ),
     },
-  ));
+  );
+}
+
+function render(source = objective, locale: "en" | "fr" = "en", timeZone = "Europe/Paris") {
+  return renderToStaticMarkup(card(source, locale, timeZone));
 }
 
 describe("objective momentum card", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+    document.body.innerHTML = "";
+  });
+
+  it("normalizes a date-only ISO deadline in the provider zone on a UTC renderer", () => {
+    const localHours = vi.spyOn(Date.prototype, "getHours").mockReturnValue(4);
+    const html = render({ ...objective, target_date: "2026-09-02T04:00:00.000Z" }, "en", "America/New_York");
+
+    expect(html).toContain("Aug 5, 2026 → Sep 2, 2026");
+    expect(html).toContain("Behind schedule");
+    expect(html).not.toContain("Target date passed");
+    expect(localHours).not.toHaveBeenCalled();
+  });
+
+  it("hydrates without local-zone mismatches and recomputes when the provider zone changes", async () => {
+    vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+    const source = { ...objective, target_date: "2026-09-02T04:00:00.000Z" };
+    const localHours = vi.spyOn(Date.prototype, "getHours").mockReturnValue(4);
+    const server = render(source, "en", "America/New_York");
+    const container = document.createElement("div");
+    container.innerHTML = server;
+    document.body.append(container);
+    const onRecoverableError = vi.fn();
+    let root: Root | undefined;
+    localHours.mockReturnValue(0);
+    try {
+      await act(() => {
+        root = hydrateRoot(container, card(source, "en", "America/New_York"), { onRecoverableError });
+      });
+      expect(onRecoverableError).not.toHaveBeenCalled();
+      expect(container.innerHTML).toBe(server);
+      expect(localHours).not.toHaveBeenCalled();
+
+      await act(() => root!.render(card(source, "en", "Europe/Paris")));
+      expect(container.textContent).toContain("Target date passed");
+    } finally {
+      await act(() => root?.unmount());
+    }
+  });
+
   it("shows target dates, future intervals, and accessible deadline progress", () => {
     const html = render();
 

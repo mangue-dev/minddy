@@ -4,7 +4,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Activity01Icon, AnalyticsDownIcon, AnalyticsUpIcon, Calendar01Icon, CancelCircleIcon as CircleSlash2, MinusSignIcon, CheckIcon } from "@hugeicons/core-free-icons";
 import { AppIcon } from "@/components/icon";
 import { useMemo } from "react";
-import { useFormatter, useNow, useTranslations } from "next-intl";
+import { useFormatter, useNow, useTimeZone, useTranslations } from "next-intl";
 import { cn } from "mangue-ui";
 import {
   Tooltip,
@@ -93,9 +93,10 @@ export function ObjectiveMomentum({
   const t = useTranslations("Objectives");
   const format = useFormatter();
   const now = useNow({ updateInterval: 60_000 });
+  const timeZone = useTimeZone() ?? "UTC";
   const insight = useMemo(
-    () => objectiveMomentum(objective, issues, now),
-    [objective, issues, now],
+    () => objectiveMomentum(objective, issues, now, timeZone),
+    [objective, issues, now, timeZone],
   );
   const state = STATE_META[insight.state];
   const StateIcon = state.icon;
