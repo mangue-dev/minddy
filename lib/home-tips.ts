@@ -67,6 +67,7 @@ export const HOME_TIPS: HomeTip[] = [
   tip("newIssue", "create.issue"),
   tip("newObjective", "create.objective"),
   tip("chords", "nav.allIssues"),
+  tip("tabSwitch", "nav.numberedTab"),
   tip("myIssues", "nav.myIssues"),
   tip("notebook", "nav.notes"),
   tip("inbox", "nav.inbox"),
