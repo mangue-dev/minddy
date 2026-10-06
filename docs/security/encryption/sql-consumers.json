@@ -5732,7 +5732,7 @@
       "functionReferences": []
     },
     "append_numo_turn_event(uuid,uuid,text,jsonb)": {
-      "sha256": "02f8627c3e06de6450fb77dd60d50a555439a8914697eef992683cdaafe710ec",
+      "sha256": "0a1e4c19f955e57ce747b6fae9c4668909e7085d210dd9609a0ae511d2a156b6",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -8048,7 +8048,7 @@
       "functionReferences": []
     },
     "complete_numo_tool_operation(uuid,uuid,text,boolean,jsonb,jsonb,boolean)": {
-      "sha256": "682c3b94c01eb6cc0d09c8eed609e15ab477c741a8dcf207b6efb505e1c6fb1b",
+      "sha256": "93cfd25d7ead20a98b76026456d9ca3babea5924be6c227a682292ba4a2b5d37",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -8763,7 +8763,7 @@
       "functionReferences": []
     },
     "complete_numo_tool_operation_protected(uuid,uuid,text,boolean,jsonb,integer,jsonb,integer,uuid,boolean)": {
-      "sha256": "09d6db5b343a5135532ac2540dffe106bd9bf1a298ae9ed8c35842e80fef0ed4",
+      "sha256": "5d61f9adb54c47ab84fb37dae9311db7942ac5102251147e6d9358f4b8803f51",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
