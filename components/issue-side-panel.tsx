@@ -1002,7 +1002,7 @@ export function IssueSidePanel({
                 setTab(v as "description" | "plan");
               }}
             >
-              <TabsList variant="line" className={TAB_LIST_DENSE}>
+              <TabsList variant="line" className={cn(TAB_LIST_DENSE, "-translate-x-3")}>
                 <TabsTrigger value="description" className={TAB_TRIGGER_DENSE}>
                   {tPlan("tabDescription")}
                 </TabsTrigger>
