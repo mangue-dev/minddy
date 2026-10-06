@@ -1,78 +1,147 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { cn } from "mangue-ui/lib/utils";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Shield01Icon, DashboardSquare01Icon, SparklesIcon, File01Icon, Link01Icon, ChartLineData01Icon, ComputerIcon } from "@hugeicons/core-free-icons";
-import type { ChangelogIllustration as Illustration } from "@/lib/changelog-types";
+import {
+  Shield01Icon, Layout3ColumnIcon, File02Icon, Link01Icon, ChartLineData01Icon,
+  ComputerIcon, Mic01Icon, Target01Icon, GitPullRequestIcon, GitMergeIcon,
+  CheckIcon, Add01Icon, FlashIcon, Clock01Icon, TaskDone01Icon,
+} from "@hugeicons/core-free-icons";
+import { Claude, Gemini, OpenAI } from "@lobehub/icons";
+import { NumoFace } from "@/components/numo-face";
+import { SmartFillIcon, SmartAssignIcon } from "@/components/smart-icons";
+import { Github, Gitlab } from "@/components/git/provider-icons";
+import type { ChangelogIllustration as Illustration, ChangelogIllustrationName } from "@/lib/changelog-types";
+import styles from "./changelog-illustrations.module.css";
 
-const ICONS = { shield: Shield01Icon, board: DashboardSquare01Icon, assistant: SparklesIcon,
-  pages: File01Icon, connections: Link01Icon, activity: ChartLineData01Icon, desktop: ComputerIcon };
-const TONES = {
-  shield: "from-violet-500/20 via-violet-500/5 to-transparent text-violet-600 dark:text-violet-300",
-  board: "from-blue-500/20 via-blue-500/5 to-transparent text-blue-600 dark:text-blue-300",
-  assistant: "from-orange-500/20 via-orange-500/5 to-transparent text-orange-600 dark:text-orange-300",
-  pages: "from-emerald-500/20 via-emerald-500/5 to-transparent text-emerald-600 dark:text-emerald-300",
-  connections: "from-cyan-500/20 via-cyan-500/5 to-transparent text-cyan-600 dark:text-cyan-300",
-  activity: "from-pink-500/20 via-pink-500/5 to-transparent text-pink-600 dark:text-pink-300",
-  desktop: "from-indigo-500/20 via-indigo-500/5 to-transparent text-indigo-600 dark:text-indigo-300",
+const ICONS = {
+  shield: Shield01Icon, board: Layout3ColumnIcon, pages: File02Icon,
+  connections: Link01Icon, activity: ChartLineData01Icon, desktop: ComputerIcon,
+  microphone: Mic01Icon, relations: Target01Icon, "pull-request": GitPullRequestIcon,
+  tabs: Layout3ColumnIcon, triage: TaskDone01Icon, providers: Link01Icon,
+  performance: FlashIcon, merge: GitMergeIcon, deadline: Clock01Icon,
 };
 
-/** Reusable CSS figures keep historical releases out of the image bundle. */
-export function ChangelogIllustration({ illustration, className, aspectRatio }: { illustration: Illustration; className?: string; aspectRatio?: number }) {
-  const [failed, setFailed] = useState(false);
-  const name = illustration.kind === "image" ? "pages" : illustration.name;
-  return (
-    <div aria-hidden style={{ aspectRatio }} className={cn("relative flex min-h-44 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br", aspectRatio ? "h-auto" : "h-full", TONES[name], className)}>
-      {illustration.kind === "image" && !failed ? (
-        // External illustrations are pre-optimized by the release author and never bundled.
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={illustration.url} width={illustration.width} height={illustration.height}
-          alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer"
-          className="absolute inset-0 size-full object-contain p-4" onError={() => setFailed(true)} />
-      ) : illustration.kind === "icon" || failed ? (
-        <HugeiconsIcon icon={ICONS[name]} className="size-20 opacity-80" strokeWidth={1.3} />
-      ) : name === "board" ? (
-        <div className="grid w-4/5 max-w-64 rotate-[-4deg] grid-cols-3 gap-2 rounded-2xl border border-current/10 bg-background/80 p-3 shadow-lg shadow-blue-500/5">
-          {[0, 1, 2].map(column => <div key={column} className="space-y-2">
-            <div className="h-1.5 w-8 rounded-full bg-current/25" />
-            {[0, 1, 2].slice(0, 3 - column).map(row => <div key={row} className="rounded-lg border border-current/10 bg-current/5 p-2">
-              <div className="mb-2 h-1 w-3/4 rounded-full bg-current/25" /><div className="h-1 w-1/2 rounded-full bg-current/10" />
-            </div>)}
-          </div>)}
-        </div>
-      ) : name === "pages" ? (
-        <div className="relative h-32 w-36">
-          <div className="absolute inset-0 rotate-12 rounded-xl border border-current/15 bg-background/70" />
-          <div className="absolute inset-0 -rotate-6 rounded-xl border border-current/20 bg-background p-4 shadow-lg shadow-emerald-500/5">
-            <HugeiconsIcon icon={File01Icon} className="mb-3 size-7" />
-            {[75, 100, 85, 60].map(width => <div key={width} className="mb-2 h-1.5 rounded-full bg-current/15" style={{ width: `${width}%` }} />)}
-          </div>
-        </div>
-      ) : name === "activity" ? (
-        <div className="flex h-28 w-44 items-end gap-3 border-b border-current/15 pb-2">
-          {[28, 45, 38, 66, 82, 100].map(height => <div key={height} style={{ height: `${height}%` }} className="flex-1 rounded-t-md bg-current/25 last:bg-current/60" />)}
-        </div>
-      ) : name === "connections" ? (
-        <div className="relative flex size-36 items-center justify-center">
-          <div className="absolute inset-0 rounded-full border border-dashed border-current/25" />
-          <div className="absolute inset-5 rounded-full border border-current/15" />
-          <div className="rounded-2xl border border-current/15 bg-background/90 p-4 shadow-sm"><HugeiconsIcon icon={Link01Icon} className="size-9" /></div>
-          {["top-0 left-1/2", "bottom-2 left-3", "bottom-2 right-3"].map(position => <span key={position} className={`absolute ${position} size-5 rounded-md border border-current/25 bg-background`} />)}
-        </div>
-      ) : name === "desktop" ? (
-        <div className="w-44 -rotate-3 rounded-xl border border-current/20 bg-background/90 p-2 shadow-lg shadow-indigo-500/5">
-          <div className="mb-2 flex gap-1">{[0, 1, 2].map(i => <span key={i} className="size-1.5 rounded-full bg-current/25" />)}</div>
-          <div className="flex h-24 items-center justify-center rounded-lg bg-current/5"><HugeiconsIcon icon={ComputerIcon} className="size-12" strokeWidth={1.3} /></div>
-        </div>
-      ) : (
-        <div className="relative flex size-36 items-center justify-center">
-          <div className="absolute inset-0 rounded-full border border-current/10" />
-          <div className="absolute inset-3 rounded-full bg-current/5" />
-          <div className="absolute inset-7 rounded-full border border-current/15 bg-background/50" />
-          <HugeiconsIcon icon={ICONS[name]} className="relative size-16" strokeWidth={1.3} />
-        </div>
-      )}
+function ProductIcon({ name, className }: { name: ChangelogIllustrationName; className?: string }) {
+  if (name === "assistant") return <NumoFace className={className} />;
+  if (name === "smart-fill") return <SmartFillIcon className={className} />;
+  if (name === "smart-assign") return <SmartAssignIcon className={className} />;
+  return <HugeiconsIcon icon={ICONS[name]} className={className} strokeWidth={1.5} />;
+}
+
+function Lines({ short = false }: { short?: boolean }) {
+  return <div className={styles.lines}><span /><span className={short ? styles.short : undefined} /></div>;
+}
+
+function Surface({ children, className }: { children: ReactNode; className?: string }) {
+  return <div className={cn(styles.surface, className)}>{children}</div>;
+}
+
+function Board({ triage = false }: { triage?: boolean }) {
+  return <Surface className={styles.board}>
+    {triage && <div className={styles.toolbar}><SmartAssignIcon className="h-5 w-5" /><Lines short /><HugeiconsIcon icon={CheckIcon} className="size-4 text-emerald-600 dark:text-emerald-400" /></div>}
+    <div className={styles.columns}>
+      {[2, 2, 1].map((count, column) => <div key={column} className={styles.column}>
+        <div className={styles.columnHeading}><span className={cn(styles.status, styles[`status${column}`])} /><span className={styles.headingLine} /><HugeiconsIcon icon={Add01Icon} className="size-3" /></div>
+        {Array.from({ length: count }, (_, row) => <div key={row} className={styles.ticket}>
+          <Lines short={row === 1} /><div className={styles.ticketMeta}><span className={styles.tag} /><span className={styles.avatar} /></div>
+        </div>)}
+      </div>)}
     </div>
-  );
+  </Surface>;
+}
+
+function PullRequest({ merge = false }: { merge?: boolean }) {
+  return <Surface className={styles.pullRequest}>
+    <div className={styles.toolbar}><ProductIcon name={merge ? "merge" : "pull-request"} className="size-5 text-violet-500" /><Lines /><span className={styles.tag} /></div>
+    {merge ? <div className={styles.checks}>
+      {[0, 1, 2].map(row => <div key={row} className={styles.checkRow}>
+        <HugeiconsIcon icon={row === 2 ? Clock01Icon : CheckIcon} className={cn("size-4", row === 2 ? "text-amber-500" : "text-emerald-600 dark:text-emerald-400")} /><Lines short={row === 1} />
+      </div>)}
+    </div> : <div className={styles.diff}>
+      {[0, 1, 2, 3, 4].map(row => <div key={row} className={row === 1 ? styles.removed : row === 3 ? styles.added : undefined}>
+        <span>{row === 1 ? "−" : row === 3 ? "+" : "·"}</span><i style={{ width: `${[72, 55, 82, 64, 40][row]}%` }} />
+      </div>)}
+    </div>}
+  </Surface>;
+}
+
+function Relations() {
+  return <div className={styles.relations}>
+    <Surface className={styles.objective}><ProductIcon name="relations" className="size-6 text-blue-500" /><Lines /><span className={styles.progress}><i /></span></Surface>
+    <div className={styles.branches} />
+    <div className={styles.relatedIssues}>{[0, 1].map(i => <Surface key={i} className={styles.relatedIssue}><span className={cn(styles.status, styles[`status${i}`])} /><Lines short /></Surface>)}</div>
+  </div>;
+}
+
+function Tabs() {
+  return <Surface className={styles.window}>
+    <div className={styles.tabs}>{["board", "pages", "pull-request"].map((name, i) => <div key={name} className={i === 0 ? styles.activeTab : undefined}>
+      <ProductIcon name={name as ChangelogIllustrationName} className="size-3.5" /><span />
+    </div>)}</div>
+    <div className={styles.windowBody}><div className={styles.sidebar}><NumoFace className="h-5 w-6" /><i /><i /><i /></div><div className={styles.windowContent}><Lines /><div className={styles.miniRows}>{[0, 1, 2].map(i => <div key={i}><span className={cn(styles.status, styles[`status${i}`])} /><Lines short /></div>)}</div></div></div>
+  </Surface>;
+}
+
+function Usage({ deadline = false }: { deadline?: boolean }) {
+  return <Surface className={styles.usage}>
+    <div className={styles.toolbar}><ProductIcon name={deadline ? "deadline" : "assistant"} className="size-6" /><Lines short /></div>
+    <div className={styles.usageValue}><span className={styles.headingLine} /><span className={styles.tag} /></div>
+    <div className={styles.meter}><i /><i /><i /></div>
+    {deadline ? <div className={styles.timeline}><span /><span /><span /><span /></div> : <div className={styles.legend}>{[0, 1, 2].map(i => <div key={i}><span /><i /></div>)}</div>}
+  </Surface>;
+}
+
+function Pages() {
+  return <Surface className={styles.page}>
+    <ProductIcon name="pages" className="size-6 text-muted-foreground" />
+    <span className={styles.pageTitle} /><Lines /><Lines short />
+    <div className={styles.pageChecklist}><HugeiconsIcon icon={CheckIcon} className="size-3.5" /><span /><span /></div>
+  </Surface>;
+}
+
+function Connections({ providers = false }: { providers?: boolean }) {
+  return <div className={styles.connections}>
+    <NumoFace className={styles.connectionNumo} />
+    <div className={styles.connectionLine} />
+    <div className={styles.services}>
+      {(providers ? [<OpenAI key="openai" size={30} />, <Claude key="claude" size={30} />, <Gemini key="gemini" size={30} />]
+        : [<Github key="github" className="size-7" />, <Gitlab key="gitlab" className="size-7" />, <ProductIcon key="pages" name="pages" className="size-7" />])
+        .map((logo, i) => <Surface key={i} className={styles.service}>{logo}</Surface>)}
+    </div>
+  </div>;
+}
+
+function CodeFigure({ name }: { name: ChangelogIllustrationName }) {
+  switch (name) {
+    case "board": return <Board />;
+    case "triage": return <Board triage />;
+    case "pull-request": return <PullRequest />;
+    case "merge": return <PullRequest merge />;
+    case "relations": return <Relations />;
+    case "desktop":
+    case "tabs": return <Tabs />;
+    case "pages": return <Pages />;
+    case "activity": return <Usage />;
+    case "deadline": return <Usage deadline />;
+    case "connections": return <Connections />;
+    case "providers": return <Connections providers />;
+    default: return <ProductIcon name={name} className={styles.mark} />;
+  }
+}
+
+/** Product marks and quiet UI excerpts use the app's own theme, without raster assets. */
+export function ChangelogIllustration({ illustration, className, aspectRatio }: { illustration: Illustration; className?: string; aspectRatio?: number }) {
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
+  const name = illustration.kind === "image" ? "pages" : illustration.name;
+  const showImage = illustration.kind === "image" && failedUrl !== illustration.url;
+  return <div aria-hidden="true" data-illustration={name} style={{ aspectRatio }} className={cn(styles.figure, aspectRatio ? "h-auto" : "h-full", className)}>
+    {showImage ? (
+      // External illustrations are pre-optimized by the release author and never bundled.
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={illustration.url} width={illustration.width} height={illustration.height} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer"
+        className="absolute inset-0 size-full object-contain p-4" onError={() => setFailedUrl(illustration.url)} />
+    ) : illustration.kind === "icon" || illustration.kind === "image" ? <ProductIcon name={name} className={styles.mark} /> : <CodeFigure name={name} />}
+  </div>;
 }
