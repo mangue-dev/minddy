@@ -163,6 +163,20 @@ describe("account import tenant isolation", () => {
     expect(JSON.stringify(write.mock.calls)).not.toContain("PRIVATE_AUTH_SENTINEL");
     expect(write.mock.calls[0]).toEqual([USER, { user_metadata: { theme: "dark", locale: "en", automation_start_delay_min: 120 } }]);
   });
+
+  it("restores current onboarding progress into Auth during an account transfer", async () => {
+    const write = vi.spyOn(service.auth.admin, "updateUserById");
+    const metadata = {
+      onboarding_started: true,
+      onboarding_dismissed: false,
+      onboarding_version: 2,
+      onboarding_steps: ["numo", "mcp"],
+    };
+
+    await importAccountTransfer(transfer({ account: { id: SOURCE_USER, user_metadata: metadata } }), USER);
+
+    expect(write).toHaveBeenCalledExactlyOnceWith(USER, { user_metadata: metadata });
+  });
   it("rejects a membership that references another tenant's project", async () => {
     database.rows.projects = [{ id: OTHER_PROJECT, owner_id: OTHER_OWNER }];
 
