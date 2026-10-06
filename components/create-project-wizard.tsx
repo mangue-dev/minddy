@@ -39,6 +39,7 @@ import {
 import { createPageApi } from "@/lib/pages-api";
 import {
   clearPendingDraftId,
+  MAX_INITIAL_BRIEF_CHARS,
   setPendingDraftId,
   stepIndexOf,
   stepsFor,
@@ -51,7 +52,6 @@ import {
 } from "@/lib/project-draft";
 import { putSeedHandoff } from "@/lib/project-seed-handoff";
 import { MAX_IMPORT_CSV_BYTES } from "@/lib/import/types";
-import { MAX_BRIEF_CHARS } from "@/lib/seed/types";
 import { getRepoProvider, type RepoProviderId } from "@/lib/repo-providers";
 import { ProviderConnectButtons } from "@/components/git/provider-connect-buttons";
 import { SearchSelect } from "@/components/search-select";
@@ -65,7 +65,6 @@ import {
   type WizardStep,
 } from "@/components/wizard/wizard-dialog";
 import { ImportGuideBlock } from "@/components/import/import-guide";
-import { NumoIcon } from "@/components/numo-icon";
 import { WizardChoiceCard } from "@/components/wizard/wizard-choice-card";
 import { CloseProjectDraftDialog } from "@/components/close-project-draft-dialog";
 import { OnboardingJoinDialog } from "@/components/home/onboarding-join-dialog";
@@ -82,7 +81,7 @@ import {
  * Project creation wizard (MIN-62, MIN-171): Where do we start? → Project →
  * Icon → Git repository → Primer → Finishings.
  * The form is that of all minddy wizards — modal, progression,
- * animation, boutons : `WizardDialog` (components/wizard/wizard-dialog.tsx).
+ * animation, and buttons: `WizardDialog` (components/wizard/wizard-dialog.tsx).
  * This file only describes its steps and what they trigger.
  *
  * The project is only created at the LAST step: everything above is a
@@ -107,9 +106,9 @@ import {
  * the id, and the callback returns to `/home?setup=git` where `ProjectDraftResume`
  * reopens the wizard to the “Deposit” step.
  *
- * The primer follows the same rule as the rest: the COLLECTION step (a pasted brief,
- * a CSV submitted), she writes nothing. The pass that makes tickets is played
- * after creation, on the board of the new project, where `?setup=` triggers it.
+ * The seed step collects a pasted brief or CSV without writing anything.
+ * After project creation, the brief becomes a wiki page and CSV imports
+ * continue on the new project board through `?setup=import`.
  */
 
 /** Resumption of the wizard on a draft — resumed manually, or after a redirect. */
@@ -205,7 +204,6 @@ export function CreateProjectWizard({
   // text, the CSV remains a `File` in memory — no network calls here, the
   // project does not yet exist.
   const [brief, setBrief] = useState("");
-  const [numo, setNumo] = useState(false);
   const [csvFile, setCsvFile] = useState<File | null>(null);
   // A CSV does not fit in sessionStorage: the detour via the git provider
   // forget it. We ask it again, and we SAY it — otherwise the empty drop zone
@@ -226,17 +224,16 @@ export function CreateProjectWizard({
    * times: this is what the draft carries and what `finish()` replays. */
   const seed: DraftSeed | null = useMemo(() => {
     if (origin === "existing") return csvFile ? { kind: "import" } : null;
-    if (numo) return { kind: "numo" };
     return brief.trim() ? { kind: "brief", text: brief.trim() } : null;
-  }, [origin, csvFile, numo, brief]);
+  }, [origin, csvFile, brief]);
 
-  // The ceiling of the pass (lib/seed/types.ts): refusing it here avoids having to
-  // discover after the creation of the project, on the board.
-  const briefTooLong = step === "seed" && brief.length > MAX_BRIEF_CHARS;
+  // Validate the page brief before the project is created.
+  const initialBriefTooLong = origin === "new" && brief.length > MAX_INITIAL_BRIEF_CHARS;
+  const briefTooLong = step === "seed" && initialBriefTooLong;
 
   /** An OPTIONAL step where nothing has been placed says "Skip", not
    * " Continue ". Both progress the same — but “Continue” on one step
-   *  vide laisse croire qu'on emporte quelque chose. */
+   *  empty step would imply that something has been added. */
   const skipLabel = (empty: boolean) =>
     empty ? tCommon("skip") : undefined;
 
@@ -260,7 +257,6 @@ export function CreateProjectWizard({
     setCandidates(null);
     setRepo(null);
     setBrief("");
-    setNumo(false);
     setCsvFile(null);
     setCsvLost(false);
     setSmartAssignEnabled(true);
@@ -283,7 +279,6 @@ export function CreateProjectWizard({
     setIcon(draft.icon);
     setRepo(draft.repo);
     setBrief(draft.seed?.kind === "brief" ? draft.seed.text : "");
-    setNumo(draft.seed?.kind === "numo");
     // The CSV did not make the trip (see `DraftSeed`): the drop zone
     // leaves empty, with the note that explains why.
     setCsvFile(null);
@@ -390,7 +385,6 @@ export function CreateProjectWizard({
     // Changing your mind does not drag the beginning of the other branch behind you.
     if (next !== origin) {
       setBrief("");
-      setNumo(false);
       setCsvFile(null);
       setCsvLost(false);
     }
@@ -565,6 +559,10 @@ export function CreateProjectWizard({
 
   // ── Creation (last step) ────────────────────── ───────────────────────
   const finish = async () => {
+    if (initialBriefTooLong) {
+      setStepIndex(steps.indexOf("seed"));
+      return;
+    }
     setSubmitting(true);
     setError(null);
 
@@ -635,27 +633,13 @@ export function CreateProjectWizard({
       );
       if (linked) track("project_git_linked", { provider: repo.provider });
     }
-    // The pasted brief becomes a PAGE of the wiki, “Initial Brief”, even before
-    // let's talk to Numo about it.
-    //
-    // It is not a disposable form: it is the text where someone has asked
-    // what he wants to build, and until now he only survived in the form
-    // of the first message in a conversation — not found three weeks later
-    // late, when we wonder precisely what was planned in the
-    // departure. A page is found, reread, corrected, and Numo reads it
-    // par ses outils comme n'importe quelle autre.
-    //
-    // A finish among others: its failure does not prevent the project
-    // to exist, and the conversation starts with the brief anyway.
+    // Save the pasted brief as a wiki page without starting a conversation.
     if (seed?.kind === "brief" && seed.text.trim()) {
       await enrich("brief page", () =>
         createPageApi(created.id, {
           title: t("wizardBriefPageTitle"),
           icon: "📝",
-          // The text goes MARKDOWN: the projection is made to the server, by
-          // the same path as the pages written by the agent — a pasted brief
-          // in markdown therefore arrives with its titles and its lists, and a brief
-          // in bare text with its paragraphs.
+          // Project Markdown on the server to preserve headings and lists.
           markdown: seed.text.trim(),
         }),
       );
@@ -682,24 +666,8 @@ export function CreateProjectWizard({
     // no more draft to offer to keep.
     closeWizard();
 
-    // The beginning is played out on the board of the new project: this is the hole we are in
-    // filling in, and none of that would fit in a wizard stage
-    // (MIN-170). What was entered travels in memory, the URL only carries
-    // instruction, and it is the board which opens the surface - the wizard lives
-    // ABOVE Numo's sign (`ProjectsProvider` climbs it before
-    // `AssistantPanelProvider`), so he has no control over it.
-    //
-    // A pasted brief and “I’m talking about it” lead to the SAME place: a
-    // conversation. The brief is not a form that a pass processes in
-    // his corner is the first message — Numo can ask what is missing
-    // before proposing anything.
-    if (seed?.kind === "brief" || seed?.kind === "numo") {
-      putSeedHandoff({
-        kind: "numo",
-        brief: seed.kind === "brief" ? seed.text : null,
-      });
-      router.push(`/projects/${created.id}?setup=numo`);
-    } else if (seed?.kind === "import" && csvFile) {
+    // CSV imports continue on the board; a brief only creates its page.
+    if (seed?.kind === "import" && csvFile) {
       putSeedHandoff({ kind: "import", file: csvFile });
       router.push(`/projects/${created.id}?setup=import`);
     } else {
@@ -999,9 +967,7 @@ export function CreateProjectWizard({
       subtitle:
         origin === "existing"
           ? t("wizardSeedImportDesc")
-          : t("wizardSeedBriefDesc", {
-              entityPlural: tIssue("entityPlural").toLowerCase(),
-            }),
+          : t("wizardSeedBriefDesc"),
       submitLabel: skipLabel(!seed),
       submitDisabled: briefTooLong,
       content:
@@ -1101,12 +1067,7 @@ export function CreateProjectWizard({
             <Textarea
               autoFocus
               value={brief}
-              onChange={(e) => {
-                setBrief(e.target.value);
-                // Writing is taking back control: the choice to go through Numo
-                // ne tient plus.
-                if (numo) setNumo(false);
-              }}
+              onChange={(e) => setBrief(e.target.value)}
               placeholder={t("wizardSeedPlaceholder")}
               aria-label={t("wizardSeedBriefTitle")}
               rows={8}
@@ -1114,45 +1075,21 @@ export function CreateProjectWizard({
             />
             {/* The counter only appears near the ceiling: before, it
  learns nothing and puts a limit before the eyes of who will never reach it. */}
-            {brief.length > MAX_BRIEF_CHARS * 0.75 && (
+            {brief.length > MAX_INITIAL_BRIEF_CHARS * 0.75 && (
               <span
                 className={cn(
                   "self-end font-mono text-xs tabular-nums",
-                  brief.length > MAX_BRIEF_CHARS
+                  brief.length > MAX_INITIAL_BRIEF_CHARS
                     ? "text-destructive"
                     : "text-muted-foreground",
                 )}
               >
                 {t("wizardSeedCounter", {
                   count: brief.length,
-                  max: MAX_BRIEF_CHARS,
+                  max: MAX_INITIAL_BRIEF_CHARS,
                 })}
               </span>
             )}
-
-            {/* The other entry into “new project” mode (MIN-173): talk about it
- rather than paste. It's a door, not a footnote —
- it can be seen and clicked like the button next to it. */}
-            <div className="mt-1 flex items-center gap-3">
-              <span className="h-px flex-1 bg-border" aria-hidden />
-              <span className="text-xs text-muted-foreground">
-                {tCommon("or")}
-              </span>
-              <span className="h-px flex-1 bg-border" aria-hidden />
-            </div>
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full justify-center gap-2"
-              onClick={() => {
-                setNumo(true);
-                setBrief("");
-                leaveSeedStep({ kind: "numo" });
-              }}
-            >
-              <NumoIcon state="idle" className="size-4" />
-              {t("wizardSeedNumoLink")}
-            </Button>
           </div>
         ),
     },
@@ -1227,7 +1164,7 @@ export function CreateProjectWizard({
         error={
           error ??
           (briefTooLong
-            ? t("wizardSeedTooLong", { max: MAX_BRIEF_CHARS })
+            ? t("wizardSeedTooLong", { max: MAX_INITIAL_BRIEF_CHARS })
             : null)
         }
         onSubmit={(id) => {
