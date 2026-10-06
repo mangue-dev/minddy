@@ -177,9 +177,11 @@ function PageStatus({
   const label =
     state === "saving"
       ? t("saving")
-      : state === "conflict"
-        ? t("savedWithConflict")
-        : t("saved");
+      : state === "error"
+        ? t("saveFailed")
+        : state === "conflict"
+          ? t("savedWithConflict")
+          : t("saved");
 
   const edited = lastEdit
     ? t("lastEditedBy", {
@@ -201,15 +203,17 @@ function PageStatus({
           onClick={onOpenHistory}
           aria-label={accessibleLabel}
           className={cn(
-            state === "conflict"
-              ? "text-amber-600 hover:text-amber-600 dark:text-amber-500"
-              : "text-muted-foreground hover:text-foreground"
+            state === "error"
+              ? "text-destructive hover:text-destructive"
+              : state === "conflict"
+                ? "text-amber-600 hover:text-amber-600 dark:text-amber-500"
+                : "text-muted-foreground hover:text-foreground"
           )}
         >
           <span role="status" aria-label={label} className="flex shrink-0">
             {state === "saving" ? (
               <Spinner className="size-3.5" />
-            ) : state === "conflict" ? (
+            ) : state === "conflict" || state === "error" ? (
               <HugeiconsIcon icon={Alert01Icon} className="size-3.5" />
             ) : (
               <HugeiconsIcon icon={CheckIcon} className="size-3.5" />
@@ -1026,6 +1030,7 @@ function PageSurface({
             // three components and navigation.
             autoFocus={!title && isEmptyDoc(page.content)}
             onTitleChange={(next) => {
+              if (next.trim()) forgetDraftPage(pageId);
               setEdited((current) => ({ ...current, title: next }));
               // The sidebar, breadcrumbs and subpage block read the cache
               // of the LIST: without this local writing, they only moved one
@@ -1035,6 +1040,7 @@ function PageSurface({
               schedule({ title: next });
             }}
             onIconChange={(next) => {
+              if (next) forgetDraftPage(pageId);
               setEdited((current) => ({ ...current, icon: next }));
               previewPage(pageId, { icon: next });
               schedule({ icon: next });
@@ -1069,6 +1075,7 @@ function PageSurface({
               <PageEditor
                 initialContent={(page.content as JSONContent | null) ?? null}
                 onChange={(content) => {
+                  if (!isEmptyDoc(content)) forgetDraftPage(pageId);
                   contentRef.current = content;
                   schedule({ content });
                 }}
