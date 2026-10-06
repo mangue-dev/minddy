@@ -12,7 +12,7 @@ import type { Issue, Objective, PendingRelationInput, Project } from "./types";
 const fixture = vi.hoisted(() => ({
   issues: [] as Issue[], objectives: [] as Objective[],
   drafts: [] as (IssueDraft | ObjectiveDraft)[], save: vi.fn(), remove: vi.fn(),
-  smartFill: true, queryProjects: [] as (string | null)[],
+  smartFill: true, smartFillCreated: true, queryProjects: [] as (string | null)[],
 }));
 vi.mock("next-intl", () => ({ useTranslations: (namespace: keyof typeof en) =>
   (key: string) => (en[namespace] as Record<string, string>)[key] ?? key,
@@ -54,7 +54,7 @@ vi.mock("@/lib/use-issues-query", () => ({ useIssuesQuery: (project: string | nu
   return { issues: project ? fixture.issues : [], loading: false };
 } }));
 vi.mock("@/lib/use-objectives-query", () => ({ useObjectivesQuery: (project: string | null) => ({ objectives: project ? fixture.objectives : [], loading: false }) }));
-vi.mock("@/lib/auth-context", () => ({ useAuth: () => ({ user: { id: "user", user_metadata: { smart_fill: fixture.smartFill } } }) }));
+vi.mock("@/lib/auth-context", () => ({ useAuth: () => ({ user: { id: "user", user_metadata: { smart_fill: fixture.smartFill, smart_fill_created: fixture.smartFillCreated } } }) }));
 vi.mock("@/lib/use-analytics", () => ({ useAnalytics: () => ({ track: vi.fn() }) }));
 vi.mock("@/lib/use-track-view", () => ({ useTrackView: vi.fn() }));
 vi.mock("@/lib/use-mention-sources", () => ({ useDescriptionMentions: () => [] }));
@@ -109,7 +109,7 @@ beforeEach(() => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   fixture.issues = [issue, { ...issue, id: "closed", title: "Closed issue", status: "done" }, { ...issue, id: "foreign", project_id: "other", title: "Foreign issue" }];
   fixture.objectives = [objective, { ...objective, id: "closed-goal", name: "Closed objective", status: "done" }, { ...objective, id: "foreign-goal", name: "Foreign objective", project_id: "other" }];
-  fixture.drafts = []; fixture.smartFill = true; fixture.queryProjects = [];
+  fixture.drafts = []; fixture.smartFill = true; fixture.smartFillCreated = true; fixture.queryProjects = [];
   fixture.save.mockImplementation(async (draft) => { fixture.drafts = [draft]; });
   fixture.remove.mockImplementation(async (id) => { fixture.drafts = fixture.drafts.filter((draft) => draft.id !== id); return true; });
   host = document.createElement("div"); document.body.append(host); root = createRoot(host);
@@ -150,6 +150,39 @@ async function mountDialog(kind: "issue" | "objective", withProjectMenu = true) 
 }
 
 describe("creation relation controls", () => {
+  it.each([
+    { defaultFill: true, crossProject: false },
+    { defaultFill: false, crossProject: false },
+    { defaultFill: true, crossProject: true },
+    { defaultFill: false, crossProject: true },
+  ])("restores Smart Fill after Create more with $defaultFill as the default and cross-project=$crossProject", async ({ defaultFill, crossProject }) => {
+    fixture.smartFillCreated = defaultFill;
+    const dialog = await mountDialog("issue");
+    await click("Create more toggle");
+    await click("Smart Fill");
+    await typeTitle("Issue with a one-ticket override");
+    if (crossProject) await click("Other project");
+    else await act(async () => { host.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })); });
+    const overriddenInput = (crossProject ? dialog.createOther : dialog.create).mock.calls[0].at(-1);
+    expect(overriddenInput).toMatchObject({ smart_fill: !defaultFill });
+    await typeTitle("Issue using account preferences");
+    await act(async () => { host.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })); });
+    expect(dialog.create).toHaveBeenLastCalledWith(expect.objectContaining({ smart_fill: defaultFill }));
+  });
+
+  it("retains the Smart Fill override when a Create more submission fails", async () => {
+    const dialog = await mountDialog("issue");
+    dialog.create.mockRejectedValueOnce(new Error("Creation failed"));
+    await click("Create more toggle");
+    await click("Smart Fill");
+    await typeTitle("Manual issue");
+    for (let attempt = 0; attempt < 2; attempt++) {
+      await act(async () => { host.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })); });
+      expect(dialog.create).toHaveBeenLastCalledWith(expect.objectContaining({ title: "Manual issue", smart_fill: false }));
+    }
+    expect(dialog.create).toHaveBeenCalledTimes(2);
+  });
+
   it.each(["issue", "objective"] as const)("portals the modal %s relation menu outside the clipping dialog after reopening", async (kind) => {
     const dialog = await mountDialog(kind);
     for (let opening = 0; opening < 2; opening++) {

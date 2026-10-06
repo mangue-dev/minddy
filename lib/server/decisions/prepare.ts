@@ -119,7 +119,7 @@ export function buildSmartFillSpec(input: {
       options: choiceOptions(
         ctx.categories.slice(0, MAX_CONTEXT_ITEMS).map((c) => ({ value: c.id, label: c.name }))
       ),
-      maxSelections: MAX_CATEGORIES_PER_ISSUE,
+      maxSelections: Math.min(MAX_CATEGORIES_PER_ISSUE, ctx.categories.length),
     });
   }
   questions.push({

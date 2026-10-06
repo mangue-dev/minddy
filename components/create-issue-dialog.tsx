@@ -578,6 +578,8 @@ export function CreateIssueDialog({
         // AND every property), exactly as if the dialog had just been reopened.
         clearContent();
         setFields(freshFields());
+        smartFillTouchedRef.current = false;
+        setSmartFill(smartFillDefault);
         setCategoryIds([]);
         setOpenPicker(null);
         titleRef.current?.focus();

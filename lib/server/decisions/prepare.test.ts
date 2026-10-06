@@ -55,7 +55,7 @@ describe("buildSmartFillSpec", () => {
       categories?.kind === "multi_choice" &&
         categories.options.map((o) => o.value).join(",")
     ).toBe("cat-bug,cat-feat");
-    expect(categories?.kind === "multi_choice" && categories.maxSelections).toBe(3);
+    expect(categories?.kind === "multi_choice" && categories.maxSelections).toBe(2);
   });
 
   it("builds the dense state from the same sources", () => {
@@ -107,6 +107,21 @@ describe("buildSmartFillSpec", () => {
       "objective_id",
     ]);
     expect(validateDecisionSpec(specEmpty)).toBe(true);
+  });
+
+  it.each([1, 2, 3, 4, 70])("produces a valid fill decision with %i categories", (count) => {
+    const spec = buildSmartFillSpec({
+      projectName: "minddy",
+      title: "Fix Smart Fill",
+      description: null,
+      ctx: {
+        categories: Array.from({ length: count }, (_, i) => ({ id: `cat-${i}`, name: `Category ${i}` })),
+        objectives: [],
+      },
+    });
+    expect(validateDecisionSpec(spec)).toBe(true);
+    const categories = spec.questions.find((q) => q.key === "category_ids");
+    expect(categories?.kind === "multi_choice" && categories.maxSelections).toBe(Math.min(3, count));
   });
 });
 
