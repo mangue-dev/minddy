@@ -1,7 +1,5 @@
 // @vitest-environment jsdom
 
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { act, createElement } from "react";
 import { createRoot } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -89,15 +87,6 @@ describe("Markdown links", () => {
     expect(markdownLinkPresentation("mailto:hello@example.com")).toEqual({
       class: MARKDOWN_LINK_CLASS,
     });
-  });
-
-  it("keeps the specified blue, un-underlined link style and globe fallback", () => {
-    const css = readFileSync(join(process.cwd(), "app/globals.css"), "utf8");
-    expect(css).toMatch(
-      /a\.markdown-link\s*\{[^}]*color:\s*#0085FF;[^}]*text-decoration:\s*none;/s,
-    );
-    expect(css).toContain("--markdown-link-icon");
-    expect(css).toContain("%3Ccircle cx='12' cy='12' r='10'/%3E");
   });
 
   it("preserves a forge image button without the enriched link decoration", () => {

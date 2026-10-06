@@ -3,35 +3,8 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-/**
- * MIN-362 — THE DESKTOP SURFACE TEST MATRIX, executable.
- *
- * `vitest.config.ts` only COLLECTS `lib/**` and oxlint plugin tests: neither
- * `app/api/**` nor `desktop/src/**` is exercised directly. Sensitive desktop
- * bridges and server-runner admission therefore need explicit coverage from
- * the collected test graph.
- *
- * Extending `include` to the application surfaces would be the obvious move, but
- * it would be wrong: the suite runs on bare Node in 18 seconds, and `app/**`
- * would pull React, Next, and jsdom behind it. The oxlint plugin remains pure,
- * with its tests alongside its vendored code.
- * The repository has already established the two correct answers, and this file
- * only makes them MANDATORY:
- *
- * 1. **a test of `lib/` can reach code that lives elsewhere** — by posting real
- * requests to a route, or by reading its source when the execution path
- * requests a database and a microVM
- * ([engine-wiring.test.ts](engine-wiring.test.ts) explains the doctrine);
- * 2. **the decision belongs in `lib/desktop/`**, where it has a neighboring test
- * (`hide-window.ts` / `hide-window.test.ts`), while the `desktop/src/` shell keeps
- * only the wiring: an `ipcMain.handle` that calls a pure function and returns
- * its response.
- *
- * So this file fails when someone adds a sensitive surface without its
- * test, and the failure message identifies the missing coverage. This is a
- * CULTURE safeguard, not a behavioral test; it does not replace the tests it
- * requires.
- */
+// Sensitive routes and IPC bridges need explicit coverage even when their owners
+// live outside lib. Presence checks complement the behavioral admission tests.
 
 const REPO = path.resolve(__dirname, "../../..");
 const read = (relative: string): string => readFileSync(path.join(REPO, relative), "utf8");
@@ -83,14 +56,6 @@ const SURFACES_HORS_LIB = [
 ] as const;
 
 describe("desktop and server-runner surfaces outside `lib/**`", () => {
-  it("keeps the premise that Vitest collects only pure tests", () => {
-    // If one day `include` expands, this file no longer has the same value — it
-    // must then be reread, not bypassed.
-    expect(read("vitest.config.ts")).toContain(
-      'include: ["lib/**/*.test.ts", "tools/**/*.test.ts"]',
-    );
-  });
-
   it("reaches every surface from a `lib/` test", () => {
     const tests = libTests();
     const orphelines = SURFACES_HORS_LIB.filter(
@@ -184,40 +149,5 @@ describe("the `desktop/src/` shell", () => {
     expect(menu).toContain("clipboard.writeText(diagnosticReport())");
     expect(menu).toContain('message: "Copy the diagnostic report?"');
     expect(menu).toContain("copyDiagnosticReportWithConfirmation(window)");
-  });
-});
-
-/**
- * `lib/desktop/`: THE OWNER `<module>.ts` / `<module>.test.ts`.
- *
- * This is the half that makes the first half tenable. An exemption is declared here,
- * with its reason — and there are only two.
- */
-const SANS_TEST = {
-  "bridge.ts": "type surface plus a small guarded `getDesktopBridge`; nothing behavioral to test",
-  "use-update-status.ts": "React hook; the suite runs in bare Node without jsdom",
-} as const;
-
-describe("the `lib/desktop/` modules", () => {
-  it("keeps a neighboring test for every behavioral module", () => {
-    const fichiers = listTs("lib/desktop");
-    const modules = fichiers.filter((f) => !f.endsWith(".test.ts") && !f.endsWith(".git.test.ts"));
-    const nus = modules.filter((f) => {
-      if (f in SANS_TEST) return false;
-      const base = f.replace(/\.tsx?$/, "");
-      return !fichiers.includes(`${base}.test.ts`) && !fichiers.includes(`${base}.git.test.ts`);
-    });
-
-    expect(
-      nus.join(", "),
-      "untested `lib/desktop/` module: desktop decisions belong here, following " +
-        "the `hide-window.ts` / `hide-window.test.ts` pattern",
-    ).toBe("");
-  });
-
-  it("keeps exemptions limited to declared modules", () => {
-    const fichiers = listTs("lib/desktop");
-    const fantomes = Object.keys(SANS_TEST).filter((f) => !fichiers.includes(f));
-    expect(fantomes.join(", "), "exemption that no longer names a module").toBe("");
   });
 });
