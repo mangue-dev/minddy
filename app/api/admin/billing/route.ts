@@ -2,8 +2,6 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { isAdminUser } from "@/lib/server/admin";
-import { getServiceClient } from "@/lib/supabase-service";
-import { findAuthUserByEmail } from "@/lib/server/auth-users";
 import {
   activeAdminOverride,
   getBillingAccountForUser,
@@ -16,26 +14,11 @@ import {
   giftExpiresAt,
   isGiftExpired,
 } from "@/lib/billing-gift";
-import { displayName } from "@/lib/display-name";
 
 /**
- * Billing administration (`/admin` → account panel) — MIN-72.
- * Same gate as other admin endpoints: JWT via getClaims + isAdminUser.
- *
- * GET ?email=<email> → the billing status of an account: effective plan + source
- * (admin_override → stripe → free) and the override set.
- *  POST { userId, planId, note?, duration? } → grants a plan (`planId` null
- * takes back the gift); Stripe remains the priority
- * resolution.
- *
- * `duration` is a DURATION, never a date: the client says “one month”, the
- * server stamps the deadline with its own clock. Absent, the deadline in
- * place does not move — an admin who corrects a note does not restart the account
- * backwards without wanting to.
- *
- * Override ONLY writes the three `admin_override_*` columns — Stripe state
- * of the account remains intact, taking back the gift makes his real plan to
- * the user.
+ * Support plan overrides. Account lookup and reads use `/api/admin/users`.
+ * Only the override fields change; subscription state remains intact.
+ * An omitted duration preserves the existing gift deadline.
  */
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -71,32 +54,6 @@ async function billingStateOf(userId: string) {
     note: override ? (account?.admin_override_note ?? null) : null,
     expiresAt: override ? (account?.admin_override_expires_at ?? null) : null,
   };
-}
-
-export async function GET(request: NextRequest) {
-  const admin = await requireAdmin(request);
-  if (!admin.ok) return admin.response;
-
-  const email = request.nextUrl.searchParams.get("email")?.trim().toLowerCase();
-  if (!email || !email.includes("@")) {
-    return NextResponse.json({ error: "Invalid email" }, { status: 400 });
-  }
-
-  const service = getServiceClient();
-  const user = await findAuthUserByEmail(service, email);
-  if (!user) return NextResponse.json({ error: "Not found" }, { status: 404 });
-
-  const meta = user.user_metadata as
-    | { display_name?: string; full_name?: string }
-    | undefined;
-  const state = await billingStateOf(user.id);
-  return NextResponse.json({
-    ...state,
-    name: displayName(
-      { full_name: meta?.display_name ?? meta?.full_name, email: user.email },
-      "—"
-    ),
-  });
 }
 
 export async function POST(request: NextRequest) {
@@ -154,5 +111,5 @@ export async function POST(request: NextRequest) {
     admin_override_expires_at: expiresAt,
   });
 
-  return NextResponse.json(await billingStateOf(userId));
+  return NextResponse.json(await billingStateOf(userId), { headers: { "Cache-Control": "private, no-store" } });
 }
