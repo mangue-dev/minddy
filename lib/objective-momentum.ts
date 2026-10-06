@@ -6,7 +6,7 @@ import type { ObjectiveStatus } from "./objective-validation";
 const DAY_MS = 86_400_000;
 const RECENT_DAYS = 7;
 const FORECAST_DAYS = 28;
-export const OBJECTIVE_MOMENTUM_WEEKS = 8;
+export const OBJECTIVE_MOMENTUM_INTERVALS = 8;
 
 export type ObjectiveMomentumState =
   | "accelerating"
@@ -19,7 +19,7 @@ export type ObjectiveMomentumState =
 
 export type ObjectiveTargetPace = "on_track" | "at_risk" | "overdue";
 
-export interface ObjectiveMomentumWeek {
+export interface ObjectiveMomentumInterval {
   start: string;
   end: string;
   completed: number;
@@ -32,7 +32,11 @@ export interface ObjectiveMomentumInsight {
   recentCompleted: number;
   previousCompleted: number;
   lastCompletionAt: string | null;
-  weeks: ObjectiveMomentumWeek[];
+  intervals: ObjectiveMomentumInterval[];
+  period: { start: string; end: string } | null;
+  periodCompleted: number;
+  progressPercent: number | null;
+  elapsedPercent: number | null;
   forecastDate: string | null;
   forecastDays: number | null;
   targetPace: ObjectiveTargetPace | null;
@@ -112,9 +116,11 @@ function momentumState({
  * objective is excluded: attaching old work should raise overall progress, but
  * must not manufacture recent momentum.
  *
- * The forecast uses effort-weighted throughput over at most 28 days and only
- * appears after two completions and a full observed week. This keeps a single
- * quick win from turning into a precise-looking but meaningless finish date.
+ * With a target, history spans creation to the deadline and throughput uses
+ * the time observed since creation, including work after an overdue deadline.
+ * Future time never dilutes throughput. Without a target, retain the rolling
+ * eight-week history and 28-day forecast. Estimates require two completions
+ * and a full observed week to avoid extrapolating from a single quick win.
  */
 export function objectiveMomentum(
   objective: ObjectiveMomentumSource,
@@ -123,6 +129,16 @@ export function objectiveMomentum(
 ): ObjectiveMomentumInsight {
   const nowMs = now.getTime();
   const createdAt = validTimestamp(objective.created_at) ?? nowMs;
+  const targetAt = objective.target_date
+    ? endOfTargetDay(objective.target_date)
+    : null;
+  const period =
+    targetAt !== null && targetAt > createdAt
+      ? {
+          start: new Date(createdAt).toISOString(),
+          end: new Date(targetAt).toISOString(),
+        }
+      : null;
   const linked = issues.filter((issue) => issue.objective_id === objective.id);
   const remaining = linked.filter(
     (issue) => !isClosedStatus(issue.status as IssueStatus),
@@ -136,27 +152,43 @@ export function objectiveMomentum(
     return [{ at, points: effortToPoints(issue.effort) }];
   });
 
-  const recentStart = nowMs - RECENT_DAYS * DAY_MS;
-  const previousStart = nowMs - RECENT_DAYS * 2 * DAY_MS;
+  // Compare equal observed halves for a target period, rather than an unrelated
+  // rolling week. The rolling comparison remains useful without a deadline.
+  const comparisonMs = period
+    ? Math.max(0, nowMs - createdAt) / 2
+    : RECENT_DAYS * DAY_MS;
+  const recentStart = nowMs - comparisonMs;
+  const previousStart = nowMs - comparisonMs * 2;
   const recentCompleted = completions.filter(({ at }) => at >= recentStart).length;
   const previousCompleted = completions.filter(
     ({ at }) => at >= previousStart && at < recentStart,
   ).length;
 
-  const chartStart = nowMs - OBJECTIVE_MOMENTUM_WEEKS * RECENT_DAYS * DAY_MS;
-  const weeks = Array.from({ length: OBJECTIVE_MOMENTUM_WEEKS }, (_, index) => {
-    const start = chartStart + index * RECENT_DAYS * DAY_MS;
-    const end = start + RECENT_DAYS * DAY_MS;
+  const chartStart = period
+    ? createdAt
+    : nowMs - OBJECTIVE_MOMENTUM_INTERVALS * RECENT_DAYS * DAY_MS;
+  const chartEnd = period ? targetAt ?? nowMs : nowMs;
+  const intervalMs = (chartEnd - chartStart) / OBJECTIVE_MOMENTUM_INTERVALS;
+  const intervals = Array.from({ length: OBJECTIVE_MOMENTUM_INTERVALS }, (_, index) => {
+    const start = Math.floor(chartStart + index * intervalMs);
+    const end =
+      index === OBJECTIVE_MOMENTUM_INTERVALS - 1
+        ? chartEnd
+        : Math.floor(chartStart + (index + 1) * intervalMs);
     return {
       start: new Date(start).toISOString(),
-      end: new Date(Math.min(end, nowMs)).toISOString(),
+      end: new Date(end).toISOString(),
       completed: completions.filter(
-        ({ at }) => at >= start && (index === OBJECTIVE_MOMENTUM_WEEKS - 1 ? at <= end : at < end),
+        ({ at }) =>
+          at >= start &&
+          (index === OBJECTIVE_MOMENTUM_INTERVALS - 1 ? at <= end : at < end),
       ).length,
     };
   });
 
-  const forecastStart = Math.max(createdAt, nowMs - FORECAST_DAYS * DAY_MS);
+  const forecastStart = period
+    ? createdAt
+    : Math.max(createdAt, nowMs - FORECAST_DAYS * DAY_MS);
   const observedDays = (nowMs - forecastStart) / DAY_MS;
   const forecastCompletions = completions.filter(({ at }) => at >= forecastStart);
   const deliveredPoints = forecastCompletions.reduce(
@@ -167,6 +199,14 @@ export function objectiveMomentum(
     const points = effortToPoints(issue.effort);
     return sum + points * (1 - statusCompletionCredit(issue.status as IssueStatus));
   }, 0);
+  const totalPoints = linked.reduce((sum, issue) => sum + effortToPoints(issue.effort), 0);
+  const progressPercent =
+    !canceled && totalPoints > 0
+      ? 100 * (1 - remainingPoints / totalPoints)
+      : null;
+  const elapsedPercent = period
+    ? Math.max(0, Math.min(100, 100 * (nowMs - createdAt) / (chartEnd - createdAt)))
+    : null;
 
   let forecastDays: number | null = null;
   let forecastDate: string | null = null;
@@ -183,13 +223,12 @@ export function objectiveMomentum(
   }
 
   let targetPace: ObjectiveTargetPace | null = null;
-  const targetAt = objective.target_date
-    ? endOfTargetDay(objective.target_date)
-    : null;
   if (!canceled && remaining.length > 0 && targetAt !== null) {
     if (targetAt < nowMs) targetPace = "overdue";
     else if (forecastDate) {
       targetPace = new Date(forecastDate).getTime() <= targetAt ? "on_track" : "at_risk";
+    } else if (progressPercent !== null && elapsedPercent !== null) {
+      targetPace = progressPercent >= elapsedPercent ? "on_track" : "at_risk";
     }
   }
 
@@ -215,7 +254,11 @@ export function objectiveMomentum(
     previousCompleted,
     lastCompletionAt:
       lastCompletion === null ? null : new Date(lastCompletion).toISOString(),
-    weeks,
+    intervals,
+    period,
+    periodCompleted: completions.filter(({ at }) => at >= chartStart && at <= chartEnd).length,
+    progressPercent,
+    elapsedPercent,
     forecastDate,
     forecastDays,
     targetPace,
