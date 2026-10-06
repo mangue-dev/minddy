@@ -66,6 +66,7 @@ import {
 } from "@/components/header-search-pill";
 import { usePlanGates } from "@/lib/use-billing-query";
 import { MobileNavActions } from "@/components/mobile-nav-actions";
+import { SidebarOnboarding } from "@/components/sidebar-onboarding";
 import { MobileMenuFooter, useAccountActions } from "@/components/mobile-account";
 import { AppTopBar } from "@/components/app-top-bar";
 import { AppTabViewHost } from "@/components/app-tab-view-host";
@@ -1654,7 +1655,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           sections={mobileMenuSections}
           commandGroups={mobilePaletteGroups}
           actions={<MobileNavActions />}
-          menuFooter={<MobileMenuFooter />}
+          menuFooter={<><SidebarOnboarding mobile /><MobileMenuFooter /></>}
           linkComponent={Link}
           searchPlaceholder={t("searchPlaceholder")}
           emptyMessage={t("noResults")}

@@ -2,6 +2,7 @@ import "server-only";
 import { locales } from "@/i18n/config";
 import { isAutomationPresetId, MAX_AUTOMATION_START_DELAY_MIN } from "@/lib/automations";
 import { NUMO_DEFAULT_STATUS_OPTIONS } from "@/lib/numo-default-status";
+import { ONBOARDING_CURRENT_VERSION, ONBOARDING_STEPS, ONBOARDING_VERSION_META_KEY } from "@/lib/onboarding";
 
 const BOOLEAN_KEYS = [
   "auto_assign_created", "auto_assign_on_start", "prompt_copy_auto_start", "smart_fill",
@@ -18,6 +19,7 @@ const ENUMS: Record<string, readonly string[]> = {
 const NUMBERS: Record<string, readonly [number, number]> = {
   cycle_duration_weeks: [1, 2], cycle_start_dow: [1, 7], cycle_upcoming_count: [1, 4],
   automation_start_delay_min: [0, MAX_AUTOMATION_START_DELAY_MIN],
+  [ONBOARDING_VERSION_META_KEY]: [1, ONBOARDING_CURRENT_VERSION],
 };
 
 /** Auth contains public identity and bounded product preferences, never arbitrary imported content. */
@@ -38,7 +40,7 @@ export function selectImportedAccountMetadata(value: unknown): Record<string, un
   }
   if (isAutomationPresetId(source.automation_preset)) result.automation_preset = source.automation_preset;
   if (Array.isArray(source.onboarding_steps)) {
-    const allowed = ["project", "tickets", "mcp", "key", "cycles", "issue", "import"];
+    const allowed: readonly string[] = [...ONBOARDING_STEPS, "key", "issue", "import"];
     result.onboarding_steps = [...new Set(source.onboarding_steps.filter((step) => allowed.includes(step)))];
   }
   const efforts = source.automation_efforts;
