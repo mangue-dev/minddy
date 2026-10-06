@@ -2419,6 +2419,28 @@ retry with a stable observation timestamp. The link and unlink SQL regressions
 also pass after both migrations. These checks do not certify a production rollout
 or a complete Supabase replay.
 
+## MIN-637 admin data minimisation audit — 6 October 2026
+
+The admin migration removes the profile-directory RPC and introduces two
+service-only RPCs: exact account lookup and bounded onboarding signals. The
+account lookup reads Auth identity fields only. The signals query reads project
+and issue routing identities to test existence, without reading encrypted content,
+and returns only the onboarding metadata used by the aggregate overview. Both
+functions use an empty search path and deny execution to anonymous and
+authenticated roles. No table, view, trigger or column-policy changes are needed.
+
+The actual migration was applied to isolated PostgreSQL 17 using the reduced
+Auth/project/member/issue fixture from
+`scripts/admin-data-minimisation.integration.test.mjs`. Introspection with
+`scripts/encryption-schema-audit.sql` verified the two function definitions and
+their grants. Only those function records were added to the SQL inventory, and
+the removed directory function was deleted from it. The TypeScript consumer
+review removes the Jev and BYOK reads and records the two new RPCs and the
+selected-account usage read. The migration digest was pinned after this audit.
+The regression verifies payload minimisation, exact matching, pagination,
+internal/deleted account handling and role restrictions. This is a focused
+function audit, not a full Supabase replay or production rollout.
+
 ## MIN-601 billing usage audit — 2 October 2026
 
 The daily analytics RPC reads only account-attributed usage timestamps, feature

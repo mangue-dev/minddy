@@ -44,11 +44,11 @@ export async function GET(request: NextRequest) {
       console.error("[admin/ai-usage] get_ai_run_calls failed:", error.message);
       return NextResponse.json({ error: "Query failed" }, { status: 500 });
     }
-    return NextResponse.json({ calls: data ?? [] });
+    return NextResponse.json({ calls: data ?? [] }, { headers: { "Cache-Control": "private, no-store" } });
   }
 
   // Overview of a window.
-  const daysRaw = Number(searchParams.get("days"));
+  const daysRaw = Number(searchParams.get("days") ?? 30);
   const days = Number.isFinite(daysRaw) ? Math.min(365, Math.max(1, Math.floor(daysRaw))) : 30;
   const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
 
@@ -57,5 +57,5 @@ export async function GET(request: NextRequest) {
     console.error("[admin/ai-usage] get_ai_usage_stats failed:", error.message);
     return NextResponse.json({ error: "Query failed" }, { status: 500 });
   }
-  return NextResponse.json({ days, stats: data });
+  return NextResponse.json({ days, stats: data }, { headers: { "Cache-Control": "private, no-store" } });
 }

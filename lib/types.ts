@@ -1447,47 +1447,17 @@ export interface CandidateRepo {
 }
 
 // ── Admin console (MIN-90) ────────────────────────────────────────────────────
-// Exact mirror of what `/api/admin/users` and `/api/admin/overview` return.
-// These screens are reserved for admins (`lib/server/admin.ts`): unlike
-// from the rest of the app, they display the raw email — it's the identifier
-// an admin works with (support, overrides, search).
-
-/** An account, as shown in the “Users” view of the admin dashboard. */
-export interface AdminUserRow {
+/** Minimal identity returned only after an exact-email support lookup. */
+export interface AdminAccountSummary {
   userId: string;
-  /** Resolved display name (lib/display-name), never the raw email. */
   name: string;
   email: string | null;
-  /** Seed of the generated avatar (public.user_avatars), never an image URL. */
-  avatarSeed: string;
-  createdAt: string;
-  /** Last CONNECTION (does not move on token refresh). */
-  lastSignInAt: string | null;
-  /** Last sign of life, connection or trace of activity — cf. migration. */
-  lastActivityAt: string | null;
   emailConfirmed: boolean;
-  /**
-   * INTERNAL account (team, demo, bot): it remains listed and administrable here,
-   * but does not count in any overview statistics.
-   */
   internal: boolean;
-  /** Projects owned + projects joined. */
-  projects: number;
-  projectsOwned: number;
-  /** Tickets for projects to which he has access. */
-  issues: number;
-  /** Tickets written in his hand. */
-  issuesCreated: number;
-  onboarding: {
-    /** Onboarding was presented to him at least once. */
-    started: boolean;
-    completed: number;
-    total: number;
-    allComplete: boolean;
-    dismissed: boolean;
-    /** Step in progress, null if everything is completed. */
-    currentStep: string | null;
-  };
+}
+
+/** Billing and quota details loaded only when a support account is opened. */
+export interface AdminUserRow extends AdminAccountSummary {
   billing: {
     planId: BillingPlanId;
     /** Mirror of BillingPlanSource (lib/server/billing-accounts, server-only). */
@@ -1506,19 +1476,8 @@ export interface AdminUserRow {
     spentUsd: number;
     /** Actual spending for the calendar month — intact after a reset. */
     spentMonthUsd: number;
-    calls: number;
     blocked: boolean;
-    /** The LAST admin reset, if there is one: it sets the
-     * start of the counted window. The full period register reads
-     * `GET /api/admin/agent-quota?userId=`. */
-    resetAt: string | null;
   };
-}
-
-export interface AdminUsersResponse {
-  users: AdminUserRow[];
-  /** Number of accounts matching the search, before pagination. */
-  total: number;
 }
 
 /** A reset of the usage budget, as the admin sees it. */
@@ -1574,48 +1533,6 @@ export interface AdminOverview {
     /** Among them, those who have explicitly passed it. */
     dismissed: number;
   };
-}
-
-/** One week of the shadow comparison (MIN-567), for ONE use case — read
- * from the `ai_decision_evaluations_weekly` view, newest week first. Weeks
- * carry SUMS and COUNTS, never per-week averages: weeks of very different
- * traffic must weigh by their sample count when the dashboard aggregates
- * them, so every displayed latency and cost stays a per-sample average. */
-export interface AdminDecisionsQualityWeek {
-  useCase: string;
-  /** ISO instant of the Monday starting the week (UTC). */
-  weekStart: string;
-  /** Confident Jev decisions sampled, whatever the replay did. */
-  samples: number;
-  /** Of which the replay answered at least one comparable question. */
-  comparable: number;
-  /** Of which every comparable answer matched. */
-  agreeCount: number;
-  /** Of which the LLM replay failed (no reference to compare against). */
-  replayFailed: number;
-  /** End-to-end latency of the Jev legs: the week's sum over its count. */
-  jevLatencySum: number;
-  jevLatencyCount: number;
-  /** End-to-end latency of the LLM replays: the week's sum over its count. */
-  llmLatencySum: number;
-  llmLatencyCount: number;
-  /** Ledger cost of the replays — the delta sampling adds: sum over count. */
-  llmCostSum: number;
-  llmCostCount: number;
-}
-
-/**
- * `GET /api/admin/decisions-quality` — the Jev decision knobs and the
- * shadow comparison's weekly agreement, per use case (MIN-567).
- */
-export interface AdminDecisionsQuality {
-  settings: {
-    enabled: boolean;
-    confidenceFloor: number;
-    shadowSampleRate: number;
-    llmFirstUseCases: string[];
-  };
-  weeks: AdminDecisionsQualityWeek[];
 }
 
 /**

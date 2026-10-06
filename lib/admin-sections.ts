@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { Activity, BotIcon as Bot, CrosshairIcon as Crosshair, DollarCircleIcon as CircleDollarSign, FlowIcon as Workflow, GaugeIcon, Globe, KeyRoundIcon as KeyRound, LayoutDashboardIcon, MessageSquareHeartIcon, Mic01Icon as Mic, PieChart, ReceiptText, Rocket, Sparkles, UserGroupIcon as Users, WalletCards } from "@hugeicons/core-free-icons";
+import { Activity, BotIcon as Bot, DollarCircleIcon as CircleDollarSign, FlowIcon as Workflow, GaugeIcon, Globe, KeyRoundIcon as KeyRound, LayoutDashboardIcon, MessageSquareHeartIcon, Mic01Icon as Mic, PieChart, ReceiptText, Rocket, Sparkles, UserGroupIcon as Users, WalletCards } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
 import type { AppIcon } from "@/components/icon";
 import type { MessageKey } from "@/lib/i18n-keys";
@@ -19,7 +19,6 @@ export const ADMIN_SECTIONS = {
   overviewOnboarding: "overview-onboarding",
   overviewPlans: "overview-plans",
   overviewContent: "overview-content",
-  overviewDecisions: "overview-decisions",
   usersAccounts: "users-accounts",
   financeSummary: "finance-summary",
   financeChart: "finance-chart",
@@ -199,25 +198,6 @@ export function useAdminSections(): AdminSection[] {
         ],
       }),
       section({
-        id: ADMIN_SECTIONS.overviewDecisions,
-        tab: "overview",
-        icon: Crosshair,
-        title: t("decisions.title"),
-        keywords: [
-          // Searchable as-is: the section TITLE is already translated (the
-          // filter matches it too), so no locale-specific aliases live here.
-          t("decisions.floor"),
-          t("decisions.shadowRate"),
-          t("decisions.agreement"),
-          "AI decisions",
-          "jev",
-          "shadow",
-          "agreement",
-          "calibration",
-          "llm-first",
-        ],
-      }),
-      section({
         id: ADMIN_SECTIONS.usersAccounts,
         tab: "users",
         icon: Users,
@@ -230,7 +210,6 @@ export function useAdminSections(): AdminSection[] {
           "accounts",
           "comptes",
           "email",
-          "onboarding",
           "quota",
           "budget",
           "gift plan",

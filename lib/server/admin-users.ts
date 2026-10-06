@@ -3,154 +3,76 @@ import "server-only";
 import { getServiceClient } from "@/lib/supabase-service";
 import { displayName } from "@/lib/display-name";
 import { resolveCyclePrefs } from "@/lib/cycle-prefs";
-import {
-  ONBOARDING_STARTED_META_KEY,
-  resolveOnboardingState,
-} from "@/lib/onboarding";
+import { ONBOARDING_STARTED_META_KEY, resolveOnboardingState } from "@/lib/onboarding";
+import type { AdminAccountSummary } from "@/lib/types";
 
-/**
- * Shared reading of accounts for the admin console (MIN-90).
- *
- * `/api/admin/users` (the paginated list) and `/api/admin/overview` (the onboarding funnel
- * and plan distribution) need the same lines: one
- * per `auth.users` account, with its counters. So they both pass
- * this way — the RPC returns the raw ingredients, and onboarding resolves
- * with the SAME `resolveOnboardingState` as home, never reimplemented.
- */
-
-/** A raw line of `get_admin_users_overview`. */
-export interface AdminUserRpcRow {
+/** Only the signals needed by the shared onboarding resolver, never a profile. */
+export interface AdminOnboardingRow {
   user_id: string;
-  email: string | null;
-  meta: Record<string, unknown> | null;
-  created_at: string;
-  last_sign_in_at: string | null;
-  email_confirmed_at: string | null;
-  /** Internal account (team, demo, bot): visible here, never in the stats. */
   is_internal: boolean;
-  projects_owned: number;
-  projects_member: number;
-  issues_accessible: number;
-  issues_created: number;
-  last_activity_at: string | null;
-  spent_month: number | string;
-  ai_calls: number;
-  reset_at: string | null;
-  total_count: number;
+  meta: Record<string, unknown> | null;
+  has_project: boolean;
+  has_issue: boolean;
 }
 
-export interface AdminUsersPage {
-  rows: AdminUserRpcRow[];
-  total: number;
-}
+const SCAN_PAGE_SIZE = 500;
 
-const ADMIN_USER_SCAN_PAGE_SIZE = 500;
-
-/** An accounts page, most recent registration first. */
-export async function fetchAdminUsers(params: {
-  search?: string | null;
-  limit: number;
-  offset: number;
-}): Promise<AdminUsersPage> {
+/** Reads minimal signals in stable, bounded pages for exact overview aggregates. */
+export async function fetchAdminOnboardingSignals(): Promise<AdminOnboardingRow[]> {
   const service = getServiceClient();
-  const { data, error } = await service.rpc("get_admin_users_overview", {
-    p_search: params.search?.trim() || null,
-    p_limit: params.limit,
-    p_offset: params.offset,
-  });
-  if (error) throw new Error(error.message);
-
-  const rows = (data ?? []) as AdminUserRpcRow[];
-  // `total_count` is carried by each line (window function); without line, the
-  // search does not match anyone.
-  return { rows, total: rows.length > 0 ? Number(rows[0].total_count) || 0 : 0 };
-}
-
-/** Reads every account in bounded RPC pages for exact overview aggregates. */
-export async function fetchAllAdminUsers(): Promise<AdminUserRpcRow[]> {
-  const rows: AdminUserRpcRow[] = [];
-  let offset = 0;
-  let total: number | null = null;
-
-  while (total === null || rows.length < total) {
-    const page = await fetchAdminUsers({
-      search: null,
-      limit: ADMIN_USER_SCAN_PAGE_SIZE,
-      offset,
+  const rows: AdminOnboardingRow[] = [];
+  for (let offset = 0; ; offset += SCAN_PAGE_SIZE) {
+    const { data, error } = await service.rpc("get_admin_onboarding_signals", {
+      p_limit: SCAN_PAGE_SIZE,
+      p_offset: offset,
     });
-    if (total === null) total = page.total;
-    if (page.rows.length === 0) break;
-    rows.push(...page.rows);
-    offset += page.rows.length;
-  }
-
-  return rows;
-}
-
-/**
- * Accounts that have set a BYOK key. The "key" stage of onboarding is
- * checkmark above (MIN-149): without this set, the admin funnel would count
- * blocked on this stage of the accounts which have passed it.
- *
- * Read in full rather than filtered to the visible admin page:
- * `user_ai_keys` carries only one row per BYOK account. Bounded response pages
- * avoid PostgREST's row ceiling while producing one set for the whole request.
- */
-export async function fetchByokUserIds(): Promise<Set<string>> {
-  const service = getServiceClient();
-  const ids = new Set<string>();
-  let offset = 0;
-  let total: number | null = null;
-
-  while (total === null || ids.size < total) {
-    const { data, error, count } = await service
-      .from("user_ai_keys")
-      .select("user_id", { count: "exact" })
-      .range(offset, offset + ADMIN_USER_SCAN_PAGE_SIZE - 1);
     if (error) throw new Error(error.message);
-    if (total === null && count !== null) total = count;
-    const page = (data ?? []) as Array<{ user_id: string }>;
-    for (const row of page) ids.add(row.user_id);
-    if (page.length === 0) break;
-    offset += page.length;
-    if (total === null && page.length < ADMIN_USER_SCAN_PAGE_SIZE) break;
+    const page = (data ?? []) as AdminOnboardingRow[];
+    rows.push(...page);
+    if (page.length < SCAN_PAGE_SIZE) return rows;
   }
-
-  return ids;
 }
 
-/** The onboarding state of an account, resolved as the home resolves it. */
-export function onboardingOf(row: AdminUserRpcRow, byokUserIds: ReadonlySet<string>) {
+export function onboardingOf(row: AdminOnboardingRow) {
   const meta = row.meta ?? {};
   const state = resolveOnboardingState({
     meta,
-    projectCount: Number(row.projects_owned) + Number(row.projects_member),
-    issueCount: Number(row.issues_accessible),
-    hasAiKey: byokUserIds.has(row.user_id),
+    projectCount: row.has_project ? 1 : 0,
+    issueCount: row.has_issue ? 1 : 0,
     cyclesEnabled: resolveCyclePrefs(meta).enabled,
   });
   return {
-    // `eligible` mixes “onboarding has started” and “the account is empty”;
-    // for the admin only the first half is a fact, hence the direct reading
-    // of the watermark placed on the first display.
     started: meta[ONBOARDING_STARTED_META_KEY] === true,
-    completed: state.completedCount,
-    total: state.totalCount,
     allComplete: state.allComplete,
     dismissed: state.dismissed,
-    currentStep: state.currentStepId,
   };
 }
 
-/** Nom d'affichage du compte (display_name → full_name → name → handle). */
-export function nameOf(row: AdminUserRpcRow): string {
-  const meta = (row.meta ?? {}) as Record<string, unknown>;
-  const pick = (key: string) => {
-    const value = meta[key];
-    return typeof value === "string" && value.trim() ? value.trim() : null;
+/** Exact lookup for support; an empty or partial search cannot enumerate accounts. */
+export async function fetchAdminAccount(params: {
+  email?: string;
+  userId?: string;
+}): Promise<AdminAccountSummary | null> {
+  const { data, error } = await getServiceClient().rpc("get_admin_account", {
+    p_email: params.email ?? null,
+    p_user_id: params.userId ?? null,
+  });
+  if (error) throw new Error(error.message);
+  const row = data?.[0] as {
+    user_id: string;
+    email: string | null;
+    name: string | null;
+    is_internal: boolean;
+    email_confirmed: boolean;
+  } | undefined;
+  if (!row) return null;
+  return {
+    userId: row.user_id,
+    name: displayName({ full_name: row.name, email: row.email }, "—"),
+    email: row.email,
+    internal: row.is_internal,
+    emailConfirmed: row.email_confirmed,
   };
-  const full = pick("display_name") ?? pick("full_name") ?? pick("name");
-  return displayName({ full_name: full, email: row.email }, "—");
 }
 
 /**

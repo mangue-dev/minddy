@@ -15,7 +15,6 @@ import {
 } from "@/components/stats/stats-chrome";
 import type { AdminOverview, AdminOverviewDay } from "@/lib/types";
 import { useAdminCapabilities } from "@/lib/use-admin-capabilities";
-import { AdminDecisionsQuality } from "@/components/admin/admin-decisions-quality";
 import {
   ADMIN_SECTIONS,
   adminSectionAnchor,
@@ -407,9 +406,6 @@ export function AdminOverviewDashboard() {
         </StatsCard>
       </StatsSection>
 
-      {/* 6 — How well the AI decides (MIN-567): the shadow comparison of the
-          decision layer, the data behind the Jev calibration. */}
-      <AdminDecisionsQuality />
     </div>
   );
 }
