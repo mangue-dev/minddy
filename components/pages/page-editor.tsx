@@ -2,7 +2,7 @@
 
 // The one-page editor — editing, and nothing but editing.
 //
-// Ce qu'il sait du DOCUMENT tient en un appel : `pageExtensions()`. Il ne nomme
+// Its document schema comes from `pageExtensions()`. It names
 // no block, and this is the property that must be kept — the day we add
 // a table block, this file does not move. And this same call is the one made
 // the markdown projection (lib/pages-markdown.ts): the editor and the agent read
@@ -289,7 +289,7 @@ export function PageEditor({
         // Same thing for the SUB-PAGE, and for an even harder reason:
         // its view goes through `@tiptap/react`, a “use client” module — named
         // from the registry, it was called from the server at first
-        // outil de page de Numo (cf. blocks/subpage.ts).
+        // Numo page tool (see blocks/subpage.ts).
         ...pageExtensions({
           mention: MentionNode,
           nodeViews: {
@@ -315,9 +315,8 @@ export function PageEditor({
         // nested blocks, and the cursor read one keystroke late.
         BlockPlaceholder.configure({ text: placeholderFor }),
         PageSlashCommand.configure({ items: slashItems }),
-        // The blink of a block. It's a DECORATION and not a class
-        // on the element: ProseMirror undoes any DOM mutation that it has not
-        // pas faite (cf. block-flash.ts).
+        // Block flashes use decorations: ProseMirror undoes DOM mutations
+        // made outside its rendering (see block-flash.ts).
         BlockFlash,
         // The EDGE of commented blocks (MIN-282). A decoration too,
         // and for one more reason than blinking: a mark would be
@@ -330,7 +329,9 @@ export function PageEditor({
     [placeholderFor, slashItems, mentions, leaveTop]
   );
 
-  const initialRef = useRef(initialContent);
+  // Activity destroys editor instances while retaining React refs. Keep the
+  // current document, including silent remote merges, for the next instance.
+  const documentRef = useRef(initialContent);
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
 
@@ -387,8 +388,16 @@ export function PageEditor({
     immediatelyRender: false,
     editable,
     extensions,
-    content: initialRef.current,
+    content: documentRef.current,
     editorProps,
+    onBeforeCreate: ({ editor }) => {
+      // Read the ref at creation time: useEditor may recreate from options
+      // captured before the last transaction or before the tab was hidden.
+      editor.options.content = documentRef.current;
+    },
+    onTransaction: ({ editor, transaction }) => {
+      if (transaction.docChanged) documentRef.current = editor.getJSON();
+    },
     onUpdate: ({ editor, transaction }) => {
       // Rebuilding mention pills is presentation-only. Persisting that
       // transaction would attribute a write to the viewer who opened the page.
