@@ -7,10 +7,11 @@ const getProjectAccess = vi.fn();
 const info = vi.fn();
 const download = vi.fn();
 const from = vi.fn(() => ({ info, download }));
+const descriptor = vi.fn();
 const service = { storage: { from },
   from: () => ({ select: () => ({ eq: () => ({
     maybeSingle: async () => ({ data: null, error: null }),
-    limit: () => ({ maybeSingle: async () => ({ data: null, error: null }) }),
+    limit: () => ({ maybeSingle: descriptor }),
   }) }) }),
 };
 
@@ -42,6 +43,7 @@ function request(path = PATH, query = "preview=1") {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  descriptor.mockResolvedValue({ data: null, error: null });
   getAuthedUser.mockResolvedValue({ ok: true, user: { id: "user-1" } });
   getProjectAccess.mockResolvedValue({ role: "member" });
   info.mockResolvedValue({ data: { contentType: "text/html" }, error: null });
@@ -143,6 +145,62 @@ describe("GET /api/attachments/file proxy", () => {
     expect(response.status).toBe(200);
     expect(await response.text()).toContain("# Markdown preview");
     expect(response.headers.get("content-disposition")).toBe("inline");
+  });
+
+  it.each(["text/csv", "application/csv", "application/octet-stream", "application/vnd.ms-excel"])(
+    "displays an opaque CSV attachment as plain text when storage reports %s",
+    async (mimeType) => {
+      const csv = new TextEncoder().encode('\uFEFFName,Usage\r\n"Café",16\r\n');
+      descriptor.mockResolvedValue({ data: {
+        id: "d2b0ed54-361e-45a5-8735-a8d6ef7c8ccd",
+        project_id: PROJECT,
+        file_name: "vercel-costs.csv",
+        mime_type: mimeType,
+      }, error: null });
+      info.mockResolvedValue({ data: { contentType: mimeType }, error: null });
+      download.mockResolvedValue({ data: new Blob([csv]), error: null });
+      const path = `projects/${PROJECT}/dd18cf40-e01a-4438-9afa-d5dc4169902b`;
+
+      const response = await GET(request(path));
+
+      expect(response.headers.get("content-type")).toBe("text/plain; charset=utf-8");
+      expect(response.headers.get("content-disposition")).toBe("inline");
+      expect(response.headers.get("content-length")).toBe(String(csv.byteLength));
+      expect(response.headers.get("content-security-policy")).toBe(PREVIEW_CSP);
+      expect(response.headers.get("x-frame-options")).toBe("SAMEORIGIN");
+      expect(response.headers.get("x-content-type-options")).toBe("nosniff");
+      expect(new Uint8Array(await response.arrayBuffer())).toEqual(csv);
+
+      for (const query of ["download=1", "preview=1&download=1", ""]) {
+        const downloaded = await GET(request(path, query));
+        expect(downloaded.headers.get("content-type")).toBe(mimeType);
+        expect(downloaded.headers.get("content-disposition")).toBe(
+          "attachment; filename*=UTF-8''vercel-costs.csv",
+        );
+        expect(new Uint8Array(await downloaded.arrayBuffer())).toEqual(csv);
+      }
+    },
+  );
+
+  it("displays CSV MIME types without relying on a filename extension", async () => {
+    info.mockResolvedValue({ data: { contentType: "text/csv" }, error: null });
+    download.mockResolvedValue({ data: new Blob(["Name,Usage\nMinddy,16\n"]), error: null });
+
+    const response = await GET(request(`projects/${PROJECT}/resource/export`));
+
+    expect(response.headers.get("content-type")).toBe("text/plain; charset=utf-8");
+    expect(response.headers.get("content-disposition")).toBe("inline");
+  });
+
+  it("renders markup in a CSV filename as inert text even when sniffed as HTML", async () => {
+    const markup = '<script>alert("preview")</script>,value';
+    download.mockResolvedValue({ data: new Blob([markup]), error: null });
+
+    const response = await GET(request(`projects/${PROJECT}/resource/export.csv`));
+
+    expect(response.headers.get("content-type")).toBe("text/plain; charset=utf-8");
+    expect(response.headers.get("content-security-policy")).toBe(PREVIEW_CSP);
+    expect(await response.text()).toBe(markup);
   });
 
   it("uses sniffed markup instead of a misleading image content type", async () => {

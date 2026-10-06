@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   attachmentPreviewKind,
+  isCsvAttachment,
   isMarkdownFileName,
 } from "@/lib/attachment-preview";
 
@@ -10,6 +11,9 @@ describe("attachmentPreviewKind", () => {
     ["image/png", "image"],
     ["IMAGE/WEBP; charset=binary", "image"],
     ["text/plain", "document"],
+    ["text/csv", "document"],
+    ["APPLICATION/CSV; charset=utf-8", "document"],
+    ["application/x-csv", "document"],
     ["text/html; charset=utf-8", "document"],
     ["application/pdf", "document"],
     ["application/xml", "document"],
@@ -38,6 +42,36 @@ describe("attachmentPreviewKind", () => {
       "document",
     );
   });
+
+  it.each(["application/octet-stream", "application/vnd.ms-excel", "", null])(
+    "previews CSV filenames with MIME type %s",
+    (mimeType) => {
+      expect(attachmentPreviewKind(mimeType, "vercel-costs.CSV")).toBe("document");
+    },
+  );
+});
+
+describe("isCsvAttachment", () => {
+  it.each(["text/csv", "TEXT/CSV; charset=utf-8", "text/x-csv", "application/csv", "application/x-csv"])(
+    "recognizes %s without a filename",
+    (mimeType) => {
+      expect(isCsvAttachment(mimeType)).toBe(true);
+    },
+  );
+
+  it.each(["export.csv", "export.CSV", " export.csv "])(
+    "recognizes %s with a generic MIME type",
+    (fileName) => {
+      expect(isCsvAttachment("application/octet-stream", fileName)).toBe(true);
+    },
+  );
+
+  it.each(["export.csv.zip", "export.xlsx", "export.xls", "", null, undefined])(
+    "does not treat %s as CSV based on the Excel MIME type alone",
+    (fileName) => {
+      expect(isCsvAttachment("application/vnd.ms-excel", fileName)).toBe(false);
+    },
+  );
 });
 
 describe("isMarkdownFileName", () => {
