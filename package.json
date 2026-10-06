@@ -58,7 +58,7 @@
     "clean": "node scripts/clean.mjs",
     "captures:timeline": "node captures/timeline/index.mjs",
     "deploy": "bash deploy.sh",
-    "test:changelog": "node --test scripts/changelog.test.mjs && vitest run lib/changelog.test.ts lib/server/changelog.test.ts"
+    "test:changelog": "node --test scripts/changelog.test.mjs && vitest run lib/changelog.test.ts lib/changelog-illustrations.test.ts lib/server/changelog.test.ts"
   },
   "overrides": {
     "@tiptap/extension-bubble-menu": "3.31.3",
