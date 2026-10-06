@@ -192,6 +192,74 @@ describe("GET /api/attachments/file proxy", () => {
     expect(response.headers.get("content-disposition")).toBe("inline");
   });
 
+  const legacyCsv = Buffer.from("Name,Value\r\nCaf\xe9,\xa3\r\n", "latin1");
+  const unicodeCsv = "Name,Value\r\nCafé,£\r\n";
+  it.each([
+    { name: "declared Windows-1252", bytes: legacyCsv,
+      mime: "text/csv; charset=windows-1252", charset: "windows-1252" },
+    { name: "quoted Windows-1252", bytes: legacyCsv,
+      mime: 'text/csv; CHARSET="Windows-1252"', charset: "windows-1252" },
+    { name: "Latin-1 browser alias", bytes: legacyCsv,
+      mime: "text/csv; charset=iso-8859-1", charset: "windows-1252" },
+    { name: "undeclared Windows-1252", bytes: legacyCsv,
+      mime: "text/csv", charset: "windows-1252" },
+    { name: "unsupported charset", bytes: legacyCsv,
+      mime: "text/csv; charset=unknown-encoding", charset: "windows-1252" },
+    { name: "undeclared UTF-8", bytes: Buffer.from(unicodeCsv, "utf8"),
+      mime: "text/csv", charset: "utf-8" },
+    { name: "UTF-8 BOM overriding metadata", bytes: Buffer.from(`\uFEFF${unicodeCsv}`, "utf8"),
+      mime: "text/csv; charset=windows-1252", charset: "utf-8" },
+    { name: "UTF-16LE BOM overriding metadata", bytes: Buffer.from(`\uFEFF${unicodeCsv}`, "utf16le"),
+      mime: "text/csv; charset=windows-1252", charset: "utf-16le" },
+    { name: "UTF-16BE BOM", bytes: Buffer.from(`\uFEFF${unicodeCsv}`, "utf16le").swap16(),
+      mime: "text/csv", charset: "utf-16be" },
+  ])("preserves characters and bytes in $name previews", async ({ bytes, mime, charset }) => {
+    info.mockResolvedValue({ data: { contentType: mime }, error: null });
+    download.mockResolvedValue({ data: new Blob([bytes]), error: null });
+    const path = `projects/${PROJECT}/resource/export.csv`;
+
+    const response = await GET(request(path));
+    const previewBytes = new Uint8Array(await response.arrayBuffer());
+
+    expect(response.headers.get("content-type")).toBe(`text/plain; charset=${charset}`);
+    expect(response.headers.get("content-length")).toBe(String(bytes.byteLength));
+    expect(response.headers.get("content-disposition")).toBe("inline");
+    expect(response.headers.get("content-security-policy")).toBe(PREVIEW_CSP);
+    expect(previewBytes).toEqual(new Uint8Array(bytes));
+    expect(new TextDecoder(charset).decode(previewBytes)).toBe(unicodeCsv);
+
+    const downloaded = await GET(request(path, "preview=1&download=1"));
+    expect(downloaded.headers.get("content-type")).toBe("text/csv");
+    expect(downloaded.headers.get("content-disposition")).toContain("attachment;");
+    expect(new Uint8Array(await downloaded.arrayBuffer())).toEqual(new Uint8Array(bytes));
+  });
+
+  it.each(["attachment", "page file", "storage fallback"])(
+    "uses the raw charset from %s metadata before normalizing MIME types",
+    async (source) => {
+      // Shift-JIS fixture: the two bytes 0x82, 0xa0 represent U+3042.
+      const bytes = new Uint8Array([0x4e, 0x61, 0x6d, 0x65, 0x0a, 0x82, 0xa0, 0x0a]);
+      const row = { id: "resource-1", project_id: PROJECT, file_name: "export.csv",
+        mime_type: source === "storage fallback" ? "text/csv" : "text/csv; charset=shift_jis" };
+      if (source === "page file") {
+        descriptor.mockResolvedValueOnce({ data: null, error: null });
+      }
+      descriptor.mockResolvedValueOnce({ data: row, error: null });
+      info.mockResolvedValue({ data: {
+        contentType: source === "storage fallback"
+          ? "text/csv; charset=shift_jis" : "text/csv; charset=utf-8",
+      }, error: null });
+      download.mockResolvedValue({ data: new Blob([bytes]), error: null });
+
+      const response = await GET(request(`projects/${PROJECT}/opaque-id`));
+
+      expect(response.headers.get("content-type")).toBe("text/plain; charset=shift_jis");
+      const previewBytes = new Uint8Array(await response.arrayBuffer());
+      expect(previewBytes).toEqual(bytes);
+      expect(new TextDecoder("shift_jis").decode(previewBytes)).toBe("Name\n\u3042\n");
+    },
+  );
+
   it("renders markup in a CSV filename as inert text even when sniffed as HTML", async () => {
     const markup = '<script>alert("preview")</script>,value';
     download.mockResolvedValue({ data: new Blob([markup]), error: null });
