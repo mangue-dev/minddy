@@ -293,17 +293,16 @@ export async function toPublicIdentity(
   };
 }
 
-/** Scope the cookie to its board path. Custom domains use the root path. */
+/** Scope the cookie to its board path. */
 export function feedbackSessionCookieOptions(
   boardToken: string,
-  expiresAt: Date,
-  opts?: { atRoot?: boolean }
+  expiresAt: Date
 ) {
   return {
     httpOnly: true,
     sameSite: "lax" as const,
     secure: SESSION_COOKIE_OPTIONS.secure,
-    path: opts?.atRoot ? "/" : `/f/${boardToken}`,
+    path: `/f/${boardToken}`,
     expires: expiresAt,
   };
 }

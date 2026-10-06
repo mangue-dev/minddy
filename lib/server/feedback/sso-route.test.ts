@@ -49,10 +49,6 @@ vi.mock("@/lib/server/feedback/boards", () => ({
   getBoardWithSsoSecretByToken: async () => ({ board, project: { id: "proj-1" } }),
 }));
 
-vi.mock("@/lib/server/custom-domains", () => ({
-  getRequestDomainTarget: async () => null,
-  feedbackBasePath: (token: string) => `/f/${token}`,
-}));
 
 const sessions: Array<{ boardId: string; userId: string }> = [];
 

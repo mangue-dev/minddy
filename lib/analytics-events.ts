@@ -236,7 +236,7 @@ export interface AnalyticsEventProps {
   view_switched: { view_kind: "system" | "custom" };
   view_updated: NoProps;
   view_deleted: NoProps;
-  view_shared: { has_password: boolean; has_custom_domain: boolean };
+  view_shared: { has_password: boolean };
   tab_reordered: NoProps;
 
   // ── Saved views of the palette (one screen retained under a name) ──
@@ -406,8 +406,6 @@ export interface AnalyticsEventProps {
   connected_app_viewed: NoProps;
   integration_added: { kind: string };
   integration_removed: { kind: string };
-  custom_domain_added: NoProps;
-  custom_domain_removed: NoProps;
   smart_assign_toggled: { enabled: boolean };
 
   // ── Notifications push / web (MIN-183) ──
@@ -769,8 +767,6 @@ const EVENT_NAMES = [
   "connected_app_viewed",
   "integration_added",
   "integration_removed",
-  "custom_domain_added",
-  "custom_domain_removed",
   "smart_assign_toggled",
   "push_device_enabled",
   "push_device_disabled",

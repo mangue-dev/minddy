@@ -25,8 +25,8 @@ import { consumeFeedbackVoiceLimit } from "@/lib/server/feedback/voice-limits";
  * and a dictation cut in the middle is not a borderline case, it is the common case.
  *
  * It lives under `/f/<token>/` and not under `/api/` for a cookie reason:
- * visitor session is path-scoped on the board (`/f/<token>`, or `/` on
- * custom domain), and the browser would therefore never send it to `/api/…`.
+ * visitor sessions are scoped to `/f/<token>`, so the browser never sends
+ * them to `/api/…`.
  *
  * What it does: transcribe, then apply the same destination-aware cleanup as
  * authenticated dictation. Storage by Numo is the server action

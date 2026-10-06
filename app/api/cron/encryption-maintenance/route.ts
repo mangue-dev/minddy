@@ -125,8 +125,6 @@ import { backfillAiDecisionEvaluationsBatch } from
   "@/lib/server/encryption/ai-decision-evaluation-backfill";
 import { scrubStripeWebhookPayloadsBatch } from
   "@/lib/server/encryption/stripe-webhook-payload-scrub";
-import { backfillCustomDomainVerificationBatch } from
-  "@/lib/server/encryption/custom-domain-verification-backfill";
 import { backfillBillingIdentityBatch } from
   "@/lib/server/encryption/billing-identity-backfill";
 import { backfillOAuthClientsBatch } from
@@ -259,7 +257,6 @@ export async function GET(request: NextRequest) {
       contentEnabled ? maintenancePass(() => backfillAppTabsBatch(25, signal)) : Promise.resolve(null),
       contentEnabled ? maintenancePass(() => backfillAiDecisionEvaluationsBatch(25, signal)) : Promise.resolve(null),
       contentEnabled ? maintenancePass(() => scrubStripeWebhookPayloadsBatch(100, signal)) : Promise.resolve(null),
-      contentEnabled ? maintenancePass(() => backfillCustomDomainVerificationBatch(25, signal)) : Promise.resolve(null),
       contentEnabled ? maintenancePass(() => backfillBillingIdentityBatch(25, signal)) : Promise.resolve(null),
       contentEnabled ? maintenancePass(() => backfillOAuthClientsBatch(25, signal)) : Promise.resolve(null),
       contentEnabled ? maintenancePass(() => backfillOAuthCodesBatch(25, signal)) : Promise.resolve(null),
@@ -355,17 +352,16 @@ export async function GET(request: NextRequest) {
     const appTabs = outcomes[81];
     const aiDecisionEvaluations = outcomes[82];
     const stripeWebhookPayloads = outcomes[83];
-    const customDomainVerification = outcomes[84];
-    const billingIdentity = outcomes[85];
-    const oauthClients = outcomes[86];
-    const oauthCodes = outcomes[87];
-    const apiKeys = outcomes[88];
-    const integrations = outcomes[89];
-    const push = outcomes[90];
-    const forgeAttachments = outcomes[91].status === "fulfilled"
-      ? outcomes[91].value : { scanned: 0, migrated: 0, failed: 1 };
-    const forgeAttachmentRotation = outcomes[92].status === "fulfilled"
-      ? outcomes[92].value : { scanned: 0, rotated: 0, failed: 1 };
+    const billingIdentity = outcomes[84];
+    const oauthClients = outcomes[85];
+    const oauthCodes = outcomes[86];
+    const apiKeys = outcomes[87];
+    const integrations = outcomes[88];
+    const push = outcomes[89];
+    const forgeAttachments = outcomes[90].status === "fulfilled"
+      ? outcomes[90].value : { scanned: 0, migrated: 0, failed: 1 };
+    const forgeAttachmentRotation = outcomes[91].status === "fulfilled"
+      ? outcomes[91].value : { scanned: 0, rotated: 0, failed: 1 };
     const failed = outcomes.some((outcome) => outcome.status === "rejected") || rotation.failed > 0 ||
       (forgeAttachments?.failed ?? 0) > 0 ||
       (forgeAttachmentRotation?.failed ?? 0) > 0 ||
@@ -373,7 +369,7 @@ export async function GET(request: NextRequest) {
         (scratchpad.value.failed > 0 || scratchpad.value.interrupted)) ||
       (statistics.status === "fulfilled" && statistics.value !== null &&
         (statistics.value.failed > 0 || statistics.value.interrupted)) ||
-      [activity, pageVersions, comments, pageComments, objectives, categories, projectDrafts, feedbackPosts, issues, agentJournal, agentEvents, agentLaunch, agentTitle, agentCheckpoint, agentDelegation, agentStandaloneMessages, agentQueueMessages, agentContexts, issueSidecar, githubCommentUrls, agentVerdicts, agentDeployments, agentBaseBranches, orphanRuntimeBaseBranches, agentBranchArtifacts, agentWorkBranches, orphanRuntimeWorkBranches, agentDelegationResults, numoWorkerEvents, numoWorkerCheckpoints, agentRunSummaries, agentTurnSummaries, agentArtifactUrls, agentRunPrUrls, pullRequestUrls, pullRequestContent, prCommentEdits, forgeRelayDeliveries, forgeRelayAudit, attachmentObjects, attachmentMetadata, pageFileMetadata, feedbackUsers, feedbackOtp, shareTokens, numoSurfaces, feedbackSso, forgeMention, numoActivity, providerResources, appConfig, feedbackMerge, agentChainCodes, numoTurnIntents, numoAutomation, numoConversationTitles, numoUserMessages, numoFinalContent, numoErrors, numoToolContent, forgeRepositoryNames, forgeDefaultBranches, projectIcons, viewContent, savedViewBookmarks, agentRoutines, projectContent, pageContent, userAiKeys, relayInstances, projectWebhookSecrets, relayProvisioning, relayUserDeliveries, forgeOAuthConnections, forgeOAuthIdentities, mcpConnections, mcpAttempts, agentBranchPrefixes, appTabs, aiDecisionEvaluations, stripeWebhookPayloads, customDomainVerification, billingIdentity, oauthClients, oauthCodes, apiKeys, integrations, push].some((outcome) => outcome.status === "fulfilled" && outcome.value !== null &&
+      [activity, pageVersions, comments, pageComments, objectives, categories, projectDrafts, feedbackPosts, issues, agentJournal, agentEvents, agentLaunch, agentTitle, agentCheckpoint, agentDelegation, agentStandaloneMessages, agentQueueMessages, agentContexts, issueSidecar, githubCommentUrls, agentVerdicts, agentDeployments, agentBaseBranches, orphanRuntimeBaseBranches, agentBranchArtifacts, agentWorkBranches, orphanRuntimeWorkBranches, agentDelegationResults, numoWorkerEvents, numoWorkerCheckpoints, agentRunSummaries, agentTurnSummaries, agentArtifactUrls, agentRunPrUrls, pullRequestUrls, pullRequestContent, prCommentEdits, forgeRelayDeliveries, forgeRelayAudit, attachmentObjects, attachmentMetadata, pageFileMetadata, feedbackUsers, feedbackOtp, shareTokens, numoSurfaces, feedbackSso, forgeMention, numoActivity, providerResources, appConfig, feedbackMerge, agentChainCodes, numoTurnIntents, numoAutomation, numoConversationTitles, numoUserMessages, numoFinalContent, numoErrors, numoToolContent, forgeRepositoryNames, forgeDefaultBranches, projectIcons, viewContent, savedViewBookmarks, agentRoutines, projectContent, pageContent, userAiKeys, relayInstances, projectWebhookSecrets, relayProvisioning, relayUserDeliveries, forgeOAuthConnections, forgeOAuthIdentities, mcpConnections, mcpAttempts, agentBranchPrefixes, appTabs, aiDecisionEvaluations, stripeWebhookPayloads, billingIdentity, oauthClients, oauthCodes, apiKeys, integrations, push].some((outcome) => outcome.status === "fulfilled" && outcome.value !== null &&
         (outcome.value.failed > 0 || outcome.value.interrupted));
     if (failed) console.error("[encryption-maintenance] incomplete batch");
     return NextResponse.json({
@@ -564,9 +560,6 @@ export async function GET(request: NextRequest) {
             ? stripeWebhookPayloads.value : { failed: true },
         } : {}),
         ...(contentEnabled ? {
-          custom_domain_verification:
-            customDomainVerification.status === "fulfilled"
-              ? customDomainVerification.value : { failed: true },
         } : {}),
         ...(contentEnabled ? {
           billing_identity: billingIdentity.status === "fulfilled"

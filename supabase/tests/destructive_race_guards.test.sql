@@ -2,7 +2,7 @@ BEGIN;
 
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 
-SELECT plan(23);
+SELECT plan(21);
 
 SELECT ok(
   NOT has_function_privilege('authenticated', 'public.purge_feedback_junk_guarded(uuid[], timestamptz)', 'EXECUTE'),
@@ -230,15 +230,6 @@ SELECT is(
   'a rejected share replacement retains the existing token'
 );
 
-INSERT INTO public.custom_domains (
-  id, domain, share_id, status, created_by
-) SELECT
-  '46200000-0000-4000-8000-000000000041',
-  'docs.example.test', id, 'verified',
-  '46200000-0000-4000-8000-000000000001'
-FROM public.view_shares
-WHERE view_id = '46200000-0000-4000-8000-000000000040';
-
 SELECT is(
   public.revoke_view_share_guarded('46200000-0000-4000-8000-000000000040')->>'status',
   'revoked',
@@ -254,26 +245,6 @@ SELECT is(
   'a share can be recreated after revocation'
 );
 
-INSERT INTO public.custom_domains (
-  id, domain, share_id, status, created_by
-) SELECT
-  '46200000-0000-4000-8000-000000000042',
-  'docs.example.test', id, 'verified',
-  '46200000-0000-4000-8000-000000000001'
-FROM public.view_shares
-WHERE view_id = '46200000-0000-4000-8000-000000000040';
-
-SELECT ok(
-  NOT public.delete_custom_domain_if_current(
-    '46200000-0000-4000-8000-000000000041',
-    'docs.example.test'
-  ),
-  'cleanup for the revoked generation cannot delete the recreated domain row'
-);
-SELECT ok(
-  EXISTS (SELECT 1 FROM public.custom_domains WHERE id = '46200000-0000-4000-8000-000000000042'),
-  'the retained domain mapping survives stale cleanup'
-);
 SELECT is(
   (SELECT token FROM public.view_shares WHERE view_id = '46200000-0000-4000-8000-000000000040'),
   'new-token',

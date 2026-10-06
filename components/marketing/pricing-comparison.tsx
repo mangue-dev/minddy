@@ -128,7 +128,6 @@ const GROUPS: ReadonlyArray<Group> = [
       { key: "moderation", hint: true, value: EVERYWHERE },
       { key: "feedbackStatus", hint: true, value: EVERYWHERE },
       { key: "sso", hint: true, value: EVERYWHERE },
-      { key: "domain", hint: true, value: EVERYWHERE },
     ],
   },
   {

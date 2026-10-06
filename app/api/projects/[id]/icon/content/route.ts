@@ -5,7 +5,6 @@ import { downloadProjectIcon } from "@/lib/server/project-icon";
 import { getBoardByToken } from "@/lib/server/feedback/boards";
 import { getPublicShareTarget } from "@/lib/server/view-shares";
 import { isShareUnlocked } from "@/lib/server/share-unlock";
-import { getRequestDomainTarget } from "@/lib/server/custom-domains";
 
 type Context = { params: Promise<{ id: string }> };
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -17,10 +16,6 @@ export async function GET(request: NextRequest, { params }: Context) {
   const token = url.searchParams.get("share_token");
   const kind = url.searchParams.get("share_kind");
   if (!UUID.test(id) || (token && token.length > 512)) {
-    return new NextResponse(null, { status: 404 });
-  }
-  const domain = await getRequestDomainTarget();
-  if (domain && domain.projectId !== id) {
     return new NextResponse(null, { status: 404 });
   }
   let allowed = false;

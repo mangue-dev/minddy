@@ -5,7 +5,6 @@ import { after } from "next/server";
 import { revalidatePath } from "next/cache";
 import { getLocale } from "next-intl/server";
 import type { Locale } from "@/i18n/config";
-import { isCustomPublicHost } from "@/lib/server/custom-domains";
 import { getBoardByToken } from "@/lib/server/feedback/boards";
 import {
   FEEDBACK_SESSION_COOKIE,
@@ -129,13 +128,10 @@ export async function verifyOtpAction(
 
   const session = await createFeedbackSession({ boardId: ctx.board.id, userId: user.id });
   if (!session) return { ok: false, error: "invalidCode" };
-  // On custom domain (MIN-36), the visible path is the root — the
-  // cookie must live there, otherwise the browser will never return it.
-  const atRoot = await isCustomPublicHost();
   (await cookies()).set(
     FEEDBACK_SESSION_COOKIE,
     session.token,
-    feedbackSessionCookieOptions(token, session.expiresAt, { atRoot })
+    feedbackSessionCookieOptions(token, session.expiresAt)
   );
   revalidatePath(`/f/${token}`, "layout");
   return { ok: true };
@@ -144,12 +140,9 @@ export async function verifyOtpAction(
 export async function logoutAction(token: string): Promise<void> {
   const cookie = (await cookies()).get(FEEDBACK_SESSION_COOKIE)?.value;
   await revokeFeedbackSession(cookie);
-  // The deletion path must reflect the current host: the cookie was
-  // placed on the same site (path "/" on custom domain, /f/<token> otherwise).
-  const atRoot = await isCustomPublicHost();
   (await cookies()).delete({
     name: FEEDBACK_SESSION_COOKIE,
-    path: atRoot ? "/" : `/f/${token}`,
+    path: `/f/${token}`,
   });
   revalidatePath(`/f/${token}`, "layout");
 }

@@ -15,23 +15,55 @@
     }
   },
   "agent_project_erasure_fences": {
-    "scope": { "kind": "project", "column": "project_id" },
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
     "encrypted": [],
     "clear": {
-      "routing_identity": ["project_id"],
-      "timestamp": ["created_at"]
+      "routing_identity": [
+        "project_id"
+      ],
+      "timestamp": [
+        "created_at"
+      ]
     }
   },
   "agent_sandbox_allocations": {
-    "scope": { "kind": "project", "column": "project_id" },
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
     "encrypted": [],
     "clear": {
-      "routing_identity": ["id", "run_id", "project_id", "user_ids", "sandbox_name",
-        "provider_key_id", "conversation_id", "created_by", "project_owner_id",
-        "private_owner_id", "repo_link_id", "connection_id", "repo_provider", "repo_external_id"],
-      "bounded_metadata": ["provider_pending", "key_request_pending"],
-      "operational_configuration": ["state"],
-      "timestamp": ["created_at", "cleaned_at", "cleanup_attempted_at"]
+      "routing_identity": [
+        "id",
+        "run_id",
+        "project_id",
+        "user_ids",
+        "sandbox_name",
+        "provider_key_id",
+        "conversation_id",
+        "created_by",
+        "project_owner_id",
+        "private_owner_id",
+        "repo_link_id",
+        "connection_id",
+        "repo_provider",
+        "repo_external_id"
+      ],
+      "bounded_metadata": [
+        "provider_pending",
+        "key_request_pending"
+      ],
+      "operational_configuration": [
+        "state"
+      ],
+      "timestamp": [
+        "created_at",
+        "cleaned_at",
+        "cleanup_attempted_at"
+      ]
     }
   },
   "agent_artifacts": {
@@ -1432,54 +1464,6 @@
         "title_encryption_checked_at",
         "title_encryption_attempted_at",
         "updated_at"
-      ]
-    }
-  },
-  "custom_domains": {
-    "scope": {
-      "kind": "system",
-      "id": "00000000-0000-0000-0000-000000000000"
-    },
-    "encrypted": [
-      "verification"
-    ],
-    "clear": {
-      "bounded_metadata": [
-        "content_revision"
-      ],
-      "operational_configuration": [
-        "status"
-      ],
-      "public_identity": [
-        "cname_target",
-        "domain"
-      ],
-      "routing_identity": [
-        "board_id",
-        "created_by",
-        "id",
-        "share_id"
-      ],
-      "timestamp": [
-        "created_at",
-        "updated_at",
-        "verification_encryption_checked_at",
-        "verification_encryption_attempted_at"
-      ]
-    }
-  },
-  "custom_domain_verification_scope": {
-    "scope": {
-      "kind": "global",
-      "id": "00000000-0000-0000-0000-000000000000"
-    },
-    "encrypted": [],
-    "clear": {
-      "routing_identity": [
-        "id"
-      ],
-      "timestamp": [
-        "activated_at"
       ]
     }
   },
@@ -4883,46 +4867,6 @@
       ],
       "timestamp": [
         "started_at"
-      ]
-    }
-  },
-  "custom_domain_cleanup": {
-    "scope": {
-      "kind": "system",
-      "id": "00000000-0000-0000-0000-000000000000"
-    },
-    "encrypted": [],
-    "clear": {
-      "public_identity": [
-        "domain"
-      ],
-      "routing_identity": [
-        "id"
-      ],
-      "timestamp": [
-        "created_at",
-        "next_attempt_at"
-      ],
-      "bounded_metadata": [
-        "attempts"
-      ]
-    }
-  },
-  "custom_domain_mutation_leases": {
-    "scope": {
-      "kind": "system",
-      "id": "00000000-0000-0000-0000-000000000000"
-    },
-    "encrypted": [],
-    "clear": {
-      "public_identity": [
-        "domain"
-      ],
-      "routing_identity": [
-        "token"
-      ],
-      "timestamp": [
-        "expires_at"
       ]
     }
   }

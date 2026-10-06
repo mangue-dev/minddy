@@ -16,7 +16,7 @@ describe("isLocalAnalyticsHostname", () => {
       "[::1]", // forme rendue par location.hostname en IPv6
       "app.localhost",
       "minddy.test",
-      "board.minddy.test", // custom domains tested via /etc/hosts (MIN-36)
+      "board.minddy.test", // local test hostname
     ]) {
       expect(isLocalAnalyticsHostname(host), host).toBe(true);
     }

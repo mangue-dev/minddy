@@ -5,7 +5,6 @@ import { ArrowDown01Icon, CodeSimpleIcon as Code2, Copy01Icon, LinkSquare01Icon,
 import { useState } from "react";
 import Link from "@/components/app-link";
 import { useTranslations } from "next-intl";
-import { useQuery } from "@tanstack/react-query";
 import {
   Badge,
   Button,
@@ -19,21 +18,14 @@ import {
   Switch,
   cn,
 } from "mangue-ui";
-import { getAppEnv } from "@/lib/env";
-import { CustomDomainRemovalDialog } from "@/components/custom-domain-removal-dialog";
 import { ssoEnvLine } from "@/lib/feedback/env-lines";
 import { useIntegrationsQuery } from "@/lib/use-integrations-query";
-import {
-  CustomDomainSection,
-  fetchCustomDomainApi,
-} from "@/components/custom-domain-section";
 import {
   BoardAccentRow,
   BoardVisibilityRows,
   FeedbackTranslationGroup,
   NumoReviewGroup,
   StatusPill,
-  feedbackDomainKey,
   useFeedbackBoardSettings,
   type BoardSettings,
 } from "@/components/feedback/feedback-settings-shared";
@@ -77,7 +69,6 @@ export function ProjectFeedbackSettings({
 }) {
   const t = useTranslations("Settings");
   const [wizardOpen, setWizardOpen] = useState(false);
-  const [confirmDisable, setConfirmDisable] = useState(false);
   const {
     board,
     sharedViews,
@@ -88,17 +79,6 @@ export function ProjectFeedbackSettings({
     patchBoardDebounced,
     post,
   } = useFeedbackBoardSettings(projectId);
-
-  // Custom domain (MIN-36) — same query as CustomDomainSection
-  // (deduplicated by React Query) to prefer the verified domain in the URL.
-  const domainPath = `/api/projects/${projectId}/feedback/domain`;
-  const { data: domainData } = useQuery({
-    queryKey: feedbackDomainKey(projectId),
-    queryFn: () => fetchCustomDomainApi(domainPath),
-    enabled: Boolean(board?.enabled),
-  });
-  const verifiedDomain =
-    domainData?.domain?.status === "verified" ? domainData.domain.domain : null;
 
   const { integrations } = useIntegrationsQuery(projectId);
   const feedbackKeyCount = integrations.filter(
@@ -116,28 +96,7 @@ export function ProjectFeedbackSettings({
   }
 
   const origin = typeof window !== "undefined" ? window.location.origin : "";
-  // The verified custom domain becomes the board's referring URL.
-  const publicUrl = verifiedDomain
-    ? `https://${verifiedDomain}`
-    : board
-      ? `${origin}/f/${board.token}`
-      : null;
-  /**
-   * The same board, served by the environment we are looking at.
-   *
-   * A custom domain is a DNS record: it points to the
-   * production, and ignores that there is a localhost and a preview version. From
-   * one of the two, the link above therefore takes you to see the PROD board — never
-   * the one we are currently modifying.
-   *
-   * The line only exists here, outside production: in production the two URLs would lead
-   * in the same place, and a second address next to the correct one would not
-   * than cluttering the screen of anyone who has nothing to debug.
-   */
-  const envUrl =
-    verifiedDomain && board && getAppEnv() !== "production"
-      ? `${origin}/f/${board.token}`
-      : null;
+  const publicUrl = board ? `${origin}/f/${board.token}` : null;
   const boardOn = board?.enabled ?? false;
   /** An open channel somewhere: this is what makes the configuration exist. */
   const configured = boardOn || feedbackKeyCount > 0;
@@ -196,12 +155,6 @@ export function ProjectFeedbackSettings({
         </div>
       )}
 
-      <CustomDomainRemovalDialog
-        kind="board"
-        open={confirmDisable}
-        onOpenChange={setConfirmDisable}
-        onConfirm={async () => { await patchBoard({ enabled: false }); }}
-      />
       {/* Public feedback board */}
       <SettingsGroup
         anchor={SETTINGS_SECTIONS.projectFeedbackBoard}
@@ -217,8 +170,7 @@ export function ProjectFeedbackSettings({
               checked={boardOn}
               disabled={!isOwner || busy}
               onCheckedChange={(v) => {
-                if (!v) setConfirmDisable(true);
-                else void patchBoard({ enabled: true });
+                void patchBoard({ enabled: v });
               }}
               aria-label={t("feedbackChannelBoardTitle")}
             />
@@ -227,9 +179,6 @@ export function ProjectFeedbackSettings({
       >
         {boardOn && board && (
           <>
-            {/* Public link + custom domain (MIN-36) merged: the link
-                already shows the verified domain, so `primaryUrlShown` avoids
-                repeat it. The domain section is hidden alone without env VERCEL_*. */}
             <div className="flex flex-col gap-3 py-3.5">
               {publicUrl && (
                 <div className="flex flex-col gap-1.5">
@@ -237,20 +186,6 @@ export function ProjectFeedbackSettings({
                   <PublicUrlLink url={publicUrl} />
                 </div>
               )}
-              {envUrl && (
-                <div className="flex flex-col gap-1.5">
-                  <p className="text-sm font-medium">{t("feedbackUrlThisEnv")}</p>
-                  <PublicUrlLink url={envUrl} />
-                  <p className="text-xs text-muted-foreground">
-                    {t("feedbackUrlThisEnvHint")}
-                  </p>
-                </div>
-              )}
-              <CustomDomainSection
-                endpoint={domainPath}
-                queryKey={feedbackDomainKey(projectId)}
-                primaryUrlShown
-              />
             </div>
 
             {/* Visitor identity */}

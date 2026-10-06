@@ -18,7 +18,7 @@ const { releaseProviderOperation, reserveProviderOperation } = await import(
 
 const input = {
   actorId: "11111111-1111-4111-8111-111111111111",
-  provider: "vercel-domains",
+  provider: "test-provider",
   operation: "refresh",
   resourceKey: "domain:feedback.example.com",
   limit: 20,

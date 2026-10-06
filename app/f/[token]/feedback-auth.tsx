@@ -121,10 +121,7 @@ export function FeedbackAuthDialog({
                 autoFocus
                 required
               />
-              {/* Mention of information at the point of collection (GDPR art. 13,
- MIN-119). The URL is absolute: a board can be served from
- its publisher's custom domain, where `/privacy` leads
- nowhere. */}
+              {/* Privacy information at the point of collection (MIN-119). */}
               <p className="text-xs leading-relaxed text-muted-foreground">
                 {t.rich("authLegalNotice", {
                   privacy: (chunks) => (

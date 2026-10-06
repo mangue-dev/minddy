@@ -3,7 +3,7 @@
  * `isSameOriginRequest` requires a declared origin for browser-only actions.
  * `hasForeignOrigin` permits headerless API clients, but rejects explicitly
  * invalid or opaque origins. Both compare against the request host so previews,
- * local development, and custom domains follow the same rule.
+ * local development follow the same rule.
  */
 
 type HeaderBag = { headers: { get(name: string): string | null } };

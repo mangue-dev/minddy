@@ -10,7 +10,6 @@ import { PublicPageShell } from "@/components/public-page-shell";
 import type { Locale } from "@/i18n/config";
 import { appPageMetadata } from "@/lib/app-metadata";
 import { publicTokenMetadata } from "@/lib/seo";
-import { getRequestDomainTarget } from "@/lib/server/custom-domains";
 import { getPublicSiteTabs } from "@/lib/server/feedback/public-nav";
 import type { ChipRelation } from "@/components/relation-chips";
 import { AppQueryProvider } from "@/lib/query-provider";
@@ -222,7 +221,6 @@ export default async function SharedViewPage({ params }: PageProps) {
     feedbackLabel: tFeedback("title"),
     untitledLabel: tFeedback("untitledPage"),
     current: { kind: "view", shareToken: token },
-    domainTarget: await getRequestDomainTarget(),
   });
 
   return (
