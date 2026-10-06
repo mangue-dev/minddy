@@ -2,8 +2,10 @@
 
 Investigated on 2026-10-06. Times below are UTC. Hosted inspection was
 read-only: Vercel request/deployment metadata, Supabase issue/category metadata
-and AI usage, and OpenRouter generation metadata. No generation was replayed,
-and no hosted data, configuration or deployment was changed.
+and AI usage, and OpenRouter generation metadata. The initial inspection
+replayed no generation. A subsequent Jev investigation made two small
+diagnostic calls, described below. No application data, configuration or
+deployment was changed.
 
 ## Incident attribution
 
@@ -61,6 +63,70 @@ why a successful POST with a recorded AI expense can leave an unfilled issue.
 Generation metadata does not include the response body; absence of the usable
 tool output is inferred from the truncation, saved issue activity and this
 deployed control flow.
+
+## Why the Jev decision did not become final
+
+The historical Jev generation's provider response reports **HTTP 200** and
+**123 ms** latency. Its recorded usage rules out a disabled Jev engine, a
+Smart Fill LLM-first override, missing credentials or an HTTP rejection for
+this run. Jev was called; its decision was discarded afterward.
+
+The deployed runner permits two remaining paths: an invalid/missing parsed
+answer (`jev_unavailable`) or confidence below the configured floor
+(`jev_low_confidence`). Its default floor is **0.55**; the current database
+value is null and therefore also uses 0.55. A historical runtime override
+cannot be reconstructed from the current configuration alone.
+
+`decisionConfidence` takes the **minimum** of all field confidences. For a
+category set, the Jev adapter also takes the minimum over every category's
+yes/no confidence, including categories not selected. An uncertain objective,
+effort or category can therefore discard otherwise confident priority/category
+answers and trigger a full LLM replacement. Answers are not merged across
+engines. This is the existing conservative decision policy, not a transport
+failure.
+
+The exact Vercel request lookup returns one successful request with no runtime
+messages. A malformed Jev response would normally emit a
+`[decisions-jev] invalid response` error; low confidence emits no diagnostic
+message in the deployed runner. The absence of an error supports the
+low-confidence explanation, but is not a retained record of the original
+scores or proof that no log was dropped.
+
+OpenRouter's generation-content endpoint returns **404, Content not available
+for this generation** for the historical Jev call. Supabase contains zero
+decision evaluation rows in the incident window, and the shadow mechanism
+records only accepted Jev decisions, not discarded fallback pairs. The
+historical answer values and confidence scores cannot be recovered from
+these sources. [OpenRouter's logging documentation](https://openrouter.ai/docs/guides/features/logs)
+explains that stored input/output requires logging to have been enabled when
+the call ran; metadata alone does not retain the answer body.
+
+Two direct diagnostic calls to the same versioned Jev model used the issue's
+unchanged title, the six current categories and four current active
+objectives. One supplied no description; the other supplied the current
+description. These are reproductions, not the original request: the original
+description and context ordering were not retained.
+
+The real `parseJevAnswers`, `buildSmartFillSpec` and `decisionConfidence`
+functions accept both diagnostic responses and produce:
+
+| Description variant | Priority | Effort | Categories | Objective | Global confidence |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| None | 0.65 | 0.56 | 0.50 | 0.35 | **0.35** |
+| Current | 0.67 | 0.50 | 0.52 | 0.38 | **0.38** |
+
+Both valid responses fall below 0.55, with the objective as the weakest field,
+and reproduce the full fallback to the LLM. The two generation IDs are
+`gen-dec-1791295931-KWu8to3dkflp5Tn93htG` and
+`gen-dec-1791295932-7PttbzUFZW4KsdN0hByT`; combined provider cost is
+**$0.000115752**. No issue or application usage-ledger row was written by
+these direct diagnostic calls.
+
+The supported conclusion is that **low confidence is the likely reason Jev
+was discarded**, and the current policy reproduces that behavior on this
+issue. The specific historical field/score cannot be asserted. No threshold
+or confidence policy change is justified by this one incident; lowering the
+floor or retaining partial answers would require a separate quality decision.
 
 ## Fix and verification
 
