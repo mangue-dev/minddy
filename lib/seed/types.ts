@@ -62,18 +62,7 @@ export const MAX_SEED_LABELS = 4;
  */
 export const MAX_SEED_DISTINCT_LABELS = 6;
 
-/**
- * Length of pasted text. A brief is the SUMMARY of a reflection carried out
- * elsewhere, not the entire conversation: a few thousand words are enough,
- * and this is also what keeps the call at a starter price.
- *
- * The ceiling is UNDER that of a chat message (12,000 characters,
- * `sanitizeAssistantMessageContent`), framing sentence included: from
- * MIN-173 the brief pasted into the wizard travels as the first message of a
- * conversation with Numo. Above, it would be silently truncated upon entry to
- * the API — and that's the end of the brief, the one that says out-of-scope, which
- * would disappear.
- */
+/** Maximum input length for AI brief splitting, separate from the wizard page brief. */
 export const MAX_BRIEF_CHARS = 10_000;
 /** Below, there is nothing to cut — the button remains off. */
 export const MIN_BRIEF_CHARS = 40;

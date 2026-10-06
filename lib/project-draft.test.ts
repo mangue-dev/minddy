@@ -85,6 +85,20 @@ describe("projectDraftFromRow / projectDraftToRow", () => {
     });
     expect(back.repo).toBeNull();
   });
+
+  it("preserves a 50,000-character page brief through a database round trip", () => {
+    const text = "# Initial brief\n\n".padEnd(50_000, "x");
+    const back = projectDraftFromRow(rowFor({ ...draft, seed: { kind: "brief", text } }));
+    expect(back.seed).toEqual({ kind: "brief", text });
+  });
+
+  it("discards the retired Numo choice when reading an older draft", () => {
+    const row = rowFor(draft);
+    const back = projectDraftFromRow({ ...row, data: { ...row.data, seed: { kind: "numo" } } });
+    expect(back.seed).toBeNull();
+    expect(back.name).toBe(draft.name);
+    expect(back.repo).toEqual(draft.repo);
+  });
 });
 
 describe("stepIndexOf", () => {
@@ -102,7 +116,7 @@ describe("stepIndexOf", () => {
 });
 
 describe("draftIconUrl", () => {
-  it("rend l'aperçu choisi, ou rien", () => {
+  it("returns the chosen preview or no icon", () => {
     expect(draftIconUrl({ ...draft, updatedAt: "" })).toBe("https://x.test/f.png");
     expect(
       draftIconUrl({ ...draft, icon: { kind: "none" }, updatedAt: "" }),
