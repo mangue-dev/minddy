@@ -1,0 +1,582 @@
+{
+  "version": "0.11.1",
+  "layout": "bento",
+  "copy": {
+    "en": {
+      "title": "Smoother work, from planning to delivery",
+      "summary": "A steadier workspace, clearer code reviews, and better visibility into Numo and your AI budget."
+    },
+    "fr": {
+      "title": "Un travail plus fluide, du plan à la livraison",
+      "summary": "Un espace plus stable, des revues de code plus claires et un meilleur suivi de Numo et de votre budget IA."
+    },
+    "de": {
+      "title": "Flüssiger arbeiten, von der Planung bis zur Lieferung",
+      "summary": "Ein stabilerer Arbeitsbereich, klarere Code-Reviews und mehr Überblick über Numo und dein KI-Budget."
+    },
+    "pt-BR": {
+      "title": "Mais fluidez, do planejamento à entrega",
+      "summary": "Um espaço mais estável, revisões de código mais claras e mais visibilidade sobre o Numo e seu orçamento de IA."
+    },
+    "it": {
+      "title": "Un lavoro più fluido, dal piano alla consegna",
+      "summary": "Uno spazio più stabile, revisioni del codice più chiare e maggiore visibilità su Numo e sul budget IA."
+    },
+    "es": {
+      "title": "Más fluidez, del plan a la entrega",
+      "summary": "Un espacio más estable, revisiones de código más claras y mejor seguimiento de Numo y de tu presupuesto de IA."
+    }
+  },
+  "features": [
+    {
+      "id": "steadier-workspace-0111",
+      "illustration": {
+        "kind": "code",
+        "name": "board"
+      },
+      "copy": {
+        "en": {
+          "title": "A steadier workspace",
+          "summary": "Boards stay visible while refreshing, and background work uses fewer resources.",
+          "details": [
+            "Issue cards remain on screen during background refreshes. Views keep their last useful data while loading an update, reducing interruptions as you move through your projects.",
+            "Background polling and encrypted-content maintenance do less repeated work. Project icons and pull request data also reuse more of the information already loaded."
+          ]
+        },
+        "fr": {
+          "title": "Un espace plus stable",
+          "summary": "Les tableaux restent visibles pendant leur actualisation et le travail en arrière-plan consomme moins de ressources.",
+          "details": [
+            "Les cartes des tickets restent à l’écran pendant les actualisations en arrière-plan. Les vues conservent leurs dernières données utiles pendant le chargement des mises à jour, pour limiter les interruptions entre vos projets.",
+            "Les vérifications en arrière-plan et la maintenance des contenus chiffrés évitent davantage de traitements répétés. Les icônes des projets et les données des pull requests réutilisent aussi mieux les informations déjà chargées."
+          ]
+        },
+        "de": {
+          "title": "Ein stabilerer Arbeitsbereich",
+          "summary": "Boards bleiben beim Aktualisieren sichtbar, und Hintergrundaufgaben benötigen weniger Ressourcen.",
+          "details": [
+            "Ticketkarten bleiben bei Aktualisierungen im Hintergrund auf dem Bildschirm. Ansichten behalten ihre letzten verfügbaren Daten, während neue Daten geladen werden. So kannst du ohne Unterbrechung zwischen Projekten wechseln.",
+            "Hintergrundabfragen und die Wartung verschlüsselter Inhalte vermeiden mehr wiederholte Arbeit. Projekticons und Pull-Request-Daten nutzen bereits geladene Informationen besser."
+          ]
+        },
+        "pt-BR": {
+          "title": "Um espaço mais estável",
+          "summary": "Os quadros continuam visíveis durante a atualização, e as tarefas em segundo plano usam menos recursos.",
+          "details": [
+            "Os cartões dos tickets permanecem na tela durante as atualizações em segundo plano. As visualizações mantêm os últimos dados disponíveis enquanto carregam novidades, reduzindo interrupções entre seus projetos.",
+            "As verificações em segundo plano e a manutenção de conteúdo criptografado evitam mais trabalho repetido. Os ícones dos projetos e os dados das pull requests também aproveitam melhor as informações já carregadas."
+          ]
+        },
+        "it": {
+          "title": "Uno spazio più stabile",
+          "summary": "Le bacheche restano visibili durante gli aggiornamenti e le attività in background usano meno risorse.",
+          "details": [
+            "Le schede dei ticket restano sullo schermo durante gli aggiornamenti in background. Le viste conservano gli ultimi dati disponibili mentre caricano le novità, riducendo le interruzioni tra i progetti.",
+            "Le verifiche in background e la manutenzione dei contenuti cifrati evitano più elaborazioni ripetute. Le icone dei progetti e i dati delle pull request riutilizzano meglio le informazioni già caricate."
+          ]
+        },
+        "es": {
+          "title": "Un espacio más estable",
+          "summary": "Los tableros siguen visibles mientras se actualizan y las tareas en segundo plano consumen menos recursos.",
+          "details": [
+            "Las tarjetas de los tickets permanecen en pantalla durante las actualizaciones en segundo plano. Las vistas conservan los últimos datos disponibles mientras cargan novedades, reduciendo las interrupciones entre proyectos.",
+            "Las comprobaciones en segundo plano y el mantenimiento del contenido cifrado evitan más trabajo repetido. Los iconos de proyectos y los datos de las pull requests también aprovechan mejor la información ya cargada."
+          ]
+        }
+      }
+    },
+    {
+      "id": "clearer-code-reviews-0111",
+      "illustration": {
+        "kind": "code",
+        "name": "connections"
+      },
+      "copy": {
+        "en": {
+          "title": "Code reviews in one place",
+          "summary": "Follow conversations, review decisions, and linked issues from the pull request page.",
+          "details": [
+            "Conversation and review summaries remain available even when nothing blocks a merge. Open the corresponding properties to see threads grouped by reviewer, resolution progress, past decisions, and pending review requests.",
+            "Request a review from a repository member through your connected GitHub or GitLab account. A pull request can link to several issues, and you can remove a link when it no longer applies."
+          ]
+        },
+        "fr": {
+          "title": "Vos revues de code au même endroit",
+          "summary": "Suivez les conversations, les avis et les tickets liés depuis la page de la pull request.",
+          "details": [
+            "Les résumés des conversations et des revues restent disponibles même lorsque rien ne bloque la fusion. Ouvrez les propriétés correspondantes pour retrouver les fils regroupés par personne, leur progression, les avis précédents et les demandes en attente.",
+            "Demandez une revue à un membre du dépôt avec votre compte GitHub ou GitLab connecté. Une pull request peut être liée à plusieurs tickets, et vous pouvez retirer un lien devenu inutile."
+          ]
+        },
+        "de": {
+          "title": "Code-Reviews an einem Ort",
+          "summary": "Verfolge Diskussionen, Review-Entscheidungen und verknüpfte Tickets auf der Pull-Request-Seite.",
+          "details": [
+            "Die Zusammenfassungen von Diskussionen und Reviews bleiben verfügbar, auch wenn nichts den Merge blockiert. Öffne die jeweiligen Eigenschaften, um Threads nach Reviewer, ihren Fortschritt, frühere Entscheidungen und offene Review-Anfragen zu sehen.",
+            "Fordere über dein verbundenes GitHub- oder GitLab-Konto ein Review von einem Repository-Mitglied an. Ein Pull Request kann mit mehreren Tickets verknüpft sein. Nicht mehr benötigte Verknüpfungen lassen sich entfernen."
+          ]
+        },
+        "pt-BR": {
+          "title": "Revisões de código em um só lugar",
+          "summary": "Acompanhe conversas, pareceres e tickets vinculados na página da pull request.",
+          "details": [
+            "Os resumos das conversas e revisões continuam disponíveis mesmo quando nada impede o merge. Abra as propriedades correspondentes para ver as discussões por revisor, o progresso da resolução, os pareceres anteriores e as solicitações pendentes.",
+            "Solicite uma revisão a um membro do repositório pela sua conta GitHub ou GitLab conectada. Uma pull request pode estar vinculada a vários tickets, e você pode remover um vínculo que não se aplica mais."
+          ]
+        },
+        "it": {
+          "title": "Revisioni del codice in un unico posto",
+          "summary": "Segui conversazioni, pareri e ticket collegati dalla pagina della pull request.",
+          "details": [
+            "I riepiloghi delle conversazioni e delle revisioni restano disponibili anche quando nulla blocca il merge. Apri le proprietà corrispondenti per vedere le discussioni per revisore, lo stato di risoluzione, i pareri precedenti e le richieste in attesa.",
+            "Richiedi una revisione a un membro del repository tramite il tuo account GitHub o GitLab collegato. Una pull request può essere associata a più ticket e puoi rimuovere un collegamento non più utile."
+          ]
+        },
+        "es": {
+          "title": "Revisiones de código en un solo lugar",
+          "summary": "Sigue conversaciones, opiniones y tickets vinculados desde la página de la pull request.",
+          "details": [
+            "Los resúmenes de conversaciones y revisiones siguen disponibles aunque nada bloquee el merge. Abre las propiedades correspondientes para ver los hilos por revisor, su progreso, las opiniones anteriores y las solicitudes pendientes.",
+            "Solicita una revisión a un miembro del repositorio con tu cuenta de GitHub o GitLab conectada. Una pull request puede vincularse a varios tickets y puedes retirar un vínculo que ya no corresponda."
+          ]
+        }
+      }
+    },
+    {
+      "id": "numo-delivery-follow-up-0111",
+      "illustration": {
+        "kind": "code",
+        "name": "assistant"
+      },
+      "copy": {
+        "en": {
+          "title": "Keep track of Numo’s work",
+          "summary": "Unread responses are easier to spot, and delegated work reports delivery more clearly.",
+          "details": [
+            "Numo remains available while a coding worker is running. A badge highlights unread responses, so you can return to the conversation when there is something new to read.",
+            "Stopping work now cancels the active execution more consistently. When a routine asks for a pull request, delivery is checked before the worker reports success, and incomplete delivery is shown as a failure."
+          ]
+        },
+        "fr": {
+          "title": "Gardez le fil avec Numo",
+          "summary": "Les réponses non lues sont plus visibles et le travail délégué indique plus clairement ce qui a été livré.",
+          "details": [
+            "Numo reste disponible pendant qu’un agent travaille sur le code. Un badge signale les réponses non lues pour vous permettre de retrouver la conversation lorsqu’un nouveau message vous attend.",
+            "L’arrêt d’un travail annule plus systématiquement son exécution active. Lorsqu’une routine demande une pull request, sa livraison est vérifiée avant d’annoncer une réussite ; une livraison incomplète est signalée comme un échec."
+          ]
+        },
+        "de": {
+          "title": "Numos Arbeit im Blick behalten",
+          "summary": "Ungelesene Antworten sind leichter zu erkennen, und delegierte Aufgaben melden ihre Lieferung klarer.",
+          "details": [
+            "Numo bleibt verfügbar, während ein Coding-Agent arbeitet. Ein Badge zeigt ungelesene Antworten an, damit du zur Unterhaltung zurückkehren kannst, sobald es etwas Neues gibt.",
+            "Das Stoppen einer Aufgabe bricht die aktive Ausführung zuverlässiger ab. Wenn eine Routine einen Pull Request verlangt, wird dessen Lieferung vor der Erfolgsmeldung geprüft. Eine unvollständige Lieferung wird als Fehler angezeigt."
+          ]
+        },
+        "pt-BR": {
+          "title": "Acompanhe o trabalho do Numo",
+          "summary": "As respostas não lidas ficam mais visíveis, e o trabalho delegado informa a entrega com mais clareza.",
+          "details": [
+            "O Numo continua disponível enquanto um agente trabalha no código. Um indicador destaca as respostas não lidas para você voltar à conversa quando houver uma nova mensagem.",
+            "Interromper uma tarefa agora cancela a execução ativa de forma mais consistente. Quando uma rotina pede uma pull request, a entrega é verificada antes de anunciar sucesso. Uma entrega incompleta aparece como falha."
+          ]
+        },
+        "it": {
+          "title": "Segui il lavoro di Numo",
+          "summary": "Le risposte non lette sono più visibili e il lavoro delegato indica più chiaramente cosa è stato consegnato.",
+          "details": [
+            "Numo resta disponibile mentre un agente lavora sul codice. Un badge segnala le risposte non lette, così puoi tornare alla conversazione quando c’è qualcosa di nuovo.",
+            "L’arresto di un’attività annulla l’esecuzione attiva in modo più coerente. Quando una routine richiede una pull request, la consegna viene verificata prima di comunicare il successo. Una consegna incompleta viene indicata come un errore."
+          ]
+        },
+        "es": {
+          "title": "Sigue el trabajo de Numo",
+          "summary": "Las respuestas sin leer son más visibles y el trabajo delegado indica mejor lo que se ha entregado.",
+          "details": [
+            "Numo sigue disponible mientras un agente trabaja en el código. Un indicador destaca las respuestas sin leer para que vuelvas a la conversación cuando haya algo nuevo.",
+            "Detener una tarea ahora cancela la ejecución activa de forma más consistente. Cuando una rutina pide una pull request, la entrega se comprueba antes de anunciar el éxito. Una entrega incompleta se muestra como un fallo."
+          ]
+        }
+      }
+    },
+    {
+      "id": "ai-budget-overview-0111",
+      "illustration": {
+        "kind": "code",
+        "name": "activity"
+      },
+      "copy": {
+        "en": {
+          "title": "Your AI budget at a glance",
+          "summary": "See your remaining budget, monthly reset, and consumption by activity.",
+          "details": [
+            "The usage page puts your remaining AI budget first, followed by trends across the current usage window and a clearer activity breakdown. Switch between cumulative consumption and daily usage to understand where your budget goes.",
+            "Routine usage includes delegated worker activity and resumed conversations in the same total. The account menu uses the same budget summary, so you can check it without leaving your work."
+          ]
+        },
+        "fr": {
+          "title": "Votre budget IA en un coup d’œil",
+          "summary": "Retrouvez votre budget restant, sa remise à zéro et la consommation par activité.",
+          "details": [
+            "La page d’utilisation présente d’abord votre budget IA restant, puis son évolution sur la période en cours et une répartition plus claire par activité. Passez de la consommation cumulée à l’utilisation quotidienne pour comprendre où va votre budget.",
+            "La consommation d’une routine regroupe le travail des agents délégués et les reprises de conversation. Le menu du compte affiche le même résumé pour consulter votre budget sans quitter votre travail."
+          ]
+        },
+        "de": {
+          "title": "Dein KI-Budget auf einen Blick",
+          "summary": "Sieh dein verbleibendes Budget, den monatlichen Neustart und den Verbrauch nach Aktivität.",
+          "details": [
+            "Die Nutzungsseite zeigt zuerst dein verbleibendes KI-Budget, danach Trends für den aktuellen Zeitraum und eine klarere Aufteilung nach Aktivität. Wechsle zwischen kumuliertem Verbrauch und Tageswerten, um dein Budget besser zu verstehen.",
+            "Der Verbrauch einer Routine umfasst delegierte Agenten und fortgesetzte Unterhaltungen in einer gemeinsamen Summe. Das Kontomenü zeigt dieselbe Übersicht, sodass du dein Budget prüfen kannst, ohne deine Arbeit zu verlassen."
+          ]
+        },
+        "pt-BR": {
+          "title": "Seu orçamento de IA em um olhar",
+          "summary": "Veja o orçamento restante, a renovação mensal e o consumo por atividade.",
+          "details": [
+            "A página de uso destaca primeiro o orçamento de IA restante, seguido das tendências do período atual e de uma divisão mais clara por atividade. Alterne entre o consumo acumulado e o uso diário para entender como o orçamento é utilizado.",
+            "O consumo das rotinas reúne o trabalho dos agentes delegados e as conversas retomadas no mesmo total. O menu da conta mostra o mesmo resumo para você consultar o orçamento sem sair do trabalho."
+          ]
+        },
+        "it": {
+          "title": "Il budget IA a colpo d’occhio",
+          "summary": "Consulta il budget residuo, il rinnovo mensile e il consumo per attività.",
+          "details": [
+            "La pagina di utilizzo mostra prima il budget IA residuo, poi l’andamento del periodo corrente e una ripartizione più chiara per attività. Passa dal consumo cumulativo a quello giornaliero per capire come viene usato il budget.",
+            "Il consumo di una routine comprende gli agenti delegati e le conversazioni riprese nello stesso totale. Il menu dell’account mostra lo stesso riepilogo per controllare il budget senza lasciare il lavoro."
+          ]
+        },
+        "es": {
+          "title": "Tu presupuesto de IA de un vistazo",
+          "summary": "Consulta el presupuesto restante, su renovación mensual y el consumo por actividad.",
+          "details": [
+            "La página de uso muestra primero el presupuesto de IA restante, seguido de las tendencias del período actual y un desglose más claro por actividad. Alterna entre consumo acumulado y uso diario para entender cómo se utiliza el presupuesto.",
+            "El consumo de las rutinas reúne el trabajo de los agentes delegados y las conversaciones retomadas en un mismo total. El menú de la cuenta muestra el mismo resumen para consultar el presupuesto sin salir de tu trabajo."
+          ]
+        }
+      }
+    },
+    {
+      "id": "relations-at-creation-0111",
+      "illustration": {
+        "kind": "code",
+        "name": "board"
+      },
+      "copy": {
+        "en": {
+          "title": "Connect work as you create it",
+          "summary": "Add dependencies and related work directly when creating an issue or objective.",
+          "details": [
+            "Choose blocking, blocked-by, and related links in the creation dialog. Selected links stay with the saved draft and are applied after the new issue or objective is created.",
+            "Dependencies are easier to see on boards and in detail views. Shared issue menus bring the same actions to sidebars, and you can detach a sub-issue from its parent when your plan changes."
+          ]
+        },
+        "fr": {
+          "title": "Reliez votre travail dès la création",
+          "summary": "Ajoutez les dépendances et les liens associés en créant un ticket ou un objectif.",
+          "details": [
+            "Choisissez les liens bloquants, bloqués par ou associés dans la fenêtre de création. Ils sont conservés avec le brouillon et ajoutés après la création du ticket ou de l’objectif.",
+            "Les dépendances sont plus visibles dans les tableaux et les vues détaillées. Les menus partagés des tickets proposent les mêmes actions dans les barres latérales, et vous pouvez détacher un sous-ticket de son parent si votre plan change."
+          ]
+        },
+        "de": {
+          "title": "Arbeit schon beim Erstellen verknüpfen",
+          "summary": "Füge Abhängigkeiten und verwandte Aufgaben direkt beim Erstellen eines Tickets oder Ziels hinzu.",
+          "details": [
+            "Wähle im Erstellungsdialog blockierende, blockierte und verwandte Verknüpfungen aus. Sie bleiben im gespeicherten Entwurf erhalten und werden nach dem Erstellen des Tickets oder Ziels hinzugefügt.",
+            "Abhängigkeiten sind auf Boards und in Detailansichten leichter zu erkennen. Gemeinsame Ticketmenüs bieten dieselben Aktionen in Seitenleisten. Wenn sich dein Plan ändert, kannst du ein Unterticket von seinem übergeordneten Ticket lösen."
+          ]
+        },
+        "pt-BR": {
+          "title": "Conecte o trabalho desde a criação",
+          "summary": "Adicione dependências e relações ao criar um ticket ou objetivo.",
+          "details": [
+            "Escolha relações de bloqueio, bloqueado por ou relacionadas na janela de criação. Elas ficam salvas no rascunho e são aplicadas depois que o ticket ou objetivo é criado.",
+            "As dependências ficam mais visíveis nos quadros e nas visualizações detalhadas. Os menus compartilhados dos tickets oferecem as mesmas ações nas barras laterais, e você pode desvincular um subticket do pai quando o plano mudar."
+          ]
+        },
+        "it": {
+          "title": "Collega il lavoro fin dalla creazione",
+          "summary": "Aggiungi dipendenze e attività correlate mentre crei un ticket o un obiettivo.",
+          "details": [
+            "Scegli i collegamenti bloccanti, bloccati da o correlati nella finestra di creazione. Restano nella bozza salvata e vengono applicati dopo la creazione del ticket o dell’obiettivo.",
+            "Le dipendenze sono più visibili nelle bacheche e nelle viste dettagliate. I menu condivisi dei ticket offrono le stesse azioni nelle barre laterali e puoi scollegare un sottoticket dal padre quando il piano cambia."
+          ]
+        },
+        "es": {
+          "title": "Conecta el trabajo desde su creación",
+          "summary": "Añade dependencias y relaciones al crear un ticket u objetivo.",
+          "details": [
+            "Elige vínculos de bloqueo, bloqueado por o relacionados en la ventana de creación. Se conservan con el borrador y se aplican después de crear el ticket u objetivo.",
+            "Las dependencias son más visibles en los tableros y las vistas de detalle. Los menús compartidos de tickets ofrecen las mismas acciones en las barras laterales y puedes desvincular un subticket de su padre cuando cambie el plan."
+          ]
+        }
+      }
+    },
+    {
+      "id": "objective-deadline-progress-0111",
+      "illustration": {
+        "kind": "code",
+        "name": "activity"
+      },
+      "copy": {
+        "en": {
+          "title": "Progress tied to your deadline",
+          "summary": "Objectives with a target date show their pace against the time available.",
+          "details": [
+            "An objective’s momentum chart now follows the period from its creation to its target date. Effort-weighted progress is compared with elapsed time, with a clear on-track, behind-schedule, or overdue indicator.",
+            "A finish estimate appears once there is enough completed work and observed history. Objectives without a valid target period keep the rolling timeline, so you can still follow their recent pace."
+          ]
+        },
+        "fr": {
+          "title": "Un suivi lié à votre échéance",
+          "summary": "Les objectifs datés montrent leur progression par rapport au temps disponible.",
+          "details": [
+            "Le graphique de dynamique suit désormais la période entre la création de l’objectif et sa date cible. La progression pondérée par l’effort est comparée au temps écoulé, avec une indication claire du respect du rythme, du retard ou du dépassement de l’échéance.",
+            "Une estimation de fin apparaît lorsqu’il y a assez de travail terminé et d’historique observé. Les objectifs sans période cible valide conservent une chronologie glissante pour suivre leur rythme récent."
+          ]
+        },
+        "de": {
+          "title": "Fortschritt passend zum Termin",
+          "summary": "Ziele mit einem Zieldatum zeigen ihren Fortschritt im Verhältnis zur verfügbaren Zeit.",
+          "details": [
+            "Das Fortschrittsdiagramm eines Ziels folgt jetzt dem Zeitraum von der Erstellung bis zum Zieldatum. Der nach Aufwand gewichtete Fortschritt wird mit der verstrichenen Zeit verglichen. Ein Status zeigt, ob das Ziel im Plan, hinter dem Plan oder überfällig ist.",
+            "Eine Abschlussprognose erscheint, sobald genügend abgeschlossene Arbeit und Beobachtungszeit vorliegen. Ziele ohne gültigen Zielzeitraum behalten die fortlaufende Zeitleiste für ihren aktuellen Fortschritt."
+          ]
+        },
+        "pt-BR": {
+          "title": "Progresso alinhado ao prazo",
+          "summary": "Objetivos com data-alvo mostram o ritmo em relação ao tempo disponível.",
+          "details": [
+            "O gráfico de progresso agora acompanha o período entre a criação do objetivo e a data-alvo. O progresso ponderado pelo esforço é comparado ao tempo decorrido, com um indicador claro de ritmo adequado, atraso ou prazo vencido.",
+            "Uma estimativa de conclusão aparece quando há trabalho concluído e histórico suficientes. Objetivos sem um período-alvo válido mantêm a linha do tempo móvel para acompanhar o ritmo recente."
+          ]
+        },
+        "it": {
+          "title": "Progressi legati alla scadenza",
+          "summary": "Gli obiettivi con una data prevista mostrano il ritmo rispetto al tempo disponibile.",
+          "details": [
+            "Il grafico di avanzamento segue ora il periodo dalla creazione dell’obiettivo alla data prevista. I progressi ponderati per lo sforzo vengono confrontati con il tempo trascorso, con un indicatore chiaro di rispetto dei tempi, ritardo o scadenza superata.",
+            "La stima di completamento appare quando ci sono abbastanza attività concluse e dati storici. Gli obiettivi senza un periodo valido mantengono la cronologia mobile per seguire il ritmo recente."
+          ]
+        },
+        "es": {
+          "title": "Progreso ligado a tu fecha objetivo",
+          "summary": "Los objetivos con fecha muestran su ritmo en relación con el tiempo disponible.",
+          "details": [
+            "El gráfico de progreso sigue ahora el período entre la creación del objetivo y su fecha prevista. El progreso ponderado por esfuerzo se compara con el tiempo transcurrido, con un indicador claro de cumplimiento, retraso o plazo vencido.",
+            "La estimación de finalización aparece cuando hay suficiente trabajo completado e historial observado. Los objetivos sin un período válido conservan la cronología móvil para seguir su ritmo reciente."
+          ]
+        }
+      }
+    },
+    {
+      "id": "creation-and-csv-previews-0111",
+      "illustration": {
+        "kind": "code",
+        "name": "pages"
+      },
+      "copy": {
+        "en": {
+          "title": "More reliable creation and previews",
+          "summary": "Smart Fill handles small category lists, and CSV attachments display their contents.",
+          "details": [
+            "Smart Fill now works when a project has only one or two categories. After Create more, it returns to your account default instead of carrying a one-off choice into the next issue.",
+            "CSV attachments open as readable text in the preview while keeping their original download format. Issue description and plan tabs also fit their content more closely."
+          ]
+        },
+        "fr": {
+          "title": "Une création et des aperçus plus fiables",
+          "summary": "Smart Fill gère les petites listes de catégories et les pièces jointes CSV affichent leur contenu.",
+          "details": [
+            "Smart Fill fonctionne désormais lorsque le projet ne compte qu’une ou deux catégories. Après Créer un autre ticket, il retrouve le réglage de votre compte au lieu de conserver un choix ponctuel pour le ticket suivant.",
+            "Les pièces jointes CSV s’ouvrent en texte lisible dans l’aperçu, tout en gardant leur format de téléchargement. Les onglets de description et de plan s’adaptent aussi mieux à leur contenu."
+          ]
+        },
+        "de": {
+          "title": "Zuverlässiger erstellen und ansehen",
+          "summary": "Smart Fill unterstützt kleine Kategorielisten, und CSV-Anhänge zeigen ihren Inhalt.",
+          "details": [
+            "Smart Fill funktioniert jetzt auch in Projekten mit nur einer oder zwei Kategorien. Nach dem Erstellen weiterer Tickets wird die Kontoeinstellung wiederhergestellt, statt eine einmalige Auswahl auf das nächste Ticket zu übertragen.",
+            "CSV-Anhänge öffnen sich als lesbarer Text in der Vorschau und behalten ihr ursprüngliches Downloadformat. Die Tabs für Beschreibung und Plan passen sich außerdem besser an ihren Inhalt an."
+          ]
+        },
+        "pt-BR": {
+          "title": "Criação e prévias mais confiáveis",
+          "summary": "O Smart Fill funciona com poucas categorias, e anexos CSV exibem seu conteúdo.",
+          "details": [
+            "O Smart Fill agora funciona em projetos com apenas uma ou duas categorias. Ao criar mais tickets, ele volta à preferência da conta em vez de repetir uma escolha pontual no próximo ticket.",
+            "Os anexos CSV abrem como texto legível na prévia, mantendo o formato original para download. As abas de descrição e plano também se ajustam melhor ao conteúdo."
+          ]
+        },
+        "it": {
+          "title": "Creazione e anteprime più affidabili",
+          "summary": "Smart Fill gestisce elenchi brevi di categorie e gli allegati CSV mostrano il contenuto.",
+          "details": [
+            "Smart Fill funziona ora anche nei progetti con una o due categorie. Dopo la creazione di un altro ticket, ripristina la preferenza dell’account invece di conservare una scelta occasionale per il ticket successivo.",
+            "Gli allegati CSV si aprono come testo leggibile nell’anteprima, mantenendo il formato originale per il download. Le schede di descrizione e piano si adattano meglio al contenuto."
+          ]
+        },
+        "es": {
+          "title": "Creación y vistas previas más fiables",
+          "summary": "Smart Fill admite pocas categorías y los archivos CSV muestran su contenido.",
+          "details": [
+            "Smart Fill ahora funciona en proyectos con una o dos categorías. Al crear otro ticket, vuelve a la preferencia de la cuenta en lugar de trasladar una elección puntual al siguiente ticket.",
+            "Los archivos CSV se abren como texto legible en la vista previa y mantienen su formato original al descargarlos. Las pestañas de descripción y plan también se ajustan mejor al contenido."
+          ]
+        }
+      }
+    },
+    {
+      "id": "workspace-navigation-0111",
+      "illustration": {
+        "kind": "code",
+        "name": "desktop"
+      },
+      "copy": {
+        "en": {
+          "title": "Move through your workspace faster",
+          "summary": "Navigate tabs and sidebars from the keyboard, and reuse views you already opened.",
+          "details": [
+            "Keyboard navigation lets you switch between workspace tabs and the options in the current sidebar. The shortcut guide lists the available commands, with support for different keyboard layouts.",
+            "Opening an existing destination reuses its tab more consistently. Switching views also reduces unnecessary loading banners and keeps the shared issue actions within reach."
+          ]
+        },
+        "fr": {
+          "title": "Naviguez plus vite dans votre espace",
+          "summary": "Parcourez les onglets et les barres latérales au clavier et retrouvez les vues déjà ouvertes.",
+          "details": [
+            "La navigation au clavier permet de passer entre les onglets de l’espace et les options de la barre latérale actuelle. Le guide des raccourcis présente les commandes disponibles, avec la prise en charge de plusieurs dispositions de clavier.",
+            "L’ouverture d’une destination existante réutilise plus systématiquement son onglet. Le passage entre les vues limite aussi les indicateurs de chargement inutiles et garde les actions des tickets à portée de main."
+          ]
+        },
+        "de": {
+          "title": "Schneller durch den Arbeitsbereich navigieren",
+          "summary": "Wechsle per Tastatur zwischen Tabs und Seitenleisten und nutze bereits geöffnete Ansichten weiter.",
+          "details": [
+            "Mit der Tastaturnavigation kannst du zwischen Arbeitsbereich-Tabs und den Optionen der aktuellen Seitenleiste wechseln. Die Tastenkürzelübersicht zeigt die verfügbaren Befehle und unterstützt verschiedene Tastaturlayouts.",
+            "Bereits geöffnete Ziele verwenden ihren vorhandenen Tab zuverlässiger wieder. Beim Wechseln zwischen Ansichten erscheinen weniger unnötige Ladehinweise, und gemeinsame Ticketaktionen bleiben leicht erreichbar."
+          ]
+        },
+        "pt-BR": {
+          "title": "Navegue mais rápido pelo espaço",
+          "summary": "Percorra abas e barras laterais pelo teclado e reutilize as visualizações abertas.",
+          "details": [
+            "A navegação pelo teclado permite alternar entre as abas do espaço e as opções da barra lateral atual. O guia de atalhos mostra os comandos disponíveis, com suporte a diferentes layouts de teclado.",
+            "Abrir um destino existente reutiliza sua aba de forma mais consistente. A troca de visualizações também reduz avisos de carregamento desnecessários e mantém as ações dos tickets por perto."
+          ]
+        },
+        "it": {
+          "title": "Spostati più velocemente nello spazio",
+          "summary": "Naviga tra schede e barre laterali con la tastiera e riutilizza le viste già aperte.",
+          "details": [
+            "La navigazione con la tastiera permette di passare tra le schede dello spazio e le opzioni della barra laterale corrente. La guida ai comandi mostra le scorciatoie disponibili e supporta diverse disposizioni della tastiera.",
+            "L’apertura di una destinazione esistente riutilizza la sua scheda in modo più coerente. Il passaggio tra le viste riduce gli indicatori di caricamento inutili e mantiene le azioni dei ticket a portata di mano."
+          ]
+        },
+        "es": {
+          "title": "Muévete más rápido por tu espacio",
+          "summary": "Navega por pestañas y barras laterales con el teclado y reutiliza las vistas abiertas.",
+          "details": [
+            "La navegación con teclado permite cambiar entre las pestañas del espacio y las opciones de la barra lateral actual. La guía de atajos muestra los comandos disponibles y admite distintas distribuciones de teclado.",
+            "Abrir un destino existente reutiliza su pestaña de forma más consistente. Cambiar de vista también reduce los avisos de carga innecesarios y mantiene las acciones de los tickets a mano."
+          ]
+        }
+      }
+    }
+  ],
+  "evidence": {
+    "commits": [
+      "0b3653099b0fa86afd7536b2d308e7acfd35227d",
+      "8f0825282fff549e3602469e0a4367da986efaa7",
+      "62c02313363be7c09116c592d70019c51420d70a",
+      "e85f9497b1fe0764c9baf48e41d350c1fa50885e",
+      "a9bc8296deba40f869d9c552cbcc824ab67f8a4e",
+      "5750c71ca48e87f3799a08e5b5de4cd36afe1fdd",
+      "32bca5a3e86fc39c198c443ee17f566e22e0e799",
+      "1c9c6567c35a06422659a74833740b68cf36888d",
+      "91c9b5341bfff8428b449bc7d02a0582947d06d8",
+      "c13d83509f55bd8707f6500e39a15bcb26447026",
+      "e5383ac00df1c8e8e938d0ef7209127b457658a8",
+      "5dda197f2a8ebd99d457261b9e9f7be3af24ee96",
+      "f551e2e6575bba7dd169485387a614bbf350b54d",
+      "20755ce3859a34a277734dc1cfefd840f969fbae",
+      "10ac44724e7d862ce6fe90191582af2df1b6e983",
+      "38b9fd8731dbecdeb5df661470afc063f4da7a1b",
+      "20b22bf48409d9ca207ef1bb14e122a7e301967f",
+      "01f381e1c64b0046df79a899753665eb3ac093e3",
+      "798d5ab9833c929858f8aa6e2ca3720cc31ea23c",
+      "fa20c238cf4779265badc6a9fc34d251b50db990",
+      "410ed3ff0ff8558e30e9fb4682fbb07c08fe2f0e",
+      "c6bc0858e37a03ec6b0185020e87fc63c469d71e",
+      "c4377493b8c390aa88cc7dc8f9484972b481cd44",
+      "32c60f14f839ec63e7481e6339521bec0198647c",
+      "19ca51eea53053b1b9ac3216c4b69dbc0d51ab63",
+      "78adc54ac9dd0e00f6ce3497abfff350ffdebedb",
+      "7695aeda77e6e5d42b1c38552769d5d0d8f63fbd",
+      "924d5e8a9cfcef4958b50cfacb7cc4551a3846ea",
+      "1f74fa0e57fd064a3644cd9c1141bfb9ff222757",
+      "9c45869089168f6139a0b560156072458628b2f9",
+      "404c4f04692a9aa0a6fd69663bba70c9eb9b98ed",
+      "9da025b941c23eaa1df5ede70fdabd06ff1627aa",
+      "71279510d3f15242a89ca15a207c22bac88e765b",
+      "83b7f6207c6e8e0f5acb59165f4cedabc1ecebf0",
+      "8ba5e265e9a6b9775456905c7c9c2106bef923cc",
+      "7f8a1bfab9e26206b05520720e5ebd192c3dd765",
+      "1eeb23415cd882eb63892326f1849a72b664fecc",
+      "c0c8675c4fed7c6ca30f00a30c28434a4ac21efb",
+      "efc7b8b0ec28ea55f30dadc3d139a5916eae1890",
+      "75d097d85091a0068561f46d4eca0b326aa0d385",
+      "0f1ff4f5692ff73f190c7b91eac60305daddeee3",
+      "ccb345030c41cbe5ca6f6c262ce24612e3ae1cde",
+      "f06bd8ce4744c59615432386d4860eaedc4fe6b3",
+      "5066cdb141c08d9a1d25b102543f7ac310de3384",
+      "47a23ac6ae445479f33334cd31a17447eba970ca",
+      "95b0496c6889213501b2d7dedeae7f8a56e15684",
+      "30210a1418b4fb2c2cf1c1fec5ffa8d0da6e1081",
+      "c29bc66b668c50023280ba0992c36909dc809fd5",
+      "ce5243a14e96506360c3beba76ed59066700f67b",
+      "f72ee24311cd6a84b2bfdc5517eedbee0a05158a",
+      "668ccb2679bcbd30cbd58505d8e2280b0dc0326d",
+      "afebc897f4586b4cd912be7882973ede13fcb78b",
+      "daa48965894e30e316124e0493a2dd62a7b5bb99",
+      "476bdfa5845ddd8118381721911811350c7c7ad3",
+      "9b85118d180f9e992942430ac6d84b8315969dc8",
+      "d2f212e08874dc2968822cb0016a7c4a55f414fd",
+      "02d82308fbfb35289e2b3d06fddfc6c4f1dccf9e",
+      "b292e9dfdbcfbcc44209149ee45a2a954377c65a",
+      "43426ec84e2a286b39f41f2d359dfa1cef24ee8f",
+      "ace783a1121e873578e93bfb1a789733240d9f00",
+      "26385fb0f3131f210c03dff974fe0afbcd075115",
+      "843612aa3e86a5850d76b8afd35b1fe7f078fbaa"
+    ],
+    "issues": [
+      "MIN-600",
+      "MIN-601",
+      "MIN-606",
+      "MIN-607",
+      "MIN-608",
+      "MIN-614",
+      "MIN-621",
+      "MIN-622",
+      "MIN-623",
+      "MIN-625",
+      "MIN-626",
+      "MIN-627",
+      "MIN-629",
+      "MIN-632",
+      "MIN-633",
+      "MIN-634",
+      "MIN-635",
+      "MIN-638",
+      "MIN-639",
+      "MIN-640",
+      "MIN-642",
+      "MIN-643",
+      "MIN-644",
+      "MIN-646",
+      "MIN-648",
+      "MIN-657"
+    ]
+  }
+}
