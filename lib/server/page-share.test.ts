@@ -38,10 +38,6 @@ vi.mock("@/lib/server/encryption/share-token-content", () => ({
 vi.mock("@/lib/server/project-access", () => ({
   getProjectAccess: async () => access,
 }));
-vi.mock("@/lib/server/custom-domains", () => ({
-  getDomainForShare: async () => null,
-  detachDomainFromVercelOnly: async () => {},
-}));
 
 function table(name: string) {
   const api = {

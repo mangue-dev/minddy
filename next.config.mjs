@@ -349,10 +349,6 @@ const nextConfig = {
     // and for the `VERCEL_DEEP_CLONE=1` that she requests from Vercel.
     NEXT_PUBLIC_VERSION_COMMITS: String(commitsSinceVersion()),
   },
-  // Local test of custom domains (MIN-36): hosts /etc/hosts pointed
-  // on 127.0.0.1 — otherwise `next dev` blocks cross-origin requests
-  // (server actions, assets) venant d'un host non-localhost.
-  allowedDevOrigins: ["board.minddy.test", "view.minddy.test"],
   async redirects() {
     return [
       // The "Mes tickets" tabs merged into the tickets board as a system view —
@@ -492,13 +488,7 @@ const nextConfig = {
     // — which is very good, we want a shared CDN cache, not a cache
     // browser that would freeze the page of a visitor who has just connected.
     //
-    // ⚠ `has: host` — these headers are ONLY valid on minddy hosts.
-    //
-    // A custom domain (MIN-36) serves at its root as a feedback board or
-    // a shared view, that is to say a personalized page per cookie. Without
-    // this condition, the client's `/` fell below the line above: set
-    // cache by the CDN, without `Vary`, therefore served to whoever passes next (MIN-337).
-    // The proxy also sets `no-store` on any response from a client domain.
+    // Cache marketing pages only on configured application hosts.
     headers.push(
       ...PUBLIC_ROUTE_PATHS.map((source) => ({
         source,

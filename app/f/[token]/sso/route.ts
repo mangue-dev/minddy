@@ -1,7 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { verifyFeedbackSsoJwt } from "@/lib/feedback/sso-jwt";
-import { isPrimaryHost, normalizeHost } from "@/lib/public-hosts";
-import { feedbackBasePath, getRequestDomainTarget } from "@/lib/server/custom-domains";
 import { getBoardWithSsoSecretByToken } from "@/lib/server/feedback/boards";
 import {
   FEEDBACK_SESSION_COOKIE,
@@ -28,17 +26,9 @@ type RouteContext = { params: Promise<{ token: string }> };
  */
 export async function GET(request: NextRequest, { params }: RouteContext) {
   const { token } = await params;
-  // Custom domain (MIN-36): redirects go back to the origin
-  // VISIBLE (host + forwarded proto) — under rewrite, request.url carries the path
-  // internal /f/<token>/… path that must not be exposed.
-  const host = normalizeHost(request.headers.get("host") ?? request.nextUrl.host);
-  const isCustomHost = Boolean(host) && !isPrimaryHost(host);
-  const proto =
-    request.headers.get("x-forwarded-proto") ?? request.nextUrl.protocol.replace(":", "");
-  const origin = `${proto}://${request.headers.get("host") ?? request.nextUrl.host}`;
-  const base = feedbackBasePath(token, await getRequestDomainTarget());
-  const boardUrl = new URL(base || "/", origin);
-  const failureUrl = new URL(`${base || "/"}?ssoError=1`, origin);
+  const boardUrl = new URL(`/f/${token}`, request.url);
+  const failureUrl = new URL(boardUrl);
+  failureUrl.searchParams.set("ssoError", "1");
 
   const jwt = request.nextUrl.searchParams.get("jwt");
   if (!jwt) return NextResponse.redirect(failureUrl);
@@ -88,7 +78,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   response.cookies.set(
     FEEDBACK_SESSION_COOKIE,
     session.token,
-    feedbackSessionCookieOptions(token, session.expiresAt, { atRoot: isCustomHost })
+    feedbackSessionCookieOptions(token, session.expiresAt)
   );
   return response;
 }

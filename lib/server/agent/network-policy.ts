@@ -129,7 +129,7 @@ export type SandboxAdmission =
 
 /**
  * The expected tenant, read in the environment. Same variables as creation
- * of microVM and that custom domains (MIN-36) — not one more to hold.
+ * of the microVM.
  *
  * And it's not just a configuration saving: it's the pair that
  * `sandboxCredentials()` (sandbox.ts) present to CREATE microVMs. We

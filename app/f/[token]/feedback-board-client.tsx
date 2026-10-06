@@ -119,7 +119,7 @@ export function FeedbackBoardClient({
   ssoError,
 }: {
   token: string;
-  /** Public prefix of links: /f/<token>, or "" on custom domain. */
+  /** Public prefix of links: /f/<token>. */
   basePath: string;
   /** The product: name (status tooltips) and icon (“Team responded” badge). */
   project: PublicProject;
@@ -292,8 +292,7 @@ function buildHref(
   // The default is the ABSENCE of a parameter: the board URL remains the board URL.
   if (filter) params.set("status", filter);
   const query = params.toString();
-  // basePath "" (custom domain): the root of the board is "/".
-  return `${basePath || "/"}${query ? `?${query}` : ""}`;
+  return `${basePath}${query ? `?${query}` : ""}`;
 }
 
 /**

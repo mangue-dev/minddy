@@ -79,11 +79,6 @@ export default async function TermsPage() {
         <P>{t("mcpP2")}</P>
       </Section>
 
-      <Section title={t("domainsTitle")}>
-        <P>{t("domainsP1")}</P>
-        <P>{t("domainsP2")}</P>
-      </Section>
-
       <Section title={t("liabilityTitle")}>
         <P>{t("liabilityP1")}</P>
         <P>{t("liabilityP2")}</P>

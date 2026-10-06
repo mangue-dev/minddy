@@ -4440,10 +4440,8 @@ export function registerMinddyTools(
       description:
         "Read the project's PUBLIC feedback board setup — call this before writing " +
         "any link, button or redirect that sends users to the board. Returns whether " +
-        "the board exists and is enabled, its public_url, the custom domain and its " +
-        "status, whether SSO pre-identification is configured, and the display " +
-        "options. public_url is the custom domain when the project has a VERIFIED " +
-        "one, otherwise the /f/<token> URL: use it VERBATIM — a board is reached by " +
+        "the board exists and is enabled, its public_url, whether SSO pre-identification is configured, and the display " +
+        "options. public_url is the /f/<token> URL on the application origin: use it VERBATIM — a board is reached by " +
         "an opaque token and its URL cannot be derived from the project.",
       inputSchema: z.object({ project_id: PROJECT_ID }),
       annotations: READ_ONLY,

@@ -3055,19 +3055,17 @@
       ]
     },
     "revoke_view_share_guarded(uuid)": {
-      "sha256": "39a621c3a8f63c8f51ef78184a02ba99a59930ad8764ebd7f3e5ac46839106af",
+      "sha256": "29456d87569d57890b523c4188135dea9e69881a70f6b7538e5b9b515b94f70b",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
       ],
       "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
-        "view_shares",
-        "custom_domains"
+        "view_shares"
       ],
       "protectedRelations": [
-        "view_shares",
-        "custom_domains"
+        "view_shares"
       ],
       "functionReferences": []
     },
@@ -4037,21 +4035,6 @@
       ],
       "functionReferences": []
     },
-    "guard_custom_domain_verification()": {
-      "sha256": "122aef3d3fecd7ec94c2912450b4b41e5d3ea0224b8632a51f53bf5d031581b7",
-      "securityDefiner": true,
-      "configuration": [
-        "search_path=\"\""
-      ],
-      "acl": "{postgres=X/postgres,service_role=X/postgres}",
-      "relations": [
-        "custom_domain_verification_scope"
-      ],
-      "protectedRelations": [],
-      "functionReferences": [
-        "custom_domain_verification_version"
-      ]
-    },
     "guard_live_page_comment_mutation()": {
       "sha256": "4bc59016a8e3630e65ffb38dceda5180312ec91d1cffbaa1938674592974c9bc",
       "securityDefiner": false,
@@ -4426,25 +4409,6 @@
       ],
       "functionReferences": [
         "notification_targets_match_project"
-      ]
-    },
-    "activate_custom_domain_verification()": {
-      "sha256": "0751c5fe1993126e7f3fdcaf4693db87451d489a0db87df3f61949f5aca227cf",
-      "securityDefiner": true,
-      "configuration": [
-        "search_path=\"\""
-      ],
-      "acl": "{postgres=X/postgres,service_role=X/postgres}",
-      "relations": [
-        "custom_domains",
-        "custom_domain_verification_scope"
-      ],
-      "protectedRelations": [
-        "custom_domains"
-      ],
-      "functionReferences": [
-        "require_encryption_read_committed",
-        "custom_domain_verification_version"
       ]
     },
     "agent_chain_stop_reason_is_code(text)": {
@@ -5292,17 +5256,6 @@
         "guard_project_actor"
       ]
     },
-    "custom_domain_verification_version(jsonb)": {
-      "sha256": "167afe08db4060b40428241143b76f5475ac2c5d129d2e5ac59609ea142c217d",
-      "securityDefiner": false,
-      "configuration": [
-        "search_path=\"\""
-      ],
-      "acl": "{postgres=X/postgres,service_role=X/postgres}",
-      "relations": [],
-      "protectedRelations": [],
-      "functionReferences": []
-    },
     "guard_forge_relay_user_delivery_content()": {
       "sha256": "84bf191c0363cde667e26593a565d983ba232976199ac615d4936dda3ffd009c",
       "securityDefiner": true,
@@ -5478,21 +5431,6 @@
         "numo_worker_legacy_bindings"
       ],
       "protectedRelations": [],
-      "functionReferences": []
-    },
-    "delete_custom_domain_if_current(uuid,text)": {
-      "sha256": "2c1ec4627c5ae5c241dc54d1a2270d20bb1450d40e27e1f645c7a9660de98b2d",
-      "securityDefiner": true,
-      "configuration": [
-        "search_path=\"\""
-      ],
-      "acl": "{postgres=X/postgres,service_role=X/postgres}",
-      "relations": [
-        "custom_domains"
-      ],
-      "protectedRelations": [
-        "custom_domains"
-      ],
       "functionReferences": []
     },
     "enforce_github_installation_single_owner()": {
@@ -9069,133 +9007,6 @@
       ],
       "functionReferences": []
     },
-    "queue_custom_domain_cleanup()": {
-      "sha256": "fef633beb4afbed0e1049c65adc385975bac3274e2cd0fb2c788bfd3b5cd7904",
-      "securityDefiner": true,
-      "configuration": [
-        "search_path=\"\""
-      ],
-      "acl": "{postgres=X/postgres}",
-      "relations": [
-        "custom_domain_cleanup"
-      ],
-      "protectedRelations": [],
-      "functionReferences": []
-    },
-    "remove_disabled_board_domains()": {
-      "sha256": "3f77985c987c9485ca12e9b42df1225f45dccb6b0d81eea04f6ddf349b7e536a",
-      "securityDefiner": true,
-      "configuration": [
-        "search_path=\"\""
-      ],
-      "acl": "{postgres=X/postgres}",
-      "relations": [
-        "custom_domains"
-      ],
-      "protectedRelations": [
-        "custom_domains"
-      ],
-      "functionReferences": []
-    },
-    "acquire_custom_domain_lease(text)": {
-      "sha256": "fe30bd40d792fbf3120e56cf34ba22a89fcf8ae0cc8c7a81e9120dc7e8a9ffa0",
-      "securityDefiner": true,
-      "configuration": [
-        "search_path=\"\""
-      ],
-      "acl": "{postgres=X/postgres,service_role=X/postgres}",
-      "relations": [
-        "custom_domain_mutation_leases"
-      ],
-      "protectedRelations": [],
-      "functionReferences": []
-    },
-    "reconcile_inactive_custom_domains()": {
-      "sha256": "a278661ee5cf4d517307364f0db975d67cff5b457881e5d1c9265921805cab6e",
-      "securityDefiner": true,
-      "configuration": [
-        "search_path=\"\""
-      ],
-      "acl": "{postgres=X/postgres,service_role=X/postgres}",
-      "relations": [
-        "pages",
-        "views",
-        "projects",
-        "view_shares",
-        "custom_domains",
-        "feedback_boards"
-      ],
-      "protectedRelations": [
-        "pages",
-        "views",
-        "projects",
-        "view_shares",
-        "custom_domains",
-        "feedback_boards"
-      ],
-      "functionReferences": []
-    },
-    "remove_unpublished_content_domains()": {
-      "sha256": "fcc5aa7043a28b65bf682cf5b894d0b262f6be53edd1d76c04d411682e344bf8",
-      "securityDefiner": true,
-      "configuration": [
-        "search_path=\"\""
-      ],
-      "acl": "{postgres=X/postgres}",
-      "relations": [
-        "pages",
-        "views",
-        "projects",
-        "view_shares",
-        "custom_domains",
-        "feedback_boards"
-      ],
-      "protectedRelations": [
-        "pages",
-        "views",
-        "projects",
-        "view_shares",
-        "custom_domains",
-        "feedback_boards"
-      ],
-      "functionReferences": []
-    },
-    "require_active_custom_domain_target()": {
-      "sha256": "38558b852581544d5f0fba18035a54a782f09270d098964168a5786873375fd5",
-      "securityDefiner": true,
-      "configuration": [
-        "search_path=\"\""
-      ],
-      "acl": "{postgres=X/postgres}",
-      "relations": [
-        "pages",
-        "views",
-        "projects",
-        "view_shares",
-        "feedback_boards"
-      ],
-      "protectedRelations": [
-        "pages",
-        "views",
-        "projects",
-        "view_shares",
-        "feedback_boards"
-      ],
-      "functionReferences": []
-    },
-    "release_custom_domain_lease(text,uuid)": {
-      "sha256": "b190c8019c706153f84174a3547cb289636e112b04aab873ba6a55e3c62e76a1",
-      "securityDefiner": true,
-      "configuration": [
-        "search_path=\"\""
-      ],
-      "acl": "{postgres=X/postgres,service_role=X/postgres}",
-      "relations": [
-        "custom_domain_mutation_leases"
-      ],
-      "protectedRelations": [],
-      "functionReferences": []
-    },
     "broadcast_pull_request_issue_link()": {
       "sha256": "a94926421a6785706acb1982449ed0e479a412f6412e095c91ea1d1de52d8835",
       "securityDefiner": true,
@@ -10089,10 +9900,6 @@
       "function": "freeze_numo_comment_scope()",
       "definition": "CREATE TRIGGER comments_freeze_numo_realtime_scope BEFORE UPDATE OF issue_id, objective_id, feedback_post_id ON comments FOR EACH ROW EXECUTE FUNCTION freeze_numo_comment_scope()"
     },
-    "custom_domains.custom_domains_set_updated_at": {
-      "function": "set_updated_at()",
-      "definition": "CREATE TRIGGER custom_domains_set_updated_at BEFORE UPDATE ON custom_domains FOR EACH ROW EXECUTE FUNCTION set_updated_at()"
-    },
     "feedback_posts.a_reclassify_unverified_check": {
       "function": "reclassify_unverified_row_check()",
       "definition": "CREATE TRIGGER a_reclassify_unverified_check BEFORE UPDATE ON feedback_posts FOR EACH ROW EXECUTE FUNCTION reclassify_unverified_row_check('encryption_revision')"
@@ -10273,10 +10080,6 @@
       "function": "guard_attachment_object_reference()",
       "definition": "CREATE TRIGGER attachments_object_reference_guard BEFORE INSERT OR UPDATE ON attachments FOR EACH ROW EXECUTE FUNCTION guard_attachment_object_reference()"
     },
-    "custom_domains.a_min591_fence_90bb0eab8a1ed78a": {
-      "function": "guard_encryption_snapshot_write()",
-      "definition": "CREATE TRIGGER a_min591_fence_90bb0eab8a1ed78a BEFORE INSERT OR UPDATE ON custom_domains FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('custom_domain_verification_scope', 'global')"
-    },
     "feedback_boards.feedback_boards_set_updated_at": {
       "function": "set_updated_at()",
       "definition": "CREATE TRIGGER feedback_boards_set_updated_at BEFORE UPDATE ON feedback_boards FOR EACH ROW EXECUTE FUNCTION set_updated_at()"
@@ -10360,10 +10163,6 @@
     "agent_runs.trg_reject_new_local_agent_execution": {
       "function": "reject_new_local_agent_execution()",
       "definition": "CREATE TRIGGER trg_reject_new_local_agent_execution BEFORE INSERT OR UPDATE OF local_exec ON agent_runs FOR EACH ROW EXECUTE FUNCTION reject_new_local_agent_execution()"
-    },
-    "custom_domains.custom_domain_verification_guard": {
-      "function": "guard_custom_domain_verification()",
-      "definition": "CREATE TRIGGER custom_domain_verification_guard BEFORE INSERT OR UPDATE ON custom_domains FOR EACH ROW EXECUTE FUNCTION guard_custom_domain_verification()"
     },
     "feedback_boards.a_min591_fence_53e040d201d6b265": {
       "function": "guard_encryption_snapshot_write()",
@@ -10901,10 +10700,6 @@
       "function": "stamp_numo_success_attempt()",
       "definition": "CREATE TRIGGER numo_user_message_attempt_on_success BEFORE UPDATE OF user_payload_checked_at ON assistant_messages FOR EACH ROW EXECUTE FUNCTION stamp_numo_success_attempt('user_payload_checked_at', 'user_payload_attempted_at')"
     },
-    "custom_domain_verification_scope.a_min591_marker_change": {
-      "function": "guard_encryption_marker_change()",
-      "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON custom_domain_verification_scope FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
-    },
     "numo_assistant_turns.numo_error_turn_attempt_on_success": {
       "function": "stamp_numo_success_attempt()",
       "definition": "CREATE TRIGGER numo_error_turn_attempt_on_success BEFORE UPDATE OF error_encryption_checked_at ON numo_assistant_turns FOR EACH ROW EXECUTE FUNCTION stamp_numo_success_attempt('error_encryption_checked_at', 'error_encryption_attempted_at')"
@@ -11308,26 +11103,6 @@
     "github_issue_sync_metadata.github_issue_sync_metadata_content_encryption_checked_at_attemp": {
       "function": "rotate_encryption_backfill_attempt()",
       "definition": "CREATE TRIGGER github_issue_sync_metadata_content_encryption_checked_at_attemp BEFORE UPDATE ON github_issue_sync_metadata FOR EACH ROW EXECUTE FUNCTION rotate_encryption_backfill_attempt('content_encryption_checked_at', 'content_encryption_attempted_at')"
-    },
-    "pages.custom_domain_page_deleted": {
-      "function": "remove_unpublished_content_domains()",
-      "definition": "CREATE TRIGGER custom_domain_page_deleted AFTER UPDATE OF deleted_at ON pages FOR EACH ROW EXECUTE FUNCTION remove_unpublished_content_domains()"
-    },
-    "projects.custom_domain_project_deleted": {
-      "function": "remove_unpublished_content_domains()",
-      "definition": "CREATE TRIGGER custom_domain_project_deleted AFTER UPDATE OF deleted_at ON projects FOR EACH ROW EXECUTE FUNCTION remove_unpublished_content_domains()"
-    },
-    "custom_domains.custom_domain_active_target": {
-      "function": "require_active_custom_domain_target()",
-      "definition": "CREATE TRIGGER custom_domain_active_target BEFORE INSERT OR UPDATE OF board_id, share_id ON custom_domains FOR EACH ROW EXECUTE FUNCTION require_active_custom_domain_target()"
-    },
-    "feedback_boards.custom_domain_board_disabled": {
-      "function": "remove_disabled_board_domains()",
-      "definition": "CREATE TRIGGER custom_domain_board_disabled AFTER UPDATE OF enabled ON feedback_boards FOR EACH ROW EXECUTE FUNCTION remove_disabled_board_domains()"
-    },
-    "custom_domains.custom_domain_cleanup_on_delete": {
-      "function": "queue_custom_domain_cleanup()",
-      "definition": "CREATE TRIGGER custom_domain_cleanup_on_delete AFTER DELETE ON custom_domains FOR EACH ROW EXECUTE FUNCTION queue_custom_domain_cleanup()"
     },
     "pull_requests.pull_request_primary_issue_link": {
       "function": "preserve_primary_pull_request_issue()",

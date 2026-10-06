@@ -27,7 +27,7 @@ export function HeaderIdentity({
   identity,
 }: {
   token: string;
-  /** Public link prefix: /f/<token>, or "" on custom domain. */
+  /** Public link prefix: /f/<token>. */
   basePath: string;
   identity: PublicIdentity | null;
 }) {

@@ -5,7 +5,6 @@ import { Copy01Icon, Share01Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { MIN_SHARE_PASSWORD_LENGTH } from "@/lib/share-password";
-import { CustomDomainRemovalDialog } from "@/components/custom-domain-removal-dialog";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Button,
@@ -20,10 +19,6 @@ import {
   toast,
 } from "mangue-ui";
 import type { View, ViewShareLevel } from "@/lib/types";
-import {
-  CustomDomainSection,
-  fetchCustomDomainApi,
-} from "@/components/custom-domain-section";
 import {
   deleteViewShareApi,
   fetchViewShareApi,
@@ -56,14 +51,12 @@ export function ShareViewDialog({
 
   const [level, setLevel] = useState<ViewShareLevel>("private");
   const [password, setPassword] = useState("");
-  const [confirmRevoke, setConfirmRevoke] = useState(false);
 
   // Re-sync the local selection when the dialog opens or the share resolves.
   useEffect(() => {
     if (open) {
       setLevel(serverLevel);
       setPassword("");
-      setConfirmRevoke(false);
     }
   }, [open, serverLevel, viewId]);
 
@@ -79,8 +72,8 @@ export function ShareViewDialog({
   const revoke = useMutation({
     mutationFn: () => deleteViewShareApi(viewId as string),
     onSuccess: () => {
+      setLevel("private");
       queryClient.setQueryData(["view-share", viewId], null);
-      queryClient.removeQueries({ queryKey: ["share-domain", viewId] });
       toast.success(t("sharingDisabled"));
     },
     onError: (err) => toast.error((err as Error).message),
@@ -89,7 +82,7 @@ export function ShareViewDialog({
   const changeLevel = (next: ViewShareLevel) => {
     if (update.isPending || revoke.isPending) return;
     if (next === "private" && share) {
-      setConfirmRevoke(true);
+      revoke.mutate();
       return;
     }
     setLevel(next);
@@ -109,20 +102,8 @@ export function ShareViewDialog({
     update.mutate({ level: "password", password: trimmed });
   };
 
-  // Custom domain (MIN-36) — same query as the CustomDomainSection;
-  // checked, it becomes the displayed sharing URL.
-  const { data: domainData } = useQuery({
-    queryKey: ["share-domain", viewId],
-    queryFn: () => fetchCustomDomainApi(`/api/views/${viewId}/share/domain`),
-    enabled: open && viewId !== null && Boolean(share),
-  });
-  const verifiedDomain =
-    domainData?.domain?.status === "verified" ? domainData.domain.domain : null;
-
   const shareUrl = share
-    ? verifiedDomain
-      ? `https://${verifiedDomain}`
-      : `${window.location.origin}/share/${share.token}`
+    ? `${window.location.origin}/share/${share.token}`
     : null;
   const copyLink = async () => {
     if (!shareUrl) return;
@@ -139,12 +120,6 @@ export function ShareViewDialog({
 
   return (
     <>
-      <CustomDomainRemovalDialog
-        kind="share"
-        open={open && confirmRevoke}
-        onOpenChange={setConfirmRevoke}
-        onConfirm={async () => { await revoke.mutateAsync(); setLevel("private"); }}
-      />
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -228,14 +203,6 @@ export function ShareViewDialog({
                 </div>
               )}
 
-              {/* ── Custom domain (MIN-36) ─────────────────────────── */}
-              {share && viewId && (
-                <CustomDomainSection
-                  endpoint={`/api/views/${viewId}/share/domain`}
-                  queryKey={["share-domain", viewId]}
-                  className="border-t pt-3"
-                />
-              )}
             </div>
           )}
         </DialogContent>

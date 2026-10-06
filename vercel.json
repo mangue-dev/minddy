@@ -8,7 +8,6 @@
     }
   },
   "crons": [
-    { "path": "/api/cron/custom-domains", "schedule": "25 * * * *" },
     { "path": "/api/cron/feedback-analysis", "schedule": "0 * * * *" },
     { "path": "/api/cron/agent-drain", "schedule": "*/2 * * * *" },
     { "path": "/api/cron/numo-turns", "schedule": "* * * * *" },

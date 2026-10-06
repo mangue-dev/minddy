@@ -14,19 +14,12 @@ import {
   setBoardVisiblePages,
   setBoardVisibleViews,
 } from "@/lib/server/feedback/boards";
-import { getDomainForBoard } from "@/lib/server/custom-domains";
 
 /**
  * The feedback board as an AGENT sees it (MIN-106).
  *
  * Numo (in chat) and the user's MCP agent (in their IDE) have the same
- * need: "what is the public URL of this board, and is it only
- * alive? ". Two tables respond — `feedback_boards` for the token and
- * the activation, `custom_domains` for the possible client domain — and the
- * response is worthless if we only read one: an activated board whose personalized domain
- * is verified has a reference URL other than its `/f/<token>`.
- *
- * So we put the two together here, once, rather than in each tool.
+ * need: the public URL, activation state, SSO availability and display options.
  *
  * What never leaves here: the SSO secret. `sso_configured` says if it exists,
  * and only `configureFeedbackBoard` returns it — at the precise moment when someone asked it to write it to a `.env`.
@@ -40,7 +33,6 @@ export interface FeedbackBoardConfig {
   token: string | null;
   /** The URL to give to the user / to hardcode into their app. */
   public_url: string | null;
-  custom_domain: { domain: string; status: "pending" | "verified" } | null;
   sso_configured: boolean;
   show_categories: boolean;
   show_views: boolean;
@@ -58,7 +50,6 @@ const NO_BOARD: FeedbackBoardConfig = {
   enabled: false,
   token: null,
   public_url: null,
-  custom_domain: null,
   sso_configured: false,
   show_categories: false,
   show_views: false,
@@ -75,17 +66,11 @@ export async function getFeedbackBoardConfig(
   const board = await getBoardForProject(projectId);
   if (!board) return NO_BOARD;
 
-  const domainRow = await getDomainForBoard(board.id);
-  const customDomain = domainRow
-    ? { domain: domainRow.domain, status: domainRow.status }
-    : null;
-
   return {
     exists: true,
     enabled: board.enabled,
     token: board.token,
-    public_url: feedbackBoardUrl({ token: board.token, origin, customDomain }),
-    custom_domain: customDomain,
+    public_url: feedbackBoardUrl({ token: board.token, origin }),
     sso_configured: board.sso_secret !== null,
     show_categories: board.show_categories,
     show_views: board.show_views,

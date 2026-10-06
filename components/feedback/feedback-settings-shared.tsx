@@ -74,9 +74,6 @@ export interface FeedbackSettingsData {
 export const feedbackSettingsKey = (projectId: string) =>
   ["feedback-settings", projectId] as const;
 
-export const feedbackDomainKey = (projectId: string) =>
-  ["feedback-domain", projectId] as const;
-
 export async function feedbackApi<T>(
   path: string,
   init?: RequestInit,
@@ -128,9 +125,6 @@ export function useFeedbackBoardSettings(projectId: string) {
         body: JSON.stringify(body),
       });
       queryClient.setQueryData(key, fresh);
-      if (body.enabled === false) {
-        queryClient.removeQueries({ queryKey: feedbackDomainKey(projectId) });
-      }
       return true;
     } catch (e) {
       queryClient.setQueryData(key, previous);

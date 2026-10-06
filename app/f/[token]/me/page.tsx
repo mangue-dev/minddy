@@ -9,11 +9,7 @@ import { PublicPageShell } from "@/components/public-page-shell";
 import type { Locale } from "@/i18n/config";
 import { appPageMetadata } from "@/lib/app-metadata";
 import { publicTokenMetadata } from "@/lib/seo";
-import {
-  feedbackBasePath,
-  getRequestDomainTarget,
-  publicCanonicalUrl,
-} from "@/lib/server/custom-domains";
+import { publicCanonicalUrl } from "@/lib/public-url";
 import { getBoardByToken } from "@/lib/server/feedback/boards";
 import {
   FEEDBACK_SESSION_COOKIE,
@@ -33,16 +29,13 @@ const getBoardContext = cache(getBoardByToken);
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { token } = await params;
-  const [ctx, domainTarget, t, locale] = await Promise.all([
+  const [ctx, t, locale] = await Promise.all([
     getBoardContext(token),
-    getRequestDomainTarget(),
     getTranslations("PublicFeedback"),
     getLocale(),
   ]);
-  // The same board responds on www.minddy.app/f/<token> AND on the domain
-  // client: the canonical says which of the two URLs is authentic (MIN-88).
-  const canonical = await publicCanonicalUrl(
-    feedbackBasePath(token, domainTarget),
+  const canonical = publicCanonicalUrl(
+    `/f/${token}`,
     "/me",
   );
   // Board absent or deactivated → the page goes to 404: it bears the title,
@@ -64,8 +57,7 @@ export default async function MyFeedbackPage({ params }: PageProps) {
   const ctx = await getBoardContext(token);
   if (!ctx || !ctx.board.enabled) notFound();
   const t = await getTranslations("PublicFeedback");
-  const domainTarget = await getRequestDomainTarget();
-  const base = feedbackBasePath(token, domainTarget);
+  const base = `/f/${token}`;
 
   const cookie = (await cookies()).get(FEEDBACK_SESSION_COOKIE)?.value;
   const [session, tabs] = await Promise.all([
@@ -75,7 +67,6 @@ export default async function MyFeedbackPage({ params }: PageProps) {
       feedbackLabel: t("title"),
       untitledLabel: t("untitledPage"),
       current: { kind: "feedback" },
-      domainTarget,
     }),
   ]);
   const [entries, identity] = await Promise.all([

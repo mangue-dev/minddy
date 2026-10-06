@@ -30,7 +30,7 @@ export function MyFeedbackClient({
   entries,
 }: {
   token: string;
-  /** Public prefix of links: /f/<token>, or "" on custom domain. */
+  /** Public prefix of links: /f/<token>. */
   basePath: string;
   /** The product: name (status tooltips) and icon (“Team responded” badge). */
   project: PublicProject;

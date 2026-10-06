@@ -552,8 +552,8 @@ export function useSettingsSections(): SettingsSection[] {
         icon: MessagesSquare,
         title: tSettings("feedbackChannelBoardTitle"),
         keywords: [
-          "feedback", "board", "public", "votes", "retours", "domaine",
-          "domain", "sso", "canal", "channel",
+          "feedback", "board", "public", "votes", "retours",
+          "sso", "canal", "channel",
         ],
       }),
       project({

@@ -792,7 +792,6 @@ export function BoardToolbar({
     y: number;
   } | null>(null);
   const t = useTranslations("Board");
-  const domainCopy = useTranslations("CustomDomain");
   const tc = useTranslations("Common");
   const tApi = useTranslations("ApiErrors");
   const tActions = useTranslations("CommandPaletteActions");
@@ -1165,7 +1164,7 @@ export function BoardToolbar({
             <DialogTitle>
               {t("deleteViewTitle", { name: deleteTarget?.name ?? "" })}
             </DialogTitle>
-            <DialogDescription>{t("deleteViewDescription")} {domainCopy("stopHostingDescription")}</DialogDescription>
+            <DialogDescription>{t("deleteViewDescription")}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteTarget(null)}>

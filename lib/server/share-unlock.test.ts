@@ -49,10 +49,6 @@ vi.mock("@/lib/server/share-unlock-attempts", () => ({
     clearFailures(shareId, ip),
 }));
 
-vi.mock("@/lib/server/custom-domains", () => ({
-  isCustomPublicHost: async () => false,
-  publicCookiePath: (_custom: boolean, path: string) => path,
-}));
 
 vi.mock("@/lib/server/view-shares", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/server/view-shares")>()),

@@ -143,8 +143,7 @@ export const MCP_FULL_USAGE_GUIDE =
       "You can also WIRE THE USER'S OWN APPLICATION to minddy from their repo, " +
       "which is something only you can do — minddy's in-app assistant has no access " +
       "to their code. minddy_get_feedback_board reads the public board's setup: take " +
-      "its public_url verbatim for any 'Feedback' link or button (it already " +
-      "resolves the project's custom domain, and a board URL is an opaque token that " +
+      "its public_url verbatim for any 'Feedback' link or button (a board URL contains an opaque token that " +
       "cannot be guessed), and minddy_configure_feedback_board publishes the board, " +
       "opens or closes its public comments, or hands you its SSO secret. " +
       "minddy_create_integration creates the API key an " +

@@ -72,7 +72,6 @@ const workers: Array<[string, string[]]> = [
   ["@/lib/server/encryption/app-tab-backfill", ["backfillAppTabsBatch"]],
   ["@/lib/server/encryption/ai-decision-evaluation-backfill", ["backfillAiDecisionEvaluationsBatch"]],
   ["@/lib/server/encryption/stripe-webhook-payload-scrub", ["scrubStripeWebhookPayloadsBatch"]],
-  ["@/lib/server/encryption/custom-domain-verification-backfill", ["backfillCustomDomainVerificationBatch"]],
   ["@/lib/server/encryption/billing-identity-backfill", ["backfillBillingIdentityBatch"]],
   ["@/lib/server/encryption/oauth-client-backfill", ["backfillOAuthClientsBatch"]],
   ["@/lib/server/encryption/oauth-code-backfill", ["backfillOAuthCodesBatch"]],

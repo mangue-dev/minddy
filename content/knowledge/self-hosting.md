@@ -91,7 +91,7 @@ pnpm self-host:install -- --non-interactive --mode managed \
   --image 'ghcr.io/mangue-dev/minddy@sha256:<release-digest>'
 ```
 
-The two initial optional choices are `application-email` and `web-push`. GitHub and GitLab integrations connect by default through the managed forge relay described above and target `github.com` and `gitlab.com`, not GitHub Enterprise Server or self-managed GitLab. Stripe, PostHog/Vercel analytics, Minddy-managed AI, Vercel domain management, and APNs/WNS release credentials are intentionally not initial self-host choices.
+The two initial optional choices are `application-email` and `web-push`. GitHub and GitLab integrations connect by default through the managed forge relay described above and target `github.com` and `gitlab.com`, not GitHub Enterprise Server or self-managed GitLab. Stripe, PostHog/Vercel analytics, Minddy-managed AI, and APNs/WNS release credentials are intentionally not initial self-host choices.
 
 For a public server, configure DNS, ports 80/443, Caddy or another reverse proxy, and matching Auth Site URL and redirect URLs. For a trusted private IPv4 installation, use private HTTP, restrict access to the LAN, and never forward ports 80, 443, 8000, database ports, or container ports on the router. The complete profile exposes only the proxy publicly and binds PostgreSQL to loopback. Do not expose Studio, PostgreSQL, Supavisor, or internal services.
 

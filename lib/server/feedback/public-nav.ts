@@ -5,7 +5,6 @@ import { getPublicBoardForProject } from "@/lib/server/feedback/boards";
 import { decodeView } from "@/lib/server/view-content";
 import { decodePageProjection } from "@/lib/server/page-content";
 import { decodeShareToken } from "@/lib/server/encryption/share-token-content";
-import type { DomainTarget } from "@/lib/custom-domain-lookup";
 import type { PublicSiteTab } from "@/lib/feedback/types";
 
 /**
@@ -27,9 +26,6 @@ export async function getPublicSiteTabs(params: {
     | { kind: "feedback" }
     | { kind: "view"; shareToken: string }
     | { kind: "page"; shareToken: string };
-  /** Target mapped to the current host (MIN-36): its tab points to "/",
- the others keep their path token (served in pass-through). */
-  domainTarget?: DomainTarget | null;
 }): Promise<PublicSiteTab[]> {
   const service = getServiceClient();
 
@@ -60,13 +56,11 @@ export async function getPublicSiteTabs(params: {
       .order("created_at", { ascending: true }),
   ]);
 
-  const target = params.domainTarget ?? null;
   const tabs: PublicSiteTab[] = [];
   if (board.enabled) {
-    const mapped = target?.kind === "feedback" && target.token === board.token;
     tabs.push({
       label: params.feedbackLabel,
-      href: mapped ? "/" : `/f/${board.token}`,
+      href: `/f/${board.token}`,
       active: params.current.kind === "feedback",
     });
   }
@@ -79,10 +73,9 @@ export async function getPublicSiteTabs(params: {
     const view = await decodeView(stored);
     const shareToken = await decodeShareToken(row.id as string,
       row.token as string);
-    const mapped = target?.kind === "share" && target.token === shareToken;
     tabs.push({
       label: view.name as string,
-      href: mapped ? "/" : `/share/${shareToken}`,
+      href: `/share/${shareToken}`,
       active: params.current.kind === "view" && params.current.shareToken === shareToken,
     });
   }
@@ -102,8 +95,6 @@ export async function getPublicSiteTabs(params: {
       row.token as string);
     tabs.push({
       label: page.title || params.untitledLabel,
-      // Published pages do not ride custom domains (MIN-36 covers the board
-      // and shared views only), so no mapping branch here.
       href: `/p/${pageToken}`,
       active:
         params.current.kind === "page" &&

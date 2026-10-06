@@ -9,7 +9,6 @@ afterEach(() => {
 
 it.each([
   { time: "2026-09-23T00:14:59Z", path: "/api/cron/encryption-maintenance" },
-  { time: "2026-09-23T00:24:59Z", path: "/api/cron/custom-domains" },
 ])("runs authenticated $path on the self-hosted hourly schedule", async ({ time, path }) => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date(time));

@@ -171,14 +171,7 @@ describe("localized slug redirects in next.config.mjs", () => {
   });
 });
 
-describe("CDN cache header vs custom domains", () => {
-  /**
-   * The `/` of a custom domain serves a feedback board, personalized
-   * per cookie. It fell under the CDN cache header placed on `/` for the
-   * landing, without `Vary`: the CDN could serve to a visitor the page of another
-   * (MIN-337). The `has: host` condition is what breaks it — and it
-   * doesn't appear anywhere in the types.
-   */
+describe("CDN cache headers on application hosts", () => {
   const cacheEntries = async () =>
     (await nextConfig.headers!()).filter((entry) =>
       entry.headers.some(
@@ -214,29 +207,15 @@ describe("CDN cache header vs custom domains", () => {
       expect(matches(host)).toBe(true);
       expect(isPrimaryHost(host)).toBe(true);
     }
-    // A client domain, and the dogfooding subdomain which IS a domain
-    // client (allowed by ops): never shared cache.
-    process.env.MDY_CUSTOM_DOMAIN_ALLOWLIST = "feedback.minddy.app";
-    try {
-      for (const host of [
-        "feedback.acme.com",
-        "acme.com",
-        "feedback.minddy.app",
-      ]) {
-        expect(matches(host)).toBe(false);
-        expect(isPrimaryHost(host)).toBe(false);
-      }
-    } finally {
-      delete process.env.MDY_CUSTOM_DOMAIN_ALLOWLIST;
+    for (const host of ["feedback.acme.com", "acme.com"]) {
+      expect(matches(host)).toBe(false);
+      expect(isPrimaryHost(host)).toBe(false);
     }
   });
 
   it("keeps a self-hosted canonical hostname on the application route", () => {
     const previousAppUrl = process.env.MINDDY_PUBLIC_APP_URL;
-    const previousAllowlist = process.env.MDY_CUSTOM_DOMAIN_ALLOWLIST;
     process.env.MINDDY_PUBLIC_APP_URL = "https://tickets.example.test:8443";
-    process.env.MDY_CUSTOM_DOMAIN_ALLOWLIST =
-      "tickets.example.test,feedback.example.test";
     try {
       expect(isPrimaryHost("tickets.example.test")).toBe(true);
       expect(isPrimaryHost("feedback.example.test")).toBe(false);
@@ -244,9 +223,6 @@ describe("CDN cache header vs custom domains", () => {
       if (previousAppUrl === undefined)
         delete process.env.MINDDY_PUBLIC_APP_URL;
       else process.env.MINDDY_PUBLIC_APP_URL = previousAppUrl;
-      if (previousAllowlist === undefined)
-        delete process.env.MDY_CUSTOM_DOMAIN_ALLOWLIST;
-      else process.env.MDY_CUSTOM_DOMAIN_ALLOWLIST = previousAllowlist;
     }
   });
 });
