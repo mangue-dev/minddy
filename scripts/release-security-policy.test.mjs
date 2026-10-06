@@ -212,6 +212,8 @@ test("the required CI gate rejects failed, cancelled, and skipped validation or 
   assert.ok(shards, "the unit test matrix must remain present");
   assert.match(shards, /shard: \[1, 2\]/);
   assert.match(shards, /--shard=\$\{\{ matrix.shard \}\}\/2/);
+  assert.match(shards, /pnpm exec vitest run --shard=/);
+  assert.doesNotMatch(shards, /pnpm run test -- /);
   assert.match(shards, /fail-fast: false/);
 
   for (const validation of ["success", "failure", "cancelled", "skipped"]) {

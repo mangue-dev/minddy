@@ -120,6 +120,12 @@ all 1109 discovered files, and their passed/skipped/failed case totals match
 the full final suite exactly. Shard runs used separate workers on the same local
 machine; GitHub runner timing still needs the first PR run.
 
+The first PR run exposed an argument-forwarding mistake: `pnpm run test --`
+preserved the separator, so Vitest ignored the shard/reporter flags and both jobs
+ran the full suite. CI now invokes `pnpm exec vitest run` directly; the gate
+regression also checks this command. Timing and coverage must be read from the
+corrected run's JSON artifacts before claiming a CI speedup.
+
 ## Database and live-probe limits
 
 The 111 default Vitest skips are 82 database cases, 24 live provider/binary

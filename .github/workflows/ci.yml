@@ -239,7 +239,7 @@ jobs:
       # retains per-file isolation. Every discovered file runs on one shard.
       - name: Tests
         run: >-
-          pnpm run test -- --shard=${{ matrix.shard }}/2
+          pnpm exec vitest run --shard=${{ matrix.shard }}/2
           --reporter=default --reporter=json
           --outputFile="${{ runner.temp }}/vitest-${{ matrix.shard }}.json"
 
