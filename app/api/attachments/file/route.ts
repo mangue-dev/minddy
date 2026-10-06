@@ -6,7 +6,8 @@ import { downloadAttachment, resolveAttachmentObjectPath } from
   "@/lib/server/attachments";
 import { verifyAttachmentRead } from "@/lib/server/encryption/attachment-url-token";
 import { decodeAttachmentRow } from "@/lib/server/attachment-content";
-import { attachmentPreviewKind } from "@/lib/attachment-preview";
+import { attachmentPreviewKind, isCsvAttachment } from "@/lib/attachment-preview";
+import { csvPreviewCharset } from "@/lib/server/csv-preview";
 import {
   isInlineSafeMimeType,
   normalizeMimeType,
@@ -106,11 +107,17 @@ export async function GET(request: NextRequest) {
   const inline = preview
     ? attachmentPreviewKind(mimeType, fileName) !== null
     : !download && isInlineSafeMimeType(mimeType);
+  // Browsers download text/csv even inline; the sandbox blocks that download
+  // and leaves an empty iframe. Preview the unchanged bytes as inert text.
+  const previewCsv = preview && isCsvAttachment(mimeType, fileName);
   const headers: Record<string, string> = {
     "Cache-Control": "private, no-store",
     "Content-Disposition": contentDisposition(inline, fileName),
     "Content-Length": String(bytes.byteLength),
-    "Content-Type": mimeType || "application/octet-stream",
+    "Content-Type": previewCsv
+      ? `text/plain; charset=${csvPreviewCharset(bytes,
+        attachment?.mime_type, pageFile?.mime_type, info?.contentType)}`
+      : mimeType || "application/octet-stream",
     "Cross-Origin-Resource-Policy": "same-origin",
     "Referrer-Policy": "no-referrer",
     "X-Content-Type-Options": "nosniff",

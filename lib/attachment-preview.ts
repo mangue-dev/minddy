@@ -2,6 +2,22 @@ import { normalizeMimeType } from "@/lib/inline-safe";
 
 export type AttachmentPreviewKind = "image" | "document" | "audio" | "video";
 
+const CSV_MIME_TYPES: ReadonlySet<string> = new Set([
+  "text/csv",
+  "text/x-csv",
+  "application/csv",
+  "application/x-csv",
+]);
+
+/** Recognize CSV exports even when storage reports a generic or Excel MIME type. */
+export function isCsvAttachment(
+  rawMimeType: string | null | undefined,
+  fileName?: string | null,
+): boolean {
+  return CSV_MIME_TYPES.has(normalizeMimeType(rawMimeType)) ||
+    (typeof fileName === "string" && /\.csv$/i.test(fileName.trim()));
+}
+
 /** Identify Markdown attachments by their user-visible filename. */
 export function isMarkdownFileName(
   fileName: string | null | undefined,
@@ -30,7 +46,9 @@ export function attachmentPreviewKind(
   fileName?: string | null,
 ): AttachmentPreviewKind | null {
   const mimeType = normalizeMimeType(rawMimeType);
-  if (isMarkdownFileName(fileName)) return "document";
+  if (isMarkdownFileName(fileName) || isCsvAttachment(mimeType, fileName)) {
+    return "document";
+  }
   if (!mimeType) return null;
 
   if (mimeType.startsWith("audio/")) return "audio";
