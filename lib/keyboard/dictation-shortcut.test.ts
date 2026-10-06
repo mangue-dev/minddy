@@ -79,8 +79,14 @@ function surface(slot: string, child: React.ReactNode, style?: React.CSSProperti
   // Match the DOM contract of mangue-ui's portaled Dialog/SidePanelContent.
   return createPortal(createElement("div", {
     role: slot === "alert-dialog-content" ? "alertdialog" : "dialog",
-    "data-slot": slot, "data-state": state, style: { zIndex: 50, ...style },
+    "data-slot": slot, "data-state": state, style: { position: "fixed", zIndex: 50, ...style },
   }, child), document.body);
+}
+
+function wrappedSurface(child: React.ReactNode, wrapperStyle: React.CSSProperties, dialogStyle?: React.CSSProperties) {
+  return createPortal(createElement("div", { style: wrapperStyle },
+    createElement("div", { role: "dialog", style: { position: "relative", zIndex: "auto", ...dialogStyle } }, child),
+  ), document.body);
 }
 
 async function press(overrides: KeyboardEventInit = {}) {
@@ -158,6 +164,76 @@ describe("dictation shortcut ownership (MIN-656)", () => {
     expect(getUserMedia).toHaveBeenCalledOnce();
     expect(recording("Lower")).toBe(false);
     expect(recording("Upper")).toBe(true);
+  });
+
+  it.each(["dialog-content", "side-panel-content"])("blocks the %s microphone beneath the command palette overlay", async (slot) => {
+    const underlying = surface(slot, mic("Background"));
+    const palette = wrappedSurface(createElement("input", { "aria-label": "Command palette" }), { position: "fixed", zIndex: 9999 });
+    // Palette first: priority must come from stacking contexts, not portal order.
+    await act(() => root.render(createElement(React.Fragment, null, palette, underlying)));
+    await press();
+    expect(getUserMedia).not.toHaveBeenCalled();
+    expect(recording("Background")).toBe(false);
+    await act(() => root.render(underlying));
+    await press();
+    expect(getUserMedia).toHaveBeenCalledOnce();
+    expect(recording("Background")).toBe(true);
+  });
+
+  it("does not let a high local z-index escape a lower ancestor stacking context", async () => {
+    await act(() => root.render(createElement(React.Fragment, null,
+      surface("dialog-content", mic("Foreground")),
+      wrappedSurface(mic("Background"), { position: "fixed", zIndex: 10 }, { zIndex: 99999 }),
+    )));
+    await press();
+    expect(getUserMedia).toHaveBeenCalledOnce();
+    expect(recording("Foreground")).toBe(true);
+    expect(recording("Background")).toBe(false);
+  });
+
+  it("uses ancestor document order when separate stacking contexts have equal z-index", async () => {
+    await act(() => root.render(createElement(React.Fragment, null,
+      wrappedSurface(mic("Earlier"), { position: "fixed", zIndex: 50 }, { zIndex: 99999 }),
+      wrappedSurface(mic("Later"), { position: "fixed", zIndex: 50 }),
+    )));
+    await press();
+    expect(getUserMedia).toHaveBeenCalledOnce();
+    expect(recording("Later")).toBe(true);
+    expect(recording("Earlier")).toBe(false);
+  });
+
+  it.each([{ transform: "translateX(0)" }, { isolation: "isolate" }, { opacity: 0.9 }, { transform: "translateX(0)", zIndex: 9999 }] satisfies React.CSSProperties[])("keeps descendants inside an ancestor context created by %j", async (wrapperStyle) => {
+    await act(() => root.render(createElement(React.Fragment, null,
+      surface("dialog-content", mic("Foreground")),
+      wrappedSurface(mic("Background"), wrapperStyle, { zIndex: 99999 }),
+    )));
+    await press();
+    expect(getUserMedia).toHaveBeenCalledOnce();
+    expect(recording("Foreground")).toBe(true);
+    expect(recording("Background")).toBe(false);
+  });
+
+  it("compares local z-index inside a shared ancestor stacking context", async () => {
+    const shared = createPortal(createElement("div", { style: { position: "fixed", zIndex: 9999 } },
+      createElement("div", { role: "dialog", style: { position: "relative", zIndex: 100 } }, mic("Upper")),
+      createElement("div", { role: "dialog", style: { position: "relative", zIndex: 50 } }, mic("Lower")),
+    ), document.body);
+    await act(() => root.render(shared));
+    await press();
+    expect(getUserMedia).toHaveBeenCalledOnce();
+    expect(recording("Upper")).toBe(true);
+    expect(recording("Lower")).toBe(false);
+  });
+
+  it("does not treat a positioned ancestor with auto z-index as a stacking context", async () => {
+    await act(() => root.render(createElement(React.Fragment, null,
+      surface("dialog-content", mic("Lower")),
+      wrappedSurface(mic("Upper"), { position: "relative" }, { zIndex: 100 }),
+    )));
+    await press();
+    expect(getUserMedia).toHaveBeenCalledOnce();
+    expect(recording("Upper")).toBe(true);
+    expect(recording("Lower")).toBe(false);
   });
 
   it("ignores hidden retained pages, hidden dialog portals, and closed animation layers", async () => {
