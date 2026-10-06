@@ -119,6 +119,7 @@ export interface Forge {
   listPullRequests(opts: {
     token: string;
     repoFullName: string;
+    includeReviewRequests?: boolean;
   }): Promise<{ pulls: PullRequestRef[]; truncated: boolean }>;
   /** Delete a remote branch. `"already-gone"` (and not an error) when
  the reference no longer exists: replaying a household is not a failure. */

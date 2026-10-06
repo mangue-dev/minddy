@@ -4,6 +4,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { TriangleIcon } from "@hugeicons/core-free-icons";
 
 import { useTranslations } from "next-intl";
+import { cn } from "mangue-ui";
 import { DateTimePicker } from "@/components/date-time-picker";
 import {
   SearchSelect,
@@ -54,14 +55,16 @@ export function Dot({ color }: { color: string | null | undefined }) {
 
 export function PropertyRow({
   label,
+  labelClassName,
   children,
 }: {
   label: string;
+  labelClassName?: string;
   children: React.ReactNode;
 }) {
   return (
     <div className="flex min-h-9 items-center justify-between gap-3">
-      <span className="shrink-0 text-sm text-foreground">{label}</span>
+      <span className={cn("shrink-0 text-sm text-foreground", labelClassName)}>{label}</span>
       <div className="flex min-w-0 flex-1 items-center justify-end">{children}</div>
     </div>
   );

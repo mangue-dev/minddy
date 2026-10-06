@@ -13,6 +13,7 @@ import {
   Spinner,
   toast,
 } from "mangue-ui";
+import { NumoIcon } from "@/components/numo-icon";
 import { ForgeUserAvatar } from "@/components/git/forge-user-avatar";
 import { usePrMembersQuery } from "@/lib/use-pr-members-query";
 import { prEndpoint, requestPullRequestReviewerApi } from "@/lib/agent-api";
@@ -24,6 +25,9 @@ export function PrRequestReview({
   open,
   onOpenChange,
   onRequested,
+  canRequestHuman = true,
+  onRequestNumo,
+  numoDisabled = false,
 }: {
   prId: string;
   author: string | null;
@@ -31,12 +35,16 @@ export function PrRequestReview({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onRequested: () => unknown;
+  canRequestHuman?: boolean;
+  onRequestNumo?: () => void;
+  numoDisabled?: boolean;
 }) {
   const t = useTranslations("PullRequests");
   const [search, setSearch] = useState("");
   const [sending, setSending] = useState<string | null>(null);
-  const { members, loading } = usePrMembersQuery(prEndpoint(prId), open);
-  const candidates = members.filter(
+  const { members, loading } = usePrMembersQuery(prEndpoint(prId), open && canRequestHuman);
+  const showNumo = !!onRequestNumo && "numo".includes(search.trim().toLowerCase());
+  const candidates = (canRequestHuman ? members : []).filter(
     (member) =>
       member.login.toLowerCase() !== author?.toLowerCase() &&
       !requestedReviewers.some(
@@ -78,11 +86,27 @@ export function PrRequestReview({
           onChange={(event) => setSearch(event.target.value)}
         />
         <div className="max-h-72 overflow-y-auto">
-          {loading ? (
+          {showNumo ? (
+            <Button
+              variant="ghost"
+              className="w-full justify-start gap-2"
+              disabled={!!sending || numoDisabled}
+              data-testid="pr-request-numo-review"
+              onClick={() => {
+                onOpenChange(false);
+                setSearch("");
+                onRequestNumo?.();
+              }}
+            >
+              <NumoIcon animated={false} className="size-6" />
+              <span>{t("numoAuthor")}</span>
+            </Button>
+          ) : null}
+          {loading && canRequestHuman ? (
             <div className="flex justify-center py-6">
               <Spinner />
             </div>
-          ) : candidates.length === 0 ? (
+          ) : candidates.length === 0 && !showNumo ? (
             <p className="py-6 text-center text-sm text-muted-foreground">
               {t("noReviewersFound")}
             </p>

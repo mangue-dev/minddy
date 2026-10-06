@@ -154,3 +154,23 @@ describe("updateCachedPullRequestState", () => {
     expect(found).toHaveLength(3);
   });
 });
+
+it("updates completed infinite pages and moves a newly closed PR into a bounded first page", () => {
+  const client = newClient();
+  const completedKey = ["pull-requests", "all", "completed", 10];
+  client.setQueryData(OPEN_KEY, page([item({})]));
+  client.setQueryData(completedKey, {
+    pages: [page(Array.from({ length: 10 }, (_, index) => item({ prId: `old-${index}`, pr_state: "merged" }))),
+      page([item({ prId: "old-10", pr_state: "closed" })])],
+    pageParams: [0, 10],
+  });
+  updateCachedPullRequestState(client, "pr-1", "closed");
+  const completed = client.getQueryData<{ pages: PullRequestListResponse[]; pageParams: number[] }>(completedKey)!;
+  expect(completed.pages[0].pullRequests).toHaveLength(10);
+  expect(completed.pages[0].pullRequests[0]).toMatchObject({ prId: "pr-1", pr_state: "closed" });
+  expect(completed.pages[0].hasMore).toBe(true);
+  expect(completed.pageParams).toEqual([0, 10]);
+  expect(client.getQueryData<PullRequestListResponse>(OPEN_KEY)?.pullRequests).toEqual([]);
+  updateCachedPullRequestState(client, "old-10", "open");
+  expect(client.getQueryData<{ pages: PullRequestListResponse[] }>(completedKey)?.pages[1].pullRequests).toEqual([]);
+});

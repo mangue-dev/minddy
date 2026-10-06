@@ -887,6 +887,8 @@ export function PrDiff({
   reviewedFiles,
   onFileReviewedChange,
   reviewControls,
+  toolbarActions,
+  showFileTreeTotals = true,
   expandableContext = true,
   canResolve = !readOnly,
   reviewComments = NO_COMMENTS,
@@ -909,10 +911,12 @@ export function PrDiff({
   reviewMode?: boolean;
   reviewedFiles?: ReadonlySet<string>;
   onFileReviewedChange?: (path: string, reviewed: boolean) => void;
-  /** Optional controls rendered INSIDE the toolbar row, next to the file
-      count — the PR page puts its review toggle there so the whole Files
-      tab stays one compact line instead of stacking a second bar. */
+  /** Review actions above the diff display controls, aligned to the right. */
   reviewControls?: ReactNode;
+  /** Additional navigation actions, such as the PR commits popover. */
+  toolbarActions?: ReactNode;
+  /** Hide repeated aggregate counts when the PR header already shows them. */
+  showFileTreeTotals?: boolean;
   /** Allow lazy loading of context out of hunk. */
   expandableContext?: boolean;
   /** Solve a thread, governed APART (MIN-144): comment request `read` on
@@ -1077,15 +1081,20 @@ export function PrDiff({
       >
         {/* MIN-548: no container behind the toolbar — the controls read
             directly in the page, like any other toolbar. */}
-        <div className="flex min-h-10 flex-wrap items-center gap-2">
-            <PrFileTreeButton
-              files={files}
-              totalAdditions={totalAdd}
-              totalDeletions={totalDel}
-              onSelect={jumpToFile}
-            />
-            {reviewControls}
-            <div className="ml-auto flex shrink-0 items-center gap-2">
+        <div data-testid="pr-diff-toolbar" className="flex flex-col gap-2">
+          {reviewControls ? <div className="flex justify-end">{reviewControls}</div> : null}
+          <div className="flex min-h-10 flex-wrap items-center gap-x-1 gap-y-2">
+            <div className="flex items-center gap-3">
+              <PrFileTreeButton
+                files={files}
+                totalAdditions={totalAdd}
+                totalDeletions={totalDel}
+                showTotals={showFileTreeTotals}
+                onSelect={jumpToFile}
+              />
+              {toolbarActions}
+            </div>
+            <div data-testid="pr-diff-display-controls" className="ml-auto flex shrink-0 items-center gap-2">
               <AppTooltip label={t("wrapLines")}>
                 <button
                   type="button"
@@ -1112,6 +1121,7 @@ export function PrDiff({
                 ]}
               />
             </div>
+          </div>
         </div>
 
         <div className="flex flex-col gap-3">

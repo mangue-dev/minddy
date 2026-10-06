@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { getPullRequest, requestPullRequestReviewer as requestGithubReviewer } from "./pr";
 
-import { requestPullRequestReviewer as requestGitlabReviewer, getMergeRequest } from "./mr";
+import { requestPullRequestReviewer as requestGitlabReviewer, getMergeRequest, listPullRequests as listGitlabPullRequests } from "./mr";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -176,4 +176,23 @@ describe("requesting a reviewer", () => {
       requestedReviewers: [{ login: "ada", avatar_url: null }],
     });
   });
+});
+
+
+it("lists only unreviewed GitLab assignments for the sidebar and skips completed or unassigned MRs", async () => {
+  const fetchMock = vi.fn<typeof fetch>()
+    .mockResolvedValueOnce(Response.json([
+      { iid: 1, state: "opened", reviewers: [{ id: 1 }, { id: 2 }] },
+      { iid: 2, state: "merged", reviewers: [{ id: 1 }] },
+      { iid: 3, state: "opened", reviewers: [] },
+    ]))
+    .mockResolvedValueOnce(Response.json([
+      { state: "reviewed", user: { username: "grace" } },
+      { state: "unreviewed", user: { username: "ada" } },
+    ]));
+  vi.stubGlobal("fetch", fetchMock);
+  const result = await listGitlabPullRequests({ token: "reader", repoFullName: "group/app", includeReviewRequests: true });
+  expect(result.pulls[0].requestedReviewers).toEqual([{ login: "ada", avatar_url: null }]);
+  expect(fetchMock).toHaveBeenCalledTimes(2);
+  expect(fetchMock.mock.calls[1][0]).toContain("/merge_requests/1/reviewers");
 });

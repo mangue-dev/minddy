@@ -801,6 +801,7 @@ const MAX_MR_PAGES = 5;
 export async function listPullRequests(opts: {
   token: string;
   repoFullName: string;
+  includeReviewRequests?: boolean;
 }): Promise<{ pulls: PullRequestRef[]; truncated: boolean }> {
   const raw = await glPaged<RawMr>(
     `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}/merge_requests` +
@@ -808,8 +809,25 @@ export async function listPullRequests(opts: {
     opts.token,
     MAX_MR_PAGES,
   );
+  const pulls = raw.map(toRef);
+  if (opts.includeReviewRequests) {
+    // GitLab retains assigned reviewers after submission; read pending states
+    // only for open MRs with assignments, with bounded request concurrency.
+    let next = 0;
+    const assigned = raw.map((mr, index) => ({ mr, index })).filter(({ mr, index }) => pulls[index].state === "open" && mr.reviewers?.length);
+    await Promise.all(Array.from({ length: Math.min(3, assigned.length) }, async () => {
+      while (next < assigned.length) {
+        const { mr, index } = assigned[next++];
+        const reviewers = await glJson<Array<{ state: string; user: { username: string; avatar_url?: string | null } }>>(
+          `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}/merge_requests/${mr.iid}/reviewers`, opts.token,
+        ).catch(() => []);
+        pulls[index].requestedReviewers = reviewers.filter((reviewer) => reviewer.state === "unreviewed")
+          .map((reviewer) => ({ login: reviewer.user.username, avatar_url: reviewer.user.avatar_url ?? null }));
+      }
+    }));
+  }
   return {
-    pulls: raw.map(toRef),
+    pulls,
     // glPaged stops on `maxPages` without saying it: a harvest full to the brim
     // edge is the only clue that there were any pages left.
     truncated: raw.length >= MAX_MR_PAGES * 100,

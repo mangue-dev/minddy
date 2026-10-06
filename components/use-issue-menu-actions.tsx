@@ -4,12 +4,12 @@ import { useCallback } from "react";
 import { useAppRouter } from "@/lib/use-app-router";
 import { useTranslations } from "next-intl";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowRight01Icon, DateTimeIcon, Delete02Icon, ExternalLinkIcon, GitPullRequestIcon, Link02Icon, LinkBackwardIcon, Target01Icon } from "@hugeicons/core-free-icons";
+import { ArrowRight01Icon, DateTimeIcon, Delete02Icon, LinkSquare01Icon, GitPullRequestIcon, Link02Icon, Cancel01Icon, Target01Icon } from "@hugeicons/core-free-icons";
 import { RelationIcon } from "@/components/issue-indicators";
 import { KEY_FOR_FIELD, type ShortcutField } from "@/components/issue-field-shortcuts";
 import type { ContextMenuAction } from "@/components/issue-context-menu";
 import { useOptionalAppTabSession } from "@/lib/app-tabs-context";
-import { useUnlinkPullRequestIssue } from "@/lib/use-unlink-pull-request-issue";
+import { usePrUnlinkConfirmation } from "@/components/pull-requests/pr-unlink-confirmation";
 import { issueIdentifier } from "@/lib/issue-constants";
 import { RELATION_TYPES } from "@/lib/relation-constants";
 import type { IssuePr } from "@/lib/agent-api";
@@ -42,7 +42,7 @@ export function useIssueMenuActionsWithNavigation(navigate: (href: string) => vo
   const tAction = useTranslations("CommandPaletteActions");
   const tPr = useTranslations("PullRequests");
   const appTabs = useOptionalAppTabSession();
-  const { isPending, mutate } = useUnlinkPullRequestIssue();
+  const { isPending, requestUnlink } = usePrUnlinkConfirmation();
 
   return useCallback(({
     issue, projectKey, agentActions, pr, hasObjectives, onSelectRelation,
@@ -76,7 +76,7 @@ export function useIssueMenuActionsWithNavigation(navigate: (href: string) => vo
                 {
                   id: "open-pr-new-tab",
                   label: tAction("openInNewTab"),
-                  icon: <HugeiconsIcon icon={ExternalLinkIcon} className="size-4" />,
+                  icon: <HugeiconsIcon icon={LinkSquare01Icon} className="size-4" />,
                   onSelect: () => {
                     const href = `/pull-requests?pr=${pr.prId}`;
                     if (appTabs) void appTabs.create(href);
@@ -91,9 +91,10 @@ export function useIssueMenuActionsWithNavigation(navigate: (href: string) => vo
         id: "unlink-pr",
         label: tPr("unlinkIssue"),
         keywords: ["unlink", "detach", "pull request", "pr"],
-        icon: <HugeiconsIcon icon={LinkBackwardIcon} className="size-4" />,
+        icon: <HugeiconsIcon icon={Cancel01Icon} className="size-4" />,
         disabled: isPending,
-        onSelect: () => mutate({ prId: pr.prId, issueId: issue.id, identifier }),
+        transfersFocus: true,
+        onSelect: () => requestUnlink({ prId: pr.prId, issueId: issue.id, identifier }),
       }] : []),
       ...(onSelectRelation
         ? [
@@ -170,5 +171,5 @@ export function useIssueMenuActionsWithNavigation(navigate: (href: string) => vo
           ]
         : []),
     ];
-  }, [t, tAgent, tRel, tCommon, tAction, tPr, navigate, appTabs, isPending, mutate]);
+  }, [t, tAgent, tRel, tCommon, tAction, tPr, navigate, appTabs, isPending, requestUnlink]);
 }

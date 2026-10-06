@@ -2,7 +2,7 @@ import type { AgentRunPrResponse, PullRequestCheck } from "./agent-api";
 import type { PullRequestReadiness, ReadinessBlocker } from "./pr-readiness";
 import type { PullRequestReadinessBatchResponse } from "./agent-api";
 
-export type PullRequestDetailTab = "activity" | "commits" | "files";
+export type PullRequestDetailTab = "activity" | "files";
 type RerunnableCheck = PullRequestCheck & {
   rerunRef: NonNullable<PullRequestCheck["rerunRef"]>;
 };

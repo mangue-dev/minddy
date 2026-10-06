@@ -3,7 +3,7 @@ import { PrLinkedIssues, linkedIssues } from "./pr-linked-issues";
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
-import { ArrowDown01Icon, ArrowLeft01Icon, ArrowUp01Icon, Cancel01Icon, Copy01Icon, Edit04Icon, GitPullRequestDraftIcon, GitPullRequestIcon, HistoryIcon, LinkSquare01Icon, Message01Icon, MessageSquareQuoteIcon, MoreHorizontalIcon, CheckIcon, Undo02Icon, ViewIcon } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, ArrowLeft01Icon, ArrowUp01Icon, Cancel01Icon, Copy01Icon, Edit04Icon, HistoryIcon, Link02Icon, LinkSquare01Icon, Message01Icon, MessageSquareQuoteIcon, MoreHorizontalIcon, CheckIcon, ViewIcon } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import {
@@ -37,7 +37,7 @@ import { ProjectOrb } from "@/components/project-orb";
 import { projectOrbSeed } from "@/lib/project-orb-colors";
 import { PrActivitySkeleton, PrFilesSkeleton, PrHeaderActionsSkeleton, PrMetadataSkeleton, PrStatusSkeleton } from "@/components/pull-requests/pr-loading-skeleton";
 import { QueryReadBoundary } from "@/components/query-read-boundary";
-import { PrCommits } from "@/components/pull-requests/pr-commits";
+import { PrCommitsPopover } from "@/components/pull-requests/pr-commits";
 import { PrCommentComposer } from "@/components/pull-requests/pr-comment-composer";
 import { PrDiff } from "@/components/pull-requests/pr-diff";
 import { PrLinkIssue } from "@/components/pull-requests/pr-link-issue";
@@ -47,9 +47,10 @@ import {
   type CommentReactions,
 } from "@/components/pull-requests/pr-review-comments";
 import { PrTimelineReview, PrTimelineRow } from "@/components/pull-requests/pr-timeline";
-import { PrStateBadge } from "@/components/pull-requests/pr-state-badge";
-import { PrReadinessBadge, PrReadinessControl } from "@/components/pull-requests/pr-readiness";
-import { PrStatusCards } from "@/components/pull-requests/pr-readiness-cards";
+import { PrStateControl } from "@/components/pull-requests/pr-state-badge";
+import { prStateTransitionActions, type EditablePrState, type PrStateAction } from "@/lib/pr-state-transition";
+import { PrReadinessBadge, PrReadinessControl, PrReadinessMenuItem } from "@/components/pull-requests/pr-readiness";
+import { PrInsights } from "@/components/pull-requests/pr-insights";
 import { PrRequestReview } from "@/components/pull-requests/pr-request-review";
 import { groupReviewThreads } from "@/lib/pr-review-threads";
 import { PrUnresolvedConversations } from "@/components/pull-requests/pr-unresolved-conversations";
@@ -143,8 +144,8 @@ import {
 
 /**
  * PR detail panel (MIN-66 + MIN-138 + MIN-143): header (ticket +
- * status + actions), CI checks banner, then two GitHub-style tabs — the thread
- * conversation (PR description + comments) and modified files.
+ * status + actions), insight properties, and tabs for description/activity
+ * and changes, with commits in the diff toolbar.
  * Everything is controlled by `item.prId`: since MIN-143 the PR no longer belongs to the run
  * who opened it, and a human PR has none.
  *
@@ -303,6 +304,7 @@ export function ThreadComment({
   forceBot,
   reactions,
   activity,
+  presentation = "comment",
 }: {
   /** Routes of this PR — the edit composer reuses them (mentions, uploads). */
   endpoint: PrEndpoint;
@@ -312,8 +314,7 @@ export function ThreadComment({
   /** Last edit at the forge — the "(edited)" marker compares it to `createdAt`. */
   updatedAt?: string | null;
   body: string;
-  /** The viewer may edit THIS message: own human message with an account on
-      the forge. The PR body is excluded — editing it is out of scope. */
+  /** Only the human author with a connected forge account may edit this content. */
   canEdit?: boolean;
   /** Refetch the thread after a saved edit: the card alone does not own the
       comments query, and the cache must not show the old body. */
@@ -335,8 +336,11 @@ export function ThreadComment({
       Numo's review is the only case: his verdict is the message, his work
       is what produced it. */
   activity?: React.ReactNode;
+  /** Render the PR body as plain description content outside the activity feed. */
+  presentation?: "comment" | "description";
 }) {
   const t = useTranslations("PullRequests");
+  const isDescription = presentation === "description";
   const format = useFormatter();
   const now = useForgeNow();
   const list = reactions?.byComment.get(commentId) ?? [];
@@ -381,88 +385,92 @@ export function ThreadComment({
     }
   };
 
+  const actions = editing ? (
+    <Button
+      variant="ghost"
+      size="sm"
+      className="-my-1 text-muted-foreground"
+      onClick={() => {
+        setEditing(false);
+        setDraft("");
+      }}
+    >
+      {t("cancel")}
+    </Button>
+  ) : (canEdit || onQuoteReply || canViewHistory) ? (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label={t(isDescription ? "descriptionMoreActions" : "commentMoreActions")}
+          className="-my-1 size-7 rounded-full text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+        >
+          <HugeiconsIcon icon={MoreHorizontalIcon} className="size-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        {canEdit ? (
+          <DropdownMenuItem
+            onSelect={() => {
+              setDraft(body);
+              setEditing(true);
+            }}
+          >
+            <HugeiconsIcon icon={Edit04Icon} />
+            {t("editComment")}
+          </DropdownMenuItem>
+        ) : null}
+        {onQuoteReply ? (
+          <DropdownMenuItem onClick={onQuoteReply}>
+            <HugeiconsIcon icon={MessageSquareQuoteIcon} />
+            {t(quotingNumo ? "quoteReplyNumo" : "quoteReply")}
+          </DropdownMenuItem>
+        ) : null}
+        {/* Keep loading and failed body reads reachable without
+            claiming that an edit has been recorded. */}
+        {canViewHistory ? (
+          <DropdownMenuItem onSelect={() => setHistoryOpen(true)}>
+            <HugeiconsIcon icon={HistoryIcon} />
+            {t("viewPreviousVersions")}
+          </DropdownMenuItem>
+        ) : null}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  ) : null;
+
   return (
     <article
-      data-testid="pr-activity-message"
+      data-testid={isDescription ? "pr-description" : "pr-activity-message"}
       // chat-selectable: the global reset of mangue-ui kills text selection;
       // the message card must read like a text surface, copyable like on the
       // forge.
-      className="chat-selectable group overflow-clip rounded-lg border border-border bg-card shadow-xs"
+      className={cn("chat-selectable group min-w-0", !isDescription && "overflow-clip rounded-lg border border-border bg-card shadow-xs")}
     >
-      <div className="flex flex-col gap-2 px-3.5 py-3">
-        <header className="flex min-h-5 items-center gap-2">
-          <ForgeUserAvatar
-            user={user}
-            forceBot={forceBot}
-            className="size-5 shrink-0"
-          />
-          <GitLogin
-            login={user?.login}
-            className="text-sm font-medium text-foreground"
-          />
-          {when ? (
-            <span className="shrink-0 text-xs text-muted-foreground/80">
-              {format.relativeTime(when, now)}
-            </span>
-          ) : null}
-          {edited ? (
-            <span className="shrink-0 text-xs text-muted-foreground/60">{t("edited")}</span>
-          ) : null}
-          <span className="min-w-0 flex-1" />
-          {editing ? (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="-my-1 text-muted-foreground"
-              onClick={() => {
-                setEditing(false);
-                setDraft("");
-              }}
-            >
-              {t("cancel")}
-            </Button>
-          ) : (canEdit || onQuoteReply || canViewHistory) ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label={t("commentMoreActions")}
-                  className="-my-1 size-7 rounded-full text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
-                >
-                  <HugeiconsIcon icon={MoreHorizontalIcon} className="size-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {canEdit ? (
-                  <DropdownMenuItem
-                    onSelect={() => {
-                      setDraft(body);
-                      setEditing(true);
-                    }}
-                  >
-                    <HugeiconsIcon icon={Edit04Icon} />
-                    {t("editComment")}
-                  </DropdownMenuItem>
-                ) : null}
-                {onQuoteReply ? (
-                  <DropdownMenuItem onClick={onQuoteReply}>
-                    <HugeiconsIcon icon={MessageSquareQuoteIcon} />
-                    {t(quotingNumo ? "quoteReplyNumo" : "quoteReply")}
-                  </DropdownMenuItem>
-                ) : null}
-                {/* Keep loading and failed body reads reachable without
-                    claiming that an edit has been recorded. */}
-                {canViewHistory ? (
-                  <DropdownMenuItem onSelect={() => setHistoryOpen(true)}>
-                    <HugeiconsIcon icon={HistoryIcon} />
-                    {t("viewPreviousVersions")}
-                  </DropdownMenuItem>
-                ) : null}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : null}
-        </header>
+      <div className={cn("flex flex-col gap-2", !isDescription && "px-3.5 py-3")}>
+        {!isDescription ? (
+          <header className="flex min-h-5 items-center gap-2">
+            <ForgeUserAvatar
+              user={user}
+              forceBot={forceBot}
+              className="size-5 shrink-0"
+            />
+            <GitLogin
+              login={user?.login}
+              className="text-sm font-medium text-foreground"
+            />
+            {when ? (
+              <span className="shrink-0 text-xs text-muted-foreground/80">
+                {format.relativeTime(when, now)}
+              </span>
+            ) : null}
+            {edited ? (
+              <span className="shrink-0 text-xs text-muted-foreground/60">{t("edited")}</span>
+            ) : null}
+            <span className="min-w-0 flex-1" />
+            {actions}
+          </header>
+        ) : null}
         {activity ? <div>{activity}</div> : null}
         {editing ? (
           // Inline edit state: the same composer as the thread — mentions,
@@ -478,7 +486,7 @@ export function ThreadComment({
               setDraft("");
             }}
             posting={saving}
-            placeholder={t("editCommentPlaceholder")}
+            placeholder={t(isDescription ? "editDescriptionPlaceholder" : "editCommentPlaceholder")}
             submitLabel={t("saveChanges")}
             autoFocus
           />
@@ -491,9 +499,12 @@ export function ThreadComment({
             {body}
           </Markdown>
         )}
-        {reactions && (list.length > 0 || reactions.canReact) ? (
-          <div>
-            <CommentReactionChips commentId={commentId} reactions={reactions} list={list} />
+        {(reactions && (list.length > 0 || reactions.canReact)) || (isDescription && actions) ? (
+          <div className={isDescription ? "flex items-center justify-between gap-2" : undefined}>
+            {reactions && (list.length > 0 || reactions.canReact) ? (
+              <CommentReactionChips commentId={commentId} reactions={reactions} list={list} />
+            ) : null}
+            {isDescription ? <span className="ml-auto">{actions}</span> : null}
           </div>
         ) : null}
       </div>
@@ -736,11 +747,34 @@ export function PrDetail({
     );
   }, [pr]);
   const [editingTitle, setEditingTitle] = useState(false);
+  const [linkIssueOpen, setLinkIssueOpen] = useState(false);
+  const [linkIssuePosition, setLinkIssuePosition] = useState<{ x: number; y: number }>();
+  const [readinessOpen, setReadinessOpen] = useState(false);
+  const [readinessPosition, setReadinessPosition] = useState<{ x: number; y: number }>();
+  const moreActionsRef = useRef<HTMLButtonElement>(null);
+  const openLinkIssueFromMenu = () => {
+    const bounds = moreActionsRef.current?.getBoundingClientRect();
+    if (!bounds) return;
+    setLinkIssuePosition({ x: bounds.right, y: bounds.bottom });
+  };
+  const openReadinessFromMenu = () => {
+    const bounds = moreActionsRef.current?.getBoundingClientRect();
+    if (bounds) setReadinessPosition({ x: bounds.right, y: bounds.bottom });
+  };
+  const onMoreCloseAutoFocus = (event: Event) => {
+    if (linkIssuePosition) {
+      event.preventDefault();
+      setLinkIssueOpen(true);
+    } else if (readinessPosition) {
+      event.preventDefault();
+      setReadinessOpen(true);
+    }
+  };
   const [titleDraft, setTitleDraft] = useState("");
   // The merge is confirmed WITH its method: bring it to the confirmation state
   // prevents a click on “merge anyway” from falling back to the default squash.
   const [confirmAction, setConfirmAction] = useState<
-    null | { kind: "merge"; method?: MergeMethod } | { kind: "close" }
+    null | { kind: "merge"; method?: MergeMethod } | { kind: "state"; state: EditablePrState }
   >(null);
   const [mergeCommitDraft, setMergeCommitDraft] = useState<MergeCommitMessageDraft | null>(null);
   const [mergeCommitDraftEdited, setMergeCommitDraftEdited] = useState(false);
@@ -793,9 +827,8 @@ export function PrDetail({
   const [scrolledDown, setScrolledDown] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const [unresolvedSidebarOpen, setUnresolvedSidebarOpen] = useState(false);
-  // The checks popover is ONE surface, shared: the checks card opens it,
-  // and the merge-state popover's "View checks" opens the same list.
-  const [checksPopoverOpen, setChecksPopoverOpen] = useState(false);
+  // The checks property and the merge-state control open the same popover.
+  const [checksDetailsOpen, setChecksDetailsOpen] = useState(false);
   // Soft fade up and down the feed — the same as the agent conversation and
   // than the columns of the board: it only lights up on the side where there REMAINS some
   // something to see, what a fixed border cannot say.
@@ -846,10 +879,6 @@ export function PrDetail({
   const isDraft = pr?.draft ?? item.pr_state === "draft";
   const isTerminal = item.pr_state === "merged" || item.pr_state === "closed";
   const badgeState = isDraft && !isTerminal ? "draft" : item.pr_state;
-  // Closed is not over: the two forges reopen, and a PR closed by
-  // error was only caught on github.com (MIN-164). Merged, in
-  // However, is definitive - the forge refuses, and there is nothing to offer.
-  const canReopen = canWrite && item.pr_state === "closed";
   // When Numo finishes (the active run disappears from the list), refresh diff +
   // comments. Line comments are one of them: Numo can have
   // answered, and a new push changes the rows they anchor to. THE
@@ -1102,20 +1131,22 @@ export function PrDetail({
       commitTitle?: string;
       commitMessage?: string;
     } = {},
+    followingActions: PrStateAction[] = [],
   ) => {
     if (acting) return;
+    const finalAction = followingActions.at(-1) ?? action;
     const optimisticState =
-      action === "merge"
+      finalAction === "merge"
         ? "merged"
-        : action === "close"
+        : finalAction === "close"
           ? "closed"
-          : action === "ready_for_review"
+          : finalAction === "ready_for_review"
             ? "open"
-            : action === "convert_to_draft"
+            : finalAction === "convert_to_draft"
               ? "draft"
-            : pr?.draft
-              ? "draft"
-              : "open";
+              : pr?.draft
+                ? "draft"
+                : "open";
     // The panel's own write starts HERE: any forge GET received before this
     // instant says nothing about the transition (see the propagation effect).
     lastLocalStateWriteAt.current = Date.now();
@@ -1123,16 +1154,19 @@ export function PrDetail({
     setActing(action);
     setConfirmAction(null);
     try {
-      const result = await actOnPullRequestApi(item.prId, action, mergeOptions);
+      let result = await actOnPullRequestApi(item.prId, action, mergeOptions);
+      for (const next of followingActions) {
+        result = await actOnPullRequestApi(item.prId, next);
+      }
       onStateChange(item.prId, result.pr_state);
       toast.success(
-        action === "merge"
+        finalAction === "merge"
           ? t("mergedToast")
-          : action === "close"
+          : finalAction === "close"
             ? t("closedToast")
-            : action === "reopen"
+            : finalAction === "reopen"
               ? t("reopenedToast")
-              : action === "convert_to_draft"
+              : finalAction === "convert_to_draft"
                 ? t("convertedToDraftToast")
                 : t("readyForReviewToast"),
       );
@@ -1142,6 +1176,7 @@ export function PrDetail({
       rollback();
       onRefetchList();
       toast.error((err as Error).message);
+      await refetchPr();
     } finally {
       setActing(null);
     }
@@ -1183,7 +1218,7 @@ export function PrDetail({
   const handleReadinessAction = async (blocker: ReadinessBlocker) => {
     if (maintenanceAction) return;
     if (blocker.action === "mark_ready") {
-      await act("ready_for_review");
+      setConfirmAction({ kind: "state", state: "open" });
       return;
     }
     if (blocker.action === "approve") {
@@ -1680,6 +1715,17 @@ export function PrDetail({
     t,
   ]);
 
+  const mobileStatusActions = <>
+    <DropdownMenuSeparator className="md:hidden" />
+    <PrStateControl inMenu state={badgeState} canChange={!!canWrite}
+      disabled={!!acting || isWorking || readState !== "fresh"}
+      onChange={(state) => setConfirmAction({ kind: "state", state })} />
+    {!isTerminal ? (
+      <PrReadinessMenuItem readiness={isDraft ? null : effectiveReadiness}
+        disabled={isDraft || !effectiveReadiness} onSelect={openReadinessFromMenu} />
+    ) : null}
+  </>;
+
   return (
     // The envelope tells the WHOLE panel — body, thread, activity, comments of
     // line, composers — which PR he is talking about: which proxy to go through to
@@ -1708,10 +1754,12 @@ export function PrDetail({
           </Button>
           <PrHeaderActionsSkeleton />
         </AppContentHeader>
-        <div className="flex flex-col gap-6 p-6" aria-hidden>
-          <PrMetadataSkeleton />
-          <PrStatusSkeleton />
-          <PrActivitySkeleton />
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 md:px-6">
+          <div data-testid="pr-detail-loading-content" className="mx-auto flex w-full max-w-3xl flex-col gap-6 py-6" aria-hidden>
+            <PrMetadataSkeleton />
+            <PrStatusSkeleton />
+            <PrActivitySkeleton />
+          </div>
         </div>
       </div>
     }>
@@ -1741,7 +1789,7 @@ export function PrDetail({
             className="size-4 shrink-0"
           />
         ) : null}
-        <span className="flex min-w-0 items-center gap-1 font-mono text-sm">
+        <span className="flex shrink-0 items-center gap-1 font-mono text-sm">
           {forgeUrl ? (
             <a
               href={forgeUrl}
@@ -1757,6 +1805,16 @@ export function PrDetail({
           <PrLinkedIssues item={item} onOpenIssue={onOpenIssue} />
           {item.project ? (
             <PrLinkIssue
+              open={linkIssueOpen}
+              onOpenChange={(open) => {
+                setLinkIssueOpen(open);
+                if (!open && linkIssuePosition) {
+                  setLinkIssuePosition(undefined);
+                  moreActionsRef.current?.focus();
+                }
+              }}
+              position={linkIssuePosition}
+              triggerClassName="hidden 2xl:inline-flex"
               prId={item.prId}
               linkedIssueIds={linkedIssues(item).map((issue) => issue.id)}
               prState={item.pr_state}
@@ -1775,26 +1833,22 @@ export function PrDetail({
             </span>
           )}
         </span>
-        {/* A Numo merge in progress has its own card in the status grid —
-            it survives navigation there, which a header spinner never did. */}
+        {/* Background merge work appears in the insight rows across navigation. */}
         {isWorking ? (
-          <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+          <span className="hidden items-center gap-1.5 text-xs text-muted-foreground md:inline-flex">
             <Spinner />
             {t("numoWorking")}
           </span>
         ) : null}
 
         {loading ? <PrHeaderActionsSkeleton /> : isTerminal ? (
-          // End of line of a completed PR: the only gesture left to it — reopen,
-          // without confirmation, it does not destroy anything and the button next to it closes it
-          // — then its STATE, last. The badge closes the line in both cases,
-          // merged (nothing before it) as closed (the button before it): it is
-          // always in the same place that we read what became of her.
-          <div className="ml-auto flex items-center gap-1.5">
+          // Closed PRs can change state; merged PRs retain a fixed badge.
+          <div className="ml-auto flex shrink-0 items-center gap-1.5">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
                   data-testid="pr-more-actions"
+                  ref={moreActionsRef}
                   variant="outline"
                   size="icon-sm"
                   aria-label={t("moreActions")}
@@ -1802,7 +1856,13 @@ export function PrDetail({
                   <HugeiconsIcon icon={MoreHorizontalIcon} />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
+              <DropdownMenuContent align="end" onCloseAutoFocus={onMoreCloseAutoFocus}>
+                {item.project ? (
+                  <DropdownMenuItem className="2xl:hidden" onSelect={openLinkIssueFromMenu}>
+                    <HugeiconsIcon icon={Link02Icon} />
+                    {t(linkedIssues(item).length > 0 ? "linkAnotherIssue" : "linkIssue")}
+                  </DropdownMenuItem>
+                ) : null}
                 {forgeUrl ? (
                   <DropdownMenuItem asChild>
                     <a
@@ -1823,26 +1883,19 @@ export function PrDetail({
                     }}
                   >
                     <HugeiconsIcon icon={Edit04Icon} />
-                    {t("renamePr")}
+                      {t("renamePr")}
                   </DropdownMenuItem>
                 ) : null}
+                {mobileStatusActions}
               </DropdownMenuContent>
             </DropdownMenu>
-            {canReopen ? (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => void act("reopen")}
-                disabled={!!acting}
-              >
-                {acting === "reopen" ? <Spinner /> : <HugeiconsIcon icon={Undo02Icon} />}
-                {t("reopen")}
-              </Button>
-            ) : null}
-            <PrStateBadge state={badgeState} icon className="h-8" />
+            <div className="hidden md:block">
+              <PrStateControl state={badgeState} canChange={!!canWrite} disabled={!!acting || isWorking || readState !== "fresh"}
+                onChange={(state) => setConfirmAction({ kind: "state", state })} />
+            </div>
           </div>
         ) : (
-          // Under `lg`, secondary actions move into the overflow menu. The
+          // Under `2xl`, secondary actions move into the overflow menu. The
           // remaining actions stay on the shared 60 px header line; if a long
           // translation still exceeds the pane, the header remains horizontally
           // reachable instead of growing vertically.
@@ -1879,27 +1932,15 @@ export function PrDetail({
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : null}
-
-              {canWrite ? (
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => setConfirmAction({ kind: "close" })}
-                  disabled={!!acting || isWorking}
-                >
-                  {acting === "close" ? <Spinner /> : <HugeiconsIcon icon={Cancel01Icon} />}
-                  {t("closePullRequest")}
-                </Button>
-              ) : null}
             </div>
 
             {/* On narrow screens, actions stay available in one unlabeled menu.
-                Numo work comes first, human review verdicts form the second
-                section, and the destructive close action stays isolated last. */}
+                Numo work comes first, followed by human review actions. */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
                   data-testid="pr-more-actions"
+                  ref={moreActionsRef}
                   variant="outline"
                   size="icon-sm"
                   aria-label={t("moreActions")}
@@ -1907,7 +1948,13 @@ export function PrDetail({
                   <HugeiconsIcon icon={MoreHorizontalIcon} />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
+              <DropdownMenuContent align="end" onCloseAutoFocus={onMoreCloseAutoFocus}>
+                {item.project ? (
+                  <DropdownMenuItem className="2xl:hidden" onSelect={openLinkIssueFromMenu}>
+                    <HugeiconsIcon icon={Link02Icon} />
+                    {t(linkedIssues(item).length > 0 ? "linkAnotherIssue" : "linkIssue")}
+                  </DropdownMenuItem>
+                ) : null}
                 {forgeUrl ? (
                   <DropdownMenuItem asChild>
                     <a
@@ -1953,51 +2000,29 @@ export function PrDetail({
                     </DropdownMenuItem>
                   </>
                 ) : null}
-                {canWrite ? (
-                  <>
-                    <DropdownMenuSeparator className="2xl:hidden" />
-                    {!isDraft ? (
-                      <DropdownMenuItem
-                        data-testid="pr-action-convert-to-draft"
-                        disabled={!!acting || isWorking}
-                        onSelect={() => void act("convert_to_draft")}
-                      >
-                        {acting === "convert_to_draft" ? <Spinner /> : <HugeiconsIcon icon={GitPullRequestDraftIcon} />}
-                        {t("convertToDraft")}
-                      </DropdownMenuItem>
-                    ) : null}
-                    <DropdownMenuItem
-                      data-testid="pr-action-close"
-                      className="2xl:hidden"
-                      variant="destructive"
-                      disabled={!!acting || isWorking}
-                      onSelect={() => setConfirmAction({ kind: "close" })}
-                    >
-                      <HugeiconsIcon icon={Cancel01Icon} />
-                      {t("closePullRequest")}
-                    </DropdownMenuItem>
-                  </>
-                ) : null}
+                {mobileStatusActions}
               </DropdownMenuContent>
             </DropdownMenu>
 
             {/* Open state and merge state read side by side, AFTER the more
                 menu: first what we can do, then what the PR is, then what
                 still stands between it and the merge. */}
-            <PrStateBadge state={badgeState} icon className="h-8" />
-            {isDraft && canWrite ? (
-              <Button
-                data-testid="pr-ready-for-review"
-                size="sm"
-                variant="outline"
-                disabled={!!acting || isWorking}
-                onClick={() => void act("ready_for_review")}
-              >
-                {acting === "ready_for_review" ? <Spinner /> : <HugeiconsIcon icon={GitPullRequestIcon} />}
-                {t("openPullRequest")}
-              </Button>
-            ) : effectiveReadiness ? (
+            <div className="hidden md:block">
+              <PrStateControl state={badgeState} canChange={!!canWrite} disabled={!!acting || isWorking || readState !== "fresh"}
+                onChange={(state) => setConfirmAction({ kind: "state", state })} />
+            </div>
+            {!isDraft && effectiveReadiness ? (
               <PrReadinessControl
+                open={readinessOpen}
+                onOpenChange={(open) => {
+                  setReadinessOpen(open);
+                  if (!open && readinessPosition) {
+                    setReadinessPosition(undefined);
+                    moreActionsRef.current?.focus();
+                  }
+                }}
+                position={readinessPosition}
+                triggerClassName="hidden md:inline-flex"
                 readiness={effectiveReadiness}
                 providerName={REPO_PROVIDERS[item.provider].displayName}
                 canAct={canActOnBlocker}
@@ -2012,10 +2037,10 @@ export function PrDetail({
                 autoMerging={maintenanceAction === "enable_auto_merge"}
                 onToggleAutoMerge={(enable) => void toggleAutoMerge(enable)}
                 checks={checks}
-                onOpenChecks={() => setChecksPopoverOpen(true)}
+                onOpenChecks={() => setChecksDetailsOpen(true)}
               />
             ) : (
-              <PrReadinessBadge readiness={null} />
+              <PrReadinessBadge readiness={null} className="hidden md:inline-flex" />
             )}
           </div>
         )}
@@ -2026,8 +2051,8 @@ export function PrDetail({
           diff file should otherwise stop 2rem lower to remain clear,
           and a header that floats 32 px from the edge is seen. The fade says “there is
           text above” — the sticky header says it better, and naming the
-          file. Under the other two tabs it remains, there is nothing sticking
-          to protect.
+          file. The description/activity tab keeps the fade because it has
+          no sticky file headers.
 
           `onScroll` continues to run: the measure costs nothing and the fade
           just returns, without missed transitions, as soon as you change tabs. */}
@@ -2148,9 +2173,12 @@ export function PrDetail({
             open={requestReviewOpen}
             onOpenChange={setRequestReviewOpen}
             onRequested={refreshReviewState}
+            canRequestHuman={!!canWrite && !isTerminal}
+            onRequestNumo={prPageContext && !isTerminal ? openAiReviewDialog : undefined}
+            numoDisabled={!canRelaunch || aiReviewActive || !!item.busyRunId}
           />
           {loading ? <PrStatusSkeleton /> : (
-            <PrStatusCards
+            <PrInsights
               readiness={effectiveReadiness}
               checks={checks}
               provider={item.provider}
@@ -2158,7 +2186,7 @@ export function PrDetail({
               conversationThreads={conversationThreads}
               timeline={timeline}
               requestedReviewers={pr?.requestedReviewers ?? []}
-              canRequestReviewer={!!canWrite && pr?.state === "open" && !pr.merged}
+              canRequestReviewer={!isTerminal && (!!canWrite || !!prPageContext)}
               onRequestReviewer={() => setRequestReviewOpen(true)}
               canAct={canActOnBlocker}
               acting={maintenanceAction}
@@ -2172,14 +2200,13 @@ export function PrDetail({
               numoReview={numoReviewCard}
               fixRun={fixRunCard}
               numoMerge={numoMerging ? { startedAt: numoMergeStartedAt } : null}
-              checksOpen={checksPopoverOpen}
-              onChecksOpenChange={setChecksPopoverOpen}
-              onRequestReview={openAiReviewDialog}
+              checksOpen={checksDetailsOpen}
+              onChecksOpenChange={setChecksDetailsOpen}
               fix={fixCard}
             />
           )}
 
-          {/* GitHub style tabs: the thread on one side, the code on the other. */}
+          {/* Navigation precedes both panels, regardless of description length. */}
           <Tabs
             value={tab}
             onValueChange={(v) => {
@@ -2189,164 +2216,146 @@ export function PrDetail({
               setScrolledDown(false);
             }}
           >
-            <TabsList variant="line" className={TAB_LIST_DENSE}>
+            <TabsList variant="line" className={cn(TAB_LIST_DENSE, "-translate-x-3")}>
               <TabsTrigger value="activity" className={cn(TAB_TRIGGER_DENSE, "gap-1.5")}>
-                {t("tabActivity")}
+                {t("tabDescriptionActivity")}
                 {conversationCount > 0 ? (
                   <span className="text-xs text-muted-foreground">{conversationCount}</span>
                 ) : null}
               </TabsTrigger>
-              {/* Commits BEFORE files, like on GitHub: we read what
-                  dials the PR before entering the code it changes. */}
-              <TabsTrigger value="commits" className={cn(TAB_TRIGGER_DENSE, "gap-1.5")}>
-                {t("tabCommits")}
-                {commits.length > 0 ? (
-                  <span className="text-xs text-muted-foreground">{commits.length}</span>
-                ) : null}
-              </TabsTrigger>
               <TabsTrigger value="files" className={cn(TAB_TRIGGER_DENSE, "gap-1.5")}>
-                {t("tabFiles")}
+                {t("tabChanges")}
                 {files.length > 0 ? (
                   <span className="text-xs text-muted-foreground">{files.length}</span>
                 ) : null}
               </TabsTrigger>
             </TabsList>
 
-            {/* Thread: PR description opens discussion, comments
-                GitHub follow, compose closes. */}
-            <TabsContent value="activity" className="mt-4 flex flex-col gap-3">
-              {loading || commentsLoading ? (
-                <PrActivitySkeleton />
-              ) : !prDescription && feed.length === 0 && !reviewCommentsLoading ? (
-                <p className="text-sm text-muted-foreground">{t("noComments")}</p>
-              ) : (
-                // MIN-548: the activity is a plain stack of cards and lines —
-                // no vertical rail, no markers. The one line of an event reads
-                // from left to right, and a card is a card, like the ticket
-                // timeline.
-                <div data-testid="pr-activity-timeline" className="flex flex-col gap-3">
-                  {prDescription ? (
-                    <ThreadComment
-                      // The body of the PR is not a commentary, but it
-                      // reacts like one: the server translates this zero into the
-                      // subject each forge expects.
-                      endpoint={prEndpoint(item.prId)}
-                      commentId={PR_BODY_COMMENT_ID}
-                      user={pr?.user ?? null}
-                      createdAt={pr?.createdAt ?? null}
-                      updatedAt={pr?.updatedAt ?? null}
-                      body={prDescription}
-                      // Like on the forge: the AUTHOR rewrites the
-                      // description — Numo's PRs stay read-only, the agent
-                      // retells them himself.
-                      canEdit={
-                        canComment &&
-                        !!viewer?.login &&
-                        !!pr?.user?.login &&
-                        pr.user.login.toLowerCase() === viewer.login.toLowerCase() &&
-                        !item.runId
+            <TabsContent value="activity" className="mt-4 flex flex-col gap-6">
+              {!loading && prDescription ? (
+                <ThreadComment
+                  presentation="description"
+                  endpoint={prEndpoint(item.prId)}
+                  commentId={PR_BODY_COMMENT_ID}
+                  user={pr?.user ?? null}
+                  createdAt={pr?.createdAt ?? null}
+                  updatedAt={pr?.updatedAt ?? null}
+                  body={prDescription}
+                  // Like on the forge: the AUTHOR rewrites the
+                  // description — Numo's PRs stay read-only, the agent
+                  // retells them himself.
+                  canEdit={
+                    canComment &&
+                    !!viewer?.login &&
+                    !!pr?.user?.login &&
+                    pr.user.login.toLowerCase() === viewer.login.toLowerCase() &&
+                    !item.runId
+                  }
+                  onSave={async (next) => {
+                    await maintainPullRequestApi(item.prId, "update_body", {
+                      body: next,
+                    });
+                  }}
+                  onEdited={() => void refetchPr()}
+                  // Quoting returns to the activity tab, where the composer lives.
+                  onQuoteReply={
+                    canComment
+                      ? () => {
+                        setTab("activity");
+                        quoteReply(prDescription, pr?.user?.login);
                       }
-                      onSave={async (next) => {
-                        await maintainPullRequestApi(item.prId, "update_body", {
-                          body: next,
-                        });
-                      }}
-                      onEdited={() => void refetchPr()}
-                      // Quote feeds the bottom composer: without a git account it
-                      // there is none, and the gesture would lead nowhere.
-                      onQuoteReply={
-                        canComment
-                          ? () => quoteReply(prDescription, pr?.user?.login)
-                          : undefined
-                      }
-                      reactions={threadReactions}
-                      forceBot={!!item.runId}
-                    />
-                  ) : null}
-                  {feed.map((entry) => {
-                    if (entry.kind === "event") {
-                      return <PrTimelineRow key={entry.key} event={entry.event} />;
-                    }
-                    if (entry.kind === "review") {
-                      return (
-                        <PrTimelineReview
-                          key={entry.key}
-                          event={entry.event}
-                          comments={entry.comments}
-                          endpoint={prEndpoint(item.prId)}
-                          threadStates={reviewThreads}
-                          canComment={!!canComment}
-                          canResolve={!!canWrite}
-                          onChanged={refreshReviewState}
-                          onResolutionChanged={refetchPr}
-                        />
-                      );
-                    }
-                    const c = entry.comment;
-                    // Editing stays on the person's OWN message (MIN-548):
-                    // same login at the forge, a connected account, and never
-                    // a bot's — Numo's messages are read-only.
-                    // Forge logins are CASE-INSENSITIVE (GitHub normalizes
-                    // nothing in its payloads): compare lowercased, or an
-                    // author whose login capitalizes differently would lose
-                    // the edit gesture on their own words.
-                    const canEdit =
-                      canComment &&
-                      !!viewer?.login &&
-                      c.user?.login?.toLowerCase() === viewer.login.toLowerCase() &&
-                      !isNumoComment(c.user?.login);
-                    return (
-                      <ThreadComment
-                        key={entry.key}
-                        endpoint={prEndpoint(item.prId)}
-                        commentId={c.id}
-                        user={c.user}
-                        createdAt={c.created_at}
-                        updatedAt={c.updated_at}
-                        body={c.body}
-                        canEdit={canEdit}
-                        onEdited={() => void refetchComments()}
-                        onQuoteReply={
-                          canComment
-                            ? () => quoteReply(c.body ?? "", c.user?.login)
-                            : undefined
-                        }
-                        quotingNumo={isNumoComment(c.user?.login)}
-                        forceBot={isNumoComment(c.user?.login)}
-                        reactions={threadReactions}
-                      />
-                    );
-                   })}
-                 </div>
-               )}
-
-              {!loading && !commentsLoading && reviewCommentsLoading ? <PrActivitySkeleton /> : null}
-
-              {canComment ? (
-                <div data-testid="pr-comment-composer-region" className="pt-1">
-                  <PrCommentComposer
-                    endpoint={prEndpoint(item.prId)}
-                    value={commentBody}
-                    onChange={setCommentBody}
-                    onSubmit={() => void submitComment()}
-                    posting={posting}
-                    placeholder={t("commentPlaceholder")}
-                    submitLabel={t("postComment")}
-                    focusSignal={quoteFocus}
-                  />
-                </div>
+                      : undefined
+                  }
+                  reactions={threadReactions}
+                  forceBot={!!item.runId}
+                />
               ) : null}
 
-            </TabsContent>
+              <div className="flex flex-col gap-3">
+                {loading || commentsLoading ? (
+                  <PrActivitySkeleton />
+                ) : feed.length === 0 && !reviewCommentsLoading ? (
+                  <p className="text-sm text-muted-foreground">{t("noComments")}</p>
+                ) : (
+                  // MIN-548: the activity is a plain stack of cards and lines —
+                  // no vertical rail, no markers. The one line of an event reads
+                  // from left to right, and a card is a card, like the ticket
+                  // timeline.
+                  <div data-testid="pr-activity-timeline" className="flex flex-col gap-3">
+                    {feed.map((entry) => {
+                      if (entry.kind === "event") {
+                        return <PrTimelineRow key={entry.key} event={entry.event} />;
+                      }
+                      if (entry.kind === "review") {
+                        return (
+                          <PrTimelineReview
+                            key={entry.key}
+                            event={entry.event}
+                            comments={entry.comments}
+                            endpoint={prEndpoint(item.prId)}
+                            threadStates={reviewThreads}
+                            canComment={!!canComment}
+                            canResolve={!!canWrite}
+                            onChanged={refreshReviewState}
+                            onResolutionChanged={refetchPr}
+                          />
+                        );
+                      }
+                      const c = entry.comment;
+                      // Editing stays on the person's OWN message (MIN-548):
+                      // same login at the forge, a connected account, and never
+                      // a bot's — Numo's messages are read-only.
+                      // Forge logins are CASE-INSENSITIVE (GitHub normalizes
+                      // nothing in its payloads): compare lowercased, or an
+                      // author whose login capitalizes differently would lose
+                      // the edit gesture on their own words.
+                      const canEdit =
+                        canComment &&
+                        !!viewer?.login &&
+                        c.user?.login?.toLowerCase() === viewer.login.toLowerCase() &&
+                        !isNumoComment(c.user?.login);
+                      return (
+                        <ThreadComment
+                          key={entry.key}
+                          endpoint={prEndpoint(item.prId)}
+                          commentId={c.id}
+                          user={c.user}
+                          createdAt={c.created_at}
+                          updatedAt={c.updated_at}
+                          body={c.body}
+                          canEdit={canEdit}
+                          onEdited={() => void refetchComments()}
+                          onQuoteReply={
+                            canComment
+                              ? () => quoteReply(c.body ?? "", c.user?.login)
+                              : undefined
+                          }
+                          quotingNumo={isNumoComment(c.user?.login)}
+                          forceBot={isNumoComment(c.user?.login)}
+                          reactions={threadReactions}
+                        />
+                      );
+                    })}
+                  </div>
+                )}
 
-            <TabsContent value="commits" className="mt-4">
-              <PrCommits
-                prId={item.prId}
-                commits={commits}
-                truncated={commitsTruncated}
-                loading={commitsLoading}
-                provider={item.provider}
-              />
+                {!loading && !commentsLoading && reviewCommentsLoading ? <PrActivitySkeleton /> : null}
+
+                {canComment ? (
+                  <div data-testid="pr-comment-composer-region" className="pt-1">
+                    <PrCommentComposer
+                      endpoint={prEndpoint(item.prId)}
+                      value={commentBody}
+                      onChange={setCommentBody}
+                      onSubmit={() => void submitComment()}
+                      posting={posting}
+                      placeholder={t("commentPlaceholder")}
+                      submitLabel={t("postComment")}
+                      focusSignal={quoteFocus}
+                    />
+                  </div>
+                ) : null}
+              </div>
             </TabsContent>
 
             <TabsContent value="files" className="mt-4">
@@ -2354,11 +2363,10 @@ export function PrDetail({
                 <PrFilesSkeleton />
               ) : pr ? (
                 <div className="flex flex-col gap-3">
-                  {/* MIN-548: the review mode lives INSIDE the diff toolbar —
-                      one single line under the tab, with the file count, the
-                      display switches and the review toggle. */}
+                  {/* Review actions sit above the display controls in the diff toolbar. */}
                   <PrDiff
                     files={files}
+                    showFileTreeTotals={false}
                     endpoint={prEndpoint(item.prId)}
                     prUrl={pr.url}
                     provider={item.provider}
@@ -2377,9 +2385,19 @@ export function PrDetail({
                     reviewReactions={reviewReactions}
                     onCommentPosted={refreshReviewState}
                     onThreadResolved={refetchPr}
+                    toolbarActions={
+                      <PrCommitsPopover
+                        prId={item.prId}
+                        commits={commits}
+                        commitCount={pr.commitCount}
+                        truncated={commitsTruncated}
+                        loading={commitsLoading}
+                        provider={item.provider}
+                      />
+                    }
                     reviewControls={
                       canComment ? (
-                        <div data-testid="pr-file-review-toolbar" className="flex items-center gap-2">
+                        <div data-testid="pr-file-review-toolbar" className="flex flex-wrap items-center justify-end gap-2">
                           {fileReviewActive ? (
                             <span className="text-xs text-muted-foreground">
                               {t("reviewFileProgress", {
@@ -2475,7 +2493,7 @@ export function PrDetail({
         </DialogContent>
       </Dialog>
 
-      {/* Confirmation fusionner / refuser */}
+      {/* Confirm merging or changing the pull request state. */}
       <Dialog
         open={!!confirmAction}
         onOpenChange={(next) => {
@@ -2492,7 +2510,7 @@ export function PrDetail({
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>
-              {confirmAction?.kind === "merge" ? t("confirmMergeTitle") : t("confirmCloseTitle")}
+              {confirmAction?.kind === "merge" ? t("confirmMergeTitle") : t("confirmStateChangeTitle")}
             </DialogTitle>
           </DialogHeader>
           {confirmAction?.kind === "merge" ? (
@@ -2602,19 +2620,28 @@ export function PrDetail({
           ) : (
             <>
           <p className="text-sm text-muted-foreground">
-            {t("confirmCloseDescription")}
+            {confirmAction?.kind === "state" ? t("confirmStateChangeDescription", {
+              currentState: t(badgeState === "draft" ? "stateDraft" : badgeState === "closed" ? "stateClosed" : "stateOpen"),
+              nextState: t(confirmAction.state === "draft" ? "stateDraft" : confirmAction.state === "closed" ? "stateClosed" : "stateOpen"),
+            }) : null}
           </p>
           <DialogFooter>
             <Button variant="outline" disabled={!!acting} onClick={() => setConfirmAction(null)}>
               {t("cancel")}
             </Button>
             <Button
-              variant="destructive"
+              variant={confirmAction?.kind === "state" && confirmAction.state === "closed" ? "destructive" : "default"}
               disabled={!!acting}
-              onClick={() => void act("close")}
+              data-testid="pr-confirm-state-change"
+              onClick={() => {
+                if (confirmAction?.kind !== "state" || badgeState === "merged") return;
+                const [first, ...following] = prStateTransitionActions(badgeState, confirmAction.state, isDraft);
+                if (first) void act(first, {}, following);
+                else setConfirmAction(null);
+              }}
             >
               {acting ? <Spinner /> : null}
-              {t("close")}
+              {t("confirmStateChange")}
             </Button>
           </DialogFooter>
             </>

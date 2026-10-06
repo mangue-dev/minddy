@@ -2,7 +2,7 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
-import { AlertCircleIcon, ArrowDown01Icon, Clock01Icon, CheckIcon } from "@hugeicons/core-free-icons";
+import { AlertCircleIcon, ArrowDown01Icon, ArrowRight01Icon, Clock01Icon, CheckIcon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import {
@@ -14,13 +14,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   Popover,
+  PopoverAnchor,
   PopoverContent,
   PopoverTrigger,
   Spinner,
   cn,
 } from "mangue-ui";
 import { AppTooltip } from "@/components/ui/app-tooltip";
-import { ChecksDonut } from "@/components/pull-requests/pr-readiness-cards";
+import { ChecksDonut } from "@/components/pull-requests/pr-insights";
 import type { ChecksSummary } from "@/lib/agent-api";
 
 import type {
@@ -214,6 +215,31 @@ export function PrReadinessIcon({
   );
 }
 
+/** Compact overflow entry with the same structure as the pull request state. */
+export function PrReadinessMenuItem({ readiness, disabled, onSelect }: {
+  readiness: PullRequestReadiness | null;
+  disabled: boolean;
+  onSelect: () => void;
+}) {
+  const t = useTranslations("PullRequests");
+  const ready = readiness?.state === "ready";
+  const pending = !readiness || readiness.state === "review_requested" ||
+    readiness.state === "checks_running" || readiness.state === "status_unavailable";
+  return (
+    <DropdownMenuItem data-testid="pr-readiness-menu" className="md:hidden"
+      disabled={disabled} onSelect={onSelect} aria-haspopup="dialog">
+      <AppIcon icon={ready ? CheckIcon : pending ? Clock01Icon : AlertCircleIcon}
+        className={cn(
+          ready && "text-emerald-700 dark:text-emerald-400",
+          pending && "text-amber-700 dark:text-amber-400",
+          !ready && !pending && "text-destructive",
+        )} />
+      {t(readiness ? STATE_KEYS[readiness.state] : "readinessLoading")}
+      <AppIcon icon={ArrowRight01Icon} className="ml-auto" />
+    </DropdownMenuItem>
+  );
+}
+
 export function PrReadinessControl({
   readiness,
   providerName,
@@ -230,7 +256,15 @@ export function PrReadinessControl({
   onToggleAutoMerge,
   checks,
   onOpenChecks,
+  open: controlledOpen,
+  onOpenChange,
+  position,
+  triggerClassName,
 }: {
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  position?: { x: number; y: number };
+  triggerClassName?: string;
   readiness: PullRequestReadiness;
   providerName: string;
   canAct: (blocker: ReadinessBlocker) => boolean;
@@ -255,7 +289,12 @@ export function PrReadinessControl({
   onOpenChecks?: () => void;
 }) {
   const t = useTranslations("PullRequests");
-  const [open, setOpen] = useState(false);
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const open = controlledOpen ?? uncontrolledOpen;
+  const setOpen = (next: boolean) => {
+    setUncontrolledOpen(next);
+    onOpenChange?.(next);
+  };
   const preferredMethod = readiness.preferredMethod;
   const otherMethods = readiness.methods.filter(
     (method) => method !== preferredMethod,
@@ -275,13 +314,16 @@ export function PrReadinessControl({
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
+      {position ? (
+        <PopoverAnchor asChild><span aria-hidden style={{ position: "fixed", left: position.x, top: position.y }} /></PopoverAnchor>
+      ) : <PopoverTrigger asChild>
         <Button
           data-testid="pr-readiness-control"
           size="sm"
           variant="outline"
           className={cn(
             "shrink-0 gap-1.5",
+            triggerClassName,
             ready &&
               "!border-emerald-600/30 bg-emerald-600/10 text-emerald-700 hover:bg-emerald-600/15 focus-visible:bg-emerald-600/15 data-[state=open]:bg-emerald-600/15 data-[state=open]:text-emerald-700 dark:!border-emerald-400/30 dark:text-emerald-400 dark:data-[state=open]:text-emerald-400",
             pending &&
@@ -296,7 +338,7 @@ export function PrReadinessControl({
           {t(STATE_KEYS[readiness.state])}
           <HugeiconsIcon icon={ArrowDown01Icon} className="size-3.5" />
         </Button>
-      </PopoverTrigger>
+      </PopoverTrigger>}
       <PopoverContent
         data-testid="pr-readiness-popover"
         align="end"
@@ -443,7 +485,7 @@ export function PrReadinessControl({
                 onCheckedChange={(checked) => onToggleAutoMerge(checked === true)}
               />
               <span className="inline-flex min-w-0 items-center gap-1.5 text-sm">
-                {mergeFlowActive ? t("autoMergeOn") : t("autoMergeWhenReady")}
+                {t("autoMergeWhenReady")}
                 {autoMerging ? <Spinner className="size-3 shrink-0" /> : null}
               </span>
             </label>

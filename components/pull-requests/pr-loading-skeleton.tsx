@@ -8,14 +8,19 @@ function Skeleton({ className, ...props }: ComponentProps<typeof BaseSkeleton>) 
 }
 
 /** Match the grouped sidebar rows, including their metadata and status badges. */
-export function PrListSkeleton() {
+export function PrListSkeleton({
+  rows = 5,
+  showHeading = true,
+}: { rows?: number; showHeading?: boolean }) {
   return (
     <div aria-hidden data-testid="pr-list-skeleton" className="flex flex-col gap-2 pt-2 pb-4">
-      <div className="flex items-center gap-2 px-2 py-1">
-        <Skeleton className="size-4 rounded" />
-        <Skeleton className="h-4 w-28" />
-      </div>
-      {Array.from({ length: 5 }, (_, i) => (
+      {showHeading ? (
+        <div className="flex items-center gap-2 px-2 py-1">
+          <Skeleton className="size-4 rounded" />
+          <Skeleton className="h-4 w-28" />
+        </div>
+      ) : null}
+      {Array.from({ length: rows }, (_, i) => (
         <div key={i} className="flex flex-col gap-2 rounded-lg py-2 pr-2 pl-8">
           <div className="flex items-center justify-between gap-3">
             <Skeleton className="h-3 w-20" />
@@ -110,12 +115,11 @@ export function PrMetadataSkeleton() {
 
 export function PrStatusSkeleton() {
   return (
-    <div aria-hidden data-testid="pr-status-skeleton" className="flex flex-wrap gap-2">
+    <div aria-hidden data-testid="pr-status-skeleton" className="flex w-full flex-col">
       {Array.from({ length: 3 }, (_, i) => (
-        <div key={i} className="flex h-24 w-40 max-w-full flex-col gap-3 rounded-xl bg-muted/40 p-3">
-          <Skeleton className="size-5 rounded" />
-          <Skeleton className="h-3 w-24" />
-          <Skeleton className="h-3 w-16" />
+        <div key={i} className="flex min-h-11 items-center justify-between gap-3">
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-6 w-40 rounded-md" />
         </div>
       ))}
     </div>
@@ -125,8 +129,8 @@ export function PrStatusSkeleton() {
 export function PrHeaderActionsSkeleton() {
   return (
     <div aria-hidden className="ml-auto flex gap-2">
-      <Skeleton className="h-8 w-16 rounded-full" />
-      <Skeleton className="h-8 w-28 rounded-full" />
+      <Skeleton className="size-8 rounded-full md:w-16" />
+      <Skeleton className="hidden h-8 w-28 rounded-full md:block" />
     </div>
   );
 }

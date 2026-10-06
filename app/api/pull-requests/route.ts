@@ -19,6 +19,9 @@ import {
   type VisibleRepo,
 } from "@/lib/server/agent/pull-requests";
 import { sweepRepo } from "@/lib/server/agent/pull-requests-sweep";
+import { listUserIdentities } from "@/lib/server/git/user-identities";
+import { readReviewQueue } from "@/lib/server/agent/pull-request-review-queue";
+import { COMPLETED_PULL_REQUESTS_PAGE } from "@/lib/pull-request-sections";
 import { getRun } from "@/lib/server/agent/runs";
 
 /**
@@ -52,6 +55,7 @@ const WORKING_STATUSES = ["queued", "running"];
 interface RunRow {
   id: string;
   status: string;
+  created_by: string | null;
   pr_number: number | null;
   created_at: string;
   repo_link: { provider: string; repo_full_name: string | null } | null;
@@ -60,6 +64,8 @@ interface RunRow {
 export interface PullRequestListItem {
   /** Item identity — the PR, plus the run that opened it (MIN-143). */
   prId: string;
+  createdByMe: boolean;
+  reviewRequestedForMe: boolean;
   pr_number: number;
   pr_url: string | null;
   pr_state: PullRequestState;
@@ -106,6 +112,7 @@ const STATE_FILTERS: Record<string, PullRequestState[]> = {
   open: ["open", "draft"],
   merged: ["merged"],
   closed: ["closed"],
+  completed: ["merged", "closed"],
 };
 
 /**
@@ -154,10 +161,18 @@ export async function GET(request: NextRequest) {
   const states = STATE_FILTERS[stateParam] ?? null; // null = all states
   const limit = Math.min(
     Math.max(Number.parseInt(params.get("limit") ?? "", 10) || DEFAULT_LIMIT, 1),
-    MAX_LIMIT,
+    stateParam === "completed" ? COMPLETED_PULL_REQUESTS_PAGE : MAX_LIMIT,
   );
+  const offset = stateParam === "completed"
+    ? Math.max(Number.parseInt(params.get("offset") ?? "", 10) || 0, 0) : 0;
 
-  const repos = await listVisibleRepos(auth.supabase);
+  const [repos, identities] = await Promise.all([
+    listVisibleRepos(auth.supabase),
+    listUserIdentities(auth.user.id).catch(() => null),
+  ]);
+  const viewerLogins = new Map((identities ?? []).flatMap((identity) =>
+    identity.account_login ? [[identity.provider, identity.account_login.toLowerCase()] as const] : [],
+  ));
   if (repos.length === 0) {
     return NextResponse.json({
       pullRequests: [],
@@ -175,6 +190,7 @@ export async function GET(request: NextRequest) {
     readRepoSyncStates(repos),
     listPullRequestsForUser(auth.supabase, repos, {
       limit: limit + 1,
+      ...(offset ? { offset } : {}),
       states: states ?? undefined,
     }).catch((err: unknown) => err as Error),
   ]);
@@ -204,6 +220,7 @@ export async function GET(request: NextRequest) {
       // The sweep may have discovered new PRs or changed existing states.
       rows = await listPullRequestsForUser(auth.supabase, repos, {
         limit: limit + 1,
+        ...(offset ? { offset } : {}),
         states: states ?? undefined,
       });
     } catch (err) {
@@ -233,7 +250,7 @@ export async function GET(request: NextRequest) {
   if (numbers.length > 0) {
     const { data } = await auth.supabase
       .from("agent_runs")
-      .select("id, status, pr_number, created_at, repo_link:project_git_links(provider, repo_full_name)")
+      .select("id, status, pr_number, created_by, created_at, repo_link:project_git_links(provider, repo_full_name)")
       .in("pr_number", numbers)
       .order("created_at", { ascending: true });
     const runs = (data ?? []) as unknown as RunRow[];
@@ -278,16 +295,46 @@ export async function GET(request: NextRequest) {
     repos.map((r) => [repoSyncKey(r.provider, r.repoFullName), r.project]),
   );
 
+  // Only authorized repositories with visible active PRs need review metadata.
+  // Discovery sweeps populate the same cache, avoiding a second forge scan.
+  const reviewQueues = new Map<string, Map<number, string[]>>();
+  const activeRepos = repos.filter((repo) => viewerLogins.has(repo.provider) && page.some((row) =>
+    rowProvider(row) === repo.provider && row.repo_full_name === repo.repoFullName &&
+    (row.state === "open" || row.state === "draft"),
+  ));
+  const uniqueRepos = [...new Map(activeRepos.map((repo) =>
+    [repoSyncKey(repo.provider, repo.repoFullName), repo],
+  )).values()];
+  let nextReviewRepo = 0;
+  await Promise.all(Array.from({ length: Math.min(3, uniqueRepos.length) }, async () => {
+    while (nextReviewRepo < uniqueRepos.length) {
+      const repo = uniqueRepos[nextReviewRepo++];
+      try {
+        reviewQueues.set(repoSyncKey(repo.provider, repo.repoFullName), await readReviewQueue(auth.user.id, repo));
+      } catch {
+        // A forge outage must not hide the cached list or its team queue.
+        console.error("[pull-requests] review queue unavailable");
+      }
+    }
+  }));
+
   const pullRequests: PullRequestListItem[] = page.map((row) => {
     const provider = rowProvider(row);
     const runs = runsByPr.get(`${provider}:${row.repo_full_name}:${row.number}`) ?? [];
     const working = runs.filter((r) => WORKING_STATUSES.includes(r.status));
+    const numoOpened = runs.some((run) => openedRunIds.has(run.id));
+    const createdByMe = numoOpened
+      ? runs.some((run) => run.created_by === auth.user.id && openedRunIds.has(run.id))
+      : !!viewerLogins.get(provider) && row.author_login?.toLowerCase() === viewerLogins.get(provider);
     // `issue_id` entered but zero nested resource = ticket in the trash
     // (MIN-133). RA remains in the list, simply DETACHED: it exists
     // at the forge, and hiding it would again show half the deposit.
     const issue = row.issue;
     return {
       prId: row.id,
+      createdByMe,
+      reviewRequestedForMe: (reviewQueues.get(repoSyncKey(provider, row.repo_full_name))?.get(row.number) ?? [])
+        .some((login) => login.toLowerCase() === viewerLogins.get(provider)),
       pr_number: row.number,
       pr_url: row.url,
       pr_state: row.state,
@@ -306,7 +353,7 @@ export async function GET(request: NextRequest) {
         projectByRepo.get(repoSyncKey(provider, row.repo_full_name)) ??
         null,
       runId: runs[0]?.id ?? null,
-      numoOpened: runs.some((r) => openedRunIds.has(r.id)),
+      numoOpened,
       activeRunId: working[0]?.id ?? null,
       busyRunId: working[0]?.id ?? null,
       runIds: runs.map((r) => r.id),

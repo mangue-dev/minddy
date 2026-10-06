@@ -393,6 +393,8 @@ export const TIMELINE = [
  */
 export const LIST_ITEM = {
   prId: PR_ID,
+  createdByMe: true,
+  reviewRequestedForMe: false,
   runId: RUN_ID,
   numoOpened: true,
   pr_number: PR_NUMBER,

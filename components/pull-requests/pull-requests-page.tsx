@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Add01Icon, FilterIcon, GitPullRequestIcon, Link02Icon } from "@hugeicons/core-free-icons";
+import { Add01Icon, FilterIcon, GitPullRequestIcon, Link02Icon, UserGroupIcon, TaskDone01Icon } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
@@ -9,24 +9,36 @@ import { useOptionalAppTabNavigation } from "@/lib/app-tab-navigation-context";
 import { canConsumePrDeepLink } from "@/lib/pr-navigation";
 import { AppTabRouteBoundary, useAppTabRoute } from "@/lib/app-tab-route-context";
 import { useFormatter, useTranslations } from "next-intl";
-import { useQueryClient } from "@tanstack/react-query";
+import { type InfiniteData, useQueryClient } from "@tanstack/react-query";
 import {
   Button,
   CommandGroup,
   CommandItem,
-  CommandSeparator,
   Spinner,
   cn,
 } from "mangue-ui";
 import { PrDetailSkeleton, PrListSkeleton } from "@/components/pull-requests/pr-loading-skeleton";
 import { EmptyScene } from "@/components/empty-scene";
 import { GitLogin } from "@/components/git/git-login";
+import { UserAvatar } from "@/components/user-avatar";
+import { useMyAvatarSource } from "@/lib/use-my-avatar";
 import { ForgeUserAvatar } from "@/components/git/forge-user-avatar";
 import { NumoIcon } from "@/components/numo-icon";
 import { linkedIssues } from "./pr-linked-issues";
 import { PrReadinessIcon } from "@/components/pull-requests/pr-readiness";
 import { PrStateBadge } from "@/components/pull-requests/pr-state-badge";
 import { SearchMenu } from "@/components/search-menu";
+import { AppTooltip } from "@/components/ui/app-tooltip";
+import { ProjectOrb } from "@/components/project-orb";
+import { projectOrbSeed } from "@/lib/project-orb-colors";
+import {
+  COMPLETED_PULL_REQUESTS_PAGE,
+  DEFAULT_PULL_REQUEST_SECTIONS,
+  PULL_REQUEST_SECTIONS,
+  pullRequestSection,
+  groupPullRequestsBySection,
+  type PullRequestSection,
+} from "@/lib/pull-request-sections";
 import { checkedProps } from "@/components/search-select";
 import { SecondarySidebar } from "@/components/secondary-sidebar";
 import { matchesFilter } from "@/components/sidebar-filter-field";
@@ -34,13 +46,12 @@ import {
   PROJECT_GROUP_INDENT,
   PROJECT_GROUP_LIMIT,
   SidebarProjectGroup,
-  groupByProject,
   toggledSet,
-  type ProjectGroup,
 } from "@/components/sidebar-project-group";
 import {
   PULL_REQUESTS_PAGE,
   useAllPullRequestsQuery,
+  useCompletedPullRequestsQuery,
   usePullRequestReadinessBatchQuery,
 } from "@/lib/use-agent-runs";
 import { useAssistantContext } from "@/lib/assistant-panel-context";
@@ -54,11 +65,9 @@ import type {
   AgentRunPrResponse,
   PullRequestListItem,
   PullRequestListResponse,
-  PullRequestStateFilter,
 } from "@/lib/agent-api";
 import {
   ALL_PULL_REQUESTS_QUERY_KEY,
-  matchesStateFilter,
   updateCachedPullRequestState,
 } from "@/lib/pull-request-list-cache";
 import {
@@ -89,172 +98,77 @@ function shouldShowPullRequestReadiness(
   return state === "draft" || state === "open";
 }
 
-/**
- * Pull Requests page (MIN-66, expanded by MIN-143) — list view/detail way
- * sorting: on the left ALL the PRs of the linked repositories (from Numo as well as from humans,
- * all accessible projects), on the right the diff + comments + actions.
- *
- * Two filters, and not one more. STATUS, served by the server — “all”
- * now means hundreds of lines. THE AUTHOR, applied on the page
- * loaded, with the entry “opened by Numo” which is the question we ask ourselves
- * really often. What is deliberately MISSING is “to be reread by me”: it
- * should know which forge account is which minddy member, and `git_connections`
- * only says it about the account that linked the deposit.
- */
+const SECTION_LABELS: Record<PullRequestSection, MessageKey<"PullRequests">> = {
+  created: "sectionCreatedByMe",
+  review: "sectionMyReview",
+  team: "sectionTeamReview",
+  completed: "sectionCompleted",
+};
+const SECTION_ICONS = {
+  review: GitPullRequestIcon,
+  team: UserGroupIcon,
+  completed: TaskDone01Icon,
+};
 
-/** Author filter value: all, Numo, or a specific forge login. */
-const AUTHOR_ALL = "__all__";
-const AUTHOR_NUMO = "__numo__";
+function PrCreatedSectionAvatar() {
+  const source = useMyAvatarSource();
+  return <UserAvatar seed={source} className="size-4 shrink-0" />;
+}
 
-/**
- * The states served by the filter, in menu order.
- *
- * A TABLE rather than four hand-written entries: the menu and the wording
- * of the button read the same source, so they cannot diverge. Typed in
- * `MessageKey` and not `string` — a key that does not exist does not compile
- * (see CLAUDE.md), where a `Record<string, string>` would calmly display
- * “PullRequests.filterOpen” on the screen.
- */
-const STATE_FILTERS: ReadonlyArray<{
-  value: PullRequestStateFilter;
-  label: MessageKey<"PullRequests">;
-  /**
-   * Title of the empty column when it is THIS state, and this state alone, which empties it —
-   * “no merged pull requests” says what we were looking for, where “none
-   * in these filters » returns the user open the menu to remember
-   * which ones. “All” does not have one: a state which excludes nothing has nothing to
-   * name, and this surface is already processed before rendering the column.
-   */
-  empty?: MessageKey<"PullRequests">;
-}> = [
-  { value: "open", label: "filterOpen", empty: "emptyOpen" },
-  { value: "merged", label: "filterMerged", empty: "emptyMerged" },
-  { value: "closed", label: "filterClosed", empty: "emptyClosed" },
-  { value: "all", label: "filterAll" },
-];
+function PrSectionIcon({ section, className = "size-4 shrink-0 text-muted-foreground" }: { section: PullRequestSection; className?: string }) {
+  return section === "created"
+    ? <PrCreatedSectionAvatar />
+    : <HugeiconsIcon icon={SECTION_ICONS[section]} className={className} />;
+}
 
-/**
- * The column filter: ONE trigger for both dimensions.
- *
- * It is a COMBOBOX, the same as the field selectors of a ticket (status,
- * priority, assigned) — `SearchMenu`, therefore cmdk, therefore searchable. On a deposit at
- * fifteen contributors, a list of authors that we can only scan with our eyes
- * is not a filter, it is a directory.
- *
- * The trigger no longer has any label or chevron, just the filter icon:
- * the line is 320 px, and the input field needs everything we can get it
- * to leave. What the label said — the current state — goes into the tooltip, and
- * a pellet indicates from afar that a filter is installed; without it, a list
- * restricted would have nothing left to say about it.
- */
+/** Sections are independent toggles; changing one keeps the menu open. */
 function PrFilterMenu({
-  state,
-  author,
-  authors,
-  onStateChange,
-  onAuthorChange,
+  sections,
+  onToggle,
 }: {
-  state: PullRequestStateFilter;
-  author: string;
-  authors: { login: string; avatar_url: string | null }[];
-  onStateChange: (state: PullRequestStateFilter) => void;
-  onAuthorChange: (author: string) => void;
+  sections: ReadonlySet<string>;
+  onToggle: (section: PullRequestSection) => void;
 }) {
   const t = useTranslations("PullRequests");
   const [open, setOpen] = useState(false);
-
-  const stateLabel = t(
-    STATE_FILTERS.find((s) => s.value === state)?.label ?? "filterOpen",
-  );
-  // “Open, all authors” is the starting point: nothing to report. All the
-  // The list remains restricted, and must be seen without opening the menu.
-  const active = state !== "open" || author !== AUTHOR_ALL;
-
-  const pick = (run: () => void) => {
-    run();
-    setOpen(false);
-  };
-
+  const active = sections.size !== DEFAULT_PULL_REQUEST_SECTIONS.length ||
+    DEFAULT_PULL_REQUEST_SECTIONS.some((section) => !sections.has(section));
   return (
     <SearchMenu
       open={open}
       onOpenChange={setOpen}
       align="end"
-      tooltip={t("filterTooltip", { state: stateLabel })}
+      tooltip={t("filterSections")}
       trigger={
-        /* `-mr-2` compensates for the padding of the button: the icon then aligns with the
-           right edge of the list lines, not 8 px below. */
         <Button
           variant="ghost"
           size="icon-sm"
           className={cn(SIDEBAR_COMPACT_CONTROL_CLASS, "-mr-2")}
-          aria-label={t("filterTooltip", { state: stateLabel })}
+          aria-label={t("filterSections")}
         >
           <span className="relative flex items-center justify-center">
             <HugeiconsIcon icon={FilterIcon} className="size-[18px]" />
             {active ? (
-              /* The ring in the color of the bar detaches the pellet from the line
-                 of the icon, which passes just below. */
-              <span
-                aria-hidden
-                className="absolute -top-0.5 -right-0.5 size-1.5 rounded-full bg-primary ring-2 ring-sidebar"
-              />
+              <span aria-hidden className="absolute -top-0.5 -right-0.5 size-1.5 rounded-full bg-primary ring-2 ring-sidebar" />
             ) : null}
           </span>
         </Button>
       }
     >
-      <CommandGroup heading={t("filterStateLabel")}>
-        {STATE_FILTERS.map((s) => (
+      <CommandGroup heading={t("filterSectionsLabel")}>
+        {PULL_REQUEST_SECTIONS.map((section) => (
           <CommandItem
-            key={s.value}
-            value={`state-${s.value}`}
-            keywords={[t(s.label)]}
-            onSelect={() => pick(() => onStateChange(s.value))}
-            {...checkedProps(s.value === state)}
+            key={section}
+            value={section}
+            keywords={[t(SECTION_LABELS[section])]}
+            onSelect={() => onToggle(section)}
+            {...checkedProps(sections.has(section))}
           >
-            <span className="truncate">{t(s.label)}</span>
+            <PrSectionIcon section={section} className="size-4" />
+            <span className="truncate">{t(SECTION_LABELS[section])}</span>
           </CommandItem>
         ))}
       </CommandGroup>
-      {/* The author only arises where Numo and humans coexist: at a
-          sole author, the group would have nothing to decide. */}
-      {authors.length > 1 ? (
-        <>
-          <CommandSeparator className="my-1" />
-          <CommandGroup heading={t("filterAuthorLabel")}>
-            <CommandItem
-              value="author-all"
-              keywords={[t("filterByAuthor")]}
-              onSelect={() => pick(() => onAuthorChange(AUTHOR_ALL))}
-              {...checkedProps(author === AUTHOR_ALL)}
-            >
-              <span className="truncate">{t("filterByAuthor")}</span>
-            </CommandItem>
-            <CommandItem
-              value="author-numo"
-              keywords={[t("filterNumoOnly"), "numo", "agent"]}
-              onSelect={() => pick(() => onAuthorChange(AUTHOR_NUMO))}
-              {...checkedProps(author === AUTHOR_NUMO)}
-            >
-              <span className="truncate">{t("filterNumoOnly")}</span>
-            </CommandItem>
-            {authors.map((a) => (
-              <CommandItem
-                key={a.login}
-                value={`author-${a.login}`}
-                keywords={[a.login]}
-                onSelect={() => pick(() => onAuthorChange(a.login))}
-                {...checkedProps(a.login === author)}
-              >
-                {/* `GitLogin` already truncates the name without overwriting its pastille
-                    “bot” — wrapping it in a `truncate` would cut it. */}
-                <GitLogin login={a.login} />
-              </CommandItem>
-            ))}
-          </CommandGroup>
-        </>
-      ) : null}
     </SearchMenu>
   );
 }
@@ -307,6 +221,13 @@ function PrRow({
     >
       <div className="flex items-center gap-2">
         <span className="flex min-w-0 items-center gap-1 font-mono text-xs text-muted-foreground">
+          {pr.project ? (
+            <AppTooltip label={pr.project.name}>
+              <span aria-label={pr.project.name} data-testid="pr-sidebar-project-logo" className="mr-0.5 flex shrink-0">
+                <ProjectOrb seed={projectOrbSeed(pr.project)} iconUrl={pr.project.icon_url} className="size-3.5" />
+              </span>
+            </AppTooltip>
+          ) : null}
           <span className="shrink-0 text-foreground">{identifier}</span>
           {linkedIssue ? (
             <>
@@ -357,7 +278,7 @@ function PrRow({
   );
 }
 
-/** A project and its pull requests — the shared shell, filled with `PrRow`. */
+/** A review queue, using the same accordion shell as the other sidebars. */
 function PrGroupRows({
   group,
   readinessByPrId,
@@ -371,8 +292,12 @@ function PrGroupRows({
   onToggle,
   onShowAll,
   onSelect,
+  hasNextPage,
+  fetchingNextPage,
+  loadingInitialPage,
+  onLoadNextPage,
 }: {
-  group: ProjectGroup<PullRequestListItem>;
+  group: { key: PullRequestSection; items: PullRequestListItem[] };
   readinessByPrId: Record<string, NonNullable<AgentRunPrResponse["readiness"]>>;
   unavailablePrIds: ReadonlySet<string>;
   readinessError: boolean;
@@ -384,21 +309,27 @@ function PrGroupRows({
   onToggle: () => void;
   onShowAll: () => void;
   onSelect: (prId: string) => void;
+  hasNextPage: boolean;
+  fetchingNextPage: boolean;
+  loadingInitialPage: boolean;
+  onLoadNextPage: () => void;
 }) {
   const tCommon = useTranslations("Common");
+  const t = useTranslations("PullRequests");
   const prs = group.items;
 
   // The OPEN PR remains visible: if it is beyond the first five, the
   // cut goes down to it rather than hiding it.
   const selectedIndex = prs.findIndex((p) => p.prId === selectedId);
-  const shown = showAll
+  const shown = showAll || group.key === "completed"
     ? prs
     : prs.slice(0, Math.max(PROJECT_GROUP_LIMIT, selectedIndex + 1));
 
   return (
     <SidebarProjectGroup
-      project={group.project}
-      fallbackLabel={tCommon("noProjectGroup")}
+      project={null}
+      fallbackLabel={t(SECTION_LABELS[group.key])}
+      headerIcon={<PrSectionIcon section={group.key} />}
       open={open}
       collapsible={collapsible}
       onToggle={onToggle}
@@ -422,6 +353,17 @@ function PrGroupRows({
           onSelect={() => onSelect(pr.prId)}
         />
       ))}
+      {group.key === "completed" && (loadingInitialPage || fetchingNextPage) ? (
+        <div aria-busy="true" data-testid="pr-sidebar-loading">
+          <PrListSkeleton rows={COMPLETED_PULL_REQUESTS_PAGE} showHeading={false} />
+        </div>
+      ) : null}
+      {group.key === "completed" && hasNextPage ? (
+        <Button variant="ghost" size="sm" className="self-start ml-8" disabled={fetchingNextPage}
+          onClick={onLoadNextPage} data-testid="pr-completed-load-more">
+          {tCommon("showMore")}
+        </Button>
+      ) : null}
     </SidebarProjectGroup>
   );
 }
@@ -471,16 +413,14 @@ function PullRequestsPageInner() {
     );
   }, [deepLink, navigation, router, searchParams]);
 
-  const [filter, setFilter] = useState<PullRequestStateFilter>("open");
-  const [author, setAuthor] = useState<string>(AUTHOR_ALL);
+  const [sections, setSections] = useState<ReadonlySet<string>>(() => new Set(DEFAULT_PULL_REQUEST_SECTIONS));
   const [query, setQuery] = useState("");
   const [limit, setLimit] = useState(PULL_REQUESTS_PAGE);
   const [selectedPrId, setSelectedPrId] = useState<string | null>(prParam);
   const [mobileDetail, setMobileDetail] = useState(!!deepLink);
   // Related issue open in side panel (on top of page, no navigation).
   const [panel, setPanel] = useState<{ projectId: string; issueId: string } | null>(null);
-  // Accordion of the list: FOLDED projects (everything is unfolded by default - we
-  // arrives to see, not to open) and those for whom we requested all the PRs.
+  // Sections start expanded; each keeps its own collapse and show-more state.
   const [collapsedGroups, setCollapsedGroups] = useState<ReadonlySet<string>>(
     () => new Set(),
   );
@@ -488,7 +428,7 @@ function PullRequestsPageInner() {
     () => new Set(),
   );
 
-  /** Folds/unfolds a project. Folding it back resets his list to his top five. */
+  /** Collapsing a section resets its list to the first five PRs. */
   const toggleGroup = (key: string) => {
     const wasOpen = !collapsedGroups.has(key);
     setCollapsedGroups((prev) => toggledSet(prev, key));
@@ -503,8 +443,18 @@ function PullRequestsPageInner() {
   // The pin lives only as long as the link does: once consumed, the address
   // stops carrying `pr`/`run` and the lens decides who belongs to the list.
   const pin = useMemo(() => ({ pr: prParam, run: runParam }), [prParam, runParam]);
-  const { pullRequests, hasMore, truncated, repoCount, anyPr, loading, fetching, refetch } =
-    useAllPullRequestsQuery(filter, limit, pin);
+  const active = useAllPullRequestsQuery("open", limit, pin);
+  const completed = useCompletedPullRequestsQuery(sections.has("completed"));
+  const { hasMore, repoCount, anyPr, loading } = active;
+  const fetching = active.fetching || completed.isFetching;
+  const truncated = active.truncated || completed.data?.pages.some((page) => page.truncated);
+  const pullRequests = useMemo(() => [...new Map([
+    ...active.pullRequests, ...completed.pullRequests,
+  ].map((pr) => [pr.prId, pr])).values()], [active.pullRequests, completed.pullRequests]);
+  const refetch = () => {
+    void active.refetch();
+    if (sections.has("completed")) void completed.refetch();
+  };
 
   // Tracks param changes (client navigation to another PR).
   useEffect(() => {
@@ -561,12 +511,15 @@ function PullRequestsPageInner() {
     const decision = deepLinkLensDecision(
       pullRequests,
       isTarget,
-      (pullRequest) => matchesStateFilter(pullRequest.pr_state, filter),
+      (pullRequest) => sections.has(pullRequestSection(pullRequest)),
     );
     if (decision === "pending") return;
     settledDeepLinkRef.current = deepLink;
-    if (decision === "widen") setFilter("all");
-  }, [deepLink, filter, prParam, pullRequests, runParam]);
+    if (decision === "widen") {
+      const target = pullRequests.find(isTarget)!;
+      setSections((previous) => new Set([...previous, pullRequestSection(target)]));
+    }
+  }, [deepLink, sections, prParam, pullRequests, runParam]);
 
   // Forging actions are slow, but their state is known from the click: we
   // patches the list before the response, then reconciles with the server. THE
@@ -574,7 +527,7 @@ function PullRequestsPageInner() {
   // ultimately refuses the action (branch protection, rights withdrawn, etc.).
   const applyOptimisticState = useCallback(
     (prId: string, state: PullRequestListItem["pr_state"]) => {
-      const previous = queryClient.getQueriesData<PullRequestListResponse>({
+      const previous = queryClient.getQueriesData<PullRequestListResponse | InfiniteData<PullRequestListResponse>>({
         queryKey: ALL_PULL_REQUESTS_QUERY_KEY,
       });
       const previousDetail = queryClient.getQueryData<AgentRunPrResponse>([
@@ -605,30 +558,10 @@ function PullRequestsPageInner() {
     [consumeDeepLink, queryClient],
   );
 
-  // Authors present in the loaded page — the menu only offers what we have.
-  const authors = useMemo(() => {
-    const seen = new Map<string, { login: string; avatar_url: string | null }>();
-    for (const pr of pullRequests) {
-      if (pr.author && !seen.has(pr.author.login)) seen.set(pr.author.login, pr.author);
-    }
-    return [...seen.values()].sort((a, b) => a.login.localeCompare(b.login));
-  }, [pullRequests]);
-
-  const filtered = useMemo(() => {
-    // The state lens is served by the server, but ONE row can contradict it:
-    // the deep-link pin, injected even outside the lens so an old PR stays
-    // reachable. The sidebar filter stays the master rule — hide the
-    // contradiction, or a merged PR would keep its place in the “open” list
-    // (and its detail on screen) as long as the address still carries `?pr=`.
-    const inLens = pullRequests.filter((p) => matchesStateFilter(p.pr_state, filter));
-    if (author === AUTHOR_ALL) return inLens;
-    // “Opened by Numo” is the FACT of the opening (`numoOpened`), not the
-    // login: according to the forge and installation, the author of a Numo
-    // PR is sometimes the app, sometimes the connected account. A fix
-    // session that bore a human PR without opening it must not pull it in.
-    if (author === AUTHOR_NUMO) return inLens.filter((p) => p.numoOpened);
-    return inLens.filter((p) => p.author?.login === author);
-  }, [pullRequests, filter, author]);
+  const filtered = useMemo(
+    () => pullRequests.filter((pr) => sections.has(pullRequestSection(pr))),
+    [pullRequests, sections],
+  );
 
   /**
    * What the column DISPLAYS. Distinct from `filtered`, the selection of which is
@@ -723,10 +656,13 @@ function PullRequestsPageInner() {
       : null,
   );
 
-  const groups = useMemo(
-    () => groupByProject(visible, (p) => p.project),
-    [visible],
-  );
+  const groups = useMemo(() => {
+    const grouped = groupPullRequestsBySection(visible);
+    if (sections.has("completed") && completed.isPending && !grouped.some((group) => group.key === "completed")) {
+      grouped.push({ key: "completed", items: [] });
+    }
+    return grouped;
+  }, [visible, sections, completed.isPending]);
   // A filter in progress UNFOLDS everything and lifts the cup of five: searching is
   // ask to see what fits, not to know where it is stored.
   const filtering = query.trim().length > 0;
@@ -802,48 +738,26 @@ function PullRequestsPageInner() {
         }}
         actions={
           <PrFilterMenu
-            state={filter}
-            author={author}
-            authors={authors}
-            onStateChange={(next) => {
-              // A manual lens pick: the deep link yields — the filter the
-              // reader chose becomes the master rule (a merged target pinned
-              // by a stale `?pr=` must not drag the lens back to “all”).
+            sections={sections}
+            onToggle={(section) => {
               consumeDeepLink();
-              setFilter(next);
+              // Settle before toggling so a pinned target cannot restore a hidden section.
+              settledDeepLinkRef.current = deepLink;
+              setSections((previous) => toggledSet(previous, section));
               setLimit(PULL_REQUESTS_PAGE);
             }}
-            onAuthorChange={setAuthor}
           />
         }
       >
         {loading ? (
-          <PrListSkeleton />
-        ) : visible.length === 0 ? (
-          /* PRs necessarily exist here — the completely empty surface is
-             processed above, before rendering the column. The list cannot
-             therefore be empty only because a filter emptied it, and the same scene
-             as the other empty states say, to the size of the column.
-             “Nothing matches” and “no PR in this state” are not the
-             same news: the first can be repaired by erasing three letters, the
-             second request to reopen the filter — hence the button, which has nothing
-             to offer as long as it is the seizure that restricts.
-
-             And when the condition is the ONLY restriction, the scene names it. Of the
-             that an author is added, it returns to the generic wording: “none
-             pull request ouverte » serait faux s'il en existe, mais d'un autre. */
+          <div aria-busy="true" data-testid="pr-sidebar-loading">
+            <PrListSkeleton />
+          </div>
+        ) : groups.length === 0 ? (
           <EmptyScene
             size="compact"
             icon={GitPullRequestIcon}
-            title={
-              query.trim()
-                ? tCommon("noFilterMatch")
-                : t(
-                    (author === AUTHOR_ALL
-                      ? STATE_FILTERS.find((s) => s.value === filter)?.empty
-                      : undefined) ?? "emptyState",
-                  )
-            }
+            title={query.trim() ? tCommon("noFilterMatch") : t("emptySections")}
             className="py-10"
           >
             {query.trim() ? null : (
@@ -854,8 +768,8 @@ function PullRequestsPageInner() {
                   // A manual lens pick: the deep link yields (see
                   // `consumeDeepLink`) — the filter the reader chose rules.
                   consumeDeepLink();
-                  setFilter("all");
-                  setAuthor(AUTHOR_ALL);
+                  settledDeepLinkRef.current = deepLink;
+                  setSections(new Set(PULL_REQUEST_SECTIONS));
                   setLimit(PULL_REQUESTS_PAGE);
                 }}
               >
@@ -865,10 +779,6 @@ function PullRequestsPageInner() {
           </EmptyScene>
         ) : (
           <div className="flex flex-col gap-2 pt-2 pb-4">
-            {/* A project, its pull requests — same accordion as the column of
-                agent conversations (`SidebarProjectGroup`). It is he who
-                carries the project, and that’s why the lines don’t carry it
-                plus: it would be written once per line under its own title. */}
             {groups.map((g) => (
               <PrGroupRows
                 key={g.key}
@@ -881,6 +791,10 @@ function PullRequestsPageInner() {
                 collapsible={!filtering}
                 selectedId={selectedId}
                 fmtDay={fmtDay}
+                hasNextPage={completed.hasNextPage}
+                fetchingNextPage={completed.isFetchingNextPage}
+                loadingInitialPage={completed.isPending}
+                onLoadNextPage={() => void completed.fetchNextPage()}
                 onToggle={() => toggleGroup(g.key)}
                 onShowAll={() => setExpandedGroups((prev) => toggledSet(prev, g.key))}
                 onSelect={(prId) => {
@@ -890,15 +804,19 @@ function PullRequestsPageInner() {
               />
             ))}
 
+            {active.loadingMore ? (
+              <div aria-busy="true" data-testid="pr-sidebar-loading">
+                <PrListSkeleton showHeading={false} />
+              </div>
+            ) : null}
             {hasMore ? (
               <Button
                 variant="ghost"
                 size="sm"
                 className="mt-2 self-center"
-                disabled={fetching}
+                disabled={active.fetching}
                 onClick={() => setLimit((n) => n + PULL_REQUESTS_PAGE)}
               >
-                {fetching ? <Spinner /> : null}
                 {t("loadMore")}
               </Button>
             ) : null}

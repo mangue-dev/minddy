@@ -14,8 +14,12 @@ import {
   DialogTitle,
   Spinner,
   toast,
+  cn,
+  CommandGroup,
+  CommandItem,
 } from "mangue-ui";
-import { SearchSelect, type PickerOption } from "@/components/search-select";
+import type { PickerOption } from "@/components/search-select";
+import { SearchMenu } from "@/components/search-menu";
 import { StatusIndicator } from "@/components/issue-indicators";
 import { globalBoardQueryFn } from "@/lib/global-board-api";
 import { GLOBAL_BOARD_KEY } from "@/lib/use-global-board-query";
@@ -33,7 +37,16 @@ export function PrLinkIssue({
   projectKey,
   onLinked,
   linkedIssueIds = [],
+  open: controlledOpen,
+  onOpenChange,
+  position,
+  triggerClassName,
 }: {
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  /** Anchor the picker to the overflow action when its inline trigger is hidden. */
+  position?: { x: number; y: number };
+  triggerClassName?: string;
   linkedIssueIds?: string[];
   prId: string;
   prState: PullRequestListItem["pr_state"];
@@ -44,7 +57,12 @@ export function PrLinkIssue({
 }) {
   const t = useTranslations("PullRequests");
   const tStatus = useTranslations("Status");
-  const [open, setOpen] = useState(false);
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const open = controlledOpen ?? uncontrolledOpen;
+  const setOpen = (next: boolean) => {
+    setUncontrolledOpen(next);
+    onOpenChange?.(next);
+  };
   const [pending, setPending] = useState<{ id: string; identifier: string } | null>(null);
   const [linking, setLinking] = useState(false);
 
@@ -96,31 +114,43 @@ export function PrLinkIssue({
 
   return (
     <>
-      <SearchSelect
-        value={null}
-        onChange={(issueId) => {
-          if (!issueId) return;
-          const issue = issues.find((i) => i.id === issueId);
-          if (!issue) return;
-          setPending({ id: issue.id, identifier: issueIdentifier(projectKey, issue.number) });
-        }}
-        options={options}
+      <SearchMenu
         open={open}
         onOpenChange={setOpen}
-        align="start"
+        position={position}
+        align={position ? "end" : "start"}
         searchPlaceholder={t("linkIssueSearchPlaceholder")}
         emptyText={open && isPending ? t("linkIssueLoading") : t("linkIssueEmpty")}
         trigger={
           <Button
             variant="ghost"
             size="sm"
-            className="h-6 gap-1 px-1.5 font-sans text-xs font-normal text-muted-foreground"
+            className={cn("h-6 gap-1 px-1.5 font-sans text-xs font-normal text-muted-foreground hover:bg-muted hover:text-foreground", triggerClassName)}
           >
             <HugeiconsIcon icon={Link02Icon} className="size-3.5" />
             {t(linkedIssueIds.length > 0 ? "linkAnotherIssue" : "linkIssue")}
           </Button>
         }
-      />
+      >
+        <CommandGroup>
+          {options.map((option) => (
+            <CommandItem
+              key={option.value}
+              value={option.value}
+              keywords={[option.label, ...(option.keywords ?? [])]}
+              onSelect={() => {
+                const issue = issues.find((candidate) => candidate.id === option.value);
+                if (!issue) return;
+                setPending({ id: issue.id, identifier: issueIdentifier(projectKey, issue.number) });
+                setOpen(false);
+              }}
+            >
+              {option.icon}
+              <span className="truncate">{option.label}</span>
+            </CommandItem>
+          ))}
+        </CommandGroup>
+      </SearchMenu>
 
       {/* Confirm the status change before linking. */}
       <Dialog

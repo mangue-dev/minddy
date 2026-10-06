@@ -940,11 +940,15 @@ export async function fetchPullRequestAiReviewApi(
 // ── Global Pull Requests page (MIN-66, expanded by MIN-143) ─────────────────
 
 /** List filtering state — served by the SERVER (`?state=`). */
-export type PullRequestStateFilter = "open" | "merged" | "closed" | "all";
+export type PullRequestStateFilter = "open" | "merged" | "closed" | "completed" | "all";
 
 export interface PullRequestListItem {
   /** The item IS the PR. The run is no longer the carrier, just a decoration. */
   prId: string;
+  /** Authenticated viewer owns this PR, including PRs opened by their Numo run. */
+  createdByMe?: boolean;
+  /** The viewer has a pending review request at the forge. */
+  reviewRequestedForMe?: boolean;
   pr_number: number;
   pr_url: string | null;
   pr_state: "draft" | "open" | "merged" | "closed";
@@ -1018,12 +1022,14 @@ export interface PullRequestListResponse {
 export async function fetchAllPullRequestsApi(input: {
   state: PullRequestStateFilter;
   limit: number;
+  offset?: number;
   pin?: { pr?: string | null; run?: string | null };
 }): Promise<PullRequestListResponse> {
   const params = new URLSearchParams({
     state: input.state,
     limit: String(input.limit),
   });
+  if (input.offset != null) params.set("offset", String(input.offset));
   if (input.pin?.pr) params.set("pr", input.pin.pr);
   if (input.pin?.run) params.set("run", input.pin.run);
   return parseJson(await fetch(`/api/pull-requests?${params}`));
