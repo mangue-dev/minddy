@@ -9,12 +9,24 @@ const env = {
 const paths = {
   "/rpc/auth_authorization_state": { post: {} },
   "/rpc/resolve_realtime_topic": { post: {} },
+  "/rpc/get_admin_account": { post: {} },
+  "/rpc/get_admin_onboarding_signals": { post: {} },
 };
 
 describe("deployment database preflight", () => {
-  it("accepts the preceding schema while worker Stop uses its compatibility path", async () => {
+  it("accepts the required schema while worker Stop uses its compatibility path", async () => {
     await expect(checkDeploymentDatabase(env, vi.fn().mockResolvedValue(Response.json({ paths }))))
       .resolves.toBeUndefined();
+  });
+
+  it("rejects the pre-admin-migration schema even when auth and Realtime are ready", async () => {
+    const fetcher = vi.fn().mockResolvedValue(Response.json({ paths: {
+      "/rpc/auth_authorization_state": { post: {} },
+      "/rpc/resolve_realtime_topic": { post: {} },
+    } }));
+    await expect(checkDeploymentDatabase(env, fetcher))
+      .rejects.toThrow("missing required RPCs: /rpc/get_admin_account, /rpc/get_admin_onboarding_signals");
+    expect(fetcher).toHaveBeenCalledOnce();
   });
   it("checks the role-filtered schema without invoking application RPCs", async () => {
     const fetcher = vi.fn().mockResolvedValue(Response.json({ paths }));

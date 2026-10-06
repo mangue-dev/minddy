@@ -2,7 +2,7 @@
 
 Vercel builds run `npm run check:deployment-db` before compiling the app. The
 check reads the target PostgREST OpenAPI schema with the deployment's service
-credentials and requires the auth and Realtime RPCs used by this candidate.
+credentials and requires the auth, Realtime and admin RPCs used by this candidate.
 Missing configuration, an unavailable schema, or a missing RPC stops the build
 before Vercel replaces the current deployment. It does not apply migrations,
 change grants, query account data, or substitute weaker authorization checks.
@@ -12,6 +12,17 @@ running database; self-hosted upgrades still use the bootstrap verification.
 This check detects missing entry points, not complete migration compatibility.
 Review the migration history and test the target database before promotion.
 Keep the required RPC list current when adding mandatory startup dependencies.
+
+The admin overview requires `get_admin_onboarding_signals`, and account support
+requires `get_admin_account`, introduced by
+`20270109200030_admin_data_minimisation.sql`. Neither has a compatibility path
+to the old account-directory RPC. Both must be present in the service-role
+OpenAPI schema before deploying this version. That migration also drops
+`get_admin_users_overview`, which the preceding admin application still uses.
+If preview and production share a database, applying it only for preview would
+break the preceding production admin. Coordinate the database and application
+upgrade, or use a separate preview database. Restore the previous compatible
+preview deployment to recover a preview that already has this mismatch.
 
 Worker Stop prefers `request_numo_worker_stop`, introduced by
 `20270109200021_numo_durable_worker_stop.sql`. Until that additive migration is
