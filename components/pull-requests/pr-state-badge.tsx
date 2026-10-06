@@ -3,7 +3,7 @@
 import { AppIcon } from "@/components/icon";
 import { ArrowDown01Icon, GitMergeIcon as GitMerge, GitPullRequestClosedIcon as GitPullRequestClosed, GitPullRequestDraftIcon as GitPullRequestDraft, GitPullRequestIcon as GitPullRequest } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
-import { Badge, Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, cn } from "mangue-ui";
+import { Badge, Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent, cn } from "mangue-ui";
 import type { EditablePrState } from "@/lib/pr-state-transition";
 import type { PullRequestListItem } from "@/lib/agent-api";
 
@@ -83,13 +83,29 @@ export function PrStateBadge({
 }
 
 /** Editable detail status; merged and read-only PRs retain their badge. */
-export function PrStateControl({ state, canChange, disabled, onChange }: {
+export function PrStateControl({ state, canChange, disabled, onChange, inMenu = false }: {
+  inMenu?: boolean;
   state: PrState;
   canChange: boolean;
   disabled: boolean;
   onChange: (state: EditablePrState) => void;
 }) {
   const t = useTranslations("PullRequests");
+  const options = (["draft", "open", "closed"] as const).map((next) => (
+    <DropdownMenuItem key={next} disabled={next === state || disabled}
+      onSelect={() => onChange(next)} data-testid={`pr-state-${next}`}>
+      <AppIcon icon={STATE_ICONS[next]} className={cn(PR_STATE_STYLES[next], "bg-transparent dark:bg-transparent")} />
+      {t(STATE_LABELS[next])}
+    </DropdownMenuItem>
+  ));
+  if (inMenu) {
+    const label = <><AppIcon icon={STATE_ICONS[state]} className={cn(PR_STATE_STYLES[state], "bg-transparent dark:bg-transparent")} />{t(STATE_LABELS[state])}</>;
+    if (state === "merged" || !canChange) return <DropdownMenuItem disabled className="md:hidden">{label}</DropdownMenuItem>;
+    return <DropdownMenuSub>
+      <DropdownMenuSubTrigger className="md:hidden" disabled={disabled} data-testid="pr-state-menu">{label}</DropdownMenuSubTrigger>
+      <DropdownMenuSubContent>{options}</DropdownMenuSubContent>
+    </DropdownMenuSub>;
+  }
   if (state === "merged" || !canChange) return <PrStateBadge state={state} icon className="h-8" />;
   return (
     <DropdownMenu>
@@ -107,17 +123,7 @@ export function PrStateControl({ state, canChange, disabled, onChange }: {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        {(["draft", "open", "closed"] as const).map((next) => (
-          <DropdownMenuItem
-            key={next}
-            disabled={next === state}
-            onSelect={() => onChange(next)}
-            data-testid={`pr-state-${next}`}
-          >
-            <AppIcon icon={STATE_ICONS[next]} className={cn(PR_STATE_STYLES[next], "bg-transparent dark:bg-transparent")} />
-            {t(STATE_LABELS[next])}
-          </DropdownMenuItem>
-        ))}
+        {options}
       </DropdownMenuContent>
     </DropdownMenu>
   );

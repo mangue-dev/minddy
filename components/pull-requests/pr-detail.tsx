@@ -49,7 +49,7 @@ import {
 import { PrTimelineReview, PrTimelineRow } from "@/components/pull-requests/pr-timeline";
 import { PrStateControl } from "@/components/pull-requests/pr-state-badge";
 import { prStateTransitionActions, type EditablePrState, type PrStateAction } from "@/lib/pr-state-transition";
-import { PrReadinessBadge, PrReadinessControl } from "@/components/pull-requests/pr-readiness";
+import { PrReadinessBadge, PrReadinessControl, PrReadinessMenuItem } from "@/components/pull-requests/pr-readiness";
 import { PrInsights } from "@/components/pull-requests/pr-insights";
 import { PrRequestReview } from "@/components/pull-requests/pr-request-review";
 import { groupReviewThreads } from "@/lib/pr-review-threads";
@@ -749,11 +749,26 @@ export function PrDetail({
   const [editingTitle, setEditingTitle] = useState(false);
   const [linkIssueOpen, setLinkIssueOpen] = useState(false);
   const [linkIssuePosition, setLinkIssuePosition] = useState<{ x: number; y: number }>();
+  const [readinessOpen, setReadinessOpen] = useState(false);
+  const [readinessPosition, setReadinessPosition] = useState<{ x: number; y: number }>();
   const moreActionsRef = useRef<HTMLButtonElement>(null);
   const openLinkIssueFromMenu = () => {
     const bounds = moreActionsRef.current?.getBoundingClientRect();
     if (!bounds) return;
     setLinkIssuePosition({ x: bounds.right, y: bounds.bottom });
+  };
+  const openReadinessFromMenu = () => {
+    const bounds = moreActionsRef.current?.getBoundingClientRect();
+    if (bounds) setReadinessPosition({ x: bounds.right, y: bounds.bottom });
+  };
+  const onMoreCloseAutoFocus = (event: Event) => {
+    if (linkIssuePosition) {
+      event.preventDefault();
+      setLinkIssueOpen(true);
+    } else if (readinessPosition) {
+      event.preventDefault();
+      setReadinessOpen(true);
+    }
   };
   const [titleDraft, setTitleDraft] = useState("");
   // The merge is confirmed WITH its method: bring it to the confirmation state
@@ -1700,6 +1715,17 @@ export function PrDetail({
     t,
   ]);
 
+  const mobileStatusActions = <>
+    <DropdownMenuSeparator className="md:hidden" />
+    <PrStateControl inMenu state={badgeState} canChange={!!canWrite}
+      disabled={!!acting || isWorking || readState !== "fresh"}
+      onChange={(state) => setConfirmAction({ kind: "state", state })} />
+    {!isTerminal ? (
+      <PrReadinessMenuItem readiness={isDraft ? null : effectiveReadiness}
+        disabled={isDraft || !effectiveReadiness} onSelect={openReadinessFromMenu} />
+    ) : null}
+  </>;
+
   return (
     // The envelope tells the WHOLE panel — body, thread, activity, comments of
     // line, composers — which PR he is talking about: which proxy to go through to
@@ -1809,7 +1835,7 @@ export function PrDetail({
         </span>
         {/* Background merge work appears in the insight rows across navigation. */}
         {isWorking ? (
-          <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+          <span className="hidden items-center gap-1.5 text-xs text-muted-foreground md:inline-flex">
             <Spinner />
             {t("numoWorking")}
           </span>
@@ -1830,12 +1856,7 @@ export function PrDetail({
                   <HugeiconsIcon icon={MoreHorizontalIcon} />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" onCloseAutoFocus={(event) => {
-                if (linkIssuePosition) {
-                  event.preventDefault();
-                  setLinkIssueOpen(true);
-                }
-              }}>
+              <DropdownMenuContent align="end" onCloseAutoFocus={onMoreCloseAutoFocus}>
                 {item.project ? (
                   <DropdownMenuItem className="2xl:hidden" onSelect={openLinkIssueFromMenu}>
                     <HugeiconsIcon icon={Link02Icon} />
@@ -1862,13 +1883,16 @@ export function PrDetail({
                     }}
                   >
                     <HugeiconsIcon icon={Edit04Icon} />
-                    {t("renamePr")}
+                      {t("renamePr")}
                   </DropdownMenuItem>
                 ) : null}
+                {mobileStatusActions}
               </DropdownMenuContent>
             </DropdownMenu>
-            <PrStateControl state={badgeState} canChange={!!canWrite} disabled={!!acting || isWorking || readState !== "fresh"}
-              onChange={(state) => setConfirmAction({ kind: "state", state })} />
+            <div className="hidden md:block">
+              <PrStateControl state={badgeState} canChange={!!canWrite} disabled={!!acting || isWorking || readState !== "fresh"}
+                onChange={(state) => setConfirmAction({ kind: "state", state })} />
+            </div>
           </div>
         ) : (
           // Under `2xl`, secondary actions move into the overflow menu. The
@@ -1924,12 +1948,7 @@ export function PrDetail({
                   <HugeiconsIcon icon={MoreHorizontalIcon} />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" onCloseAutoFocus={(event) => {
-                if (linkIssuePosition) {
-                  event.preventDefault();
-                  setLinkIssueOpen(true);
-                }
-              }}>
+              <DropdownMenuContent align="end" onCloseAutoFocus={onMoreCloseAutoFocus}>
                 {item.project ? (
                   <DropdownMenuItem className="2xl:hidden" onSelect={openLinkIssueFromMenu}>
                     <HugeiconsIcon icon={Link02Icon} />
@@ -1981,16 +2000,29 @@ export function PrDetail({
                     </DropdownMenuItem>
                   </>
                 ) : null}
+                {mobileStatusActions}
               </DropdownMenuContent>
             </DropdownMenu>
 
             {/* Open state and merge state read side by side, AFTER the more
                 menu: first what we can do, then what the PR is, then what
                 still stands between it and the merge. */}
-            <PrStateControl state={badgeState} canChange={!!canWrite} disabled={!!acting || isWorking || readState !== "fresh"}
-              onChange={(state) => setConfirmAction({ kind: "state", state })} />
+            <div className="hidden md:block">
+              <PrStateControl state={badgeState} canChange={!!canWrite} disabled={!!acting || isWorking || readState !== "fresh"}
+                onChange={(state) => setConfirmAction({ kind: "state", state })} />
+            </div>
             {!isDraft && effectiveReadiness ? (
               <PrReadinessControl
+                open={readinessOpen}
+                onOpenChange={(open) => {
+                  setReadinessOpen(open);
+                  if (!open && readinessPosition) {
+                    setReadinessPosition(undefined);
+                    moreActionsRef.current?.focus();
+                  }
+                }}
+                position={readinessPosition}
+                triggerClassName="hidden md:inline-flex"
                 readiness={effectiveReadiness}
                 providerName={REPO_PROVIDERS[item.provider].displayName}
                 canAct={canActOnBlocker}
@@ -2008,7 +2040,7 @@ export function PrDetail({
                 onOpenChecks={() => setChecksDetailsOpen(true)}
               />
             ) : (
-              <PrReadinessBadge readiness={null} />
+              <PrReadinessBadge readiness={null} className="hidden md:inline-flex" />
             )}
           </div>
         )}

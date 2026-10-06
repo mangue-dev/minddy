@@ -129,8 +129,8 @@ export function PrStatusSkeleton() {
 export function PrHeaderActionsSkeleton() {
   return (
     <div aria-hidden className="ml-auto flex gap-2">
-      <Skeleton className="h-8 w-16 rounded-full" />
-      <Skeleton className="h-8 w-28 rounded-full" />
+      <Skeleton className="size-8 rounded-full md:w-16" />
+      <Skeleton className="hidden h-8 w-28 rounded-full md:block" />
     </div>
   );
 }
