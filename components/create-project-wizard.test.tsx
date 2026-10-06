@@ -4,6 +4,7 @@ import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import en from "@/messages/en.json";
+import type { Project } from "@/lib/types";
 import { projectDraftFromRow, type ProjectDraft } from "@/lib/project-draft";
 import { takeSeedHandoff } from "@/lib/project-seed-handoff";
 import type { WizardStep } from "@/components/wizard/wizard-dialog";
@@ -11,7 +12,8 @@ import type { WizardStep } from "@/components/wizard/wizard-dialog";
 const mocks = vi.hoisted(() => ({
   push: vi.fn(), createProject: vi.fn(), createPage: vi.fn(),
   updateProject: vi.fn(), deleteDraft: vi.fn(), invalidate: vi.fn(),
-  track: vi.fn(), close: vi.fn(), toastError: vi.fn(),
+  track: vi.fn(), close: vi.fn(), toastError: vi.fn(), toastSuccess: vi.fn(),
+  prepareBrief: vi.fn(), saveDraft: vi.fn(), projects: [] as Project[],
 }));
 vi.mock("@/lib/use-app-router", () => ({ useAppRouter: () => ({ push: mocks.push }) }));
 vi.mock("next-intl", () => ({
@@ -23,11 +25,11 @@ vi.mock("next-intl", () => ({
 vi.mock("@tanstack/react-query", () => ({ useQueryClient: () => ({ invalidateQueries: mocks.invalidate }) }));
 vi.mock("@/lib/auth-context", () => ({ useAuth: () => ({ user: { id: "owner" } }) }));
 vi.mock("@/lib/projects-context", () => ({ useProjects: () => ({
-  projects: [], createProject: mocks.createProject, updateProject: mocks.updateProject,
-  saveProjectDraft: vi.fn(), deleteProjectDraft: mocks.deleteDraft,
+  projects: mocks.projects, createProject: mocks.createProject, updateProject: mocks.updateProject,
+  saveProjectDraft: mocks.saveDraft, deleteProjectDraft: mocks.deleteDraft,
 }) }));
 vi.mock("@/lib/use-git-connections-query", () => ({ useGitConnectionsQuery: () => ({ connections: [], providers: [] }) }));
-vi.mock("@/lib/pages-api", () => ({ createPageApi: mocks.createPage }));
+vi.mock("@/lib/pages-api", () => ({ createPageApi: mocks.createPage, prepareInitialBriefApi: mocks.prepareBrief }));
 vi.mock("@/lib/use-analytics", () => ({ useAnalytics: () => ({ track: mocks.track }) }));
 vi.mock("@/lib/use-track-view", () => ({ useTrackView: vi.fn() }));
 vi.mock("@hugeicons/react", () => ({ HugeiconsIcon: () => null }));
@@ -37,7 +39,7 @@ vi.mock("mangue-ui", () => ({
   Textarea: (props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => <textarea {...props} />,
   Spinner: () => null, Switch: () => null,
   cn: (...values: unknown[]) => values.filter(Boolean).join(" "),
-  toast: { success: vi.fn(), error: mocks.toastError },
+  toast: { success: mocks.toastSuccess, error: mocks.toastError },
 }));
 vi.mock("@/components/ui/tooltip", () => ({
   Tooltip: ({ children }: { children: React.ReactNode }) => children,
@@ -84,6 +86,11 @@ beforeEach(() => {
   vi.stubGlobal("React", React);
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   mocks.createProject.mockResolvedValue({ id: draft.id, name: draft.name });
+  mocks.projects = [];
+  mocks.prepareBrief.mockImplementation(async (markdown: string) => ({
+    type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: markdown }] }],
+  }));
+  mocks.saveDraft.mockResolvedValue(draft);
   mocks.createPage.mockResolvedValue({ id: "brief-page" });
   mocks.updateProject.mockResolvedValue(undefined);
   mocks.deleteDraft.mockResolvedValue(undefined);
@@ -98,6 +105,7 @@ afterEach(async () => {
   host.remove();
   takeSeedHandoff();
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 
 async function mount(overrides: Partial<ProjectDraft> = {}) {
@@ -138,8 +146,10 @@ describe("initial project brief", () => {
     expect(mocks.createPage).not.toHaveBeenCalled();
     await submit();
     expect(mocks.createPage).toHaveBeenCalledExactlyOnceWith(draft.id, {
-      title: en.Projects.wizardBriefPageTitle, icon: "📝", markdown: text,
+      title: en.Projects.wizardBriefPageTitle, icon: "📝",
+      content: { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text }] }] },
     });
+    expect(mocks.prepareBrief).toHaveBeenCalledExactlyOnceWith(text);
     expectNormalNavigation();
   });
 
@@ -181,6 +191,76 @@ describe("initial project brief", () => {
     await mount(restored);
     await submit();
     expect(mocks.createPage).not.toHaveBeenCalled();
+    expectNormalNavigation();
+  });
+
+
+  it("rejects projected page overflow before creating a project and retains the editable brief", async () => {
+    const text = "x\n\n".repeat(16_666);
+    mocks.prepareBrief.mockRejectedValueOnce(new Error("Projected page too large"));
+    await mount({ step: "finish", seed: { kind: "brief", text } });
+    await submit();
+    expect(mocks.createProject).not.toHaveBeenCalled();
+    expect(mocks.createPage).not.toHaveBeenCalled();
+    expect(mocks.deleteDraft).not.toHaveBeenCalled();
+    expect(mocks.close).not.toHaveBeenCalled();
+    expect(host.querySelector<HTMLTextAreaElement>("textarea")!.value).toBe(text);
+    expect(host.querySelector('[role="alert"]')!.textContent).toBe("Projected page too large");
+    await typeBrief("A shorter brief");
+    expect(host.querySelector('[role="alert"]')).toBeNull();
+    await submit();
+    await submit();
+    expectNormalNavigation();
+  });
+
+  it("retains the full brief and its draft on page-write failure, then retries the same project", async () => {
+    const text = "# Brief\n\n".padEnd(50_000, "x");
+    mocks.createPage.mockRejectedValueOnce(new Error("Page service unavailable"));
+    await mount({ step: "finish", seed: { kind: "brief", text } });
+    await submit();
+    expect(host.querySelector('[role="alert"]')!.textContent).toBe("Page service unavailable");
+    expect(mocks.saveDraft).toHaveBeenCalledWith(expect.objectContaining({
+      id: draft.id, step: "finish", seed: { kind: "brief", text },
+    }));
+    expect(mocks.deleteDraft).not.toHaveBeenCalled();
+    expect(mocks.close).not.toHaveBeenCalled();
+    expect(mocks.push).not.toHaveBeenCalled();
+    expect(mocks.toastSuccess).not.toHaveBeenCalled();
+    expect(takeSeedHandoff()).toBeNull();
+    await submit();
+    expect(mocks.createProject).toHaveBeenCalledTimes(1);
+    expect(mocks.createPage).toHaveBeenCalledTimes(2);
+    expect(mocks.createPage.mock.calls[1][1].content.content[0].content[0].text).toBe(text);
+    expect(mocks.deleteDraft).toHaveBeenCalledExactlyOnceWith(draft.id);
+    expectNormalNavigation();
+  });
+
+  it("keeps the wizard retryable even when saving its recovery draft also fails", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    mocks.createPage.mockRejectedValueOnce(new Error("Offline"));
+    mocks.saveDraft.mockRejectedValueOnce(new Error("Offline"));
+    await mount({ step: "finish", seed: { kind: "brief", text: "Keep this brief" } });
+    await submit();
+    expect(host.querySelector('[role="alert"]')!.textContent).toBe("Offline");
+    expect(mocks.deleteDraft).not.toHaveBeenCalled();
+    expect(mocks.close).not.toHaveBeenCalled();
+    await submit();
+    expect(mocks.createProject).toHaveBeenCalledTimes(1);
+    expectNormalNavigation();
+  });
+
+  it("resumes the saved recovery draft against the already created project", async () => {
+    mocks.createPage.mockRejectedValueOnce(new Error("Try again later"));
+    await mount({ step: "finish", seed: { kind: "brief", text: "Saved recovery brief" } });
+    await submit();
+    const saved = mocks.saveDraft.mock.calls[0][0];
+    await act(() => root.unmount());
+    root = createRoot(host);
+    mocks.projects = [{ id: draft.id, name: draft.name, owner_id: "owner" } as Project];
+    await mount(saved);
+    await submit();
+    expect(mocks.createProject).toHaveBeenCalledTimes(1);
+    expect(mocks.createPage).toHaveBeenCalledTimes(2);
     expectNormalNavigation();
   });
 

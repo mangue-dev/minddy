@@ -38,8 +38,7 @@ export type ProjectWizardStep = (typeof PROJECT_WIZARD_STEPS)[number];
 /** Where do we start from (MIN-171) — the wizard's first question. */
 export type ProjectOrigin = "new" | "existing";
 
-/** Maximum length of the initial brief saved as a project page. */
-export const MAX_INITIAL_BRIEF_CHARS = 50_000;
+export { MAX_INITIAL_BRIEF_CHARS } from "./project-brief";
 
 /**
  * The route KEPT. The seed depends on the origin — until it is chosen, the step has no content and does not count towards the stepper.

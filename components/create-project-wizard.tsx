@@ -36,7 +36,7 @@ import {
   importProjectIconApi,
   uploadProjectIconDataUrlApi,
 } from "@/lib/projects-api";
-import { createPageApi } from "@/lib/pages-api";
+import { createPageApi, prepareInitialBriefApi } from "@/lib/pages-api";
 import {
   clearPendingDraftId,
   MAX_INITIAL_BRIEF_CHARS,
@@ -152,6 +152,7 @@ export function CreateProjectWizard({
     deleteProjectDraft,
   } = useProjects();
   const { track } = useAnalytics();
+  const createdProjectRef = useRef<Awaited<ReturnType<typeof createProject>> | null>(null);
 
   const [stepIndex, setStepIndex] = useState(0);
   const [submitting, setSubmitting] = useState(false);
@@ -238,6 +239,7 @@ export function CreateProjectWizard({
     empty ? tCommon("skip") : undefined;
 
   const reset = useCallback(() => {
+    createdProjectRef.current = null;
     setStepIndex(0);
     setSubmitting(false);
     setError(null);
@@ -270,6 +272,7 @@ export function CreateProjectWizard({
   useEffect(() => {
     if (!resume) return;
     const { draft } = resume;
+    createdProjectRef.current = null;
     setDraftId(draft.id);
     setOrbSeed(draft.orbSeed);
     setOrigin(draft.origin);
@@ -566,19 +569,39 @@ export function CreateProjectWizard({
     setSubmitting(true);
     setError(null);
 
-    let created;
+    let briefContent: unknown;
+    if (seed?.kind === "brief") {
+      try {
+        briefContent = await prepareInitialBriefApi(seed.text);
+      } catch (err) {
+        setStepIndex(steps.indexOf("seed"));
+        setError((err as Error).message);
+        setSubmitting(false);
+        return;
+      }
+    }
+
+    // A failed page write may be retried here or resumed from its saved draft.
+    let created = createdProjectRef.current ?? projects.find((p) => p.id === draftId);
     try {
       // The language of the interface leaves WITH the creation: it becomes the
       // language of the project team, the one into which Numo will translate the
       // foreign returns. This is the only time you can read it — the app
       // fits in a cookie, never on the account.
-      created = await createProject({
-        id: draftId,
-        orb_seed: orbSeed,
-        name: name.trim(),
-        key,
-        locale,
-      });
+      if (!created) {
+        created = await createProject({
+          id: draftId,
+          orb_seed: orbSeed,
+          name: name.trim(),
+          key,
+          locale,
+        });
+        track("project_created", {
+          has_icon: icon.kind !== "none",
+          has_git_link: !!repo,
+        });
+      }
+      createdProjectRef.current = created;
     } catch (err) {
       // Name, key already taken, plan limit: everything is settled in the first step,
       // and the draft remains intact — nothing has been lost.
@@ -588,20 +611,34 @@ export function CreateProjectWizard({
       return;
     }
 
-    // The draft has done its job: the project exists, it no longer takes place
-    // to be. Its failure to delete does not call anything into question — at worst a
-    // draft line remains in the sidebar, and is thrown with a click
-    // droit.
+    if (seed?.kind === "brief") {
+      try {
+        await createPageApi(created.id, {
+          title: t("wizardBriefPageTitle"),
+          icon: "📝",
+          content: briefContent,
+        });
+      } catch (err) {
+        setError((err as Error).message);
+        // Keep the form even if the same outage also prevents saving its draft.
+        try {
+          await saveProjectDraft(snapshot());
+          setDraftExists(true);
+        } catch (draftError) {
+          console.error("[create-project-wizard] brief draft save failed:", draftError);
+        }
+        setSubmitting(false);
+        return;
+      }
+    }
+
+    // Delete the draft only once its brief page has been saved successfully.
     clearPendingDraftId();
     if (draftExists) {
       void deleteProjectDraft(draftId).catch((err: Error) => {
         console.error("[create-project-wizard] draft delete failed:", err);
       });
     }
-    track("project_created", {
-      has_icon: icon.kind !== "none",
-      has_git_link: !!repo,
-    });
 
     // From here the project EXISTS: each of the finishes can fail without
     // call creation into question. We say it, we continue, we don't cancel anything.
@@ -632,17 +669,6 @@ export function CreateProjectWizard({
         bindGitRepoApi(created.id, repo.connectionId, repo.externalRepoId),
       );
       if (linked) track("project_git_linked", { provider: repo.provider });
-    }
-    // Save the pasted brief as a wiki page without starting a conversation.
-    if (seed?.kind === "brief" && seed.text.trim()) {
-      await enrich("brief page", () =>
-        createPageApi(created.id, {
-          title: t("wizardBriefPageTitle"),
-          icon: "📝",
-          // Project Markdown on the server to preserve headings and lists.
-          markdown: seed.text.trim(),
-        }),
-      );
     }
     if (smartAssignEnabled || autoAssignEnabled) {
       await enrich("assign settings", () =>
@@ -1067,7 +1093,10 @@ export function CreateProjectWizard({
             <Textarea
               autoFocus
               value={brief}
-              onChange={(e) => setBrief(e.target.value)}
+              onChange={(e) => {
+                setBrief(e.target.value);
+                setError(null);
+              }}
               placeholder={t("wizardSeedPlaceholder")}
               aria-label={t("wizardSeedBriefTitle")}
               rows={8}
