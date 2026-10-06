@@ -107,6 +107,7 @@ function Probe() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
   Object.assign(globalThis, {
     IS_REACT_ACT_ENVIRONMENT: true,
     fetch: h.webFetch,
@@ -119,6 +120,7 @@ beforeEach(() => {
 
 afterEach(() => {
   act(() => root.unmount());
+  vi.useRealTimers();
 });
 
 describe("Numo conversation settings", () => {
@@ -658,7 +660,7 @@ describe("Numo conversation settings", () => {
 
     await act(async () => root.render(createElement(Probe)));
     await act(async () => value.loadConversation(conversationId, null));
-    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 50)); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(50); });
 
     expect(value.state.toolCallResults.get("call-launch")).toMatchObject({
       status: "complete",
@@ -720,7 +722,7 @@ describe("Numo conversation settings", () => {
 
     await act(async () => root.render(createElement(Probe)));
     await act(async () => value.loadConversation(conversationId, null));
-    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 2600)); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(2600); });
 
     expect(value.state.status).toBe("idle");
     expect(value.state.error).toBeNull();
@@ -757,7 +759,7 @@ describe("Numo conversation settings", () => {
 
     await act(async () => root.render(createElement(Probe)));
     await act(async () => value.sendMessage(null, "Hello"));
-    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 2600)); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(2600); });
 
     expect(value.state.status).toBe("idle");
     expect(value.state.error).toBeNull();
@@ -792,7 +794,7 @@ describe("Numo conversation settings", () => {
     // The stream closed without a terminal event: reconciliation rode in.
 
     await act(async () => { value.abort(); });
-    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 50)); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(50); });
 
     expect(value.state.status).toBe("idle");
     expect(stopPosted).toBe(true);
