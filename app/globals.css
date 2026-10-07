@@ -2889,17 +2889,6 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
 
 /* Mobile sheets share one breakpoint and viewport budget. Wide data surfaces
    (boards, tables, code and diffs) retain their own intentional scroll areas. */
-[data-mobile-sheet-backing] {
-  position: absolute;
-  pointer-events: none;
-  user-select: none;
-  contain: strict;
-}
-[data-mobile-sheet-backing][data-state="closed"] {
-  animation-name: mobile-sheet-backing-exit;
-  animation-fill-mode: forwards;
-}
-@keyframes mobile-sheet-backing-exit { to { opacity: 0; } }
 @media (width < 768px) {
   .app-workspace, .app-shell main, #app-tab-content {
     min-width: 0;
