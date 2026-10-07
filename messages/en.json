@@ -1334,7 +1334,7 @@
       "newIssue": "Create an issue from anywhere in the app.",
       "newObjective": "Create an objective from anywhere in the app.",
       "chords": "Jump straight to a screen without opening a menu.",
-      "tabSwitch": "Jump straight to an open tab by typing its number, without leaving the keyboard.",
+      "tabSwitch": "Switch to one of the first ten open tabs with the numbered keyboard shortcut.",
       "myIssues": "See every issue assigned to you across all your projects.",
       "notebook": "Your notebook is personal and available across all your projects.",
       "inbox": "Mentions, assignments, and agent replies appear in your inbox.",
