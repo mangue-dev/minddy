@@ -1,5 +1,7 @@
 "use client";
 
+import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
+
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
 import { ArrowDown01Icon, CheckIcon } from "@hugeicons/core-free-icons";
@@ -283,7 +285,7 @@ function DatabaseColumnDialog({
           <label className="grid gap-2 text-sm font-medium">
             {t("propertyName")}
             <Input
-              autoFocus
+              autoFocus={allowInputAutoFocus()}
               value={name}
               maxLength={80}
               required

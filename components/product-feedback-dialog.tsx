@@ -1,5 +1,6 @@
 "use client";
 
+import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { LoaderCircleIcon, SentIcon } from "@hugeicons/core-free-icons";
 import { useId, useState } from "react";
@@ -110,7 +111,7 @@ export function ProductFeedbackDialog({
           placeholder={t("feedbackTitlePlaceholder")}
           maxLength={FEEDBACK_TITLE_MAX}
           disabled={submitting}
-          autoFocus
+          autoFocus={allowInputAutoFocus()}
           required
         />
       </div>

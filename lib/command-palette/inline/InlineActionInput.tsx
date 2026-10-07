@@ -14,6 +14,8 @@
 
 "use client";
 
+import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
+
 import {
   useCallback,
   useEffect,
@@ -98,7 +100,7 @@ export function InlineActionInput({
 
   // The field that takes the cursor when opened: the first to fill, and to
   // default the first one altogether — a fully pre-filled form is a
-  // proposition, pas un formulaire fini (cf. auto-focus.ts).
+  // proposal rather than a finished form (see auto-focus.ts).
   const autoFocusIndex = useMemo(
     () => autoFocusFieldIndex(fields.map((f) => f.spec.key), values),
     [fields, values]
@@ -397,7 +399,7 @@ export function InlineActionInput({
     const { spec, label, placeholder, options, disabled, isLoading } = fieldConfig;
     const value = values[spec.key];
 
-    const shouldAutoFocus = index === autoFocusIndex;
+    const shouldAutoFocus = allowInputAutoFocus() && index === autoFocusIndex;
 
     // Select if: type select, has options, or is loading (will have options)
     const isSelect = spec.type === "select" || (options && options.length > 0) || isLoading;

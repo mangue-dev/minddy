@@ -1,5 +1,6 @@
 "use client";
 
+import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Alert01Icon, ArrowLeft01Icon, ArrowRight01Icon, Delete02Icon, GitPullRequestIcon, MoreHorizontalIcon, PauseCircleIcon, Edit04Icon, PlayIcon } from "@hugeicons/core-free-icons";
 import { useEffect, useRef, useState, type ReactNode } from "react";
@@ -1133,7 +1134,7 @@ function RoutineEditor({
         {/* The SAME field as the `job` step of the wizard — it's literally the
             same component: dictation, input ceiling and limited height. */}
         <RoutinePromptField
-          autoFocus
+          autoFocus={allowInputAutoFocus()}
           projectId={projectId}
           baseBranch={null}
           value={draft.prompt}

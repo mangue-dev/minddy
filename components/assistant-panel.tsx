@@ -1,5 +1,7 @@
 "use client";
 
+import { focusMobileSheet } from "@/lib/mobile-sheet-focus";
+
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Sheet, SheetContent, SheetTitle } from "mangue-ui";
@@ -164,7 +166,7 @@ export function AssistantPanel() {
       <SheetContent
         side={mobile ? "bottom" : "right"}
         showCloseButton={false}
-        autoFocusOnOpen={mobile}
+        onOpenAutoFocus={mobile ? focusMobileSheet : undefined}
         onCloseAutoFocus={mobile ? (event) => {
           event.preventDefault();
           document.querySelector<HTMLElement>("[data-mobile-numo-launcher]")?.focus();

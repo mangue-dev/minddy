@@ -1,5 +1,6 @@
 "use client";
 
+import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowLeft01Icon, Cancel01Icon, CircleDotDashedIcon as CircleDotDashed, Copy01Icon, CheckIcon } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -722,7 +723,7 @@ function TriagePage() {
             mentions={mentions}
             placeholder={t("messagePlaceholder")}
             rows={3}
-            autoFocus
+            autoFocus={allowInputAutoFocus()}
             includeNumo
             className="w-full rounded-lg bg-control px-3 py-2 text-sm outline-none [&:empty]:before:text-muted-foreground/60 focus-visible:bg-control-hover"
             onSubmit={() => void runConfirm()}

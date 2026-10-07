@@ -235,7 +235,9 @@ function MobileActionMenu({ actions, onSelect, ...props }: {
     </CommandGroup> : <CommandItem key={action.id} value={action.id}
       keywords={[action.label, parentLabel, ...(action.keywords ?? [])]}
       disabled={parentDisabled || action.disabled} onSelect={() => onSelect(action)}>
-      {action.icon}<span className={action.variant === "destructive" ? "text-destructive" : undefined}>{action.label}</span>
+      <span className={action.variant === "destructive" ? "flex items-center gap-2 text-destructive [&_svg]:text-destructive" : "flex items-center gap-2"}>
+        {action.icon}<span>{action.label}</span>
+      </span>
     </CommandItem>);
   return <SearchMenu {...props}><CommandGroup>{rows(actions)}</CommandGroup></SearchMenu>;
 }

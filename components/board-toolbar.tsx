@@ -1,8 +1,9 @@
 "use client";
 
+import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
-import { Add01Icon, ArrangeByLettersAZIcon, AiAutoRotateIcon as CycleIcon, ArrowUpRight01Icon, Delete02Icon, FilterIcon, FloppyDiskIcon, LinkSquare01Icon, LoaderCircleIcon, LockIcon, MoreHorizontalIcon, Edit04Icon, Plug01Icon, Share01Icon, CheckIcon, TriangleIcon, UserCircleIcon } from "@hugeicons/core-free-icons";
+import { Add01Icon, ArrowDown01Icon, ArrangeByLettersAZIcon, AiAutoRotateIcon as CycleIcon, ArrowUpRight01Icon, Delete02Icon, FilterIcon, FloppyDiskIcon, LinkSquare01Icon, LoaderCircleIcon, LockIcon, MoreHorizontalIcon, Edit04Icon, Plug01Icon, Share01Icon, CheckIcon, TriangleIcon, UserCircleIcon } from "@hugeicons/core-free-icons";
 import { createContext, useContext, useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
@@ -344,7 +345,7 @@ function FiltersPopover({
               >
                 <NumoIcon animated={false} className="size-4 shrink-0 text-primary" />
                 <Input
-                  autoFocus
+                  autoFocus={allowInputAutoFocus()}
                   value={aiWish}
                   onChange={(event) => setAiWish(event.target.value)}
                   placeholder={t("aiFilterInput")}
@@ -695,7 +696,7 @@ function ViewNameDialog({
       } : undefined}
     >
           <Input
-            autoFocus
+            autoFocus={allowInputAutoFocus()}
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder={t("viewNamePlaceholder")}
@@ -931,6 +932,7 @@ export function BoardToolbar({
             stays fixed at the end. */}
         <div className="flex min-w-0 flex-1 items-center gap-1 md:hidden">
           <SearchSelect
+            menuActions={[{ id: "create-view", label: t("newView"), icon: <HugeiconsIcon icon={Add01Icon} className="size-4" />, onSelect: () => setCreateOpen(true) }]}
             value={cycleTab?.active ? CYCLE_TAB_KEY : activeViewId}
             onChange={(id) => { if (id === CYCLE_TAB_KEY) cycleTab?.onSelect(); else if (id) onSelectView(id); }}
             options={tabKeys.flatMap((key) => {
@@ -938,11 +940,11 @@ export function BoardToolbar({
               const view = viewById.get(key);
               return view ? [{ value: key, label: view.kind === "my" ? t("myView") : view.name }] : [];
             })}
-            trigger={<Button variant="ghost" size="sm" className="min-w-0 max-w-full justify-start">
+            trigger={<Button variant="ghost" size="sm" className="min-w-0 max-w-full justify-start gap-2">
               <span className="truncate">{cycleTab?.active ? t("cycleTab") : activeView?.kind === "my" ? t("myView") : activeView?.name ?? t("newView")}</span>
+              <HugeiconsIcon icon={ArrowDown01Icon} className="size-4 shrink-0" />
             </Button>}
           />
-          <Button variant="ghost" size="icon-sm" aria-label={t("newView")} onClick={() => setCreateOpen(true)}><HugeiconsIcon icon={Add01Icon} /></Button>
         </div>
         <div className="hidden shrink-0 items-center gap-1 md:flex">
           <DndContext

@@ -1,5 +1,7 @@
 "use client";
 
+import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
+
 import { forwardRef, useEffect, useRef } from "react";
 import { ChevronDownIcon, LoaderIcon } from "../icons";
 import styles from "../styles/InlineActionInput.module.css";
@@ -44,7 +46,7 @@ export const InlineSelect = forwardRef<HTMLButtonElement | HTMLInputElement, Inl
 
     // Focus the input when the select becomes active
     useEffect(() => {
-      if (isActive && inputRef.current) {
+      if (isActive && allowInputAutoFocus() && inputRef.current) {
         inputRef.current.focus({ preventScroll: true });
       }
     }, [isActive]);

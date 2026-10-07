@@ -1,4 +1,5 @@
 "use client";
+import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
 import { Add01Icon, Alert01Icon, ArrowLeft01Icon, ArrowRight01Icon, ArrowUp01Icon, Cancel01Icon, CancelCircleIcon as Ban, Clock01Icon, Copy01Icon, Delete02Icon, FilterIcon, GitMergeIcon, GlobeIcon, LanguageCircleIcon, Link02Icon, LockIcon, MessageMultiple01Icon, MoreHorizontalIcon, SentIcon, Shield01Icon, SparklesIcon, CheckIcon, Undo02Icon } from "@hugeicons/core-free-icons";
@@ -2259,7 +2260,7 @@ function MergeDialog({
             <DialogDescription>{t("mergeDialogDesc")}</DialogDescription>
           </DialogHeader>
           <Input
-            autoFocus
+            autoFocus={allowInputAutoFocus()}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={t("mergeSearchPlaceholder")}
@@ -2360,7 +2361,7 @@ function LinkIssueDialog({
           <DialogDescription>{t("linkIssueDialogDesc")}</DialogDescription>
         </DialogHeader>
         <Input
-          autoFocus
+          autoFocus={allowInputAutoFocus()}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder={t("linkIssueSearchPlaceholder")}
@@ -2630,7 +2631,7 @@ function NewAuthorFields({
   return (
     <div className="flex min-w-0 flex-1 items-center gap-2">
       <Input
-        autoFocus
+        autoFocus={allowInputAutoFocus()}
         type="email"
         value={email}
         onChange={(e) => onEmailChange(e.target.value)}
@@ -2869,7 +2870,7 @@ function InternalFeedbackDialog({
       >
         <DialogTitle className="sr-only">{t("internalDialogTitle")}</DialogTitle>
         <AutoTextarea
-          autoFocus
+          autoFocus={allowInputAutoFocus()}
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           onKeyDown={(e) => {

@@ -1,5 +1,7 @@
 "use client";
 
+import { useMobileLayout } from "@/lib/use-mobile-layout";
+
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/responsive-popover";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, BulbIcon, Cancel01Icon, Clock01Icon, CollapseIcon, ExpandIcon, Search01Icon, TaskEdit01Icon } from "@hugeicons/core-free-icons";
@@ -174,6 +176,7 @@ export const AssistantShell = forwardRef<
   const isExpanded = displayMode === "expanded";
   // Expanded mode keeps the conversation centered (mx-auto) but widens the
   // reading column to use more of the larger surface.
+  const mobile = useMobileLayout() === true;
   const convoMaxW = isExpanded ? "max-w-4xl" : "max-w-3xl";
   const t = useTranslations("Assistant");
   const tc = useTranslations("Common");
@@ -1090,7 +1093,7 @@ export const AssistantShell = forwardRef<
                       {state.error}
                     </div>
                   ) : null}
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  {!mobile && <div className="hidden grid-cols-1 gap-3 md:grid md:grid-cols-2">
                     {STARTERS.map(({ key, icon: Icon, iconClassName }) => {
                       const title = t(`starter.${key}.title` as const);
                       const prompt = t(`starter.${key}.prompt` as const);
@@ -1111,7 +1114,7 @@ export const AssistantShell = forwardRef<
                         </Button>
                       );
                     })}
-                  </div>
+                  </div>}
                 </div>
               </div>
             )}

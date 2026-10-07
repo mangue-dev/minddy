@@ -1,5 +1,7 @@
 "use client";
 
+import { focusMobileSheet } from "@/lib/mobile-sheet-focus";
+
 import * as React from "react";
 import { useTranslations } from "next-intl";
 import {
@@ -23,11 +25,11 @@ export function PopoverAnchor(props: React.ComponentProps<typeof DesktopAnchor>)
   const mobile = React.useContext(MobilePopover);
   return mobile ? null : <DesktopAnchor {...props} />;
 }
-export function PopoverContent({ className, container, align, side, sideOffset, alignOffset, avoidCollisions, collisionPadding, collisionBoundary, sticky, hideWhenDetached, arrowPadding, updatePositionStrategy, mobileTitle, ...props }: React.ComponentProps<typeof DesktopContent> & { mobileTitle?: React.ReactNode }) {
+export function PopoverContent({ className, onOpenAutoFocus, container, align, side, sideOffset, alignOffset, avoidCollisions, collisionPadding, collisionBoundary, sticky, hideWhenDetached, arrowPadding, updatePositionStrategy, mobileTitle, ...props }: React.ComponentProps<typeof DesktopContent> & { mobileTitle?: React.ReactNode }) {
   const mobile = React.useContext(MobilePopover);
   const t = useTranslations("Picker");
-  if (!mobile) return <DesktopContent {...{ className, container, align, side, sideOffset, alignOffset, avoidCollisions, collisionPadding, collisionBoundary, sticky, hideWhenDetached, arrowPadding, updatePositionStrategy }} {...props} />;
-  return <SheetContent {...props} side="bottom" autoFocusOnOpen aria-describedby={undefined}
+  if (!mobile) return <DesktopContent onOpenAutoFocus={onOpenAutoFocus} {...{ className, container, align, side, sideOffset, alignOffset, avoidCollisions, collisionPadding, collisionBoundary, sticky, hideWhenDetached, arrowPadding, updatePositionStrategy }} {...props} />;
+  return <SheetContent {...props} side="bottom" onOpenAutoFocus={(event) => { onOpenAutoFocus?.(event); focusMobileSheet(event); }} aria-describedby={undefined}
     data-mobile-picker className={cn("mobile-bottom-sheet mobile-picker-sheet gap-0 p-2 pt-12", className)}>
     <SheetTitle className="sr-only">{mobileTitle ?? t("search")}</SheetTitle>
     {props.children}

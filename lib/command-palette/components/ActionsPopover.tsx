@@ -13,6 +13,8 @@
 
 "use client";
 
+import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
+
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Kbd } from "@/components/ui/kbd";
@@ -156,7 +158,7 @@ export function ActionsPopover({
     if (isOpen) {
       setIsMounted(true);
       const timer = setTimeout(() => {
-        inputRef.current?.focus();
+        if (allowInputAutoFocus()) inputRef.current?.focus();
       }, 50);
       return () => clearTimeout(timer);
     } else {

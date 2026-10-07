@@ -68,17 +68,6 @@ export function useAccountActions(): {
         ],
       },
       {
-        key: "appearance",
-        label: t("appearance"),
-        items: THEME_CHOICES.map((c) => ({
-          key: `m-${c.value}`,
-          label: t(c.key as Parameters<typeof t>[0]),
-          icon: c.icon,
-          active: theme === c.value,
-          onClick: () => setTheme(c.value),
-        })),
-      },
-      {
         key: "session",
         items: [
           { key: "m-signout", label: t("signOut"), icon: dataIcon(LogOutIcon), onClick: () => void signOut() },

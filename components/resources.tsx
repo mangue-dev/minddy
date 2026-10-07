@@ -1,5 +1,6 @@
 "use client";
 
+import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, AttachmentIcon, Cancel01Icon, File02Icon, Link02Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useRef, useState } from "react";
@@ -393,7 +394,7 @@ export function AddLinkDialog({
  `normalizeWebUrl` is there to complete. `inputMode` is enough to get
  to get the URL keyboard on mobile, without native validation. */}
           <Input
-            autoFocus
+            autoFocus={allowInputAutoFocus()}
             type="text"
             inputMode="url"
             autoComplete="off"

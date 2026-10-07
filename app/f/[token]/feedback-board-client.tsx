@@ -1,5 +1,6 @@
 "use client";
 
+import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowDown01Icon, ArrowUpDownIcon, FilterIcon, Megaphone01Icon, MessageMultiple01Icon, Mic01Icon, Search01Icon, CheckIcon } from "@hugeicons/core-free-icons";
 import { useEffect, useRef, useState, useTransition, type CSSProperties, type Ref } from "react";
@@ -808,7 +809,7 @@ function ComposerDialog({
         </div>}
         <div hidden={draftLoading || draftRestoreFailed || Boolean(legacyDraft)}>
         <AutoTextarea
-          autoFocus
+          autoFocus={allowInputAutoFocus()}
           value={title}
           onChange={(e) => {
             setTitle(e.target.value);

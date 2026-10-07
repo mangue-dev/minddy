@@ -1,4 +1,5 @@
 "use client";
+import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 import { PrLinkedIssues, linkedIssues } from "./pr-linked-issues";
 
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -485,7 +486,7 @@ export function ThreadComment({
             posting={saving}
             placeholder={t(isDescription ? "editDescriptionPlaceholder" : "editCommentPlaceholder")}
             submitLabel={t("saveChanges")}
-            autoFocus
+            autoFocus={allowInputAutoFocus()}
           />
         ) : (
           <Markdown
@@ -2472,7 +2473,7 @@ export function PrDetail({
             value={titleDraft}
             onChange={(event) => setTitleDraft(event.target.value)}
             maxLength={256}
-            autoFocus
+            autoFocus={allowInputAutoFocus()}
             className="h-9 w-full rounded-md bg-control px-3 text-sm outline-none focus-visible:bg-control-hover"
             onKeyDown={(event) => {
               if (event.key === "Enter" && titleDraft.trim()) void saveTitle();
@@ -2838,7 +2839,7 @@ export function PrDetail({
                     : "reviewPlaceholder",
               )}
               rows={reviewMode === "findings" ? 5 : 4}
-              autoFocus
+              autoFocus={allowInputAutoFocus()}
               // Height-capped like the merge dialog's commit message: the
               // base `field-sizing-content` would grow the box with the
               // message until it dwarfed the dialog — past the cap the box

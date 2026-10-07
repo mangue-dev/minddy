@@ -1,5 +1,7 @@
 "use client";
 
+import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
+
 import { OneLine } from "@/components/one-line";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowRight01Icon, Delete02Icon, GlobeIcon, LockIcon, MessageMultiple01Icon, MoreHorizontalIcon, Edit04Icon, Plug01Icon } from "@hugeicons/core-free-icons";
@@ -840,7 +842,7 @@ export function ReplyComposer({
           if (!draft.trim()) close();
         }}
         placeholder={threadIsPublic ? t("replyPublicPlaceholder") : t("replyPlaceholder")}
-        autoFocus
+        autoFocus={allowInputAutoFocus()}
         includeNumo
         className="rounded-none border-0 bg-transparent px-3.5 py-2.5 focus-visible:border-0 focus-visible:ring-0"
       />

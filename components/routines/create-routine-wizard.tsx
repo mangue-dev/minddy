@@ -1,5 +1,6 @@
 "use client";
 
+import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { PlayIcon } from "@hugeicons/core-free-icons";
 import { useMemo, useState } from "react";
@@ -306,7 +307,7 @@ export function CreateRoutineWizard({
           {/* The SAME field as modifying a routine (detail pane):
               same dictation, same input ceiling, same limited height. */}
           <RoutinePromptField
-            autoFocus
+            autoFocus={allowInputAutoFocus()}
             projectId={projectId}
             baseBranch={null}
             value={prompt}

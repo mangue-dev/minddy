@@ -1,5 +1,7 @@
 "use client";
 
+import { focusMobileSheet } from "@/lib/mobile-sheet-focus";
+
 import * as React from "react";
 import {
   Dialog as DesktopDialog, DialogContent as DesktopContent,
@@ -32,10 +34,10 @@ export function DialogDescription(props: React.ComponentProps<typeof DesktopDesc
   const Description = React.useContext(MobileDialog) ? SheetDescription : DesktopDescription;
   return <Description {...props} />;
 }
-export function DialogContent({ className, ...props }: React.ComponentProps<typeof DesktopContent>) {
+export function DialogContent({ className, onOpenAutoFocus, ...props }: React.ComponentProps<typeof DesktopContent>) {
   const mobile = React.useContext(MobileDialog);
-  if (!mobile) return <DesktopContent className={className} {...props} />;
-  return <SheetContent side="bottom" autoFocusOnOpen data-mobile-dialog
+  if (!mobile) return <DesktopContent className={className} onOpenAutoFocus={onOpenAutoFocus} {...props} />;
+  return <SheetContent side="bottom" onOpenAutoFocus={(event) => { onOpenAutoFocus?.(event); focusMobileSheet(event); }} data-mobile-dialog
     className={cn("mobile-bottom-sheet gap-4 p-4", className)} {...props} />;
 }
 export { DialogHeader, DialogFooter };

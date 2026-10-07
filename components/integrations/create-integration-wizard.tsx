@@ -1,5 +1,6 @@
 "use client";
 
+import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AddToListIcon, Clock01Icon, Copy01Icon, MessageMultiple01Icon, CheckIcon, WebhookIcon } from "@hugeicons/core-free-icons";
 import type { IconSvgElement } from "@hugeicons/react";
@@ -257,7 +258,7 @@ export function CreateIntegrationWizard({
       submitDisabled: !name.trim(),
       content: (
         <Input
-          autoFocus
+          autoFocus={allowInputAutoFocus()}
           required
           maxLength={60}
           value={name}
@@ -284,7 +285,7 @@ export function CreateIntegrationWizard({
         // than to type. The transcript is added to what is written.
         <div className="relative">
           <Textarea
-            autoFocus
+            autoFocus={allowInputAutoFocus()}
             value={placement}
             onChange={(e) => setPlacement(e.target.value)}
             placeholder={

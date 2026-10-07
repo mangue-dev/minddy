@@ -3,6 +3,7 @@
 // Shared searchable menu: anchored popover on desktop, modal bottom sheet on
 // mobile. Field and pointer-anchored pickers share filtering and option state.
 
+import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Search01Icon } from "@hugeicons/core-free-icons";
 import * as React from "react";
@@ -118,7 +119,7 @@ export function SearchMenu({
       <Command shouldFilter={shouldFilter}>
         <DropdownSearchRow>
           <CommandPrimitive.Input
-            autoFocus
+            autoFocus={allowInputAutoFocus()}
             placeholder={searchPlaceholder ?? t("search")}
             className={searchInputClass}
             {...(searchValue !== undefined

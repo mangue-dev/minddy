@@ -1,5 +1,7 @@
 "use client";
 
+import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
@@ -334,7 +336,7 @@ export function MarkdownEditor({
         editor.commands.focus("end");
       },
     });
-    if (autoFocus) {
+    if (autoFocus && allowInputAutoFocus()) {
       queueMicrotask(() => {
         if (!editor.isDestroyed) editor.commands.focus("end");
       });

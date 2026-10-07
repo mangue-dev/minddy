@@ -1,5 +1,7 @@
 "use client";
 
+import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
+
 import { HugeiconsIcon } from "@hugeicons/react";
 import { LinkSquare01Icon, Edit04Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useId, useState } from "react";
@@ -107,7 +109,7 @@ export function MarkdownLinkEditDialog({
           </label>
           <Input
             id={inputId}
-            autoFocus
+            autoFocus={allowInputAutoFocus()}
             type="text"
             inputMode="url"
             autoComplete="off"

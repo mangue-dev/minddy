@@ -1,5 +1,6 @@
 "use client";
 
+import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { FileUploadIcon, InformationCircleIcon, Layers01Icon, Refresh01Icon, SparklesIcon, UserAdd01Icon } from "@hugeicons/core-free-icons";
 import { createUuid } from "@/lib/create-uuid";
@@ -772,7 +773,7 @@ export function CreateProjectWizard({
               </label>
               <Input
                 id="project-name"
-                autoFocus
+                autoFocus={allowInputAutoFocus()}
                 required
                 value={name}
                 onChange={(e) => handleNameChange(e.target.value)}
@@ -1091,7 +1092,7 @@ export function CreateProjectWizard({
         ) : (
           <div className="flex flex-col gap-2">
             <Textarea
-              autoFocus
+              autoFocus={allowInputAutoFocus()}
               value={brief}
               onChange={(e) => {
                 setBrief(e.target.value);
