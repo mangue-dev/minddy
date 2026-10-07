@@ -304,14 +304,8 @@ export function AdminDashboard() {
       <div
         className="flex min-h-0 min-w-0 flex-1 flex-col"
       >
-        {/* The active section is named in the mobile content header. */}
-        <AppContentHeader
-          contentClassName="gap-2"
-        >
-          <span className="truncate text-sm font-medium md:hidden">
-            {t(`tabs.${active}`)}
-          </span>
-        </AppContentHeader>
+        {/* Navigation already names the active section; keep the shared spacing. */}
+        <AppContentHeader />
 
         <div
           ref={contentFade.ref}

@@ -22,7 +22,7 @@ import { APP_VERSION } from "@/lib/app-version";
 import { getDesktopBridge } from "@/lib/desktop/bridge";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import {
   Button,
   DropdownMenu,
@@ -78,8 +78,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import type { MessageKey } from "@/lib/i18n-keys";
-import type { ChangelogPageContent } from "@/lib/changelog-types";
-import type { Locale } from "@/i18n/config";
 import type { Project } from "@/lib/types";
 
 /** Expanded width the sidebar keeps on every level — the old secondary
@@ -569,7 +567,7 @@ function AccountButton({
 
   if (mobile) {
     const destinations = [
-      { href: "/settings?tab=profile", label: name, icon: Settings01Icon },
+      { href: "/settings?tab=profile", label: name, icon: null },
       ...(hasManagedService ? [{ href: "/billing", label: t("billing"), icon: CreditCardIcon }] : []),
       { href: "/settings", label: t("accountSettings"), icon: Settings01Icon },
       { href: "/trash", label: t("trash"), icon: Delete02Icon },
@@ -587,7 +585,7 @@ function AccountButton({
           <DialogTitle>{t("account")}</DialogTitle>
           <MobileSheetScrollArea>
             {destinations.map(({ href, label, icon }) => <Link key={href} href={href} onClick={() => setMenuOpen(false)} className="flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm hover:bg-muted">
-              <AppIcon icon={icon} className="size-[18px] shrink-0" /><span className="min-w-0 truncate">{label}</span>
+              {icon ? <AppIcon icon={icon} className="size-[18px] shrink-0" /> : <UserAvatar seed={seed} className="size-[22px] shrink-0" />}<span className="min-w-0 truncate">{label}</span>
             </Link>)}
             <button type="button" onClick={openSignOutConfirmation} className="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-sm text-destructive hover:bg-muted">
               <AppIcon icon={LogOutIcon} className="size-[18px]" />{t("signOut")}
@@ -731,27 +729,6 @@ function AccountButton({
   );
 }
 
-function ChangelogTimelineMarker({
-  position,
-}: {
-  position: "first" | "middle" | "last";
-}) {
-  return (
-    <span
-      aria-hidden
-      className="relative flex w-4 shrink-0 self-stretch items-center justify-center"
-    >
-      {position !== "first" ? (
-        <span className="absolute top-0 h-[calc(50%-6px)] w-px bg-border" />
-      ) : null}
-      <span className="relative z-10 size-2.5 rounded-full border-2 border-muted-foreground/60 bg-popover" />
-      {position !== "last" ? (
-        <span className="absolute bottom-0 h-[calc(50%-6px)] w-px bg-border" />
-      ) : null}
-    </span>
-  );
-}
-
 function ChangelogButton({
   productFeedbackIntegrationEnabled,
   productFeedbackUrl,
@@ -766,8 +743,6 @@ function ChangelogButton({
   portalOwner: string;
 }) {
   const t = useTranslations("Nav");
-  const locale = useLocale() as Locale;
-  const [preview, setPreview] = useState<ChangelogPageContent | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMounted, setDialogMounted] = useState(false);
@@ -785,16 +760,6 @@ function ChangelogButton({
     onMenuOpenChange?.(nextOpen);
   };
 
-  useEffect(() => {
-    if (!menuOpen) return;
-    let active = true;
-    fetch(`/api/changelog?locale=${encodeURIComponent(locale)}`).then(response => {
-      if (!response.ok) throw new Error("Changelog preview unavailable");
-      return response.json() as Promise<ChangelogPageContent>;
-    }).then(result => { if (active) setPreview(result); }).catch(() => { /* The full changelog offers retry. */ });
-    return () => { active = false; };
-  }, [menuOpen, locale]);
-
   const control = (
     <button
       type="button"
@@ -811,7 +776,6 @@ function ChangelogButton({
       <DialogContent aria-describedby={undefined}>
         <DialogTitle>{t("whatsNew")}</DialogTitle>
         <MobileSheetScrollArea className="space-y-2">
-          <ol>{preview?.releases.slice(0, 3).map((entry) => <li key={entry.version} className="min-h-11 px-3 py-3 text-sm">{`v${entry.version} · ${entry.title}`}</li>)}</ol>
           <button type="button" className="flex min-h-11 w-full items-center rounded-lg px-3 text-left text-sm hover:bg-muted" onClick={() => { handleMenuOpenChange(false); setDialogMounted(true); setDialogOpen(true); }}>{t("viewFullChangelog")}</button>
           {(productFeedbackIntegrationEnabled || productFeedbackUrl) && <button type="button" className="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-left text-sm hover:bg-muted" onClick={() => {
             handleMenuOpenChange(false);
@@ -840,21 +804,6 @@ function ChangelogButton({
           <DropdownMenuLabel className="font-normal text-muted-foreground">
             {t("whatsNew")}
           </DropdownMenuLabel>
-          <ol>
-            {(preview?.releases.slice(0, 3) ?? []).map((entry, index) => (
-              <li
-                key={entry.version}
-                className="flex h-8 items-center gap-1.5 px-2.5 text-sm leading-tight"
-              >
-                <ChangelogTimelineMarker
-                  position={index === 0 ? "first" : "middle"}
-                />
-                <span className="min-w-0 flex-1 truncate">
-                  {`v${entry.version} · ${entry.title}`}
-                </span>
-              </li>
-            ))}
-          </ol>
           <DropdownMenuItem
             onSelect={() => {
               handleMenuOpenChange(false);
@@ -863,7 +812,6 @@ function ChangelogButton({
             }}
             className="h-8 gap-1.5 px-2.5 py-0 max-[1199px]:py-0"
           >
-            <ChangelogTimelineMarker position="last" />
             <span className="min-w-0 flex-1 truncate">
               {t("viewFullChangelog")}
             </span>

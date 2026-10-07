@@ -228,8 +228,12 @@ function FilterSub({
   count: number;
   children: React.ReactNode;
 }) {
-  if (useContext(MobileFilters)) return <details className="rounded-xl">
-    <summary className="min-h-11 cursor-pointer px-3 py-3 text-sm">{label}{count > 0 && <span className="ml-2 text-muted-foreground">{count}</span>}</summary>
+  if (useContext(MobileFilters)) return <details className="group/filter rounded-xl">
+    <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-3 py-3 text-sm [&::-webkit-details-marker]:hidden">
+      <span className="min-w-0 flex-1 truncate">{label}</span>
+      {count > 0 && <span className="shrink-0 tabular-nums text-muted-foreground">{count}</span>}
+      <HugeiconsIcon icon={ArrowDown01Icon} aria-hidden className="size-4 shrink-0 text-muted-foreground transition-transform group-open/filter:rotate-180 motion-reduce:transition-none" />
+    </summary>
     <div className="pl-3">{children}</div>
   </details>;
   return (

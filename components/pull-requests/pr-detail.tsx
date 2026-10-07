@@ -2436,7 +2436,7 @@ export function PrDetail({
             variant="ghost"
             size="icon-sm"
             aria-label={t("scrollToTop")}
-            className="absolute bottom-4 right-4 z-20 rounded-full border border-border bg-card text-muted-foreground shadow-md hover:text-foreground md:right-6"
+            className="absolute bottom-4 right-4 z-20 hidden rounded-full border border-border bg-card text-muted-foreground shadow-md hover:text-foreground md:inline-flex md:right-6"
             onClick={() =>
               scrollContainerRef.current?.scrollTo({ top: 0, behavior: "smooth" })
             }

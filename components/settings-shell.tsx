@@ -197,8 +197,6 @@ function SettingsTabs({
   const activeTab = tabParam && validValues.has(tabParam) ? tabParam : fallback;
 
   const contentFade = useScrollFade<HTMLDivElement>();
-  const activeLabel =
-    visibleTabs.find((t) => t.value === activeTab)?.label ?? title;
 
   const setActiveTab = useCallback(
     (value: string) => {
@@ -374,17 +372,8 @@ function SettingsTabs({
       <div
         className="flex min-h-0 min-w-0 flex-1 flex-col"
       >
-        {/* The settings content keeps the same structural header as the other
-            list/detail screens. It stays intentionally empty on desktop: the
-            secondary rail already names the active tab, while the blank header
-            gives the settings cards the expected top breathing room. */}
-        <AppContentHeader
-          contentClassName="gap-2"
-        >
-          <span className="truncate text-sm font-medium md:hidden">
-            {activeLabel}
-          </span>
-        </AppContentHeader>
+        {/* Navigation already names the active tab; keep the shared spacing. */}
+        <AppContentHeader />
 
         <div
           ref={contentFade.ref}
