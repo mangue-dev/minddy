@@ -27,7 +27,7 @@ A valid backup captures one write-consistent point in time and includes all of:
 
 A database dump alone is not enough: it contains Storage metadata but not file bytes. Storage bytes alone are not enough: they do not contain object metadata, policies, accounts, or migrations. For S3, take an immutable raw backend snapshot/version while Storage is stopped; do not restore database records through the `/storage/v1/s3` API. Encrypt backups, store them off-host, checksum them, and prove a test restore.
 
-The repository provides `pnpm self-host:backup`, `self-host:update`, and `self-host:restore` as read-only preflight safety gates: they check release identity and checksums and print the procedure to follow, but they never guess a storage backend, an outage, a database, or a restore target. The concrete procedures are the runbook's:
+The repository provides `pnpm self-host:backup`, `self-host:update`, and `self-host:restore` as read-only preflight safety gates: they validate required deployment settings, verify backup checksums for updates and restores, and print the procedure to follow. They do not verify release ancestry or perform the backup, update, or restore. They never guess a storage backend, an outage, a database, or a restore target. The concrete procedures are the runbook's:
 
 ```bash
 pnpm self-host:backup -- --backup-dir /mnt/backup/minddy/<timestamp>-<release>
@@ -56,4 +56,3 @@ The reverse proxy must redirect public HTTP to HTTPS and agree with `MINDDY_PUBL
 Use `pnpm self-host:doctor` after installation and maintenance. It reports configuration, compatibility, container health, database/migration and Storage verification when supplied a DB URL, scheduler, agent runner, network/TLS health, Auth email delivery, forge access, optional capabilities, and disk space without printing credentials. Common failures are missing Docker/Supabase CLI, incomplete Supabase API values, Storage API or service-role errors, an app URL mismatch, a missing compatibility entry, unhealthy Compose services, or missing scheduler/runner containers. Correct the underlying configuration and rerun the idempotent bootstrap or diagnostic; never delete a non-empty `avatars` bucket just to clear a warning.
 
 Minddy maintainers support the latest public release and its documented previous-release path for the two compatibility-matrix topologies. They do not operate the host, provide an SLA, recover operator data, or support unpinned derivative deployments. Minddy Cloud remains a separate operated service and is never part of a self-hosted recovery path.
-
