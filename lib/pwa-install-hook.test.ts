@@ -5,8 +5,8 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { usePwaInstall } from "@/components/marketing/use-pwa-install";
 
-function Harness() {
-  const { canPrompt, promptInstall } = usePwaInstall();
+function Harness({ enabled = true }: { enabled?: boolean }) {
+  const { canPrompt, promptInstall } = usePwaInstall(enabled);
   return createElement(
     "button",
     { onClick: () => void promptInstall() },
@@ -54,6 +54,24 @@ describe("usePwaInstall", () => {
     expect(container.textContent).toBe("ready");
 
     act(() => window.dispatchEvent(new Event("appinstalled")));
+    expect(container.textContent).toBe("fallback");
+  });
+
+  it("leaves browser invitations untouched when this install surface is disabled", () => {
+    act(() => root.render(createElement(Harness, { enabled: false })));
+    const event = Object.assign(new Event("beforeinstallprompt", { cancelable: true }), { prompt: vi.fn() });
+    act(() => window.dispatchEvent(event));
+    expect(event.defaultPrevented).toBe(false);
+    expect(container.textContent).toBe("fallback");
+  });
+
+  it("discards a captured invitation when the install surface becomes ineligible", () => {
+    const event = Object.assign(new Event("beforeinstallprompt", { cancelable: true }), { prompt: vi.fn() });
+    act(() => window.dispatchEvent(event));
+    expect(container.textContent).toBe("ready");
+    act(() => root.render(createElement(Harness, { enabled: false })));
+    expect(container.textContent).toBe("fallback");
+    act(() => root.render(createElement(Harness)));
     expect(container.textContent).toBe("fallback");
   });
 });

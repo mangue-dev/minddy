@@ -16,6 +16,7 @@ import {
 import { useAuth } from "@/lib/auth-context";
 import { useAnalytics } from "@/lib/use-analytics";
 import { isDesktop } from "@/lib/desktop/bridge";
+import { useMobileLayout } from "@/lib/use-mobile-layout";
 import {
   DESKTOP_PROMPT_DISMISSED_META_KEY,
   isLinuxPlatform,
@@ -45,6 +46,7 @@ export function DesktopInstallBanner() {
   const t = useTranslations("Home");
   const { user, updateUserMetadata } = useAuth();
   const { track } = useAnalytics();
+  const mobile = useMobileLayout();
   const [eligible, setEligible] = useState(false);
   // Discarded immediately, without waiting for GoTrue: the gesture must be instantaneous.
   const [dismissed, setDismissed] = useState(false);
@@ -56,7 +58,7 @@ export function DesktopInstallBanner() {
   const alreadyDismissed = resolveDesktopPromptDismissed(user?.user_metadata);
 
   useEffect(() => {
-    const offer = shouldOfferDesktopApp({
+    const offer = mobile === false && shouldOfferDesktopApp({
       inDesktopApp: isDesktop(),
       isMac: isMacPlatform({
         uaDataPlatform: (
@@ -80,9 +82,9 @@ export function DesktopInstallBanner() {
       shownTracked.current = true;
       track("desktop_install_prompt_shown");
     }
-  }, [alreadyDismissed, track]);
+  }, [alreadyDismissed, mobile, track]);
 
-  if (!eligible || dismissed) return null;
+  if (mobile !== false || !eligible || dismissed) return null;
 
   const dismiss = () => {
     setDismissed(true);

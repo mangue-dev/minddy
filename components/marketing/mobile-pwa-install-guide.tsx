@@ -54,15 +54,17 @@ function GuideCard({
   title,
   body,
   children,
+  compact = false,
 }: {
   number: number;
   title: string;
   body: string;
   children: ReactNode;
+  compact?: boolean;
 }) {
   return (
-    <li className={`flex min-w-0 flex-col rounded-2xl p-5 sm:p-6 ${[CARD_TONES.sky, CARD_TONES.lavender, CARD_TONES.peach][number - 1]}`}>
-      <div className="mb-4 flex items-start gap-3">
+    <li className={`flex min-w-0 flex-col rounded-2xl ${compact ? "p-4" : "p-5 sm:p-6"} ${[CARD_TONES.sky, CARD_TONES.lavender, CARD_TONES.peach][number - 1]}`}>
+      <div className={`${compact ? "mb-3" : "mb-4"} flex items-start gap-3`}>
         <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-foreground text-xs font-semibold text-background">
           {number}
         </span>
@@ -293,46 +295,47 @@ export function MobilePwaInstallGuide({
 
 /** Explicit platforms keep the standalone guide readable before hydration. */
 export function MobilePwaGuideSteps({
-  platform, copy, locale, id = "mobile-install-guide", manualAndroid = false,
+  platform, copy, locale, id = "mobile-install-guide", manualAndroid = false, compact = false,
 }: {
   platform: "ios" | "android";
   copy: MobileInstallGuideCopy;
   locale: Locale;
   id?: string;
   manualAndroid?: boolean;
+  compact?: boolean;
 }) {
   const ios = platform === "ios";
 
   return (
-    <section id={id} className="scroll-mt-24 py-12 sm:py-16">
-      <div className="mx-auto w-full max-w-6xl px-4 sm:px-6">
-        <header className="mb-10 max-w-3xl">
+    <section id={id} className={compact ? "min-w-0" : "scroll-mt-24 py-12 sm:py-16"}>
+      <div className={compact ? "w-full min-w-0" : "mx-auto w-full max-w-6xl px-4 sm:px-6"}>
+        {!compact && <header className="mb-10 max-w-3xl">
           <h2 className="text-3xl font-medium tracking-[-0.035em] text-balance sm:text-4xl">
             {ios ? copy.iosTitle : copy.androidTitle}
           </h2>
           <p className="mt-4 max-w-2xl leading-relaxed text-pretty text-muted-foreground">
             {ios ? copy.iosBody : copy.androidBody}
           </p>
-        </header>
+        </header>}
 
         {ios ? (
-          <ol className="grid gap-4 md:grid-cols-3">
-            <GuideCard number={1} title={copy.iosStepShareTitle} body={copy.iosStepShareBody}>
+          <ol className={compact ? "grid gap-3" : "grid gap-4 md:grid-cols-3"}>
+            <GuideCard compact={compact} number={1} title={copy.iosStepShareTitle} body={copy.iosStepShareBody}>
               <SafariShareVisual copy={copy} />
             </GuideCard>
-            <GuideCard number={2} title={copy.iosStepHomeTitle} body={copy.iosStepHomeBody}>
+            <GuideCard compact={compact} number={2} title={copy.iosStepHomeTitle} body={copy.iosStepHomeBody}>
               <IosShareSheetVisual copy={copy} />
             </GuideCard>
-            <GuideCard number={3} title={copy.iosStepAddTitle} body={copy.iosStepAddBody}>
+            <GuideCard compact={compact} number={3} title={copy.iosStepAddTitle} body={copy.iosStepAddBody}>
               <IosAddVisual copy={copy} />
             </GuideCard>
           </ol>
         ) : (
-          <ol className="grid gap-4 md:grid-cols-2">
-            <GuideCard number={1} title={manualAndroid ? copy.androidStepMenuTitle : copy.androidStepPromptTitle} body={manualAndroid ? copy.androidStepMenuBody : copy.androidStepPromptBody}>
+          <ol className={compact ? "grid gap-3" : "grid gap-4 md:grid-cols-2"}>
+            <GuideCard compact={compact} number={1} title={manualAndroid ? copy.androidStepMenuTitle : copy.androidStepPromptTitle} body={manualAndroid ? copy.androidStepMenuBody : copy.androidStepPromptBody}>
               {manualAndroid ? <AndroidMenuVisual copy={copy} /> : <AndroidPromptVisual copy={copy} locale={locale} />}
             </GuideCard>
-            <GuideCard number={2} title={manualAndroid ? copy.androidStepPromptTitle : copy.androidStepMenuTitle} body={manualAndroid ? copy.androidStepPromptBody : copy.androidStepMenuBody}>
+            <GuideCard compact={compact} number={2} title={manualAndroid ? copy.androidStepPromptTitle : copy.androidStepMenuTitle} body={manualAndroid ? copy.androidStepPromptBody : copy.androidStepMenuBody}>
               {manualAndroid ? <AndroidPromptVisual copy={copy} locale={locale} /> : <AndroidMenuVisual copy={copy} />}
             </GuideCard>
           </ol>

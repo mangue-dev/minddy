@@ -1312,6 +1312,8 @@
     "desktopBannerText": "Baixe o aplicativo de desktop para ir mais longe",
     "desktopBannerCta": "Baixar",
     "desktopBannerDismiss": "Não mostre isso novamente",
+    "pwaInstallHint": "Instalar o minddy neste dispositivo",
+    "pwaInstallTitle": "Instalar o minddy",
     "tips": {
       "palette": "Pesquise qualquer tela ou problema e execute ações na paleta de comandos.",
       "cheatsheet": "Veja todos os teclados atalho em um só lugar.",

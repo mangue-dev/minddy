@@ -1312,6 +1312,8 @@
     "desktopBannerText": "Download the desktop app to go further",
     "desktopBannerCta": "Download",
     "desktopBannerDismiss": "Don't show this again",
+    "pwaInstallHint": "Install minddy on this device",
+    "pwaInstallTitle": "Install minddy",
     "tips": {
       "palette": "Search for any screen or issue and run actions from the command palette.",
       "cheatsheet": "See every keyboard shortcut in one place.",

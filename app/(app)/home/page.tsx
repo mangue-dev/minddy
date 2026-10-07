@@ -11,6 +11,7 @@ import { HomeSmartAssignWarning } from "@/components/home/home-smart-assign-warn
 import { HomeProjectSignals } from "@/components/home/home-project-signals";
 import { HomeNumoComposer } from "@/components/home/home-numo-composer";
 import { DesktopInstallBanner } from "@/components/home/desktop-install-banner";
+import { MobileInstallHint } from "@/components/home/mobile-install-hint";
 import { HomeTip } from "@/components/home/home-tip";
 
 type AuthMeta = { display_name?: string; full_name?: string; name?: string };
@@ -70,6 +71,7 @@ export default function HomePage() {
         <HomeSmartAssignWarning />
         <HomeProjectSignals />
         <DesktopInstallBanner />
+        <MobileInstallHint key={user?.id} />
       </div>
 
       <HomeTip />
