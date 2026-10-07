@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowDown01Icon, ArrowLeft01Icon, ArrowRight01Icon, ArrowUpRight01Icon, Analytics01Icon, CreditCardIcon, Delete02Icon, HelpCircleIcon, Home01Icon, LogOutIcon, Megaphone01Icon, Settings01Icon, Shield01Icon, CheckIcon } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, ArrowLeft01Icon, ArrowRight01Icon, ArrowUpRight01Icon, Analytics01Icon, CreditCardIcon, Delete02Icon, HelpCircleIcon, HistoryIcon, Home01Icon, LogOutIcon, Megaphone01Icon, Settings01Icon, Shield01Icon, CheckIcon } from "@hugeicons/core-free-icons";
 import { AppIcon } from "@/components/icon";
 import { useMobileAccountIdentity } from "@/components/mobile-account";
 import { Dialog, DialogContent, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -775,15 +775,28 @@ function ChangelogButton({
     <Dialog open={menuOpen} onOpenChange={handleMenuOpenChange}>
       <DialogContent aria-describedby={undefined}>
         <DialogTitle>{t("whatsNew")}</DialogTitle>
-        <MobileSheetScrollArea className="space-y-2">
-          <button type="button" className="flex min-h-11 w-full items-center rounded-lg px-3 text-left text-sm hover:bg-muted" onClick={() => { handleMenuOpenChange(false); setDialogMounted(true); setDialogOpen(true); }}>{t("viewFullChangelog")}</button>
+        <MobileSheetScrollArea>
+          <button
+            type="button"
+            className="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-left text-sm hover:bg-muted"
+            onClick={() => {
+              handleMenuOpenChange(false);
+              setDialogMounted(true);
+              setDialogOpen(true);
+            }}
+          >
+            <AppIcon icon={HistoryIcon} className="size-[18px] shrink-0" />
+            <span className="min-w-0 truncate">{t("viewFullChangelog")}</span>
+          </button>
           {(productFeedbackIntegrationEnabled || productFeedbackUrl) && <button type="button" className="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-left text-sm hover:bg-muted" onClick={() => {
             handleMenuOpenChange(false);
             if (productFeedbackIntegrationEnabled) { setFeedbackDialogMounted(true); setFeedbackDialogOpen(true); }
             else if (productFeedbackUrl) window.open(productFeedbackUrl, "_blank", "noopener,noreferrer");
-          }}><AppIcon icon={Megaphone01Icon} className="size-[18px]" />{t("shareFeedback")}</button>}
-          <p className="px-3 text-xs text-muted-foreground">{t("webVersion")}: {APP_VERSION}</p>
-          {desktopVersion && <p className="px-3 text-xs text-muted-foreground">{t("appVersion")}: {desktopVersion}</p>}
+          }}><AppIcon icon={Megaphone01Icon} className="size-[18px] shrink-0" /><span className="min-w-0 truncate">{t("shareFeedback")}</span></button>}
+          <div className="space-y-2 px-3 pt-3 text-xs text-muted-foreground">
+            <p className="flex items-center justify-between gap-3"><span>{t("webVersion")}</span><span className="shrink-0 tabular-nums">{APP_VERSION}</span></p>
+            {desktopVersion && <p className="flex items-center justify-between gap-3"><span>{t("appVersion")}</span><span className="shrink-0 tabular-nums">{desktopVersion}</span></p>}
+          </div>
         </MobileSheetScrollArea>
       </DialogContent>
     </Dialog>
@@ -810,8 +823,9 @@ function ChangelogButton({
               setDialogMounted(true);
               setDialogOpen(true);
             }}
-            className="h-8 gap-1.5 px-2.5 py-0 max-[1199px]:py-0"
+            className="py-1.5 max-[1199px]:py-1.5"
           >
+            <HugeiconsIcon icon={HistoryIcon} className="size-4 shrink-0 text-muted-foreground" />
             <span className="min-w-0 flex-1 truncate">
               {t("viewFullChangelog")}
             </span>
