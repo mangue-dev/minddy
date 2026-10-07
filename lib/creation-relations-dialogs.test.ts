@@ -202,7 +202,8 @@ describe("creation relation controls", () => {
     const picker = host.querySelector("[data-picker]")!;
     expect(picker.parentElement!.lastElementChild).toBe(picker);
     await addRelation("blocks", "issue");
-    expect(host.textContent).toContain("MIN-12 Target issue");
+    expect(host.textContent).toContain("MIN-12");
+    expect(host.textContent).not.toContain("Target issue");
   });
 
   it("shows relations when the account disables Smart Fill", async () => {

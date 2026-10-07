@@ -15,12 +15,17 @@ vi.mock("@/components/model-logo", () => ({
   ProviderLogo: () => null,
 }));
 
+const keyState = vi.hoisted(() => ({ keys: [] as import("@/lib/agent-keys-api").AiKey[] }));
+const deleteKey = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/agent-keys-api", () => ({ deleteAiKeyApi: deleteKey, addAiKeyApi: vi.fn() }));
+
 vi.mock("@/lib/use-ai-keys-query", () => ({
   aiKeysQueryKey: ["account", "ai-keys"],
-  useAiKeysQuery: () => ({ keys: [], loading: false }),
+  useAiKeysQuery: () => ({ keys: keyState.keys, loading: false }),
 }));
 
-vi.mock("mangue-ui", () => ({
+vi.mock("mangue-ui", async () => ({
+  ...await vi.importActual<Record<string, unknown>>("mangue-ui/components/ui/alert-dialog.tsx"),
   cn: (...values: unknown[]) => values.filter(Boolean).join(" "),
   toast: { error: vi.fn(), success: vi.fn() },
   Spinner: () => null,
@@ -75,6 +80,9 @@ describe("ByokConnectPanel", () => {
   let root: Root;
 
   beforeEach(() => {
+    vi.stubGlobal("matchMedia", vi.fn(() => ({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() })));
+    keyState.keys = [];
+    deleteKey.mockReset().mockResolvedValue(undefined);
     (window as typeof window & { IS_REACT_ACT_ENVIRONMENT: boolean })
       .IS_REACT_ACT_ENVIRONMENT = true;
     container = document.createElement("div");
@@ -86,6 +94,7 @@ describe("ByokConnectPanel", () => {
     act(() => root.unmount());
     container.remove();
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
     delete (window as typeof window & { IS_REACT_ACT_ENVIRONMENT?: boolean })
       .IS_REACT_ACT_ENVIRONMENT;
   });
@@ -168,4 +177,21 @@ describe("ByokConnectPanel", () => {
     expect(container.textContent).toContain("Save key");
     expect(container.textContent).not.toContain("minddy Cloud");
   });
+  it("requires confirmation before removing a key and allows cancellation", async () => {
+    keyState.keys = [{ id: "key-1", provider: "openrouter", key_prefix: "sk-test", base_url: null, validated_at: "2026-10-07" } as import("@/lib/agent-keys-api").AiKey];
+    await renderPanel();
+    const remove = [...container.querySelectorAll("button")].find((button) => button.textContent === "Remove")!;
+    await act(async () => remove.click());
+    expect(deleteKey).not.toHaveBeenCalled();
+    let dialog = document.querySelector('[role="alertdialog"]')!;
+    expect(dialog.textContent).toContain("OpenRouter");
+    await act(async () => [...dialog.querySelectorAll<HTMLButtonElement>("button")].find((button) => button.textContent === "Cancel")!.click());
+    expect(deleteKey).not.toHaveBeenCalled();
+    await act(async () => remove.click());
+    dialog = document.querySelector('[role="alertdialog"]')!;
+    await act(async () => [...dialog.querySelectorAll<HTMLButtonElement>("button")].find((button) => button.textContent === "Remove")!.click());
+    expect(deleteKey).toHaveBeenCalledExactlyOnceWith("key-1");
+    expect(document.querySelector('[role="alertdialog"]')).toBeNull();
+  });
+
 });

@@ -37,16 +37,17 @@ export function findActiveMentionQuery(
   };
 }
 
-/** Stable ordering: preserve relevance/source order, but place tickets last. */
+/** Stable ordering: put Numo first, preserve source order, and place tickets last. */
 export function orderMentionItems<T extends MentionSearchItem>(
   items: readonly T[],
 ): T[] {
+  const numo: T[] = [];
   const other: T[] = [];
   const issues: T[] = [];
   for (const item of items) {
-    (item.type === "issue" ? issues : other).push(item);
+    (item.type === "numo" ? numo : item.type === "issue" ? issues : other).push(item);
   }
-  return [...other, ...issues];
+  return [...numo, ...other, ...issues];
 }
 
 /** Matches a mention query without imposing an artificial result limit. */

@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowDown01Icon, ArrowLeft01Icon, ArrowRight01Icon, ArrowUpRight01Icon, BarChartIcon, CreditCardIcon, Delete02Icon, HelpCircleIcon, Home01Icon, Logout01Icon, Megaphone01Icon, Settings01Icon, Shield01Icon, CheckIcon } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, ArrowLeft01Icon, ArrowRight01Icon, ArrowUpRight01Icon, Analytics01Icon, CreditCardIcon, Delete02Icon, HelpCircleIcon, Home01Icon, LogOutIcon, Megaphone01Icon, Settings01Icon, Shield01Icon, CheckIcon } from "@hugeicons/core-free-icons";
 import { AppIcon } from "@/components/icon";
 import {
   useCallback,
@@ -604,7 +604,7 @@ function AccountButton({
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link href="/statistics">
-                  <HugeiconsIcon icon={BarChartIcon} />
+                  <HugeiconsIcon icon={Analytics01Icon} />
                   {t("statistics")}
                 </Link>
               </DropdownMenuItem>
@@ -624,7 +624,7 @@ function AccountButton({
                   openSignOutConfirmation();
                 }}
               >
-                <HugeiconsIcon icon={Logout01Icon} />
+                <HugeiconsIcon icon={LogOutIcon} />
                 {t("signOut")}
               </DropdownMenuItem>
             </DropdownMenuContent>

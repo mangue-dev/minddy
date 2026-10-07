@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
-import { BarChartIcon, ComputerIcon, Copy01Icon, CreditCardIcon, Delete02Icon, Logout01Icon, MoonIcon, Settings01Icon, Shield01Icon, Sun01Icon, CheckIcon } from "@hugeicons/core-free-icons";
+import { Analytics01Icon, ComputerIcon, Copy01Icon, CreditCardIcon, Delete02Icon, LogOutIcon, MoonIcon, Settings01Icon, Shield01Icon, Sun01Icon, CheckIcon } from "@hugeicons/core-free-icons";
 import { useEffect, useMemo, useState, type SVGProps } from "react";
 import { useTranslations } from "next-intl";
 import { useAppRouter } from "@/lib/use-app-router";
@@ -59,7 +59,7 @@ export function useAccountActions(): {
         label: t("account"),
         items: [
           { key: "m-trash", label: t("trash"), icon: dataIcon(Delete02Icon), href: "/trash" },
-          { key: "m-stats", label: t("statistics"), icon: dataIcon(BarChartIcon), href: "/statistics" },
+          { key: "m-stats", label: t("statistics"), icon: dataIcon(Analytics01Icon), href: "/statistics" },
           { key: "m-billing", label: t("billing"), icon: dataIcon(CreditCardIcon), href: "/billing" },
           { key: "m-settings", label: t("accountSettings"), icon: dataIcon(Settings01Icon), href: "/settings" },
           ...(isAdmin
@@ -81,7 +81,7 @@ export function useAccountActions(): {
       {
         key: "session",
         items: [
-          { key: "m-signout", label: t("signOut"), icon: dataIcon(Logout01Icon), onClick: () => void signOut() },
+          { key: "m-signout", label: t("signOut"), icon: dataIcon(LogOutIcon), onClick: () => void signOut() },
         ],
       },
     ];
@@ -98,7 +98,7 @@ export function useAccountActions(): {
       {
         key: "cmd-stats",
         label: t("statistics"),
-        icon: dataIcon(BarChartIcon),
+        icon: dataIcon(Analytics01Icon),
         href: "/statistics",
         keywords: ["statistics", "stats", "statistiques"],
         onSelect: () => router.push("/statistics"),
@@ -163,7 +163,7 @@ export function useAccountActions(): {
       {
         key: "cmd-signout",
         label: t("signOut"),
-        icon: dataIcon(Logout01Icon),
+        icon: dataIcon(LogOutIcon),
         keywords: ["logout", "sign out", "déconnexion", "deconnexion", "quitter"],
         onSelect: () => void signOut(),
       },

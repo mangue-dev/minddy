@@ -236,6 +236,8 @@ export function IssueContextMenu({
  entries (view pills), where it would only make noise. */
   searchable?: boolean;
 }) {
+  const lastPosition = React.useRef({ x: 0, y: 0 });
+  if (position) lastPosition.current = position;
   const [mounted, setMounted] = React.useState(false);
   React.useEffect(() => setMounted(true), []);
   // Portals have no server markup. Keep the first client render identical
@@ -254,8 +256,8 @@ export function IssueContextMenu({
           aria-hidden
           style={{
             position: "fixed",
-            left: position?.x ?? 0,
-            top: position?.y ?? 0,
+            left: lastPosition.current.x,
+            top: lastPosition.current.y,
           }}
         />
       </DropdownMenuTrigger>

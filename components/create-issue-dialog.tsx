@@ -918,7 +918,7 @@ export function CreateIssueDialog({
                       ))}</>}
                     >
                       {submitting && <Spinner />}
-                      <span className="max-w-[14rem] truncate">
+                      <span className="max-w-[14rem] truncate py-0.5 leading-normal">
                         {t("createInProject", { project: currentProject.name })}
                       </span>
                     </SplitButton>

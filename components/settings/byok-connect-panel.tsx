@@ -4,6 +4,14 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
   Button,
   Input,
   Select,
@@ -56,6 +64,8 @@ export function ByokConnectPanel({
   const [keyDraft, setKeyDraft] = useState("");
   const [baseUrlDraft, setBaseUrlDraft] = useState("");
   const [saving, setSaving] = useState(false);
+  const [removing, setRemoving] = useState<AiKey | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const providerLabel = (entry: { id: string; label: string }) => {
     if (entry.id === "generic") return t("aiProviderGeneric");
@@ -146,13 +156,18 @@ export function ByokConnectPanel({
     }
   };
   const removeKey = async (key: AiKey) => {
+    if (deleting) return;
+    setDeleting(true);
     try {
       await deleteAiKeyApi(key.id);
       await refresh();
       if (editing?.id === key.id) resetForm();
       toast.success(t("aiKeyRemovedToast"));
+      setRemoving(null);
     } catch (error) {
       toast.error((error as Error).message);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -169,6 +184,42 @@ export function ByokConnectPanel({
 
   return (
     <div className={cn("flex max-w-2xl flex-col gap-3", className)}>
+      <AlertDialog
+        open={removing !== null}
+        onOpenChange={(open) => {
+          if (!open && !deleting) setRemoving(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("aiKeyRemoveConfirmTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("aiKeyRemoveConfirmDescription", {
+                provider: removing
+                  ? providerLabel(getAgentProvider(removing.provider) ?? {
+                      id: removing.provider,
+                      label: removing.provider,
+                    })
+                  : "",
+              })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>{tc("cancel")}</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={deleting}
+              onClick={(event) => {
+                event.preventDefault();
+                if (removing) void removeKey(removing);
+              }}
+            >
+              {deleting ? <Spinner /> : null}
+              {t("aiKeyRemove")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       {keys.map((key) => {
         const definition = getAgentProvider(key.provider);
         return (
@@ -201,7 +252,7 @@ export function ByokConnectPanel({
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => void removeKey(key)}
+              onClick={() => setRemoving(key)}
             >
               {t("aiKeyRemove")}
             </Button>

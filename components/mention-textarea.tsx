@@ -112,6 +112,7 @@ function makeSlot(option: MentionOption): HTMLSpanElement {
     el.dataset.mentionIcon = option.iconUrl;
   if ("icon" in option && option.icon) el.dataset.mentionIcon = option.icon;
   if ("color" in option && option.color) el.dataset.mentionColor = option.color;
+  if ("status" in option && option.status) el.dataset.mentionStatus = option.status;
   return el;
 }
 
@@ -181,6 +182,7 @@ function slotOption(el: HTMLElement): MentionOption | null {
         : { iconUrl: el.dataset.mentionIcon }
       : {}),
     ...(el.dataset.mentionColor ? { color: el.dataset.mentionColor } : {}),
+    ...(el.dataset.mentionStatus ? { status: el.dataset.mentionStatus as EntityMentionOption["status"] } : {}),
   };
 }
 
@@ -208,6 +210,7 @@ function optionFromMention(mention: ScannedMention): MentionOption {
         id: mention.issue.id,
         label: mention.issue.identifier,
         detail: mention.issue.title,
+        status: mention.issue.status,
       };
     case "objective":
       return {
@@ -515,6 +518,10 @@ export function MentionTextarea({
     return list;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [membersKey, includeNumo, fromForge, mentions?.options]);
+
+  const issueStatusById = useMemo(() => new Map(mentionables.flatMap((item) =>
+    item.type === "issue" && item.status ? [[item.id, item.status] as const] : [],
+  )), [mentionables]);
 
   const suggestions = useMemo(
     () => (query === null ? [] : filterMentionItems(mentionables, query)),
@@ -1020,6 +1027,9 @@ export function MentionTextarea({
             iconUrl={"iconUrl" in option ? option.iconUrl : null}
             icon={"icon" in option ? option.icon : null}
             color={"color" in option ? option.color : null}
+            status={option.type === "issue"
+              ? issueStatusById.get(option.id) ?? option.status
+              : undefined}
           />,
           el,
           // Two mentions of the SAME person: the key takes rank, otherwise

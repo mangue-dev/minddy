@@ -30,11 +30,9 @@ const COMPACT_DESKTOP =
 
 // Expanded: centered, LARGE format — a pane-mirror modal (`dialog-pane-mirror`,
 // see globals.css): the exact box, radius and border of the app content pane.
-// All the !-utilities used to carry this geometry by hand; the mirror class
-// owns it now, and the morph interpolates radius only (geometry swaps at the
-// mirror's fixed inset).
+// The morph uses explicit dimensions to interpolate into the pane geometry.
 const EXPANDED_DESKTOP =
-  "dialog-pane-mirror md:origin-center";
+  "dialog-pane-mirror assistant-panel-expanded md:origin-center";
 
 /** Classes of the panel's SheetContent, depending on the display mode. */
 export function panelSheetClassName(displayMode: PanelDisplayMode): string {

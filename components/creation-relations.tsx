@@ -191,8 +191,10 @@ export function CreationRelationPills({
         const objective = relation.target_type === "objective"
           ? objectives.find((o) => o.id === relation.target_id) : null;
         const label = issue
-          ? `${issueIdentifier(projectKey, issue.number)} ${issue.title}`
-          : objective?.name ?? relation.target_label;
+          ? issueIdentifier(projectKey, issue.number)
+          : relation.target_type === "issue"
+            ? relation.target_label.split(" ")[0]
+            : objective?.name ?? relation.target_label;
         const fullLabel = `${t(relation.type)}: ${label}`;
         return (
           <span

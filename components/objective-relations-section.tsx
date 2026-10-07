@@ -317,6 +317,7 @@ export function ObjectiveRelationsSection({
     </>
   );
   if (variant === "panel") return content;
+  if (resolved.length === 0) return null;
   const activeGroups = grouped
     .map((group) => ({
       ...group,

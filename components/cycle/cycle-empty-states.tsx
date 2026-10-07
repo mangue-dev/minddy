@@ -59,18 +59,21 @@ export function CycleActivationWelcome() {
   };
 
   return (
-    <EmptyShell>
-      <p className="text-sm font-semibold">{t("welcomeTitle")}</p>
-      <ul className="flex max-w-sm flex-col gap-1 text-sm text-muted-foreground">
-        <li>{t("welcomeBullet1")}</li>
-        <li>{t("welcomeBullet2")}</li>
-        <li>{t("welcomeBullet3")}</li>
-      </ul>
-      <Button size="sm" className="mt-1" onClick={() => void activate()} disabled={activating || !user}>
-        {activating ? <HugeiconsIcon icon={LoaderCircleIcon} className="animate-spin" /> : <AppIcon icon={CycleIcon} />}
-        {t("activate")}
-      </Button>
-    </EmptyShell>
+    <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8">
+      <EmptyScene icon={CycleIcon} title={t("welcomeTitle")}>
+        <div className="flex flex-col items-center gap-4">
+          <ul className="flex max-w-sm flex-col gap-1 text-sm text-muted-foreground">
+            <li>{t("welcomeBullet1")}</li>
+            <li>{t("welcomeBullet2")}</li>
+            <li>{t("welcomeBullet3")}</li>
+          </ul>
+          <Button size="sm" onClick={() => void activate()} disabled={activating || !user}>
+            {activating ? <HugeiconsIcon icon={LoaderCircleIcon} className="animate-spin" /> : <AppIcon icon={CycleIcon} />}
+            {t("activate")}
+          </Button>
+        </div>
+      </EmptyScene>
+    </div>
   );
 }
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Delete02Icon, Logout01Icon } from "@hugeicons/core-free-icons";
+import { Delete02Icon, LogOutIcon } from "@hugeicons/core-free-icons";
 import {useEffect, useState} from "react";
 import { useAppRouter } from "@/lib/use-app-router";
 import {useTranslations} from "next-intl";
@@ -126,7 +126,7 @@ export function ProjectGeneralSection({
               disabled={leaving}
               onClick={() => void handleLeave()}
             >
-              {leaving ? <Spinner /> : <HugeiconsIcon icon={Logout01Icon} />}
+              {leaving ? <Spinner /> : <HugeiconsIcon icon={LogOutIcon} />}
               {t("leave")}
             </Button>
           }

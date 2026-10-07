@@ -1,6 +1,6 @@
 import type { AppIcon } from "@/components/icon";
 import { useMemo } from "react";
-import { AppWindowIcon as AppWindow, AiAutoRotateIcon as CycleIcon, BarChartIcon, BellRingIcon as BellRing, BotIcon as Bot, CalendarClockIcon, CodeSimpleIcon as Code2, Download, FlowIcon as Workflow, FolderKanbanIcon, GitBranchIcon as GitBranch, ImportIcon, InboxIcon as Inbox, Keyboard, KeyRoundIcon as KeyRound, Languages, ListPlus, LockIcon, LogOut, MessageMultiple01Icon as MessagesSquare, Palette, PlugIcon as Plug, RepeatIcon as Repeat, Settings02Icon as Settings2, ShieldOff, Sparkles, TagsIcon as Tags, TicketIcon as Ticket, Trash2, TriangleAlertIcon, Upload04Icon as Upload, UserGroupIcon as Users, UserIcon as User } from "@hugeicons/core-free-icons";
+import { AppWindowIcon as AppWindow, AiAutoRotateIcon as CycleIcon, Analytics01Icon, BellRingIcon as BellRing, BotIcon as Bot, CalendarClockIcon, CodeSimpleIcon as Code2, Download, FlowIcon as Workflow, FolderKanbanIcon, GitBranchIcon as GitBranch, ImportIcon, InboxIcon as Inbox, Keyboard, KeyRoundIcon as KeyRound, Languages, ListPlus, LockIcon, LogOut, MessageMultiple01Icon as MessagesSquare, Palette, PlugIcon as Plug, RepeatIcon as Repeat, Settings02Icon as Settings2, ShieldOff, Sparkles, TagsIcon as Tags, TicketIcon as Ticket, Trash2, TriangleAlertIcon, Upload04Icon as Upload, UserGroupIcon as Users, UserIcon as User } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
 import { SmartAssignIcon } from "@/components/smart-icons";
 
@@ -430,7 +430,7 @@ export function useSettingsSections(): SettingsSection[] {
       account({
         id: SETTINGS_SECTIONS.accountAnalytics,
         tab: "data",
-        icon: BarChartIcon,
+        icon: Analytics01Icon,
         title: tAnalytics("title"),
         keywords: [
           "audience", "analytics", "mesure", "statistiques", "posthog",

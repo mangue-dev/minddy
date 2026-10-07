@@ -118,14 +118,10 @@ export function UsageIndicator({
 
 /** Shared usage content with a compact layout for the real account popover. */
 export function UsageBreakdownBody({ compact = false }: { compact?: boolean }) {
-  const t = useTranslations("Billing");
   return (
     <>
       <UsageBudgetSummary compact={compact} />
       <div className="space-y-3 border-t border-border px-3 py-3">
-        <p className="text-xs text-muted-foreground">
-          {t("segmentBudgetHint")}
-        </p>
         <UsageSegmentBreakdown compact={compact} />
       </div>
     </>
