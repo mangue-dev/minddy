@@ -3098,3 +3098,9 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
     padding: 0.75rem;
   }
 }
+
+/* Single-column boards use persistent pagination instead of a scrollbar. */
+@media (width < 640px) {
+  .mobile-kanban-scroller { scrollbar-width: none; }
+  .mobile-kanban-scroller::-webkit-scrollbar { display: none; }
+}

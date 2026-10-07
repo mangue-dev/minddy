@@ -1,5 +1,7 @@
 "use client";
 
+import { BoardColumnDots } from "@/components/board-column-dots";
+
 import {
   memo,
   useCallback,
@@ -599,7 +601,7 @@ export const GlobalKanbanBoard = memo(function GlobalKanbanBoard({
               }}
               onPointerDown={onMarqueePointerDown}
               style={isLanding ? { scrollSnapType: "none" } : undefined}
-              className={cn("h-full min-h-0", BOARD_SCROLLER_CLASS)}
+              className={cn("mobile-kanban-scroller min-h-0 flex-1", BOARD_SCROLLER_CLASS)}
             >
               {columns.map(({ status, items }) => (
                 <GlobalKanbanColumn
@@ -634,6 +636,7 @@ export const GlobalKanbanBoard = memo(function GlobalKanbanBoard({
               ))}
             </div>
             <ScrollFadeEdges edges={edges} axis="x" className="z-30" />
+            <BoardColumnDots statuses={columns.map((column) => column.status)} scroller={scrollerRef} />
           </div>
 
           <MarqueeOverlay overlayRef={marqueeOverlayRef} />

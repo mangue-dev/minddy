@@ -23,7 +23,6 @@ import {
   cn,
   toast,
   useMediaQuery,
-  type NavSection,
 } from "mangue-ui";
 import {
   AppIcon,
@@ -63,7 +62,8 @@ import {
 } from "@/components/header-search-pill";
 import { usePlanGates } from "@/lib/use-billing-query";
 import { useMobileViewport } from "@/lib/use-mobile-layout";
-import { MobileNavigation } from "@/components/mobile-navigation";
+import { MobileProjectMenu, MobileRoutinesMenu, MobilePullRequestsMenu } from "@/components/mobile-project-menu";
+import { MobileNavigation, type MobileMenuSection, type MobileMenuPanel, type MobileMenuNavigation } from "@/components/mobile-navigation";
 import { SidebarOnboarding } from "@/components/sidebar-onboarding";
 import { MobileMenuFooter, useAccountActions } from "@/components/mobile-account";
 import { AppTopBar } from "@/components/app-top-bar";
@@ -172,7 +172,7 @@ function menuIcon(icon: AppIcon): IconComponent {
 }
 
 
-function toMenuSections(sections: AppNavSection[]): NavSection[] {
+function toMenuSections(sections: AppNavSection[]): MobileMenuSection[] {
   return sections.map((section) => ({
     ...section,
     items: section.items.map((item) => ({
@@ -1196,7 +1196,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
 
   // Prepare the full model during the palette's idle warmup and retain it
   // between openings. Narrow windows also need the full model when a keyboard
-  // shortcut opens the palette; MobileNav's separate list stays capped below.
+  // shortcut opens the palette.
   const desktopDataGroups = useMemo(
     () =>
       paletteMounted && (!mobileLayout || paletteOpen)
@@ -1490,10 +1490,42 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     [commandGroups, settingsGroups, desktopDataGroups, accountCommandGroup]
   );
 
-  const mobileMenuSections = useMemo(
-    () => toMenuSections([...sections, ...accountSections]),
-    [sections, accountSections]
-  );
+  const mobileNavigation = useMemo(() => {
+    const settingsPanel = (project?: Project): MobileMenuPanel => {
+      const scope = project ? "project" : "account";
+      const allowed = settingsSections.filter((section) => section.scope === scope &&
+        (!section.audience || section.audience === (project?.owner_id === user?.id ? "owner" : "member")));
+      return { key: `settings-${project?.id ?? "account"}`, title: project ? t("projectSettings") : t("accountSettings"),
+        sections: toMenuSections([...new Set(allowed.map((section) => section.tab))].map((tab) => {
+          const entries = allowed.filter((section) => section.tab === tab);
+          return { items: [{ key: tab, label: entries[0].tabLabel, icon: entries[0].icon,
+            href: settingsSectionHref(entries[0], project?.id) }] };
+        })) };
+    };
+    const panels = new Map<string, MobileMenuPanel>();
+    projects.forEach((project) => {
+      const base = `/projects/${project.id}`;
+      const resource = (kind: "objectives" | "pages" | "triage" | "feedback"): MobileMenuPanel => ({ key: `${project.id}-${kind}`, title: t(kind),
+        render: (navigation: MobileMenuNavigation) => <MobileProjectMenu {...navigation} projectId={project.id} kind={kind} /> });
+      panels.set(project.id, { key: `project-${project.id}`, title: project.name, sections: [{ items: [
+        { key: "tickets", label: t("tickets"), icon: menuIcon(Layout3ColumnIcon), href: base, active: pathname === base && !objectiveBoardId },
+        { key: "objectives", label: t("objectives"), icon: menuIcon(Target01Icon), panel: resource("objectives"), active: pathname.startsWith(`${base}/objectives`) || (currentProject?.id === project.id && !!objectiveBoardId) },
+        { key: "pages", label: t("pages"), icon: menuIcon(File02Icon), panel: resource("pages"), active: pathname.startsWith(`${base}/pages`) },
+        { key: "triage", label: t("triage"), icon: menuIcon(TriageNavIcon), panel: resource("triage"), active: pathname.startsWith(`${base}/triage`), ...countBadges(triageCounts[project.id]?.triage ?? 0, t("triageBadge", {count: triageCounts[project.id]?.triage ?? 0})) },
+        { key: "feedback", label: t("feedback"), icon: menuIcon(MessageMultiple01Icon), panel: resource("feedback"), active: pathname.startsWith(`${base}/feedback`), ...countBadges(triageCounts[project.id]?.feedback ?? 0, t("feedbackBadge", {count: triageCounts[project.id]?.feedback ?? 0})) },
+        { key: "settings", label: t("projectSettings"), icon: menuIcon(Settings01Icon), panel: settingsPanel(project), active: pathname.startsWith(`${base}/settings`) },
+      ] }] });
+    });
+    const root = toMenuSections([...homeSections, ...accountSections]).map((section) => ({ ...section,
+      items: section.items.map((item) => ({ ...item,
+        panel: item.key.startsWith("project-") ? panels.get(item.key.slice("project-".length)) : item.key === "m-settings" ? settingsPanel()
+          : item.key === "routines" ? { key: "routines", title: t("routines"), render: (navigation: MobileMenuNavigation) => <MobileRoutinesMenu {...navigation} /> }
+          : item.key === "pull-requests" ? { key: "pull-requests", title: t("pullRequests"), render: (navigation: MobileMenuNavigation) => <MobilePullRequestsMenu {...navigation} /> }
+          : undefined,
+      })),
+    }));
+    return { sections: root, initialPanel: currentProject ? panels.get(currentProject.id) : undefined };
+  }, [projects, homeSections, accountSections, settingsSections, user?.id, currentProject, pathname, objectiveBoardId, triageCounts, t]);
 
   // Opening the palette arms the cross-project index if idle hasn't yet, and
   // revalidates it when the snapshot has aged (no-op while fresh).
@@ -1583,7 +1615,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       }
       mobileNav={
         <MobileNavigation
-          sections={mobileMenuSections}
+          {...mobileNavigation}
           onSearch={() => handlePaletteOpenChange(true)}
           menuFooter={<><SidebarOnboarding mobile /><MobileMenuFooter /></>}
         />

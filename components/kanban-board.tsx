@@ -9,7 +9,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { useTranslations } from "next-intl";
+import { BoardColumnDots } from "@/components/board-column-dots";
 import {
   DndContext,
   DragOverlay,
@@ -360,8 +360,6 @@ export const KanbanBoard = memo(function KanbanBoard({
     },
     [fadeRef, marqueeRef],
   );
-  const [activeColumn, setActiveColumn] = useState(0);
-  const columnCount = columns.length;
 
   useLayoutEffect(() => {
     const node = scrollerRef.current;
@@ -385,39 +383,6 @@ export const KanbanBoard = memo(function KanbanBoard({
     },
     [dropAnimation],
   );
-
-  const updateActiveColumn = useCallback(
-    (el: HTMLDivElement) => {
-      // The pagination dots are `sm:hidden` (see `ColumnDots`): above 640 px
-      // there is nothing to show or track. Updating `activeColumn` would rerender
-      // the entire board, including every card, at each horizontal threshold
-      // crossing (MIN-317). `scrollProps.onScroll` avoids the same pattern in
-      // `lib/use-scroll-fade.ts`.
-      if (window.innerWidth >= 640) {
-        setActiveColumn((prev) => (prev === 0 ? prev : 0));
-        return;
-      }
-      if (el.scrollWidth <= el.clientWidth + 1) {
-        setActiveColumn((prev) => (prev === 0 ? prev : 0));
-        return;
-      }
-      const stride = el.scrollWidth / columnCount;
-      const idx = Math.min(
-        columnCount - 1,
-        Math.max(0, Math.round(el.scrollLeft / stride)),
-      );
-      setActiveColumn((prev) => (prev === idx ? prev : idx));
-    },
-    [columnCount],
-  );
-
-  const scrollToColumn = useCallback((index: number) => {
-    const el = scrollerRef.current;
-    if (!el) return;
-    // The scroller's direct children are exactly the columns.
-    const stride = el.scrollWidth / (el.children.length || 1);
-    el.scrollTo({ left: index * stride, behavior: "smooth" });
-  }, []);
 
   const handleDragStart = (event: DragStartEvent) => {
     landingGenerationRef.current += 1;
@@ -538,7 +503,6 @@ export const KanbanBoard = memo(function KanbanBoard({
           onDragCancel={handleDragCancel}
         >
           <div className="flex h-full flex-col">
-            {/* On mobile, dots reflect and control the snapped status column. */}
             {selectedIssues.length > 0 && (
               <BulkIssueActions
                 count={selectedIssues.length}
@@ -567,11 +531,6 @@ export const KanbanBoard = memo(function KanbanBoard({
                 onLink={bulkLink}
               />
             )}
-            <ColumnDots
-              statuses={columns.map((c) => c.status)}
-              active={activeColumn}
-              onSelect={scrollToColumn}
-            />
             {/* Draw the edge fade beside the scroller (MIN-319). A mask on the
                 scroller would be recomposited on every frame and nested inside
                 each column's mask. The relative parent anchors the fade. */}
@@ -582,11 +541,10 @@ export const KanbanBoard = memo(function KanbanBoard({
                   preservedHorizontalScroll.current =
                     e.currentTarget.scrollLeft;
                   scrollProps.onScroll();
-                  updateActiveColumn(e.currentTarget);
                 }}
                 onPointerDown={onMarqueePointerDown}
                 style={isLanding ? { scrollSnapType: "none" } : undefined}
-                className={cn("min-h-0 flex-1", BOARD_SCROLLER_CLASS)}
+                className={cn("mobile-kanban-scroller min-h-0 flex-1", BOARD_SCROLLER_CLASS)}
               >
                 {columns.map(({ status, items }) => (
                   <KanbanColumn
@@ -623,6 +581,7 @@ export const KanbanBoard = memo(function KanbanBoard({
               </div>
               <ScrollFadeEdges edges={edges} axis="x" className="z-30" />
             </div>
+            <BoardColumnDots statuses={columns.map((column) => column.status)} scroller={scrollerRef} />
           </div>
 
           <MarqueeOverlay overlayRef={marqueeOverlayRef} />
@@ -658,44 +617,3 @@ export const KanbanBoard = memo(function KanbanBoard({
     </AgentActivityProvider>
   );
 });
-
-/**
- * Mobile-only pagination dots for the swipeable board: one dot per status column,
- * the active one widened. Tapping a dot scrolls that column into view. Hidden
- * when there's only one column.
- *
- * `sm:hidden` and not `desktop:hidden` (MIN-293): these points count PAGES,
- * and there is only one page per column below 640 px, where one column
- * fills the window (`BOARD_COLUMN_CLASS`). Above, two or three columns
- * hold together, a page is no longer a column — the points would start counting wrong, and the last ones would be unreachable. What remains outside
- * field is then read at the faded edges (`useScrollFade`).
- */
-function ColumnDots({
-  statuses,
-  active,
-  onSelect,
-}: {
-  statuses: StatusMeta[];
-  active: number;
-  onSelect: (index: number) => void;
-}) {
-  const ts = useTranslations("Status");
-  if (statuses.length <= 1) return null;
-  return (
-    <div className="flex shrink-0 items-center justify-center gap-1.5 pb-2 sm:hidden">
-      {statuses.map((status, i) => (
-        <button
-          key={status.value}
-          type="button"
-          aria-label={ts(status.value)}
-          aria-current={i === active}
-          onClick={() => onSelect(i)}
-          className={cn(
-            "h-1.5 rounded-full transition-all",
-            i === active ? "w-4 bg-foreground" : "w-1.5 bg-muted-foreground/30",
-          )}
-        />
-      ))}
-    </div>
-  );
-}
