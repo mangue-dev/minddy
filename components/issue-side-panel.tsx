@@ -917,7 +917,7 @@ export function IssueSidePanel({
                 />
               )}
             </div>
-            <div className="-mr-1.5 flex items-center gap-0.5">
+            <div data-mobile-sheet-header-actions className="-mr-1.5 flex items-center gap-0.5">
               <IssueActionsMenu
                 key={issue.id}
                 actions={menuActions}

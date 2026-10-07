@@ -18,3 +18,13 @@ export function sidebarGestureSettlesOpen(offset: number, width: number, velocit
 export function sidebarRevealRadius(offset: number, width: number): number {
   return width > 0 ? Math.max(0, Math.min(1, offset / width)) * 24 : 0;
 }
+
+/** Editors, native horizontal scrollers and app-owned gestures retain their input. */
+export function sidebarGestureIsReserved(target: Element, surface: HTMLElement): boolean {
+  if (target.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"]), [data-mobile-gesture-lock], [data-board-column-scroller], [aria-roledescription="carousel"], [data-carousel], [role="slider"], [draggable="true"]')) return true;
+  for (let node: Element | null = target; node && node !== surface; node = node.parentElement) {
+    const style = window.getComputedStyle(node);
+    if (node.scrollWidth > node.clientWidth + 1 && /^(auto|scroll)$/.test(style.overflowX)) return true;
+  }
+  return false;
+}

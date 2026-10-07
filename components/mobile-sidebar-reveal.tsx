@@ -4,7 +4,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefO
 import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
 import { useMobileLayout } from "@/lib/use-mobile-layout";
-import { mobileSidebarWidth, sidebarGestureIntent, sidebarGestureSettlesOpen, sidebarRevealRadius } from "@/lib/mobile-sidebar-reveal";
+import { mobileSidebarWidth, sidebarGestureIntent, sidebarGestureSettlesOpen, sidebarRevealRadius, sidebarGestureIsReserved } from "@/lib/mobile-sidebar-reveal";
 
 const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex="0"]';
 
@@ -82,11 +82,12 @@ export function MobileSidebarReveal({ open, onOpenChange, trigger, focusTarget, 
       else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
     };
     const down = (event: PointerEvent) => {
-      if (event.pointerType !== "touch" || !event.isPrimary || otherDialog()) return;
+      if (event.pointerType !== "touch") return;
+      if (!event.isPrimary) { gesture.current = null; setDrag(null); return; }
+      if (otherDialog()) return;
       const target = event.target;
-      if (!(target instanceof Element) || (!open && event.clientX > 24)) return;
-      if (target.closest('input, textarea, select, [contenteditable="true"], [data-mobile-gesture-lock]')) return;
-      if (!open && target.closest('button, a[href], [data-board-column-scroller], [data-radix-scroll-area-viewport]')) return;
+      if (!(target instanceof Element) || (!open && !surface.contains(target))) return;
+      if (sidebarGestureIsReserved(target, surface)) return;
       if (open && !drawer.current?.contains(target) && !target.closest("[data-mobile-sidebar-dismiss]")) return;
       gesture.current = { id: event.pointerId, x: event.clientX, y: event.clientY, start: open ? width : 0, lastX: event.clientX, lastTime: event.timeStamp, velocity: 0, intent: "pending" };
     };
@@ -140,6 +141,5 @@ export function MobileSidebarReveal({ open, onOpenChange, trigger, focusTarget, 
       {children}
     </div>
     {shown && <button type="button" data-mobile-sidebar-dismiss aria-label={tc("close")} onClick={() => onOpenChange(false)} style={{ left: offset }} />}
-    <div data-mobile-sidebar-edge aria-hidden style={{ pointerEvents: shown ? "none" : "auto" }} />
   </>, surface.parentElement);
 }

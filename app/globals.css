@@ -2919,7 +2919,7 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
     border: 0;
     background: var(--card);
   }
-  .mobile-bottom-sheet [data-slot="dialog-header"],
+  .mobile-bottom-sheet :is([data-slot="dialog-header"], [data-slot="sheet-header"]),
   .mobile-bottom-sheet > [data-slot="sheet-title"]:not(.sr-only) {
     min-height: 44px;
     justify-content: center;
@@ -2933,7 +2933,7 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
   }
   .mobile-bottom-sheet [data-mobile-sheet-header] {
     min-height: 44px;
-    padding-right: 44px;
+    padding-right: 60px;
     padding-top: 0;
     padding-bottom: 0;
   }
@@ -2951,6 +2951,20 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
     border-radius: 50%;
     color: var(--muted-foreground);
     background: transparent;
+  }
+  .mobile-bottom-sheet :is([data-mobile-sheet-header], [data-mobile-sheet-toolbar], [data-slot="dialog-header"], [data-slot="sheet-header"], [data-slot="side-panel-header"]) button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  .mobile-bottom-sheet [data-mobile-sheet-header-actions] { margin: 0; gap: 8px; flex-shrink: 0; }
+  .mobile-bottom-sheet [data-mobile-sheet-toolbar] { gap: 8px; }
+  .mobile-assistant-sheet .app-content-header > div { padding-right: 60px; }
+  .mobile-assistant-sheet .app-content-header button { min-height: 44px; min-width: 44px; }
+  [data-property-row] { min-height: 52px; }
+  [data-property-row] :is(button, a[role="button"]) { min-height: 44px; min-width: 44px; }
+  :is([data-slot="sheet-overlay"], [data-slot="dialog-overlay"], [data-slot="alert-dialog-overlay"]) {
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
   }
   .mobile-bottom-sheet [data-mobile-sheet-close-wrapper] { display: contents; }
   .mobile-bottom-sheet [data-mobile-sheet-close-legacy] { display: none; }
@@ -2989,7 +3003,9 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
     border-radius: var(--mobile-sidebar-radius, 0px) 0 0 var(--mobile-sidebar-radius, 0px);
     transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1), border-radius 260ms cubic-bezier(0.22, 1, 0.36, 1);
     will-change: transform;
+    touch-action: pan-y pinch-zoom;
   }
+  html:has([data-mobile-sidebar-surface]) { overscroll-behavior-x: none; }
   .app-shell[data-mobile-sidebar-open="true"] { box-shadow: -8px 0 32px rgb(0 0 0 / 0.08); }
   .app-shell[data-mobile-sidebar-dragging="true"] { transition: none; }
   [data-mobile-sidebar-dismiss] {
@@ -3002,7 +3018,6 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
     background: transparent;
     touch-action: pan-y;
   }
-  [data-mobile-sidebar-edge] { position: absolute; inset: 0 auto 0 0; width: 16px; z-index: 2; touch-action: pan-y; }
   @media (prefers-reduced-motion: reduce) { .app-shell[data-mobile-sidebar-surface] { transition: none; } }
   .mobile-bottom-sheet :is([data-slot="side-panel-header"], [data-slot="side-panel-footer"]) {
     border: 0;

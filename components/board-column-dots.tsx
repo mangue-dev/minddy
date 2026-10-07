@@ -46,7 +46,7 @@ export function BoardColumnDots({ statuses, scroller }: {
         const first = node?.firstElementChild as HTMLElement | null;
         if (node && column && first) node.scrollTo({ left: column.offsetLeft - first.offsetLeft, behavior: "smooth" });
       }}
-      className="flex h-11 min-w-0 flex-1 max-w-11 items-center justify-center rounded-lg focus-visible:ring-2 focus-visible:ring-ring">
+      className="flex h-11 w-8 shrink-0 items-center justify-center rounded-lg focus-visible:ring-2 focus-visible:ring-ring">
       <span aria-hidden className={cn("h-1.5 rounded-full transition-all", index === active ? "w-4 bg-foreground" : "w-1.5 bg-muted-foreground/30")} />
     </button>)}
   </div>;
