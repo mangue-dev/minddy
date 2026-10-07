@@ -789,13 +789,16 @@ function PrInsightView({ insight, now }: { insight: PrInsight; now: Date }) {
           : insight.iconKind === "branch" ? t("insightBranch")
             : insight.iconKind === "policy" ? t("insightPolicy")
               : t("insightMergeability");
+  const onSelect = insight.actions ? undefined : insight.action?.onClick ?? insight.onSelect;
+  const actionLabel = insight.action?.label ?? insight.openLabel;
   return (
     <PrInsightRow
       label={label}
+      ariaLabel={onSelect && actionLabel ? `${insight.title}: ${actionLabel}` : undefined}
       tone={insight.tone}
       testId={`pr-status-card-${insight.id}`}
       showTitle={insight.id !== "deployment"}
-      onSelect={insight.actions ? undefined : insight.action?.onClick ?? insight.onSelect}
+      onSelect={onSelect}
       disabled={insight.action?.disabled}
       menuActions={insight.actions ? insightMenuActions(insight, t) : undefined}
       detailsTestId={insight.actions ? `pr-${insight.id}-menu` : undefined}

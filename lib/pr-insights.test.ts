@@ -6,6 +6,7 @@ import { NextIntlClientProvider } from "next-intl";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PrInsights } from "@/components/pull-requests/pr-insights";
 import type { CheckState, ChecksSummary } from "@/lib/agent-api";
+import type { ReadinessBlocker } from "@/lib/pr-readiness";
 import messages from "@/messages/en.json";
 import { groupReviewThreads } from "@/lib/pr-review-threads";
 import { AI_REVIEW_PROVIDERS } from "@/lib/pr-ai-review/providers";
@@ -80,6 +81,27 @@ describe("pull request insight properties", () => {
   function trigger(id: string) {
     return document.querySelector<HTMLButtonElement>(`[data-testid="pr-status-card-${id}"]`)!;
   }
+
+  it.each([
+    { kind: "draft", action: "mark_ready", statusLabel: "Draft", actionLabel: "Mark ready" },
+    { kind: "branch", action: "update_branch", statusLabel: "Branch out of date", actionLabel: "Update branch" },
+    { kind: "policy", action: "enable_auto_merge", statusLabel: "Policy blocked", actionLabel: "Open merge flow" },
+  ] as const)("announces the status and direct action for $kind", async ({ kind, action, statusLabel, actionLabel }) => {
+    const blocker: ReadinessBlocker = { id: kind, kind, action, required: true, status: "blocked", source: "pull_request" };
+    props.readiness = { state: "draft", blockers: [blocker], passed: [], mergeAllowed: false, methods: [], preferredMethod: null };
+    props.canAct = () => true;
+    await render();
+    expect(trigger(kind).getAttribute("aria-label")).toBe(`${statusLabel}: ${actionLabel}`);
+    await act(async () => trigger(kind).click());
+    expect(props.onAction).toHaveBeenCalledExactlyOnceWith(blocker);
+    expect(document.querySelector('[data-slot="popover-content"]')).toBeNull();
+    props.acting = action;
+    await render();
+    expect(trigger(kind).disabled).toBe(true);
+    expect(trigger(kind).getAttribute("aria-label")).toBe(`${statusLabel}: ${actionLabel}`);
+    await act(async () => trigger(kind).click());
+    expect(props.onAction).toHaveBeenCalledOnce();
+  });
 
   it("keeps checks and reviews available without empty conversation or Numo rows", async () => {
     props.checks = checks();
@@ -317,6 +339,7 @@ describe("pull request insight properties", () => {
       created_at: "2026-10-05T10:00:00Z", html_url: "https://example.test/review/1",
     }]);
     await render();
+    expect(trigger("conversations").getAttribute("aria-label")).toContain(messages.PullRequests.viewConversations);
     await act(async () => trigger("conversations").click());
     expect(props.onOpenConversations).toHaveBeenCalledOnce();
     expect(document.querySelector('[data-slot="popover-content"]')).toBeNull();
