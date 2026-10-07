@@ -36,7 +36,7 @@ import { AGENT_SANDBOX_RUNTIME_ENV } from "./sandbox-resources";
  * pushed work branch and encrypted Agent journal. Automatic filesystem
  * snapshots are disabled because they preserve decrypted job and tool data.
  * AUTH: reuses
- * VERCEL_TOKEN/TEAM_ID/PROJECT_ID (like custom domains, MIN-36); on Vercel
+ * VERCEL_TOKEN/TEAM_ID/PROJECT_ID; on Vercel
  * l'OIDC suffit.
  */
 

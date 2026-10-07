@@ -1,0 +1,30 @@
+{
+  "fixture": {
+    "accounts": 2000,
+    "projects": 2000,
+    "issues": 10000,
+    "ai_usage_rows": 20000,
+    "stat_event_rows": 20000
+  },
+  "runs": {
+    "before": {
+      "warm_ms": [
+        369.273,
+        408.566,
+        350.429
+      ],
+      "warm_median_ms": 369.273,
+      "payload_bytes": 349892
+    },
+    "after": {
+      "warm_ms": [
+        3.269,
+        3.331,
+        3.392
+      ],
+      "warm_median_ms": 3.331,
+      "payload_bytes": 119500
+    }
+  },
+  "lookup_ms": 1.351
+}

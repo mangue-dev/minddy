@@ -1,8 +1,13 @@
 import type { Locale } from "@/i18n/config";
 
+export type ChangelogIllustrationName =
+  | "shield" | "board" | "assistant" | "pages" | "connections" | "activity" | "desktop"
+  | "smart-fill" | "smart-assign" | "microphone" | "relations" | "pull-request"
+  | "tabs" | "triage" | "providers" | "performance" | "merge" | "deadline";
+
 export type ChangelogIllustration =
-  | { kind: "code"; name: "shield" | "board" | "assistant" | "pages" | "connections" | "activity" | "desktop" }
-  | { kind: "icon"; name: "shield" | "board" | "assistant" | "pages" | "connections" | "activity" | "desktop" }
+  | { kind: "code"; name: ChangelogIllustrationName }
+  | { kind: "icon"; name: ChangelogIllustrationName }
   | { kind: "image"; url: string; width: number; height: number };
 
 export interface FeatureCopy {

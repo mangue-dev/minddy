@@ -347,8 +347,7 @@ export function BackToBoardLink({ basePath }: { basePath: string }) {
   const t = useTranslations("PublicFeedback");
   return (
     <Button asChild className="w-fit">
-      {/* basePath "" (custom domain): the root of the board is "/". */}
-      <Link href={basePath || "/"}>
+      <Link href={basePath}>
         <HugeiconsIcon icon={ArrowLeft01Icon} />
         {t("back")}
       </Link>

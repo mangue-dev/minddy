@@ -23,10 +23,28 @@ still contains older announcements.
 
 Illustrations use `{ kind: "code", name }`, `{ kind: "icon", name }`, or
 `{ kind: "image", url, width, height }`. Code/icon names are `shield`, `board`,
-`assistant`, `pages`, `connections`, `activity`, and `desktop`. All figures
+`assistant`, `pages`, `connections`, `activity`, `desktop`, `smart-fill`,
+`smart-assign`, `microphone`, `relations`, `pull-request`, `tabs`, `triage`,
+`providers`, `performance`, `merge`, and `deadline`. All figures
 share the same small renderer. Images require external HTTPS, real dimensions,
 and optimized assets up to 1600 px per side. Aim for at most 80 KiB per image.
 The browser loads them lazily and keeps the tile text if an image fails.
+
+Choose the feature's own mark for focused improvements: `assistant` renders
+the official Numo face, and `smart-fill` and `smart-assign` reuse the product
+icons. Use `kind: "icon"` for a standalone symbol. Use `kind: "code"` for
+restrained interface excerpts such as the board, relations, PR diff/checks,
+workspace tabs, usage meter, or document. These excerpts use Minddy's theme
+tokens and omit labels so they work across locales. Avoid decorative gradients,
+tilted windows, or unrelated stock imagery. The approach follows the focused
+product imagery in [Linear's changelog](https://linear.app/changelog) and the
+contextual simplicity of [Atlassian's illustration guidance](https://atlassian.design/guidelines/brand/illustrations/).
+
+`lib/changelog-illustrations.ts` selects improved artwork for the existing
+0.11.0 features and the prepared 0.11.1 features at display time. This applies to
+both local history and remote catalogs without rewriting immutable publication
+records, feature anchors, or translations. Explicit images/icons retain the
+release author's selection; unknown feature IDs use their declared preset.
 
 The validator caps a complete six-locale release at 192 KiB, 64 features,
 90-character titles, 320-character summaries, and six 1200-character detail

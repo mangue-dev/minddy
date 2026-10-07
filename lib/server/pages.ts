@@ -13,8 +13,7 @@ import {
   type Page,
   type PageWriteKind,
 } from "@/lib/pages";
-import { exceedsJsonDepth, MAX_PAGE_JSON_DEPTH } from "@/lib/json-depth";
-import { checkPageContent } from "@/lib/page-content-schema";
+import { readPageContent } from "./page-content-input";
 import { afterOrNow } from "@/lib/server/after-safe";
 import {
   notifyAgentPageWrite,
@@ -119,14 +118,6 @@ export type PageErrorKey =
 
 /** The title of a page: same ceiling as a ticket title (MIN-118). */
 const MAX_TITLE_LENGTH = 500;
-
-/**
- * The body, in bytes of JSON. A 1 MB ProseMirror document is already a
- * page that no editor renders comfortably; beyond that we refuse rather than
- * to let a write cause the request to fall on a platform limit,
- * where the user would understand nothing of the message.
- */
-const MAX_CONTENT_BYTES = 1_000_000;
 
 /** An emoji, not a sentence: we limit ourselves rather than validating an alphabet. */
 const MAX_ICON_LENGTH = 16;
@@ -588,7 +579,7 @@ export async function createPage({
       ? await bodyFromMarkdownServer(input.markdown)
       : input.content;
 
-  const content = readContent(raw);
+  const content = readPageContent(raw);
   if (content === "too-deep") {
     return { ok: false, status: 400, errorKey: "pageTooDeep" };
   }
@@ -839,7 +830,7 @@ export async function updatePage({
   // owner to write next to it (see the `pages_favorite` migration).
   if (typeof input.favorite === "boolean") patch.favorite = input.favorite;
 
-  const content = readContent(input.content);
+  const content = readPageContent(input.content);
   if (content === "too-deep") {
     return { ok: false, status: 400, errorKey: "pageTooDeep" };
   }
@@ -1322,31 +1313,4 @@ function readIcon(value: unknown): string | null {
   if (typeof value !== "string") return null;
   const icon = value.trim();
   return icon ? icon.slice(0, MAX_ICON_LENGTH) : null;
-}
-
-/**
- * The ProseMirror body. `undefined` = field is not in the request,
- * `"too-large"` = refused. A value which is not an object is ignored rather than refused: it is the same treatment as an unknown status elsewhere, and the only possible harm is not to write what one has not been able to read.
- *
- * Three guards, in THIS order, and the order is the subject :
- *
- * 1. DEPTH first (MIN-348) — weighing a document is serializing it,
- * and `JSON.stringify` goes down the tree through the call stack: on a body
- * nested ten thousand times, this is the guardrail falling, not what he was supposed to
- * stop. Recursive descent of the schema would fall similarly;
- * 2. the SIZE, before traversing the tree node by node;
- * 3. the SCHEMA (MIN-350): known types, known attributes, addresses without
- * hostile protocol (lib/page-content-schema.ts). It makes the body CLEAN
- * of its unknown attributes — it is this value which is taken as base.
- */
-function readContent(
-  value: unknown
-): unknown | undefined | "too-large" | "too-deep" | "refused" {
-  if (value === undefined || value === null) return undefined;
-  if (typeof value !== "object" || Array.isArray(value)) return undefined;
-  if (exceedsJsonDepth(value, MAX_PAGE_JSON_DEPTH)) return "too-deep";
-  if (JSON.stringify(value).length > MAX_CONTENT_BYTES) return "too-large";
-  const checked = checkPageContent(value);
-  if (!checked.ok) return "refused";
-  return checked.content;
 }

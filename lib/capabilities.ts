@@ -14,7 +14,6 @@ export type CapabilityId =
   | "managedAi"
   | "agentExecution"
   | "vercelSandbox"
-  | "vercelDomains"
   | "scheduler"
   | "analytics"
   | "transactionalEmail"
@@ -232,18 +231,6 @@ export function resolveCapabilities(env: CapabilityEnvironment): Record<Capabili
           diagnostic: "Server-side agent execution is disabled; configure AGENT_EXECUTION_BACKEND and its server sandbox.",
         });
 
-  const domainMissing = missing(env, ["VERCEL_TOKEN", "VERCEL_PROJECT_ID"]);
-  const vercelDomains = status({
-    id: "vercelDomains",
-    requirement: "optional",
-    state: domainMissing.length === 0 ? "ready" : "disabled",
-    missing: domainMissing,
-    diagnostic:
-      domainMissing.length === 0
-        ? "Vercel custom-domain management is configured."
-        : `Custom domains are hidden; missing: ${domainMissing.join(", ")}.`,
-  });
-
   const clientAnalytics = present(env, "MINDDY_PUBLIC_POSTHOG_KEY") &&
     present(env, "MINDDY_PUBLIC_POSTHOG_HOST");
   const serverAnalytics = present(env, "POSTHOG_API_KEY") && present(env, "POSTHOG_HOST");
@@ -438,7 +425,6 @@ export function resolveCapabilities(env: CapabilityEnvironment): Record<Capabili
     managedAi,
     agentExecution,
     vercelSandbox,
-    vercelDomains,
     scheduler:
       !present(env, "CRON_SECRET")
           ? status({

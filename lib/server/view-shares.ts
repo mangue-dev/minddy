@@ -2,12 +2,7 @@ import "server-only";
 
 import { randomBytes, randomUUID, scryptSync, timingSafeEqual } from "node:crypto";
 import { getServiceClient } from "@/lib/supabase-service";
-import {
-  detachDomainFromVercelOnly,
-  reserveCustomDomainMutation,
-} from "@/lib/server/custom-domains";
 import { getProjectAccess } from "@/lib/server/project-access";
-import { cleanRemovedDomain } from "@/lib/server/custom-domain-cleanup";
 import { publicProjectIconRoute } from "@/lib/server/project-icon-content";
 import { decodeProjectName } from "@/lib/server/project-content";
 import { decodeView } from "@/lib/server/view-content";
@@ -158,54 +153,6 @@ async function resolveShareView(
   return { ok: true };
 }
 
-/**
- * Resolution view → share for custom domain management (MIN-36).
- * Same access rule as sharing, plus isOwner: attach a domain key
- * Vercel infrastructure, the transfer is reserved for the owner of the road side project.
- */
-export async function resolveShareForDomain(
-  viewId: string,
-  actorId: string
-): Promise<
-  | { ok: true; share: { id: string; token: string } | null; isOwner: boolean }
-  | {
-      ok: false;
-      status: 400 | 404 | 500;
-      errorKey: "viewNotFound" | "globalViewsNotShareable" | "databaseError";
-    }
-> {
-  const service = getServiceClient();
-  const { data: view } = await service
-    .from("views")
-    .select("id, project_id, user_id")
-    .eq("id", viewId)
-    .maybeSingle();
-  if (!view) return { ok: false, status: 404, errorKey: "viewNotFound" };
-  if (view.user_id && view.user_id !== actorId) {
-    return { ok: false, status: 404, errorKey: "viewNotFound" };
-  }
-  if (view.project_id === null) {
-    return { ok: false, status: 400, errorKey: "globalViewsNotShareable" };
-  }
-  const access = await getProjectAccess(actorId, view.project_id as string);
-  if (!access) return { ok: false, status: 404, errorKey: "viewNotFound" };
-
-  const { data: share, error } = await service
-    .from("view_shares")
-    .select("id, token")
-    .eq("view_id", viewId)
-    .maybeSingle();
-  if (error) {
-    console.error("[view-shares] read failed:", error.message);
-    return { ok: false, status: 500, errorKey: "databaseError" };
-  }
-  return {
-    ok: true,
-    share: share ? { id: share.id, token: await decodeShareToken(share.id, share.token) } : null,
-    isOwner: access.isOwner,
-  };
-}
-
 export async function getViewShare(
   viewId: string,
   actorId: string
@@ -298,18 +245,6 @@ export async function deleteViewShare(
   const resolved = await resolveShareView(viewId, actorId);
   if (!resolved.ok) return resolved;
 
-  // Use the same durable provider lease as the domain route. A re-created share
-  // can commit after this guarded revoke, but it cannot attach its domain until
-  // cleanup of the revoked share has finished.
-  const reservation = await reserveCustomDomainMutation(`view:${viewId}`, actorId);
-  if (reservation) {
-    return {
-      ok: false,
-      status: reservation.error === "provider_unavailable" ? 503 : 409,
-      errorKey: "databaseError",
-    };
-  }
-
   const { data, error } = await getServiceClient().rpc("revoke_view_share_guarded", {
     p_view_id: viewId,
   });
@@ -317,16 +252,10 @@ export async function deleteViewShare(
     console.error("[view-shares] delete failed:", error.message);
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
-  const result = data as { status?: unknown; domain?: unknown } | null;
+  const result = data as { status?: unknown } | null;
   if (result?.status !== "absent" && result?.status !== "revoked") {
     console.error("[view-shares] invalid guarded revoke response");
     return { ok: false, status: 500, errorKey: "databaseError" };
-  }
-  const domainRow = result?.domain as Parameters<typeof detachDomainFromVercelOnly>[0] | null;
-  if (domainRow) {
-    await detachDomainFromVercelOnly(domainRow, actorId, {
-      mutationAlreadyReserved: true,
-    });
   }
   return { ok: true, share: null };
 }
@@ -622,11 +551,6 @@ export async function deletePageShare(
   const resolved = await resolveSharePage(pageId, actorId);
   if (!resolved.ok) return resolved;
 
-  const { data: domains, error: lookupError } = await getServiceClient()
-    .from("custom_domains").select("domain, view_shares!inner(page_id)")
-    .eq("view_shares.page_id", pageId);
-  if (lookupError) return { ok: false, status: 500, errorKey: "databaseError" };
-
   const { error } = await getServiceClient()
     .from("view_shares")
     .delete()
@@ -635,6 +559,5 @@ export async function deletePageShare(
     console.error("[view-shares] page delete failed:", error.message);
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
-  for (const row of domains ?? []) await cleanRemovedDomain(row.domain as string);
   return { ok: true, share: null };
 }

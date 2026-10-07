@@ -23,6 +23,7 @@ import { KbdSequence } from "@/components/ui/kbd";
 
 import { DictateWaveform } from "./dictate-waveform";
 import { eventKey } from "@/lib/keyboard/event-key";
+import { ownsDictationShortcut } from "@/lib/keyboard/dictation-shortcut";
 import { resolveKeyToken } from "@/lib/keyboard/shortcuts";
 import type { DictationContext } from "@/lib/dictation-context";
 import {
@@ -90,8 +91,8 @@ export interface DictateButtonProps {
  * carries its own modifiers, so it fires everywhere, inputs included — but it
  * must include a NON-typographic modifier ("mod" or "alt"): a lone Shift
  * combo is just how you type a capital letter, and would fire on it. The
- * listener lives for as long as the button is mounted, so scope it by only
- * rendering the button in the context where the shortcut should apply.
+ * listener lives for as long as the button is mounted. Only the foremost
+ * visible dialog or panel handles it while an overlay is open.
  */
   shortcutKey?: string;
   /**
@@ -216,6 +217,7 @@ export function DictateButton({
   const [status, setStatus] = useState<DictateStatus>("idle");
   const [elapsedMs, setElapsedMs] = useState(0);
   const [stream, setStream] = useState<MediaStream | null>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -511,10 +513,11 @@ export function DictateButton({
     const { mod, shift, alt, key } = shortcut;
     const isCombo = mod || shift || alt;
     const onKey = (e: KeyboardEvent) => {
-      if (e.repeat) return;
+      if (e.repeat || e.defaultPrevented) return;
       if (e.metaKey || e.ctrlKey ? !mod : mod) return;
       if (e.shiftKey !== shift || e.altKey !== alt) return;
       if (eventKey(e) !== key) return;
+      if (!ownsDictationShortcut(buttonRef.current)) return;
       if (!isCombo) {
         const el = e.target as HTMLElement | null;
         if (
@@ -526,6 +529,7 @@ export function DictateButton({
           return;
       }
       e.preventDefault();
+      e.stopImmediatePropagation();
       handleClick();
     };
     document.addEventListener("keydown", onKey, true);
@@ -558,6 +562,7 @@ export function DictateButton({
           <TooltipTrigger asChild>
             <PopoverTrigger asChild>
               <button
+                ref={buttonRef}
                 type="button"
                 onClick={handleClick}
                 disabled={disabled || status === "starting" || status === "processing"}

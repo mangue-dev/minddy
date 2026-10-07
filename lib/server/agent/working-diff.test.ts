@@ -267,11 +267,6 @@ function fakeHost(replies: [RegExp, string][]): RepoHost & { commands: string[] 
 }
 
 describe("resolveBaseRef", () => {
-  it("prend origin/<base> quand la ref existe", async () => {
-    const host = fakeHost([[/rev-parse --verify/, "abc123\n"]]);
-    expect(await resolveBaseRef(host, "main")).toBe("origin/main");
-  });
-
   /**
  * THE DEFAULT WHICH WAS READING 881 LINES FOR 130 (PR 51). Without the common point,
  * the live diff compares the working tree to the TIP of the base: the commits

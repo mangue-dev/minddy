@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
   }
 
   const { searchParams } = new URL(request.url);
-  const daysRaw = Number(searchParams.get("days"));
+  const daysRaw = Number(searchParams.get("days") ?? 30);
   const days = Number.isFinite(daysRaw)
     ? Math.min(365, Math.max(1, Math.floor(daysRaw)))
     : 30;
@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const summary = await getFinanceSummary({ days, refresh });
-    return NextResponse.json(summary);
+    return NextResponse.json(summary, { headers: { "Cache-Control": "private, no-store" } });
   } catch (err) {
     console.error("[admin/finance] failed:", (err as Error).message);
     return NextResponse.json({ error: "Query failed" }, { status: 500 });

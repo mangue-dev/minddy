@@ -8,11 +8,7 @@ import { PublicPageShell } from "@/components/public-page-shell";
 import type { Locale } from "@/i18n/config";
 import { appPageMetadata } from "@/lib/app-metadata";
 import { publicTokenMetadata } from "@/lib/seo";
-import {
-  feedbackBasePath,
-  getRequestDomainTarget,
-  publicCanonicalUrl,
-} from "@/lib/server/custom-domains";
+import { publicCanonicalUrl } from "@/lib/public-url";
 import { getBoardContext } from "@/lib/server/feedback/board-context";
 import {
   FEEDBACK_SESSION_COOKIE,
@@ -56,16 +52,13 @@ type PageProps = {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { token } = await params;
-  const [ctx, domainTarget, t, locale] = await Promise.all([
+  const [ctx, t, locale] = await Promise.all([
     getBoardContext(token),
-    getRequestDomainTarget(),
     getTranslations("PublicFeedback"),
     getLocale(),
   ]);
-  // The same board responds on www.minddy.app/f/<token> AND on the domain
-  // client: the canonical says which of the two URLs is authentic (MIN-88).
-  const canonical = await publicCanonicalUrl(
-    feedbackBasePath(token, domainTarget),
+  const canonical = publicCanonicalUrl(
+    `/f/${token}`,
     "",
   );
   // Board absent or deactivated → the page goes to 404: it bears the title,
@@ -85,10 +78,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function PublicFeedbackPage({ params, searchParams }: PageProps) {
   const { token } = await params;
   const search = await searchParams;
-  // Custom domain (MIN-36): basePath "" when the board is served by
-  // its own domain — the links become /p/<id>, /me…
-  const domainTarget = await getRequestDomainTarget();
-  const base = feedbackBasePath(token, domainTarget);
+  const base = `/f/${token}`;
 
   // Documented SSO landing: /f/<token>?sso=<jwt> — a page cannot
   // place a cookie, the dedicated route takes care of it and then comes back here.
@@ -108,7 +98,6 @@ export default async function PublicFeedbackPage({ params, searchParams }: PageP
       feedbackLabel: t("title"),
       untitledLabel: t("untitledPage"),
       current: { kind: "feedback" },
-      domainTarget,
     }),
   ]);
   const sort: PublicSort = search.sort === "recent" ? "recent" : "top";

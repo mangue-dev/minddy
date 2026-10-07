@@ -30,20 +30,6 @@ describe("destructive race guards", () => {
     expect(commentMutation).toContain('.eq("page_id", pageId)');
     expect(shares).toContain('.rpc("upsert_view_share_guarded"');
     expect(shares).toContain('.rpc("revoke_view_share_guarded"');
-    expect(shares).toContain("reserveCustomDomainMutation(`view:${viewId}`");
   });
 
-  it("binds provider cleanup to the exact retained domain generation", () => {
-    const domains = source("lib/server/custom-domains.ts");
-
-    expect(domains).toContain('provider: "vercel-domain-names"');
-    expect(domains).toContain('"delete_custom_domain_if_current"');
-    expect(domains).toContain("if (error || current?.id !== row.id) return false;");
-    expect(domains).toContain("await cleanRemovedDomain(row.domain)");
-    const cleanup = source("lib/server/custom-domain-cleanup.ts");
-    expect(cleanup).toContain("await acquireDomainLease(row.domain)");
-    expect(cleanup).toContain('if (error) throw new Error("Unable to check retained custom domain")');
-    expect(cleanup).toContain("if (!retained && !protectedHost)");
-    expect(cleanup).toContain('.delete().eq("domain", row.domain).eq("id", row.id)');
-  });
 });

@@ -6,6 +6,7 @@ import {
   createPageApi,
   fetchPagesApi,
   isPageCycleError,
+  prepareInitialBriefApi,
   updatePageApi,
 } from "./pages-api";
 
@@ -39,6 +40,23 @@ afterEach(() => {
 });
 
 describe("pages-api", () => {
+  it("returns the validated brief body for the later page write", async () => {
+    const content = { type: "doc", content: [] };
+    mockFetch({ ok: true, status: 200, body: { content } });
+    await expect(prepareInitialBriefApi("# Initial brief")).resolves.toEqual(content);
+    expect(fetch).toHaveBeenCalledWith("/api/account/project-brief", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ markdown: "# Initial brief" }),
+    });
+  });
+
+  it("preserves the projected-page refusal message and status", async () => {
+    mockFetch({ ok: false, status: 413, body: { error: "Page too large" } });
+    await expect(prepareInitialBriefApi("x\n\n".repeat(16_666))).rejects.toMatchObject({
+      message: "Page too large", status: 413,
+    });
+  });
+
   it("keeps optimistic creation alive across immediate navigation", async () => {
     const body = { id: "page-1" };
     mockFetch({ ok: true, status: 201, body });

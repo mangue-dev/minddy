@@ -4498,95 +4498,6 @@
       }
     ]
   },
-  "custom_domains": {
-    "columns": {
-      "id": {
-        "type": "uuid",
-        "nullable": false,
-        "generated": false
-      },
-      "domain": {
-        "type": "text",
-        "nullable": false,
-        "generated": false
-      },
-      "status": {
-        "type": "text",
-        "nullable": false,
-        "generated": false
-      },
-      "board_id": {
-        "type": "uuid",
-        "nullable": true,
-        "generated": false
-      },
-      "share_id": {
-        "type": "uuid",
-        "nullable": true,
-        "generated": false
-      },
-      "created_at": {
-        "type": "timestamp with time zone",
-        "nullable": false,
-        "generated": false
-      },
-      "created_by": {
-        "type": "uuid",
-        "nullable": true,
-        "generated": false
-      },
-      "updated_at": {
-        "type": "timestamp with time zone",
-        "nullable": false,
-        "generated": false
-      },
-      "cname_target": {
-        "type": "text",
-        "nullable": true,
-        "generated": false
-      },
-      "verification": {
-        "type": "jsonb",
-        "nullable": true,
-        "generated": false
-      },
-      "content_revision": {
-        "type": "bigint",
-        "nullable": false,
-        "generated": false
-      },
-      "verification_encryption_checked_at": {
-        "type": "timestamp with time zone",
-        "nullable": true,
-        "generated": false
-      },
-      "verification_encryption_attempted_at": {
-        "type": "timestamp with time zone",
-        "nullable": true,
-        "generated": false
-      }
-    },
-    "primaryKey": [
-      "id"
-    ],
-    "foreignKeys": [
-      {
-        "table": "feedback_boards",
-        "column": "board_id",
-        "targetColumn": "id"
-      },
-      {
-        "table": "users",
-        "column": "created_by",
-        "targetColumn": "id"
-      },
-      {
-        "table": "view_shares",
-        "column": "share_id",
-        "targetColumn": "id"
-      }
-    ]
-  },
   "feedback_posts": {
     "columns": {
       "id": {
@@ -11616,24 +11527,6 @@
       }
     ]
   },
-  "custom_domain_verification_scope": {
-    "columns": {
-      "id": {
-        "type": "boolean",
-        "nullable": false,
-        "generated": false
-      },
-      "activated_at": {
-        "type": "timestamp with time zone",
-        "nullable": false,
-        "generated": false
-      }
-    },
-    "primaryKey": [
-      "id"
-    ],
-    "foreignKeys": []
-  },
   "pr_comment_edit_encryption_scope": {
     "columns": {
       "id": {
@@ -12195,62 +12088,6 @@
     },
     "primaryKey": [
       "id"
-    ],
-    "foreignKeys": []
-  },
-  "custom_domain_cleanup": {
-    "columns": {
-      "id": {
-        "type": "uuid",
-        "nullable": false,
-        "generated": false
-      },
-      "domain": {
-        "type": "text",
-        "nullable": false,
-        "generated": false
-      },
-      "attempts": {
-        "type": "integer",
-        "nullable": false,
-        "generated": false
-      },
-      "created_at": {
-        "type": "timestamp with time zone",
-        "nullable": false,
-        "generated": false
-      },
-      "next_attempt_at": {
-        "type": "timestamp with time zone",
-        "nullable": false,
-        "generated": false
-      }
-    },
-    "primaryKey": [
-      "domain"
-    ],
-    "foreignKeys": []
-  },
-  "custom_domain_mutation_leases": {
-    "columns": {
-      "token": {
-        "type": "uuid",
-        "nullable": false,
-        "generated": false
-      },
-      "domain": {
-        "type": "text",
-        "nullable": false,
-        "generated": false
-      },
-      "expires_at": {
-        "type": "timestamp with time zone",
-        "nullable": false,
-        "generated": false
-      }
-    },
-    "primaryKey": [
-      "domain"
     ],
     "foreignKeys": []
   },

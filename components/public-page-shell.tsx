@@ -14,14 +14,8 @@ import type { PublicSiteTab } from "@/lib/feedback/types";
  * Two height modes: fullHeight (h-dvh, the content manages its overflow —
  * kanban) or natural scrollable page (min-h-dvh — feedback board).
  *
- * LEGAL FOOOTER (GDPR art. 13). It is a link, and it is here rather
- * than in the board because the need is the same on both surfaces: this
- * are pages where minddy processes the data of people who do not have an account
- * with him. The mention at the collection point of the board only lives in the
- * email verification dialog — a visitor arriving by SSO never sees it
- * (his identity is set by the editor's backend), and a simple
- * reader neither, even though he receives the cookies banner. Absolute URL: on a
- * custom domain, `/privacy` leads nowhere.
+ * The shared legal footer links to privacy information for public visitors.
+ * The email verification dialog also shows a notice at the point of collection.
  */
 export async function PublicPageShell({
   heading,
@@ -59,8 +53,6 @@ export async function PublicPageShell({
           <div className="min-w-0 flex-1">{heading ?? <span />}</div>
           <div className="flex shrink-0 items-center gap-3 sm:gap-4">
             {actions}
-            {/* Absolute link: on a custom domain (MIN-36), "/" would be
- the root of the client's site, not minddy. */}
             <a
               href={SITE_URL}
               className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"

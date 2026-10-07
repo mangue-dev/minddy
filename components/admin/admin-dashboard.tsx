@@ -5,7 +5,8 @@ import { ArrowLeft01Icon, BotIcon, DashboardCircleIcon, DollarCircleIcon as Circ
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useReducedMotion } from "framer-motion";
-import { Button, cn } from "mangue-ui";
+import dynamic from "next/dynamic";
+import { Skeleton, Button, cn } from "mangue-ui";
 import { useTranslations } from "next-intl";
 import { AppIcon } from "@/components/icon";
 import { SecondarySidebar } from "@/components/secondary-sidebar";
@@ -26,10 +27,27 @@ import {
   type AdminSection,
   type AdminSectionId,
 } from "@/lib/admin-sections";
-import { AdminOverviewDashboard } from "./admin-overview-dashboard";
-import { AdminUsersDashboard } from "./admin-users-dashboard";
-import { AdminModelsDashboard } from "./admin-models-dashboard";
-import { AdminFinanceDashboard } from "./admin-finance-dashboard";
+
+function PanelLoading() {
+  return <Skeleton className="h-48 rounded-xl" />;
+}
+
+const AdminOverviewDashboard = dynamic(
+  () => import("./admin-overview-dashboard").then((module) => module.AdminOverviewDashboard),
+  { loading: PanelLoading },
+);
+const AdminUsersDashboard = dynamic(
+  () => import("./admin-users-dashboard").then((module) => module.AdminUsersDashboard),
+  { loading: PanelLoading },
+);
+const AdminModelsDashboard = dynamic(
+  () => import("./admin-models-dashboard").then((module) => module.AdminModelsDashboard),
+  { loading: PanelLoading },
+);
+const AdminFinanceDashboard = dynamic(
+  () => import("./admin-finance-dashboard").then((module) => module.AdminFinanceDashboard),
+  { loading: PanelLoading },
+);
 
 /**
  * Shell of `/admin` (MIN-90). Four tabs: “Overview” (the app in

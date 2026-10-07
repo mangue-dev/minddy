@@ -1,10 +1,8 @@
 import path from "node:path";
 import { defineConfig } from "vitest/config";
 
-// Unit tests target the pure libs only (lib/cycle.ts & friends) — plain node,
-// no jsdom, no React. The alias mirrors tsconfig's "@/*" → repo root; the
-// "server-only" one is a no-op stub, so a module that is pure but carries Next's
-// server guard (lib/server/agent/tools.ts) stays testable.
+// Tests use Node by default; DOM suites opt into jsdom per file. Resolve the
+// application alias and stub Next's server guard for server modules under test.
 export default defineConfig({
   resolve: {
     alias: {
@@ -14,7 +12,7 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    include: ["lib/**/*.test.ts", "tools/**/*.test.ts"],
+    include: ["{lib,components,tools}/**/*.test.{ts,tsx}"],
     // The page projection bundle (MIN-295): the projection loads it
     // by path, so it must exist before the first test that passes through it.
     globalSetup: ["test/build-pages-md-setup.ts"],

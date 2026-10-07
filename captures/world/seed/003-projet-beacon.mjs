@@ -139,9 +139,9 @@ const ISSUES = [
     at: 0.85,
   },
   {
-    title: "Custom domain for the status page",
+    title: "Status page accent color",
     description:
-      "Serve the page on status.customer.com instead of our subdomain, with the certificate issued automatically.",
+      "Let teams choose an accent color for the status page so it matches their brand.",
     categories: ["feature"],
     status: "backlog",
     priority: "medium",

@@ -1,5 +1,4 @@
 const JOBS = [
-  ["25 * * * *", "/api/cron/custom-domains"],
   ["0 * * * *", "/api/cron/feedback-analysis"],
   ["*/2 * * * *", "/api/cron/agent-drain"],
   // Forge-relay delivery worker: retry backoff starts at 1 minute, so the
@@ -42,7 +41,7 @@ function matchesSchedule(schedule, now) {
 async function run(path) {
   const response = await fetch(new URL(path, baseUrl), {
     headers: { Authorization: `Bearer ${secret}` },
-    signal: AbortSignal.timeout(path === "/api/cron/custom-domains" ? 60_000 : 30_000),
+    signal: AbortSignal.timeout(30_000),
   });
   console.log(`${new Date().toISOString()} ${path} ${response.status}`);
 }

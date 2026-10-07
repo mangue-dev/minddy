@@ -3,7 +3,7 @@
   "name": "io.github.mangue-dev/minddy",
   "title": "minddy",
   "description": "Minimal issue tracker: projects, objectives and trackable plans, written by agents over MCP.",
-  "version": "0.11.0",
+  "version": "0.11.1",
   "websiteUrl": "https://www.minddy.app",
   "repository": {
     "url": "https://github.com/mangue-dev/minddy",

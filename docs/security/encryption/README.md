@@ -217,10 +217,10 @@ registrations; orphan cleanup then removes the object.
 The current source, copy, writer, reader, migration and proof status is tracked
 in [the closure matrix](closure-matrix.md).
 
-- `schema.json` records 203 application tables and 1,798 columns, their primary
+- `schema.json` records 199 application tables and 1,775 columns, their primary
   keys and foreign keys. It contains schema metadata, not application rows.
 - `../../../lib/server/encryption/data-policy.json` classifies every recorded
-  column exactly once. Its 173 encryption targets include the original content,
+  column exactly once. Its 172 encryption targets include the original content,
   derived copies, arbitrary user JSON, private identities, credentials and share
   tokens. The relay audit detail target was removed by an action-specific SQL
   guard and historical scrub; opaque attachment object paths replace two path
@@ -228,10 +228,10 @@ in [the closure matrix](closure-matrix.md).
   forge mention and provider-operation resource identities
   now use purpose-separated one-way equality digests. This is a target
   policy, not evidence that those columns are encrypted.
-- `consumers.json` records 1,750 TypeScript/JavaScript table, view, RPC and object-store
+- `consumers.json` records 1,752 TypeScript/JavaScript table, view, RPC and object-store
   access candidates. Dynamic table names remain explicit `null` entries requiring
   caller review. Array and Buffer constructors are excluded.
-- `sql-consumers.json` records 572 functions, ten views and 499 application triggers. Function
+- `sql-consumers.json` records 566 functions, ten views and 490 application triggers. Function
   and view hashes pin the observed definitions without copying their bodies.
   Relation references are conservative text matches, not a SQL data-flow proof.
 - `migrations.json` pins migration inputs. CI rejects added or changed migrations
@@ -283,7 +283,7 @@ they do not certify unconverted access paths or replace database permissions.
 | `timestamp` | Lifecycle, retention and scheduling timestamps remain queryable. |
 | `bounded_metadata` | Numeric counters, budgets, positions, booleans and bounded scheduler values. Arbitrary JSON is excluded. |
 | `operational_configuration` | Status/provider/model/locale enums and reviewed structured settings, such as recurrence and sandbox pricing. New free-text fields require reclassification. |
-| `public_identity` | Product-public display identities and avatars, public board slugs and published custom domains. A private email or share capability is not a public identity. |
+| `public_identity` | Product-public display identities and avatars, public board slugs. A private email or share capability is not a public identity. |
 | `one_way_authentication` | High-entropy token digests, salted password verifiers and server-keyed authentication proofs. A plain digest of a six-digit OTP does not meet this rule. |
 | `encryption_metadata` | Wrapped keys, ciphertext, blind indexes and version fields; never plaintext key material. |
 | `token_digest` | The invitation capability is retained only as a digest after conversion. The legacy format still needs its existing migration path. |
@@ -1485,7 +1485,7 @@ When `MINDDY_SHARE_TOKEN_ENCRYPTION_ENABLED=true` together with the global
 content flag, new `view_shares.token` values use a system-bound, row-authenticated
 envelope. A purpose-separated version-one blind index supports public token
 lookup without exposing the bearer secret in SQL. Authorized owner dialogs,
-public share routes and custom-domain routing decode at the application
+public share routes decode at the application
 boundary. The guarded view-share RPC retains its row lock and password update
 semantics; page publishing creates an opaque row identity before encryption.
 Legacy shares remain readable during conversion. A bounded CAS worker rotates
@@ -2240,26 +2240,6 @@ does not reappear. No key rotation is needed for a value that is removed.
 `MINDDY_STRIPE_WEBHOOK_PAYLOAD_SCRUB_ENABLED` and the global content flag stay
 off in production. Other MIN-591 targets remain open.
 
-## Custom-domain verification checkpoint — 26 September 2026
-
-`custom_domains.verification` now stores a format-3 system-key envelope bound
-to its stable domain row ID. The Vercel attach and refresh writers seal TXT
-records before persistence; board and shared-view settings decrypt after
-their existing authorization checks. The public hostname lookup selects only
-routing IDs and status, and therefore does not reveal the verification value.
-The field uses a system key because it describes the deployment's Vercel DNS
-challenge for a globally unique hostname, whether its target is a board or a
-shared view. The target parent and row ID remain immutable under the guard.
-
-A bounded 25-row worker verifies and rotates legacy or historical-key records
-under a row revision compare-and-swap. Activation requires every non-null
-verification record to be checked and sealed; SQL rejects old JSON inserts and
-updates afterward. The local regression covers both target kinds and old
-writers. A PostgreSQL dump/restore loads domain rows before their board/share
-parents and keys in independent batches, reads two key versions with cold
-caches and rejects a wrong root. The dedicated and global flags remain off in
-production. Other MIN-591 targets remain open.
-
 ## Billing identity checkpoint — 26 September 2026
 
 `billing_accounts.email` and `admin_override_note` now store format-3
@@ -2438,6 +2418,28 @@ Concurrent association changes force a bounded
 retry with a stable observation timestamp. The link and unlink SQL regressions
 also pass after both migrations. These checks do not certify a production rollout
 or a complete Supabase replay.
+
+## MIN-637 admin data minimisation audit — 6 October 2026
+
+The admin migration removes the profile-directory RPC and introduces two
+service-only RPCs: exact account lookup and bounded onboarding signals. The
+account lookup reads Auth identity fields only. The signals query reads project
+and issue routing identities to test existence, without reading encrypted content,
+and returns only the onboarding metadata used by the aggregate overview. Both
+functions use an empty search path and deny execution to anonymous and
+authenticated roles. No table, view, trigger or column-policy changes are needed.
+
+The actual migration was applied to isolated PostgreSQL 17 using the reduced
+Auth/project/member/issue fixture from
+`scripts/admin-data-minimisation.integration.test.mjs`. Introspection with
+`scripts/encryption-schema-audit.sql` verified the two function definitions and
+their grants. Only those function records were added to the SQL inventory, and
+the removed directory function was deleted from it. The TypeScript consumer
+review removes the Jev and BYOK reads and records the two new RPCs and the
+selected-account usage read. The migration digest was pinned after this audit.
+The regression verifies payload minimisation, exact matching, pagination,
+internal/deleted account handling and role restrictions. This is a focused
+function audit, not a full Supabase replay or production rollout.
 
 ## MIN-601 billing usage audit — 2 October 2026
 

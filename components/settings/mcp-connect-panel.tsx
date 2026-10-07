@@ -18,22 +18,14 @@ import {
 import { MCP_AGENTS, type McpAgent } from "@/lib/mcp-agents";
 import { McpAgentLogo } from "@/components/mcp-agent-logo";
 
-/** “Connect an agent” — OAuth only: The install command does not contain ANY secrets (the agent opens the browser to allow first use). 100% client-side copy, nothing to generate.
-
- ONE question at a time: the grid asks which agent, the dialog gives its
- command. Everything was previously in the same frame - selector, command,
- button and explanation stacked together - and nothing was read there anymore.
-
- The same component serves the account settings (`account-mcp-section.tsx`) and
- the MCP onboarding step (`components/home/onboarding-mcp-step.tsx`), which only
- adds its “Skip this step” action. */
+/** Select an agent, then show its OAuth installation command in a dialog. */
 export function McpConnectPanel({
   className,
   onSelect,
   onConnected,
 }: {
   className?: string;
-  /** The agent has just been chosen — onboarding uses it for analytics. */
+  /** Called when an agent is selected. */
   onSelect?: (agent: McpAgent) => void;
   /** The dialog closed with "It's connected". */
   onConnected?: () => void;

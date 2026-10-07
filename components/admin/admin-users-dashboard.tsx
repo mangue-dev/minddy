@@ -2,7 +2,7 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Cancel01Icon, Search01Icon, Undo02Icon, ViewOffIcon } from "@hugeicons/core-free-icons";
-import {useCallback, useEffect, useMemo, useRef, useState} from "react";
+import {useCallback, useEffect, useRef, useState} from "react";
 import type {ReactNode} from "react";
 import {useFormatter, useTranslations} from "next-intl";
 import {Badge, Button, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, Skeleton, Spinner, Switch, cn, toast} from "mangue-ui";
@@ -16,7 +16,7 @@ import type {
   AdminQuotaReset,
   AdminQuotaResetsResponse,
   AdminUserRow,
-  AdminUsersResponse,
+  AdminAccountSummary,
 } from "@/lib/types";
 import type { MessageKey } from "@/lib/i18n-keys";
 import {useAdminCapabilities} from "@/lib/use-admin-capabilities";
@@ -24,53 +24,8 @@ import {giftSectionVisible} from "@/lib/admin-tabs";
 import {ADMIN_SECTIONS, adminSectionAnchor} from "@/lib/admin-sections";
 import {Tooltip, TooltipContent, TooltipTrigger} from "@/components/ui/tooltip";
 
-/**
- * `/admin` → “Users” tab (MIN-90): THE view of the app’s accounts.
- * One line per account — onboarding, projects, tickets, plan, registration,
- * last sign of life — and a panel that brings together ALL the actions
- * administration on this account.
- *
- * This panel replaces two old tabs. This was the real fault of the dashboard:
- * “Quotas” only listed accounts that had consumed AI this month, and
- * “Billing” required knowing the email by heart before you could act.
- * The two endpoints (`/api/admin/agent-quota`, `/api/admin/billing`) do not have
- * moved: they are simply called from the line of the account concerned.
- *
- * Resetting retains its original, essential nuance: it does not delete
- * NO cost. The panel therefore shows the two amounts — what the budget counts
- * (real window + watermark) and the actual expense of the month, intact.
- *
- * It now STACKS (20261105): several per billing period, and
- * the panel keeps the register. It is the most recent which sets the start of the
- * window counted — the previous ones are behind it and no longer release anything;
- * they only say how much has already been offered to this account over the period,
- * which is exactly what we want to know before offering one more.
- *
- * The panel follows the SETTINGS GRAMMAR (`components/settings/settings-ui`,
- * MIN-167), such as the “Models” tab. He didn't always do it, and that's
- * saw: six sections all in `text-sm font-semibold`, some lined and
- * other bare ones, each followed by its explanatory paragraph — nothing said
- * which was a title, a fact or a gesture. The same information holds
- * now in three row cards “label on the left · value on the right”,
- * and prose (what an internal account ceases to feed, what a reset
- * zero does not erase) has gone behind the ⓘ, where we read it when we
- * look for. At the top, what identifies the account: avatar, name, email, then
- * its state dots on their own line — attached to the title, they
- * truncated as soon as a name was long.
- *
- * Only screen of the app where the raw email is displayed: it is the identifier with
- * which an admin works, and access is locked on the server side
- * (`app/(app)/admin/layout.tsx` + `isAdminUser` on each route).
- *
- * GDPR audit (MIN-416): every datum here is either an admin ACTION target
- * (email, plan override, quota reset, internal flag) or a counter without
- * personal content (projects, tickets, spend). No IP address, no session
- * log, no message or ticket body ever reaches this screen, and lifecycle
- * timestamps are limited to what support needs (registered / last sign-in /
- * last activity). Nothing to remove without breaking an action above.
- */
+/** Account support: exact lookup, then billing and quota actions on demand. */
 
-const PAGE_SIZE = 25;
 const NO_OVERRIDE = "none";
 /** Duration selector value that sends NO duration: the deadline in place
  * don't move. Only offered when a gift is already in progress — otherwise
@@ -82,51 +37,6 @@ function fmtCost(n: number): string {
   if (n < 0.01) return `$${n.toFixed(6)}`;
   if (n < 1) return `$${n.toFixed(4)}`;
   return `$${n.toFixed(2)}`;
-}
-
-/** Progress of onboarding in four tablets — readable at a glance.
- * The trigger is a `span` (not the default Tooltip button):
- * the pellet lives IN the button of the line, and a button within a button is
- *  invalid HTML. `aria-label` carries the information to the keyboard. */
-function OnboardingPips({ user }: { user: AdminUserRow }) {
-  const t = useTranslations("Admin");
-  const { completed, total, started, dismissed } = user.onboarding;
-  const label = dismissed
-    ? t("users.onboardingDismissed", { done: completed, total })
-    : started
-      ? t("users.onboardingProgress", { done: completed, total })
-      : t("users.onboardingNeverSeen");
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <span className="flex shrink-0 items-center gap-1" aria-label={label}>
-          {Array.from({ length: total }, (_, i) => (
-            <span
-              key={i}
-              className={cn(
-                "size-1.5 rounded-full",
-                i < completed ? "bg-foreground/70" : "bg-border",
-              )}
-            />
-          ))}
-        </span>
-      </TooltipTrigger>
-      <TooltipContent>
-        <span className="font-medium">{t("users.onboardingTitle")}</span>
-        <span className="block text-background/70">{label}</span>
-      </TooltipContent>
-    </Tooltip>
-  );
-}
-
-/** A line measurement: the number above, its wording below. */
-function Cell({ value, label }: { value: number; label: string }) {
-  return (
-    <div className="flex w-14 flex-col items-end">
-      <span className="text-sm font-medium tabular-nums">{value}</span>
-      <span className="text-[11px] text-muted-foreground">{label}</span>
-    </div>
-  );
 }
 
 function PlanBadge({ user }: { user: AdminUserRow }) {
@@ -182,7 +92,7 @@ function InternalBadge() {
   );
 }
 
-/** Account panel: its complete profile and all admin actions. */
+/** Support panel: account confirmation, billing and budget actions. */
 function UserSheet({
   user,
   giftVisible,
@@ -359,7 +269,6 @@ function UserSheet({
         userId: user.userId,
         usage: {
           ...user.usage,
-          resetAt: data.resets[0]?.at ?? null,
           spentUsd: data.usage.spentUsd,
           blocked: data.usage.blocked,
         },
@@ -380,30 +289,6 @@ function UserSheet({
     user.usage.budgetUsd > 0
       ? Math.min(user.usage.spentUsd / user.usage.budgetUsd, 1)
       : 0;
-
-  // Onboarding is in ONE line: where it is, and the current stage when
-  // she means something (an account to which onboarding has never been
-  // shown has not taken any steps and will not take any).
-  const onboarding = user.onboarding.dismissed
-    ? t("users.onboardingDismissed", {
-        done: user.onboarding.completed,
-        total: user.onboarding.total,
-      })
-    : user.onboarding.started
-      ? t("users.onboardingProgress", {
-          done: user.onboarding.completed,
-          total: user.onboarding.total,
-        })
-      : t("users.onboardingNeverSeen");
-  const currentStep =
-    user.onboarding.started && user.onboarding.currentStep
-      ? t("users.onboardingCurrent", {
-          // The step comes from the base: key assembled at runtime.
-          step: t(
-            `users.step_${user.onboarding.currentStep}` as MessageKey<"Admin">,
-          ),
-        })
-      : null;
 
   /** What the “Offer” button will ask: a duration does not say itself to
    *  what date it falls on. */
@@ -431,7 +316,7 @@ function UserSheet({
             would not come off of anything. */}
         <SheetHeader className="shrink-0 gap-3 border-b border-border pr-12">
           <div className="flex min-w-0 items-center gap-3">
-            <UserAvatar seed={user.avatarSeed} className="size-9 shrink-0" />
+            <UserAvatar seed={user.userId} className="size-9 shrink-0" />
             <div className="flex min-w-0 flex-col">
               <SheetTitle className="truncate">{user.name}</SheetTitle>
               <SheetDescription className="truncate text-xs">
@@ -454,47 +339,9 @@ function UserSheet({
         </SheetHeader>
 
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto bg-background p-4">
-          {/* ── The count in numbers ─────────────────────────────────── */}
-          {/* Nets at 1 px by `gap-px` on border background: the tiles do not
-              cannot touch each other, and the value remains aligned from one column to the next.
-              the other even when a label moves to the line. */}
-          <section className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-border bg-border sm:grid-cols-4">
-            {[
-              { label: t("users.projects"), value: user.projects },
-              { label: t("users.projectsOwned"), value: user.projectsOwned },
-              { label: t("users.issues"), value: user.issues },
-              { label: t("users.issuesCreated"), value: user.issuesCreated },
-            ].map((item) => (
-              <div
-                key={item.label}
-                className="flex flex-col gap-1 bg-card px-3 py-2.5"
-              >
-                <span className="text-lg leading-none font-semibold tabular-nums">
-                  {item.value}
-                </span>
-                <span className="truncate text-[11px] text-muted-foreground">
-                  {item.label}
-                </span>
-              </div>
-            ))}
-          </section>
-
-          {/* ── The account ─────────────────────── ──────────────────────── */}
           <SettingsGroup
             title={t("users.accountTitle")}
           >
-            <SettingsRow
-              label={t("users.signedUp")}
-              control={<Value>{dt(user.createdAt)}</Value>}
-            />
-            <SettingsRow
-              label={t("users.lastSignIn")}
-              control={<Value>{dt(user.lastSignInAt)}</Value>}
-            />
-            <SettingsRow
-              label={t("users.lastActivity")}
-              control={<Value>{dt(user.lastActivityAt)}</Value>}
-            />
             <SettingsRow
               label={t("users.emailStatus")}
               control={
@@ -504,11 +351,6 @@ function UserSheet({
                     : t("users.unconfirmed")}
                 </Badge>
               }
-            />
-            <SettingsRow
-              label={t("users.onboardingTitle")}
-              hint={currentStep ? `${onboarding} ${currentStep}` : onboarding}
-              control={<OnboardingPips user={user} />}
             />
             <SettingsRow
               htmlFor="admin-user-internal"
@@ -534,7 +376,7 @@ function UserSheet({
             />
           </SettingsGroup>
 
-          {/* ── Budget d'usage ────────────────────────────────────────── */}
+          {/* Usage budget and support resets. */}
           <SettingsGroup
             title={t("users.usageTitle")}
             help={t("users.usageSubtitle")}
@@ -584,7 +426,6 @@ function UserSheet({
                 that's the whole point of showing it next to the count. */}
             <SettingsRow
               label={t("quotas.realSpend")}
-              hint={t("quotas.calls", { count: user.usage.calls })}
               control={<Value>{fmtCost(user.usage.spentMonthUsd)}</Value>}
             />
             {/* The register of the period. Nothing to show as long as no discount
@@ -763,204 +604,160 @@ function Value({
 
 export function AdminUsersDashboard() {
   const t = useTranslations("Admin");
-  const format = useFormatter();
-  // The “Gift a plan” section only exists when the instance can honor it
-  // (Stripe or paid plans configured, MIN-416); an override already in
-  // progress keeps its section regardless, so it stays removable.
   const billingAvailable = useAdminCapabilities().configured("managedBilling");
   const giftVisible = useCallback(
     (user: AdminUserRow | null) => giftSectionVisible(billingAvailable, !!user?.billing.override),
     [billingAvailable],
   );
   const [search, setSearch] = useState("");
-  const [query, setQuery] = useState("");
-  const [users, setUsers] = useState<AdminUserRow[]>([]);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
+  const [account, setAccount] = useState<AdminAccountSummary | null>(null);
+  const [selected, setSelected] = useState<AdminUserRow | null>(null);
+  const [searched, setSearched] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [loadingDetails, setLoadingDetails] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  // Rendering during flight; a quick keystroke should not leave a
-  // late reply overwrite a newer search.
   const requestRef = useRef(0);
+  const selectedIdRef = useRef<string | null>(null);
+  const controllerRef = useRef<AbortController | null>(null);
 
-  // Search debunked: the server pages, we do not filter on the client side.
-  useEffect(() => {
-    const id = setTimeout(() => setQuery(search.trim()), 250);
-    return () => clearTimeout(id);
-  }, [search]);
+  useEffect(() => () => {
+    selectedIdRef.current = null;
+    requestRef.current++;
+    controllerRef.current?.abort();
+  }, []);
 
-  const load = useCallback(
-    async (offset: number) => {
-      const token = ++requestRef.current;
-      if (offset === 0) setLoading(true);
-      else setLoadingMore(true);
-      try {
-        const params = new URLSearchParams({
-          limit: String(PAGE_SIZE),
-          offset: String(offset),
-        });
-        if (query) params.set("search", query);
-        const response = await fetch(`/api/admin/users?${params}`);
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const data = (await response.json()) as AdminUsersResponse;
-        if (token !== requestRef.current) return;
-        setUsers((prev) => (offset === 0 ? data.users : [...prev, ...data.users]));
-        setTotal(data.total);
-        setError(null);
-      } catch (err) {
-        if (token === requestRef.current) setError((err as Error).message);
-      } finally {
-        if (token === requestRef.current) {
-          setLoading(false);
-          setLoadingMore(false);
-        }
+  // Clearing or editing the address immediately retires the previous account.
+  const changeSearch = (value: string) => {
+    selectedIdRef.current = null;
+    requestRef.current++;
+    controllerRef.current?.abort();
+    setSearch(value);
+    setAccount(null);
+    setSelected(null);
+    setSearched(false);
+    setError(null);
+    setLoading(false);
+    setLoadingDetails(false);
+  };
+
+  const lookup = async () => {
+    const token = ++requestRef.current;
+    controllerRef.current?.abort();
+    const controller = new AbortController();
+    controllerRef.current = controller;
+    setLoading(true);
+    setLoadingDetails(false);
+    setAccount(null);
+    selectedIdRef.current = null;
+    setSelected(null);
+    setError(null);
+    setSearched(true);
+    try {
+      const response = await fetch("/api/admin/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: search.trim() }),
+        cache: "no-store",
+        signal: controller.signal,
+      });
+      if (!response.ok) throw new Error("Lookup failed");
+      const data = await response.json() as { account: AdminAccountSummary | null };
+      if (token === requestRef.current) setAccount(data.account);
+    } catch {
+      if (token === requestRef.current) setError(t("users.lookupFailed"));
+    } finally {
+      if (token === requestRef.current) setLoading(false);
+    }
+  };
+
+  const loadDetails = async (userId: string) => {
+    const token = ++requestRef.current;
+    controllerRef.current?.abort();
+    const controller = new AbortController();
+    controllerRef.current = controller;
+    setLoadingDetails(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/admin/users?userId=${encodeURIComponent(userId)}`, {
+        cache: "no-store",
+        signal: controller.signal,
+      });
+      if (!response.ok) throw new Error("Details failed");
+      const data = await response.json() as { user: AdminUserRow };
+      if (token === requestRef.current) {
+        selectedIdRef.current = data.user.userId;
+        setSelected(data.user);
       }
-    },
-    [query],
-  );
+    } catch {
+      if (token === requestRef.current) {
+        selectedIdRef.current = null;
+        setSelected(null);
+        setError(t("users.detailsFailed"));
+      }
+    } finally {
+      if (token === requestRef.current) setLoadingDetails(false);
+    }
+  };
 
-  useEffect(() => {
-    void load(0);
-  }, [load]);
+  const closeDetails = () => {
+    selectedIdRef.current = null;
+    requestRef.current++;
+    controllerRef.current?.abort();
+    setSelected(null);
+    setLoadingDetails(false);
+  };
 
-  const selected = useMemo(
-    () => users.find((u) => u.userId === selectedId) ?? null,
-    [users, selectedId],
-  );
-
-  /** An action on the panel changed the account: we refresh ITS line. */
-  const applyChange = useCallback(
-    (patch: Partial<AdminUserRow> & { userId: string }) => {
-      setUsers((prev) =>
-        prev.map((u) => (u.userId === patch.userId ? { ...u, ...patch } : u)),
-      );
-    },
-    [],
-  );
-
-  const day = (iso: string | null) =>
-    iso
-      ? format.dateTime(new Date(iso), {
-          day: "numeric",
-          month: "short",
-          year: "2-digit",
-        })
-      : "—";
+  const applyChange = (patch: Partial<AdminUserRow> & { userId: string }) => {
+    if (selectedIdRef.current !== patch.userId) return;
+    setAccount((prev) => prev?.userId === patch.userId ? { ...prev, internal: patch.internal ?? prev.internal } : prev);
+    setSelected((prev) => prev?.userId === patch.userId ? { ...prev, ...patch } : prev);
+    // Re-read the effective plan and budget after a support action.
+    void loadDetails(patch.userId);
+  };
 
   return (
     <div className="flex flex-col gap-4">
-      <div
-        id={adminSectionAnchor(ADMIN_SECTIONS.usersAccounts)}
-        className="flex scroll-mt-20 flex-col gap-1 rounded-lg"
-      >
+      <div id={adminSectionAnchor(ADMIN_SECTIONS.usersAccounts)} className="flex scroll-mt-20 flex-col gap-1 rounded-lg">
         <h2 className="text-sm font-semibold">{t("users.title")}</h2>
         <p className="text-sm text-muted-foreground">{t("users.subtitle")}</p>
       </div>
-
-      <div className="flex items-center gap-2">
-        <div className="relative max-w-sm flex-1">
-          <HugeiconsIcon icon={Search01Icon} className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder={t("users.searchPlaceholder")}
-            className="pl-8"
-          />
-          {search ? (
-            <button
-              type="button"
-              onClick={() => setSearch("")}
-              aria-label={t("users.clearSearch")}
-              className="absolute top-1/2 right-2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-            >
+      <form className="flex flex-col gap-2" onSubmit={(event) => { event.preventDefault(); void lookup(); }}>
+        <label htmlFor="admin-support-email" className="text-sm font-medium">{t("users.emailLabel")}</label>
+        <div className="flex items-center gap-2">
+          <div className="relative max-w-sm flex-1">
+            <HugeiconsIcon icon={Search01Icon} className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
+            <Input id="admin-support-email" type="email" required maxLength={254} autoComplete="off"
+              value={search} onChange={(e) => changeSearch(e.target.value)}
+              placeholder={t("users.searchPlaceholder")} className="pr-8 pl-8" aria-describedby="admin-support-purpose" />
+            {search ? <button type="button" onClick={() => changeSearch("")} aria-label={t("users.clearSearch")}
+              className="absolute top-1/2 right-2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
               <HugeiconsIcon icon={Cancel01Icon} className="size-3.5" />
-            </button>
-          ) : null}
-        </div>
-        <span className="text-xs whitespace-nowrap text-muted-foreground tabular-nums">
-          {t("users.count", { count: total })}
-        </span>
-      </div>
-
-      {loading ? (
-        <div className="flex flex-col gap-2">
-          <Skeleton className="h-14 rounded-lg" />
-          <Skeleton className="h-14 rounded-lg" />
-          <Skeleton className="h-14 rounded-lg" />
-        </div>
-      ) : error ? (
-        <p className="text-sm text-destructive">{error}</p>
-      ) : users.length === 0 ? (
-        <p className="text-sm text-muted-foreground">{t("users.empty")}</p>
-      ) : (
-        <>
-          <div className="flex flex-col divide-y divide-border rounded-xl border border-border">
-            {users.map((u) => (
-              <button
-                key={u.userId}
-                type="button"
-                onClick={() => setSelectedId(u.userId)}
-                className="flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors first:rounded-t-xl last:rounded-b-xl hover:bg-muted/50"
-              >
-                <UserAvatar
-                  seed={u.avatarSeed}
-                  className="size-8"
-                />
-                <div className="flex min-w-0 flex-1 flex-col">
-                  <span className="flex items-center gap-2">
-                    <span className="truncate text-sm font-medium">{u.name}</span>
-                    <PlanBadge user={u} />
-                    {u.internal ? <InternalBadge /> : null}
-                    {u.usage.blocked ? (
-                      <Badge variant="destructive" className="h-5 shrink-0 text-[10px]">
-                        {t("quotas.blocked")}
-                      </Badge>
-                    ) : null}
-                  </span>
-                  <span className="truncate text-xs text-muted-foreground">
-                    {u.email ?? "—"}
-                  </span>
-                </div>
-
-                <OnboardingPips user={u} />
-
-                <div className="hidden items-center gap-4 sm:flex">
-                  <Cell value={u.projects} label={t("users.projectsShort")} />
-                  <Cell value={u.issues} label={t("users.issuesShort")} />
-                </div>
-
-                <div className="hidden w-24 flex-col items-end sm:flex">
-                  <span className="text-xs tabular-nums">{day(u.createdAt)}</span>
-                  <span className="text-[11px] text-muted-foreground tabular-nums">
-                    {t("users.seen", { at: day(u.lastActivityAt) })}
-                  </span>
-                </div>
-              </button>
-            ))}
+            </button> : null}
           </div>
-
-          {users.length < total ? (
-            <Button
-              variant="outline"
-              size="sm"
-              className="self-center"
-              disabled={loadingMore}
-              onClick={() => void load(users.length)}
-            >
-              {loadingMore ? <Spinner /> : null}
-              {t("users.loadMore")}
-            </Button>
-          ) : null}
-        </>
-      )}
-
-      <UserSheet
-        user={selected}
-        giftVisible={giftVisible}
-        onClose={() => setSelectedId(null)}
-        onChanged={applyChange}
-      />
+          <Button type="submit" size="sm" disabled={loading || !search.trim()}>
+            {loading ? <Spinner /> : null}{t("users.findAccount")}
+          </Button>
+        </div>
+        <p id="admin-support-purpose" className="text-xs text-muted-foreground">{t("users.supportPurpose")}</p>
+      </form>
+      <div aria-live="polite" aria-busy={loading || loadingDetails}>
+        {loading ? <Skeleton className="h-14 rounded-lg" /> : account ? (
+          <button type="button" onClick={() => void loadDetails(account.userId)} disabled={loadingDetails}
+            className="flex w-full items-center gap-3 rounded-xl border border-border px-3 py-3 text-left transition-colors hover:bg-muted/50">
+            <UserAvatar seed={account.userId} className="size-8" />
+            <div className="flex min-w-0 flex-1 flex-col">
+              <span className="flex items-center gap-2">
+                <span className="truncate text-sm font-medium">{account.name}</span>
+                {account.internal ? <InternalBadge /> : null}
+              </span>
+              <span className="truncate text-xs text-muted-foreground">{account.email ?? "—"}</span>
+            </div>
+            {loadingDetails ? <Spinner /> : <span className="text-xs text-muted-foreground">{t("users.openAccount")}</span>}
+          </button>
+        ) : searched ? <p className="text-sm text-muted-foreground">{t("users.empty")}</p> : null}
+        {error ? <p role="alert" className="mt-2 text-sm text-destructive">{error}</p> : null}
+      </div>
+      {selected ? <UserSheet key={selected.userId} user={selected} giftVisible={giftVisible} onClose={closeDetails} onChanged={applyChange} /> : null}
     </div>
   );
 }

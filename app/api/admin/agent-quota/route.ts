@@ -6,29 +6,7 @@ import { getServiceClient } from "@/lib/supabase-service";
 import { getBillingWindow, getUserUsage } from "@/lib/server/usage";
 import type { AdminQuotaResetsResponse } from "@/lib/types";
 
-/**
- * Account USAGE BUDGET administration (`/admin` → account detail) .
- * Same gate as other admin endpoints: JWT via getClaims + isAdminUser.
- *
- * Since MIN-72 there is NO LONGER a global ceiling: the limit of each
- * user is the monthly budget of HIS plan (lib/billing-plans.ts), all
- * features confondues.
- *
- * GET ?userId=<uuid> → resets of SA billing period in
- * courses, from the most recent to the oldest.
- * POST { userId } → asks one more: the countdown starts again from
- *                           maintenant.
- * DELETE ?id=<uuid> → removes one; the previous one takes control.
- *
- * They STACK: the table is a register (one line per gesture), and it is the
- * most recent which sets the start of the counted window. Offer a second
- * extension in the month therefore no longer makes the trace of the first disappear —
- * and the account of the period says what has already been given.
- *
- * A reset DOES NOT DELETE ANY cost data: `ai_usage` is a ledger
- * append-only, analysis source. We only move the start of the window
- * counted (see migrations 20260811090000 and 20261105090000).
- */
+/** Support quota resets preserve the ledger and change only the budget watermark. */
 
 async function requireAdmin(
   request: NextRequest,
@@ -88,7 +66,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    return NextResponse.json(await quotaStateOf(userId));
+    return NextResponse.json(await quotaStateOf(userId), { headers: { "Cache-Control": "private, no-store" } });
   } catch (err) {
     console.error("[admin/agent-quota] read failed:", (err as Error).message);
     return NextResponse.json({ error: "Query failed" }, { status: 500 });
@@ -131,7 +109,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    return NextResponse.json(await quotaStateOf(userId));
+    return NextResponse.json(await quotaStateOf(userId), { headers: { "Cache-Control": "private, no-store" } });
   } catch (err) {
     console.error("[admin/agent-quota] read after reset failed:", (err as Error).message);
     return NextResponse.json({ error: "Query failed" }, { status: 500 });
@@ -165,7 +143,7 @@ export async function DELETE(request: NextRequest) {
   if (!userId) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   try {
-    return NextResponse.json(await quotaStateOf(userId));
+    return NextResponse.json(await quotaStateOf(userId), { headers: { "Cache-Control": "private, no-store" } });
   } catch (err) {
     console.error("[admin/agent-quota] read after undo failed:", (err as Error).message);
     return NextResponse.json({ error: "Query failed" }, { status: 500 });

@@ -41,7 +41,7 @@ export function FeedbackPostClient({
   identity,
 }: {
   token: string;
-  /** Public link prefix: /f/<token>, or "" on custom domain. */
+  /** Public link prefix: /f/<token>. */
   basePath: string;
   project: PublicProject;
   post: PublicPost;

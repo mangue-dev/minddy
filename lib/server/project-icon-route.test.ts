@@ -7,7 +7,6 @@ const getBoardByToken = vi.fn();
 const getPublicShareTarget = vi.fn();
 const isShareUnlocked = vi.fn();
 const downloadProjectIcon = vi.fn();
-const getRequestDomainTarget = vi.fn();
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/server/api-auth", () => ({
@@ -28,9 +27,6 @@ vi.mock("@/lib/server/share-unlock", () => ({
 vi.mock("@/lib/server/project-icon", () => ({
   downloadProjectIcon: (...args: unknown[]) => downloadProjectIcon(...args),
 }));
-vi.mock("@/lib/server/custom-domains", () => ({
-  getRequestDomainTarget: (...args: unknown[]) => getRequestDomainTarget(...args),
-}));
 
 const { GET } = await import("@/app/api/projects/[id]/icon/content/route");
 const projectId = "11111111-1111-4111-8111-111111111111";
@@ -45,7 +41,6 @@ beforeEach(() => {
   getPublicShareTarget.mockResolvedValue(null);
   isShareUnlocked.mockResolvedValue(false);
   downloadProjectIcon.mockResolvedValue(icon);
-  getRequestDomainTarget.mockResolvedValue(null);
 });
 
 function request(query = "") {
@@ -85,9 +80,6 @@ describe("private project icon delivery", () => {
     isShareUnlocked.mockResolvedValue(true);
     expect((await GET(request("?share_kind=share&share_token=public"), params))
       .status).toBe(200);
-    getRequestDomainTarget.mockResolvedValue({ projectId: "other-project" });
-    expect((await GET(request("?share_kind=feedback&share_token=valid"), params))
-      .status).toBe(404);
     expect(downloadProjectIcon).toHaveBeenCalledTimes(2);
   });
 });

@@ -198,6 +198,35 @@ test("daily CI validates every main push, including release records, without rep
   assert.doesNotMatch(workflow, /^    paths(?:-ignore)?:/m);
 });
 
+test("the required CI gate rejects failed, cancelled, and skipped validation or test shards", () => {
+  const workflow = readFileSync(new URL("../.github/workflows/ci.yml", import.meta.url), "utf8");
+  const gate = workflow.match(/^  checks:\n([\s\S]*?)(?=^  \w+:)/m)?.[1];
+  assert.ok(gate, "the required check must remain present");
+  assert.match(gate, /name: Tests & typecheck/);
+  assert.match(gate, /if: always\(\)/);
+  assert.match(gate, /needs: \[validation, tests\]/);
+  const script = gate.match(/^        run: (.+)$/m)?.[1];
+  assert.ok(script, "the gate must execute its dependency result checks");
+
+  const shards = workflow.match(/^  tests:\n([\s\S]*?)(?=^  \w+:)/m)?.[1];
+  assert.ok(shards, "the unit test matrix must remain present");
+  assert.match(shards, /shard: \[1, 2\]/);
+  assert.match(shards, /--shard=\$\{\{ matrix.shard \}\}\/2/);
+  assert.match(shards, /pnpm exec vitest run --shard=/);
+  assert.doesNotMatch(shards, /pnpm run test -- /);
+  assert.match(shards, /fail-fast: false/);
+
+  for (const validation of ["success", "failure", "cancelled", "skipped"]) {
+    for (const tests of ["success", "failure", "cancelled", "skipped"]) {
+      const run = spawnSync("bash", ["-e", "-c", script], {
+        env: { PATH: process.env.PATH, VALIDATION_RESULT: validation, TEST_RESULT: tests },
+      });
+      assert.equal(run.status === 0, validation === "success" && tests === "success",
+        `validation=${validation}, tests=${tests}`);
+    }
+  }
+});
+
 test("promotion only fast-forwards a green main SHA and waits for Vercel Production", () => {
   const workflow = readFileSync(
     new URL("../.github/workflows/promote-production.yml", import.meta.url),

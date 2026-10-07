@@ -1059,7 +1059,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "get_feedback_board",
       description:
-        "Read the project's PUBLIC feedback board setup — call this before writing any code, link or button that points users at the board. Returns whether the board exists and is enabled, its public_url (the custom domain when the project has a VERIFIED one, otherwise the /f/<token> URL), the custom domain and its status, whether SSO pre-identification is configured, and the display options. ALWAYS take public_url from here verbatim — a board URL cannot be guessed or rebuilt from the project name.",
+        "Read the project's PUBLIC feedback board setup — call this before writing any code, link or button that points users at the board. Returns whether the board exists and is enabled, its public_url (/f/<token> on the application origin), whether SSO pre-identification is configured, and the display options. ALWAYS take public_url from here verbatim — a board URL cannot be guessed or rebuilt from the project name.",
       parameters: { type: "object", properties: {} },
     },
   },

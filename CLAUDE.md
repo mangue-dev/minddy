@@ -129,6 +129,7 @@ npm run lint
 npm run typecheck
 npx vitest run lib/server/agent
 npm test
+npm run test:tooling
 ```
 
 `npm run lint` runs `oxlint --deny-warnings`. The vendored anti-slop plugin lives
@@ -141,7 +142,13 @@ mutating the collection prevents iteration from skipping entries.
 A successful type check does not prove lifecycle or runtime behavior. Add a
 focused regression for a behavior change and read a neighboring test before
 inventing a new fixture or mocking approach. Avoid tests that merely duplicate
-the implementation. The root Vitest configuration uses Node, not a browser DOM.
+the implementation. Vitest discovers tests in `lib`, `components`, and `tools`,
+using Node by default; DOM suites opt into jsdom per file. Prefer observable
+outcomes and distinct boundary cases over exact CSS, logo, or source formatting
+assertions. Structural checks remain useful for security and cross-file contracts
+that runtime tests do not exercise. Do not require a test file for every module.
+Use fake timers for polling and debounce tests instead of real elapsed waits;
+keep real process deadlines where process termination is the behavior under test.
 
 | Test concern | Existing example |
 | --- | --- |
@@ -155,6 +162,13 @@ build/start checks, dependency auditing, and publication/secret guards. Consult
 the workflow for the current commands; historical test counts and local timings
 are not acceptance criteria. Opt-in database tests need an isolated fixture and
 must be reported separately from the default suite's skipped cases.
+
+`test:tooling` discovers deterministic Node tests under `scripts` and
+`captures/lib`; `*.integration.test.mjs` suites keep their explicit prerequisites
+and commands. CI runs two complete Vitest shards alongside validation and keeps
+the required `Tests & typecheck` gate dependent on both. See the
+[MIN-617 review](docs/validation/min-617-test-suite-review.md) for the inventory,
+cleanup decisions, timings, and database coverage limits.
 
 ## Encryption boundaries and operational gates
 

@@ -62,6 +62,7 @@ import { usePrefetchPages } from "@/lib/use-pages-query";
 import { SidebarPanelTransition } from "@/components/sidebar-panel-transition";
 import { useRuntimeConfig } from "@/lib/runtime-config-provider";
 import { NewMenu } from "@/components/new-menu";
+import { SidebarOnboarding } from "@/components/sidebar-onboarding";
 import { UsageIndicator } from "@/components/usage-indicator";
 import {
   SIDEBAR_COMPACT_CONTROL_CLASS,
@@ -1153,6 +1154,8 @@ export function AppSidebar({
           className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-sidebar to-transparent"
         />
       </div>
+
+      <SidebarOnboarding onLayerOpenChange={handleMenuOpenChange} />
 
       {/* The account line is the only option present on EVERY level — the
           separator keeps it apart from whichever level runs above it. */}

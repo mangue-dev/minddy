@@ -1,12 +1,6 @@
 import { supabaseServerFetchWithTimeout as supabaseServerFetch } from "@/lib/server/supabase-fetch";
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import {
-  lookupCustomDomain,
-  lookupTokenProject,
-  type DomainTarget,
-  type PublicTokenKind,
-} from "@/lib/custom-domain-lookup";
 import { isPrimaryHost, normalizeHost } from "@/lib/public-hosts";
 import { detectFromAcceptLanguage } from "@/lib/accept-language";
 import {
@@ -29,7 +23,7 @@ import {
 } from "@/lib/backend-availability";
 
 /**
- * Next 16 middleware (named `proxy`). It does four things: route custom domains, resolve the language of public URLs, keep app routes behind a session, and keep crawlers out of anything that doesn't look at them.
+ * Next 16 middleware (named `proxy`). It resolves public URL languages, protects app routes with a session, and keeps private content out of search indexes.
  *
  * What requires a session lives in `lib/protected-prefixes.ts` (BLACK list):
  * everything that is not there falls into the Next rendering, and therefore in 404 if there is
@@ -89,23 +83,6 @@ const PUBLIC_PREFIXES = ["/auth/", "/_next/", "/.well-known/", "/share/", "/f/",
  Google, and it is not an option — neither here nor in the dialog. */
 const NOINDEX_PREFIXES = ["/share/", "/f/", "/p/"];
 
-// Custom domains (MIN-36): paths served as is on a host
-//custom. `/f/` + `/share/` = cross-navigation by token (site tabs
-// public) ; `/icon`, `/favicon.ico`, `/manifest.json` = routes/fichiers de
-// metadata that would otherwise be rewritten to /f/<token>/icon → 404.
-const CUSTOM_HOST_PASS_PREFIXES = ["/f/", "/share/", "/p/", "/api/", "/auth/", "/_next/", "/.well-known/"];
-const CUSTOM_HOST_PASS_ROUTES = new Set(["/favicon.ico", "/icon", "/manifest.json"]);
-
-// Among these passing prefixes, those whose first segment is a TOKEN, therefore
-// denotes content owned by a tenant (MIN-337). On the domain of a
-// client, only the tokens from HIS project pass: the others are content
-// foreigners, served under his name and behind his certificate.
-const CUSTOM_HOST_TOKEN_PREFIXES: ReadonlyArray<{ prefix: string; kind: PublicTokenKind }> = [
-  { prefix: "/f/", kind: "feedback" },
-  { prefix: "/share/", kind: "share" },
-  { prefix: "/p/", kind: "page" },
-];
-
 // Anonymous public pages (feedback board /f/, shared views /share/, site
 // marketing and legal pages): we tag the request so that the root layout
 // switch the default theme to "system" instead of "dark" (MIN-60). The header
@@ -157,112 +134,6 @@ function hasPrefix(pathname: string, prefixes: readonly string[]): boolean {
         ? pathname.startsWith(prefix)
         : pathname === prefix || pathname.startsWith(`${prefix}/`),
   );
-}
-
-/**
- * Nothing that leaves a client domain goes into a shared cache (MIN-337).
- *
- * These pages are personalized by cookie — the identity of the end user
- * of the board, its shared view unlock — and the `/` of a domain custom
- * fell under the CDN cache header placed on `/` for the landing, without
- * `Vary`: the CDN could serve another visitor's page to one visitor. The cause is
- * handled upstream (`next.config.mjs` headers are now limited to
- * primary hosts); this is the belt, placed on the only path through which
- * passes ANY request from a client domain.
- */
-function noSharedCache(response: NextResponse): NextResponse {
-  response.headers.set("Cache-Control", "private, no-store");
-  // The header that the Vercel CDN reads as a priority, and that Next never overwrites
-  // (see the long comment of next.config.mjs, which covers the measurement).
-  response.headers.set("Vercel-CDN-Cache-Control", "no-store");
-  return response;
-}
-
-/**
- * Does the requested path point to content from ANOTHER tenant? (MIN-337)
- *
- * `/f/`, `/share/` and `/p/` are passing on a client domain — the board has
- * needs `/f/<son token>/…` for its tabs, and a shared view can be
- * opened from a board. But the token is a global identifier: without this
- * control, `feedback.acme.com/f/<token d'un concurrent>` made the board of the
- * competitor, under the name of Acme.
- *
- * `false` on a path without token (`/_next/`, `/favicon.ico`…): nothing to
- * to attach to a tenant, nothing to refuse.
- */
-async function isForeignTenantPath(
-  pathname: string,
-  target: DomainTarget,
-): Promise<boolean> {
-  const match = CUSTOM_HOST_TOKEN_PREFIXES.find(({ prefix }) => pathname.startsWith(prefix));
-  if (!match) return false;
-
-  const token = pathname.slice(match.prefix.length).split("/")[0] ?? "";
-  if (!token) return true;
-
-  const projectId = await lookupTokenProject(match.kind, token);
-  // Unknown token: 404 here rather than a rendering which will be 404 later — and no
-  // observable difference between “does not exist” and “belongs to another”.
-  return projectId !== target.projectId;
-}
-
-/**
- * Host custom → rewrite to the mapped public page (feedback board or
- * shared view): `/` becomes `/f/<token>` (resp. `/share/<token>`), the
- * subpaths are prefixed (`/p/123`) → `/f/<token>/p/123`), the query string
- * is preserved. Unknown host, or domain whose ownership is not yet
- * verified → 404 text. Never Supabase auth here: a client domain only serves the public.
- */
-async function proxyCustomHost(request: NextRequest, host: string): Promise<NextResponse> {
-  const pathname = request.nextUrl.pathname;
-
-  // Crawl a client domain (MIN-88). Without this branch, `/robots.txt` was
-  // rewritten as `/f/<token>/robots.txt` — a route that does not exist, therefore a
-  // 404 as robots.txt: the crawler deduces “everything is authorized” and
-  // indexes the board under the client's domain. Boards remain off-index
-  // (framing decision), so we respond explicitly.
-  if (pathname === "/robots.txt") {
-    return noSharedCache(
-      new NextResponse("User-agent: *\nDisallow: /\n", {
-        headers: { "Content-Type": "text/plain; charset=utf-8" },
-      }),
-    );
-  }
-  // A client domain does not have a sitemap: 404 franc rather than rewriting
-  // to a non-existent route, which produced the same code but in HTML.
-  if (pathname === "/sitemap.xml") {
-    return noSharedCache(new NextResponse("Not found", { status: 404 }));
-  }
-
-  // The mapping is resolved BEFORE the passing paths: it is he who names the
-  // tenant of the domain, and therefore what token prefixes have the right to
-  // serve. A host without verified mapping is no longer useful at all, assets
-  // understood — there is no page they belong on.
-  const target = await lookupCustomDomain(host);
-  if (!target) return noSharedCache(new NextResponse("Unknown domain", { status: 404 }));
-
-  if (
-    CUSTOM_HOST_PASS_ROUTES.has(pathname) ||
-    CUSTOM_HOST_PASS_PREFIXES.some((prefix) => pathname.startsWith(prefix))
-  ) {
-    if (await isForeignTenantPath(pathname, target)) {
-      return noSharedCache(new NextResponse("Not found", { status: 404 }));
-    }
-    // A custom host only serves the public → “system” theme (MIN-60). Harmless
-    // on /api, /_next… which do not render the themed layout.
-    return noSharedCache(
-      NextResponse.next(withRequestHeaders(request, { [PUBLIC_THEME_HEADER]: "1" })),
-    );
-  }
-
-  const base = target.kind === "feedback" ? `/f/${target.token}` : `/share/${target.token}`;
-  const url = request.nextUrl.clone();
-  url.pathname = pathname === "/" ? base : `${base}${pathname}`;
-  const response = noSharedCache(
-    NextResponse.rewrite(url, withRequestHeaders(request, { [PUBLIC_THEME_HEADER]: "1" })),
-  );
-  response.headers.set("X-Robots-Tag", "noindex");
-  return response;
 }
 
 /**
@@ -431,7 +302,7 @@ export async function proxy(request: NextRequest) {
 async function routeRequest(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
-  // This page must render without touching Supabase, including on a custom host.
+  // This page must render without touching Supabase, even when the application host is unavailable.
   if (pathname === SERVER_UNAVAILABLE_PATH) {
     const locale = supportedLocaleForTag(request.nextUrl.searchParams.get("locale"));
     return nextClean(request, {
@@ -440,12 +311,12 @@ async function routeRequest(request: NextRequest) {
     });
   }
 
-  // Custom domain (MIN-36): dedicated branch, BEFORE all logic
-  // pathname-based — primary hosts pay nothing, custom hosts do not
-  // touchent jamais l'auth/locale/login.
   const host = normalizeHost(request.headers.get("host") ?? "");
   if (host && !isPrimaryHost(host)) {
-    return proxyCustomHost(request, host);
+    return new NextResponse("Not found", {
+      status: 404,
+      headers: { "Cache-Control": "private, no-store", "X-Robots-Tag": "noindex" },
+    });
   }
 
   const supabaseUrl = process.env.MINDDY_PUBLIC_SUPABASE_URL;

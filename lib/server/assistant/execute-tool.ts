@@ -2753,7 +2753,7 @@ export async function executeTool(
       // cores. The post is always re-scoped to the project in scope; the
       // feedback comment mode's current post is the default target.
 
-      // The board's SETUP (public URL, custom domain, SSO), as opposed to the
+      // The board's SETUP (public URL, SSO), as opposed to the
       // posts on it — what Numo needs to hand the user a working "Feedback"
       // button for their own app. Absolute URLs: the code goes elsewhere.
       case "get_feedback_board": {

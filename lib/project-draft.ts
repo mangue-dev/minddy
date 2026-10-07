@@ -38,6 +38,8 @@ export type ProjectWizardStep = (typeof PROJECT_WIZARD_STEPS)[number];
 /** Where do we start from (MIN-171) — the wizard's first question. */
 export type ProjectOrigin = "new" | "existing";
 
+export { MAX_INITIAL_BRIEF_CHARS } from "./project-brief";
+
 /**
  * The route KEPT. The seed depends on the origin — until it is chosen, the step has no content and does not count towards the stepper.
  */
@@ -68,7 +70,6 @@ export interface DraftRepo {
  */
 export type DraftSeed =
   | { kind: "brief"; text: string }
-  | { kind: "numo" }
   | { kind: "import" };
 
 export interface ProjectDraft {
@@ -193,7 +194,6 @@ function normalizeOrigin(value: unknown): ProjectOrigin | null {
 function normalizeSeed(value: unknown): DraftSeed | null {
   const seed = value as DraftSeed | undefined;
   if (seed?.kind === "brief" && typeof seed.text === "string") return seed;
-  if (seed?.kind === "numo") return { kind: "numo" };
   if (seed?.kind === "import") return { kind: "import" };
   return null;
 }

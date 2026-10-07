@@ -43,7 +43,7 @@ import {
 
 /** What the header displays. `conflict` survives the writing that produced it:
     the page IS saved, but a block has been replaced and it needs to be said. */
-export type PageSaveState = "saved" | "saving" | "conflict";
+export type PageSaveState = "saved" | "saving" | "error" | "conflict";
 
 /**
  * The number of consecutive replays. Three, because a replay only fails if one
@@ -143,6 +143,7 @@ export function usePageAutosave({
   const inFlightDone = useRef<Promise<void>>(Promise.resolve());
 
   const [saving, setSaving] = useState(false);
+  const [failed, setFailed] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [conflicts, setConflicts] = useState<PageBlockConflict[]>([]);
 
@@ -186,6 +187,7 @@ export function usePageAutosave({
     let finish!: () => void;
     inFlightDone.current = new Promise<void>((resolve) => { finish = resolve; });
     setSaving(true);
+    setFailed(false);
     try {
       // A writing, its replays, then what was typed during — all
       // in ONE loop, so never two requests in flight.
@@ -210,9 +212,8 @@ export function usePageAutosave({
             sent = null;
           } catch (err) {
             if (!(err instanceof PageConflictError) || replays >= MAX_REPLAYS) {
-              // A refusal that we do not know how to resolve does not lose its impact: the
-              // draft returns to the queue, the next attempt the
-              // reprendra.
+              // Keep failed edits queued for the next retry, with newer
+              // pending fields taking precedence over this attempt.
               pending.current = { ...attempt, ...pending.current };
               throw err;
             }
@@ -223,6 +224,7 @@ export function usePageAutosave({
         patch = takePending();
       }
     } catch (err) {
+      setFailed(true);
       onError(err);
     } finally {
       inFlight.current = false;
@@ -275,6 +277,8 @@ export function usePageAutosave({
         screen.current = patch.content as PageDocJSON;
       }
       pending.current = { ...pending.current, ...patch };
+      setFailed(false);
+      setSaving(true);
       if (timer.current) clearTimeout(timer.current);
       timer.current = setTimeout(() => void writeRef.current(), delayMs);
     },
@@ -313,6 +317,8 @@ export function usePageAutosave({
         const { content: _content, version: _version, ...rest } = pending.current;
         pending.current = Object.keys(rest).length > 0 ? rest : null;
       }
+      setSaving(inFlight.current || pending.current !== null);
+      if (!pending.current) setFailed(false);
     },
     [pageId, adopt, delayMs]
   );
@@ -346,9 +352,11 @@ export function usePageAutosave({
 
   const state: PageSaveState = saving
     ? "saving"
-    : conflicts.length > 0
-      ? "conflict"
-      : "saved";
+    : failed
+      ? "error"
+      : conflicts.length > 0
+        ? "conflict"
+        : "saved";
 
   return useMemo(
     () => ({

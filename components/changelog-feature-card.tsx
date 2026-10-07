@@ -6,9 +6,8 @@ import { Add01Icon } from "@hugeicons/core-free-icons";
 import type { ChangelogFeatureSummary, ChangelogLabels } from "@/lib/changelog-types";
 import { FeatureDisclosureFrame } from "@/components/feature-disclosure";
 import { ChangelogIllustration } from "@/components/changelog-illustration";
+import { CHANGELOG_ASPECT_RATIOS, resolveChangelogIllustration } from "@/lib/changelog-illustrations";
 import styles from "./changelog-cards.module.css";
-
-const ASPECT_RATIOS = { shield: 1, board: 1.5, assistant: 1.3, pages: 1.4, connections: 1.2, activity: 1.25, desktop: 1.5 };
 
 /** Localized details are already rendered, so native disclosures open immediately. */
 export function ChangelogFeatureCard({ feature, labels, compact = false, reveal }: {
@@ -40,8 +39,8 @@ export function ChangelogFeatureCard({ feature, labels, compact = false, reveal 
     <div className="max-w-2xl pb-4 text-sm leading-relaxed" role="region" aria-label={feature.title}>{content}</div>
   </details>;
 
-  const illustration = feature.illustration;
-  const ratio = illustration.kind === "image" ? Math.max(.85, Math.min(1.6, illustration.width / illustration.height)) : ASPECT_RATIOS[illustration.name];
+  const illustration = resolveChangelogIllustration(feature.id, feature.illustration);
+  const ratio = illustration.kind === "image" ? Math.max(.85, Math.min(1.6, illustration.width / illustration.height)) : CHANGELOG_ASPECT_RATIOS[illustration.name];
   return <FeatureDisclosureFrame
     id={feature.id} title={feature.title} detailsLabel={labels.details} disclosureRef={disclosure}
     className={`${styles.card} border border-border bg-card`}

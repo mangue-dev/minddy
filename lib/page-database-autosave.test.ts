@@ -44,6 +44,26 @@ async function mount(save: Parameters<typeof usePageAutosave>[0]["save"]) {
 }
 
 describe("database entry navigation saves", () => {
+  it("reports queued edits as saving until the server accepts the write", async () => {
+    let resolve!: (page: ReturnType<typeof buildOptimisticPage>) => void;
+    const save = vi.fn(() => new Promise<ReturnType<typeof buildOptimisticPage>>((done) => { resolve = done; }));
+    const h = await mount(save);
+    expect(h.autosave.state).toBe("saved");
+    await act(async () => { h.autosave.schedule({ title: "Waiting for the debounce" }); });
+    expect(h.autosave.state).toBe("saving");
+    expect(h.autosave.savedAt).toBeNull();
+    expect(save).not.toHaveBeenCalled();
+    let writing!: Promise<void>;
+    await act(async () => { writing = h.autosave.flush(); });
+    expect(h.autosave.state).toBe("saving");
+    await act(async () => {
+      resolve({ ...h.page, updated_at: "2026-10-06T12:00:00Z" });
+      await writing;
+    });
+    expect(h.autosave.state).toBe("saved");
+    expect(h.autosave.savedAt).toBe("2026-10-06T12:00:00Z");
+  });
+
   it("waits for an existing write and drains text typed while it was in flight", async () => {
     let resolve!: (page: ReturnType<typeof buildOptimisticPage>) => void;
     const save = vi.fn().mockImplementationOnce(
@@ -86,11 +106,14 @@ describe("database entry navigation saves", () => {
     });
     expect(saved).toBe(false);
     expect(h.onError).toHaveBeenCalled();
+    expect(h.autosave.state).toBe("error");
+    expect(h.autosave.savedAt).toBeNull();
     save.mockResolvedValue({ ...h.page, title: "Unsaved title" });
     await act(async () => {
       saved = await h.autosave.flushBeforeNavigation();
     });
     expect(saved).toBe(true);
+    expect(h.autosave.state).toBe("saved");
     expect(save).toHaveBeenLastCalledWith("entry", { title: "Unsaved title" });
   });
 });

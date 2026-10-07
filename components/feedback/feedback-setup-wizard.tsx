@@ -26,15 +26,12 @@ const GlobeSceneIcon = sceneIcon(GlobeIcon);
 const PlugSceneIcon = sceneIcon(Plug01Icon);
 const KeySceneIcon = sceneIcon(Key02Icon);
 const MailSceneIcon = sceneIcon(Mail01Icon);
-import { CustomDomainSection } from "@/components/custom-domain-section";
-import { CustomDomainRemovalDialog } from "@/components/custom-domain-removal-dialog";
 import {
   BoardAccentRow,
   BoardVisibilityRows,
   FeedbackTranslationGroup,
   NumoReviewGroup,
   SettingsRows,
-  feedbackDomainKey,
   feedbackSettingsKey,
   useFeedbackBoardSettings,
 } from "@/components/feedback/feedback-settings-shared";
@@ -124,7 +121,6 @@ export function FeedbackSetupWizard({
   const [envCopied, setEnvCopied] = useState(false);
   /** Did this journey light up the board itself? Only this case falls apart. */
   const [provisionedBoard, setProvisionedBoard] = useState(false);
-  const [confirmDisable, setConfirmDisable] = useState(false);
 
   const {
     board,
@@ -181,7 +177,6 @@ export function FeedbackSetupWizard({
     setCopied(false);
     setEnvCopied(false);
     setProvisionedBoard(false);
-    setConfirmDisable(false);
   };
 
   const handleOpenChange = (next: boolean) => {
@@ -207,11 +202,7 @@ export function FeedbackSetupWizard({
    * next steps have something to fix — and go back to the API on
    * returned to the condition in which it was found.
    */
-  const applyType = async (confirmed = false) => {
-    if (mode !== "board" && provisionedBoard && !confirmed) {
-      setConfirmDisable(true);
-      return;
-    }
+  const applyType = async () => {
     const alreadyOn = board?.enabled === true;
     setWorking(true);
     try {
@@ -431,14 +422,6 @@ export function FeedbackSetupWizard({
               />
             </SettingsRows>
           )}
-          {/* The section is hidden alone without the VERCEL_* env: on a
- deployment which does not know how to plug in a domain, the step reduces
- to the color, which is exactly what it has to say. */}
-          <CustomDomainSection
-            endpoint={`/api/projects/${projectId}/feedback/domain`}
-            queryKey={feedbackDomainKey(projectId)}
-            className="rounded-xl border border-border bg-card p-4"
-          />
         </div>
       ),
     },
@@ -616,12 +599,6 @@ export function FeedbackSetupWizard({
 
   return (
     <>
-      <CustomDomainRemovalDialog
-        kind="board"
-        open={open && confirmDisable}
-        onOpenChange={setConfirmDisable}
-        onConfirm={async () => { await applyType(true); }}
-      />
       <WizardDialog
         open={open}
         onOpenChange={handleOpenChange}

@@ -2,11 +2,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { sendInvitationEmail } from "@/lib/server/invitation-email";
 import { sendOtpEmail } from "@/lib/server/feedback/otp-email";
-import {
-  addDomainToVercel,
-  getVercelDomainState,
-  removeDomainFromVercel,
-} from "@/lib/server/vercel-domains";
 import { getServerPostHog } from "@/lib/server/posthog";
 import { configureWebPush } from "@/lib/server/push/vapid";
 import { sendApnsNotification } from "@/lib/server/push/apns";
@@ -62,12 +57,9 @@ describe("missing integrations", () => {
     ]);
   });
 
-  it("does not contact Vercel Domains, Resend, or PostHog", async () => {
+  it("does not contact Resend or PostHog", async () => {
     const fetchMock = vi.mocked(fetch);
 
-    expect(await addDomainToVercel("example.test")).toEqual({ ok: false, code: "api_error" });
-    expect(await removeDomainFromVercel("example.test")).toEqual({ ok: false });
-    expect((await getVercelDomainState("example.test")).attached).toBe(false);
     expect(await sendOtpEmail({ to: "a@example.test", code: "123456", locale: "fr" })).toBe(false);
     expect(
       await sendInvitationEmail({
@@ -84,15 +76,6 @@ describe("missing integrations", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("never enables the fake domain provider in self-hosted production", async () => {
-    vi.stubEnv("MDY_FAKE_VERCEL_DOMAINS", "1");
-
-    expect(await addDomainToVercel("example.test")).toEqual({
-      ok: false,
-      code: "api_error",
-    });
-    expect(fetch).not.toHaveBeenCalled();
-  });
 
   it("rejects partial configurations before any network call", async () => {
     vi.stubEnv("EMAIL_PROVIDER", "resend");

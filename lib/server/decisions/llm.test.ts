@@ -1,7 +1,12 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { mapLlmAnswers } from "./llm";
+import { mapLlmAnswers, runLlmDecision } from "./llm";
 import type { DecisionSpec } from "./types";
+
+const { forcedToolCallMock } = vi.hoisted(() => ({ forcedToolCallMock: vi.fn() }));
+vi.mock("@/lib/server/feedback/forced-tool-call", () => ({ forcedToolCall: forcedToolCallMock }));
+vi.mock("@/lib/server/model-config", () => ({ resolveConfiguredModel: async () => ({ model: "reasoning-model" }) }));
+afterEach(() => { vi.clearAllMocks(); });
 
 /**
  * The mapping of the existing tool arguments into decision answers. Strict
@@ -117,6 +122,30 @@ describe("mapLlmAnswers — smart_fill", () => {
     // The sanitizer still writes nothing for it, on the use case's side.
     const answers = mapLlmAnswers(SPEC, { category_ids: [] });
     expect(answers.category_ids?.value).toEqual([]);
+  });
+});
+
+describe("runLlmDecision — Smart Fill generation", () => {
+  it("leaves room for reasoning and the tool output within the creation timeout", async () => {
+    forcedToolCallMock.mockResolvedValue({ priority: "high", effort: "m", category_ids: ["cat-a"] });
+    const context = { runId: "fill-run", seq: 1, billTo: { userId: "creator" }, projectId: "project" };
+    const answers = await runLlmDecision(SPEC, context);
+    expect(forcedToolCallMock).toHaveBeenCalledWith(
+      "reasoning-model", "s", "u", "fill_issue", {},
+      expect.objectContaining({
+        maxTokens: 2_048, reasoning: "low", timeoutMs: 20_000,
+        record: expect.objectContaining({ feature: "smart_fill", ...context }),
+      }),
+    );
+    expect(answers?.priority?.value).toBe("high");
+    expect(answers?.effort?.value).toBe("m");
+    expect(answers?.category_ids?.value).toEqual(["cat-a"]);
+  });
+
+  it("keeps a failed generation non-fatal without retrying", async () => {
+    forcedToolCallMock.mockResolvedValue(null);
+    expect(await runLlmDecision(SPEC, { runId: "fill-run", billTo: { userId: "creator" } })).toBeNull();
+    expect(forcedToolCallMock).toHaveBeenCalledTimes(1);
   });
 });
 

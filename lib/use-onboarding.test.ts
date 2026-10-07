@@ -21,10 +21,6 @@ const mocks = vi.hoisted(() => ({
     counts: { total: 0 },
     loading: true,
   },
-  keys: {
-    keys: [] as Array<{ id: string }>,
-    loading: false,
-  },
   analytics: {
     track: vi.fn(),
     setPersonProperties: vi.fn(),
@@ -36,7 +32,6 @@ vi.mock("@/lib/projects-context", () => ({ useProjects: () => mocks.projects }))
 vi.mock("@/lib/use-home-summary-query", () => ({
   useHomeSummaryQuery: () => mocks.summary,
 }));
-vi.mock("@/lib/use-ai-keys-query", () => ({ useAiKeysQuery: () => mocks.keys }));
 vi.mock("@/lib/use-analytics", () => ({ useAnalytics: () => mocks.analytics }));
 vi.mock("mangue-ui", () => ({ toast: { error: vi.fn() } }));
 
@@ -56,15 +51,13 @@ describe("useOnboarding", () => {
       .IS_REACT_ACT_ENVIRONMENT = true;
     mocks.auth.user = {
       id: "user-1",
-      user_metadata: { onboarding_started: true },
+      user_metadata: { onboarding_started: true, onboarding_version: 2 },
     };
-    mocks.auth.updateUserMetadata.mockClear();
+    mocks.auth.updateUserMetadata.mockReset().mockResolvedValue(undefined);
     mocks.projects.projects = [];
     mocks.projects.loading = true;
     mocks.summary.counts = { total: 0 };
     mocks.summary.loading = true;
-    mocks.keys.keys = [];
-    mocks.keys.loading = false;
     mocks.analytics.track.mockClear();
     mocks.analytics.setPersonProperties.mockClear();
     latest = null;
@@ -84,21 +77,95 @@ describe("useOnboarding", () => {
     act(() => root.render(createElement(OnboardingHarness)));
   }
 
-  it("does not expose the onboarding card before account signals are loaded", () => {
+  it("does not expose the onboarding checklist before account signals are loaded", () => {
     renderHook();
 
     expect(latest?.loading).toBe(true);
     expect(latest?.visible).toBe(true);
-    expect(latest?.showCard).toBe(false);
+    expect(latest?.showChecklist).toBe(false);
   });
 
-  it("exposes the onboarding card once an eligible account is fully loaded", () => {
+  it("exposes the onboarding checklist once an eligible account is fully loaded", () => {
     mocks.projects.loading = false;
     mocks.summary.loading = false;
 
     renderHook();
 
     expect(latest?.loading).toBe(false);
-    expect(latest?.showCard).toBe(true);
+    expect(latest?.showChecklist).toBe(true);
   });
+
+  it("keeps earlier optimistic acknowledgments in subsequent metadata writes", async () => {
+    mocks.projects.loading = false;
+    mocks.summary.loading = false;
+    renderHook();
+    await act(async () => { await latest!.acknowledgeStep("mcp"); });
+    await act(async () => { await latest!.acknowledgeStep("numo"); });
+    expect(mocks.auth.updateUserMetadata).toHaveBeenLastCalledWith({
+      onboarding_version: 2, onboarding_steps: ["numo", "mcp"],
+    });
+    expect(latest!.steps.find((step) => step.id === "tickets")!.completed).toBe(false);
+  });
+
+  it("rolls back the completion screen when saving the last step fails", async () => {
+    mocks.projects.loading = false;
+    mocks.summary.loading = false;
+    mocks.auth.user!.user_metadata.onboarding_steps = ["project", "tickets", "numo", "mcp"];
+    let rejectWrite!: (error: Error) => void;
+    mocks.auth.updateUserMetadata.mockImplementationOnce(() => new Promise((_, reject) => { rejectWrite = reject; }));
+    renderHook();
+    let saving!: Promise<void>;
+    act(() => { saving = latest!.acknowledgeStep("cycles"); });
+    expect(latest!.finalScreen).toBe(true);
+    await act(async () => { rejectWrite(new Error("Save failed")); await saving; });
+    expect(latest!.finalScreen).toBe(false);
+    expect(latest!.currentStepId).toBe("cycles");
+    expect(latest!.showChecklist).toBe(true);
+  });
+
+  it("restores the checklist if dismissal cannot be saved", async () => {
+    mocks.projects.loading = false;
+    mocks.summary.loading = false;
+    mocks.auth.updateUserMetadata.mockRejectedValueOnce(new Error("Save failed"));
+    renderHook();
+    await act(async () => { await latest!.dismiss(); });
+    expect(latest!.showChecklist).toBe(true);
+  });
+
+  it("shows completion once and closes it without a dismissal analytics event", async () => {
+    mocks.projects.loading = false;
+    mocks.summary.loading = false;
+    mocks.auth.user!.user_metadata.onboarding_steps = ["project", "tickets", "numo", "mcp"];
+    renderHook();
+    await act(async () => { await latest!.acknowledgeStep("cycles"); });
+    expect(latest!.finalScreen).toBe(true);
+    expect(mocks.analytics.track.mock.calls.filter(([event]) => event === "onboarding_completed")).toHaveLength(1);
+    await act(async () => { await latest!.finish(); });
+    expect(latest!.showChecklist).toBe(false);
+    expect(mocks.analytics.track.mock.calls.some(([event]) => event === "onboarding_dismissed")).toBe(false);
+  });
+
+
+  it("stamps a fresh account with the current onboarding version", async () => {
+    mocks.projects.loading = false;
+    mocks.summary.loading = false;
+    mocks.auth.user!.user_metadata = {};
+    await act(async () => { renderHook(); });
+    expect(mocks.auth.updateUserMetadata).toHaveBeenCalledWith({
+      onboarding_started: true, onboarding_version: 2, onboarding_steps: [],
+    });
+    expect(latest!.showChecklist).toBe(true);
+  });
+
+  it("preserves legacy progress when stamping an unstamped account", async () => {
+    mocks.projects.loading = false;
+    mocks.summary.loading = false;
+    mocks.auth.user!.user_metadata = { onboarding_steps: ["mcp"] };
+    await act(async () => { renderHook(); });
+    expect(mocks.auth.updateUserMetadata).toHaveBeenCalledWith({
+      onboarding_started: true, onboarding_version: 2, onboarding_steps: ["tickets", "mcp"],
+    });
+    expect(latest!.steps.find((step) => step.id === "tickets")!.completed).toBe(true);
+  });
+
 });

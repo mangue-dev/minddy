@@ -2,6 +2,7 @@
 
 import { Suspense } from "react";
 import dynamic from "next/dynamic";
+import { OnboardingProvider } from "@/lib/use-onboarding";
 import { AuthProvider } from "@/lib/auth-context";
 import { AccountQueryProvider } from "@/lib/account-query-provider";
 import { RealtimeProvider } from "@/lib/realtime-provider";
@@ -101,7 +102,9 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
                             <CreateProvider>
                               <BulkActionsProvider>
                                 <PrUnlinkConfirmationProvider>
-                                  <AppShellChrome>{children}</AppShellChrome>
+                                  <OnboardingProvider>
+                                    <AppShellChrome>{children}</AppShellChrome>
+                                  </OnboardingProvider>
                                 </PrUnlinkConfirmationProvider>
                               </BulkActionsProvider>
                             </CreateProvider>
