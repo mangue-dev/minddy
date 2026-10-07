@@ -1,7 +1,5 @@
 "use client";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { Layers01Icon } from "@hugeicons/core-free-icons";
-import { cn } from "mangue-ui";
+import { MentionChip } from "@/components/mention-chip";
 
 /** Compact skill badge shared by the composer and sent messages. */
 export function SkillChip({
@@ -13,30 +11,14 @@ export function SkillChip({
   className?: string;
   onClick?: () => void;
 }) {
-  const chipClassName = cn(
-    "inline-flex max-w-full items-center gap-1 whitespace-nowrap rounded-[5px] border border-emerald-600/20 bg-emerald-500/15 px-1.5 py-px align-baseline text-[0.95em] font-medium leading-4 text-emerald-700 dark:border-emerald-400/25 dark:bg-emerald-500/15 dark:text-emerald-400",
-    onClick &&
-      "transition-colors hover:bg-emerald-500/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40",
-    className,
-  );
-  const content = (
-    <>
-      <HugeiconsIcon icon={Layers01Icon} className="size-3 shrink-0" aria-hidden />
-      <span className="truncate">{name}</span>
-    </>
-  );
-
-  return onClick ? (
-    <button
-      type="button"
-      className={chipClassName}
-      onMouseDown={(event) => event.preventDefault()}
+  return (
+    <MentionChip
+      type="skill"
+      id={name}
+      label={name}
+      className={className}
       onClick={onClick}
-      aria-haspopup="dialog"
-    >
-      {content}
-    </button>
-  ) : (
-    <span className={chipClassName}>{content}</span>
+      ariaHasPopup={onClick ? "dialog" : undefined}
+    />
   );
 }

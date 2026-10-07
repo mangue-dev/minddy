@@ -102,7 +102,7 @@ const ATTACHMENT_SHORTCUT_KEY = "a";
  which React carries the real pill (MentionChip). Composing it does not redraw
  so it is not a pill “like” the one in the context — it is the same. */
 const MENTION_SLOT_CLASS = "inline-block align-baseline";
-const SKILL_SLOT_CLASS = "mx-0.5 inline-block max-w-full align-baseline";
+const SKILL_SLOT_CLASS = MENTION_SLOT_CLASS;
 
 /** The pill of a “/” command placed at the top of the message: same geometry as
  the pill of mention, without a figure — the “/” is enough to say what it is.

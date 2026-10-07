@@ -720,6 +720,34 @@ button[data-variant="ghost"] {
     transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
   }
 
+  /* Both modes use numeric dimensions and the same right/bottom anchors. */
+  @media (min-width: 768px) {
+    [data-slot="sheet-content"].assistant-panel-expanded {
+      top: auto !important;
+      left: auto !important;
+      right: 12px !important;
+      bottom: 36px !important;
+      width: calc(100vw - 332px) !important;
+      height: calc(100dvh - 80px) !important;
+      transition: width 280ms cubic-bezier(0.16, 1, 0.3, 1),
+        height 280ms cubic-bezier(0.16, 1, 0.3, 1),
+        right 280ms cubic-bezier(0.16, 1, 0.3, 1),
+        bottom 280ms cubic-bezier(0.16, 1, 0.3, 1),
+        border-radius 280ms cubic-bezier(0.16, 1, 0.3, 1) !important;
+    }
+
+    body[data-sidebar-hidden="true"] [data-slot="sheet-content"].assistant-panel-expanded {
+      left: auto !important;
+      width: calc(100vw - 24px) !important;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    [data-slot="sheet-content"].assistant-panel-morph {
+      transition: none !important;
+    }
+  }
+
   /* On ultrawide (≥2200px) the shell becomes a centered map (mango-ui
      AppShell places `.ultrawide-canvas` on the body), so we re-anchor the FAB
      Numo and its compact panel — both in `fixed` — at the bottom right corner of
@@ -2876,4 +2904,14 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
 .app-update-slot button { max-width: 100%; }
 @media print {
   .app-top-bar { display: none !important; }
+}
+
+/* Apply the running-review sheen to the provider's masked logo. */
+.review-logo-shimmer {
+  background-image: linear-gradient(90deg, currentColor 35%, var(--muted-foreground) 50%, currentColor 65%);
+  background-size: 300% 100%;
+  animation: text-shimmer 1.8s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .review-logo-shimmer { animation: none; }
 }

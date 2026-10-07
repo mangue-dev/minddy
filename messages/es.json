@@ -2461,6 +2461,8 @@
     "aiLocalEndpointAddedToast": "Endpoint local guardado.",
     "aiKeyRemovedToast": "Se ha quitado la clave.",
     "aiKeyRemove": "Eliminar",
+    "aiKeyRemoveConfirmTitle": "¿Eliminar la clave API?",
+    "aiKeyRemoveConfirmDescription": "¿Eliminar tu conexión con {provider}? Añade una clave de nuevo para usar este proveedor.",
     "securityTab": "Seguridad",
     "securityTabIndicator": "Autenticación de dos factores está desactivada",
     "keyboardSectionTitle": "Teclado",

@@ -64,6 +64,13 @@ describe("mention menu results", () => {
     ).toEqual(["page", "objective", "issue", "issue"]);
   });
 
+  it("places Numo first only when the assistant matches the query", () => {
+    const options = [...items, { type: "numo", label: "Numo", keywords: ["assistant"] }];
+    expect(filterMentionItems(options, "")[0].type).toBe("numo");
+    expect(filterMentionItems(options, "num").map((item) => item.type)).toEqual(["numo"]);
+    expect(filterMentionItems(options, "release").some((item) => item.type === "numo")).toBe(false);
+  });
+
   it("does not cap the number of results", () => {
     const many = Array.from({ length: 18 }, (_, index) => ({
       type: index % 3 === 0 ? "issue" : "page",

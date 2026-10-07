@@ -7,7 +7,6 @@ import { useEffect, useState } from "react";
 import { useFormatter, useNow, useTranslations } from "next-intl";
 import {
   Button,
-  PopoverTrigger,
   cn,
 } from "mangue-ui";
 
@@ -15,7 +14,7 @@ import { PrReviewsDetails, type PrReviewerDetails } from "@/components/pull-requ
 import { reviewerReviewGroups, reviewCardTone } from "@/lib/pr-review-request";
 import type { PrTimelineEvent } from "@/lib/pr-timeline";
 import { AppTooltip } from "@/components/ui/app-tooltip";
-import { PrInsightRow, PrInsightPopover, PrInsightPopoverContent, type PrInsightTone } from "@/components/pull-requests/pr-insight-row";
+import { PrInsightRow, PrInsightActionMenu, type PrInsightMenuAction, type PrInsightTone } from "@/components/pull-requests/pr-insight-row";
 import { CheckLogo } from "@/components/pull-requests/pr-check-logo";
 import { NumoIcon } from "@/components/numo-icon";
 import { ForgeUserAvatar } from "@/components/git/forge-user-avatar";
@@ -318,18 +317,17 @@ export function PrInsights(props: PrInsightsProps) {
               {blocked.length > 0 ? <span className="text-xs tabular-nums">{blocked.length}</span> : null}
             </h3>
             {fixInsight ? (
-              <PrInsightPopover>
-                <PopoverTrigger asChild>
+              <PrInsightActionMenu
+                testId="pr-fix-menu"
+                actions={insightMenuActions(fixInsight, t)}
+                trigger={
                   <Button variant="ghost" size="sm" data-testid="pr-fix-action" className="min-w-0">
                     <HugeiconsIcon icon={Wrench01Icon} className="size-4 shrink-0" />
                     <span className="min-w-0 truncate">{t("cardFix")}</span>
                     <HugeiconsIcon icon={ArrowDown01Icon} aria-hidden className="size-3.5 shrink-0" />
                   </Button>
-                </PopoverTrigger>
-                <PrInsightPopoverContent align="end" data-testid="pr-fix-popover" className="w-[min(26rem,calc(100vw-2rem))] p-3">
-                  <StatusDetails insight={fixInsight} now={now} />
-                </PrInsightPopoverContent>
-              </PrInsightPopover>
+                }
+              />
             ) : null}
           </div>
           <div className="flex min-w-0 flex-col pt-2">
@@ -734,7 +732,7 @@ function StatusIcon({ insight }: { insight: PrInsight }) {
   return (
     <span aria-hidden className="flex shrink-0 items-center [&_svg]:size-4">
       {insight.logo ? (
-        <span className="inline-block size-4 bg-current [mask-repeat:no-repeat] [mask-position:center] [mask-size:contain]" style={{ maskImage: `url(${insight.logo})`, WebkitMaskImage: `url(${insight.logo})` }} />
+        <span className={cn("inline-block size-4 bg-current [mask-repeat:no-repeat] [mask-position:center] [mask-size:contain]", insight.id.startsWith("ai-review-") && insight.tone === "progress" && "review-logo-shimmer")} style={{ maskImage: `url(${insight.logo})`, WebkitMaskImage: `url(${insight.logo})` }} />
       ) : insight.donutParts || insight.id === "checks" ? (
         <ChecksDonut parts={insight.donutParts ?? []} />
       ) : insight.id === "conversations" && insight.tone === "success" ? (
@@ -766,6 +764,22 @@ function StatusSummary({ insight, now, compact = false }: { insight: PrInsight; 
   );
 }
 
+function insightMenuActions(insight: PrInsight, t: ReturnType<typeof useTranslations<"PullRequests">>): PrInsightMenuAction[] {
+  if (!insight.actions) return [];
+  return (["top", "bottom"] as const).map((which) => {
+    const action = insight.actions![which];
+    return {
+      ...action,
+      disabled: which === "bottom" && insight.actions!.bottom.disabled,
+      keepOpen: action.feedback === "copied",
+      feedbackLabel: action.feedback ? t(FEEDBACK_KEYS[action.feedback]) : undefined,
+      icon: insight.id === "fix" && which === "bottom"
+        ? <NumoIcon animated={false} />
+        : <HugeiconsIcon icon={which === "top" ? Copy01Icon : LinkSquare01Icon} className="size-4" />,
+    };
+  });
+}
+
 function PrInsightView({ insight, now }: { insight: PrInsight; now: Date }) {
   const t = useTranslations("PullRequests");
   const label = insight.id === "conversations" ? t("conversationsTitle")
@@ -775,12 +789,19 @@ function PrInsightView({ insight, now }: { insight: PrInsight; now: Date }) {
           : insight.iconKind === "branch" ? t("insightBranch")
             : insight.iconKind === "policy" ? t("insightPolicy")
               : t("insightMergeability");
+  const onSelect = insight.actions ? undefined : insight.action?.onClick ?? insight.onSelect;
+  const actionLabel = insight.action?.label ?? insight.openLabel;
   return (
     <PrInsightRow
       label={label}
+      ariaLabel={onSelect && actionLabel ? `${insight.title}: ${actionLabel}` : undefined}
       tone={insight.tone}
       testId={`pr-status-card-${insight.id}`}
       showTitle={insight.id !== "deployment"}
+      onSelect={onSelect}
+      disabled={insight.action?.disabled}
+      menuActions={insight.actions ? insightMenuActions(insight, t) : undefined}
+      detailsTestId={insight.actions ? `pr-${insight.id}-menu` : undefined}
       summary={<StatusSummary insight={insight} now={now} />}
     >
       <StatusDetails insight={insight} now={now} />

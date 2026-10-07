@@ -62,7 +62,7 @@ function ObjectiveSwitch({
         <button
           type="button"
           aria-label={t("switchObjective")}
-          className="flex max-w-full -translate-x-1.5 items-center gap-1.5 rounded-md px-1.5 py-0.5 font-medium leading-tight outline-none transition-colors hover:bg-muted focus-visible:bg-muted"
+          className="flex min-w-0 max-w-full -translate-x-1.5 items-center gap-1.5 rounded-md px-1.5 py-0.5 font-medium leading-tight outline-none transition-colors hover:bg-muted focus-visible:bg-muted"
         >
           <span className="truncate">{objective.name}</span>
           <HugeiconsIcon icon={ArrowDown01Icon} className="size-3.5 shrink-0 text-muted-foreground" />
@@ -111,7 +111,7 @@ export function ObjectiveBoardHeader({
     objective.status !== "canceled";
 
   return (
-    <AppContentHeader contentClassName="gap-5">
+    <AppContentHeader contentClassName="w-full gap-3 sm:gap-5">
       <Button asChild variant="ghost" size="icon-sm">
         <Link
           href={`/projects/${projectId}/objectives?open=${objective.id}`}
@@ -122,7 +122,7 @@ export function ObjectiveBoardHeader({
       </Button>
 
       {/* Identity: color dot, name, and status. */}
-      <div className="flex min-w-0 max-w-full shrink-0 items-center gap-3">
+      <div className="flex min-w-0 flex-1 items-center gap-3">
         <span
           className="size-3 shrink-0 rounded-full"
           style={{ backgroundColor: objective.color ?? "var(--muted-foreground)" }}

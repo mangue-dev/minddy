@@ -6,6 +6,7 @@ import { NextIntlClientProvider } from "next-intl";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PrInsights } from "@/components/pull-requests/pr-insights";
 import type { CheckState, ChecksSummary } from "@/lib/agent-api";
+import type { ReadinessBlocker } from "@/lib/pr-readiness";
 import messages from "@/messages/en.json";
 import { groupReviewThreads } from "@/lib/pr-review-threads";
 import { AI_REVIEW_PROVIDERS } from "@/lib/pr-ai-review/providers";
@@ -15,6 +16,7 @@ vi.mock("mangue-ui", async () => ({
   ...await vi.importActual<Record<string, unknown>>("mangue-ui/components/ui/button.tsx"),
   ...await vi.importActual<Record<string, unknown>>("mangue-ui/components/ui/badge.tsx"),
   ...await vi.importActual<Record<string, unknown>>("mangue-ui/components/ui/popover.tsx"),
+  ...await vi.importActual<Record<string, unknown>>("mangue-ui/components/ui/dropdown-menu.tsx"),
   ...await vi.importActual<Record<string, unknown>>("mangue-ui/lib/utils.ts"),
 }));
 
@@ -79,6 +81,27 @@ describe("pull request insight properties", () => {
   function trigger(id: string) {
     return document.querySelector<HTMLButtonElement>(`[data-testid="pr-status-card-${id}"]`)!;
   }
+
+  it.each([
+    { kind: "draft", action: "mark_ready", statusLabel: "Draft", actionLabel: "Mark ready" },
+    { kind: "branch", action: "update_branch", statusLabel: "Branch out of date", actionLabel: "Update branch" },
+    { kind: "policy", action: "enable_auto_merge", statusLabel: "Policy blocked", actionLabel: "Open merge flow" },
+  ] as const)("announces the status and direct action for $kind", async ({ kind, action, statusLabel, actionLabel }) => {
+    const blocker: ReadinessBlocker = { id: kind, kind, action, required: true, status: "blocked", source: "pull_request" };
+    props.readiness = { state: "draft", blockers: [blocker], passed: [], mergeAllowed: false, methods: [], preferredMethod: null };
+    props.canAct = () => true;
+    await render();
+    expect(trigger(kind).getAttribute("aria-label")).toBe(`${statusLabel}: ${actionLabel}`);
+    await act(async () => trigger(kind).click());
+    expect(props.onAction).toHaveBeenCalledExactlyOnceWith(blocker);
+    expect(document.querySelector('[data-slot="popover-content"]')).toBeNull();
+    props.acting = action;
+    await render();
+    expect(trigger(kind).disabled).toBe(true);
+    expect(trigger(kind).getAttribute("aria-label")).toBe(`${statusLabel}: ${actionLabel}`);
+    await act(async () => trigger(kind).click());
+    expect(props.onAction).toHaveBeenCalledOnce();
+  });
 
   it("keeps checks and reviews available without empty conversation or Numo rows", async () => {
     props.checks = checks();
@@ -190,6 +213,16 @@ describe("pull request insight properties", () => {
     expect(onOpen).not.toHaveBeenCalled();
   });
 
+  it("shimmers only active external review logos", async () => {
+    const provider = AI_REVIEW_PROVIDERS[0];
+    props.aiReviews = [{ provider, state: "running", startedAt: "2026-10-07T10:00:00Z", durationMs: null, updatedAt: "2026-10-07T10:00:00Z", url: null }];
+    await render();
+    expect(trigger("reviews").querySelector(".review-logo-shimmer")).not.toBeNull();
+    props.aiReviews = [{ ...props.aiReviews[0], state: "clean" }];
+    await render();
+    expect(trigger("reviews").querySelector(".review-logo-shimmer")).toBeNull();
+  });
+
   it("opens global correction actions beside the static blockers heading", async () => {
     const onCopy = vi.fn();
     const onLaunch = vi.fn();
@@ -199,16 +232,16 @@ describe("pull request insight properties", () => {
     const action = header.querySelector<HTMLButtonElement>('[data-testid="pr-fix-action"]')!;
     expect(header.querySelectorAll("button")).toHaveLength(1);
     expect(trigger("fix")).toBeNull();
-    await act(async () => action.click());
-    expect(document.querySelector('[data-testid="pr-fix-popover"]')).not.toBeNull();
-    const copy = document.querySelector<HTMLButtonElement>('[data-testid="pr-card-fix-copy"]')!;
-    const launch = document.querySelector<HTMLButtonElement>('[data-testid="pr-card-fix-launch"]')!;
+    await act(async () => action.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true })));
+    expect(document.querySelector('[data-testid="pr-fix-menu"]')).not.toBeNull();
+    const copy = document.querySelector<HTMLElement>('[data-testid="pr-card-fix-copy"]')!;
+    const launch = document.querySelector<HTMLElement>('[data-testid="pr-card-fix-launch"]')!;
     await act(async () => copy.click());
     expect(onCopy).toHaveBeenCalledOnce();
     expect(copy.textContent).toBe("Copied");
     await act(async () => launch.click());
     expect(onLaunch).toHaveBeenCalledOnce();
-    expect(document.querySelector('[data-testid="pr-fix-popover"]')).toBeNull();
+    expect(document.querySelector('[data-testid="pr-fix-menu"]')).toBeNull();
   });
 
   it("shows check results and durations without details links in the popover", async () => {
@@ -298,7 +331,7 @@ describe("pull request insight properties", () => {
     expect(pending.closest("header")).not.toBeNull();
   });
 
-  it("closes the conversation popover when opening the feedback sidebar", async () => {
+  it("opens the feedback sidebar directly from the conversation value", async () => {
     props.conversationThreads = groupReviewThreads([{
       id: 1, body: "Review feedback", path: "app.tsx", line: 1, original_line: 1,
       side: "RIGHT", start_line: null, original_start_line: null, start_side: null,
@@ -306,15 +339,15 @@ describe("pull request insight properties", () => {
       created_at: "2026-10-05T10:00:00Z", html_url: "https://example.test/review/1",
     }]);
     await render();
+    expect(trigger("conversations").getAttribute("aria-label")).toContain(messages.PullRequests.viewConversations);
     await act(async () => trigger("conversations").click());
-    const popover = document.querySelector('[data-testid="pr-insight-detail-conversations"]')!.closest('[data-slot="popover-content"]')!;
-    await act(async () => popover.querySelector<HTMLButtonElement>("button")!.click());
     expect(props.onOpenConversations).toHaveBeenCalledOnce();
-    expect(document.contains(popover)).toBe(false);
-    expect(trigger("conversations").getAttribute("aria-expanded")).toBe("false");
+    expect(document.querySelector('[data-slot="popover-content"]')).toBeNull();
+    expect(trigger("conversations").hasAttribute("aria-expanded")).toBe(false);
+    expect(trigger("conversations").querySelectorAll("svg")).toHaveLength(1);
   });
 
-  it("keeps deployment copy feedback visible and closes the popover when viewing the deployment", async () => {
+  it("keeps deployment copy feedback visible and closes the menu when viewing the deployment", async () => {
     const url = "https://preview.example.test";
     const writeText = vi.fn().mockResolvedValue(undefined);
     const open = vi.spyOn(window, "open").mockImplementation(() => null);
@@ -323,9 +356,10 @@ describe("pull request insight properties", () => {
     try {
       props.deployment = { status: "success", url, startedAt: null, durationMs: 30_000 };
       await render();
-      await act(async () => trigger("deployment").click());
-      const copy = document.querySelector<HTMLButtonElement>('[data-testid="pr-card-copy-deployment"]')!;
-      const view = document.querySelector<HTMLButtonElement>('[data-testid="pr-card-view-deployment"]')!;
+      await act(async () => trigger("deployment").dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true })));
+      const copy = document.querySelector<HTMLElement>('[data-testid="pr-card-copy-deployment"]')!;
+      const view = document.querySelector<HTMLElement>('[data-testid="pr-card-view-deployment"]')!;
+      expect(document.querySelector('[data-testid="pr-deployment-menu"]')?.getAttribute("role")).toBe("menu");
       expect(copy.querySelector("svg")).not.toBeNull();
       expect(view.querySelector("svg")).not.toBeNull();
       await act(async () => copy.click());

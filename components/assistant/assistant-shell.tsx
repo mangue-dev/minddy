@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Add01Icon, BulbIcon, Calendar01Icon, Cancel01Icon, Clock01Icon, CollapseIcon, ExpandIcon, Search01Icon, TaskEdit01Icon } from "@hugeicons/core-free-icons";
+import { Add01Icon, BulbIcon, Cancel01Icon, Clock01Icon, CollapseIcon, ExpandIcon, Search01Icon, TaskEdit01Icon } from "@hugeicons/core-free-icons";
 import {
   useCallback,
   useEffect,
@@ -178,7 +178,6 @@ export const AssistantShell = forwardRef<
   // reading column to use more of the larger surface.
   const convoMaxW = isExpanded ? "max-w-4xl" : "max-w-3xl";
   const t = useTranslations("Assistant");
-  const tRoutines = useTranslations("Routines");
   const tc = useTranslations("Common");
   const tToolCall = useTranslations("ToolCall");
   const tSeed = useTranslations("Seed");
@@ -872,28 +871,6 @@ export const AssistantShell = forwardRef<
  message would unmount it, the focus would go to <body> and the
  FocusScope of the Sheet would place it on the shell (focus halo). */
           <>
-            {state.routineOccurrence ? (
-              <div className="shrink-0 border-b border-border px-4 py-2">
-                <Link
-                  href={`/routines?routine=${encodeURIComponent(state.routineOccurrence.routine_id)}`}
-                  className={cn(
-                    "mx-auto flex w-full items-center gap-2 text-xs text-muted-foreground hover:text-foreground",
-                    convoMaxW,
-                  )}
-                >
-                  <HugeiconsIcon icon={Calendar01Icon} className="size-3.5" aria-hidden />
-                  <span>{tRoutines("routineOccurrence")}</span>
-                  <span aria-hidden>·</span>
-                  <span>
-                    {tRoutines(
-                      state.routineOccurrence.origin === "scheduled"
-                        ? "runOriginScheduled"
-                        : "runOriginManual",
-                    )}
-                  </span>
-                </Link>
-              </div>
-            ) : null}
             {hasMessages ? (
               <Conversation className="min-h-0 flex-1" anchor={scrollAnchor}>
                 <ConversationContent

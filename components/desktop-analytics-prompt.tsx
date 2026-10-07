@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { BarChartIcon } from "@hugeicons/core-free-icons";
+import { Analytics01Icon } from "@hugeicons/core-free-icons";
 import { useRuntimeConfig } from "@/lib/runtime-config-provider";
 
 import { useEffect, useState } from "react";
@@ -111,7 +111,7 @@ export function DesktopAnalyticsPrompt() {
         className="max-w-[calc(100%-2rem)] sm:max-w-[420px]"
       >
         <div className="flex size-9 items-center justify-center rounded-full bg-muted text-muted-foreground">
-          <HugeiconsIcon icon={BarChartIcon} className="size-4" />
+          <HugeiconsIcon icon={Analytics01Icon} className="size-4" />
         </div>
         <DialogTitle className="mt-3 text-base">{t("promptTitle")}</DialogTitle>
         <DialogDescription className="leading-relaxed">
