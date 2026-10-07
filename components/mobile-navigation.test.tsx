@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
-import { act, type MouseEvent, type ReactNode } from "react";
+import { act, useLayoutEffect, useState, type MouseEvent, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
+import { createPortal } from "react-dom";
+import { SecondarySidebarProvider, useMobileSecondarySidebar } from "@/lib/secondary-sidebar-context";
 import { NextIntlClientProvider } from "next-intl";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { MobileNavigation, type MobileMenuPanel } from "./mobile-navigation";
@@ -12,7 +14,7 @@ vi.mock("@/components/app-link", () => ({ default: ({ href, onClick, children, .
 }) => <a {...props} href={href} onClick={(event: MouseEvent) => { event.preventDefault(); onClick?.(); navigation.visit(href); }}>{children}</a> }));
 vi.mock("./app-sidebar", () => ({
   SidebarFrame: ({ children, onNavigate, focusRef }: { children: ReactNode; onNavigate: () => void; focusRef: React.Ref<HTMLElement> }) => <aside ref={focusRef} tabIndex={-1} onClickCapture={(event) => { if ((event.target as Element).closest("a[href]")) onNavigate(); }}>{children}</aside>,
-  SidebarTopBand: ({ onCreate }: { onCreate: () => void }) => <button onClick={onCreate}>New issue</button>,
+  SidebarTopBand: ({ onCreate, secondary, headerRef }: { onCreate: () => void; secondary: boolean; headerRef: React.Ref<HTMLDivElement> }) => <div><button hidden={secondary} onClick={onCreate}>New issue</button><div ref={headerRef} data-test-header hidden={!secondary} /></div>,
   SidebarBackRow: ({ label, onBack, ariaLabel }: { label: string; onBack: () => void; ariaLabel: string }) => <button aria-label={ariaLabel} onClick={onBack}>{label}</button>,
   ProjectContextRow: () => null,
   SidebarRows: ({ sections }: { sections: { items: { key: string; href?: string; label: string; onClick: () => void; browseKey?: string }[] }[] }) => sections.map((section, index) => <section key={index}>{section.items.map((item) => item.href
@@ -28,6 +30,8 @@ vi.mock("mangue-ui", async () => ({
   ...await import("../node_modules/mangue-ui/src/lib/utils"),
 }));
 vi.mock("@/lib/use-mobile-layout", () => ({ useMobileLayout: () => navigation.mobile }));
+const activeElement = <T extends HTMLElement>(selector: string) => [...document.querySelectorAll<T>(selector)].find((node) => !node.closest("[inert]"))!;
+const activePanel = () => activeElement<HTMLElement>("[data-mobile-sidebar-panel]");
 let root: ReturnType<typeof createRoot>;
 let container: HTMLDivElement;
 beforeEach(() => {
@@ -44,16 +48,20 @@ it("browses projects and resource levels without leaving the sidebar until a fin
   const objectives: MobileMenuPanel = { key: "beacon-objectives", title: "Objectives", sections: [{ items: [{ key: "overview", label: "All objectives", href: "/projects/beacon/objectives" }] }] };
   const beacon: MobileMenuPanel = { key: "beacon", title: "Beacon", sections: [{ items: [{ key: "objectives", label: "Objectives", href: "/projects/beacon/objectives", panel: objectives, onClick: branchAction }] }] };
   const aurora: MobileMenuPanel = { key: "aurora", title: "Aurora", sections: [{ items: [{ key: "board", label: "Tickets", href: "/projects/aurora" }] }] };
-  await act(() => root.render(<div className="app-shell"><NextIntlClientProvider locale="en" messages={{ Nav: { goTo: "Go to", home: "Home", searchPlaceholder: "Search" }, Common: { back: "Back", close: "Close" } }}>
+  await act(() => root.render(<div className="app-shell"><NextIntlClientProvider locale="en" messages={{ Nav: { goTo: "Go to", home: "Home", searchPlaceholder: "Search" }, Common: { back: "Back", close: "Close", clearFilter: "Clear filter" }, Settings: { filterPlaceholder: "Filter {count} items" } }}>
     <MobileNavigation initialPanel={aurora} sections={[{ items: [{ key: "beacon", label: "Beacon", href: "/projects/beacon", panel: beacon, onClick: branchAction }] }]} onSearch={() => {}} />
   </NextIntlClientProvider></div>));
-  const click = async (selector: string) => { await act(() => document.querySelector<HTMLElement>(selector)!.click()); };
+  const click = async (selector: string) => { await act(() => activeElement<HTMLElement>(selector).click()); };
   const dialog = () => document.querySelector('[role="dialog"]');
   await click("[data-mobile-menu-trigger]");
   expect(dialog()?.textContent).toContain("Aurora");
   expect(container.querySelector<HTMLElement>(".app-shell")?.inert).toBe(true);
   expect(dialog()?.querySelector('button[aria-label="Close"]')).toBeNull();
   await click('button[aria-label="Back"]');
+  const outgoing = document.querySelector('[data-mobile-sidebar-panel="aurora"]')!.parentElement!;
+  expect(outgoing.hasAttribute("inert")).toBe(true);
+  expect(outgoing.getAttribute("aria-hidden")).toBe("true");
+  expect(outgoing.style.pointerEvents).toBe("none");
   await click('[data-mobile-menu-branch="beacon"]');
   expect(dialog()?.textContent).toContain("Beacon");
   expect(document.activeElement).toBe(dialog()?.querySelector("aside"));
@@ -73,14 +81,14 @@ it("browses projects and resource levels without leaving the sidebar until a fin
   expect(document.activeElement).toBe(document.querySelector("[data-mobile-menu-trigger]"));
   await click("[data-mobile-menu-trigger]");
   expect(dialog()?.textContent).toContain("Aurora");
-  expect(dialog()?.textContent).not.toContain("Beacon");
+  expect(activePanel()?.textContent).not.toContain("Beacon");
   await act(() => window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })));
   expect(dialog()).toBeNull();
   expect(container.querySelector<HTMLElement>(".app-shell")?.inert).toBe(false);
 });
 
 it("restores the page and workspace when switching to desktop and back", async () => {
-  const render = () => root.render(<div className="app-shell"><NextIntlClientProvider locale="en" messages={{ Nav: { goTo: "Go to", home: "Home", searchPlaceholder: "Search" }, Common: { back: "Back", close: "Close" } }}>
+  const render = () => root.render(<div className="app-shell"><NextIntlClientProvider locale="en" messages={{ Nav: { goTo: "Go to", home: "Home", searchPlaceholder: "Search" }, Common: { back: "Back", close: "Close", clearFilter: "Clear filter" }, Settings: { filterPlaceholder: "Filter {count} items" } }}>
     <MobileNavigation sections={[]} onSearch={() => {}} />
   </NextIntlClientProvider></div>);
   await act(render);
@@ -103,7 +111,7 @@ it("restores the page and workspace when switching to desktop and back", async (
 
 it("adopts a cold-loaded route panel without resetting deliberate browsing", async () => {
   let loadedPanels: MobileMenuPanel[] = [];
-  const render = () => root.render(<div className="app-shell"><NextIntlClientProvider locale="en" messages={{ Nav: { goTo: "Go to", home: "Home", searchPlaceholder: "Search" }, Common: { back: "Back", close: "Close" } }}>
+  const render = () => root.render(<div className="app-shell"><NextIntlClientProvider locale="en" messages={{ Nav: { goTo: "Go to", home: "Home", searchPlaceholder: "Search" }, Common: { back: "Back", close: "Close", clearFilter: "Clear filter" }, Settings: { filterPlaceholder: "Filter {count} items" } }}>
     <MobileNavigation sections={[]} initialPanels={loadedPanels} onSearch={() => {}} />
   </NextIntlClientProvider></div>);
   await act(render);
@@ -111,8 +119,43 @@ it("adopts a cold-loaded route panel without resetting deliberate browsing", asy
   loadedPanels = [{ key: "aurora", title: "Aurora", sections: [] }];
   await act(render);
   expect(document.querySelector('[role="dialog"]')?.textContent).toContain("Aurora");
-  await act(() => document.querySelector<HTMLButtonElement>('button[aria-label="Back"]')!.click());
+  await act(() => activeElement<HTMLButtonElement>('button[aria-label="Back"]').click());
   loadedPanels = [...loadedPanels];
   await act(render);
-  expect(document.querySelector('[role="dialog"]')?.textContent).not.toContain("Aurora");
+  expect(activePanel()?.textContent).not.toContain("Aurora");
+});
+
+
+it("keeps route-owned portal controls mounted while browsing other levels and shares the header with only the active filter", async () => {
+  const collection: MobileMenuPanel = { key: "collection", title: "Collection", sidebarRoute: "/projects/aurora" };
+  const other: MobileMenuPanel = { key: "other", title: "Other", sections: [{ items: [{ key: "leaf", label: "Other destination", href: "/other" }] }] };
+  function RouteList() {
+    const secondary = useMobileSecondarySidebar()!;
+    const [query, setQuery] = useState("");
+    useLayoutEffect(() => secondary.register(), [secondary.register]);
+    return secondary.mobileHost ? <>
+      {createPortal(<input aria-label="Collection filter" value={query} onChange={(event) => setQuery(event.target.value)} />, secondary.mobileHost.header)}
+      {createPortal(<button>Collection item</button>, secondary.mobileHost.body)}
+    </> : null;
+  }
+  await act(() => root.render(<div className="app-shell"><NextIntlClientProvider locale="en" messages={{ Nav: { goTo: "Go to", home: "Home", searchPlaceholder: "Search" }, Common: { back: "Back", close: "Close", clearFilter: "Clear filter" }, Settings: { filterPlaceholder: "Filter {count} items" } }}>
+    <SecondarySidebarProvider><RouteList /><MobileNavigation initialPanel={collection} sections={[{ items: [
+      { key: "collection", label: "Collection", panel: collection }, { key: "other", label: "Other", panel: other },
+    ] }]} onSearch={() => {}} /></SecondarySidebarProvider>
+  </NextIntlClientProvider></div>));
+  await act(() => activeElement<HTMLButtonElement>("[data-mobile-menu-trigger]").click());
+  const originalInput = activeElement<HTMLInputElement>('input[aria-label="Collection filter"]');
+  expect(originalInput).toBeDefined();
+  originalInput.focus();
+  await act(() => activeElement<HTMLButtonElement>('button[aria-label="Back"]').click());
+  expect(originalInput.closest("[hidden][inert]")).not.toBeNull();
+  await act(() => activeElement<HTMLButtonElement>('[data-mobile-menu-branch="other"]').click());
+  expect(activeElement<HTMLInputElement>("input")).not.toBe(originalInput);
+  expect(originalInput.closest("[hidden][inert]")).not.toBeNull();
+  await act(() => activeElement<HTMLButtonElement>('button[aria-label="Back"]').click());
+  await act(() => activeElement<HTMLButtonElement>('[data-mobile-menu-branch="collection"]').click());
+  expect(activeElement<HTMLInputElement>('input[aria-label="Collection filter"]')).toBe(originalInput);
+  expect(activeElement<HTMLElement>("[data-test-header]").querySelectorAll('input:not([inert] input)')).toHaveLength(1);
+  expect(document.activeElement).toBe(document.querySelector('[role="dialog"] aside'));
+  expect(navigation.visit).not.toHaveBeenCalled();
 });

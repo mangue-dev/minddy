@@ -6,6 +6,9 @@ import { useTranslations } from "next-intl";
 import { Home01Icon, Menu01Icon, Search01Icon } from "@hugeicons/core-free-icons";
 import { AppIcon } from "@/components/icon";
 import { createPortal } from "react-dom";
+import { AnimatePresence, motion, useIsPresent, useReducedMotion } from "framer-motion";
+import { transitions } from "@/lib/motion";
+import { SidebarPanelTransition } from "./sidebar-panel-transition";
 import { SecondarySidebarHeader } from "@/components/secondary-sidebar";
 import { matchesFilter } from "@/components/sidebar-filter-field";
 import Link from "@/components/app-link";
@@ -57,6 +60,10 @@ export function MobileNavigation({ sections, initialPanel, initialPanels, projec
   const browsing = useRef(false);
   const panel = panels.at(-1);
   const secondary = useMobileSecondarySidebar();
+  const reduce = useReducedMotion();
+  const panelTransition = reduce ? { duration: 0 } : transitions.panel;
+  const collectionPanel = (initialPanels ?? (initialPanel ? [initialPanel] : [])).find((item) => item.sidebarRoute === pathname);
+  const showCollection = !!collectionPanel && panel?.key === collectionPanel.key && !!secondary?.present;
   const onBrowse = useCallback((next: MobileMenuPanel) => { browsing.current = true; setPanels((previous) => [...previous, next]); }, []);
   const onBack = useCallback(() => { browsing.current = true; setPanels((previous) => previous.slice(0, -1)); }, []);
   const onNavigate = useCallback(() => setMenuOpen(false), []);
@@ -86,35 +93,75 @@ export function MobileNavigation({ sections, initialPanel, initialPanels, projec
     <MobileSidebarReveal open={menuOpen} onOpenChange={onOpenChange} trigger={menuTrigger} focusTarget={focusTarget} label={t("goTo")}>
       <SidebarFrame id={sidebarId} mobile onNavigate={onNavigate} focusRef={focusTarget}>
         <SidebarTopBand secondary={!!panel && !panel.project} headerRef={setHeaderHost} onCreate={onNavigate} />
-        {!!panel && !panel.project && <SidebarBackRow label={panel.title} ariaLabel={tc("back")} onBack={onBack} />}
-        {panel?.sidebarRoute === pathname && secondary?.present ?
-          <MobileCollectionMenu route={pathname} onNavigate={onNavigate} headerHost={headerHost} /> :
-          <MobileSheetScrollArea key={panel?.key ?? "home"} className={`space-y-4 px-2.5 pb-2 ${!panel || panel.project ? "pt-[calc((var(--app-content-header-height)-2.25rem)/2)]" : ""}`}>
-            {panel?.project && <ProjectContextRow
-              homeItem={{ key: "home-back", label: t("home"), href: "/home" }} currentProject={panel.project} projects={projects}
-              onBack={onBack}
-              onProjectSelect={(project) => {
-                const next = sections.flatMap((section) => section.items).find((item) => item.panel?.project?.id === project.id)?.panel;
-                if (next) { browsing.current = true; setPanels([next]); }
-              }} />}
-            {panel?.render ? panel.render(navigation) : panel && !panel.project ? <MobileStaticMenu key={panel.key} sections={panel.sections ?? []} {...navigation} /> : <MobileMenuRows sections={panel?.sections ?? sections} {...navigation} />}
-          </MobileSheetScrollArea>}
+        <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
+          {collectionPanel && secondary?.present && <motion.div
+            data-mobile-sidebar-panel={collectionPanel.key}
+            className="absolute inset-0 flex min-h-0 flex-col"
+            inert={!showCollection} aria-hidden={!showCollection}
+            initial={false}
+            animate={{ opacity: showCollection ? 1 : 0, x: showCollection ? 0 : 16 }}
+            transition={panelTransition}
+            style={{ pointerEvents: showCollection ? "auto" : "none" }}>
+            <SidebarBackRow label={collectionPanel.title} ariaLabel={tc("back")} onBack={onBack} />
+            <MobileCollectionMenu route={pathname} active={showCollection} onNavigate={onNavigate} headerHost={headerHost} />
+          </motion.div>}
+          <AnimatePresence mode="sync" initial={false}>
+            {!showCollection && <SidebarPanelTransition key={panel?.key ?? "home"}
+              className="absolute inset-0 flex min-h-0 flex-col" offset={panel ? 16 : -16} transition={panelTransition}>
+              <MobileBrowsePanel panel={panel} sections={sections} projects={projects} navigation={navigation} onBack={onBack}
+                onProjectSelect={(project) => {
+                  const next = sections.flatMap((section) => section.items).find((item) => item.panel?.project?.id === project.id)?.panel;
+                  if (next) { browsing.current = true; setPanels([next]); }
+                }} />
+            </SidebarPanelTransition>}
+          </AnimatePresence>
+        </div>
       </SidebarFrame>
     </MobileSidebarReveal>
   </>;
 }
 
-/** The page keeps selection and filters while its navigation lives in the menu. */
-function MobileCollectionMenu({ route, onNavigate, headerHost }: { route: string; onNavigate: () => void; headerHost: HTMLElement | null }) {
+/** Exiting levels keep their rows visible, but only the current level owns the filter band. */
+function MobileBrowsePanel({ panel, sections, projects, navigation, onBack, onProjectSelect }: {
+  panel?: MobileMenuPanel;
+  sections: MobileMenuSection[];
+  projects: Project[];
+  navigation: MobileMenuNavigation;
+  onBack: () => void;
+  onProjectSelect: (project: Project) => void;
+}) {
+  const present = useIsPresent();
+  const t = useTranslations("Nav");
+  const tc = useTranslations("Common");
+  const currentNavigation = { ...navigation, headerHost: present ? navigation.headerHost : null };
+  return <div data-mobile-sidebar-panel={panel?.key ?? "home"} className="flex min-h-0 flex-1 flex-col">
+    {!!panel && !panel.project && <SidebarBackRow label={panel.title} ariaLabel={tc("back")} onBack={onBack} />}
+    <MobileSheetScrollArea className={`space-y-4 px-2.5 pb-2 ${!panel || panel.project ? "pt-[calc((var(--app-content-header-height)-2.25rem)/2)]" : ""}`}>
+      {panel?.project && <ProjectContextRow
+        homeItem={{ key: "home-back", label: t("home"), href: "/home" }} currentProject={panel.project} projects={projects}
+        onBack={onBack} onProjectSelect={onProjectSelect} />}
+      {panel?.render ? panel.render(currentNavigation) : panel && !panel.project ?
+        <MobileStaticMenu sections={panel.sections ?? []} {...currentNavigation} /> :
+        <MobileMenuRows sections={panel?.sections ?? sections} {...currentNavigation} />}
+    </MobileSheetScrollArea>
+  </div>;
+}
+
+/** Keep portal destinations mounted like desktop so browsing preserves page-owned state. */
+function MobileCollectionMenu({ route, active, onNavigate, headerHost }: {
+  route: string; active: boolean; onNavigate: () => void; headerHost: HTMLElement | null;
+}) {
   const secondary = useMobileSecondarySidebar();
   const [body, setBody] = useState<HTMLDivElement | null>(null);
+  const [header, setHeader] = useState<HTMLDivElement | null>(null);
   const setHost = secondary?.setMobileHost;
   useLayoutEffect(() => {
-    if (!setHost || !headerHost || !body) return;
-    setHost({ route, header: headerHost, body, onNavigate });
+    if (!setHost || !header || !body) return;
+    setHost({ route, header, body, onNavigate });
     return () => setHost(null);
-  }, [setHost, route, headerHost, body, onNavigate]);
+  }, [setHost, route, header, body, onNavigate]);
   return <>
+    {headerHost && createPortal(<div ref={setHeader} hidden={!active} inert={!active} />, headerHost)}
     <MobileSheetScrollArea className="space-y-4 px-2.5 pb-2">
       <div ref={setBody} />
     </MobileSheetScrollArea>

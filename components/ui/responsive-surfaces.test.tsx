@@ -77,13 +77,14 @@ it("keeps a parent form open while selecting from a nested mobile sheet", async 
   expect(document.querySelector('[data-mobile-dialog]')).toBeNull();
 });
 
-it("forwards scroll and click handlers while fading only edges with hidden content", async () => {
+it.each([false, true])("forwards handlers and fades hidden content (asChild: %s)", async (asChild) => {
   const clicked = vi.fn();
   const scrolled = vi.fn();
-  await act(() => root.render(<MobileSheetScrollArea onScroll={scrolled} className="list">
-    <button onClick={clicked}>Choose option</button>
+  await act(() => root.render(<MobileSheetScrollArea asChild={asChild} onScroll={scrolled} className="list">
+    {asChild ? <div data-slot-child><button onClick={clicked}>Choose option</button></div> : <button onClick={clicked}>Choose option</button>}
   </MobileSheetScrollArea>));
   const scroller = container.querySelector<HTMLDivElement>(".list")!;
+  expect(scroller.hasAttribute("data-slot-child")).toBe(asChild);
   Object.defineProperties(scroller, { clientHeight: { value: 100 }, scrollHeight: { value: 300 } });
   const scroll = async (top: number) => {
     await act(() => { scroller.scrollTop = top; scroller.dispatchEvent(new Event("scroll")); });

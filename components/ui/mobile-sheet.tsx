@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Slot } from "radix-ui";
+import { Slot } from "@radix-ui/react-slot";
 import { useTranslations } from "next-intl";
 import { Cancel01Icon } from "@hugeicons/core-free-icons";
 import { Button, SheetClose, SheetContent, cn } from "mangue-ui";
@@ -36,7 +36,7 @@ export function MobileSheetClose() {
 export function MobileSheetScrollArea({ children, asChild = false, className, ...props }: React.ComponentProps<"div"> & { asChild?: boolean }) {
   const mobile = useMobileLayout() === true;
   const { ref, scrollProps, edges } = useScrollFade<HTMLDivElement>();
-  const Content = asChild ? Slot.Root : "div";
+  const Content = asChild ? Slot : "div";
   if (!mobile) return <Content {...props} className={className}>{children}</Content>;
   return <div data-mobile-sheet-scroll className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
     <Content {...props} ref={ref} onScroll={(event) => { props.onScroll?.(event); scrollProps.onScroll(); }}
