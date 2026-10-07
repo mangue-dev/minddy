@@ -3004,7 +3004,13 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
     z-index: 0;
     touch-action: pan-y;
     overflow: hidden;
+    transform-origin: center;
+    transform: scale(calc(0.94 + var(--mobile-sidebar-progress, 0) * 0.06));
+    opacity: calc(0.65 + var(--mobile-sidebar-progress, 0) * 0.35);
+    transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1), opacity 260ms cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: transform, opacity;
   }
+  .mobile-sidebar-reveal[data-mobile-sidebar-dragging="true"] { transition: none; }
   .app-shell[data-mobile-sidebar-surface] {
     position: relative;
     z-index: 1;
@@ -3029,7 +3035,10 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
     background: transparent;
     touch-action: pan-y;
   }
-  @media (prefers-reduced-motion: reduce) { .app-shell[data-mobile-sidebar-surface] { transition: none; } }
+  @media (prefers-reduced-motion: reduce) {
+    .app-shell[data-mobile-sidebar-surface] { transition: none; }
+    .mobile-sidebar-reveal { transform: none; opacity: 1; transition: none; }
+  }
   .mobile-bottom-sheet :is([data-slot="side-panel-header"], [data-slot="side-panel-footer"]) {
     border: 0;
     padding: 8px 16px;

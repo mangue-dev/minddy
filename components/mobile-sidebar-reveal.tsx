@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode, type RefObject } from "react";
 import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
 import { useMobileLayout } from "@/lib/use-mobile-layout";
@@ -8,7 +8,7 @@ import { mobileSidebarWidth, sidebarGestureIntent, sidebarGestureSettlesOpen, si
 
 const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex="0"]';
 
-/** A sidebar behind the full-width page; only the page surface translates. */
+/** A sidebar that rises from behind the translated full-width page. */
 export function MobileSidebarReveal({ open, onOpenChange, trigger, focusTarget, children, label }: {
   open: boolean; onOpenChange: (open: boolean) => void;
   trigger: RefObject<HTMLButtonElement | null>; focusTarget: RefObject<HTMLElement | null>;
@@ -24,6 +24,7 @@ export function MobileSidebarReveal({ open, onOpenChange, trigger, focusTarget, 
   const swallowClick = useRef(false);
   const wasOpen = useRef(false);
   const offset = drag ?? (open ? width : 0);
+  const progress = width > 0 ? Math.max(0, Math.min(1, offset / width)) : 0;
   const shown = open || drag !== null;
 
   useLayoutEffect(() => {
@@ -137,7 +138,8 @@ export function MobileSidebarReveal({ open, onOpenChange, trigger, focusTarget, 
   return createPortal(<>
     <div ref={drawer} role={shown ? "dialog" : undefined} aria-modal={shown || undefined} aria-label={label}
       data-mobile-sidebar-dialog data-state={shown ? "open" : "closed"} aria-hidden={!shown} inert={!shown}
-      className="mobile-sidebar-reveal" style={{ width }}>
+      data-mobile-sidebar-dragging={drag !== null}
+      className="mobile-sidebar-reveal" style={{ width, "--mobile-sidebar-progress": progress } as CSSProperties}>
       {children}
     </div>
     {shown && <button type="button" data-mobile-sidebar-dismiss aria-label={tc("close")} onClick={() => onOpenChange(false)} style={{ left: offset }} />}
