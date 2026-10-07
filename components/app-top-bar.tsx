@@ -28,7 +28,7 @@ export function AppTopBar({ hidden, inbox, onSearch, onSearchWarm, onNewTab }: {
   }, []);
   const native = useWindowButtonsSlot(useWideLayout());
   const width = appTopBarNavigationWidth(hidden);
-  return <div className="app-top-bar relative z-40 hidden h-11 shrink-0 items-center bg-sidebar text-sidebar-foreground desktop:flex">
+  return <div className="app-top-bar relative z-40 hidden h-11 shrink-0 items-center bg-sidebar text-sidebar-foreground app-desktop:flex">
     <div className="app-titlebar-safe-area flex min-w-0 flex-1 items-center">
       <div style={{ width }}
         className="flex h-11 shrink-0 items-center gap-1 px-[10px]">

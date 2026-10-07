@@ -38,21 +38,22 @@ describe("mobile navigation bar clearance", () => {
       "--mobile-nav-clearance: calc(var(--mobile-nav-height) + 0.75rem);",
     );
     // The AppShell reserve is indeed the one that is overwritten, on the <main> of
-    // shell and under the same breakpoint (768px = --breakpoint-desktop).
+    // shell and under the shared mobile layout attribute.
     expect(css).toMatch(
-      /@media \(width < 768px\) \{\s*\.app-shell main \{\s*padding-bottom: var\(--mobile-nav-clearance\);/,
+      /:root\[data-app-layout="mobile"\] \{\s*\.app-shell main \{\s*padding-bottom: var\(--mobile-nav-clearance\);/,
     );
   });
 
-  it("uses the same 768px breakpoint as desktop chrome", () => {
+  it("keeps a 1024px width fallback for dependency chrome", () => {
     expect(read(GLOBALS)).toMatch(
-      /@theme \{\s*--breakpoint-desktop: 768px;/,
+      /@theme \{\s*--breakpoint-desktop: 1024px;/,
     );
   });
 
-  it("forces desktop chrome between 768 and 1200 px even when the dependency is cached", () => {
+  it("synchronizes cached dependency chrome with the runtime layout", () => {
     const css = read(GLOBALS);
-    expect(css).toContain("@media (768px <= width < 1200px)");
+    expect(css).toContain(':root[data-app-layout="desktop"]');
+    expect(css).toContain(':root[data-app-layout="mobile"]');
     expect(css).toContain(".app-shell .desktop\\:flex");
     expect(css).toContain(".app-shell .desktop\\:hidden");
   });

@@ -11,7 +11,8 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
-import { cn, useMediaQuery } from "mangue-ui";
+import { useMobileLayout } from "@/lib/use-mobile-layout";
+import { cn } from "mangue-ui";
 import { useSecondarySidebar } from "@/lib/secondary-sidebar-context";
 import { SidebarFilterField } from "@/components/sidebar-filter-field";
 import { isPlainNavigationClick } from "@/components/editor-node-link";
@@ -21,7 +22,7 @@ import { useNavigationContextActions } from "@/components/navigation-context-act
 
 /**
  * Width of the column the primary sidebar takes when it hosts this bar
- * (MIN-546). Shared by the mobile inline layout (`md:w-80`).
+ * (MIN-546). Shared by the desktop fallback column (`app-desktop:w-80`).
  */
 export const SECONDARY_WIDTH = 320;
 
@@ -41,10 +42,10 @@ const useIsoLayoutEffect =
  *
  * Two renderings, one component:
  *
- * - **≥ 768 px**: teleported INSIDE the primary sidebar (MIN-546) — the
+ * - **Desktop layout**: teleported INSIDE the primary sidebar (MIN-546) — the
  * filter/actions strip into the sidebar's top band, the item list right
  * below the back row. No resizing anywhere: the primary sidebar hosts it.
- * - **< 768 px**: hosted in the navigation sheet when its route is open.
+ * - **Mobile layout**: hosted in the revealed sidebar when its route is open.
  * Selection stays owned by the page; only the navigation moves into the menu.
  */
 export function SecondarySidebar({
@@ -96,7 +97,7 @@ export function SecondarySidebar({
 }) {
   const { headerSlot, slot, register, hosting, mobileHost } = useSecondarySidebar();
   const pathname = usePathname();
-  const isMobileLayout = useMediaQuery("(max-width: 767px)");
+  const isMobileLayout = useMobileLayout() === true;
   // Nothing in the server rendering: the space is reserved by the primary
   // sidebar's route-level panel anyway (routeHasSecondaryNav), and
   // teleporting before knowing where it goes would diverge the hydration.
@@ -197,7 +198,7 @@ export function SecondarySidebar({
       data-sidebar-navigation
       className={cn(
         "min-h-0 flex-col border-border",
-        "w-full shrink-0 md:flex md:w-80 md:border-r",
+        "w-full shrink-0 app-desktop:flex app-desktop:w-80 app-desktop:border-r",
         hiddenOnMobile ? "hidden" : "flex",
       )}
       onContextMenu={(event: MouseEvent<HTMLElement>) => {

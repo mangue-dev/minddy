@@ -244,28 +244,26 @@ select.input {
    MOBILE STYLES
    ============================================================================= */
 
-@media (max-width: 767px) {
-  .header {
-    padding: 16px;
-  }
+:global(html[data-app-layout="mobile"]) .header {
+  padding: 16px;
+}
 
-  .backButton {
-    width: 44px;
-    height: 44px;
-  }
+:global(html[data-app-layout="mobile"]) .backButton {
+  width: 44px;
+  height: 44px;
+}
 
-  .form {
-    padding: 20px 16px;
-  }
+:global(html[data-app-layout="mobile"]) .form {
+  padding: 20px 16px;
+}
 
-  .input {
-    padding: 14px 12px;
-    font-size: 16px; /* Prevents iOS zoom */
-  }
+:global(html[data-app-layout="mobile"]) .input {
+  padding: 14px 12px;
+  font-size: 16px; /* Prevents iOS zoom */
+}
 
-  .cancelButton,
-  .submitButton {
-    padding: 14px 16px;
-    font-size: 16px;
-  }
+:global(html[data-app-layout="mobile"]) .cancelButton,
+  :global(html[data-app-layout="mobile"]) .submitButton {
+  padding: 14px 16px;
+  font-size: 16px;
 }

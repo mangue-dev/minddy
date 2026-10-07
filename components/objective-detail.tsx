@@ -471,7 +471,7 @@ export function ObjectiveDetail({
       <div
         ref={fade.ref}
         {...fade.scrollProps}
-        className="min-h-0 flex-1 overflow-y-auto px-4 py-6 md:px-6"
+        className="min-h-0 flex-1 overflow-y-auto px-4 py-6 app-desktop:px-6"
       >
         <div className="mx-auto flex max-w-3xl flex-col gap-4">
           <AutoTextarea
@@ -576,7 +576,7 @@ export function ObjectiveDetail({
         </div>
       </div>
 
-      <div className="dock-above-nav shrink-0 bg-background px-4 py-3 md:px-6">
+      <div className="dock-above-nav shrink-0 bg-background px-4 py-3 app-desktop:px-6">
         <div className="mx-auto max-w-3xl">
           <CommentComposer
             members={members}

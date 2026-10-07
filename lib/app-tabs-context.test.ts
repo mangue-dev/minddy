@@ -14,9 +14,10 @@ import { createHomeTab } from "./app-tabs";
 import type { AppTabsSession } from "./app-tabs-session";
 
 const query = vi.hoisted(() => ({ isPending: false, isError: false, refetch: vi.fn() }));
-const router = vi.hoisted(() => ({ push: vi.fn() }));
+const router = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn() }));
+const viewport = vi.hoisted(() => ({ mobile: false }));
 const auth = vi.hoisted(() => ({ user: { id: "owner" } as { id: string } | null }));
-vi.mock("./use-mobile-layout", () => ({ useMobileLayout: () => false }));
+vi.mock("./use-mobile-layout", () => ({ useMobileLayout: () => viewport.mobile }));
 vi.mock("./auth-context", () => ({ useAuth: () => auth }));
 vi.mock("./use-app-tabs-query", () => ({
   appTabsQueryKey: (owner: string) => ["app-tabs", owner],
@@ -51,6 +52,8 @@ function Actions() {
 
 beforeEach(async () => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  viewport.mobile = false;
+  router.replace.mockClear();
   sessionStorage.clear();
   auth.user = { id: "owner" };
   renders = { strip: 0, navigation: 0, actions: 0 };
@@ -76,9 +79,20 @@ afterEach(async () => {
   client.clear();
   container.remove();
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 
 describe("application tab subscriptions", () => {
+  it("does not reset the current page when a desktop reload rotates into mobile", async () => {
+    window.history.replaceState(null, "", "/projects/example");
+    vi.spyOn(performance, "getEntriesByType").mockReturnValue([{ type: "reload" } as PerformanceNavigationTiming]);
+    const tree = () => createElement(QueryClientProvider, { client },
+      createElement(AppTabsProvider, { children: createElement(Page) }));
+    viewport.mobile = true;
+    await act(() => root.render(tree()));
+    expect(router.replace).not.toHaveBeenCalled();
+    expect(window.location.pathname).toBe("/projects/example");
+  });
   it("replaces the session on account switches and clears optional contexts on sign-out", async () => {
     let values: unknown[] = [];
     function OptionalConsumers() {

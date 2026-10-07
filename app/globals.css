@@ -7,16 +7,14 @@
 @source "../node_modules/streamdown/dist/*.js";
 @source "../node_modules/@streamdown/code/dist/*.js";
 
-/* The shell remains a desktop application from 768 px: primary navigation and
-   the full command palette. Below this threshold only, the pill
-   mobile navigation takes over. 768–1199 px displays use the
-   retracted side panel (see AppShellChrome), rather than the mobile interface.
-   This redefinition, after the mango-ui tokens, aligns `desktop:` and
-   `max-desktop:` on the same threshold. */
+/* App chrome follows the shared runtime policy, including tablet orientation.
+   Ordinary content grids keep Tailwind's independent width breakpoints. */
 @theme {
-  --breakpoint-desktop: 768px;
+  --breakpoint-desktop: 1024px;
   --breakpoint-wide: 1200px;
 }
+@custom-variant app-mobile (&:where(html[data-app-layout="mobile"] *));
+@custom-variant app-desktop (&:where(html[data-app-layout="desktop"] *));
 
 /* One hover cursor for the whole app (MIN-587): buttons and every other
    interactive element show the default arrow, never the pointer hand. The
@@ -51,17 +49,11 @@
   cursor: default;
 }
 
-/* `mangue-ui` is also compiled by Turbopack as a dependency: according to the
-   development cache, its `desktop:` utilities can keep the
-   published threshold (1200 px) while those in the application have already read the theme
-   above. The shell cannot be cut in two: this layer
-   forces the three primitives of chromium in the intermediate slice, with a
-   higher specificity than library utilities.
+/* Dependency chrome can retain compiled width utilities. Match its shell
+   wrappers to the same layout attribute as the application components. */
+:root[data-app-layout="desktop"] {
+  .app-shell main { padding-bottom: 0; }
 
-   It is voluntarily limited to `.app-shell`: public pages keep
-   their own adaptations, and this rule does not arbitrarily expand any
-   l'interface. */
-@media (768px <= width < 1200px) {
   .app-shell .desktop\:flex {
     display: flex !important;
   }
@@ -75,6 +67,11 @@
   .app-shell > .desktop\:flex {
     display: flex !important;
   }
+}
+
+:root[data-app-layout="mobile"] {
+  .app-shell .desktop\:flex { display: none !important; }
+  .app-shell .desktop\:hidden { display: flex !important; }
 }
 
 /* In the Electron app, the fixed strip that allows you to move the window covers
@@ -93,18 +90,14 @@ html[data-desktop-app] .sidebar-nav-hotzone {
 .compact-window-controls-clearance {
   display: none;
 }
-@media (width < 768px) {
-  html[data-desktop-platform="darwin"] .compact-window-controls-clearance {
+:root[data-app-layout="mobile"] {
+  &[data-desktop-platform="darwin"] .compact-window-controls-clearance {
     display: flex;
   }
 }
 
-/* mango-ui gives menu options a higher touch target up to
-   1199 px (`max-[1199px]:min-h-10`). However, the application remains desktop
-   from 768 px: in this section, the menus must regain their density of
-   desktop (the original `py-1.5`). The rule is outside layer and `!important` for
-   also cover utilities already compiled in the dependency. */
-@media (width >= 768px) {
+/* Desktop dropdowns keep their density even on a touch-capable wide viewport. */
+:root[data-app-layout="desktop"] {
   [data-slot="dropdown-menu-item"],
   [data-slot="dropdown-menu-checkbox-item"],
   [data-slot="dropdown-menu-radio-item"],
@@ -506,7 +499,7 @@ button[data-variant="ghost"] {
    shared surface makes it one continuous frame. The content column (header
    clearance + <main>, mangue-ui app-shell's right child) floats over it as a
    rounded card, clear of the right and bottom window edges, flush against the
-   top bar above and the sidebar on its left. Desktop only; below 768 px the
+   top bar above and the sidebar on its left. Desktop only; in mobile layout the
    shell keeps its classic full-bleed layout and floating pill navigation.
 
    `--app-pane-radius` is the single source of the pane's corner rounding: the
@@ -535,7 +528,7 @@ button[data-variant="ghost"] {
   );
 }
 
-@media (min-width: 768px) {
+:root[data-app-layout="desktop"] {
   .app-shell {
     background: var(--sidebar);
   }
@@ -721,7 +714,7 @@ button[data-variant="ghost"] {
   }
 
   /* Both modes use numeric dimensions and the same right/bottom anchors. */
-  @media (min-width: 768px) {
+  :root[data-app-layout="desktop"] {
     [data-slot="sheet-content"].assistant-panel-expanded {
       top: auto !important;
       left: auto !important;
@@ -1092,8 +1085,8 @@ button[data-variant="ghost"] {
   --mobile-nav-clearance: calc(var(--mobile-nav-height) + 0.75rem);
 }
 
-/* 768px = `--breakpoint-desktop`, the point where the pill appears. */
-@media (width < 768px) {
+/* Reserve the actual navigation height whenever the mobile layout is active. */
+:root[data-app-layout="mobile"] {
   .app-shell main {
     padding-bottom: var(--mobile-nav-clearance);
   }
@@ -2165,9 +2158,9 @@ html[data-app-shell] [data-radix-scroll-area-viewport][style*="overflow-y: scrol
    when it comes from the sidebar. Not a pixel more either: beyond that, the
    box would come out of the column.
 
-   Under `md`, the column is only 24 px indented: the extended box would overflow
+   In mobile layout, the column is only 24px indented: the extended box would overflow
    of the container that passes by. And there's no hovering on a touchscreen. */
-@media (min-width: 768px) {
+:root[data-app-layout="desktop"] {
   .page-editor[data-gutter] .ProseMirror {
     padding-left: 96px;
     margin-left: -96px;
@@ -2812,7 +2805,7 @@ html[data-desktop-platform="darwin"]
   flex-shrink: 0;
 }
 
-@media (width < 768px) {
+:root[data-app-layout="mobile"] {
   .content-toaster[data-sonner-toaster][data-x-position="center"] {
     bottom: calc(var(--mobile-nav-clearance) + 1rem);
   }
@@ -2841,9 +2834,9 @@ html[data-desktop-platform="darwin"]
     box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
   }
 }
-@media (min-width: 768px) {
+:root[data-app-layout="desktop"] {
   .app-top-bar { display: flex; }
-  html[data-desktop-app][data-app-top-bar] .desktop-drag-band { display: none; }
+  &[data-desktop-app][data-app-top-bar] .desktop-drag-band { display: none; }
 }
 html[data-desktop-app] .app-top-bar,
 html[data-desktop-app] .app-content-header { -webkit-app-region: drag; }
@@ -2863,8 +2856,8 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
   z-index: 30;
   -webkit-app-region: drag;
 }
-@media (max-width: 767px) {
-  html[data-integrated-caption-controls]:not([data-desktop-platform="darwin"]) .app-workspace::before {
+:root[data-app-layout="mobile"] {
+  &[data-integrated-caption-controls]:not([data-desktop-platform="darwin"]) .app-workspace::before {
     content: "";
     display: block;
     height: 44px;
@@ -2889,7 +2882,7 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
 
 /* Mobile sheets share one breakpoint and viewport budget. Wide data surfaces
    (boards, tables, code and diffs) retain their own intentional scroll areas. */
-@media (width < 768px) {
+:root[data-app-layout="mobile"] {
   .app-workspace, .app-shell main, #app-tab-content {
     min-width: 0;
     max-width: 100%;
@@ -3022,7 +3015,7 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
     will-change: transform;
     touch-action: pan-y pinch-zoom;
   }
-  html:has([data-mobile-sidebar-surface]) { overscroll-behavior-x: none; }
+  &:has([data-mobile-sidebar-surface]) { overscroll-behavior-x: none; }
   .app-shell[data-mobile-sidebar-open="true"] { box-shadow: -8px 0 32px rgb(0 0 0 / 0.08); }
   .app-shell[data-mobile-sidebar-dragging="true"] { transition: none; }
   [data-mobile-sidebar-dismiss] {
@@ -3180,7 +3173,7 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
   }
 }
 
-@media (width < 768px) {
+:root[data-app-layout="mobile"] {
   .mobile-side-panel-sheet[data-slot="sheet-content"] {
     height: calc(var(--mobile-viewport-height, 100dvh) - max(1rem, env(safe-area-inset-top)));
     overflow: hidden;
@@ -3192,7 +3185,7 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
   }
 }
 
-@media (width < 768px) {
+:root[data-app-layout="mobile"] {
   .mobile-inbox-sheet[data-slot="sheet-content"] {
     height: min(85dvh, calc(var(--mobile-viewport-height, 100dvh) - 1rem));
     max-height: calc(var(--mobile-viewport-height, 100dvh) - 1rem);
@@ -3204,7 +3197,7 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
 .creation-field-label { display: none; }
 .creation-title { display: block; }
 
-@media (width < 768px) {
+:root[data-app-layout="mobile"] {
   .creation-sheet[data-slot="sheet-content"] {
     height: min(92dvh, calc(var(--mobile-viewport-height, 100dvh) - 1rem));
     padding: 8px 1rem max(1rem, env(safe-area-inset-bottom));
@@ -3285,7 +3278,7 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
   .creation-submit > *, .creation-submit button[type="submit"] { flex: 1; }
 }
 
-@media (width < 768px) {
+:root[data-app-layout="mobile"] {
   .creation-property > button,
   .creation-property > button:hover,
   .creation-property > button:focus-visible,

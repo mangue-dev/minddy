@@ -175,34 +175,27 @@
 }
 
 /* Mobile adjustments */
-@media (max-width: 767px) {
-  .item {
-    padding: 10px 12px;
-    min-height: 44px; /* Touch target */
-    touch-action: manipulation;
-  }
-
-  .icon {
-    width: 24px;
-    height: 24px;
-  }
-
-  .icon svg {
-    width: 18px;
-    height: 18px;
-  }
-
-  .title {
-    font-size: 1rem;
-  }
-
-  /* Hide type indicator on mobile to save space */
-  .typeIndicator {
-    display: none;
-  }
-
-  /* Hide shortcuts on mobile */
-  .shortcut {
-    display: none;
-  }
+:global(html[data-app-layout="mobile"]) .item {
+  padding: 10px 12px;
+  min-height: 44px; /* Touch target */
+  touch-action: manipulation;
+}
+:global(html[data-app-layout="mobile"]) .icon {
+  width: 24px;
+  height: 24px;
+}
+:global(html[data-app-layout="mobile"]) .icon svg {
+  width: 18px;
+  height: 18px;
+}
+:global(html[data-app-layout="mobile"]) .title {
+  font-size: 1rem;
+}
+/* Hide type indicator on mobile to save space */
+:global(html[data-app-layout="mobile"]) .typeIndicator {
+  display: none;
+}
+/* Hide shortcuts on mobile */
+:global(html[data-app-layout="mobile"]) .shortcut {
+  display: none;
 }

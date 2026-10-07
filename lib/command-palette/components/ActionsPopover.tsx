@@ -13,6 +13,7 @@
 
 "use client";
 
+import { useMobileLayout } from "@/lib/use-mobile-layout";
 import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -104,6 +105,7 @@ export function ActionsPopover({
   actions: directActions,
 }: ActionsPopoverProps) {
   const { t, registry } = usePaletteConfig();
+  const isMobile = useMobileLayout() === true;
 
   const actionActiveIndex = usePaletteStore((state) => state.actionActiveIndex);
   const actionsPopoverQuery = usePaletteStore((state) => state.actionsPopoverQuery);
@@ -322,7 +324,6 @@ export function ActionsPopover({
   let globalIndex = 0;
 
   // Portal on desktop (with anchor), inline on mobile
-  const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
   const shouldUsePortal = !isMobile && !!anchorRef?.current;
 
   // Wait for position before rendering with portal (prevents jump)

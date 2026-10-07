@@ -40,7 +40,7 @@ export function HomeTip() {
   return (
     // Full row width, `mt-auto` glues it to the foot of the page; the container
     // itself is content-sized and centered.
-    <p data-home-tip className="mt-auto hidden justify-center pt-8 text-xs text-muted-foreground md:flex">
+    <p data-home-tip className="mt-auto hidden justify-center pt-8 text-xs text-muted-foreground app-desktop:flex">
       {tip && (
         /* Its own container: content width bounded by the hint's max width,
            centered on the WHOLE row (mx-auto + w-fit) — the text keeps

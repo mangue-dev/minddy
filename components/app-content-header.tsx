@@ -29,7 +29,7 @@ export function AppContentHeader({
   return (
     <div
       className={cn(
-        "app-content-header sticky top-0 z-[35] h-[var(--app-content-header-height)] shrink-0 max-md:overflow-hidden md:overflow-x-auto overflow-y-hidden bg-background overscroll-x-contain",
+        "app-content-header sticky top-0 z-[35] h-[var(--app-content-header-height)] shrink-0 app-mobile:overflow-hidden app-desktop:overflow-x-auto overflow-y-hidden bg-background overscroll-x-contain",
         "[-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
         className,
       )}
@@ -37,7 +37,7 @@ export function AppContentHeader({
     >
       <div
         className={cn(
-          "flex h-full min-w-0 md:min-w-full flex-nowrap items-center px-[var(--app-content-header-pad-x)]",
+          "flex h-full min-w-0 app-desktop:min-w-full flex-nowrap items-center px-[var(--app-content-header-pad-x)]",
           contentClassName,
         )}
       >

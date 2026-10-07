@@ -325,7 +325,7 @@ export default function TrashPage() {
           {...contentFade.scrollProps}
           className="min-h-0 flex-1 overflow-y-auto"
         >
-          <div className="mx-auto w-full max-w-3xl px-4 py-6 md:px-6 md:py-8">
+          <div className="mx-auto w-full max-w-3xl px-4 py-6 app-desktop:px-6 app-desktop:py-8">
             {loading ? (
               <div className="flex flex-col gap-2">
                 {Array.from({ length: 4 }).map((_, index) => (

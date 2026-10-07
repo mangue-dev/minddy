@@ -144,7 +144,7 @@ function ColorCompact({
             onClick={() => pick(null)}
             aria-label={t("noColor")}
             className={cn(
-              "flex size-6 max-md:size-11 items-center justify-center rounded-full border border-border text-[10px] text-muted-foreground",
+              "flex size-6 app-mobile:size-11 items-center justify-center rounded-full border border-border text-[10px] text-muted-foreground",
               value === null && "ring-2 ring-ring ring-offset-2 ring-offset-background"
             )}
           >
@@ -644,7 +644,7 @@ export function ObjectiveDialog({
               )}
               {/* No Cancel button: the dialog's own close X already does
                   that job. */}
-              <div className="creation-submit ml-auto flex items-center justify-end gap-2 max-md:w-full">
+              <div className="creation-submit ml-auto flex items-center justify-end gap-2 app-mobile:w-full">
                 {showSplit ? (
                   /* The tooltip attaches to the action, not the chevron: its
  props pass through `SplitButton` to the left button,
@@ -661,8 +661,8 @@ export function ObjectiveDialog({
                         !form.name.trim() ||
                         uploads.uploading
                       }
-                      className="max-md:w-full"
-                      actionClassName="max-md:flex-1"
+                      className="app-mobile:w-full"
+                      actionClassName="app-mobile:flex-1"
                       menuLabel={t("createInOtherProject")}
                       menu={<>
                         {relations.length > 0 && <DropdownMenuLabel className="max-w-60 whitespace-normal">{tRelations("crossProjectUnavailable")}</DropdownMenuLabel>}
@@ -687,7 +687,7 @@ export function ObjectiveDialog({
                   >
                     <Button
                       type="submit"
-                      className="rounded-full px-4 max-md:w-full"
+                      className="rounded-full px-4 app-mobile:w-full"
                       disabled={
                         submitting ||
                         numoBusy ||

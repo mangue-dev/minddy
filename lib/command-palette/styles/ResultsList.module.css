@@ -120,18 +120,14 @@
 }
 
 /* Mobile adjustments */
-@media (max-width: 767px) {
-  .header {
-    padding: 8px 16px;
-  }
-
-  .headerNotFirst {
-    padding-top: 14px;
-  }
-
-  .headerText {
-    font-size: 0.75rem;
-  }
+:global(html[data-app-layout="mobile"]) .header {
+  padding: 8px 16px;
+}
+:global(html[data-app-layout="mobile"]) .headerNotFirst {
+  padding-top: 14px;
+}
+:global(html[data-app-layout="mobile"]) .headerText {
+  font-size: 0.75rem;
 }
 
 /* Reduced motion - disable animations for accessibility */

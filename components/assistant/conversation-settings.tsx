@@ -144,7 +144,7 @@ export function ConversationSettings() {
           align="start"
           side="top"
           sideOffset={8}
-          className="w-[min(22rem,calc(100vw-2rem))] rounded-xl p-3 md:relative"
+          className="w-[min(22rem,calc(100vw-2rem))] rounded-xl p-3 app-desktop:relative"
         >
           <div className="grid grid-cols-[2.25rem_minmax(0,1fr)_2.25rem] items-center gap-2">
             <div aria-hidden />
@@ -182,7 +182,7 @@ export function ConversationSettings() {
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="shrink-0 md:absolute md:top-1.5 md:right-1.5"
+                  className="shrink-0 app-desktop:absolute app-desktop:top-1.5 app-desktop:right-1.5"
                   aria-label={t("modelSettingsReset")}
                   onClick={reset}
                 >

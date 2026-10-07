@@ -8,6 +8,7 @@ import { SecondarySidebarProvider, useSecondarySidebar } from "./secondary-sideb
 
 vi.mock("next/navigation", () => ({ usePathname: () => "/projects/project/pages" }));
 const viewport = vi.hoisted(() => ({ mobile: false }));
+vi.mock("@/lib/use-mobile-layout", () => ({ useMobileLayout: () => viewport.mobile }));
 vi.mock("mangue-ui", () => ({
   cn: (...values: unknown[]) => values.filter(Boolean).join(" "),
   useMediaQuery: () => viewport.mobile,

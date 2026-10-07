@@ -56,7 +56,7 @@ const DEFAULT_HOUR = 9;
 const CalendarSurface = React.lazy(() =>
   import("@/components/calendar").then((m) => ({ default: m.Calendar })),
 );
-const CALENDAR_FALLBACK = "h-[300px] w-full min-[768px]:w-72 animate-pulse rounded-md bg-muted/50";
+const CALENDAR_FALLBACK = "h-[300px] w-full app-desktop:w-72 animate-pulse rounded-md bg-muted/50";
 
 // "anchored" has no visible trigger: it opens (controlled) at `anchor`, the
 // mouse position — used by the keyboard field shortcuts (issue-field-shortcuts).

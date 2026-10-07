@@ -33,13 +33,21 @@ const SessionContext = createContext<AppTabsSession | null>(null);
 export function AppTabsProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const mobile = useMobileLayout();
+  const previous = useRef<{ owner: string; mobile: boolean } | null>(null);
+  const freshSession = !previous.current || previous.current.owner !== user?.id;
+  const resumeAtCurrentRoute = !freshSession && previous.current?.mobile === true;
+  useEffect(() => {
+    if (!user) previous.current = null;
+    else if (mobile !== undefined) previous.current = { owner: user.id, mobile };
+  }, [user, mobile]);
   // No account tab query, restoration, persistence or retained desktop views on phones.
   if (!user || mobile === undefined) return children;
-  return mobile ? <MobileRoutes key={user.id}>{children}</MobileRoutes>
-    : <AccountTabs key={user.id} owner={user.id}>{children}</AccountTabs>;
+  return mobile ? <MobileRoutes key={user.id} freshSession={freshSession}>{children}</MobileRoutes>
+    : <AccountTabs key={user.id} owner={user.id} resumeAtCurrentRoute={resumeAtCurrentRoute}>{children}</AccountTabs>;
 }
 
-function MobileRoutes({ children }: { children: ReactNode }) {
+function MobileRoutes({ children, freshSession }: { children: ReactNode; freshSession: boolean }) {
+  const resetOnReload = useRef(freshSession).current;
   const router = useRouter();
   const mobileNavigation = useMemo(() => {
     const guards = new Set<() => Promise<boolean>>();
@@ -65,16 +73,17 @@ function MobileRoutes({ children }: { children: ReactNode }) {
     started.current = true;
     const navigation = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming | undefined;
     // A new ordinary session starts at Home. Explicit incoming URLs stay usable.
-    if (navigation?.type === "reload" && window.location.pathname !== "/home") {
+    if (resetOnReload && navigation?.type === "reload" && window.location.pathname !== "/home") {
       router.replace("/home");
     }
-  }, [router]);
+  }, [router, resetOnReload]);
   return <SessionContext.Provider value={null}><NavigationContext.Provider value={null}>
     <Context.Provider value={null}><MobileNavigationContext.Provider value={mobileNavigation}>{children}</MobileNavigationContext.Provider></Context.Provider>
   </NavigationContext.Provider></SessionContext.Provider>;
 }
 
-function AccountTabs({ owner, children }: { owner: string; children: ReactNode }) {
+function AccountTabs({ owner, children, resumeAtCurrentRoute }: { owner: string; children: ReactNode; resumeAtCurrentRoute: boolean }) {
+  const keepCurrentRoute = useRef(resumeAtCurrentRoute).current;
   const client = useQueryClient();
   const router = useRouter();
   const query = useAppTabsQuery(owner);
@@ -154,17 +163,19 @@ function AccountTabs({ owner, children }: { owner: string; children: ReactNode }
     void (async () => {
       let restored: { id: string; href: string } | undefined;
       try {
-        const raw = JSON.parse(sessionStorage.getItem(storageKey) ?? "null");
-        if (raw?.format !== "minddy-local-v1") removeLocalSnapshot(sessionStorage, storageKey);
-        else {
-          const value = await restoreLocalSnapshot(sessionStorage, storageKey, "window-tabs");
-          if (value && typeof value === "object" && "id" in value && "href" in value && typeof value.id === "string" && typeof value.href === "string") restored = { id: value.id, href: value.href };
+        if (!keepCurrentRoute) {
+          const raw = JSON.parse(sessionStorage.getItem(storageKey) ?? "null");
+          if (raw?.format !== "minddy-local-v1") removeLocalSnapshot(sessionStorage, storageKey);
+          else {
+            const value = await restoreLocalSnapshot(sessionStorage, storageKey, "window-tabs");
+            if (value && typeof value === "object" && "id" in value && "href" in value && typeof value.id === "string" && typeof value.href === "string") restored = { id: value.id, href: value.href };
+          }
         }
       } catch { /* Server-backed tab destinations remain available. */ }
-      if (!cancelled) await session.initialize(window.location.pathname + window.location.search + window.location.hash, restored);
+      if (!cancelled) await session.initialize(window.location.pathname + window.location.search + window.location.hash, restored, keepCurrentRoute);
     })();
     return () => { cancelled = true; };
-  }, [query.data, session, storageKey]);
+  }, [query.data, session, storageKey, keepCurrentRoute]);
   // A refresh hides the page first: push the pending location write out
   // immediately, or the next load restores a destination the session outgrew.
   useEffect(() => {

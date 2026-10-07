@@ -8,6 +8,8 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from "react";
+import { COMPACT_DESKTOP_QUERY } from "./app-layout";
+import { useMobileLayout } from "./use-mobile-layout";
 import { useMediaQuery } from "mangue-ui";
 
 /** Persisted choice — survives reloads; the sidebar never reclaims space on
@@ -52,7 +54,9 @@ interface SidebarVisibilityContextValue {
 const SidebarVisibilityContext = createContext<SidebarVisibilityContextValue | null>(null);
 
 export function SidebarVisibilityProvider({ children }: { children: ReactNode }) {
-  const compactDesktop = useMediaQuery("(min-width: 768px) and (max-width: 1199px)");
+  const mobile = useMobileLayout();
+  const narrowDesktop = useMediaQuery(COMPACT_DESKTOP_QUERY);
+  const compactDesktop = mobile === false && narrowDesktop;
   // Compact desktop layouts always hide navigation. Wider layouts follow the
   // user's explicit choice, persisted locally so it survives reloads and never
   // moves by itself.

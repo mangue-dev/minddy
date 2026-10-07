@@ -467,16 +467,14 @@
 }
 
 /* Responsive adjustments */
-@media (max-width: 767px) {
-  /* Prevent iOS zoom on input focus - requires minimum 16px font-size */
-  /* Using both class and element selectors for higher specificity */
-  .inlineSelect,
-  .inlineSelectInput,
-  .inlineTextInput,
-  .inlineField input,
-  .inlineField textarea {
-    font-size: 16px;
-  }
+/* Prevent iOS zoom on input focus - requires minimum 16px font-size */
+/* Using both class and element selectors for higher specificity */
+:global(html[data-app-layout="mobile"]) .inlineSelect,
+  :global(html[data-app-layout="mobile"]) .inlineSelectInput,
+  :global(html[data-app-layout="mobile"]) .inlineTextInput,
+  :global(html[data-app-layout="mobile"]) .inlineField input,
+  :global(html[data-app-layout="mobile"]) .inlineField textarea {
+  font-size: 16px;
 }
 
 @media (max-width: 480px) {

@@ -22,7 +22,6 @@ import {
   AppShell,
   cn,
   toast,
-  useMediaQuery,
 } from "mangue-ui";
 import {
   AppIcon,
@@ -61,7 +60,7 @@ import {
   type PaletteItem,
 } from "@/components/header-search-pill";
 import { usePlanGates } from "@/lib/use-billing-query";
-import { useMobileViewport } from "@/lib/use-mobile-layout";
+import { useMobileLayout, useMobileViewport } from "@/lib/use-mobile-layout";
 import { MobileProjectMenu, MobileRoutinesMenu, MobilePullRequestsMenu, MobileSettingsMenu } from "@/components/mobile-project-menu";
 import { MobileNavigation, type MobileMenuSection, type MobileMenuPanel, type MobileMenuNavigation } from "@/components/mobile-navigation";
 import { useAccountActions } from "@/components/mobile-account";
@@ -327,7 +326,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   );
   const { setOpen: setCheatsheetOpen } = useCheatsheet();
   const { hidden: sidebarHidden } = useSidebarVisibility();
-  const mobileLayout = useMediaQuery("(max-width: 767px)");
+  const mobileLayout = useMobileLayout() === true;
 
   // Command palette open state — shared by the header search pill and the
   // lightweight global shortcut launcher. The full palette mounts on demand.

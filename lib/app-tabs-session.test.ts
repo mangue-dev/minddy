@@ -26,6 +26,36 @@ function setup(initial: AppTab[] = [createHomeTab("owner"), createHomeTab("owner
 }
 
 describe("application tab sessions", () => {
+  it.each([true, false])("keeps Home when entering desktop with an existing Home row: %s", async (hasHome) => {
+    const board = { ...createHomeTab("owner"), href: "/all" };
+    const home = createHomeTab("owner", undefined, 1);
+    const original = hasHome ? [board, home] : [board];
+    const { session, transport, navigate, rows } = setup(original);
+    await session.initialize("/home", { id: board.id, href: board.href }, true);
+    await session.retry();
+    expect(session.getActiveHref()).toBe("/home");
+    expect(navigate).not.toHaveBeenCalled();
+    expect(rows().find((tab) => tab.id === board.id)).toEqual(board);
+    expect(session.getSnapshot().tabs).toHaveLength(2);
+    if (hasHome) {
+      expect(session.getSnapshot().activeId).toBe(home.id);
+      expect(transport.create).not.toHaveBeenCalled();
+    } else {
+      expect(session.getSnapshot().activeId).not.toBe(board.id);
+      expect(transport.create).toHaveBeenCalledOnce();
+    }
+    session.dispose();
+  });
+  it("does not restore a remembered hidden selection when switching to desktop", async () => {
+    const pr = { ...createHomeTab("owner"), href: "/pull-requests?pr=a" };
+    const { session, navigate, rows } = setup([pr]);
+    await session.initialize("/pull-requests", { id: pr.id, href: pr.href }, true);
+    await session.retry();
+    expect(session.getActiveHref()).toBe("/pull-requests");
+    expect(navigate).not.toHaveBeenCalled();
+    expect(rows().find((tab) => tab.id === pr.id)).toEqual(pr);
+    session.dispose();
+  });
   it("reuses an exact destination without replacing the outgoing tab or losing local state", async () => {
     const home = createHomeTab("owner");
     const pr = { ...createHomeTab("owner", undefined, 1), href: "/pull-requests?pr=a" };

@@ -378,7 +378,7 @@ function SettingsTabs({
         <div
           ref={contentFade.ref}
           {...contentFade.scrollProps}
-          className="min-h-0 flex-1 overflow-y-auto px-4 pt-1 pb-8 md:px-6 md:pt-6"
+          className="min-h-0 flex-1 overflow-y-auto px-4 pt-1 pb-8 app-desktop:px-6 app-desktop:pt-6"
         >
           <div className={cn("mx-auto flex flex-col gap-4", SETTINGS_MAX_WIDTH)}>
             {/* Only the open tab is mounted — that's already what it did

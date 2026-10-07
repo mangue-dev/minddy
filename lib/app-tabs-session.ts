@@ -58,7 +58,7 @@ export class AppTabsSession {
   private timer: ReturnType<typeof setTimeout> | undefined;
   private targetTimer: ReturnType<typeof setTimeout> | undefined;
   private localState = new Map<string, unknown>();
-  private startup: { href: string; restored?: { id: string; href: string } } | null = null;
+  private startup: { href: string; restored?: { id: string; href: string }; keepCurrentRoute: boolean } | null = null;
   getLocalState<T>(key: string): T | undefined { return this.localState.get(key) as T | undefined; }
   setLocalState(key: string, value: unknown) { if (!this.disposed) this.localState.set(key, value); }
   private forget(id: string) {
@@ -157,14 +157,15 @@ export class AppTabsSession {
     if (missing) void this.recoverRemoteClose();
   }
 
-  initialize(href: string, restored?: { id: string; href: string }): Promise<void> {
+  initialize(href: string, restored?: { id: string; href: string }, keepCurrentRoute = false): Promise<void> {
     if (this.snapshot.activeId) return Promise.resolve();
-    this.startup = { href, restored };
+    if (keepCurrentRoute) restored = undefined;
+    this.startup = { href, restored, keepCurrentRoute };
     return this.run(async () => {
       if (this.snapshot.activeId) return;
       if (!this.snapshot.tabs.length) this.merge(await this.transport.create(true, crypto.randomUUID()));
       const normalized = normalizeAppTabLocation(href) ?? "/home";
-      const explicit = href !== "/home";
+      const explicit = keepCurrentRoute || href !== "/home";
       // The load destination claims the row that CONVENTIONALLY ALREADY shows
       // it: a live reload (the URL still points at the tab the previous
       // session left open) restores that tab, a typed or shared deep link
@@ -206,7 +207,7 @@ export class AppTabsSession {
         ? restoredTab
         : null;
       const matched = explicit ? this.snapshot.tabs.find((tab) => tab.href === normalized) ?? null : null;
-      if (explicit && !remembered && !matched && normalized !== "/home") {
+      if (explicit && !remembered && !matched && (keepCurrentRoute || normalized !== "/home")) {
         // No row displays the load address: give it its own row. The document
         // is already there, so nothing navigates — the row joins the account
         // like a newly created tab, and every other row keeps its location.
@@ -468,7 +469,7 @@ export class AppTabsSession {
     this.select(next);
   });
   retry = () => {
-    if (!this.snapshot.activeId && this.startup) return this.initialize(this.startup.href, this.startup.restored);
+    if (!this.snapshot.activeId && this.startup) return this.initialize(this.startup.href, this.startup.restored, this.startup.keepCurrentRoute);
     return this.snapshot.recovering ? this.recoverRemoteClose() : this.run(async () => {
       await this.persist(async () => { for (const id of this.creating) await this.createOnServer(id); });
       await this.flushLocation();

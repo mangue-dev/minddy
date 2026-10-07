@@ -934,7 +934,7 @@ export function BoardToolbar({
       <AppContentHeader contentClassName="gap-2">
         {/* Views bar — pills (views + Cycle) are drag-reorderable; the "+"
             stays fixed at the end. */}
-        <div className="flex min-w-0 flex-1 items-center gap-1 md:hidden">
+        <div className="flex min-w-0 flex-1 items-center gap-1 app-desktop:hidden">
           <SearchSelect
             menuActions={[{ id: "create-view", label: t("newView"), icon: <HugeiconsIcon icon={Add01Icon} className="size-4" />, onSelect: () => setCreateOpen(true) }]}
             value={cycleTab?.active ? CYCLE_TAB_KEY : activeViewId}
@@ -950,7 +950,7 @@ export function BoardToolbar({
             </Button>}
           />
         </div>
-        <div className="hidden shrink-0 items-center gap-1 md:flex">
+        <div className="hidden shrink-0 items-center gap-1 app-desktop:flex">
           <DndContext
             sensors={tabSensors}
             collisionDetection={closestCenter}

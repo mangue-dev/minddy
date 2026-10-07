@@ -67,10 +67,10 @@ export function AssistantFab() {
             // `assistant-fab-anchor` re-anchors the FAB to the corner of the centered shell
             // on ultrawide (≥2200px) — see globals.css `.ultrawide-canvas`.
             "assistant-fab-anchor",
-            // Hidden below the 768px mobile cutover — there the assistant is
+            // Hidden in mobile layout — there the assistant is
             // reached from the mobile navbar's Numo button (single entry point),
             // and the FAB would overlap the bottom nav.
-            "max-desktop:hidden",
+            "app-mobile:hidden",
             "fixed z-40 flex items-center gap-1",
             // Badged into the bottom chrome band (Linear-style): flush with the
             // panel's inset, vertically centered in the band itself.
@@ -109,8 +109,8 @@ export function AssistantFab() {
                     )}
                   >
                     {/* `animated={false}` (MIN-323): the face animated
- SVG attributes loop, including masking under 768 px
- (`max-desktop:hidden` mask without unmounting). The activity signal
+ SVG attributes loop, including masking in mobile layout
+ (`app-mobile:hidden` mask without unmounting). The activity signal
  already passes through the `AgentBeam` above. */}
                     <NumoLauncherIcon unread={unread} className="size-4" />
                     <span className="text-[13px] font-medium leading-none">Numo</span>

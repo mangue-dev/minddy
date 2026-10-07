@@ -16,6 +16,7 @@ vi.mock("framer-motion", async (importOriginal) => ({
   ...await importOriginal<typeof import("framer-motion")>(),
   useReducedMotion: () => viewport.reducedMotion,
 }));
+vi.mock("@/lib/use-mobile-layout", () => ({ useMobileLayout: () => false }));
 vi.mock("mangue-ui", () => ({
   cn: (...classes: Array<string | false | undefined>) => classes.filter(Boolean).join(" "),
   useMediaQuery: () => viewport.compact,

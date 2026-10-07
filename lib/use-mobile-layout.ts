@@ -2,19 +2,14 @@
 
 import { useEffect, useSyncExternalStore } from "react";
 
-export const MOBILE_LAYOUT_QUERY = "(max-width: 767px)";
-const subscribe = (notify: () => void) => {
-  if (!window.matchMedia) return () => {};
-  const query = window.matchMedia(MOBILE_LAYOUT_QUERY);
-  query.addEventListener("change", notify);
-  return () => query.removeEventListener("change", notify);
-};
-const snapshot = () => window.matchMedia?.(MOBILE_LAYOUT_QUERY).matches ?? false;
+import { isMobileLayout, subscribeAppLayout } from "./app-layout";
+
+export { MOBILE_LAYOUT_QUERY } from "./app-layout";
 const serverSnapshot = () => undefined;
 
 /** Resolve the viewport before mounting anything that writes desktop tabs. */
 export function useMobileLayout() {
-  return useSyncExternalStore(subscribe, snapshot, serverSnapshot);
+  return useSyncExternalStore(subscribeAppLayout, isMobileLayout, serverSnapshot);
 }
 
 /** Keep sheets above the software keyboard on browsers with a visual viewport. */

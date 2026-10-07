@@ -92,10 +92,10 @@ export function SidebarFilterField({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         aria-label={placeholder}
-        // `text-base` under md: below 16 px, iOS zooms on the field at
+        // `text-base` under app-desktop: below 16 px, iOS zooms on the field at
         // focus and never zoom out again.
         className={cn(
-          "min-w-0 flex-1 bg-transparent text-base outline-none md:text-sm",
+          "min-w-0 flex-1 bg-transparent text-base outline-none app-desktop:text-sm",
           "placeholder:text-muted-foreground",
         )}
         onKeyDown={(e) => {

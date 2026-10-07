@@ -1,8 +1,8 @@
-import { MOBILE_LAYOUT_QUERY } from "@/lib/use-mobile-layout";
+import { isMobileLayout } from "@/lib/app-layout";
 
 /** Automatic text focus opens the software keyboard before a sheet settles. */
 export function allowInputAutoFocus() {
-  return typeof window !== "undefined" && !window.matchMedia?.(MOBILE_LAYOUT_QUERY).matches;
+  return typeof window !== "undefined" && !isMobileLayout();
 }
 
 /** Move modal focus into the sheet without opening the software keyboard. */

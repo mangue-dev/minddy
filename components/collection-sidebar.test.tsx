@@ -6,6 +6,7 @@ import { CollectionSidebar } from "./secondary-sidebar";
 import { SecondarySidebarProvider, useSecondarySidebar } from "@/lib/secondary-sidebar-context";
 
 vi.mock("next/navigation", () => ({ usePathname: () => "/home" }));
+vi.mock("@/lib/use-mobile-layout", () => ({ useMobileLayout: () => true }));
 vi.mock("mangue-ui", () => ({ cn: (...values: unknown[]) => values.filter(Boolean).join(" "), useMediaQuery: () => true }));
 vi.mock("@/components/issue-context-menu", () => ({ IssueContextMenu: () => null }));
 vi.mock("@/components/sidebar-filter-field", () => ({ SidebarFilterField: () => <input aria-label="Filter" /> }));

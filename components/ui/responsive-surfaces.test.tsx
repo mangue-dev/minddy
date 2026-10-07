@@ -20,7 +20,7 @@ vi.mock("mangue-ui", async () => ({
   toast: { error: vi.fn() },
 }));
 const viewport = vi.hoisted(() => ({ mobile: true }));
-vi.mock("@/lib/use-mobile-layout", () => ({ useMobileLayout: () => viewport.mobile, MOBILE_LAYOUT_QUERY: "(max-width: 767px)" }));
+vi.mock("@/lib/use-mobile-layout", () => ({ useMobileLayout: () => viewport.mobile, MOBILE_LAYOUT_QUERY: "(max-width: 1023px)" }));
 vi.mock("@/components/ui/tooltip", async () => await import("../../node_modules/mangue-ui/src/components/ui/tooltip"));
 import { TooltipProvider } from "../../node_modules/mangue-ui/src/components/ui/tooltip";
 let root: ReturnType<typeof createRoot>;

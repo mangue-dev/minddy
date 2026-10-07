@@ -585,7 +585,7 @@ describe("la palette et ses jetons CSS", () => {
  * it was.
  *
  * Three values must match, and no type looks at them: the RESERVE
- * that the column leaves on the left (`md:pl-24`), the padding of the rule, and
+ * that the column leaves on the left (`app-desktop:pl-24`), the padding of the rule, and
  * the negative margin which cancels it. An imbalance of one pixel between the last two
  * shifts the body under its title. A padding narrower than the
  * reserve leaves a dead band at the left edge — this is the defect measured in
@@ -616,7 +616,7 @@ describe("the gutter hover surface", () => {
   });
 
   it("equals exactly the reserve given by the document column", () => {
-    // `md:pl-24` = 6rem = 96 px. It is the column that decides the width of
+    // `app-desktop:pl-24` = 6rem = 96 px. It is the column that decides the width of
     // the gutter; the style rule only copies it. If one of the
     // two moves without the other, either the box comes out of the column, or it
     // remains a dead band — both are invisible on replay.
@@ -625,8 +625,8 @@ describe("the gutter hover surface", () => {
       "utf8"
     );
     const rem = GUTTER_HOVER / 16;
-    expect(view, `la colonne n'a plus md:pl-${rem * 4}`).toContain(
-      `md:pl-${rem * 4}`
+    expect(view, `the content column no longer has app-desktop:pl-${rem * 4}`).toContain(
+      `app-desktop:pl-${rem * 4}`
     );
   });
 

@@ -887,7 +887,7 @@ export function CreateIssueDialog({
               {/* The button in its own block: it is he who switches to a
   line, full width, when the bar passes the line. No Cancel button:
   the dialog's own close X already does that job. */}
-              <div className="creation-submit flex items-center justify-end gap-2 max-md:w-full md:ml-1">
+              <div className="creation-submit flex items-center justify-end gap-2 app-mobile:w-full app-desktop:ml-1">
                 {otherProjects.length > 0 && currentProject ? (
                   /* The tooltip clings to the action, not the chevron: its
  props pass through `SplitButton` to the left button,
@@ -899,8 +899,8 @@ export function CreateIssueDialog({
                     <SplitButton
                       type="submit"
                       disabled={submitting || numoBusy || !title.trim() || uploads.uploading}
-                      className="max-md:w-full"
-                      actionClassName="max-md:flex-1"
+                      className="app-mobile:w-full"
+                      actionClassName="app-mobile:flex-1"
                       menuLabel={t("createInOtherProject")}
                       menu={<>
                         {relations.length > 0 && <DropdownMenuLabel className="max-w-60 whitespace-normal">{tRelations("crossProjectUnavailable")}</DropdownMenuLabel>}
@@ -925,7 +925,7 @@ export function CreateIssueDialog({
                   <SendShortcutTooltip scope="form" label={t("createTicket")}>
                     <Button
                       type="submit"
-                      className="rounded-full px-4 max-md:w-full"
+                      className="rounded-full px-4 app-mobile:w-full"
                       disabled={submitting || numoBusy || !title.trim() || uploads.uploading}
                     >
                       {submitting && <Spinner />}

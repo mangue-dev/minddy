@@ -1,5 +1,6 @@
 "use client";
 
+import { useMobileLayout } from "@/lib/use-mobile-layout";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
 import { ArrowDown01Icon, ArrowRight01Icon, TextWrapIcon as WrapText } from "@hugeicons/core-free-icons";
@@ -14,7 +15,7 @@ import {
 } from "react";
 import { flushSync } from "react-dom";
 import { useLocale, useTranslations } from "next-intl";
-import { Badge, Checkbox, cn, SegmentedControl, toast, useIsMobile } from "mangue-ui";
+import { Badge, Checkbox, cn, SegmentedControl, toast } from "mangue-ui";
 import { applyPatch } from "diff";
 import { getLineAnnotationName, parsePatchFiles } from "@pierre/diffs";
 import { FileDiff } from "@pierre/diffs/react";
@@ -939,7 +940,7 @@ export function PrDiff({
   const t = useTranslations("PullRequests");
   const locale = useLocale();
   const resolvedTheme = useEffectiveColorScheme();
-  const isMobile = useIsMobile();
+  const isMobile = useMobileLayout() === true;
   const [viewType, setViewType] = useState<ViewType>("unified");
   /**
    * Folding long lines: `null` as long as no one has decided, and that's

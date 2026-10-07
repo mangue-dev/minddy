@@ -1039,7 +1039,7 @@ export function secondaryNavBackTarget(
  *
  * The teleport points (`headerSlot`, `slot`) are installed by the level-2/3
  * panel and stay mounted across route changes within it — the pages' bars
- * portal INTO the sidebar. Under 768 px none of this renders (mobile shell).
+ * portal INTO the sidebar. In mobile layout none of this renders (mobile shell).
  */
 export function AppSidebar({
   sections,

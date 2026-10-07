@@ -1712,7 +1712,7 @@ export function PrDetail({
   ]);
 
   const mobileStatusActions = <>
-    <DropdownMenuSeparator className="md:hidden" />
+    <DropdownMenuSeparator className="app-desktop:hidden" />
     <PrStateControl inMenu state={badgeState} canChange={!!canWrite}
       disabled={!!acting || isWorking || readState !== "fresh"}
       onChange={(state) => setConfirmAction({ kind: "state", state })} />
@@ -1746,7 +1746,7 @@ export function PrDetail({
         <AppContentHeader>
           <PrHeaderActionsSkeleton />
         </AppContentHeader>
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 md:px-6">
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 app-desktop:px-6">
           <div data-testid="pr-detail-loading-content" className="mx-auto flex w-full max-w-3xl flex-col gap-6 py-6" aria-hidden>
             <PrMetadataSkeleton />
             <PrStatusSkeleton />
@@ -1818,7 +1818,7 @@ export function PrDetail({
         </span>
         {/* Background merge work appears in the insight rows across navigation. */}
         {isWorking ? (
-          <span className="hidden items-center gap-1.5 text-xs text-muted-foreground md:inline-flex">
+          <span className="hidden items-center gap-1.5 text-xs text-muted-foreground app-desktop:inline-flex">
             <Spinner />
             {t("numoWorking")}
           </span>
@@ -1872,7 +1872,7 @@ export function PrDetail({
                 {mobileStatusActions}
               </DropdownMenuContent>
             </DropdownMenu>
-            <div className="hidden md:block">
+            <div className="hidden app-desktop:block">
               <PrStateControl state={badgeState} canChange={!!canWrite} disabled={!!acting || isWorking || readState !== "fresh"}
                 onChange={(state) => setConfirmAction({ kind: "state", state })} />
             </div>
@@ -1990,7 +1990,7 @@ export function PrDetail({
             {/* Open state and merge state read side by side, AFTER the more
                 menu: first what we can do, then what the PR is, then what
                 still stands between it and the merge. */}
-            <div className="hidden md:block">
+            <div className="hidden app-desktop:block">
               <PrStateControl state={badgeState} canChange={!!canWrite} disabled={!!acting || isWorking || readState !== "fresh"}
                 onChange={(state) => setConfirmAction({ kind: "state", state })} />
             </div>
@@ -2005,7 +2005,7 @@ export function PrDetail({
                   }
                 }}
                 position={readinessPosition}
-                triggerClassName="hidden md:inline-flex"
+                triggerClassName="hidden app-desktop:inline-flex"
                 readiness={effectiveReadiness}
                 providerName={REPO_PROVIDERS[item.provider].displayName}
                 canAct={canActOnBlocker}
@@ -2023,7 +2023,7 @@ export function PrDetail({
                 onOpenChecks={() => setChecksDetailsOpen(true)}
               />
             ) : (
-              <PrReadinessBadge readiness={null} className="hidden md:inline-flex" />
+              <PrReadinessBadge readiness={null} className="hidden app-desktop:inline-flex" />
             )}
           </div>
         )}
@@ -2055,7 +2055,7 @@ export function PrDetail({
           // scrolling, not on its edge — a `py-6` here stopped the header from
           // 24 px file too low, and `scroll-padding-top: 0` changes nothing.
           // When lowered, it scrolls with the content and the header sticks to the banner.
-          className="h-full overflow-y-auto px-4 md:px-6"
+          className="h-full overflow-y-auto px-4 app-desktop:px-6"
         >
         <div className="mx-auto flex max-w-3xl flex-col gap-6 py-6">
           {/* PR title + meta. The TITLE of the pull request, not that of the
@@ -2436,7 +2436,7 @@ export function PrDetail({
             variant="ghost"
             size="icon-sm"
             aria-label={t("scrollToTop")}
-            className="absolute bottom-4 right-4 z-20 hidden rounded-full border border-border bg-card text-muted-foreground shadow-md hover:text-foreground md:inline-flex md:right-6"
+            className="absolute bottom-4 right-4 z-20 hidden rounded-full border border-border bg-card text-muted-foreground shadow-md hover:text-foreground app-desktop:inline-flex app-desktop:right-6"
             onClick={() =>
               scrollContainerRef.current?.scrollTo({ top: 0, behavior: "smooth" })
             }

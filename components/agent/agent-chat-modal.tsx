@@ -88,7 +88,7 @@ export function AgentChatModal({
                   <Button
                     variant="ghost"
                     size="icon-sm"
-                    className="hidden md:inline-flex"
+                    className="hidden app-desktop:inline-flex"
                     aria-label={isExpanded ? ta("collapse") : ta("expand")}
                     onClick={toggleDisplayMode}
                   >

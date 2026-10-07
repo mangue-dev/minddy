@@ -87,7 +87,7 @@ export function CycleTitleSelector({
         <Button
           variant="ghost"
           size="sm"
-          className="max-w-24 gap-1.5 font-normal md:max-w-64"
+          className="max-w-24 gap-1.5 font-normal app-desktop:max-w-64"
         >
           <span className="truncate">
             {phaseLabel} · {formatCycleRange(format, selected)}
@@ -126,7 +126,7 @@ function RingStat({
           {/* The arc caps at a full circle, but the number is honest — an
               overfilled cycle reads 115%, not a lying 100%. */}
           <ProgressRing percent={percent} colorClass={colorClass} />
-          <span className="hidden md:inline">{percent}%</span>
+          <span className="hidden app-desktop:inline">{percent}%</span>
         </span>
       </TooltipTrigger>
       <TooltipContent>{tooltip}</TooltipContent>

@@ -42,7 +42,7 @@ const MAX_BACK_LEVELS = 2;
  * secondary level): a page reads it to dock its bar away instead of letting
  * it fall back inline and reflow the content.
  *
- * Below 768px, collection pages expose their filters and lists through a
+ * In mobile layout, collection pages expose their filters and lists through a
  * separate host in the mobile menu. Selection remains owned by the page.
  */
 interface SecondarySidebar {
