@@ -16,7 +16,9 @@ import { cn } from "mangue-ui";
 import { AppIcon } from "@/components/icon";
 import { trackEvent } from "@/lib/analytics";
 import { AppContentHeader } from "@/components/app-content-header";
-import { SecondarySidebar } from "@/components/secondary-sidebar";
+import { CollectionSidebar, type SidebarBrowseTarget } from "@/components/secondary-sidebar";
+import { AppTabRouteBoundary, useAppTabRoute } from "@/lib/app-tab-route-context";
+import { useMobileCollectionState } from "@/lib/mobile-collection-state";
 import { SidebarNavRail } from "@/components/sidebar-nav-rail";
 import { matchesFilter } from "@/components/sidebar-filter-field";
 import { useScrollFade } from "@/lib/use-scroll-fade";
@@ -43,6 +45,7 @@ export type SettingsTab = {
 };
 
 type SettingsShellProps = {
+  browse?: SidebarBrowseTarget;
   title: string;
   defaultTab: string;
   tabs: SettingsTab[];
@@ -146,19 +149,21 @@ export function SettingsShell({
   tabs,
   audience,
   filterPlaceholder,
+  browse,
 }: SettingsShellProps) {
   return (
     // SettingsTabs reads `?tab=`; useSearchParams needs a Suspense boundary
     // so the route can still be statically prerendered.
-    <Suspense fallback={<div className="min-h-64" />}>
+    <Suspense fallback={<div className="min-h-64" />}><AppTabRouteBoundary>
       <SettingsTabs
+        browse={browse}
         title={title}
         defaultTab={defaultTab}
         tabs={tabs}
         audience={audience}
         filterPlaceholder={filterPlaceholder}
       />
-    </Suspense>
+    </AppTabRouteBoundary></Suspense>
   );
 }
 
@@ -168,11 +173,15 @@ function SettingsTabs({
   tabs,
   audience,
   filterPlaceholder,
+  browse,
 }: SettingsShellProps) {
   const tCommon = useTranslations("Common");
   const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
+  const livePathname = usePathname();
+  const liveSearchParams = useSearchParams();
+  const route = useAppTabRoute();
+  const pathname = browse ? route.pathname : livePathname;
+  const searchParams = browse ? route.searchParams : liveSearchParams;
   const reduceMotion = useReducedMotion();
 
   const visibleTabs = useMemo(() => tabs.filter((t) => !t.hidden), [tabs]);
@@ -244,13 +253,13 @@ function SettingsTabs({
 
   useSectionFocus(focus, !!reduceMotion);
 
-  // ── Recherche de sections ────────────────────────────────────────────────
+  // Section search uses the same catalog as the command palette.
   // The miter rail answers "where is it?" ", but what we type is the name of
   // the CARD: “pace”, “sensitive zone”, “act on your behalf” — none of
   // these words is not a tab. The ⌘K palette already knows how to find them; the column
   // replays exactly the same path, with the same catalog and the same URL
   // (right tab, unrolled anchor, highlighted map) — cf. settingsSectionHref.
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useMobileCollectionState(pathname, "query", "");
   const allSections = useSettingsSections();
   const scope = pathname.startsWith("/projects/") ? "project" : "account";
   const projectId = projectIdFromPath(pathname);
@@ -289,11 +298,9 @@ function SettingsTabs({
     [router, projectId],
   );
 
-  return (
-    // The ROW of the screen: the rail leaves in the secondary sidebar (by
-    // gate, in the chassis) and the cards remain on the right.
-    <div className="flex h-full min-h-0">
-      <SecondarySidebar
+  const sidebar = (
+      <CollectionSidebar
+        browse={browse}
         title={title}
         hiddenOnMobile
         filter={{
@@ -354,7 +361,15 @@ function SettingsTabs({
             }}
           />
         )}
-      </SecondarySidebar>
+      </CollectionSidebar>
+  );
+  if (browse) return sidebar;
+
+  return (
+    // The ROW of the screen: the rail leaves in the secondary sidebar (by
+    // gate, in the chassis) and the cards remain on the right.
+    <div className="flex h-full min-h-0">
+      {sidebar}
 
       <div
         className="flex min-h-0 min-w-0 flex-1 flex-col"

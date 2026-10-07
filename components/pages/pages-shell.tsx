@@ -1,10 +1,12 @@
 "use client";
 
+import { useMobileCollectionState } from "@/lib/mobile-collection-state";
+
 // The persistent page tree and document surfaces for the project.
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, Cancel01Icon, ExpandIcon } from "@hugeicons/core-free-icons";
-import { useCallback, useEffect, useMemo, useState, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useAppNavigation } from "@/lib/use-app-router";
 import { AppTabRouteBoundary, useAppTabRoute } from "@/lib/app-tab-route-context";
 import { useTranslations } from "next-intl";
@@ -15,7 +17,7 @@ import {
   toast,
 } from "mangue-ui";
 import { SidePanel, SidePanelContent, SidePanelTitle } from "@/components/ui/side-panel";
-import { SecondarySidebar } from "@/components/secondary-sidebar";
+import { CollectionSidebar, type SidebarBrowseTarget } from "@/components/secondary-sidebar";
 import { PageTree } from "@/components/pages/page-tree";
 import { PageCreateMenu } from "@/components/pages/page-create-menu";
 import { markDatabaseSetup } from "@/lib/page-database-setup";
@@ -37,11 +39,11 @@ import {
 import { SIDEBAR_COMPACT_CONTROL_CLASS } from "@/lib/sidebar-control-styles";
 import type { PageMenuTarget } from "@/components/pages/page-document-actions";
 
-export function PagesShell() {
-  return <AppTabRouteBoundary><PagesShellInner /></AppTabRouteBoundary>;
+export function PagesShell({ browse }: { browse?: SidebarBrowseTarget } = {}) {
+  return <AppTabRouteBoundary><PagesShellInner browse={browse} /></AppTabRouteBoundary>;
 }
 
-function PagesShellInner() {
+function PagesShellInner({ browse }: { browse?: SidebarBrowseTarget }) {
   const openDestination = useAppNavigation();
   const t = useTranslations("Pages");
   const tCommon = useTranslations("Common");
@@ -60,7 +62,7 @@ function PagesShellInner() {
 
   const { pages, tree, byId, loading, createPage, prefetchPage, updatePage, trashPage } =
     usePagesQuery(projectId);
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useMobileCollectionState(base, "query", "");
 
   const previewId = searchParams.get("entry");
   const preview = previewId ? byId.get(previewId) : undefined;
@@ -71,10 +73,10 @@ function PagesShellInner() {
     const href = parent?.database_schema != null
       ? `${pageHref(projectId, parent.id)}?entry=${pageId}`
       : pageHref(projectId, pageId);
-    const open = () => openDestination(href, () => pushPagesHistory(href));
+    const open = () => browse ? browse.onSelect(href) : openDestination(href, () => pushPagesHistory(href));
     if (validPreview) void previewFlush.current().then((saved) => { if (saved) open(); });
     else open();
-  }, [projectId, byId, validPreview, openDestination]);
+  }, [projectId, byId, validPreview, openDestination, browse]);
   const leavePreview = async (extend = false) => {
     if (!(await previewFlush.current())) return;
     const href = pageHref(projectId, extend && validPreview ? validPreview.id : activePageId!);
@@ -102,7 +104,8 @@ function PagesShellInner() {
         // is not saving it.
         if (!database && !(parentId && byId.get(parentId)?.database_schema)) markDraftPage(page.id);
         if (parentId && byId.get(parentId)?.database_schema) {
-          pushPagesHistory(`${pageHref(projectId, parentId)}?entry=${page.id}`);
+          const href = `${pageHref(projectId, parentId)}?entry=${page.id}`;
+          if (browse) browse.onSelect(href); else pushPagesHistory(href);
         } else openPage(page.id);
         void page.settled.catch((err: unknown) => {
           forgetDraftPage(page.id);
@@ -115,7 +118,7 @@ function PagesShellInner() {
         toast.error(err instanceof Error ? err.message : t("createFailed"));
       }
     },
-    [base, createPage, openPage, projectId, t, byId]
+    [base, createPage, openPage, projectId, t, byId, browse]
   );
 
   const move = useCallback(
@@ -199,13 +202,8 @@ function PagesShellInner() {
   // page each time you arrive in the tab, on almost all projects.
   const bare = !loading && pages.length === 0;
 
-  return (
-    // The PRESENCE is open here, and not in the page: the shell crosses
-    // navigations, open page no (MIN-271).
-    <PagePresenceProvider projectId={projectId} pageId={validPreview?.id ?? activePageId}>
-    <div className="flex h-full min-h-0">
-      {bare ? null : (
-      <SecondarySidebar
+  const sidebar = (
+      <CollectionSidebar browse={browse}
         title={t("title")}
         hiddenOnMobile
         filter={{
@@ -250,8 +248,17 @@ function PagesShellInner() {
             onToggleFavorite={toggleFavorite}
           />
         )}
-      </SecondarySidebar>
-      )}
+      </CollectionSidebar>
+  );
+
+  if (browse) return <PagePresenceProvider projectId={projectId} pageId={null}>{sidebar}</PagePresenceProvider>;
+
+  return (
+    // The PRESENCE is open here, and not in the page: the shell crosses
+    // navigations, open page no (MIN-271).
+    <PagePresenceProvider projectId={projectId} pageId={validPreview?.id ?? activePageId}>
+    <div className="flex h-full min-h-0">
+      {bare ? null : sidebar}
 
       <div
         className="flex min-h-0 min-w-0 flex-1 flex-col"

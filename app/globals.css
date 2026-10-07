@@ -2958,7 +2958,8 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
   [data-mobile-sidebar-workspace] { background: var(--sidebar); }
   .mobile-sidebar-reveal :is([data-sidebar-navigation-item], [data-sidebar-filter-result], [data-navigation-href], [data-sidebar-back]) { min-height: 44px; }
   .mobile-sidebar-reveal [data-sidebar-filter-result] { min-width: 44px; }
-  .mobile-sidebar-reveal [data-mobile-collection-navigation] button { min-height: 44px; }
+  .mobile-sidebar-reveal :is([data-mobile-collection-navigation], [data-sidebar-browse-collection]) button { min-height: 44px; }
+  .mobile-sidebar-reveal [class~="group/project"] button { min-height: 44px; min-width: 44px; opacity: 1; pointer-events: auto; }
   .mobile-sidebar-reveal :is([data-sidebar-footer], [data-sidebar-project-context], .secondary-sidebar-header) button { min-height: 44px; min-width: 44px; }
   .mobile-sidebar-reveal [data-sidebar-page-row] button { min-height: 44px; min-width: 44px; }
   .mobile-sidebar-reveal [data-sidebar-page-row-actions] { opacity: 1; }

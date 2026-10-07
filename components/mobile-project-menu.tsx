@@ -1,105 +1,65 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import { issuesQueryFn } from "@/lib/issues-api";
-import { feedbackQueryOptions } from "@/lib/feedback-query";
-import { useRoutinesQuery } from "@/lib/use-routines-query";
-import { useAllPullRequestsQuery } from "@/lib/use-agent-runs";
-import { useState } from "react";
-import { createPortal } from "react-dom";
-import { SecondarySidebarHeader } from "@/components/secondary-sidebar";
-import { matchesFilter } from "@/components/sidebar-filter-field";
-import { useTranslations } from "next-intl";
-import { File02Icon, Target01Icon, GitPullRequestIcon, BubbleChatDelayIcon, MessageMultiple01Icon, Ticket01Icon } from "@hugeicons/core-free-icons";
-import { dataIcon } from "@/components/icon";
-import { MobileMenuRows, type MobileMenuNavigation, type MobileMenuPanel } from "@/components/mobile-navigation";
-import { useObjectivesQuery } from "@/lib/use-objectives-query";
-import { usePagesQuery } from "@/lib/use-pages-query";
+import { useCallback, useMemo, type ReactNode } from "react";
+import dynamic from "next/dynamic";
+import { useRouter } from "next/navigation";
+import { Skeleton } from "mangue-ui";
+import { AppTabRouteProvider } from "@/lib/app-tab-route-context";
+import { useAppNavigation } from "@/lib/use-app-router";
+import { AgentsPlanGate } from "@/components/billing/agents-plan-gate";
+import type { SidebarBrowseTarget } from "@/components/secondary-sidebar";
+import type { MobileMenuNavigation } from "@/components/mobile-navigation";
 
-/** Only the project currently browsed by the sidebar loads its resource lists. */
-export function MobileProjectMenu({ projectId, kind, parentId, ...navigation }: {
-  projectId: string;
-  kind: "objectives" | "pages" | "triage" | "feedback";
-  parentId?: string;
-} & MobileMenuNavigation) {
-  const t = useTranslations("Nav");
-  const tc = useTranslations("Common");
-  const tp = useTranslations("Pages");
-  const to = useTranslations("Objectives");
-  const tt = useTranslations("Triage");
-  const tf = useTranslations("FeedbackBoard");
-  const [query, setQuery] = useState("");
-  const { objectives, loading: objectivesLoading } = useObjectivesQuery(kind === "objectives" ? projectId : null);
-  const { pages, loading: pagesLoading, error } = usePagesQuery(kind === "pages" ? projectId : null);
-  const issues = useQuery({ queryKey: ["issues", projectId], queryFn: issuesQueryFn(projectId), enabled: kind === "triage" });
-  const feedback = useQuery({ ...feedbackQueryOptions(projectId), enabled: kind === "feedback" });
-  const resourceError = kind === "triage" ? issues.error : kind === "feedback" ? feedback.error : error;
-  const base = `/projects/${projectId}`;
-  const selectedPage = parentId ? pages.find((page) => page.id === parentId) : null;
-  const pagePanel = (id: string, title: string): MobileMenuPanel => ({
-    key: `page-${id}`, title,
-    render: (next) => <MobileProjectMenu {...next} projectId={projectId} kind="pages" parentId={id} />,
-  });
-  const items = kind === "triage"
-    ? (issues.data ?? []).filter((issue) => issue.status === "triage").map((issue) => ({ key: issue.id, label: issue.title, icon: dataIcon(Ticket01Icon), href: `${base}/triage?issue=${encodeURIComponent(issue.id)}` }))
-    : kind === "feedback"
-      ? (feedback.data?.posts ?? []).map((post) => ({ key: post.id, label: post.title, icon: dataIcon(MessageMultiple01Icon), href: `${base}/feedback?post=${encodeURIComponent(post.id)}` }))
-    : kind === "objectives"
-    ? objectives.map((objective) => ({ key: objective.id, label: objective.name, icon: dataIcon(Target01Icon), href: `${base}/objectives?open=${encodeURIComponent(objective.id)}` }))
-    : pages.filter((page) => (page.parent_id ?? null) === (parentId ?? null)).map((page) => ({
-      key: page.id, label: page.title || tp("untitled"), icon: dataIcon(File02Icon), href: `${base}/pages/${page.id}`,
-      panel: pages.some((child) => child.parent_id === page.id) ? pagePanel(page.id, page.title || tp("untitled")) : undefined,
-    }));
-  const filterPlaceholder = kind === "objectives" ? to("filterPlaceholder", { count: items.length }) : kind === "pages" ? tp("filterPlaceholder", { count: items.length }) : kind === "triage" ? tt("filterPlaceholder", { count: items.length }) : tf("filterPlaceholder", { count: items.length });
-  return <>
-    <MobileMenuHeader headerHost={navigation.headerHost} filter={{ value: query, onChange: setQuery, placeholder: filterPlaceholder, clearLabel: tc("clearFilter") }} />
-    <MobileMenuRows {...navigation} sections={[{ items: [
-      { key: "overview", label: selectedPage?.title || (kind === "objectives" ? to("emptyShowAll") : t(kind)), icon: dataIcon(kind === "objectives" ? Target01Icon : kind === "triage" ? Ticket01Icon : kind === "feedback" ? MessageMultiple01Icon : File02Icon), href: selectedPage ? `${base}/pages/${selectedPage.id}` : `${base}/${kind}` },
-      ...items.filter((item) => matchesFilter(query, [item.label])),
-    ] }]} />
-    {(objectivesLoading || pagesLoading || (kind === "triage" && issues.isPending) || (kind === "feedback" && feedback.isPending)) && <p role="status" className="px-3 text-sm text-muted-foreground">{tc("loading")}</p>}
-    {resourceError && <p role="alert" className="px-3 text-sm text-destructive">{resourceError.message}</p>}
-  </>;
-}
+const loading = () => <div className="flex flex-col gap-2 pt-2" aria-busy="true">
+  {Array.from({ length: 4 }, (_, index) => <Skeleton key={index} className="h-14 rounded-lg" />)}
+</div>;
+const PullRequests = dynamic(() => import("./pull-requests/pull-requests-page").then((module) => module.PullRequestsPage), { loading, ssr: false });
+const Routines = dynamic(() => import("./routines/routines-panel").then((module) => module.RoutinesPanel), { loading, ssr: false });
+const Objectives = dynamic(() => import("./objectives/objectives-page").then((module) => module.ObjectivesCollection), { loading, ssr: false });
+const Triage = dynamic(() => import("./triage/triage-page").then((module) => module.TriagePage), { loading, ssr: false });
+const Feedback = dynamic(() => import("./feedback/feedback-team-page").then((module) => module.FeedbackTeamPage), { loading, ssr: false });
+const AccountSettings = dynamic(() => import("./settings/account-settings-page"), { loading, ssr: false });
+const ProjectSettings = dynamic(() => import("./settings/project-settings-page"), { loading, ssr: false });
+const Pages = dynamic(() => import("./pages/pages-shell").then((module) => module.PagesShell), { loading, ssr: false });
 
-/** Global secondary destinations also browse before choosing a final route. */
-export function MobileRoutinesMenu(navigation: MobileMenuNavigation) {
-  const t = useTranslations("Nav");
-  const tc = useTranslations("Common");
-  const { routines, loading } = useRoutinesQuery();
-  const tr = useTranslations("Routines");
-  const [query, setQuery] = useState("");
-  return <>
-    <MobileMenuHeader headerHost={navigation.headerHost} filter={{ value: query, onChange: setQuery, placeholder: tr("filterPlaceholder", { count: routines.length }), clearLabel: tc("clearFilter") }} />
-    <MobileMenuRows {...navigation} sections={[{ items: [
-      { key: "overview", label: t("routines"), icon: dataIcon(BubbleChatDelayIcon), href: "/routines" },
-      ...routines.filter((routine) => matchesFilter(query, [routine.title])).map((routine) => ({ key: routine.id, label: routine.title, icon: dataIcon(BubbleChatDelayIcon), href: `/routines?routine=${encodeURIComponent(routine.id)}` })),
-    ] }]} />
-    {loading && <p role="status" className="px-3 text-sm text-muted-foreground">{tc("loading")}</p>}
-  </>;
+/** The real collection owns its navigation state while the current page stays put. */
+function BrowseCollection({ href, navigation, children }: {
+  href: string;
+  navigation: MobileMenuNavigation;
+  children: (browse: SidebarBrowseTarget) => ReactNode;
+}) {
+  const router = useRouter();
+  const open = useAppNavigation();
+  const { onNavigate, headerHost } = navigation;
+  const select = useCallback((destination: string) => {
+    open(destination, () => { onNavigate(); router.push(destination); });
+  }, [open, onNavigate, router]);
+  const browse = useMemo(() => ({ headerHost, onSelect: select }), [headerHost, select]);
+  const route = useMemo(() => ({ pathname: href, search: "", projectId: href.match(/^\/projects\/([^/]+)/)?.[1] ?? null }), [href]);
+  return <AppTabRouteProvider route={route} active={false}>{children(browse)}</AppTabRouteProvider>;
 }
 
 export function MobilePullRequestsMenu(navigation: MobileMenuNavigation) {
-  const t = useTranslations("Nav");
-  const tc = useTranslations("Common");
-  const tp = useTranslations("PullRequests");
-  const [limit, setLimit] = useState(40);
-  const [query, setQuery] = useState("");
-  const { pullRequests, loading, hasMore, loadingMore } = useAllPullRequestsQuery("open", limit);
-  return <>
-    <MobileMenuHeader headerHost={navigation.headerHost} filter={{ value: query, onChange: setQuery, placeholder: tp("filterPlaceholder", { count: pullRequests.length }), clearLabel: tc("clearFilter") }} />
-    <MobileMenuRows {...navigation} sections={[{ items: [
-      { key: "overview", label: t("pullRequests"), icon: dataIcon(GitPullRequestIcon), href: "/pull-requests" },
-      ...pullRequests.filter((pr) => matchesFilter(query, [pr.title, String(pr.pr_number)])).map((pr) => ({ key: pr.prId, label: pr.title || `#${pr.pr_number}`, icon: dataIcon(GitPullRequestIcon), href: `/pull-requests?pr=${encodeURIComponent(pr.prId)}` })),
-    ] }]} />
-    {hasMore && <button type="button" disabled={loadingMore} className="min-h-11 w-full rounded-xl px-3 text-left text-sm hover:bg-control-hover" onClick={() => setLimit((previous) => previous + 40)}>{tp("loadMore")}</button>}
-    {loading && <p role="status" className="px-3 text-sm text-muted-foreground">{tc("loading")}</p>}
-  </>;
+  return <BrowseCollection href="/pull-requests" navigation={navigation}>{(browse) => <AgentsPlanGate><PullRequests browse={browse} /></AgentsPlanGate>}</BrowseCollection>;
 }
 
-/** Portal only the controls; list query and filter state stay in their owner. */
-export function MobileMenuHeader({ headerHost, ...props }: Parameters<typeof SecondarySidebarHeader>[0] & {
-  headerHost?: HTMLElement | null;
-}) {
-  return headerHost ? createPortal(<SecondarySidebarHeader {...props} />, headerHost) : null;
+export function MobileRoutinesMenu(navigation: MobileMenuNavigation) {
+  return <BrowseCollection href="/routines" navigation={navigation}>{(browse) => <AgentsPlanGate><Routines browse={browse} selectedId={null} onSelect={(id) => browse.onSelect(id ? `/routines?routine=${encodeURIComponent(id)}` : "/routines")} /></AgentsPlanGate>}</BrowseCollection>;
+}
+
+export function MobileProjectMenu({ projectId, kind, ...navigation }: {
+  projectId: string;
+  kind: "objectives" | "pages" | "triage" | "feedback";
+} & MobileMenuNavigation) {
+  return <BrowseCollection href={`/projects/${projectId}/${kind}`} navigation={navigation}>{(browse) =>
+    kind === "objectives" ? <Objectives projectId={projectId} browse={browse} /> :
+    kind === "pages" ? <Pages browse={browse} /> :
+    kind === "triage" ? <Triage browse={browse} /> : <Feedback browse={browse} />
+  }</BrowseCollection>;
+}
+
+export function MobileSettingsMenu({ projectId, ...navigation }: { projectId?: string } & MobileMenuNavigation) {
+  return <BrowseCollection href={projectId ? `/projects/${projectId}/settings` : "/settings"} navigation={navigation}>{(browse) =>
+    projectId ? <ProjectSettings projectId={projectId} browse={browse} /> : <AccountSettings browse={browse} />
+  }</BrowseCollection>;
 }

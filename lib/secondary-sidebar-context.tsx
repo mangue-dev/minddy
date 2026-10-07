@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import { usePathname } from "next/navigation";
+import { MobileCollectionStateProvider } from "@/lib/mobile-collection-state";
 
 /**
  * How many back presses the sidebar may stack on top of one route. Two: a
@@ -161,7 +162,7 @@ export function SecondarySidebarProvider({
 
   return (
     <SecondarySidebarContext.Provider value={value}>
-      {children}
+      <MobileCollectionStateProvider>{children}</MobileCollectionStateProvider>
     </SecondarySidebarContext.Provider>
   );
 }

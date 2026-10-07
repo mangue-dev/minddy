@@ -1,5 +1,7 @@
 "use client";
 
+import { useMobileCollectionState } from "@/lib/mobile-collection-state";
+
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, FilterIcon, GitPullRequestIcon, Link02Icon, UserGroupIcon, TaskDone01Icon } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -40,7 +42,7 @@ import {
   type PullRequestSection,
 } from "@/lib/pull-request-sections";
 import { checkedProps } from "@/components/search-select";
-import { SecondarySidebar } from "@/components/secondary-sidebar";
+import { CollectionSidebar, type SidebarBrowseTarget } from "@/components/secondary-sidebar";
 import { matchesFilter } from "@/components/sidebar-filter-field";
 import {
   PROJECT_GROUP_INDENT,
@@ -368,11 +370,11 @@ function PrGroupRows({
   );
 }
 
-export function PullRequestsPage() {
-  return <AppTabRouteBoundary><PullRequestsPageInner /></AppTabRouteBoundary>;
+export function PullRequestsPage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
+  return <AppTabRouteBoundary><PullRequestsPageInner browse={browse} /></AppTabRouteBoundary>;
 }
 
-function PullRequestsPageInner() {
+function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   const t = useTranslations("PullRequests");
   const tProjects = useTranslations("Projects");
   const tCommon = useTranslations("Common");
@@ -413,17 +415,17 @@ function PullRequestsPageInner() {
     );
   }, [deepLink, navigation, router, searchParams]);
 
-  const [sections, setSections] = useState<ReadonlySet<string>>(() => new Set(DEFAULT_PULL_REQUEST_SECTIONS));
-  const [query, setQuery] = useState("");
-  const [limit, setLimit] = useState(PULL_REQUESTS_PAGE);
+  const [sections, setSections] = useMobileCollectionState<ReadonlySet<string>>("/pull-requests", "sections", () => new Set(DEFAULT_PULL_REQUEST_SECTIONS));
+  const [query, setQuery] = useMobileCollectionState("/pull-requests", "query", "");
+  const [limit, setLimit] = useMobileCollectionState("/pull-requests", "limit", PULL_REQUESTS_PAGE);
   const [selectedPrId, setSelectedPrId] = useState<string | null>(prParam);
   // Related issue open in side panel (on top of page, no navigation).
   const [panel, setPanel] = useState<{ projectId: string; issueId: string } | null>(null);
   // Sections start expanded; each keeps its own collapse and show-more state.
-  const [collapsedGroups, setCollapsedGroups] = useState<ReadonlySet<string>>(
+  const [collapsedGroups, setCollapsedGroups] = useMobileCollectionState<ReadonlySet<string>>("/pull-requests", "collapsedGroups",
     () => new Set(),
   );
-  const [expandedGroups, setExpandedGroups] = useState<ReadonlySet<string>>(
+  const [expandedGroups, setExpandedGroups] = useMobileCollectionState<ReadonlySet<string>>("/pull-requests", "expandedGroups",
     () => new Set(),
   );
 
@@ -624,7 +626,7 @@ function PullRequestsPageInner() {
   // “Save current view” (⌘K): the open PR is a selection of
   // the page, derived rather than pushed into the address — `?pr=` is precisely
   // which restores it (and the pin on the server side, even if it's six months old).
-  usePublishCurrentView({
+  usePublishCurrentView(browse ? null : {
     href: selected ? `/pull-requests?pr=${encodeURIComponent(selected.prId)}` : "/pull-requests",
     label: selected ? `${t("title")} · ${selected.title}` : t("title"),
   });
@@ -632,7 +634,7 @@ function PullRequestsPageInner() {
   // Publish the selected PR to Numo even when it has no linked issue. The PR id
   // is the stable repository-work anchor; issue details remain optional context.
   useAssistantContext(
-    selected && selected.project
+    !browse && selected && selected.project
       ? {
           projectId: selected.project.id,
           pullRequestId: selected.prId,
@@ -698,34 +700,8 @@ function PullRequestsPageInner() {
    * crosses: a project, a linked repository, then pull requests. `anyPr` account
    * all states, otherwise “none open” would pass for “none ever”.
    */
-  if (!loading && !projectsLoading && (projects.length === 0 || repoCount === 0 || !anyPr)) {
-    return (
-      <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8">
-        <div className="mx-auto max-w-5xl">
-          {projects.length === 0 ? (
-            <EmptyScene icon={GitPullRequestIcon} title={t("emptyNoProject")}>
-              <Button onClick={openCreateProject}>
-                <HugeiconsIcon icon={Add01Icon} />
-                {tProjects("firstProject")}
-              </Button>
-            </EmptyScene>
-          ) : (
-            /* Without a linked deposit, there is no button to offer: the deposit is linked
-               in the settings OF ONE project, and we don't know which one. */
-            <EmptyScene
-              icon={GitPullRequestIcon}
-              title={repoCount === 0 ? t("emptyNoRepo") : t("emptyNone")}
-            />
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex h-full min-h-0">
-      {/* ── Left: pull request list ─────────────────────────────────────── */}
-      <SecondarySidebar
+  const sidebar = (
+      <CollectionSidebar browse={browse}
         title={t("title")}
         hiddenOnMobile
         filter={{
@@ -755,10 +731,10 @@ function PullRequestsPageInner() {
           <EmptyScene
             size="compact"
             icon={GitPullRequestIcon}
-            title={query.trim() ? tCommon("noFilterMatch") : t("emptySections")}
+            title={projects.length === 0 ? t("emptyNoProject") : repoCount === 0 ? t("emptyNoRepo") : !anyPr ? t("emptyNone") : query.trim() ? tCommon("noFilterMatch") : t("emptySections")}
             className="py-10"
           >
-            {query.trim() ? null : (
+            {query.trim() || !anyPr ? null : (
               <Button
                 variant="outline"
                 size="sm"
@@ -823,7 +799,39 @@ function PullRequestsPageInner() {
             ) : null}
           </div>
         )}
-      </SecondarySidebar>
+      </CollectionSidebar>
+  );
+
+  if (browse) return sidebar;
+
+  if (!loading && !projectsLoading && (projects.length === 0 || repoCount === 0 || !anyPr)) {
+    return (
+      <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8">
+        <div className="mx-auto max-w-5xl">
+          {projects.length === 0 ? (
+            <EmptyScene icon={GitPullRequestIcon} title={t("emptyNoProject")}>
+              <Button onClick={openCreateProject}>
+                <HugeiconsIcon icon={Add01Icon} />
+                {tProjects("firstProject")}
+              </Button>
+            </EmptyScene>
+          ) : (
+            /* Without a linked deposit, there is no button to offer: the deposit is linked
+               in the settings OF ONE project, and we don't know which one. */
+            <EmptyScene
+              icon={GitPullRequestIcon}
+              title={repoCount === 0 ? t("emptyNoRepo") : t("emptyNone")}
+            />
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex h-full min-h-0">
+      {/* ── Left: pull request list ─────────────────────────────────────── */}
+      {sidebar}
 
       {/* ── Right: detail of the PR ────────────────────────────────────── */}
       <div

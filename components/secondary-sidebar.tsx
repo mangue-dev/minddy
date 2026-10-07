@@ -6,6 +6,7 @@ import {
   useMemo,
   useState,
   type MouseEvent,
+  type ComponentProps,
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
@@ -13,6 +14,7 @@ import { usePathname } from "next/navigation";
 import { cn, useMediaQuery } from "mangue-ui";
 import { useSecondarySidebar } from "@/lib/secondary-sidebar-context";
 import { SidebarFilterField } from "@/components/sidebar-filter-field";
+import { isPlainNavigationClick } from "@/components/editor-node-link";
 import { normalizeAppTabLocation } from "@/lib/app-tab-location";
 import { IssueContextMenu, type ContextMenuAction } from "@/components/issue-context-menu";
 import { useNavigationContextActions } from "@/components/navigation-context-actions";
@@ -247,4 +249,30 @@ export function SecondarySidebarHeader({ title, filter, actions }: {
       ) : null}
     </div>
   );
+}
+
+
+/** Browsing shares the actual collection UI without registering a second route sidebar. */
+export type SidebarBrowseTarget = {
+  headerHost?: HTMLElement | null;
+  onSelect: (href: string) => void;
+};
+
+export function CollectionSidebar({ browse, children, ...props }: ComponentProps<typeof SecondarySidebar> & {
+  browse?: SidebarBrowseTarget;
+}) {
+  if (!browse) return <SecondarySidebar {...props}>{children}</SecondarySidebar>;
+  return <>
+    {browse.headerHost && createPortal(<SecondarySidebarHeader title={props.title} filter={props.filter} actions={props.actions} />, browse.headerHost)}
+    <div data-sidebar-browse-collection onClickCapture={(event) => {
+      if (!isPlainNavigationClick(event) || !(event.target instanceof Element)) return;
+      const target = event.target.closest<HTMLElement>("[data-navigation-href], a[href]");
+      if (!target || !event.currentTarget.contains(target)) return;
+      const href = normalizeAppTabLocation(target.dataset.navigationHref ?? target.getAttribute("href"));
+      if (!href) return;
+      event.preventDefault();
+      event.stopPropagation();
+      browse.onSelect(href);
+    }}>{children}</div>
+  </>;
 }

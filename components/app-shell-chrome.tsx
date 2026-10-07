@@ -62,7 +62,7 @@ import {
 } from "@/components/header-search-pill";
 import { usePlanGates } from "@/lib/use-billing-query";
 import { useMobileViewport } from "@/lib/use-mobile-layout";
-import { MobileProjectMenu, MobileRoutinesMenu, MobilePullRequestsMenu } from "@/components/mobile-project-menu";
+import { MobileProjectMenu, MobileRoutinesMenu, MobilePullRequestsMenu, MobileSettingsMenu } from "@/components/mobile-project-menu";
 import { MobileNavigation, type MobileMenuSection, type MobileMenuPanel, type MobileMenuNavigation } from "@/components/mobile-navigation";
 import { useAccountActions } from "@/components/mobile-account";
 import { AppTopBar } from "@/components/app-top-bar";
@@ -1489,17 +1489,12 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   );
 
   const mobileNavigation = useMemo(() => {
-    const settingsPanel = (project?: Project): MobileMenuPanel => {
-      const scope = project ? "project" : "account";
-      const allowed = settingsSections.filter((section) => section.scope === scope &&
-        (!section.audience || section.audience === (project?.owner_id === user?.id ? "owner" : "member")));
-      return { key: `settings-${project?.id ?? "account"}`, title: project ? t("projectSettings") : t("accountSettings"), sidebarRoute: project ? `/projects/${project.id}/settings` : "/settings",
-        sections: toMenuSections([...new Set(allowed.map((section) => section.tab))].map((tab) => {
-          const entries = allowed.filter((section) => section.tab === tab);
-          return { items: [{ key: tab, label: entries[0].tabLabel, icon: entries[0].icon,
-            href: settingsSectionHref(entries[0], project?.id) }] };
-        })) };
-    };
+    const settingsPanel = (project?: Project): MobileMenuPanel => ({
+      key: `settings-${project?.id ?? "account"}`,
+      title: project ? t("projectSettings") : t("accountSettings"),
+      sidebarRoute: project ? `/projects/${project.id}/settings` : "/settings",
+      render: (navigation: MobileMenuNavigation) => <MobileSettingsMenu {...navigation} projectId={project?.id} />,
+    });
     const panels = new Map<string, MobileMenuPanel>();
     projects.forEach((project) => {
       const base = `/projects/${project.id}`;
@@ -1527,7 +1522,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     const globalPanel = root.flatMap((section) => section.items).find((item) => item.panel?.sidebarRoute === pathname)?.panel
       ?? (pathname === "/settings" ? settingsPanel() : pathname === "/trash" || pathname === "/admin" ? { key: pathname, title: t(pathname === "/trash" ? "trash" : "adminDashboard"), sidebarRoute: pathname } : undefined);
     return { sections: root, projects, initialPanels: projectPanel ? [projectPanel, ...(resourcePanel ? [resourcePanel] : [])] : globalPanel ? [globalPanel] : [] };
-  }, [projects, homeSections, settingsSections, user?.id, currentProject, pathname, objectiveBoardId, triageCounts, t]);
+  }, [projects, homeSections, currentProject, pathname, objectiveBoardId, triageCounts, t]);
 
   // Opening the palette arms the cross-project index if idle hasn't yet, and
   // revalidates it when the snapshot has aged (no-op while fresh).

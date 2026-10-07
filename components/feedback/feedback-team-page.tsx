@@ -1,4 +1,6 @@
 "use client";
+
+import { useMobileCollectionState } from "@/lib/mobile-collection-state";
 import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
@@ -36,7 +38,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { EmptyScene } from "@/components/empty-scene";
 import { AppContentHeader } from "@/components/app-content-header";
 import { FeedbackSetupWizard } from "@/components/feedback/feedback-setup-wizard";
-import { SecondarySidebar } from "@/components/secondary-sidebar";
+import { CollectionSidebar, type SidebarBrowseTarget } from "@/components/secondary-sidebar";
 import { matchesFilter } from "@/components/sidebar-filter-field";
 import { SearchMenu } from "@/components/search-menu";
 import { SearchSelect, checkedProps } from "@/components/search-select";
@@ -766,11 +768,11 @@ function FeedbackRow({
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 
-export function FeedbackTeamPage() {
-  return <AppTabRouteBoundary><FeedbackTeamPageInner /></AppTabRouteBoundary>;
+export function FeedbackTeamPage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
+  return <AppTabRouteBoundary><FeedbackTeamPageInner browse={browse} /></AppTabRouteBoundary>;
 }
 
-function FeedbackTeamPageInner() {
+function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   const t = useTranslations("FeedbackBoard");
   const tCommon = useTranslations("Common");
   const format = useFormatter();
@@ -798,14 +800,14 @@ function FeedbackTeamPageInner() {
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useMobileCollectionState(`/projects/${projectId}/feedback`, "query", "");
 
   // We arrive on this page to decide what is not decided: the
   // column therefore opens on the open returns, and not on the hundreds
   // archives which buried them.
-  const [state, setState] = useState<FeedbackStateFilter>("unresolved");
-  const [sort, setSort] = useState<FeedbackSort>("top");
-  const [onlyToReview, setOnlyToReview] = useState(false);
+  const [state, setState] = useMobileCollectionState<FeedbackStateFilter>(`/projects/${projectId}/feedback`, "state", "unresolved");
+  const [sort, setSort] = useMobileCollectionState<FeedbackSort>(`/projects/${projectId}/feedback`, "sort", "top");
+  const [onlyToReview, setOnlyToReview] = useMobileCollectionState(`/projects/${projectId}/feedback`, "onlyToReview", false);
   const toReviewCount = useMemo(() => posts.filter(needsHumanReview).length, [posts]);
   useEffect(() => {
     if (toReviewCount === 0 && onlyToReview) setOnlyToReview(false);
@@ -899,7 +901,7 @@ function FeedbackTeamPageInner() {
   // The proposed name bears the PROJECT, as on the objectives: the field is arriving
   // pre-selected, Enter accepts it, and “Returns” for short is the same
   // name on each project — the second view would overwrite the first.
-  usePublishCurrentView({
+  usePublishCurrentView(browse ? null : {
     href: buildViewHref(pathname, searchParams.toString(), {
       post: selectedPost?.id ?? null,
     }),
@@ -911,7 +913,7 @@ function FeedbackTeamPageInner() {
   });
 
   useAssistantContext(
-    project
+    !browse && project
       ? selectedPost
         ? { projectId, feedbackId: selectedPost.id, feedbackTitle: selectedPost.title }
         : { projectId }
@@ -1021,6 +1023,7 @@ function FeedbackTeamPageInner() {
       onOpenChange={setCreateOpen}
       onCreated={(postId) => {
         refresh();
+        if (browse) browse.onSelect(`/projects/${projectId}/feedback?post=${encodeURIComponent(postId)}`);
         // A return just entered is opened: it falls into the filter by
         // default. But if the column is elsewhere, open it without bringing it back there
         // would select a post that the list does not show.
@@ -1039,14 +1042,8 @@ function FeedbackTeamPageInner() {
   // remain within reach in the pane: grab one in your hand, and go and
   // adjust the collection — it is she who then fills the page.
 
-  return (
-    /* “@” when hovering over a row of the column opens Numo on this return
-       (MIN-105). The context passes through the secondary bar portal, which
-       is only deported to the DOM. */
-    <AskNumoFeedbackProvider onAskNumo={handleAskNumo}>
-    <div className="flex h-full min-h-0">
-      {/* ── Liste ────────────────────────────────────────────────────────── */}
-      <SecondarySidebar
+  const sidebar = (
+      <CollectionSidebar browse={browse}
         title={t("title")}
         hiddenOnMobile
         filter={{
@@ -1166,7 +1163,19 @@ function FeedbackTeamPageInner() {
             </ul>
           )}
         </div>
-      </SecondarySidebar>
+      </CollectionSidebar>
+  );
+
+  if (browse) return <AskNumoFeedbackProvider onAskNumo={handleAskNumo}>{sidebar}{createDialog}</AskNumoFeedbackProvider>;
+
+  return (
+    /* “@” when hovering over a row of the column opens Numo on this return
+       (MIN-105). The context passes through the secondary bar portal, which
+       is only deported to the DOM. */
+    <AskNumoFeedbackProvider onAskNumo={handleAskNumo}>
+    <div className="flex h-full min-h-0">
+      {/* ── List ────────────────────────────────────────────────────────── */}
+      {sidebar}
 
       {/* ── Detail ──────────────────────────── ──────────────────────────── */}
       <div className="min-h-0 min-w-0 flex-1">
