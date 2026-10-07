@@ -2889,6 +2889,17 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
 
 /* Mobile sheets share one breakpoint and viewport budget. Wide data surfaces
    (boards, tables, code and diffs) retain their own intentional scroll areas. */
+[data-mobile-sheet-backing] {
+  position: absolute;
+  pointer-events: none;
+  user-select: none;
+  contain: strict;
+}
+[data-mobile-sheet-backing][data-state="closed"] {
+  animation-name: mobile-sheet-backing-exit;
+  animation-fill-mode: forwards;
+}
+@keyframes mobile-sheet-backing-exit { to { opacity: 0; } }
 @media (width < 768px) {
   .app-workspace, .app-shell main, #app-tab-content {
     min-width: 0;
@@ -2919,6 +2930,16 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
     border: 0;
     background: var(--card);
   }
+  .mobile-bottom-sheet [data-calendar] { width: 100%; }
+  .mobile-bottom-sheet [data-calendar] :is(.rdp-weekday, .rdp-day) {
+    flex: 1 1 0;
+    min-width: 0;
+    width: auto;
+  }
+  .mobile-bottom-sheet [data-calendar] :is(.rdp-day, button[data-day]) { height: 44px; }
+  .mobile-bottom-sheet [data-calendar] button[data-day] { width: 100%; }
+  .mobile-bottom-sheet [data-calendar] :is(.rdp-button_previous, .rdp-button_next) { width: 44px; height: 44px; }
+  .mobile-bottom-sheet [data-calendar] .rdp-month_caption { height: 44px; }
   .mobile-bottom-sheet :is([data-slot="dialog-header"], [data-slot="sheet-header"]),
   .mobile-bottom-sheet > [data-slot="sheet-title"]:not(.sr-only) {
     min-height: 44px;
