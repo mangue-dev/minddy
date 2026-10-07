@@ -3,20 +3,24 @@
 import { useRef, useState, useLayoutEffect, useCallback, useEffect, useId, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { ArrowLeft01Icon, Cancel01Icon, Home01Icon, Menu01Icon, Search01Icon } from "@hugeicons/core-free-icons";
+import { Home01Icon, Menu01Icon, Search01Icon } from "@hugeicons/core-free-icons";
 import { AppIcon } from "@/components/icon";
+import { createPortal } from "react-dom";
+import { SecondarySidebarHeader } from "@/components/secondary-sidebar";
+import { matchesFilter } from "@/components/sidebar-filter-field";
 import Link from "@/components/app-link";
 import { MobileNavActions } from "./mobile-nav-actions";
 import { MobileSidebarReveal } from "./mobile-sidebar-reveal";
-import { SidebarFrame, SidebarRows } from "./app-sidebar";
+import { SidebarFrame, SidebarRows, SidebarTopBand, SidebarBackRow, ProjectContextRow } from "./app-sidebar";
 import { MobileSheetScrollArea } from "./ui/mobile-sheet";
 import { type NavSection, type NavItem } from "mangue-ui";
+import type { Project } from "@/lib/types";
 import { useMobileSecondarySidebar } from "@/lib/secondary-sidebar-context";
 
 export type MobileMenuPanel = {
   key: string;
   title: string;
-  icon?: ReactNode;
+  project?: Project;
   sidebarRoute?: string;
   sections?: MobileMenuSection[];
   render?: (navigation: MobileMenuNavigation) => ReactNode;
@@ -24,7 +28,7 @@ export type MobileMenuPanel = {
 export type MobileMenuSection = Omit<NavSection, "items"> & {
   items: (NavItem & { panel?: MobileMenuPanel })[];
 };
-export type MobileMenuNavigation = { onBrowse: (panel: MobileMenuPanel) => void; onNavigate: () => void };
+export type MobileMenuNavigation = { onBrowse: (panel: MobileMenuPanel) => void; onNavigate: () => void; headerHost?: HTMLElement | null };
 
 /** Branches browse within the sidebar; only final destinations leave it. */
 export function MobileMenuRows({ sections, onBrowse, onNavigate }: { sections: MobileMenuSection[] } & MobileMenuNavigation) {
@@ -34,10 +38,11 @@ export function MobileMenuRows({ sections, onBrowse, onNavigate }: { sections: M
   })) }))} />;
 }
 
-export function MobileNavigation({ sections, initialPanel, initialPanels, onSearch }: {
+export function MobileNavigation({ sections, initialPanel, initialPanels, projects = [], onSearch }: {
   sections: MobileMenuSection[];
   initialPanel?: MobileMenuPanel;
   initialPanels?: MobileMenuPanel[];
+  projects?: Project[];
   onSearch: () => void;
 }) {
   const t = useTranslations("Nav");
@@ -45,23 +50,30 @@ export function MobileNavigation({ sections, initialPanel, initialPanels, onSear
   const pathname = usePathname();
   const sidebarId = useId();
   const menuTrigger = useRef<HTMLButtonElement>(null);
-  const heading = useRef<HTMLHeadingElement>(null);
+  const focusTarget = useRef<HTMLElement>(null);
+  const [headerHost, setHeaderHost] = useState<HTMLDivElement | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [panels, setPanels] = useState<MobileMenuPanel[]>([]);
+  const browsing = useRef(false);
   const panel = panels.at(-1);
   const secondary = useMobileSecondarySidebar();
-  const onBrowse = useCallback((next: MobileMenuPanel) => setPanels((previous) => [...previous, next]), []);
+  const onBrowse = useCallback((next: MobileMenuPanel) => { browsing.current = true; setPanels((previous) => [...previous, next]); }, []);
+  const onBack = useCallback(() => { browsing.current = true; setPanels((previous) => previous.slice(0, -1)); }, []);
   const onNavigate = useCallback(() => setMenuOpen(false), []);
   const onOpenChange = useCallback((next: boolean) => {
-    if (next && !menuOpen) setPanels(initialPanels ?? (initialPanel ? [initialPanel] : []));
+    if (next && !menuOpen) { browsing.current = false; setPanels(initialPanels ?? (initialPanel ? [initialPanel] : [])); }
     setMenuOpen(next);
   }, [menuOpen, initialPanels, initialPanel]);
   useEffect(() => { setMenuOpen(false); }, [pathname]);
+  useEffect(() => {
+    if (menuOpen && !browsing.current) setPanels(initialPanels ?? (initialPanel ? [initialPanel] : []));
+  }, [menuOpen, initialPanels, initialPanel]);
   const navigation: MobileMenuNavigation = {
     onBrowse,
     onNavigate,
+    headerHost,
   };
-  useLayoutEffect(() => { if (menuOpen) heading.current?.focus({ preventScroll: true }); }, [panel?.key, menuOpen]);
+  useLayoutEffect(() => { if (menuOpen) focusTarget.current?.focus({ preventScroll: true }); }, [panel?.key, menuOpen]);
   return <>
     <nav aria-label="Navigation" data-mobile-navigation className="fixed inset-x-0 bottom-0 z-40 flex justify-center pb-[max(1rem,env(safe-area-inset-bottom))] desktop:hidden">
       <div className="grid h-12 w-[min(100%-2rem,320px)] grid-cols-5 grid-rows-1 items-center rounded-full border border-border bg-background shadow-lg">
@@ -71,21 +83,21 @@ export function MobileNavigation({ sections, initialPanel, initialPanels, onSear
         <MobileNavActions />
       </div>
     </nav>
-    <MobileSidebarReveal open={menuOpen} onOpenChange={onOpenChange} trigger={menuTrigger} heading={heading} label={t("goTo")}>
-      <SidebarFrame id={sidebarId} mobile onNavigate={onNavigate}>
-        <div data-mobile-sidebar-header className="flex min-h-14 shrink-0 items-center gap-2 px-2.5">
-          {panels.length > 0 && <button type="button" className="flex size-11 shrink-0 items-center justify-center rounded-lg hover:bg-sidebar-accent"
-            aria-label={tc("back")} onClick={() => setPanels((previous) => previous.slice(0, -1))}>
-            <AppIcon icon={ArrowLeft01Icon} className="size-[18px]" />
-          </button>}
-          {panel?.icon && <span data-mobile-project-icon className="shrink-0" aria-hidden>{panel.icon}</span>}
-          <h2 ref={heading} tabIndex={-1} className="min-w-0 flex-1 truncate text-sm font-medium outline-none">{panel?.title ?? t("goTo")}</h2>
-          <button type="button" aria-label={tc("close")} onClick={onNavigate} className="flex size-11 shrink-0 items-center justify-center rounded-lg text-sidebar-foreground/60 hover:bg-sidebar-accent"><AppIcon icon={Cancel01Icon} className="size-[18px]" /></button>
-        </div>
+    <MobileSidebarReveal open={menuOpen} onOpenChange={onOpenChange} trigger={menuTrigger} focusTarget={focusTarget} label={t("goTo")}>
+      <SidebarFrame id={sidebarId} mobile onNavigate={onNavigate} focusRef={focusTarget}>
+        <SidebarTopBand secondary={!!panel && !panel.project} headerRef={setHeaderHost} onCreate={onNavigate} />
+        {!!panel && !panel.project && <SidebarBackRow label={panel.title} ariaLabel={tc("back")} onBack={onBack} />}
         {panel?.sidebarRoute === pathname && secondary?.present ?
-          <MobileCollectionMenu route={pathname} onNavigate={onNavigate} /> :
-          <MobileSheetScrollArea key={panel?.key ?? "home"} className="space-y-4 px-2.5 pb-4">
-            {panel?.render ? panel.render(navigation) : <MobileMenuRows sections={panel?.sections ?? sections} {...navigation} />}
+          <MobileCollectionMenu route={pathname} onNavigate={onNavigate} headerHost={headerHost} /> :
+          <MobileSheetScrollArea key={panel?.key ?? "home"} className={`space-y-4 px-2.5 pb-2 ${!panel || panel.project ? "pt-[calc((var(--app-content-header-height)-2.25rem)/2)]" : ""}`}>
+            {panel?.project && <ProjectContextRow
+              homeItem={{ key: "home-back", label: t("home"), href: "/home" }} currentProject={panel.project} projects={projects}
+              onBack={onBack}
+              onProjectSelect={(project) => {
+                const next = sections.flatMap((section) => section.items).find((item) => item.panel?.project?.id === project.id)?.panel;
+                if (next) { browsing.current = true; setPanels([next]); }
+              }} />}
+            {panel?.render ? panel.render(navigation) : panel && !panel.project ? <MobileStaticMenu key={panel.key} sections={panel.sections ?? []} {...navigation} /> : <MobileMenuRows sections={panel?.sections ?? sections} {...navigation} />}
           </MobileSheetScrollArea>}
       </SidebarFrame>
     </MobileSidebarReveal>
@@ -93,20 +105,29 @@ export function MobileNavigation({ sections, initialPanel, initialPanels, onSear
 }
 
 /** The page keeps selection and filters while its navigation lives in the menu. */
-function MobileCollectionMenu({ route, onNavigate }: { route: string; onNavigate: () => void }) {
+function MobileCollectionMenu({ route, onNavigate, headerHost }: { route: string; onNavigate: () => void; headerHost: HTMLElement | null }) {
   const secondary = useMobileSecondarySidebar();
-  const [header, setHeader] = useState<HTMLDivElement | null>(null);
   const [body, setBody] = useState<HTMLDivElement | null>(null);
   const setHost = secondary?.setMobileHost;
   useLayoutEffect(() => {
-    if (!setHost || !header || !body) return;
-    setHost({ route, header, body, onNavigate });
+    if (!setHost || !headerHost || !body) return;
+    setHost({ route, header: headerHost, body, onNavigate });
     return () => setHost(null);
-  }, [setHost, route, header, body, onNavigate]);
+  }, [setHost, route, headerHost, body, onNavigate]);
   return <>
-    <div ref={setHeader} data-mobile-collection-filter className="shrink-0 px-2.5 pb-2" />
-    <MobileSheetScrollArea className="space-y-4 px-2.5 pb-4">
+    <MobileSheetScrollArea className="space-y-4 px-2.5 pb-2">
       <div ref={setBody} />
     </MobileSheetScrollArea>
+  </>;
+}
+
+function MobileStaticMenu({ sections, headerHost, ...navigation }: { sections: MobileMenuSection[] } & MobileMenuNavigation) {
+  const t = useTranslations("Settings");
+  const tc = useTranslations("Common");
+  const [query, setQuery] = useState("");
+  const count = sections.reduce((total, section) => total + section.items.length, 0);
+  return <>
+    {headerHost && createPortal(<SecondarySidebarHeader filter={{ value: query, onChange: setQuery, placeholder: t("filterPlaceholder", { count }), clearLabel: tc("clearFilter") }} />, headerHost)}
+    <MobileMenuRows sections={sections.map((section) => ({ ...section, items: section.items.filter((item) => matchesFilter(query, [item.label])) }))} {...navigation} />
   </>;
 }

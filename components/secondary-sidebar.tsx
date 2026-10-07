@@ -129,22 +129,7 @@ export function SecondarySidebar({
    * The title line COMMANDS the column, it does not name it: the filter
    * of the list, what restricts it, what can be created there.
    */
-  const header = (
-    <div className="secondary-sidebar-header flex h-[var(--app-content-header-height)] shrink-0 items-center gap-2 border-b border-border px-4">
-      {filter ? (
-        <SidebarFilterField {...filter} />
-      ) : title ? (
-        <h1 className="min-w-0 flex-1 truncate font-display text-lg font-semibold tracking-tight">
-          {title}
-        </h1>
-      ) : (
-        <div className="flex-1" />
-      )}
-      {actions ? (
-        <div className="flex shrink-0 items-center gap-1">{actions}</div>
-      ) : null}
-    </div>
-  );
+  const header = <SecondarySidebarHeader title={title} filter={filter} actions={actions} />;
 
   const body = (
     <aside
@@ -237,5 +222,29 @@ export function SecondarySidebar({
         searchable={false}
       />
     </aside>
+  );
+}
+
+/** The same filter/action band is used by route-owned and browsed mobile lists. */
+export function SecondarySidebarHeader({ title, filter, actions }: {
+  title?: string;
+  filter?: { value: string; onChange: (value: string) => void; placeholder: string; clearLabel: string };
+  actions?: ReactNode;
+}) {
+  return (
+    <div className="secondary-sidebar-header flex h-[var(--app-content-header-height)] shrink-0 items-center gap-2 border-b border-border px-4">
+      {filter ? (
+        <SidebarFilterField {...filter} />
+      ) : title ? (
+        <h1 className="min-w-0 flex-1 truncate font-display text-lg font-semibold tracking-tight">
+          {title}
+        </h1>
+      ) : (
+        <div className="flex-1" />
+      )}
+      {actions ? (
+        <div className="flex shrink-0 items-center gap-1">{actions}</div>
+      ) : null}
+    </div>
   );
 }

@@ -11,7 +11,6 @@ import { useAuth } from "@/lib/auth-context";
 import { useIsAdmin } from "@/lib/use-is-admin";
 import { useAccountTheme } from "@/lib/use-account-theme";
 import { authDisplayName, type AuthNameMeta } from "@/lib/display-name";
-import { useBillingSummary } from "@/lib/use-billing-query";
 import type { AppNavSection } from "@/components/app-sidebar";
 import type { PaletteGroup, PaletteItem } from "@/components/header-search-pill";
 
@@ -160,14 +159,10 @@ export function useAccountActions(): {
   }, [t, router, signOut, theme, setTheme, isAdmin]);
 }
 
-/** Shared mobile identity never falls back to an email or an assumed plan. */
+/** Shared mobile identity never falls back to an email. */
 export function useMobileAccountIdentity() {
   const t = useTranslations("Nav");
-  const tb = useTranslations("Billing");
   const { user } = useAuth();
-  const { status, usage } = useBillingSummary();
-  const planId = usage?.planId ?? status?.planId;
-  const planLabel = planId ? tb(({ free: "planFree", go: "planGo", pro: "planPro" } as const)[planId]) : null;
   const meta = user?.user_metadata as AuthNameMeta | undefined;
-  return { name: authDisplayName(meta, null, t("accountFallback")), planLabel };
+  return { name: authDisplayName(meta, null, t("accountFallback")) };
 }

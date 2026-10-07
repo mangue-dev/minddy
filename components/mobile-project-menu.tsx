@@ -6,6 +6,9 @@ import { feedbackQueryOptions } from "@/lib/feedback-query";
 import { useRoutinesQuery } from "@/lib/use-routines-query";
 import { useAllPullRequestsQuery } from "@/lib/use-agent-runs";
 import { useState } from "react";
+import { createPortal } from "react-dom";
+import { SecondarySidebarHeader } from "@/components/secondary-sidebar";
+import { matchesFilter } from "@/components/sidebar-filter-field";
 import { useTranslations } from "next-intl";
 import { File02Icon, Target01Icon, GitPullRequestIcon, BubbleChatDelayIcon, MessageMultiple01Icon, Ticket01Icon } from "@hugeicons/core-free-icons";
 import { dataIcon } from "@/components/icon";
@@ -13,7 +16,7 @@ import { MobileMenuRows, type MobileMenuNavigation, type MobileMenuPanel } from 
 import { useObjectivesQuery } from "@/lib/use-objectives-query";
 import { usePagesQuery } from "@/lib/use-pages-query";
 
-/** Only the project currently browsed by the sheet loads its resource lists. */
+/** Only the project currently browsed by the sidebar loads its resource lists. */
 export function MobileProjectMenu({ projectId, kind, parentId, ...navigation }: {
   projectId: string;
   kind: "objectives" | "pages" | "triage" | "feedback";
@@ -23,6 +26,9 @@ export function MobileProjectMenu({ projectId, kind, parentId, ...navigation }: 
   const tc = useTranslations("Common");
   const tp = useTranslations("Pages");
   const to = useTranslations("Objectives");
+  const tt = useTranslations("Triage");
+  const tf = useTranslations("FeedbackBoard");
+  const [query, setQuery] = useState("");
   const { objectives, loading: objectivesLoading } = useObjectivesQuery(kind === "objectives" ? projectId : null);
   const { pages, loading: pagesLoading, error } = usePagesQuery(kind === "pages" ? projectId : null);
   const issues = useQuery({ queryKey: ["issues", projectId], queryFn: issuesQueryFn(projectId), enabled: kind === "triage" });
@@ -44,10 +50,12 @@ export function MobileProjectMenu({ projectId, kind, parentId, ...navigation }: 
       key: page.id, label: page.title || tp("untitled"), icon: dataIcon(File02Icon), href: `${base}/pages/${page.id}`,
       panel: pages.some((child) => child.parent_id === page.id) ? pagePanel(page.id, page.title || tp("untitled")) : undefined,
     }));
+  const filterPlaceholder = kind === "objectives" ? to("filterPlaceholder", { count: items.length }) : kind === "pages" ? tp("filterPlaceholder", { count: items.length }) : kind === "triage" ? tt("filterPlaceholder", { count: items.length }) : tf("filterPlaceholder", { count: items.length });
   return <>
+    <MobileMenuHeader headerHost={navigation.headerHost} filter={{ value: query, onChange: setQuery, placeholder: filterPlaceholder, clearLabel: tc("clearFilter") }} />
     <MobileMenuRows {...navigation} sections={[{ items: [
       { key: "overview", label: selectedPage?.title || (kind === "objectives" ? to("emptyShowAll") : t(kind)), icon: dataIcon(kind === "objectives" ? Target01Icon : kind === "triage" ? Ticket01Icon : kind === "feedback" ? MessageMultiple01Icon : File02Icon), href: selectedPage ? `${base}/pages/${selectedPage.id}` : `${base}/${kind}` },
-      ...items,
+      ...items.filter((item) => matchesFilter(query, [item.label])),
     ] }]} />
     {(objectivesLoading || pagesLoading || (kind === "triage" && issues.isPending) || (kind === "feedback" && feedback.isPending)) && <p role="status" className="px-3 text-sm text-muted-foreground">{tc("loading")}</p>}
     {resourceError && <p role="alert" className="px-3 text-sm text-destructive">{resourceError.message}</p>}
@@ -59,10 +67,13 @@ export function MobileRoutinesMenu(navigation: MobileMenuNavigation) {
   const t = useTranslations("Nav");
   const tc = useTranslations("Common");
   const { routines, loading } = useRoutinesQuery();
+  const tr = useTranslations("Routines");
+  const [query, setQuery] = useState("");
   return <>
+    <MobileMenuHeader headerHost={navigation.headerHost} filter={{ value: query, onChange: setQuery, placeholder: tr("filterPlaceholder", { count: routines.length }), clearLabel: tc("clearFilter") }} />
     <MobileMenuRows {...navigation} sections={[{ items: [
       { key: "overview", label: t("routines"), icon: dataIcon(BubbleChatDelayIcon), href: "/routines" },
-      ...routines.map((routine) => ({ key: routine.id, label: routine.title, icon: dataIcon(BubbleChatDelayIcon), href: `/routines?routine=${encodeURIComponent(routine.id)}` })),
+      ...routines.filter((routine) => matchesFilter(query, [routine.title])).map((routine) => ({ key: routine.id, label: routine.title, icon: dataIcon(BubbleChatDelayIcon), href: `/routines?routine=${encodeURIComponent(routine.id)}` })),
     ] }]} />
     {loading && <p role="status" className="px-3 text-sm text-muted-foreground">{tc("loading")}</p>}
   </>;
@@ -73,13 +84,22 @@ export function MobilePullRequestsMenu(navigation: MobileMenuNavigation) {
   const tc = useTranslations("Common");
   const tp = useTranslations("PullRequests");
   const [limit, setLimit] = useState(40);
+  const [query, setQuery] = useState("");
   const { pullRequests, loading, hasMore, loadingMore } = useAllPullRequestsQuery("open", limit);
   return <>
+    <MobileMenuHeader headerHost={navigation.headerHost} filter={{ value: query, onChange: setQuery, placeholder: tp("filterPlaceholder", { count: pullRequests.length }), clearLabel: tc("clearFilter") }} />
     <MobileMenuRows {...navigation} sections={[{ items: [
       { key: "overview", label: t("pullRequests"), icon: dataIcon(GitPullRequestIcon), href: "/pull-requests" },
-      ...pullRequests.map((pr) => ({ key: pr.prId, label: pr.title || `#${pr.pr_number}`, icon: dataIcon(GitPullRequestIcon), href: `/pull-requests?pr=${encodeURIComponent(pr.prId)}` })),
+      ...pullRequests.filter((pr) => matchesFilter(query, [pr.title, String(pr.pr_number)])).map((pr) => ({ key: pr.prId, label: pr.title || `#${pr.pr_number}`, icon: dataIcon(GitPullRequestIcon), href: `/pull-requests?pr=${encodeURIComponent(pr.prId)}` })),
     ] }]} />
     {hasMore && <button type="button" disabled={loadingMore} className="min-h-11 w-full rounded-xl px-3 text-left text-sm hover:bg-control-hover" onClick={() => setLimit((previous) => previous + 40)}>{tp("loadMore")}</button>}
     {loading && <p role="status" className="px-3 text-sm text-muted-foreground">{tc("loading")}</p>}
   </>;
+}
+
+/** Portal only the controls; list query and filter state stay in their owner. */
+export function MobileMenuHeader({ headerHost, ...props }: Parameters<typeof SecondarySidebarHeader>[0] & {
+  headerHost?: HTMLElement | null;
+}) {
+  return headerHost ? createPortal(<SecondarySidebarHeader {...props} />, headerHost) : null;
 }

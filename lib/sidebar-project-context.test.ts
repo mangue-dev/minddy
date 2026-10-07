@@ -29,7 +29,8 @@ describe("primary sidebar project context", () => {
     expect(contextRow).toContain("<ProjectOrb");
     expect(contextRow).toContain("icon={ArrowLeft01Icon}");
     expect(contextRow).toContain("icon={ArrowDown01Icon}");
-    expect(contextRow).toContain("<DropdownMenuTrigger");
+    expect(contextRow).toContain("<ProjectTrigger");
+    expect(contextRow).toContain('onProjectSelect ? "button" : DropdownMenuTrigger');
   });
 
   it("keeps project data and menu state wired through the persistent sidebar", () => {
@@ -49,7 +50,7 @@ describe("primary sidebar project context", () => {
 
   it("keeps the back rows sidebar-only: they lift a level, they never navigate", () => {
     expect(sidebar).not.toContain("router.push");
-    expect(sidebar).toContain("onClick={goBack}");
+    expect(sidebar).toContain("<SidebarBackRow label={back.label} onBack={goBack}");
     expect(sidebar).toContain("onClick={onBack}");
   });
 

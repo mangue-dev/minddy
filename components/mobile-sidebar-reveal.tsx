@@ -4,14 +4,14 @@ import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefO
 import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
 import { useMobileLayout } from "@/lib/use-mobile-layout";
-import { mobileSidebarWidth, sidebarGestureIntent, sidebarGestureSettlesOpen } from "@/lib/mobile-sidebar-reveal";
+import { mobileSidebarWidth, sidebarGestureIntent, sidebarGestureSettlesOpen, sidebarRevealRadius } from "@/lib/mobile-sidebar-reveal";
 
 const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex="0"]';
 
 /** A sidebar behind the full-width page; only the page surface translates. */
-export function MobileSidebarReveal({ open, onOpenChange, trigger, heading, children, label }: {
+export function MobileSidebarReveal({ open, onOpenChange, trigger, focusTarget, children, label }: {
   open: boolean; onOpenChange: (open: boolean) => void;
-  trigger: RefObject<HTMLButtonElement | null>; heading: RefObject<HTMLHeadingElement | null>;
+  trigger: RefObject<HTMLButtonElement | null>; focusTarget: RefObject<HTMLElement | null>;
   children: ReactNode; label: string;
 }) {
   const mobile = useMobileLayout() === true;
@@ -37,29 +37,36 @@ export function MobileSidebarReveal({ open, onOpenChange, trigger, heading, chil
   useLayoutEffect(() => {
     if (!mobile || !surface) return;
     surface.setAttribute("data-mobile-sidebar-surface", "");
+    surface.parentElement?.setAttribute("data-mobile-sidebar-workspace", "");
     surface.setAttribute("data-mobile-sidebar-open", String(shown));
     surface.setAttribute("data-mobile-sidebar-dragging", String(drag !== null));
     surface.style.setProperty("--mobile-sidebar-offset", `${offset}px`);
+    surface.style.setProperty("--mobile-sidebar-radius", `${sidebarRevealRadius(offset, width)}px`);
     surface.inert = shown;
     return () => { surface.inert = false; };
-  }, [mobile, surface, offset, shown, drag]);
+  }, [mobile, surface, offset, shown, drag, width]);
 
-  useEffect(() => () => {
-    surface?.removeAttribute("data-mobile-sidebar-surface");
-    surface?.removeAttribute("data-mobile-sidebar-open");
-    surface?.removeAttribute("data-mobile-sidebar-dragging");
-    surface?.style.removeProperty("--mobile-sidebar-offset");
-    if (surface) surface.inert = false;
+  useLayoutEffect(() => {
+    if (!mobile || !surface) return;
+    return () => {
+      surface.removeAttribute("data-mobile-sidebar-surface");
+      surface.parentElement?.removeAttribute("data-mobile-sidebar-workspace");
+      surface.removeAttribute("data-mobile-sidebar-open");
+      surface.removeAttribute("data-mobile-sidebar-dragging");
+      surface.style.removeProperty("--mobile-sidebar-offset");
+      surface.style.removeProperty("--mobile-sidebar-radius");
+      surface.inert = false;
+    };
   }, [surface, mobile]);
 
   useEffect(() => { if (!mobile) { gesture.current = null; setDrag(null); if (open) onOpenChange(false); } }, [mobile, open, onOpenChange]);
 
   useLayoutEffect(() => {
     if (!mobile || !surface) return;
-    if (open) heading.current?.focus({ preventScroll: true });
+    if (open) focusTarget.current?.focus({ preventScroll: true });
     else if (wasOpen.current) trigger.current?.focus({ preventScroll: true });
     wasOpen.current = open;
-  }, [open, mobile, surface, heading, trigger]);
+  }, [open, mobile, surface, focusTarget, trigger]);
 
   useEffect(() => {
     if (!mobile || !surface) return;
@@ -70,8 +77,8 @@ export function MobileSidebarReveal({ open, onOpenChange, trigger, heading, chil
       if (event.key !== "Tab") return;
       const items = [...(drawer.current?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? [])].filter(node => node.getBoundingClientRect().width > 0 && !node.closest('[inert], [aria-hidden="true"]'));
       const first = items[0], last = items.at(-1);
-      if (!first) { event.preventDefault(); heading.current?.focus({ preventScroll: true }); return; }
-      if (event.shiftKey && (document.activeElement === first || document.activeElement === heading.current)) { event.preventDefault(); last?.focus(); }
+      if (!first) { event.preventDefault(); focusTarget.current?.focus({ preventScroll: true }); return; }
+      if (event.shiftKey && (document.activeElement === first || document.activeElement === focusTarget.current)) { event.preventDefault(); last?.focus(); }
       else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
     };
     const down = (event: PointerEvent) => {
@@ -123,7 +130,7 @@ export function MobileSidebarReveal({ open, onOpenChange, trigger, heading, chil
       document.removeEventListener("pointercancel", finish);
       document.removeEventListener("click", click, true);
     };
-  }, [mobile, surface, open, width, heading, onOpenChange]);
+  }, [mobile, surface, open, width, focusTarget, onOpenChange]);
 
   if (!mobile || !surface?.parentElement) return null;
   return createPortal(<>

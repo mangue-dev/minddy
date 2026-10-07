@@ -13,3 +13,8 @@ export function sidebarGestureSettlesOpen(offset: number, width: number, velocit
   if (Math.abs(velocity) > 0.45) return velocity > 0;
   return offset >= width * 0.5;
 }
+
+/** Curvature follows the exposed sidebar fraction, including interrupted drags. */
+export function sidebarRevealRadius(offset: number, width: number): number {
+  return width > 0 ? Math.max(0, Math.min(1, offset / width)) * 24 : 0;
+}

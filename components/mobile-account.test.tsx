@@ -5,12 +5,8 @@ import { NextIntlClientProvider } from "next-intl";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { useMobileAccountIdentity } from "./mobile-account";
 
-const billing = vi.hoisted(() => ({
-  status: null as { planId: "free" | "go" | "pro" } | null,
-  usage: null as { planId: "free" | "go" | "pro" } | null,
-}));
-vi.mock("@/lib/use-billing-query", () => ({ useBillingSummary: () => billing }));
-vi.mock("@/lib/auth-context", () => ({ useAuth: () => ({ user: { email: "private@example.com", user_metadata: { name: "Camille" } } }) }));
+const auth = vi.hoisted(() => ({ name: "Camille" as string | undefined }));
+vi.mock("@/lib/auth-context", () => ({ useAuth: () => ({ user: { email: "private@example.com", user_metadata: { name: auth.name } } }) }));
 vi.mock("mangue-ui", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
 
 function Identity() {
@@ -21,24 +17,18 @@ let root: ReturnType<typeof createRoot>;
 let container: HTMLDivElement;
 beforeEach(() => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
-  billing.status = null; billing.usage = null;
+  auth.name = "Camille";
   container = document.createElement("div"); document.body.append(container);
   root = createRoot(container);
 });
 afterEach(async () => { await act(() => root.unmount()); container.remove(); vi.unstubAllGlobals(); });
 
 it.each([
-  { status: "free", usage: null, expected: "Free" },
-  { status: "go", usage: null, expected: "Go" },
-  { status: "pro", usage: null, expected: "Pro" },
-  { status: null, usage: "pro", expected: "Pro" },
-  { status: "free", usage: "go", expected: "Go" },
-  { status: null, usage: null, expected: null },
-] as const)("shows $expected from the available billing data without exposing the email", async ({ status, usage, expected }) => {
-  billing.status = status ? { planId: status } : null;
-  billing.usage = usage ? { planId: usage } : null;
-  await act(() => root.render(<NextIntlClientProvider locale="en" messages={{ Nav: { accountFallback: "Account", webVersion: "Web version", appVersion: "App version" }, Billing: { planFree: "Free", planGo: "Go", planPro: "Pro" } }}><Identity /></NextIntlClientProvider>));
-  expect(container.textContent).toContain("Camille");
+  { name: "Camille", expected: "Camille" },
+  { name: undefined, expected: "Account" },
+])("shows $expected without an email fallback or billing subtitle", async ({ name, expected }) => {
+  auth.name = name;
+  await act(() => root.render(<NextIntlClientProvider locale="en" messages={{ Nav: { accountFallback: "Account" } }}><Identity /></NextIntlClientProvider>));
   expect(container.textContent).not.toContain("private@example.com");
-  expect(JSON.parse(container.textContent ?? "{}")).toEqual({ name: "Camille", planLabel: expected });
+  expect(JSON.parse(container.textContent ?? "{}")).toEqual({ name: expected });
 });

@@ -92,9 +92,11 @@ export function useCreateActions(): CreateAction[] {
 export function NewMenu({
   variant = "header",
   collapsed = false,
+  onAction,
 }: {
   variant?: "header" | "sidebar";
   collapsed?: boolean;
+  onAction?: () => void;
 }) {
   const t = useTranslations("Nav");
   const actions = useCreateActions();
@@ -116,7 +118,7 @@ export function NewMenu({
             aria-label={issueAction.label}
             onPointerEnter={issueAction.onWarm}
             onFocus={issueAction.onWarm}
-            onClick={issueAction.onSelect}
+            onClick={() => { onAction?.(); issueAction.onSelect(); }}
             className={cn(
               SIDEBAR_ROW_ACTION_CLASS,
               "min-w-0 justify-start text-sm font-medium text-sidebar-foreground/70 shadow-none",

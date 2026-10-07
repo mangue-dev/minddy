@@ -14,6 +14,7 @@ import {
   useState,
   type MouseEvent,
   type ReactNode,
+  type Ref,
 } from "react";
 import Link from "@/components/app-link";
 import dynamic from "next/dynamic";
@@ -153,10 +154,10 @@ const ProductFeedbackDialog = dynamic(
 
 /* ─── Brand ────────────────────────────────────────────────────────── */
 
-function SidebarQuickActions() {
+function SidebarQuickActions({ onCreate }: { onCreate?: () => void }) {
   return (
     <div className={cn("flex w-full min-w-0 shrink-0 gap-1")}>
-      <NewMenu variant="sidebar" collapsed={false} />
+      <NewMenu variant="sidebar" collapsed={false} onAction={onCreate} />
     </div>
   );
 }
@@ -316,10 +317,10 @@ function SidebarRow({ item }: { item: AppNavItem }) {
 }
 
 /** Mobile and desktop navigation use the same rows and section geometry. */
-export function SidebarRows({ sections }: { sections: AppNavSection[] }) {
+export function SidebarRows({ sections, renderItem }: { sections: AppNavSection[]; renderItem?: (item: AppNavItem) => ReactNode }) {
   return <>{sections.map((section, index) => <section key={section.key ?? index} className={cn(index > 0 && "mt-4")}>
     {section.label && <h2 className={cn("truncate pt-1 pr-3 pb-1 text-[11px] font-medium tracking-wide text-sidebar-foreground/45", ROW_PL)}>{section.label}</h2>}
-    <ul className="flex flex-col gap-1">{section.items.map((item) => <li key={item.key}><SidebarRow item={item} /></li>)}</ul>
+    <ul className="flex flex-col gap-1">{section.items.map((item) => <li key={item.key}>{renderItem?.(item) ?? <SidebarRow item={item} />}</li>)}</ul>
   </section>)}</>;
 }
 
@@ -360,53 +361,27 @@ function SidebarNav({
         resetBack();
       }}
     >
-      {sections.map((section, index) => (
-        <div key={section.key ?? index} className={cn(index > 0 && "mt-4")}>
-          {section.label ? (
-            <div
-              className={cn(
-                "truncate pt-1 pr-3 pb-1 text-[11px] font-medium tracking-wide text-sidebar-foreground/45",
-                ROW_PL,
-              )}
-            >
-              {section.label}
-            </div>
-          ) : null}
-          <ul className="flex flex-col gap-1">
-            {section.items.map((item) => (
-              <li key={item.key}>
-                {item.key === "home-back" && currentProject ? (
-                  <ProjectContextRow
-                    homeItem={item}
-                    currentProject={currentProject}
-                    projects={projects}
-                    onMenuOpenChange={onMenuOpenChange}
-                    onBack={onBack}
-                  />
-                ) : (
-                  <SidebarRow item={item} />
-                )}
-              </li>
-            ))}
-          </ul>
-        </div>
-      ))}
+      <SidebarRows sections={sections} renderItem={(item) => item.key === "home-back" && currentProject
+        ? <ProjectContextRow homeItem={item} currentProject={currentProject} projects={projects} onMenuOpenChange={onMenuOpenChange} onBack={onBack} />
+        : undefined} />
     </nav>
   );
 }
 
-function ProjectContextRow({
+export function ProjectContextRow({
   homeItem,
   currentProject,
   projects,
   onMenuOpenChange,
   onBack,
+  onProjectSelect,
 }: {
   homeItem: AppNavItem;
   currentProject: Project;
   projects: Project[];
   onMenuOpenChange?: (open: boolean) => void;
   onBack?: () => void;
+  onProjectSelect?: (project: Project) => void;
 }) {
   const tk = useTranslations("Keyboard");
   const pathname = usePathname();
@@ -414,8 +389,14 @@ function ProjectContextRow({
   const homeActions = useNavigationContextActions(homeItem.href);
   const [homeMenuPosition, setHomeMenuPosition] = useState<{ x: number; y: number } | null>(null);
 
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const ProjectTrigger = onProjectSelect ? "button" : DropdownMenuTrigger;
   const projectTrigger = (
-    <DropdownMenuTrigger
+    <ProjectTrigger
+      type="button"
+      onClick={onProjectSelect ? () => setPickerOpen(true) : undefined}
+      aria-haspopup={onProjectSelect ? "dialog" : undefined}
+      aria-expanded={onProjectSelect ? pickerOpen : undefined}
       aria-label={currentProject.name}
       className={cn(
         "flex h-9 items-center rounded-lg text-sm font-medium text-sidebar-foreground/70 outline-none transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-foreground focus-visible:bg-sidebar-accent focus-visible:text-sidebar-foreground",
@@ -429,13 +410,11 @@ function ProjectContextRow({
       />
       <span className="min-w-0 flex-1 truncate">{currentProject.name}</span>
       <HugeiconsIcon icon={ArrowDown01Icon} className="size-3.5 shrink-0 text-sidebar-foreground/45" aria-hidden />
-    </DropdownMenuTrigger>
+    </ProjectTrigger>
   );
 
-  return (
-    <>
-    <DropdownMenu onOpenChange={onMenuOpenChange}>
-      <div className="flex items-center gap-1">
+  const contextRow = (
+      <div data-sidebar-project-context className="flex items-center gap-1">
         <Tooltip delayDuration={SIDEBAR_TOOLTIP_DELAY_MS} disableHoverableContent>
           <TooltipTrigger asChild>
             {/* The back gesture of the project panel: one level up IN THE
@@ -471,6 +450,29 @@ function ProjectContextRow({
         </Tooltip>
         {projectTrigger}
       </div>
+  );
+  if (onProjectSelect) return <>
+    {contextRow}
+    <Dialog open={pickerOpen} onOpenChange={setPickerOpen}>
+      <DialogContent aria-describedby={undefined}>
+        <DialogTitle>{currentProject.name}</DialogTitle>
+        <MobileSheetScrollArea>
+          {projects.map((project) => <button key={project.id} type="button"
+            onClick={() => { setPickerOpen(false); onProjectSelect(project); }}
+            className="flex min-h-11 w-full items-center gap-2 rounded-lg px-3 text-left text-sm hover:bg-muted">
+            <ProjectOrb seed={projectOrbSeed(project)} iconUrl={project.icon_url} className="size-[18px] rounded-[5px]" />
+            <span className="min-w-0 flex-1 truncate">{project.name}</span>
+            {project.id === currentProject.id && <HugeiconsIcon icon={CheckIcon} className="size-4 shrink-0" />}
+          </button>)}
+        </MobileSheetScrollArea>
+      </DialogContent>
+    </Dialog>
+  </>;
+
+  return (
+    <>
+    <DropdownMenu onOpenChange={onMenuOpenChange}>
+      {contextRow}
 
       {/* No label above the switcher list: the row itself names the project,
             the menu holds nothing but projects. */}
@@ -539,7 +541,6 @@ function AccountButton({
   const confirmationPendingRef = useRef(false);
   const meta = user?.user_metadata as AuthNameMeta | undefined;
   const name = mobile ? mobileIdentity.name : authDisplayName(meta, user?.email ?? null, t("accountFallback"));
-  const mobilePlanName = mobileIdentity.planLabel;
   const seed = useMyAvatarSource();
 
   useEffect(() => {
@@ -576,11 +577,9 @@ function AccountButton({
     ];
     return <>
       <button type="button" data-mobile-sidebar-account aria-haspopup="dialog" aria-expanded={menuOpen}
-        onClick={() => setMenuOpen(true)} className={cn("flex min-h-11 w-full items-center gap-3 rounded-lg pr-2 text-left hover:bg-sidebar-accent", AVATAR_PL)}>
+        onClick={() => setMenuOpen(true)} className={cn("flex h-10 w-full items-center gap-3 rounded-lg pr-3 text-left outline-none transition-colors hover:bg-sidebar-accent focus-visible:bg-sidebar-accent", AVATAR_PL)}>
         <UserAvatar seed={seed} className="size-[22px] shrink-0" />
-        <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium">{name}</span>
-          {mobilePlanName && <span className="block truncate text-xs text-sidebar-foreground/60">{mobilePlanName}</span>}
-        </span>
+        <span className="min-w-0 flex-1 truncate text-sm font-medium">{name}</span>
       </button>
       <Dialog open={menuOpen} onOpenChange={setMenuOpen}>
         <DialogContent aria-describedby={undefined} onCloseAutoFocus={finishOpeningSignOutConfirmation}>
@@ -956,18 +955,65 @@ function SidebarFooter({
 }
 
 /** The same sidebar surface and pinned footer surround both navigation layouts. */
-export function SidebarFrame({ id, mobile = false, children, onLayerOpenChange, onNavigate }: {
+export function SidebarFrame({ id, mobile = false, children, onLayerOpenChange, onNavigate, focusRef }: {
   id: string; mobile?: boolean; children: ReactNode;
-  onLayerOpenChange?: (open: boolean) => void; onNavigate?: () => void;
+  onLayerOpenChange?: (open: boolean) => void; onNavigate?: () => void; focusRef?: Ref<HTMLElement>;
 }) {
-  return <aside id={id} data-sidebar-navigation data-mobile-sidebar={mobile || undefined}
+  return <aside ref={focusRef} tabIndex={mobile ? -1 : undefined} id={id} data-sidebar-navigation data-mobile-sidebar={mobile || undefined}
     style={{ width: mobile ? "100%" : EXPANDED_WIDTH }}
-    className="flex h-full min-h-0 flex-col overflow-hidden bg-sidebar text-sidebar-foreground"
+    className="flex h-full min-h-0 flex-col overflow-hidden bg-sidebar text-sidebar-foreground outline-none"
     onClickCapture={mobile ? (event) => { if (isPlainNavigationClick(event) && event.target instanceof Element && event.target.closest("a[href]")) onNavigate?.(); } : undefined}>
     {children}
     <SidebarOnboarding mobile={mobile} onLayerOpenChange={onLayerOpenChange} />
     <div data-sidebar-footer className={cn("shrink-0 pt-2 pb-2.5", GUTTER)}><SidebarFooter portalOwner={id} mobile={mobile} onMenuOpenChange={onLayerOpenChange} /></div>
   </aside>;
+}
+
+/** The desktop command/filter band is shared without mobile-specific chrome. */
+export function SidebarTopBand({ secondary = false, headerRef, onCreate }: {
+  secondary?: boolean; headerRef?: Ref<HTMLDivElement>; onCreate?: () => void;
+}) {
+  return (
+      <div
+        className={cn(
+          "sidebar-brand-row relative flex h-[var(--app-content-header-height)] shrink-0 items-center",
+          // Level 2/3: the teleported filter strip carries its own gutter, so
+          // the band's px-2.5 must not wrap it a second time.
+          !secondary && GUTTER,
+          // The other levels close the band with the same hairline the
+          // level-2/3 filter strip draws (border-b on its header): the
+          // command row is separated from the option rows below on every
+          // level.
+          !secondary && "border-b border-border",
+        )}
+      >
+        <div className={cn("flex h-full w-full min-w-0 items-center", secondary && "hidden")}>
+          <SidebarQuickActions onCreate={onCreate} />
+        </div>
+        <div
+          ref={headerRef}
+          className={cn(
+            "relative h-[var(--app-content-header-height)] w-full min-w-0",
+            !secondary && "hidden",
+          )}
+        />
+      </div>
+  );
+}
+
+/** The secondary-level browse row uses the same geometry in both layouts. */
+export function SidebarBackRow({ label, onBack, ariaLabel }: {
+  label: string; onBack: () => void; ariaLabel?: string;
+}) {
+  return <div className="shrink-0 pt-[calc((var(--app-content-header-height)-2.25rem)/2)] pb-2">
+    <div className={GUTTER}>
+      <button type="button" data-sidebar-back onClick={onBack} aria-label={ariaLabel}
+        className={cn("relative flex h-9 w-full min-w-0 items-center rounded-lg text-sm font-medium transition-colors", ROW_PL, "pr-3 text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-foreground focus-visible:bg-sidebar-accent focus-visible:text-sidebar-foreground")}>
+        <HugeiconsIcon icon={ArrowLeft01Icon} className="absolute left-[9px] top-1/2 size-[18px] shrink-0 -translate-y-1/2" aria-hidden />
+        <span className="min-w-0 flex-1 truncate text-center">{label}</span>
+      </button>
+    </div>
+  </div>;
 }
 
 /* ─── Levels (MIN-546) ─────────────────────────────────────────────── */
@@ -1113,32 +1159,11 @@ export function AppSidebar({
         {back && (
           <SidebarPanelTransition
             key={`back:${back.href}:${back.label}`}
-            className="absolute inset-x-0 top-0 pt-[calc((var(--app-content-header-height)-2.25rem)/2)] pb-2"
+            className="absolute inset-x-0 top-0"
             offset={16}
             transition={shellTransition}
           >
-            {/* Same geometry as a nav row — gutter, 36 px height, rounded
-                control, regular weight — it is a row, not a title stuck to
-                the border. */}
-            <div className={GUTTER}>
-              <button
-                type="button"
-                onClick={goBack}
-                className={cn(
-                  "relative flex h-9 w-full min-w-0 items-center rounded-lg text-sm font-medium transition-colors",
-                  ROW_PL,
-                  "pr-3",
-                  "text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-foreground focus-visible:bg-sidebar-accent focus-visible:text-sidebar-foreground",
-                )}
-              >
-                {/* Out of the flow: the label is centered on the FULL row
-                    width, the chevron does not push it off-center. */}
-                <HugeiconsIcon icon={ArrowLeft01Icon} className="absolute left-[9px] top-1/2 size-[18px] shrink-0 -translate-y-1/2" aria-hidden />
-                <span className="min-w-0 flex-1 truncate text-center">
-                  {back.label}
-                </span>
-              </button>
-            </div>
+            <SidebarBackRow label={back.label} onBack={goBack} />
           </SidebarPanelTransition>
         )}
       </AnimatePresence>
@@ -1163,30 +1188,7 @@ export function AppSidebar({
       {/* The top band COMMANDS the column: level 2/3 keeps the page's filter
           strip teleported here, the other levels the creation controls.
           Pinned strip — what drives the list should be here. */}
-      <div
-        className={cn(
-          "sidebar-brand-row relative flex h-[var(--app-content-header-height)] shrink-0 items-center",
-          // Level 2/3: the teleported filter strip carries its own gutter, so
-          // the band's px-2.5 must not wrap it a second time.
-          !showSecondary && GUTTER,
-          // The other levels close the band with the same hairline the
-          // level-2/3 filter strip draws (border-b on its header): the
-          // command row is separated from the option rows below on every
-          // level.
-          !showSecondary && "border-b border-border",
-        )}
-      >
-        <div className={cn("flex h-full w-full min-w-0 items-center", showSecondary && "hidden")}>
-          <SidebarQuickActions />
-        </div>
-        <div
-          ref={setHeaderSlot}
-          className={cn(
-            "relative h-[var(--app-content-header-height)] w-full min-w-0",
-            !showSecondary && "hidden",
-          )}
-        />
-      </div>
+      <SidebarTopBand secondary={showSecondary} headerRef={setHeaderSlot} />
 
       {/* All levels live in the same flex-1 area, stacked absolutely so a
           swap animates over a stable layout instead of resizing anything. */}

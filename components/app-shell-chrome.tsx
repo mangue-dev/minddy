@@ -1503,9 +1503,9 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     const panels = new Map<string, MobileMenuPanel>();
     projects.forEach((project) => {
       const base = `/projects/${project.id}`;
-      const resource = (kind: "objectives" | "pages" | "triage" | "feedback"): MobileMenuPanel => ({ key: `${project.id}-${kind}`, title: t(kind), sidebarRoute: kind !== "pages" ? `${base}/${kind}` : undefined,
+      const resource = (kind: "objectives" | "pages" | "triage" | "feedback"): MobileMenuPanel => ({ key: `${project.id}-${kind}`, title: t(kind), sidebarRoute: kind === "pages" && pathname.startsWith(`${base}/pages`) ? pathname : `${base}/${kind}`,
         render: (navigation: MobileMenuNavigation) => <MobileProjectMenu {...navigation} projectId={project.id} kind={kind} /> });
-      panels.set(project.id, { key: `project-${project.id}`, title: project.name, icon: <ProjectOrb seed={projectOrbSeed(project)} iconUrl={project.icon_url} className="size-5" />, sections: [{ items: [
+      panels.set(project.id, { key: `project-${project.id}`, title: project.name, project, sections: [{ items: [
         { key: "tickets", label: t("tickets"), icon: menuIcon(Layout3ColumnIcon), href: base, active: pathname === base && !objectiveBoardId },
         { key: "objectives", label: t("objectives"), icon: menuIcon(Target01Icon), panel: resource("objectives"), active: pathname.startsWith(`${base}/objectives`) || (currentProject?.id === project.id && !!objectiveBoardId) },
         { key: "pages", label: t("pages"), icon: menuIcon(File02Icon), panel: resource("pages"), active: pathname.startsWith(`${base}/pages`) },
@@ -1526,7 +1526,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     const resourcePanel = projectPanel?.sections?.flatMap((section) => section.items).find((item) => item.panel && item.active)?.panel;
     const globalPanel = root.flatMap((section) => section.items).find((item) => item.panel?.sidebarRoute === pathname)?.panel
       ?? (pathname === "/settings" ? settingsPanel() : pathname === "/trash" || pathname === "/admin" ? { key: pathname, title: t(pathname === "/trash" ? "trash" : "adminDashboard"), sidebarRoute: pathname } : undefined);
-    return { sections: root, initialPanels: projectPanel ? [projectPanel, ...(resourcePanel ? [resourcePanel] : [])] : globalPanel ? [globalPanel] : [] };
+    return { sections: root, projects, initialPanels: projectPanel ? [projectPanel, ...(resourcePanel ? [resourcePanel] : [])] : globalPanel ? [globalPanel] : [] };
   }, [projects, homeSections, settingsSections, user?.id, currentProject, pathname, objectiveBoardId, triageCounts, t]);
 
   // Opening the palette arms the cross-project index if idle hasn't yet, and
