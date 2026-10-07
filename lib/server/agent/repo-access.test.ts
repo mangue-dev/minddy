@@ -98,6 +98,20 @@ function githubLink(overrides: Record<string, unknown> = {}) {
 }
 
 describe("incomplete GitHub repository links", () => {
+  it("limits CLI authentication to PR writes and content reads in the linked repository", async () => {
+    h.row = githubLink({ installation_id: 4242 });
+    expect(await resolveRepoCloneTarget("project-1", "github-cli")).not.toBeNull();
+    expect(h.installationCalls).toEqual([{
+      installationId: 4242,
+      scope: { repositoryIds: [9001], permissions: { contents: "read", pull_requests: "write" } },
+    }]);
+  });
+
+  it("never returns an account-wide GitLab token to the GitHub CLI relay", async () => {
+    h.row = githubLink({ provider: "gitlab" });
+    expect(await resolveRepoCloneTarget("project-1", "github-cli")).toBeNull();
+    expect(h.gitlabCalls).toEqual([]);
+  });
   it.each(["local", "relay"])("recovers the installation from the linked %s connection", async (source) => {
     h.row = githubLink({
       git_connections: { provider: "github", installation_id: 4242, source },
