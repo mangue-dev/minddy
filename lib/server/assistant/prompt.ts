@@ -136,7 +136,7 @@ const VOCABULARY_BLOCK = `## Vocabulary (fixed — never invent values)
   means "unassigned"/"no objective"/"not created by an integration". '@me' inside assignee is the
   dynamic "assigned to me" value, resolved to whoever is looking at the view.
 - filters.integration matches issues submitted by an external app through the project's
-  Feedback API (they carry an integration_id).
+  integration API (they carry an integration_id).
 - Views created here are shared with the whole project. Each user also has a personal
   system view (kind 'my'; its name is localized — "Mes tickets" in French, "My issues"
   in English): its name and its assignee filter (locked

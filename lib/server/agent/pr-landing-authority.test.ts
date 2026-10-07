@@ -1,4 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { EncryptedStore } from "@/lib/server/encryption/store";
+import { encodeAgentWorkBranch } from "./run-work-branch-content";
+
+const store = new EncryptedStore({
+  current: async () => ({ version: 1, bytes: Buffer.alloc(32, 47) }),
+  byVersion: async (_scope, version) => ({ version, bytes: Buffer.alloc(32, 47) }),
+});
+vi.mock("@/lib/server/encryption/registry", () => ({
+  getEncryptedStore: () => store,
+  getBlindIndexKeys: () => ({ current: async () => ({ version: 1, bytes: Buffer.alloc(32, 85) }) }),
+}));
+vi.mock("@/lib/server/encryption/audit", () => ({ auditDecryption: vi.fn() }));
 
 const h = vi.hoisted(() => ({
   member: true,
@@ -137,6 +149,42 @@ describe("PR landing issue status synchronization", () => {
 });
 
 describe("PR landing authority", () => {
+  it("opens a PR after a prior push persisted the encrypted working branch", async () => {
+    const { ctx, target, ensurePullRequest } = context();
+    h.run!.branch_name = await encodeAgentWorkBranch("project-1", RUN_ID, ctx.workBranch);
+    await openPullRequestAfterPush(ctx, {
+      pushed: { pushed: true, remoteUpdated: true, headSha: "abc" },
+      prTitle: "Agent work", fresh: target, jobsNote: "", noteBranchPushed: async () => {},
+    });
+    expect(ensurePullRequest).toHaveBeenCalledOnce();
+    expect(ensurePullRequest.mock.calls[0]).toEqual([expect.objectContaining({ head: ctx.workBranch })]);
+  });
+
+  it.each([false, true])("reports expected and received branches for a mismatch (encrypted: %s)", async (encrypted) => {
+    const { ctx } = context();
+    h.run!.branch_name = encrypted
+      ? await encodeAgentWorkBranch("project-1", RUN_ID, "numo/expected")
+      : "numo/expected";
+    await expect(assertPrLandingAuthority(ctx)).rejects.toThrow(
+      `expected "numo/expected", received ${JSON.stringify(ctx.workBranch)}`,
+    );
+  });
+
+  it("fails closed without exposing malformed ciphertext", async () => {
+    h.run!.branch_name = "mdyw3:private-malformed-ciphertext";
+    await expect(assertPrLandingAuthority(context().ctx)).rejects.toThrow("unable to decode the run's working branch");
+  });
+
+  it("rechecks an encrypted branch binding changed during the push", async () => {
+    const { ctx, target, ensurePullRequest } = context();
+    await expect(openPullRequestAfterPush(ctx, {
+      pushed: { pushed: true, remoteUpdated: true, headSha: "abc" },
+      prTitle: "Agent work", fresh: target, jobsNote: "",
+      noteBranchPushed: async () => { h.run!.branch_name = await encodeAgentWorkBranch("project-1", RUN_ID, "numo/rebound"); },
+    })).rejects.toThrow('expected "numo/rebound"');
+    expect(ensurePullRequest).not.toHaveBeenCalled();
+  });
+
   it("accepts the current member and immutable repository identity", async () => {
     await expect(assertPrLandingAuthority(context().ctx)).resolves.toMatchObject({ id: RUN_ID });
   });

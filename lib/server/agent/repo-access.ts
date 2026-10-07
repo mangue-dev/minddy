@@ -33,12 +33,14 @@ export type RepoProvider = "github" | "gitlab";
  * - `repo-write` grants GitHub `contents: write` for clone/fetch/push through
  *   trusted network infrastructure.
  * - `repo-read` grants GitHub `contents: read` for pull-request review clones.
+ * - `github-cli` grants `contents: read` and `pull_requests: write` to the
+ *   server-side CLI relay. The sandbox never receives this token.
  *
  * GitLab `repo-read` and `repo-write` profiles mint a short-lived project access
  * token. Only `full`, used by trusted server-side forge API operations, retains
  * the connection's account OAuth token.
  */
-export type RepoTokenAccess = "full" | "repo-write" | "repo-read";
+export type RepoTokenAccess = "full" | "repo-write" | "repo-read" | "github-cli";
 
 /** GitHub permissions requested from mint, per profile. `full` doesn't narrow anything
  * (the token keeps those of the installation) — the restriction that matters to it
@@ -50,6 +52,7 @@ const GITHUB_PERMISSIONS_BY_ACCESS: Record<
   full: undefined,
   "repo-write": { contents: "write" },
   "repo-read": { contents: "read" },
+  "github-cli": { contents: "read", pull_requests: "write" },
 };
 
 const GITLAB_PROJECT_ACCESS_BY_PROFILE = {
@@ -74,7 +77,7 @@ interface GitlabProjectTokenResponse {
 export async function mintGitlabProjectToken(input: {
   accountToken: string;
   projectId: string;
-  access: Exclude<RepoTokenAccess, "full">;
+  access: "repo-read" | "repo-write";
   now?: Date;
   fetcher?: typeof fetch;
 }): Promise<string> {
@@ -295,6 +298,7 @@ async function targetFromLink(
   // Inert fixtures and disconnected installations carry no forge authority.
   // Treat them as unavailable instead of minting a token or throwing a 500.
   if (row.provider === "github" && installationId == null) return null;
+  if (access === "github-cli" && row.provider !== "github") return null;
   if (!row.repo_full_name) {
     throw new Error("Project git link is missing repo_full_name");
   }
@@ -337,6 +341,7 @@ async function targetFromLink(
   }
 
   if (row.provider === "gitlab") {
+    if (access === "github-cli") return null;
     const accountToken = await provider.getGitlabAccessToken(row.connection_id);
     const token =
       access === "full"

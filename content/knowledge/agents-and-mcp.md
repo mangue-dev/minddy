@@ -5,27 +5,29 @@ summary: Work with Numo in minddy and connect external agents or personal MCP to
 category: automation
 audience: both
 tags: [agent, mcp, oauth, codex, claude, cursor]
-lastReviewed: 2026-09-17
+lastReviewed: 2026-10-07
 ---
 
-Numo is minddy's built-in conversation for understanding and acting on project work. The **Numo** page is the main place to start or find conversations. The floating Numo button is a compact view of that same experience: it adds the current page as context, and a conversation started there remains available on the Numo page. Contextual actions such as **Hand to Numo** also enter this common conversation instead of opening a separate agent destination.
+Numo is minddy's built-in conversation for understanding and acting on project work. The floating Numo button is the one place conversations live: it opens the Numo panel, adds the current page as context, and keeps every conversation reachable from its conversation list. Contextual actions such as **Hand to Numo** enter this same conversation instead of opening a separate agent destination, and links to the retired dedicated Numo page open the panel too.
 
 Choose the conversation model and reasoning level in Numo's composer. When a request needs repository work, Numo delegates it to a code worker and shows its progress, changed files, checks, and pull request inside the conversation. The worker always uses the code model and reasoning level configured in **Account settings → AI**. It clones the project's linked GitHub or GitLab repository into the configured server sandbox; it does not run in a folder on the user's computer.
 
 Routines are scheduled Numo requests. Each occurrence starts a new Numo conversation with the saved instruction and project context. Numo can use Minddy tools directly and delegate repository work only when needed. The conversation records the result and any request for user input.
 
-minddy also exposes an OAuth-based MCP server for external tools. Compatible coding agents can read issues and their context, update status and properties, write plans and comments, create linked issues and objectives, and work with project pages. The MCP setup page provides the endpoint and setup instructions for supported clients. The MCP server and Numo are available on every plan; available AI usage and model choices depend on the account plan or an optional personal API key.
+minddy also exposes an OAuth-based MCP server for external tools. Compatible coding agents can read issues and their context, update status and properties, write plans and comments, create linked issues and objectives, and work with project pages, feedback posts, cycles, routines, and the task notebook. The MCP setup page provides the endpoint and setup instructions for supported clients. The MCP server and Numo are available on every plan; available AI usage and model choices depend on the account plan or an optional personal API key.
 
 ## Connect Numo to an MCP server
 
 In **Account settings → MCP for Numo**, choose a service or
 select **Add another MCP server**. The catalog is a shortcut, not an allowlist:
-unlisted public HTTPS servers work through the same connection flow. The catalog
-includes Notion, Linear, Google Workspace, GitHub, Atlassian, Slack, Figma, Asana,
-Canva, Sentry, Supabase, Vercel, and Stripe. Services open a connection dialog with
+unlisted public HTTPS servers work through the same connection flow, and the same
+search also reaches servers in the public MCP registry. The catalog includes Gmail
+and the other Google services (Drive, Calendar, Docs, Sheets, Slides, Chat,
+Contacts), Notion, Linear, GitHub, GitLab, Atlassian, Slack, Figma, Asana, Canva,
+Sentry, Supabase, Vercel, Stripe, HubSpot, Dropbox, Box, ClickUp, Airtable,
+Webflow, and many more. Services open a connection dialog with
 their configuration already filled in. Provider prerequisites and setup links
-appear when needed. Provider endpoints were checked
-against those documents on September 4, 2026.
+appear when needed.
 
 Numo can do this setup for you in a conversation: ask it to configure a service
 ("configure the Notion MCP") and it resolves the service in the catalog, checks
@@ -39,13 +41,13 @@ MCP for Numo like any other, where they can be edited, tested, disabled or
 removed. An unattended routine cannot create connections: this setup only runs
 in a conversation with you.
 
-Choose **Connect** to add the service and open the provider's OAuth flow. In the desktop app, that flow opens in the system browser and returns to the app when it completes. An
+Choose **Sign in** to add the service and open the provider's OAuth flow. In the desktop app, that flow opens in the system browser and returns to the app when it completes. An
 installed OAuth connection that is not authenticated shows an orange triangle;
-hover or focus it to see its status, then use **Connect** to try again. Minddy
+hover or focus it to see its status, then use **Reconnect** to try again. Minddy
 supports discovery, dynamic registration, PKCE, and refresh tokens. Providers that
 require an existing OAuth application can use the client ID and secret under
 **Advanced settings → OAuth app settings**; register the callback URL shown there with the provider.
-Google Workspace servers are in developer preview and require an OAuth app and
+Google services are in developer preview and require an OAuth app and
 preview access. Slack requires an internal or Marketplace app, Asana requires a
 registered MCP app, and Figma requires provider approval of the MCP client. An
 entry in the catalog does not bypass these provider restrictions.
