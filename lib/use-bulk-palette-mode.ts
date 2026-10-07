@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useBulkActions } from "@/lib/bulk-actions-context";
 
 /** Handle each selection launch once, even when the palette changes mode. */
@@ -15,9 +15,11 @@ export function useBulkPaletteMode({
 }) {
   const { request, openSignal, consumeOpenSignal } = useBulkActions();
   const [bulkMode, setBulkMode] = useState(false);
+  const wasOpen = useRef(open);
 
   useEffect(() => {
-    if (!open) setBulkMode(false);
+    if (wasOpen.current && !open) setBulkMode(false);
+    wasOpen.current = open;
   }, [open]);
 
   useEffect(() => {

@@ -2962,6 +2962,7 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
   .mobile-assistant-sheet .app-content-header button { min-height: 44px; min-width: 44px; }
   [data-property-row] { min-height: 52px; }
   [data-property-row] :is(button, a[role="button"]) { min-height: 44px; min-width: 44px; }
+  [data-bulk-issue-actions] button { min-height: 44px; min-width: 44px; }
   :is([data-slot="sheet-overlay"], [data-slot="dialog-overlay"], [data-slot="alert-dialog-overlay"]) {
     -webkit-backdrop-filter: blur(4px);
     backdrop-filter: blur(4px);

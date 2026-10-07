@@ -97,6 +97,29 @@ function paletteMode() {
 }
 
 describe("bulk palette launch lifecycle", () => {
+  it("retains a pending selection when the lazy palette mounts closed", async () => {
+    function PendingLaunch() {
+      const { requestBulkActions } = useBulkActions();
+      const [mounted, setMounted] = useState(false);
+      const [open, setOpen] = useState(false);
+      return createElement("div", null,
+        createElement("button", {
+          "data-action": "launch",
+          onClick: () => {
+            requestBulkActions({ count: 2, members: [], onUpdate: vi.fn(), onAskNumo: vi.fn() });
+            setMounted(true);
+          },
+        }, "Selection actions"),
+        mounted ? createElement(Palette, { open, destinationOnly: false, onOpenChange: setOpen }) : null,
+      );
+    }
+    await act(() => root.render(createElement(StrictMode, null,
+      createElement(BulkActionsProvider, null, createElement(PendingLaunch)),
+    )));
+    await click('[data-action="launch"]');
+    expect(paletteMode()).toBe("bulk");
+  });
+
   it.each(["button", "shortcut"])("opens destinations via %s after closing and cancelling a selection", async (source) => {
     await mount();
     await click('[data-action="select"]');

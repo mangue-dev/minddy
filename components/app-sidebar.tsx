@@ -384,6 +384,7 @@ export function ProjectContextRow({
   onProjectSelect?: (project: Project) => void;
 }) {
   const tk = useTranslations("Keyboard");
+  const tNav = useTranslations("Nav");
   const pathname = usePathname();
   const prefetchProject = usePrefetchProject();
   const homeActions = useNavigationContextActions(homeItem.href);
@@ -455,7 +456,7 @@ export function ProjectContextRow({
     {contextRow}
     <Dialog open={pickerOpen} onOpenChange={setPickerOpen}>
       <DialogContent aria-describedby={undefined}>
-        <DialogTitle>{currentProject.name}</DialogTitle>
+        <DialogTitle>{tNav("switchProject")}</DialogTitle>
         <MobileSheetScrollArea>
           {projects.map((project) => <button key={project.id} type="button"
             onClick={() => { setPickerOpen(false); onProjectSelect(project); }}
