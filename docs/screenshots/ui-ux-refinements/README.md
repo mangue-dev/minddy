@@ -12,6 +12,12 @@ an authenticated end-to-end session.
 - `pr-actions-light.png`: correction actions use a dropdown menu.
 - `byok-confirmation-light.png`: removing a provider connection requires a
   confirmation dialog naming the provider.
+- `skill-mentions-light.png` and `skill-mentions-dark.png`: the actual routine
+  instruction editor (`MentionTextarea`), Numo composer, and message badges
+  share the same mention geometry. Host data and the skill preview dialog are
+  mocked. At a 14 px editor font size, all four mention types measure 17.8125 px
+  high and their text bounds align exactly; the clickable skill also preserves
+  its action.
 
 Browser checks also sampled the shared assistant sheet geometry: expansion
 interpolated from 450 × 600 to 1108 × 920 at a 1440 × 1000 viewport, and collapse

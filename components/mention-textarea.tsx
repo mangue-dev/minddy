@@ -93,8 +93,8 @@ type SpecialMentionOption =
 type MentionOption = EntityMentionOption | SpecialMentionOption;
 
 /** The envelope of a mention in the editor: a NON-editable, empty node, in__KEEP_NL_TOKEN__ which React carries the real pill. The field therefore does not redraw a__KEEP_NL_TOKEN__ pill “like” the one in the published comment — it is the same. */
-const SLOT_CLASS = "inline-flex align-middle";
-const SKILL_SLOT_CLASS = "mx-0.5 inline-block max-w-full align-baseline";
+const SLOT_CLASS = "inline-block align-baseline";
+const SKILL_SLOT_CLASS = SLOT_CLASS;
 const EMPTY_ASSISTANT_MENTIONS: AssistantMention[] = [];
 
 function makeSlot(option: MentionOption): HTMLSpanElement {

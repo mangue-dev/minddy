@@ -30,7 +30,7 @@
 // that a color cannot render: a face, an orb, an emoji.
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Book02Icon, Target01Icon } from "@hugeicons/core-free-icons";
+import { Book02Icon, Layers01Icon, Target01Icon } from "@hugeicons/core-free-icons";
 import type { CSSProperties, MouseEvent } from "react";
 import { cn } from "mangue-ui";
 import {
@@ -60,7 +60,8 @@ export type MentionChipType =
   | "forge"
   | "issue"
   | "objective"
-  | "page";
+  | "page"
+  | "skill";
 
 export function MentionChip({
   type,
@@ -74,6 +75,8 @@ export function MentionChip({
   status,
   href,
   onNavigate,
+  onClick,
+  ariaHasPopup,
   className,
 }: {
   type: MentionChipType;
@@ -106,6 +109,9 @@ export function MentionChip({
   /** Handles a regular click without a document reload. The destination may
    * open in place or use client-side routing. */
   onNavigate?: () => void;
+  /** Opens an inline action while preserving the editor's selection. */
+  onClick?: () => void;
+  ariaHasPopup?: "dialog";
   className?: string;
 }) {
   // Images use the narrower left gutter; glyphs use the wider one. Every
@@ -141,6 +147,8 @@ export function MentionChip({
         ) : (
           <span className="size-[0.7em] rounded-full bg-current" />
         )
+      ) : type === "skill" ? (
+        <HugeiconsIcon icon={Layers01Icon} className="size-full" aria-hidden />
       ) : type === "page" ? (
         // The EMOJI of the page takes the place of the glyph when it has one:
         // it's her own face, and she wears her own colors.
@@ -177,6 +185,25 @@ export function MentionChip({
   );
 
   const tone = toneStyle(type, avatarSeed ?? id, color);
+
+  if (!href && onClick)
+    return (
+      <button
+        type="button"
+        style={tone}
+        className={cn(
+          shape,
+          "transition-colors hover:bg-(--mention-chip-hover) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current/40",
+          className,
+        )}
+        onMouseDown={(event) => event.preventDefault()}
+        onClick={onClick}
+        aria-haspopup={ariaHasPopup}
+      >
+        {figure}
+        {label}
+      </button>
+    );
 
   if (!href)
     return (
@@ -249,6 +276,8 @@ function mentionTone(
       return "var(--mention-issue)";
     case "page":
       return "var(--mention-page)";
+    case "skill":
+      return "var(--color-emerald-500)";
     case "objective":
       // Fallback understood: a lens without color gives the gray of the text
       // secondary, therefore a gray pill — and that's right, he doesn't have one.
