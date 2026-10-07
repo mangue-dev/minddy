@@ -16,6 +16,7 @@ import type { AppTabsSession } from "./app-tabs-session";
 const query = vi.hoisted(() => ({ isPending: false, isError: false, refetch: vi.fn() }));
 const router = vi.hoisted(() => ({ push: vi.fn() }));
 const auth = vi.hoisted(() => ({ user: { id: "owner" } as { id: string } | null }));
+vi.mock("./use-mobile-layout", () => ({ useMobileLayout: () => false }));
 vi.mock("./auth-context", () => ({ useAuth: () => auth }));
 vi.mock("./use-app-tabs-query", () => ({
   appTabsQueryKey: (owner: string) => ["app-tabs", owner],

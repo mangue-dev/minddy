@@ -6,10 +6,6 @@ import { useEffect, useRef, useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import {
   Button,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -18,6 +14,7 @@ import {
   Spinner,
   toast,
 } from "mangue-ui";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { NumoIcon } from "@/components/numo-icon";
 import { buildScratchpadPrompt } from "@/lib/scratchpad-prompt";
 import { resolvePromptCopyAutoStart } from "@/lib/prompt-copy-auto-start";

@@ -13,8 +13,8 @@ import {
   Skeleton,
   cn,
   toast,
-  SidePanel, SidePanelContent, SidePanelTitle,
 } from "mangue-ui";
+import { SidePanel, SidePanelContent, SidePanelTitle } from "@/components/ui/side-panel";
 import { SecondarySidebar } from "@/components/secondary-sidebar";
 import { PageTree } from "@/components/pages/page-tree";
 import { PageCreateMenu } from "@/components/pages/page-create-menu";

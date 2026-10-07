@@ -1,29 +1,15 @@
 "use client";
 
-// The single shared shell for every searchable dropdown built on cmdk: the
-// field pickers (search-select.tsx, trigger-anchored) and the pointer-anchored
-// menus (command-anchor.tsx — field shortcuts, relation target picker). A cmdk
-// <Command> inside a Popover, anchored either to a trigger element or to a
-// viewport position. The search field (icon + plain input + separator) is the
-// same one the right-click context menu uses (see DropdownSearchRow), so all
-// searchable dropdowns share one look.
+// Shared searchable menu: anchored popover on desktop, modal bottom sheet on
+// mobile. Field and pointer-anchored pickers share filtering and option state.
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Search01Icon } from "@hugeicons/core-free-icons";
 import * as React from "react";
 import { useTranslations } from "next-intl";
 import { Command as CommandPrimitive } from "cmdk";
-import {
-  Command,
-  CommandEmpty,
-  CommandList,
-  CommandSeparator,
-  Popover,
-  PopoverAnchor,
-  PopoverContent,
-  PopoverTrigger,
-  cn,
-} from "mangue-ui";
+import { Command, CommandEmpty, CommandList, CommandSeparator, cn } from "mangue-ui";
+import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "@/components/ui/responsive-popover";
 import { Kbd } from "@/components/ui/kbd";
 import {
   Tooltip,

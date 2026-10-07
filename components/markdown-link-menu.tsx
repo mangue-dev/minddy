@@ -7,13 +7,9 @@ import type { Editor } from "@tiptap/core";
 import { BubbleMenu } from "@tiptap/react/menus";
 import {
   Button,
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
   Input,
 } from "mangue-ui";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useTranslations } from "next-intl";
 
 function shouldShowLinkMenu({ editor }: { editor: Editor }): boolean {

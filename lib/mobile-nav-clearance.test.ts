@@ -3,28 +3,11 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-/**
- * Clearing the mobile navbar is a contract between TWO
- * packages. mango-ui sets the geometry — the height of the floating pill and the
- * reserve that the AppShell leaves under the content — and `app/globals.css` the
- * recalculates to realign this reserve on what the pill really occupies
- * (`--mobile-nav-clearance`), instead of the third too much that it occupies reserved.
- *
- * Nothing connects the two at execution: they are copied numbers. A bump
- * of mango-ui which changes the height pill, or which abandons its reserve, does not
- * break ANYTHING visible - the anchored field screens (composed of a pull
- * request, that of an agent session) are content to rest in the wrong
- * place, a few tens of pixels too high or over the bar. This is
- * exactly the kind of drift that you don't see from a dev workstation, where the
- * moving bar does not exist.
- *
- * Hence this test: it rereads the two sources and fails the second they no longer say the same thing. The instruction is then to UPDATE globals.css
- * according to mangue-ui, not to relax the test.
- */
+/** The shell's reserved space must match the fixed mobile navigation geometry. */
 
 const REPO = process.cwd();
 const APP_SHELL = join(REPO, "node_modules/mangue-ui/src/components/shell/app-shell.tsx");
-const MOBILE_NAV = join(REPO, "node_modules/mangue-ui/src/components/shell/mobile-nav.tsx");
+const MOBILE_NAV = join(REPO, "components/mobile-navigation.tsx");
 const GLOBALS = join(REPO, "app/globals.css");
 
 const read = (path: string) => readFileSync(path, "utf8");
@@ -38,12 +21,12 @@ describe("mobile navigation bar clearance", () => {
     );
   });
 
-  it("la pilule mesure toujours 3rem de boutons + son ancrage bas", () => {
+  it("reserves three rem for buttons plus the safe bottom anchor", () => {
     const nav = read(MOBILE_NAV);
     // Bottom anchoring of the bar…
     expect(nav).toContain("pb-[max(1rem,env(safe-area-inset-bottom))]");
-    // …and height of a pill button (MobileNavItem).
-    expect(nav).toMatch(/inline-flex h-12 w-12 items-center/);
+    // …and height of the fixed navigation bar.
+    expect(nav).toContain("grid h-12");
   });
 
   it("globals.css reproduces this geometry exactly", () => {
@@ -61,7 +44,7 @@ describe("mobile navigation bar clearance", () => {
     );
   });
 
-  it("l'application redéfinit `desktop` à 768 px", () => {
+  it("uses the same 768px breakpoint as desktop chrome", () => {
     expect(read(GLOBALS)).toMatch(
       /@theme \{\s*--breakpoint-desktop: 768px;/,
     );

@@ -8,15 +8,10 @@ import {
   Badge,
   Button,
   Checkbox,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
   Spinner,
   toast,
 } from "mangue-ui";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   deleteAgentBranchesApi,
   fetchAgentBranchesApi,

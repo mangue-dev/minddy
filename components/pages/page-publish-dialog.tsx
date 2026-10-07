@@ -9,16 +9,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Button,
   Checkbox,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
   Input,
   SegmentedControl,
   Spinner,
   toast,
 } from "mangue-ui";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   deletePageShareApi,
   fetchPageShareApi,

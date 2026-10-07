@@ -13,7 +13,6 @@ import {
   useState,
   type ComponentType,
 } from "react";
-import Link from "@/components/app-link";
 import dynamic from "next/dynamic";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useAppNavigation, useAppRouter } from "@/lib/use-app-router";
@@ -21,11 +20,9 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import {
   AppShell,
-  MobileNav,
   cn,
   toast,
   useMediaQuery,
-  type CommandMenuGroup,
   type NavSection,
 } from "mangue-ui";
 import {
@@ -65,7 +62,8 @@ import {
   type PaletteItem,
 } from "@/components/header-search-pill";
 import { usePlanGates } from "@/lib/use-billing-query";
-import { MobileNavActions } from "@/components/mobile-nav-actions";
+import { useMobileViewport } from "@/lib/use-mobile-layout";
+import { MobileNavigation } from "@/components/mobile-navigation";
 import { SidebarOnboarding } from "@/components/sidebar-onboarding";
 import { MobileMenuFooter, useAccountActions } from "@/components/mobile-account";
 import { AppTopBar } from "@/components/app-top-bar";
@@ -115,36 +113,6 @@ import {
   loadScratchpadModal,
   preloadSurface,
 } from "@/lib/lazy-app-surfaces";
-
-/**
- * How many rows from OTHER projects the mobile surfaces get, per data group.
- *
- * The desktop palette is virtualized (react-window mounts only visible rows),
- * so it takes the whole list. mangue-ui's MobileNav is not: its cmdk search
- * sheet and its "⋯" menu mount every item they're given, and cross-project
- * search would hand them thousands.
- */
-const MOBILE_CROSS_PROJECT_ROWS = 100;
-
-/** The project the user is in, complete (exactly what mobile had before
- *  MIN-91), plus the most recently updated rows from the other projects.
- *  `rows` arrives current-project-first, index order after (mergeByProject). */
-function capForMobile<T extends { project_id: string }>(
-  rows: T[],
-  currentProjectId: string | null
-): T[] {
-  const capped: T[] = [];
-  let others = 0;
-  for (const r of rows) {
-    if (currentProjectId && r.project_id === currentProjectId) {
-      capped.push(r);
-    } else if (others < MOBILE_CROSS_PROJECT_ROWS) {
-      others++;
-      capped.push(r);
-    }
-  }
-  return capped.length === rows.length ? rows : capped;
-}
 
 // The CSV export is deferred like the creation dialogs: a dialog that we
 // opens from ⌘K a few times in the life of an account has nothing to do in the
@@ -203,15 +171,6 @@ function menuIcon(icon: AppIcon): IconComponent {
   return Array.isArray(icon) ? dataIcon(icon) : (icon as IconComponent);
 }
 
-function toMenuGroups(groups: PaletteGroup[]): CommandMenuGroup[] {
-  return groups.map((group) => ({
-    ...group,
-    items: group.items.map((item) => ({
-      ...item,
-      icon: item.icon ? menuIcon(item.icon) : undefined,
-    })),
-  }));
-}
 
 function toMenuSections(sections: AppNavSection[]): NavSection[] {
   return sections.map((section) => ({
@@ -300,6 +259,7 @@ function identifierBadge(id: string) {
 }
 
 export function AppShellChrome({ children }: { children: React.ReactNode }) {
+  useMobileViewport();
   // A root marker keeps application typography scoped without repeatedly
   // matching relational :has() selectors against the entire workspace DOM.
   useLayoutEffect(() => {
@@ -1259,24 +1219,6 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     ]
   );
 
-  // MobileNav opens its own sheet. Prepare its bounded model only on mobile;
-  // a CSS-hidden mobile navigation must not duplicate this work on desktop.
-  const mobileDataGroups = useMemo(
-    () =>
-      mobileLayout ? buildDataGroups(
-        capForMobile(paletteIssues, currentProjectId),
-        capForMobile(paletteObjectives, currentProjectId),
-        capForMobile(palettePages, currentProjectId)
-      ) : [],
-    [
-      buildDataGroups,
-      paletteIssues,
-      paletteObjectives,
-      palettePages,
-      currentProjectId,
-      mobileLayout,
-    ]
-  );
 
   const inboxItem: AppNavItem = {
     key: "inbox",
@@ -1536,9 +1478,8 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   const { menuSections: accountSections, commandGroup: accountCommandGroup } =
     useAccountActions();
 
-  // Palette = orders + data + account (used by the desktop pill too). Tea
-  // mobile menu sheet gains the account sections so it fully replaces the
-  // sidebar, and takes the capped data groups.
+  // Both layouts share the virtualized command palette and full data index.
+  // Mobile account destinations also appear in the navigation sheet.
   const paletteGroups = useMemo(
     () => [
       ...commandGroups,
@@ -1547,16 +1488,6 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       accountCommandGroup,
     ],
     [commandGroups, settingsGroups, desktopDataGroups, accountCommandGroup]
-  );
-  const mobilePaletteGroups = useMemo(
-    () =>
-      toMenuGroups([
-        ...commandGroups,
-        ...settingsGroups,
-        ...mobileDataGroups,
-        accountCommandGroup,
-      ]),
-    [commandGroups, settingsGroups, mobileDataGroups, accountCommandGroup]
   );
 
   const mobileMenuSections = useMemo(
@@ -1651,14 +1582,10 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         </div>
       }
       mobileNav={
-        <MobileNav
+        <MobileNavigation
           sections={mobileMenuSections}
-          commandGroups={mobilePaletteGroups}
-          actions={<MobileNavActions />}
+          onSearch={() => handlePaletteOpenChange(true)}
           menuFooter={<><SidebarOnboarding mobile /><MobileMenuFooter /></>}
-          linkComponent={Link}
-          searchPlaceholder={t("searchPlaceholder")}
-          emptyMessage={t("noResults")}
         />
       }
     >

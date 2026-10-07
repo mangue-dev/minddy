@@ -6,9 +6,6 @@ import { useEffect, useId, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   Button,
-  Dialog,
-  DialogContent,
-  DialogTitle,
   DropdownMenuItem,
   DropdownMenuLabel,
   Spinner,
@@ -16,6 +13,7 @@ import {
   Switch,
   toast,
 } from "mangue-ui";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { AutoTextarea } from "@/components/auto-textarea";
 import { CreationRelationPills, CreationRelationsCompact } from "@/components/creation-relations";
 // Deferred editor: keeps tiptap (~1.5 MB) out of every board route's graph —
@@ -29,7 +27,8 @@ import { useDescriptionMentions } from "@/lib/use-mention-sources";
 import { useArrowField } from "@/lib/use-arrow-field";
 import { DraftRecoveryRow } from "@/components/draft-recovery-row";
 import { CloseDraftDialog } from "@/components/close-draft-dialog";
-import { DictateButton } from "@/components/ai-elements/dictate-button";
+import { CreationDictation, CreationProperty } from "@/components/creation-form-layout";
+import { useMobileLayout } from "@/lib/use-mobile-layout";
 import {
   AddResourceButton,
   ResourcePills,
@@ -38,7 +37,6 @@ import {
   useFileDrop,
 } from "@/components/resources";
 import { useAttachmentUploads } from "@/lib/use-attachment-uploads";
-import { NumoIcon } from "@/components/numo-icon";
 import { SendShortcutTooltip } from "@/components/send-shortcut";
 import { AgentBeamOverlay } from "@/components/agent-beam";
 import { ProjectOrb } from "@/components/project-orb";
@@ -164,6 +162,8 @@ export function CreateIssueDialog({
   analyticsSource?: AnalyticsPropsFor<"issue_created">["source"];
 }) {
   const t = useTranslations("IssueUI");
+  const mobile = useMobileLayout() === true;
+  const tField = useTranslations("Field");
   const tDrafts = useTranslations("Drafts");
   const tRelations = useTranslations("Relations");
   const { user } = useAuth();
@@ -206,6 +206,7 @@ export function CreateIssueDialog({
   // from the picker) must keep his touches to himself.
   const contentRef = useRef<HTMLDivElement>(null);
   const createMoreId = useId();
+  const titleId = useId();
   // ⌘/Ctrl + Enter creates the ticket, from wherever you are in the form — y
   // understood from the description, which the title field does not cover.
   const submitShortcut = useSubmitShortcut();
@@ -644,22 +645,21 @@ export function CreateIssueDialog({
     applyPatch,
   });
 
+  const dictationControl = <CreationDictation mobile={mobile} busy={numoBusy} busyLabel={t("numoWorking")}
+    context="issue_form" onTranscription={(text) => { track("issue_dictation_used", { surface: "create_dialog" }); onTranscript(text); }}
+    disabled={submitting} shortcutKey="mod+shift+d" onProcessingChange={setTranscribing}
+    autoStart={dictateArmed} onAutoStart={() => setDictateArmed(false)} />;
+
   return (
     <>
       <Dialog open={open} onOpenChange={handleOpenChange}>
-        {/* Three widths, three margins. At large, the modal keeps its 32 px.
- Under `sm`, it only makes the window minus 32 px: 20 px is enough
- to make it breathe without eating up the line. Under 480 px, mango-ui the
- switches to bottom sheet (vaul) and ALREADY places its own 16 px on the
- content - ours would be added to it, or almost a third of the
- width of a phone lost in the margins, hence the `p-0` of this case
- (the vaul attribute, the only reliable benchmark for the switchover). */}
         <DialogContent
           ref={contentRef}
-          className="p-8 max-sm:p-5 data-vaul-drawer:p-0 sm:max-w-2xl"
+          aria-describedby={undefined}
+          className="creation-sheet p-8 max-sm:p-5 sm:max-w-2xl"
           onInteractOutside={keepOverlayOpenForPopper}
         >
-          <DialogTitle className="sr-only">{t("newIssueTitle")}</DialogTitle>
+          <DialogTitle className={mobile ? "shrink-0 pr-10" : "sr-only"}>{t("newIssueTitle")}</DialogTitle>
 
           <form
             {...submitShortcut}
@@ -667,144 +667,40 @@ export function CreateIssueDialog({
               e.preventDefault();
               void submit(createMore);
             }}
-            className="relative flex flex-col rounded-lg"
+            className="creation-form relative flex flex-col rounded-lg"
             onPaste={pasteFileHandler(uploads.addFiles)}
             {...drop.handlers}
           >
             <DropOverlay show={drop.dragging} />
-            {/* Recent drafts — a row above the title to restore or delete an
-              abandoned draft (MIN-41). Hidden once the form has content. */}
-            {title.trim() === "" && description.trim() === "" && (
-              <DraftRecoveryRow
-                drafts={drafts.drafts.map((d) => ({ id: d.id, title: d.title }))}
-                onRecover={recoverDraft}
-                onDelete={drafts.remove}
+            <div className="creation-form-body">
+              {mobile && dictationControl}
+              {/* Recent drafts — a row above the title to restore or delete an
+                abandoned draft (MIN-41). Hidden once the form has content. */}
+              {title.trim() === "" && description.trim() === "" && (
+                <DraftRecoveryRow
+                  drafts={drafts.drafts.map((d) => ({ id: d.id, title: d.title }))}
+                  onRecover={recoverDraft}
+                  onDelete={drafts.remove}
+                  className="mb-3"
+                />
+              )}
+              {/* Resources are context — they sit ABOVE the text being written. */}
+              <ResourcePills
+                resources={uploads.pending.filter((p) => p.status === "done")}
+                pending={uploads.pending}
+                onRemove={(a) => {
+                  // A link has no storage path — match on whichever identifies it.
+                  const match = uploads.pending.find((p) =>
+                    a.kind === "link"
+                      ? p.url === a.url
+                      : p.storage_path === a.storage_path
+                  );
+                  if (match) uploads.remove(match.localId);
+                }}
+                onRemovePending={uploads.remove}
                 className="mb-3"
               />
-            )}
-            {/* Resources are context — they sit ABOVE the text being written. */}
-            <ResourcePills
-              resources={uploads.pending.filter((p) => p.status === "done")}
-              pending={uploads.pending}
-              onRemove={(a) => {
-                // A link has no storage path — match on whichever identifies it.
-                const match = uploads.pending.find((p) =>
-                  a.kind === "link"
-                    ? p.url === a.url
-                    : p.storage_path === a.storage_path
-                );
-                if (match) uploads.remove(match.localId);
-              }}
-              onRemovePending={uploads.remove}
-              className="mb-3"
-            />
-            <CreationRelationPills
-              projectId={projectId}
-              projectKey={currentProject?.key ?? ""}
-              active={open}
-              value={relations}
-              onChange={setRelations}
-              disabled={submitting}
-            />
-            <AutoTextarea
-              ref={arrowTitle.ref}
-              autoFocus
-              required
-              value={title}
-              onChange={(e) => setTitle(arrowTitle.read(e))}
-              onKeyDown={(e) => {
-                if (e.key !== "Enter") return;
-                e.preventDefault();
-                void submit(e.shiftKey || createMore);
-              }}
-              placeholder={t("titlePlaceholder")}
-              className="w-full overflow-hidden bg-transparent text-xl leading-tight font-semibold outline-none placeholder:text-muted-foreground/50 sm:text-2xl"
-            />
-            <MarkdownEditor
-              mentions={mentions}
-              key={editorKey}
-              value={description}
-              onCommit={setDescription}
-              onEmptyChange={(empty) => {
-                editorNonEmptyRef.current = !empty;
-              }}
-              placeholder={t("createDescriptionPlaceholder")}
-              className="mt-2 min-h-16"
-            />
-
-            {/* Options — one compact inline row, like the Figma mockup */}
-            <div className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1.5">
-              <StatusCompact
-                value={fields.status}
-                onChange={(status) => setFields((f) => ({ ...f, status }))}
-                open={openPicker === "status"}
-                onOpenChange={(o) => setOpenPicker(o ? "status" : null)}
-                shortcutHint={KEY_FOR_FIELD.status}
-              />
-              {/* Priority, effort and categories: what Smart-fill poses
- itself. Removed—not grayed out—when armed. */}
-              {!smartFill && (
-                <>
-                <PriorityCompact
-                  value={fields.priority}
-                  onChange={(priority) => setFields((f) => ({ ...f, priority }))}
-                  open={openPicker === "priority"}
-                  onOpenChange={(o) => setOpenPicker(o ? "priority" : null)}
-                  shortcutHint={KEY_FOR_FIELD.priority}
-                />
-                <EffortCompact
-                  value={fields.effort}
-                  onChange={(effort) => setFields((f) => ({ ...f, effort }))}
-                  open={openPicker === "effort"}
-                  onOpenChange={(o) => setOpenPicker(o ? "effort" : null)}
-                  shortcutHint={KEY_FOR_FIELD.effort}
-                />
-                <CategoriesCompact
-                  categories={categories}
-                  projectId={projectId}
-                  value={categoryIds}
-                  onChange={setCategoryIds}
-                  open={openPicker === "category"}
-                  onOpenChange={(o) => setOpenPicker(o ? "category" : null)}
-                  shortcutHint={KEY_FOR_FIELD.category}
-                />
-                </>
-              )}
-              <AssigneeCompact
-                value={fields.assignee_id}
-                onChange={(assignee_id) =>
-                  setFields((f) => ({ ...f, assignee_id }))
-                }
-                members={members}
-                open={openPicker === "assignee"}
-                onOpenChange={(o) => setOpenPicker(o ? "assignee" : null)}
-                shortcutHint={KEY_FOR_FIELD.assignee}
-              />
-              <DueDateCompact
-                value={fields.due_date}
-                onChange={(due_date) => setFields((f) => ({ ...f, due_date }))}
-                recurrence={fields.recurrence}
-                onRecurrenceChange={(next) => setFields((f) => ({ ...f, ...next }))}
-                open={openPicker === "dueDate"}
-                onOpenChange={(o) => setOpenPicker(o ? "dueDate" : null)}
-                shortcutHint={KEY_FOR_FIELD.dueDate}
-              />
-              {/* The objective also comes from Smart-fill — it closes the list of
- four, and the toggle takes their place at the end of the row. */}
-              {!smartFill && (
-                <ObjectiveCompact
-                  value={fields.objective_id}
-                  onChange={(objective_id) =>
-                    setFields((f) => ({ ...f, objective_id }))
-                  }
-                  objectives={objectives}
-                  projectId={projectId}
-                  open={openPicker === "objective"}
-                  onOpenChange={(o) => setOpenPicker(o ? "objective" : null)}
-                  shortcutHint={KEY_FOR_FIELD.objective}
-                />
-              )}
-              <CreationRelationsCompact
+              <CreationRelationPills
                 projectId={projectId}
                 projectKey={currentProject?.key ?? ""}
                 active={open}
@@ -812,52 +708,156 @@ export function CreateIssueDialog({
                 onChange={setRelations}
                 disabled={submitting}
               />
-              {smartFillAvailable && (
-                <SmartFillCompact
-                  value={smartFill}
-                  onChange={(value) => {
-                    smartFillTouchedRef.current = true;
-                    setSmartFill(value);
-                  }}
-                />
-              )}
-            </div>
+              <label htmlFor={titleId} className="creation-field-label">{tField("title")}</label>
+              <AutoTextarea
+                id={titleId}
+                ref={arrowTitle.ref}
+                enterKeyHint={mobile ? "next" : undefined}
+                autoFocus={!mobile}
+                required
+                value={title}
+                onChange={(e) => setTitle(arrowTitle.read(e))}
+                onKeyDown={(e) => {
+                  if (e.key !== "Enter") return;
+                  e.preventDefault();
+                  if (mobile && !e.metaKey && !e.ctrlKey) {
+                    e.currentTarget.form?.querySelector<HTMLElement>(".creation-description [contenteditable=true]")?.focus();
+                    return;
+                  }
+                  void submit(e.shiftKey || createMore);
+                }}
+                placeholder={t("titlePlaceholder")}
+                className="creation-title w-full overflow-hidden bg-transparent text-xl leading-tight font-semibold outline-none placeholder:text-muted-foreground/50 sm:text-2xl"
+              />
+              <div className="creation-field-label">{tField("description")}</div>
+              <MarkdownEditor
+                mentions={mentions}
+                key={editorKey}
+                value={description}
+                onCommit={setDescription}
+                onEmptyChange={(empty) => {
+                  editorNonEmptyRef.current = !empty;
+                }}
+                placeholder={t("createDescriptionPlaceholder")}
+                className="creation-description mt-2 min-h-16"
+              />
 
-            {/* Bottom bar — voice dictation at left, create controls at right.
- It moves to the line under `sm`: microphone, paper clip and “create
- more” fit on the first, the button — which bears the name of the
- project — takes the second, full width. */}
-            <div className="mt-6 flex flex-wrap items-center gap-3 sm:mt-8">
-              {numoBusy ? (
-                <span
-                  className="-ml-2 inline-flex size-8 shrink-0 items-center justify-center"
-                  aria-hidden
-                >
-                  <NumoIcon
-                    state="thinking"
-                    className="size-6 text-primary animate-in fade-in duration-300"
+              {/* Property values stay compact on desktop and receive labels on mobile. */}
+              <div className="creation-properties mt-4 flex flex-wrap items-center gap-x-2 gap-y-1.5">
+                <CreationProperty mobile={mobile} label={tField("status")}>
+                  <StatusCompact
+                    showValue={mobile}
+                    value={fields.status}
+                    onChange={(status) => setFields((f) => ({ ...f, status }))}
+                    open={openPicker === "status"}
+                    onOpenChange={(o) => setOpenPicker(o ? "status" : null)}
+                    shortcutHint={KEY_FOR_FIELD.status}
                   />
-                </span>
-              ) : (
-                <DictateButton
-                  context="issue_form"
-                  onTranscription={(text) => {
-                    track("issue_dictation_used", { surface: "create_dialog" });
-                    onTranscript(text);
-                  }}
-                  disabled={submitting}
-                  autoStart={dictateArmed}
-                  onAutoStart={() => setDictateArmed(false)}
-                  shortcutKey="mod+shift+d"
-                  onProcessingChange={setTranscribing}
-                  className="-ml-2"
-                />
-              )}
-              {numoBusy && (
-                <span className="sr-only" role="status">
-                  {t("numoWorking")}
-                </span>
-              )}
+                </CreationProperty>
+                {/* Smart Fill provides these values when enabled. */}
+                {!smartFill && (
+                  <>
+                    <CreationProperty mobile={mobile} label={tField("priority")}>
+                      <PriorityCompact
+                        showValue={mobile}
+                        value={fields.priority}
+                        onChange={(priority) => setFields((f) => ({ ...f, priority }))}
+                        open={openPicker === "priority"}
+                        onOpenChange={(o) => setOpenPicker(o ? "priority" : null)}
+                        shortcutHint={KEY_FOR_FIELD.priority}
+                      />
+                    </CreationProperty>
+                    <CreationProperty mobile={mobile} label={tField("effort")}>
+                      <EffortCompact
+                        showValue={mobile}
+                        value={fields.effort}
+                        onChange={(effort) => setFields((f) => ({ ...f, effort }))}
+                        open={openPicker === "effort"}
+                        onOpenChange={(o) => setOpenPicker(o ? "effort" : null)}
+                        shortcutHint={KEY_FOR_FIELD.effort}
+                      />
+                    </CreationProperty>
+                    <CreationProperty mobile={mobile} label={tField("categories")}>
+                      <CategoriesCompact
+                        showValue={mobile}
+                        categories={categories}
+                        projectId={projectId}
+                        value={categoryIds}
+                        onChange={setCategoryIds}
+                        open={openPicker === "category"}
+                        onOpenChange={(o) => setOpenPicker(o ? "category" : null)}
+                        shortcutHint={KEY_FOR_FIELD.category}
+                      />
+                    </CreationProperty>
+                  </>
+                )}
+                <CreationProperty mobile={mobile} label={tField("assignee")}>
+                  <AssigneeCompact
+                    showValue={mobile}
+                    value={fields.assignee_id}
+                    onChange={(assignee_id) =>
+                      setFields((f) => ({ ...f, assignee_id }))
+                    }
+                    members={members}
+                    open={openPicker === "assignee"}
+                    onOpenChange={(o) => setOpenPicker(o ? "assignee" : null)}
+                    shortcutHint={KEY_FOR_FIELD.assignee}
+                  />
+                </CreationProperty>
+                <CreationProperty mobile={mobile} label={tField("dueDate")}>
+                  <DueDateCompact
+                    value={fields.due_date}
+                    onChange={(due_date) => setFields((f) => ({ ...f, due_date }))}
+                    recurrence={fields.recurrence}
+                    onRecurrenceChange={(next) => setFields((f) => ({ ...f, ...next }))}
+                    open={openPicker === "dueDate"}
+                    onOpenChange={(o) => setOpenPicker(o ? "dueDate" : null)}
+                    shortcutHint={KEY_FOR_FIELD.dueDate}
+                  />
+                </CreationProperty>
+                {/* Smart Fill also chooses the objective. */}
+                {!smartFill && (
+                  <CreationProperty mobile={mobile} label={tField("objective")}>
+                    <ObjectiveCompact
+                      showValue={mobile}
+                      value={fields.objective_id}
+                      onChange={(objective_id) =>
+                        setFields((f) => ({ ...f, objective_id }))
+                      }
+                      objectives={objectives}
+                      projectId={projectId}
+                      open={openPicker === "objective"}
+                      onOpenChange={(o) => setOpenPicker(o ? "objective" : null)}
+                      shortcutHint={KEY_FOR_FIELD.objective}
+                    />
+                  </CreationProperty>
+                )}
+                <CreationProperty mobile={mobile} label={tRelations("relations")}>
+                  <CreationRelationsCompact
+                    projectId={projectId}
+                    projectKey={currentProject?.key ?? ""}
+                    active={open}
+                    value={relations}
+                    onChange={setRelations}
+                    disabled={submitting}
+                  />
+                </CreationProperty>
+                {smartFillAvailable && (
+                  <SmartFillCompact
+                      fullWidth={mobile}
+                      value={smartFill}
+                      onChange={(value) => {
+                        smartFillTouchedRef.current = true;
+                        setSmartFill(value);
+                      }}
+                    />
+                )}
+              </div>
+
+            </div>
+            {/* Submission stays visible while the mobile form body scrolls. */}
+            <div className="creation-form-footer mt-6 flex flex-wrap items-center gap-3 sm:mt-8">
+              {!mobile && dictationControl}
               {/* The proposed wiki is that of THIS project. Create the ticket in a
  other project (the creation menu entry) sends the
  files, never the pages: the server discards those which
@@ -885,7 +885,7 @@ export function CreateIssueDialog({
               {/* The button in its own block: it is he who switches to a
   line, full width, when the bar passes the line. No Cancel button:
   the dialog's own close X already does that job. */}
-              <div className="flex items-center justify-end gap-2 max-sm:w-full sm:ml-1">
+              <div className="creation-submit flex items-center justify-end gap-2 max-md:w-full md:ml-1">
                 {otherProjects.length > 0 && currentProject ? (
                   /* The tooltip clings to the action, not the chevron: its
  props pass through `SplitButton` to the left button,
@@ -897,8 +897,8 @@ export function CreateIssueDialog({
                     <SplitButton
                       type="submit"
                       disabled={submitting || numoBusy || !title.trim() || uploads.uploading}
-                      className="max-sm:w-full"
-                      actionClassName="max-sm:flex-1"
+                      className="max-md:w-full"
+                      actionClassName="max-md:flex-1"
                       menuLabel={t("createInOtherProject")}
                       menu={<>
                         {relations.length > 0 && <DropdownMenuLabel className="max-w-60 whitespace-normal">{tRelations("crossProjectUnavailable")}</DropdownMenuLabel>}
@@ -923,7 +923,7 @@ export function CreateIssueDialog({
                   <SendShortcutTooltip scope="form" label={t("createTicket")}>
                     <Button
                       type="submit"
-                      className="rounded-full px-4 max-sm:w-full"
+                      className="rounded-full px-4 max-md:w-full"
                       disabled={submitting || numoBusy || !title.trim() || uploads.uploading}
                     >
                       {submitting && <Spinner />}

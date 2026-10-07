@@ -8,13 +8,10 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   Button,
   ConfirmDeleteDialog,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
   Spinner,
   cn,
 } from "mangue-ui";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { WizardStepper } from "@/components/wizard/wizard-stepper";
 import { SendShortcutTooltip } from "@/components/send-shortcut";
 import { useSubmitShortcut } from "@/lib/keyboard/use-submit-shortcut";

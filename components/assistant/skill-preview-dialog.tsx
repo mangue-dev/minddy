@@ -6,11 +6,8 @@ import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   Button,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
 } from "mangue-ui";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Markdown } from "@/components/markdown";
 import { useScrollFade } from "@/lib/use-scroll-fade";
 import type {

@@ -24,12 +24,6 @@ import { CSS } from "@dnd-kit/utilities";
 import { useTranslations } from "next-intl";
 import {
   Button,
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
@@ -37,6 +31,7 @@ import {
   DropdownMenuSeparator,
   Input,
 } from "mangue-ui";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { useAppTabs } from "@/lib/app-tabs-context";
 import { useProjects } from "@/lib/projects-context";
 import { appTabRoute } from "@/lib/app-tab-location";

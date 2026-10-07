@@ -1,5 +1,6 @@
 "use client";
 
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/responsive-popover";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, BulbIcon, Cancel01Icon, Clock01Icon, CollapseIcon, ExpandIcon, Search01Icon, TaskEdit01Icon } from "@hugeicons/core-free-icons";
 import {
@@ -16,9 +17,6 @@ import { useTranslations } from "next-intl";
 import {
   Button,
   cn,
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
   Sheet,
   SheetContent,
   SheetTitle,
@@ -660,6 +658,7 @@ export const AssistantShell = forwardRef<
           </TooltipContent>
         </Tooltip>
         <PopoverContent
+          mobileTitle={t("conversations")}
           side="bottom"
           align="start"
           sideOffset={6}

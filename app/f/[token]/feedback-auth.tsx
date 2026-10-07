@@ -7,14 +7,10 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
   Button,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
   Input,
   Spinner,
 } from "mangue-ui";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { requestOtpAction, verifyOtpAction } from "./actions";
 import { useRuntimeConfig } from "@/lib/runtime-config-provider";
 import type { MessageKey } from "@/lib/i18n-keys";

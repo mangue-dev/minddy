@@ -8,13 +8,9 @@ import { Search01Icon } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
   Input,
 } from "mangue-ui";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { KbdSequence } from "@/components/ui/kbd";
 import { useCheatsheet } from "@/lib/keyboard/keyboard-context";
 import { filterCheatsheet } from "@/lib/keyboard/filter-cheatsheet";

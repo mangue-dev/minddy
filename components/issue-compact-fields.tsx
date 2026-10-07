@@ -9,7 +9,8 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Tag01Icon, Target01Icon, TriangleIcon, UserCircleIcon } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
-import { cn } from "mangue-ui";
+import { cn, Switch } from "mangue-ui";
+import { useId } from "react";
 import { DateTimePicker } from "@/components/date-time-picker";
 import { SmartFillIcon } from "@/components/smart-icons";
 import {
@@ -59,6 +60,8 @@ type ShortcutControl = {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   shortcutHint?: string;
+  /** Show the selected value in mobile creation property tiles. */
+  showValue?: boolean;
 };
 
 export function StatusCompact({
@@ -67,6 +70,7 @@ export function StatusCompact({
   open,
   onOpenChange,
   shortcutHint,
+  showValue = false,
 }: {
   value: IssueStatus;
   onChange: (v: IssueStatus) => void;
@@ -91,6 +95,7 @@ export function StatusCompact({
       trigger={
         <button type="button" aria-label={t("changeStatusAria")} className={BARE}>
           <StatusIndicator status={value} />
+          {showValue && <span>{tStatus(value)}</span>}
         </button>
       }
     />
@@ -103,6 +108,7 @@ export function PriorityCompact({
   open,
   onOpenChange,
   shortcutHint,
+  showValue = false,
 }: {
   value: IssuePriority;
   onChange: (v: IssuePriority) => void;
@@ -127,6 +133,7 @@ export function PriorityCompact({
       trigger={
         <button type="button" aria-label={t("changePriorityAria")} className={BARE}>
           <PriorityIndicator priority={value} />
+          {showValue && <span>{tPriority(value)}</span>}
         </button>
       }
     />
@@ -139,6 +146,7 @@ export function EffortCompact({
   open,
   onOpenChange,
   shortcutHint,
+  showValue = false,
 }: {
   value: IssueEffort | null;
   onChange: (v: IssueEffort | null) => void;
@@ -168,6 +176,7 @@ export function EffortCompact({
           ) : (
             <HugeiconsIcon icon={TriangleIcon} className="size-[18px] shrink-0 text-muted-foreground" />
           )}
+          {showValue && !value && <span>{tCommon("none")}</span>}
         </button>
       }
     />
@@ -182,6 +191,7 @@ export function CategoriesCompact({
   open,
   onOpenChange,
   shortcutHint,
+  showValue = false,
 }: {
   categories: Category[];
   value: string[];
@@ -228,6 +238,7 @@ export function CategoriesCompact({
           ) : (
             <HugeiconsIcon icon={Tag01Icon} className="size-[17px] shrink-0 text-muted-foreground" />
           )}
+          {showValue && !first && <span>{tField("noCategories")}</span>}
         </button>
       }
     />
@@ -241,12 +252,13 @@ export function AssigneeCompact({
   open,
   onOpenChange,
   shortcutHint,
+  showValue = false,
   noneLabel,
 }: {
   value: string | null;
   members: Member[];
   onChange: (v: string | null) => void;
-  /** Overrides the "clear" option's label (e.g. "Sans lead" for objectives). */
+  /** Overrides the "clear" option's label (e.g. "No lead" for objectives). */
   noneLabel?: string;
 } & ShortcutControl) {
   const t = useTranslations("IssueUI");
@@ -283,6 +295,7 @@ export function AssigneeCompact({
           ) : (
             <HugeiconsIcon icon={UserCircleIcon} strokeWidth={1.75} className="size-[18px] shrink-0 text-muted-foreground" />
           )}
+          {showValue && <span>{current ? displayName(current) : noneLabel ?? tField("unassigned")}</span>}
         </button>
       }
     />
@@ -334,6 +347,7 @@ export function ObjectiveCompact({
   open,
   onOpenChange,
   shortcutHint,
+  showValue = false,
 }: {
   value: string | null;
   objectives: Objective[];
@@ -375,7 +389,7 @@ export function ObjectiveCompact({
           ) : (
             <>
               <HugeiconsIcon icon={Target01Icon} className="size-4 shrink-0 text-muted-foreground" />
-              <span className="text-muted-foreground">{tField("objective")}</span>
+              <span className="text-muted-foreground">{tField(showValue ? "noObjective" : "objective")}</span>
             </>
           )}
         </button>
@@ -384,29 +398,24 @@ export function ObjectiveCompact({
   );
 }
 
-/**
- * SMART-FILL (MIN-260) — the toggle, in the row of options.
- *
- * It ONLY appears there if the account has the armed preference: cut off in the
- * settings, the feature does not exist and neither does its toggle (it is the caller who
- * decides to return it). Here, it only serves to cut it FOR THIS TICKET —
- * when we already know what we want, or we prefer not to spend a call.
- *
- * It is on by default, so it is drawn in reverse from the others: a
- * chip FULL when the thing is active (the normal state), and emptied when we have it
- * cut off. The other six pickers are empty until anything is chosen.
- *
- * `aria-pressed` and not a `Switch`: it is a tool row button, at least
- * same design as its neighbors, not a line of adjustments.
- */
+/** Desktop uses a compact action; mobile creation uses a full-width labeled switch. */
 export function SmartFillCompact({
   value,
   onChange,
+  fullWidth = false,
 }: {
   value: boolean;
   onChange: (v: boolean) => void;
+  fullWidth?: boolean;
 }) {
   const t = useTranslations("IssueUI");
+  const id = useId();
+  if (fullWidth) return <div className="creation-smart-fill">
+    <label htmlFor={id} className="flex min-w-0 flex-1 items-center gap-2 text-sm">
+      <SmartFillIcon className="size-4 shrink-0" />{t("smartFillChip")}
+    </label>
+    <Switch id={id} checked={value} onCheckedChange={onChange} />
+  </div>;
   return (
     <Tooltip>
       <TooltipTrigger asChild>

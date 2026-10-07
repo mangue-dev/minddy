@@ -2,14 +2,17 @@
 
 import { useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import { useMobileNavigation } from "./mobile-navigation-context";
 import { useOptionalAppTabSession } from "./app-tabs-context";
 
 /** Opening is distinct from local selection changes and passive redirects. */
 export function useAppNavigation() {
   const session = useOptionalAppTabSession();
+  const mobile = useMobileNavigation();
   return useCallback((href: string, open: () => void) => {
-    if (!session?.reuseDestination(href)) open();
-  }, [session]);
+    if (mobile) mobile.open(open);
+    else if (!session?.reuseDestination(href)) open();
+  }, [session, mobile]);
 }
 
 /** User navigation reuses exact destinations; replace keeps local URL updates. */

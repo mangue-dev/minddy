@@ -4,15 +4,11 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   Button,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
   Input,
   Spinner,
   toast,
 } from "mangue-ui";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { NumoIcon } from "@/components/numo-icon";
 import { ForgeUserAvatar } from "@/components/git/forge-user-avatar";
 import { usePrMembersQuery } from "@/lib/use-pr-members-query";

@@ -8,11 +8,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import {
   Button,
-  Checkbox,  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
+  Checkbox,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -27,6 +23,7 @@ import {
   cn,
   toast,
 } from "mangue-ui";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ForgeUserAvatar } from "@/components/git/forge-user-avatar";
 import { AppContentHeader } from "@/components/app-content-header";
 import { BotBadge, GitLogin } from "@/components/git/git-login";

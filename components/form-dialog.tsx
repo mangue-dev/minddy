@@ -3,13 +3,8 @@
 import type { ComponentProps, FormEvent, ReactNode } from "react";
 import {
   Button,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
 } from "mangue-ui";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DictateButton } from "@/components/ai-elements/dictate-button";
 import { SendShortcutTooltip } from "@/components/send-shortcut";
 import type { DictationContext } from "@/lib/dictation-context";

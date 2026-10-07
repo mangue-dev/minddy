@@ -5,11 +5,8 @@ import { Cancel01Icon } from "@hugeicons/core-free-icons";
 import { useLocale, useTranslations } from "next-intl";
 import {
   Button,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
 } from "mangue-ui";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import type { Locale } from "@/i18n/config";
 import { ChangelogEntries } from "@/components/changelog-entries";
 import { useScrollFade } from "@/lib/use-scroll-fade";

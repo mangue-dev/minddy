@@ -4,20 +4,8 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { AddToListIcon, ArrowUpDownIcon, CheckIcon } from "@hugeicons/core-free-icons";
 import { useMemo, useState, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import {
-  Button,
-  Command,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-  commandFilter,
-  cn,
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-  Spinner,
-} from "mangue-ui";
+import { Button, Command, CommandGroup, CommandInput, CommandItem, CommandList, commandFilter, cn, Spinner } from "mangue-ui";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/responsive-popover";
 import { ModelLogo, ProviderLogo } from "@/components/model-logo";
 import { formatModelName } from "@/lib/model-display";
 import { formatMultiplier, isMultiplierWithinPlan } from "@/lib/model-multiplier";

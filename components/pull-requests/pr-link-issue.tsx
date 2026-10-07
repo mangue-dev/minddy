@@ -7,17 +7,13 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import {
   Button,
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
   Spinner,
   toast,
   cn,
   CommandGroup,
   CommandItem,
 } from "mangue-ui";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { PickerOption } from "@/components/search-select";
 import { SearchMenu } from "@/components/search-menu";
 import { StatusIndicator } from "@/components/issue-indicators";

@@ -11,9 +11,6 @@ import {
   CommandGroup,
   CommandItem,
   CommandSeparator,
-  Dialog,
-  DialogContent,
-  DialogTitle,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -22,6 +19,7 @@ import {
   Switch,
   toast,
 } from "mangue-ui";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { AutoTextarea } from "@/components/auto-textarea";
 import { AgentBeamOverlay } from "@/components/agent-beam";
 import { DictateButton } from "@/components/ai-elements/dictate-button";

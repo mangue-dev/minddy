@@ -1083,39 +1083,10 @@ button[data-variant="ghost"] {
   padding: 0;
 }
 
-/* Mobile bottom nav (mangue-ui <MobileNav>): hide the auto "More" (⋯) menu and
-   its leading hairline divider. Every destination is reachable from the Menu
-   sheet + Search, and Numo / "+" have their own dedicated buttons — the extra
-   overflow menu is redundant. Targets the stable aria-label on the pill. */
-nav[aria-label="Navigation"] button[aria-label="More options"],
-nav[aria-label="Navigation"]
-  span[aria-hidden]:has(+ button[aria-label="More options"]) {
-  display: none;
-}
-
-/* ─── Clearing the mobile navigation bar ──────────────────────────
-   mango-ui reserves 6 rem at the bottom of the content (AppShell: `max-desktop:pb-[calc(
-   6rem+env(safe-area-inset-bottom))]`) so that nothing goes unnoticed
-   floating. However, the pill only measures 3 rem of buttons plus its low anchor:
-   the reserve releases one and a half times what was needed, and on mobile this
-   surplus is paid for everywhere — the end of a list, the last column of a board,
-   and especially the screens which ANCHOR a field at the foot (composing it with a pull
-   request, that of an agent session). There, the gap is not made up for
-   scrolling: there REMAINS on the screen, around forty pixels of space between the
-   bar and field, on the narrowest surface of the product.
-
-   We therefore base the reservation on what the pill really measures, plus a net
-   of air — only one rule, so all the pages at once. It targets <main>
-   of the shell (the only one of the app, cf. the class placed on the AppShell in
-   components/app-shell-chrome.tsx) and wins without `!important`: a
-   Tailwind utility lives in @layer, and an out-of-layer rule beats anything that
-   is layered, regardless of the specificity.
-
-   TO KEEP UPDATED WITH mangue-ui: the two measurements below copy its
-   geometry, and `lib/mobile-nav-clearance.test.ts` fails if it moves. */
+/* The fixed mobile bar owns its geometry. Keep the shell's reserve aligned
+   with its 48px buttons and safe-area anchor, plus a small content gutter. */
 :root {
-  /* The pill: 3 rem of buttons (MobileNavItem, `h-12`) + its bottom anchor
-     (MobileNav : `pb-[max(1rem,env(safe-area-inset-bottom))]`). */
+  /* Three rem of buttons plus the safe bottom anchor. */
   --mobile-nav-height: calc(3rem + max(1rem, env(safe-area-inset-bottom)));
   /* What we keep free under the content: the pill and a trickle of air. */
   --mobile-nav-clearance: calc(var(--mobile-nav-height) + 0.75rem);
@@ -2914,4 +2885,216 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
 }
 @media (prefers-reduced-motion: reduce) {
   .review-logo-shimmer { animation: none; }
+}
+
+/* Mobile sheets share one breakpoint and viewport budget. Wide data surfaces
+   (boards, tables, code and diffs) retain their own intentional scroll areas. */
+@media (width < 768px) {
+  .app-workspace, .app-shell main, #app-tab-content {
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: clip;
+  }
+
+  .mobile-bottom-sheet[data-slot="sheet-content"],
+  .mobile-assistant-sheet[data-slot="sheet-content"],
+  [data-slot="alert-dialog-content"] {
+    inset: auto 0 var(--mobile-keyboard-inset, 0px);
+    width: 100%;
+    max-width: none;
+    max-height: calc(var(--mobile-viewport-height, 100dvh) - max(1rem, env(safe-area-inset-top)));
+    height: auto;
+    margin: 0;
+    translate: none;
+    transform: none;
+    border-radius: 24px 24px 0 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+
+  .mobile-bottom-sheet [data-slot="dialog-header"] {
+    padding-right: 2rem;
+  }
+  .mobile-bottom-sheet [data-slot="sheet-close"] {
+    width: 44px;
+    height: 44px;
+    top: 4px;
+    right: 8px;
+  }
+  .mobile-menu-sheet[data-slot="sheet-content"] {
+    height: min(85dvh, var(--mobile-viewport-height, 100dvh));
+    overflow: hidden;
+  }
+  .mobile-picker-sheet[data-slot="sheet-content"] {
+    max-height: min(75dvh, calc(var(--mobile-viewport-height, 100dvh) - 1rem));
+    overflow: hidden;
+    padding-top: 3rem;
+  }
+  .mobile-picker-sheet [cmdk-root] {
+    display: flex;
+    min-height: 0;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .mobile-picker-sheet [cmdk-list] {
+    min-height: 0;
+    max-height: min(50dvh, calc(var(--mobile-viewport-height, 100dvh) - 7rem));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .mobile-picker-sheet [cmdk-item] {
+    min-height: 44px;
+  }
+  .mobile-assistant-sheet[data-slot="sheet-content"] {
+    height: calc(var(--mobile-viewport-height, 100dvh) - max(1rem, env(safe-area-inset-top)));
+    overflow: hidden;
+    transition: none;
+    border: 1px solid var(--border);
+  }
+  .mobile-assistant-sheet > div {
+    min-height: 0;
+  }
+  .mobile-command-palette[data-slot="sheet-content"] {
+    height: min(85dvh, calc(var(--mobile-viewport-height, 100dvh) - 1rem));
+    padding: 3rem 0 max(1rem, env(safe-area-inset-bottom));
+    gap: 0;
+    overflow: hidden;
+  }
+  [data-mobile-navigation] {
+    bottom: var(--mobile-keyboard-inset, 0px);
+  }
+  .app-content-header > div {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+@media (width < 768px) {
+  .mobile-side-panel-sheet[data-slot="sheet-content"] {
+    height: calc(var(--mobile-viewport-height, 100dvh) - max(1rem, env(safe-area-inset-top)));
+    overflow: hidden;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .mobile-side-panel-sheet [data-slot="side-panel-body"] {
+    min-height: 0;
+    overscroll-behavior: contain;
+  }
+}
+
+@media (width < 768px) {
+  .mobile-inbox-sheet[data-slot="sheet-content"] {
+    height: min(85dvh, calc(var(--mobile-viewport-height, 100dvh) - 1rem));
+    max-height: calc(var(--mobile-viewport-height, 100dvh) - 1rem);
+    padding-top: 3rem;
+  }
+}
+
+.creation-field-label { display: none; }
+.creation-title { display: block; }
+
+@media (width < 768px) {
+  .creation-sheet[data-slot="sheet-content"] {
+    height: min(92dvh, calc(var(--mobile-viewport-height, 100dvh) - 1rem));
+    padding: 1rem 1rem max(1rem, env(safe-area-inset-bottom));
+    gap: 1rem;
+    overflow: hidden;
+  }
+  .creation-form {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .creation-form-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+    padding: 0 2px 1rem;
+  }
+  .creation-dictation { margin-bottom: 1rem; }
+  .creation-field-label {
+    display: block;
+    margin: 1rem 0 0.5rem;
+    font-size: 0.75rem;
+    color: var(--muted-foreground);
+  }
+  .creation-title, .creation-description {
+    margin: 0;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 0.75rem;
+    font-size: 1rem;
+    line-height: 1.5;
+  }
+  .creation-description { min-height: 6rem; }
+  .creation-description .ProseMirror { font-size: 1rem; }
+  .creation-title:focus, .creation-description:focus-within { border-color: var(--ring); }
+  .creation-properties {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+  }
+  .creation-property {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 0.5rem 0.5rem 0;
+  }
+  .creation-property > button {
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    height: auto;
+    padding-inline: 0;
+    justify-content: flex-start;
+    overflow: hidden;
+  }
+  .creation-property > button span:not(.sr-only) {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .creation-form-footer {
+    flex-shrink: 0;
+    margin-top: 0;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--border);
+    gap: 0.5rem;
+  }
+  .creation-form-footer > button, .creation-submit button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  .creation-submit { width: 100%; }
+  .creation-submit > *, .creation-submit button[type="submit"] { flex: 1; }
+}
+
+@media (width < 768px) {
+  .creation-property > button,
+  .creation-property > button:hover,
+  .creation-property > button:focus-visible,
+  .creation-property > button[aria-expanded=true] {
+    background-color: transparent;
+  }
+  .creation-property:focus-within { border-color: var(--ring); }
+  .creation-property > button:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: -2px;
+  }
+  .creation-smart-fill {
+    grid-column: 1 / -1;
+    display: flex;
+    min-height: 56px;
+    align-items: center;
+    gap: 1rem;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 0.75rem;
+  }
 }

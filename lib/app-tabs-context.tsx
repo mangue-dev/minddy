@@ -1,4 +1,6 @@
 "use client";
+import { MobileNavigationContext, useMobileNavigation } from "./mobile-navigation-context";
+import { useMobileLayout } from "./use-mobile-layout";
 import { createContext, Suspense, useContext, useEffect, useMemo, useRef, useSyncExternalStore, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
@@ -30,7 +32,46 @@ const SessionContext = createContext<AppTabsSession | null>(null);
 
 export function AppTabsProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
-  return user ? <AccountTabs key={user.id} owner={user.id}>{children}</AccountTabs> : children;
+  const mobile = useMobileLayout();
+  // No account tab query, restoration, persistence or retained desktop views on phones.
+  if (!user || mobile === undefined) return children;
+  return mobile ? <MobileRoutes key={user.id}>{children}</MobileRoutes>
+    : <AccountTabs key={user.id} owner={user.id}>{children}</AccountTabs>;
+}
+
+function MobileRoutes({ children }: { children: ReactNode }) {
+  const router = useRouter();
+  const mobileNavigation = useMemo(() => {
+    const guards = new Set<() => Promise<boolean>>();
+    let pending = false;
+    return {
+      registerDeparture: (guard: () => Promise<boolean>) => { guards.add(guard); return () => { guards.delete(guard); }; },
+      open: (navigate: () => void) => {
+        if (pending) return;
+        pending = true;
+        void (async () => {
+          try {
+            for (const guard of guards) if (!(await guard())) return;
+            navigate();
+          } catch (error) { console.error("Unable to save before navigation", error); }
+          finally { pending = false; }
+        })();
+      },
+    };
+  }, []);
+  const started = useRef(false);
+  useEffect(() => {
+    if (started.current) return;
+    started.current = true;
+    const navigation = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming | undefined;
+    // A new ordinary session starts at Home. Explicit incoming URLs stay usable.
+    if (navigation?.type === "reload" && window.location.pathname !== "/home") {
+      router.replace("/home");
+    }
+  }, [router]);
+  return <SessionContext.Provider value={null}><NavigationContext.Provider value={null}>
+    <Context.Provider value={null}><MobileNavigationContext.Provider value={mobileNavigation}>{children}</MobileNavigationContext.Provider></Context.Provider>
+  </NavigationContext.Provider></SessionContext.Provider>;
 }
 
 function AccountTabs({ owner, children }: { owner: string; children: ReactNode }) {
@@ -167,5 +208,6 @@ export function useAppTabs() {
 /** Every mounted editor, including database previews, participates in departure. */
 export function useAppTabDeparture(guard: () => Promise<boolean>) {
   const session = useOptionalAppTabSession();
-  useEffect(() => session?.registerDeparture(guard), [session, guard]);
+  const mobile = useMobileNavigation();
+  useEffect(() => session?.registerDeparture(guard) ?? mobile?.registerDeparture(guard), [session, mobile, guard]);
 }

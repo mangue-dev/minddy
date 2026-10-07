@@ -4,17 +4,13 @@ import { useMemo, useState } from "react";
 import Link from "@/components/app-link";
 import { useTranslations } from "next-intl";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "mangue-ui";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
 import { useAnalytics } from "@/lib/use-analytics";

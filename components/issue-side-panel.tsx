@@ -12,12 +12,6 @@ import { useTranslations } from "next-intl";
 import {
   Button,
   ConfirmDeleteDialog,
-  SidePanel,
-  SidePanelBody,
-  SidePanelClose,
-  SidePanelContent,
-  SidePanelFooter,
-  SidePanelTitle,
   Tabs,
   TabsContent,
   TabsList,
@@ -25,6 +19,7 @@ import {
   cn,
   toast,
 } from "mangue-ui";
+import { SidePanel, SidePanelBody, SidePanelClose, SidePanelContent, SidePanelFooter, SidePanelTitle } from "@/components/ui/side-panel";
 import {
   AssigneeValue,
   CategoryValue,

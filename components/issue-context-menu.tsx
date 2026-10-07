@@ -1,5 +1,8 @@
 "use client";
 
+import { useMobileLayout } from "@/lib/use-mobile-layout";
+import { CommandGroup, CommandItem } from "mangue-ui";
+import { SearchMenu } from "@/components/search-menu";
 import { actionMenuItems } from "@/lib/visible-overlays";
 
 // Ticket actions menu: a real Radix dropdown (the same as dropdowns
@@ -221,6 +224,22 @@ function ActionMenuBody({
   );
 }
 
+/** Mobile actions stay in one searchable sheet, including nested groups. */
+function MobileActionMenu({ actions, onSelect, ...props }: {
+  actions: ContextMenuAction[];
+  onSelect: (action: ContextMenuAction) => void;
+} & Omit<React.ComponentProps<typeof SearchMenu>, "children">) {
+  const rows = (items: ContextMenuAction[], parentLabel = "", parentDisabled = false): React.ReactNode =>
+    items.map((action) => action.children?.length ? <CommandGroup key={action.id} heading={action.label}>
+      {rows(action.children, action.label, parentDisabled || !!action.disabled)}
+    </CommandGroup> : <CommandItem key={action.id} value={action.id}
+      keywords={[action.label, parentLabel, ...(action.keywords ?? [])]}
+      disabled={parentDisabled || action.disabled} onSelect={() => onSelect(action)}>
+      {action.icon}<span className={action.variant === "destructive" ? "text-destructive" : undefined}>{action.label}</span>
+    </CommandItem>);
+  return <SearchMenu {...props}><CommandGroup>{rows(actions)}</CommandGroup></SearchMenu>;
+}
+
 /** Pointer-anchored actions menu (right click on a card, tab, sidebar row…). */
 export function IssueContextMenu({
   position,
@@ -236,6 +255,7 @@ export function IssueContextMenu({
  entries (view pills), where it would only make noise. */
   searchable?: boolean;
 }) {
+  const mobile = useMobileLayout() === true;
   const lastPosition = React.useRef({ x: 0, y: 0 });
   if (position) lastPosition.current = position;
   const [mounted, setMounted] = React.useState(false);
@@ -243,6 +263,9 @@ export function IssueContextMenu({
   // Portals have no server markup. Keep the first client render identical
   // before attaching the pointer anchor, including when the menu is closed.
   if (!mounted) return null;
+  if (mobile) return <MobileActionMenu position={position} open={!!position}
+    onOpenChange={(next) => { if (!next) onClose(); }} actions={actions}
+    onSelect={(action) => { onClose(); requestAnimationFrame(() => action.onSelect?.()); }} />;
   // The whole menu — trigger included — is portaled to <body>. The invisible
   // trigger carries the anchor coordinates; inside any transformed or
   // clipped ancestor (drag-and-drop items, overflow-hidden strips) a `fixed`
@@ -310,12 +333,16 @@ export function IssueActionsMenu({
    */
   onOpenChange?: (open: boolean) => void;
 }) {
+  const mobile = useMobileLayout() === true;
   const [open, setOpen] = React.useState(false);
   const transferringFocus = React.useRef(false);
   const change = (next: boolean) => {
     setOpen(next);
     onOpenChange?.(next);
   };
+  if (mobile && searchable) return <MobileActionMenu trigger={trigger} open={open}
+    onOpenChange={change} actions={actions}
+    onSelect={(action) => { change(false); requestAnimationFrame(() => action.onSelect?.()); }} />;
   return (
     <DropdownMenu open={open} onOpenChange={change}>
       <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>

@@ -6,6 +6,7 @@
 // and renders one of four triggers via `variant`. Values are ISO strings
 // (local wall-clock time preserved); `null` means unset.
 
+import { Popover, PopoverContent, PopoverTrigger, PopoverAnchor } from "@/components/ui/responsive-popover";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { DateTimeIcon, RepeatIcon } from "@hugeicons/core-free-icons";
 import { AppIcon } from "@/components/icon";
@@ -20,10 +21,6 @@ import {
   ptBR as rdpPtBR,
 } from "react-day-picker/locale";
 import {
-  Popover,
-  PopoverAnchor,
-  PopoverContent,
-  PopoverTrigger,
   SegmentedControl,
   Select,
   SelectContent,
@@ -435,6 +432,7 @@ export function DateTimePicker({
         </PopoverTrigger>
       )}
       <PopoverContent
+        mobileTitle={ariaLabel ?? placeholder ?? t("placeholder")}
         align={
           variant === "field" || variant === "ghost" || variant === "anchored"
             ? "start"

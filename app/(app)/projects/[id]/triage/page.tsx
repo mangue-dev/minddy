@@ -9,16 +9,12 @@ import Link from "@/components/app-link";
 import { useTranslations, useFormatter } from "next-intl";
 import {
   Button,
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
   Skeleton,
   Spinner,
   cn,
   toast,
 } from "mangue-ui";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { EmptyScene } from "@/components/empty-scene";
 import { AppContentHeader } from "@/components/app-content-header";
 import { SecondarySidebar } from "@/components/secondary-sidebar";

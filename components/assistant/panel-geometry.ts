@@ -49,10 +49,9 @@ export function panelSheetClassName(displayMode: PanelDisplayMode): string {
     "md:data-open:!slide-in-from-right-0 md:data-closed:!slide-out-to-right-0",
     "md:data-open:zoom-in-95 md:data-closed:zoom-out-95",
     "md:shadow-[0_20px_50px_-15px_rgba(0,0,0,0.35),0_4px_12px_-4px_rgba(0,0,0,0.12)]",
-    // Mobile: almost full screen with a slight inset (floating map).
-    "max-md:!inset-2 max-md:!h-auto max-md:!w-auto max-md:!max-w-none",
-    "max-md:rounded-[30px] max-md:border",
-    "max-md:pb-[env(safe-area-inset-bottom)]",
+    // Mobile has one fixed bottom-sheet size, independent of desktop display mode.
+    "mobile-assistant-sheet",
+
   );
 }
 

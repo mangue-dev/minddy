@@ -3,7 +3,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
 import { Add01Icon, ArrangeByLettersAZIcon, AiAutoRotateIcon as CycleIcon, ArrowUpRight01Icon, Delete02Icon, FilterIcon, FloppyDiskIcon, LinkSquare01Icon, LoaderCircleIcon, LockIcon, MoreHorizontalIcon, Edit04Icon, Plug01Icon, Share01Icon, CheckIcon, TriangleIcon, UserCircleIcon } from "@hugeicons/core-free-icons";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   DndContext,
@@ -24,12 +24,6 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import {
   Button,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -44,6 +38,7 @@ import {
   cn,
   toast,
 } from "mangue-ui";
+import { DialogTrigger, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   StatusIndicator,
   PriorityIndicator,
@@ -55,6 +50,8 @@ import {
 import { UserAvatar } from "@/components/user-avatar";
 import { NumoIcon } from "@/components/numo-icon";
 import { useMyAvatarSource } from "@/lib/use-my-avatar";
+import { useMobileLayout } from "@/lib/use-mobile-layout";
+import { SearchSelect } from "@/components/search-select";
 import { AppContentHeader } from "@/components/app-content-header";
 import { ProjectOrb } from "@/components/project-orb";
 import { ProgressRing } from "@/components/progress-ring";
@@ -184,6 +181,14 @@ function toggleFacet<T extends string | null>(
   return [...set];
 }
 
+const MobileFilters = createContext(false);
+function FilterItem({ onSelect, disabled, children, pressed }: React.ComponentProps<typeof DropdownMenuItem> & { pressed?: boolean }) {
+  if (!useContext(MobileFilters)) return <DropdownMenuItem onSelect={onSelect} disabled={disabled}>{children}</DropdownMenuItem>;
+  return <button type="button" disabled={disabled} aria-pressed={pressed}
+    className="flex min-h-11 w-full items-center gap-2 rounded-xl px-3 text-left hover:bg-control-hover disabled:opacity-50"
+    onClick={(event) => onSelect?.(event.nativeEvent)}>{children}</button>;
+}
+
 /** One toggle row inside a filter submenu — Linear style: clicking toggles
     WITHOUT closing the menu (onSelect preventDefault), the check sits on the
     right. */
@@ -197,7 +202,8 @@ function MenuToggleRow({
   children: React.ReactNode;
 }) {
   return (
-    <DropdownMenuItem
+    <FilterItem
+      pressed={active}
       onSelect={(event) => {
         event.preventDefault();
         onSelect();
@@ -205,7 +211,7 @@ function MenuToggleRow({
     >
       <span className="flex min-w-0 flex-1 items-center gap-2">{children}</span>
       {active && <HugeiconsIcon icon={CheckIcon} className="size-4 shrink-0" />}
-    </DropdownMenuItem>
+    </FilterItem>
   );
 }
 
@@ -221,6 +227,10 @@ function FilterSub({
   count: number;
   children: React.ReactNode;
 }) {
+  if (useContext(MobileFilters)) return <details className="rounded-xl">
+    <summary className="min-h-11 cursor-pointer px-3 py-3 text-sm">{label}{count > 0 && <span className="ml-2 text-muted-foreground">{count}</span>}</summary>
+    <div className="pl-3">{children}</div>
+  </details>;
   return (
     <DropdownMenuSub>
       <DropdownMenuSubTrigger>
@@ -268,6 +278,8 @@ function FiltersPopover({
       attached) — the entry point of the filter request. */
   onAskAI: (wish: string) => void;
 }) {
+  const mobile = useMobileLayout() === true;
+  const Separator = mobile ? () => <hr className="my-2 border-border" /> : DropdownMenuSeparator;
   const [open, setOpen] = useState(false);
   const [aiWish, setAiWish] = useState("");
   const f = config.filters;
@@ -309,19 +321,10 @@ function FiltersPopover({
     onAskAI(wish);
   };
 
-  return (
-    <DropdownMenu open={open} onOpenChange={setOpen}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon-sm" aria-label={tc("filters")}>
-              <HugeiconsIcon icon={FilterIcon} className={cn(count > 0 && "text-primary")} />
-            </Button>
-          </DropdownMenuTrigger>
-        </TooltipTrigger>
-        <TooltipContent>{tc("filters")}</TooltipContent>
-      </Tooltip>
-      <DropdownMenuContent align="end" className="w-60">
+  const trigger = <Button variant="ghost" size="icon-sm" aria-label={tc("filters")}>
+    <HugeiconsIcon icon={FilterIcon} className={cn(count > 0 && "text-primary")} />
+  </Button>;
+  const body = <>
         {withAI && (
           <>
             {/* The AI input (MIN-592): write the wish, press Enter, the
@@ -350,7 +353,7 @@ function FiltersPopover({
                 />
               </form>
             </div>
-            <DropdownMenuSeparator />
+            <Separator />
           </>
         )}
         {projects.length > 0 && (
@@ -536,7 +539,7 @@ function FiltersPopover({
           </FilterSub>
         )}
 
-        <DropdownMenuSeparator />
+        <Separator />
         <MenuToggleRow
           active={!!config.display.hideDone}
           onSelect={() =>
@@ -566,10 +569,10 @@ function FiltersPopover({
         {/* Order — moved into the menu (MIN-592), with the direction invert
             right under the sort list. The invert button does not apply to
             "smart" and "manual": they carry their own order. */}
-        <DropdownMenuSeparator />
+        <Separator />
         <FilterSub label={tf("order")} count={0}>
           {SORTS.map((s) => (
-            <DropdownMenuItem
+            <FilterItem
               key={s}
               onSelect={(event) => {
                 event.preventDefault();
@@ -578,14 +581,14 @@ function FiltersPopover({
             >
               {tSort(s)}
               {config.sort === s && <HugeiconsIcon icon={CheckIcon} className="ml-auto size-4" />}
-            </DropdownMenuItem>
+            </FilterItem>
           ))}
-          <DropdownMenuSeparator />
+          <Separator />
           {/* The invert action reads like a checked option (MIN-592 review):
               the icon shows the CURRENT direction (A→Z vs Z→A) and the check
               marks that the direction is the reversed one. Not available for
               "smart" and "manual" — they carry their own order. */}
-          <DropdownMenuItem
+          <FilterItem
             disabled={!isDirectionalSort(config.sort)}
             onSelect={(event) => {
               event.preventDefault();
@@ -606,11 +609,23 @@ function FiltersPopover({
             )}
             {t("reverseOrder")}
             {sortDirection === "desc" && <HugeiconsIcon icon={CheckIcon} className="ml-auto size-4" />}
-          </DropdownMenuItem>
+          </FilterItem>
         </FilterSub>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
+  </>;
+  return <MobileFilters.Provider value={mobile}>
+    {mobile ? <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>{trigger}</DialogTrigger>
+      <DialogContent aria-describedby={undefined}>
+        <DialogTitle>{tc("filters")}</DialogTitle>
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">{body}</div>
+      </DialogContent>
+    </Dialog> : <DropdownMenu open={open} onOpenChange={setOpen}>
+      <Tooltip><TooltipTrigger asChild><DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger></TooltipTrigger>
+        <TooltipContent>{tc("filters")}</TooltipContent>
+      </Tooltip>
+      <DropdownMenuContent align="end" className="w-60">{body}</DropdownMenuContent>
+    </DropdownMenu>}
+  </MobileFilters.Provider>;
 }
 
 function ViewNameDialog({
@@ -914,7 +929,22 @@ export function BoardToolbar({
       <AppContentHeader contentClassName="gap-2">
         {/* Views bar — pills (views + Cycle) are drag-reorderable; the "+"
             stays fixed at the end. */}
-        <div className="flex shrink-0 items-center gap-1">
+        <div className="flex min-w-0 flex-1 items-center gap-1 md:hidden">
+          <SearchSelect
+            value={cycleTab?.active ? CYCLE_TAB_KEY : activeViewId}
+            onChange={(id) => { if (id === CYCLE_TAB_KEY) cycleTab?.onSelect(); else if (id) onSelectView(id); }}
+            options={tabKeys.flatMap((key) => {
+              if (key === CYCLE_TAB_KEY) return cycleTab ? [{ value: key, label: t("cycleTab") }] : [];
+              const view = viewById.get(key);
+              return view ? [{ value: key, label: view.kind === "my" ? t("myView") : view.name }] : [];
+            })}
+            trigger={<Button variant="ghost" size="sm" className="min-w-0 max-w-full justify-start">
+              <span className="truncate">{cycleTab?.active ? t("cycleTab") : activeView?.kind === "my" ? t("myView") : activeView?.name ?? t("newView")}</span>
+            </Button>}
+          />
+          <Button variant="ghost" size="icon-sm" aria-label={t("newView")} onClick={() => setCreateOpen(true)}><HugeiconsIcon icon={Add01Icon} /></Button>
+        </div>
+        <div className="hidden shrink-0 items-center gap-1 md:flex">
           <DndContext
             sensors={tabSensors}
             collisionDetection={closestCenter}

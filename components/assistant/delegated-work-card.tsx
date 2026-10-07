@@ -9,16 +9,11 @@ import { useSearchParams } from "next/navigation";
 import { useNow, useTranslations } from "next-intl";
 import {
   Button,
-  SidePanel,
-  SidePanelBody,
-  SidePanelContent,
-  SidePanelDescription,
-  SidePanelHeader,
-  SidePanelTitle,
   Spinner,
   toast,
   cn,
 } from "mangue-ui";
+import { SidePanel, SidePanelBody, SidePanelContent, SidePanelDescription, SidePanelHeader, SidePanelTitle } from "@/components/ui/side-panel";
 import { AgentDiffSheet } from "@/components/agent/agent-diff-sheet";
 import { AppIcon } from "@/components/icon";
 import { ModelLogo } from "@/components/model-logo";

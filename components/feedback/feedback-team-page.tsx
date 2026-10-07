@@ -18,12 +18,6 @@ import {
   CommandItem,
   CommandSeparator,
   ConfirmDeleteDialog,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -36,6 +30,7 @@ import {
   cn,
   toast,
 } from "mangue-ui";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 // ChevronUp renders the post vote count.
 import { EmptyScene } from "@/components/empty-scene";
 import { AppContentHeader } from "@/components/app-content-header";
