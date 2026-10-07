@@ -672,10 +672,6 @@ export function CreateIssueDialog({
             {...drop.handlers}
           >
             <DropOverlay show={drop.dragging} />
-            {drafts.legacyAvailable && <div className="mb-3 text-sm">
-              <p>{tDrafts("legacyWarning")}</p>
-              <Button type="button" variant="ghost" onClick={() => void drafts.recoverLegacy()}>{tDrafts("recoverLegacy")}</Button>
-            </div>}
             {/* Recent drafts — a row above the title to restore or delete an
               abandoned draft (MIN-41). Hidden once the form has content. */}
             {title.trim() === "" && description.trim() === "" && (

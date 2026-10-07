@@ -505,10 +505,6 @@ export function ObjectiveDialog({
               : {})}
           >
             {composerEnabled && <DropOverlay show={drop.dragging} />}
-            {composerEnabled && drafts.legacyAvailable && <div className="mb-3 text-sm">
-              <p>{tDrafts("legacyWarning")}</p>
-              <Button type="button" variant="ghost" onClick={() => void drafts.recoverLegacy()}>{tDrafts("recoverLegacy")}</Button>
-            </div>}
             {/* Recent drafts — a row above the name to restore or delete an
               abandoned draft (MIN-41). Hidden once the form has content. */}
             {composerEnabled &&
