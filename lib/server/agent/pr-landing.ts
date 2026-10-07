@@ -12,6 +12,7 @@ import { DEFAULT_NUMO_STATUS, type NumoDefaultStatus,
 import type { RepoProviderId } from "@/lib/repo-providers";
 import { numoPullRequestFooter } from "@/lib/numo-pr-footer";
 import { DEFAULT_AGENT_BRANCH_PREFIX } from "./branch-name";
+import { decodeAgentWorkBranch } from "./run-work-branch-content";
 
 import { notifyPullRequestOpened } from "./pr-opened-notify";
 import { prStateFromRef, upsertPullRequest, pullRequestIssueIds } from "./pull-requests";
@@ -57,7 +58,7 @@ export interface PrLandingContext {
   issue: { identifier: string } | null;
   workBranch: string;
   baseBranch: string;
-  /** Langue du commentaire de ticket : celle du lanceur. */
+  /** Issue comment locale, chosen by the launcher. */
   locale: Locale;
   /** The calling engine's event emitter: `appendEvent` serialized in the
    * function, a POST to `/events` from the microVM. Same type as that of
@@ -112,10 +113,15 @@ export async function assertPrLandingAuthority(
   if (!isValidGitBranchName(ctx.workBranch) || !isValidGitBranchName(ctx.baseBranch)) {
     throw new PrLandingAuthorityError("invalid pull request branch");
   }
-  if (current.branch_name && current.branch_name !== ctx.workBranch) {
-    throw new PrLandingAuthorityError("working branch does not match the run");
+  const decoded = await decodeAgentWorkBranch(current, current.created_by).catch(() => {
+    throw new PrLandingAuthorityError("unable to decode the run's working branch");
+  });
+  if (decoded.branch_name && decoded.branch_name !== ctx.workBranch) {
+    throw new PrLandingAuthorityError(
+      `working branch does not match the run: expected ${JSON.stringify(decoded.branch_name)}, received ${JSON.stringify(ctx.workBranch)}`,
+    );
   }
-  return current;
+  return decoded;
 }
 
 /** Thread note when end of turn push fails (visible in conversation). */

@@ -846,6 +846,25 @@ export async function handleControlPlaneRequest(opts: {
     return ok();
   }
 
+  if (method === "POST" && surface === "/github-cli") {
+    if (opts.local) return forbidden("GitHub CLI sandbox relay is unavailable for local runs");
+    if (run.repo_provider !== "github") return ok({ supported: false });
+    const { resolveRepoCloneTarget } = await import("./repo-access");
+    const target = await resolveRepoCloneTarget(run.project_id, "github-cli");
+    if (!target) return { status: 404, body: { error: "no GitHub repository linked" } };
+    if (!repoTargetMatchesRun(run, target)) {
+      return { status: 409, body: { error: "run repository binding has changed" } };
+    }
+    if (body.path === undefined) return ok({ supported: true, repoFullName: target.repoFullName });
+    const { relayGithubCliRequest } = await import("./github-cli");
+    try {
+      return ok(await relayGithubCliRequest(target, body));
+    } catch {
+      // Do not echo upstream failures, which may contain credentials or request bodies.
+      return bad("GitHub CLI relay request failed or is outside the linked repository");
+    }
+  }
+
   if (method === "POST" && surface === "/repo-auth") {
     /** Desktop-local execution refreshes repository access through the signed-in
      * app, not through its readable execution token (MIN-355). */
@@ -1383,7 +1402,7 @@ async function runCreatePr(
     typeof body.workBranch === "string" ? body.workBranch.trim() : "";
   const workBranch = suppliedBranch || expectedBranch;
   if (!isValidGitBranchName(workBranch) || workBranch !== expectedBranch) {
-    return bad("create_pr: invalid or unexpected work branch");
+    return bad(`create_pr: invalid or unexpected work branch: expected ${JSON.stringify(expectedBranch)}, received ${JSON.stringify(workBranch)}`);
   }
   const baseBranch = run.base_branch ?? target.defaultBranch;
   if (!isValidGitBranchName(baseBranch))

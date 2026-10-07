@@ -1621,3 +1621,42 @@ leave, no memory** — and not before the changeover week of batch 3.
    switch of batch 3, at the additional cost in rounds observed, not before.
 
 The rest of the site is in the MIN-286 plan.
+
+## GitHub CLI in server sandboxes (MIN-660)
+
+Managed Vercel and self-hosted Linux sandboxes install the official GitHub CLI
+2.102.0 for amd64 or arm64, verified against pinned release SHA-256 checksums.
+The binary lives under the harness runtime directory, outside the repository,
+and is reused on later turns. Installation failures stop bootstrap with an
+explicit error instead of leaving a worker with a missing CLI.
+
+`gh` uses a private Unix socket configured in a temporary `GH_CONFIG_DIR`.
+Its `GH_TOKEN` is only a placeholder. The `/github-cli` control-plane surface
+rechecks the run, current project membership, and immutable repository binding
+for every request. Only the server holds the installation token, scoped to the
+linked repository ID with `contents: read` and `pull_requests: write`.
+REST requests are restricted to that repository; GraphQL relies on the same
+GitHub-enforced token scope. Neither a forge token nor an authenticated remote
+is written to sandbox files or supplied to the OpenCode environment. The socket
+and configuration are removed when the turn ends. Desktop-local runs retain
+their own CLI configuration, and GitLab runs do not provision this GitHub relay.
+
+`create_pr` remains the integrated delivery path because it also records the PR
+and synchronizes issue state. For a CLI fallback after the branch was pushed:
+
+```sh
+gh pr create --head "$(git branch --show-current)" --base main \
+  --title "Reviewable update" --body-file /tmp/pr-description.md
+gh api repos/OWNER/REPO/pulls/NUMBER
+```
+
+Use the run's actual base branch instead of `main` when it differs. `--head`
+skips the CLI's fork/push prompts; Git transport retains its separate harness
+authentication. Account operations, release uploads and repository-content
+writes are outside this relay's scope. Mutating relay requests are never
+automatically retried: after a lost response, inspect the PR list before retrying.
+
+PR landing reads the current branch in plaintext only after authorization
+checks. Encrypted persisted work branches are decoded before comparison, and
+branch mismatches identify both the expected and supplied branch. A decoding
+failure rejects landing without including ciphertext in the error.
