@@ -5,7 +5,7 @@ summary: Back up, upgrade, restore, troubleshoot, and understand the lifecycle c
 category: deployment
 audience: developer
 tags: [self-hosting, self host, backup, restore, upgrade, rollback, maintenance, migration, operations]
-lastReviewed: 2026-09-09
+lastReviewed: 2026-10-07
 ---
 
 Use this article after installation. The detailed versioned runbook is `docs/self-hosting-operations.md`; the release's compatibility row and release assets are authoritative for exact versions, image digests, and Supabase revisions. These procedures are for an operator or an agent working with explicit operator-provided infrastructure, not for Minddy Cloud.
@@ -27,7 +27,7 @@ A valid backup captures one write-consistent point in time and includes all of:
 
 A database dump alone is not enough: it contains Storage metadata but not file bytes. Storage bytes alone are not enough: they do not contain object metadata, policies, accounts, or migrations. For S3, take an immutable raw backend snapshot/version while Storage is stopped; do not restore database records through the `/storage/v1/s3` API. Encrypt backups, store them off-host, checksum them, and prove a test restore.
 
-The repository provides `pnpm self-host:backup`, `self-host:update`, and `self-host:restore` as read-only preflight safety gates: they check release ancestry and checksums and print the procedure to follow, but they never guess a storage backend, an outage, a database, or a restore target. The concrete procedures are the runbook's:
+The repository provides `pnpm self-host:backup`, `self-host:update`, and `self-host:restore` as read-only preflight safety gates: they check release identity and checksums and print the procedure to follow, but they never guess a storage backend, an outage, a database, or a restore target. The concrete procedures are the runbook's:
 
 ```bash
 pnpm self-host:backup -- --backup-dir /mnt/backup/minddy/<timestamp>-<release>
