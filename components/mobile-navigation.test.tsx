@@ -10,6 +10,12 @@ vi.mock("next/navigation", () => ({ usePathname: () => "/projects/aurora" }));
 vi.mock("@/components/app-link", () => ({ default: ({ href, onClick, children, ...props }: {
   href: string; onClick?: () => void; children: ReactNode;
 }) => <a {...props} href={href} onClick={(event: MouseEvent) => { event.preventDefault(); onClick?.(); navigation.visit(href); }}>{children}</a> }));
+vi.mock("./app-sidebar", () => ({
+  SidebarFrame: ({ children, onNavigate }: { children: ReactNode; onNavigate: () => void }) => <aside onClickCapture={(event) => { if ((event.target as Element).closest("a[href]")) onNavigate(); }}>{children}</aside>,
+  SidebarRows: ({ sections }: { sections: { items: { key: string; href?: string; label: string; onClick: () => void; browseKey?: string }[] }[] }) => sections.map((section, index) => <section key={index}>{section.items.map((item) => item.href
+    ? <a key={item.key} href={item.href} onClick={(event) => { event.preventDefault(); navigation.visit(item.href); }}>{item.label}</a>
+    : <button key={item.key} data-mobile-menu-branch={item.browseKey} onClick={item.onClick}><svg />{item.label}</button>)}</section>),
+}));
 vi.mock("./mobile-nav-actions", () => ({ MobileNavActions: () => null }));
 vi.mock("@/components/icon", () => ({ AppIcon: (props: { className?: string }) => <svg aria-hidden className={props.className} /> }));
 vi.mock("mangue-ui", async () => ({
@@ -25,22 +31,23 @@ beforeEach(() => {
   navigation.visit.mockClear();
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} });
-  container = document.createElement("div"); document.body.appendChild(container); root = createRoot(container);
+  container = document.createElement("div"); container.className = "app-workspace"; document.body.appendChild(container); root = createRoot(container);
 });
 afterEach(async () => { await act(() => root.unmount()); container.remove(); vi.unstubAllGlobals(); });
 
-it("browses projects and resource levels without leaving the sheet until a final link is chosen", async () => {
+it("browses projects and resource levels without leaving the sidebar until a final link is chosen", async () => {
   const branchAction = vi.fn();
   const objectives: MobileMenuPanel = { key: "beacon-objectives", title: "Objectives", sections: [{ items: [{ key: "overview", label: "All objectives", href: "/projects/beacon/objectives" }] }] };
   const beacon: MobileMenuPanel = { key: "beacon", title: "Beacon", sections: [{ items: [{ key: "objectives", label: "Objectives", href: "/projects/beacon/objectives", panel: objectives, onClick: branchAction }] }] };
   const aurora: MobileMenuPanel = { key: "aurora", title: "Aurora", icon: <svg data-project-icon />, sections: [{ items: [{ key: "board", label: "Tickets", href: "/projects/aurora" }] }] };
-  await act(() => root.render(<NextIntlClientProvider locale="en" messages={{ Nav: { goTo: "Go to", home: "Home", searchPlaceholder: "Search" }, Common: { back: "Back", close: "Close" } }}>
-    <MobileNavigation initialPanel={aurora} sections={[{ items: [{ key: "beacon", label: "Beacon", href: "/projects/beacon", panel: beacon, onClick: branchAction }] }]} menuFooter={null} onSearch={() => {}} />
-  </NextIntlClientProvider>));
+  await act(() => root.render(<div className="app-shell"><NextIntlClientProvider locale="en" messages={{ Nav: { goTo: "Go to", home: "Home", searchPlaceholder: "Search" }, Common: { back: "Back", close: "Close" } }}>
+    <MobileNavigation initialPanel={aurora} sections={[{ items: [{ key: "beacon", label: "Beacon", href: "/projects/beacon", panel: beacon, onClick: branchAction }] }]} onSearch={() => {}} />
+  </NextIntlClientProvider></div>));
   const click = async (selector: string) => { await act(() => document.querySelector<HTMLElement>(selector)!.click()); };
   const dialog = () => document.querySelector('[role="dialog"]');
   await click("[data-mobile-menu-trigger]");
   expect(dialog()?.textContent).toContain("Aurora");
+  expect(container.querySelector<HTMLElement>(".app-shell")?.inert).toBe(true);
   expect(dialog()?.querySelector("[data-mobile-project-icon] [data-project-icon]")).not.toBeNull();
   await click('button[aria-label="Back"]');
   await click('[data-mobile-menu-branch="beacon"]');
@@ -58,7 +65,12 @@ it("browses projects and resource levels without leaving the sheet until a final
   await click('a[href="/projects/beacon/objectives"]');
   expect(navigation.visit).toHaveBeenCalledExactlyOnceWith("/projects/beacon/objectives");
   expect(dialog()).toBeNull();
+  expect(container.querySelector<HTMLElement>(".app-shell")?.inert).toBe(false);
+  expect(document.activeElement).toBe(document.querySelector("[data-mobile-menu-trigger]"));
   await click("[data-mobile-menu-trigger]");
   expect(dialog()?.textContent).toContain("Aurora");
   expect(dialog()?.textContent).not.toContain("Beacon");
+  await act(() => window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })));
+  expect(dialog()).toBeNull();
+  expect(container.querySelector<HTMLElement>(".app-shell")?.inert).toBe(false);
 });

@@ -3,6 +3,9 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowDown01Icon, ArrowLeft01Icon, ArrowRight01Icon, ArrowUpRight01Icon, Analytics01Icon, CreditCardIcon, Delete02Icon, HelpCircleIcon, Home01Icon, LogOutIcon, Megaphone01Icon, Settings01Icon, Shield01Icon, CheckIcon } from "@hugeicons/core-free-icons";
 import { AppIcon } from "@/components/icon";
+import { useMobileAccountIdentity } from "@/components/mobile-account";
+import { Dialog, DialogContent, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { MobileSheetScrollArea } from "@/components/ui/mobile-sheet";
 import {
   useCallback,
   useEffect,
@@ -131,6 +134,8 @@ export type AppNavItem = Omit<NavItem, "icon"> & {
   descends?: boolean;
   /** Additional right-click actions for rows that represent editable objects. */
   contextActions?: ContextMenuAction[];
+  /** A mobile browse target; selecting it changes levels without navigation. */
+  browseKey?: string;
 };
 export type AppNavSection = Omit<NavSection, "items"> & { items: AppNavItem[] };
 
@@ -258,6 +263,7 @@ function SidebarRow({ item }: { item: AppNavItem }) {
         data-sidebar-navigation-item
         aria-current={active ? "page" : undefined}
         onClick={item.onClick}
+        data-mobile-menu-branch={item.browseKey}
         disabled={item.disabled}
         onContextMenu={openContextMenu}
         className={cn(rowClass, "text-left", "w-full")}
@@ -307,6 +313,14 @@ function SidebarRow({ item }: { item: AppNavItem }) {
       />
     </>
   );
+}
+
+/** Mobile and desktop navigation use the same rows and section geometry. */
+export function SidebarRows({ sections }: { sections: AppNavSection[] }) {
+  return <>{sections.map((section, index) => <section key={section.key ?? index} className={cn(index > 0 && "mt-4")}>
+    {section.label && <h2 className={cn("truncate pt-1 pr-3 pb-1 text-[11px] font-medium tracking-wide text-sidebar-foreground/45", ROW_PL)}>{section.label}</h2>}
+    <ul className="flex flex-col gap-1">{section.items.map((item) => <li key={item.key}><SidebarRow item={item} /></li>)}</ul>
+  </section>)}</>;
 }
 
 function SidebarNav({
@@ -499,8 +513,10 @@ function ProjectContextRow({
 
 function AccountButton({
   onMenuOpenChange,
+  mobile = false,
 }: {
   onMenuOpenChange?: (open: boolean) => void;
+  mobile?: boolean;
 }) {
   const t = useTranslations("Nav");
   const tCommon = useTranslations("Common");
@@ -508,6 +524,7 @@ function AccountButton({
   const { capabilities } = useRuntimeConfig();
   const hasManagedService = capabilities.managedBilling?.configured || capabilities.managedAi?.configured;
   const { status } = useBillingSummary();
+  const mobileIdentity = useMobileAccountIdentity();
   const tBilling = useTranslations("Billing");
   const planLabels: Record<BillingPlanId, "planFree" | "planGo" | "planPro"> = { free: "planFree", go: "planGo", pro: "planPro" };
   const planName = hasManagedService && status && (status.managedBilling || status.managedAi)
@@ -521,7 +538,8 @@ function AccountButton({
   const [confirmationOpen, setConfirmationOpen] = useState(false);
   const confirmationPendingRef = useRef(false);
   const meta = user?.user_metadata as AuthNameMeta | undefined;
-  const name = authDisplayName(meta, user?.email ?? null, t("accountFallback"));
+  const name = mobile ? mobileIdentity.name : authDisplayName(meta, user?.email ?? null, t("accountFallback"));
+  const mobilePlanName = mobileIdentity.planLabel;
   const seed = useMyAvatarSource();
 
   useEffect(() => {
@@ -546,6 +564,46 @@ function AccountButton({
     setConfirmationOpen(false);
     void signOut();
   };
+
+  if (mobile) {
+    const destinations = [
+      { href: "/settings?tab=profile", label: name, icon: Settings01Icon },
+      ...(hasManagedService ? [{ href: "/billing", label: t("billing"), icon: CreditCardIcon }] : []),
+      { href: "/settings", label: t("accountSettings"), icon: Settings01Icon },
+      { href: "/trash", label: t("trash"), icon: Delete02Icon },
+      { href: "/statistics", label: t("statistics"), icon: Analytics01Icon },
+      ...(isAdmin ? [{ href: "/admin", label: t("adminDashboard"), icon: Shield01Icon }] : []),
+    ];
+    return <>
+      <button type="button" data-mobile-sidebar-account aria-haspopup="dialog" aria-expanded={menuOpen}
+        onClick={() => setMenuOpen(true)} className={cn("flex min-h-11 w-full items-center gap-3 rounded-lg pr-2 text-left hover:bg-sidebar-accent", AVATAR_PL)}>
+        <UserAvatar seed={seed} className="size-[22px] shrink-0" />
+        <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium">{name}</span>
+          {mobilePlanName && <span className="block truncate text-xs text-sidebar-foreground/60">{mobilePlanName}</span>}
+        </span>
+      </button>
+      <Dialog open={menuOpen} onOpenChange={setMenuOpen}>
+        <DialogContent aria-describedby={undefined} onCloseAutoFocus={finishOpeningSignOutConfirmation}>
+          <DialogTitle>{t("account")}</DialogTitle>
+          <MobileSheetScrollArea>
+            {destinations.map(({ href, label, icon }) => <Link key={href} href={href} onClick={() => setMenuOpen(false)} className="flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm hover:bg-muted">
+              <AppIcon icon={icon} className="size-[18px] shrink-0" /><span className="min-w-0 truncate">{label}</span>
+            </Link>)}
+            <button type="button" onClick={openSignOutConfirmation} className="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-sm text-destructive hover:bg-muted">
+              <AppIcon icon={LogOutIcon} className="size-[18px]" />{t("signOut")}
+            </button>
+          </MobileSheetScrollArea>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={confirmationOpen} onOpenChange={setConfirmationOpen}>
+        <DialogContent aria-describedby={confirmationDescriptionId}>
+          <DialogTitle>{t("signOutConfirmTitle")}</DialogTitle>
+          <p id={confirmationDescriptionId} className="text-sm text-muted-foreground">{t("signOutConfirmDescription")}</p>
+          <DialogFooter><Button variant="outline" onClick={() => setConfirmationOpen(false)}>{tCommon("cancel")}</Button><Button variant="destructive" onClick={confirmSignOut}>{t("signOut")}</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>;
+  }
 
   return (
     <Popover open={confirmationOpen} onOpenChange={setConfirmationOpen}>
@@ -699,7 +757,9 @@ function ChangelogButton({
   productFeedbackUrl,
   onMenuOpenChange,
   portalOwner,
+  mobile = false,
 }: {
+  mobile?: boolean;
   productFeedbackIntegrationEnabled: boolean;
   productFeedbackUrl: string | null;
   onMenuOpenChange?: (open: boolean) => void;
@@ -744,6 +804,28 @@ function ChangelogButton({
       <HugeiconsIcon icon={HelpCircleIcon} className="size-[18px]" />
     </button>
   );
+
+  if (mobile) return <>
+    <button type="button" aria-label={t("whatsNew")} aria-haspopup="dialog" aria-expanded={menuOpen} onClick={() => handleMenuOpenChange(true)} className={SIDEBAR_COMPACT_CONTROL_CLASS}><HugeiconsIcon icon={HelpCircleIcon} className="size-[18px]" /></button>
+    <Dialog open={menuOpen} onOpenChange={handleMenuOpenChange}>
+      <DialogContent aria-describedby={undefined}>
+        <DialogTitle>{t("whatsNew")}</DialogTitle>
+        <MobileSheetScrollArea className="space-y-2">
+          <ol>{preview?.releases.slice(0, 3).map((entry) => <li key={entry.version} className="min-h-11 px-3 py-3 text-sm">{`v${entry.version} · ${entry.title}`}</li>)}</ol>
+          <button type="button" className="flex min-h-11 w-full items-center rounded-lg px-3 text-left text-sm hover:bg-muted" onClick={() => { handleMenuOpenChange(false); setDialogMounted(true); setDialogOpen(true); }}>{t("viewFullChangelog")}</button>
+          {(productFeedbackIntegrationEnabled || productFeedbackUrl) && <button type="button" className="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-left text-sm hover:bg-muted" onClick={() => {
+            handleMenuOpenChange(false);
+            if (productFeedbackIntegrationEnabled) { setFeedbackDialogMounted(true); setFeedbackDialogOpen(true); }
+            else if (productFeedbackUrl) window.open(productFeedbackUrl, "_blank", "noopener,noreferrer");
+          }}><AppIcon icon={Megaphone01Icon} className="size-[18px]" />{t("shareFeedback")}</button>}
+          <p className="px-3 text-xs text-muted-foreground">{t("webVersion")}: {APP_VERSION}</p>
+          {desktopVersion && <p className="px-3 text-xs text-muted-foreground">{t("appVersion")}: {desktopVersion}</p>}
+        </MobileSheetScrollArea>
+      </DialogContent>
+    </Dialog>
+    {dialogMounted && <WhatsNewDialog open={dialogOpen} onOpenChange={setDialogOpen} />}
+    {feedbackDialogMounted && <ProductFeedbackDialog open={feedbackDialogOpen} onOpenChange={setFeedbackDialogOpen} />}
+  </>;
 
   return (
     <>
@@ -846,21 +928,24 @@ function ChangelogButton({
 function SidebarFooter({
   onMenuOpenChange,
   portalOwner,
+  mobile = false,
 }: {
   onMenuOpenChange?: (open: boolean) => void;
   portalOwner: string;
+  mobile?: boolean;
 }) {
   const { productFeedbackIntegrationEnabled, productFeedbackUrl } = useRuntimeConfig();
   return (
     <div className="flex items-center gap-0.5">
       <div className="min-w-9 flex-1">
-        <AccountButton onMenuOpenChange={onMenuOpenChange} />
+        <AccountButton mobile={mobile} onMenuOpenChange={onMenuOpenChange} />
       </div>
       <UsageIndicator
         variant="sidebar"
         onOpenChange={onMenuOpenChange}
       />
       <ChangelogButton
+        mobile={mobile}
         portalOwner={portalOwner}
         productFeedbackIntegrationEnabled={productFeedbackIntegrationEnabled}
         productFeedbackUrl={productFeedbackUrl}
@@ -868,6 +953,21 @@ function SidebarFooter({
       />
     </div>
   );
+}
+
+/** The same sidebar surface and pinned footer surround both navigation layouts. */
+export function SidebarFrame({ id, mobile = false, children, onLayerOpenChange, onNavigate }: {
+  id: string; mobile?: boolean; children: ReactNode;
+  onLayerOpenChange?: (open: boolean) => void; onNavigate?: () => void;
+}) {
+  return <aside id={id} data-sidebar-navigation data-mobile-sidebar={mobile || undefined}
+    style={{ width: mobile ? "100%" : EXPANDED_WIDTH }}
+    className="flex h-full min-h-0 flex-col overflow-hidden bg-sidebar text-sidebar-foreground"
+    onClickCapture={mobile ? (event) => { if (isPlainNavigationClick(event) && event.target instanceof Element && event.target.closest("a[href]")) onNavigate?.(); } : undefined}>
+    {children}
+    <SidebarOnboarding mobile={mobile} onLayerOpenChange={onLayerOpenChange} />
+    <div data-sidebar-footer className={cn("shrink-0 pt-2 pb-2.5", GUTTER)}><SidebarFooter portalOwner={id} mobile={mobile} onMenuOpenChange={onLayerOpenChange} /></div>
+  </aside>;
 }
 
 /* ─── Levels (MIN-546) ─────────────────────────────────────────────── */
@@ -1059,14 +1159,7 @@ export function AppSidebar({
   }, [onLayerOpenChange]);
 
   return (
-    <aside
-      id={railId}
-      data-sidebar-navigation
-      style={{ width: EXPANDED_WIDTH }}
-      className={cn(
-        "flex h-full flex-col overflow-hidden bg-sidebar text-sidebar-foreground",
-      )}
-    >
+    <SidebarFrame id={railId} onLayerOpenChange={handleMenuOpenChange}>
       {/* The top band COMMANDS the column: level 2/3 keeps the page's filter
           strip teleported here, the other levels the creation controls.
           Pinned strip — what drives the list should be here. */}
@@ -1155,16 +1248,6 @@ export function AppSidebar({
         />
       </div>
 
-      <SidebarOnboarding onLayerOpenChange={handleMenuOpenChange} />
-
-      {/* The account line is the only option present on EVERY level — the
-          separator keeps it apart from whichever level runs above it. */}
-      <div className={cn("pt-2 pb-2.5", GUTTER)}>
-        <SidebarFooter
-          portalOwner={railId}
-          onMenuOpenChange={handleMenuOpenChange}
-        />
-      </div>
-    </aside>
+    </SidebarFrame>
   );
 }

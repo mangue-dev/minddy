@@ -2,19 +2,15 @@
 
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
 import { Analytics01Icon, ComputerIcon, Copy01Icon, CreditCardIcon, Delete02Icon, LogOutIcon, MoonIcon, Settings01Icon, Shield01Icon, Sun01Icon, CheckIcon } from "@hugeicons/core-free-icons";
-import { useEffect, useMemo, useState, type SVGProps } from "react";
+import { useMemo, type SVGProps } from "react";
 import { useTranslations } from "next-intl";
 import { useAppRouter } from "@/lib/use-app-router";
-import { APP_VERSION } from "@/lib/app-version";
-import { getDesktopBridge } from "@/lib/desktop/bridge";
 import { toast } from "mangue-ui";
 import type { IconComponent } from "@/components/icon";
 import { useAuth } from "@/lib/auth-context";
 import { useIsAdmin } from "@/lib/use-is-admin";
 import { useAccountTheme } from "@/lib/use-account-theme";
 import { authDisplayName, type AuthNameMeta } from "@/lib/display-name";
-import { useMyAvatarSource } from "@/lib/use-my-avatar";
-import { UserAvatar } from "@/components/user-avatar";
 import { useBillingSummary } from "@/lib/use-billing-query";
 import type { AppNavSection } from "@/components/app-sidebar";
 import type { PaletteGroup, PaletteItem } from "@/components/header-search-pill";
@@ -33,10 +29,8 @@ const THEME_CHOICES: { value: "light" | "dark" | "system"; icon: IconComponent; 
 ];
 
 /**
- * The account/global options that live in the desktop sidebar footer (statistics,
- * feedback, account settings, theme, sign out), surfaced on mobile in both the
- * hamburger menu sheet (as nav sections — the sidebar replacement) and the
- * command palette (as an "Account" group), from one source so they stay in sync.
+ * Account/global actions for the command palette and navigation consumers.
+ * The shared sidebar footer owns account controls in both viewport layouts.
  */
 export function useAccountActions(): {
   menuSections: AppNavSection[];
@@ -166,45 +160,14 @@ export function useAccountActions(): {
   }, [t, router, signOut, theme, setTheme, isAdmin]);
 }
 
-/** User identity block for the bottom of the mobile menu sheet (menuFooter). */
-export function MobileMenuFooter() {
+/** Shared mobile identity never falls back to an email or an assumed plan. */
+export function useMobileAccountIdentity() {
   const t = useTranslations("Nav");
   const tb = useTranslations("Billing");
   const { user } = useAuth();
   const { status, usage } = useBillingSummary();
   const planId = usage?.planId ?? status?.planId;
   const planLabel = planId ? tb(({ free: "planFree", go: "planGo", pro: "planPro" } as const)[planId]) : null;
-  const [desktopVersion, setDesktopVersion] = useState<string | null>(null);
   const meta = user?.user_metadata as AuthNameMeta | undefined;
-  const name = authDisplayName(meta, null, t("accountFallback"));
-  const seed = useMyAvatarSource();
-
-  useEffect(() => {
-    const bridge = getDesktopBridge();
-    if (bridge) setDesktopVersion(bridge.version);
-  }, []);
-
-  return (
-    <div className="flex flex-col gap-2 px-1">
-      <div className="flex items-center gap-3">
-        <UserAvatar seed={seed} className="size-8" />
-        <div className="min-w-0 flex-1">
-          <div className="truncate text-sm font-medium">{name}</div>
-          {planLabel ? (
-            <div className="truncate text-xs text-muted-foreground">{planLabel}</div>
-          ) : null}
-        </div>
-      </div>
-      <div className="flex flex-col text-center text-xs text-muted-foreground">
-        <span>
-          {t("webVersion")}: <span className="tabular-nums">{APP_VERSION}</span>
-        </span>
-        {desktopVersion ? (
-          <span>
-            {t("appVersion")}: <span className="tabular-nums">{desktopVersion}</span>
-          </span>
-        ) : null}
-      </div>
-    </div>
-  );
+  return { name: authDisplayName(meta, null, t("accountFallback")), planLabel };
 }

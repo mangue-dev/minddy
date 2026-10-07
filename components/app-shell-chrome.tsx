@@ -64,8 +64,7 @@ import { usePlanGates } from "@/lib/use-billing-query";
 import { useMobileViewport } from "@/lib/use-mobile-layout";
 import { MobileProjectMenu, MobileRoutinesMenu, MobilePullRequestsMenu } from "@/components/mobile-project-menu";
 import { MobileNavigation, type MobileMenuSection, type MobileMenuPanel, type MobileMenuNavigation } from "@/components/mobile-navigation";
-import { SidebarOnboarding } from "@/components/sidebar-onboarding";
-import { MobileMenuFooter, useAccountActions } from "@/components/mobile-account";
+import { useAccountActions } from "@/components/mobile-account";
 import { AppTopBar } from "@/components/app-top-bar";
 import { AppTabViewHost } from "@/components/app-tab-view-host";
 import { useOptionalAppTabNavigation } from "@/lib/app-tabs-context";
@@ -1472,10 +1471,9 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   const [sidebarLayerOpen, setSidebarLayerOpen] = useState(false);
   const [inboxOpen, setInboxOpen] = useState(false);
 
-  // Account/global options (statistics, feedback, theme, sign out). On desktop
-  // they live in the sidebar footer; on mobile they move into the menu sheet +
-  // command palette from a single source so both stay in sync.
-  const { menuSections: accountSections, commandGroup: accountCommandGroup } =
+  // Both sidebar layouts expose account/global options in their pinned footer;
+  // the command palette keeps the same account destinations available.
+  const { commandGroup: accountCommandGroup } =
     useAccountActions();
 
   // Both layouts share the virtualized command palette and full data index.
@@ -1516,21 +1514,20 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         { key: "settings", label: t("projectSettings"), icon: menuIcon(Settings01Icon), panel: settingsPanel(project), active: pathname.startsWith(`${base}/settings`) },
       ] }] });
     });
-    const root = toMenuSections([...homeSections, ...accountSections]).map((section) => ({ ...section,
+    const root = toMenuSections(homeSections).map((section) => ({ ...section,
       items: section.items.map((item) => ({ ...item,
-        panel: item.key.startsWith("project-") ? panels.get(item.key.slice("project-".length)) : item.key === "m-settings" ? settingsPanel()
+        panel: item.key.startsWith("project-") ? panels.get(item.key.slice("project-".length))
           : item.key === "routines" ? { key: "routines", title: t("routines"), sidebarRoute: "/routines", render: (navigation: MobileMenuNavigation) => <MobileRoutinesMenu {...navigation} /> }
           : item.key === "pull-requests" ? { key: "pull-requests", title: t("pullRequests"), sidebarRoute: "/pull-requests", render: (navigation: MobileMenuNavigation) => <MobilePullRequestsMenu {...navigation} /> }
-          : item.key === "m-admin" ? { key: "admin", title: t("adminDashboard"), sidebarRoute: "/admin", sections: [{ items: [{ key: "overview", label: t("adminDashboard"), href: "/admin" }] }] }
-          : item.key === "m-trash" ? { key: "trash", title: t("trash"), sidebarRoute: "/trash", sections: [{ items: [{ key: "overview", label: t("trash"), href: "/trash" }] }] }
           : undefined,
       })),
     }));
     const projectPanel = currentProject ? panels.get(currentProject.id) : undefined;
     const resourcePanel = projectPanel?.sections?.flatMap((section) => section.items).find((item) => item.panel && item.active)?.panel;
-    const globalPanel = root.flatMap((section) => section.items).find((item) => item.panel?.sidebarRoute === pathname)?.panel;
+    const globalPanel = root.flatMap((section) => section.items).find((item) => item.panel?.sidebarRoute === pathname)?.panel
+      ?? (pathname === "/settings" ? settingsPanel() : pathname === "/trash" || pathname === "/admin" ? { key: pathname, title: t(pathname === "/trash" ? "trash" : "adminDashboard"), sidebarRoute: pathname } : undefined);
     return { sections: root, initialPanels: projectPanel ? [projectPanel, ...(resourcePanel ? [resourcePanel] : [])] : globalPanel ? [globalPanel] : [] };
-  }, [projects, homeSections, accountSections, settingsSections, user?.id, currentProject, pathname, objectiveBoardId, triageCounts, t]);
+  }, [projects, homeSections, settingsSections, user?.id, currentProject, pathname, objectiveBoardId, triageCounts, t]);
 
   // Opening the palette arms the cross-project index if idle hasn't yet, and
   // revalidates it when the snapshot has aged (no-op while fresh).
@@ -1573,7 +1570,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   }, [appTabs?.session]);
 
   return (
-    <div className="app-workspace flex h-dvh w-full min-w-0 flex-col overflow-hidden">
+    <div className="app-workspace relative flex h-dvh w-full min-w-0 flex-col overflow-hidden">
       {appTabs && (
         <AppTopBar
           hidden={sidebarHidden}
@@ -1622,7 +1619,6 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         <MobileNavigation
           {...mobileNavigation}
           onSearch={() => handlePaletteOpenChange(true)}
-          menuFooter={<><SidebarOnboarding mobile /><MobileMenuFooter /></>}
         />
       }
     >

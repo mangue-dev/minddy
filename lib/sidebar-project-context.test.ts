@@ -39,7 +39,9 @@ describe("primary sidebar project context", () => {
     // Two nav panels share the wiring: the project panel of the route, and
     // the home panel the back rows lift to from a project page.
     expect(sidebar.match(/<SidebarNav\s/g)).toHaveLength(2);
-    expect(sidebar.match(/onMenuOpenChange=\{handleMenuOpenChange\}/g)).toHaveLength(3);
+    expect(sidebar.match(/onMenuOpenChange=\{handleMenuOpenChange\}/g)).toHaveLength(2);
+    expect(sidebar).toContain("<SidebarFrame id={railId} onLayerOpenChange={handleMenuOpenChange}>");
+    expect(sidebar).toContain("<SidebarFooter portalOwner={id} mobile={mobile} onMenuOpenChange={onLayerOpenChange}");
     expect(shell).toContain("pinned={sidebarLayerOpen}");
     expect(shell).toContain("onLayerOpenChange={setSidebarLayerOpen}");
     expect(shell).toContain("homeSections={homeDesktopSections}");
