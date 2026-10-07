@@ -110,7 +110,6 @@ export function RoutineDetail({
   routine,
   project,
   isOwner,
-  onBack,
   onChanged,
   onDeleted,
 }: {
@@ -125,7 +124,6 @@ export function RoutineDetail({
   /** Gestures (switch, throw, edit, delete) are up to the owner
    * alone — a button that leads to a 403 is not displayed. */
   isOwner: boolean;
-  onBack: () => void;
   onChanged: () => void;
   onDeleted: () => void;
 }) {
@@ -374,15 +372,6 @@ export function RoutineDetail({
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
       {/* The title and controls share the same 60 px bar as every detail pane. */}
       <AppContentHeader contentClassName="gap-2">
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label={tAgents("backToList")}
-          className="md:hidden"
-          onClick={onBack}
-        >
-          <HugeiconsIcon icon={ArrowLeft01Icon} />
-        </Button>
         {project ? (
           <ProjectOrb
             seed={projectOrbSeed(project)}

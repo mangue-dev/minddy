@@ -2,7 +2,7 @@
 import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
-import { Add01Icon, Alert01Icon, ArrowLeft01Icon, ArrowRight01Icon, ArrowUp01Icon, Cancel01Icon, CancelCircleIcon as Ban, Clock01Icon, Copy01Icon, Delete02Icon, FilterIcon, GitMergeIcon, GlobeIcon, LanguageCircleIcon, Link02Icon, LockIcon, MessageMultiple01Icon, MoreHorizontalIcon, SentIcon, Shield01Icon, SparklesIcon, CheckIcon, Undo02Icon } from "@hugeicons/core-free-icons";
+import { Add01Icon, Alert01Icon, ArrowRight01Icon, ArrowUp01Icon, Cancel01Icon, CancelCircleIcon as Ban, Clock01Icon, Copy01Icon, Delete02Icon, FilterIcon, GitMergeIcon, GlobeIcon, LanguageCircleIcon, Link02Icon, LockIcon, MessageMultiple01Icon, MoreHorizontalIcon, SentIcon, Shield01Icon, SparklesIcon, CheckIcon, Undo02Icon } from "@hugeicons/core-free-icons";
 import { feedbackQueryOptions } from "@/lib/feedback-query";
 import { useAppTabChange } from "@/lib/use-app-tab-change";
 
@@ -797,7 +797,6 @@ function FeedbackTeamPageInner() {
   const boardEnabled = listData?.board_enabled ?? false;
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [mobileDetail, setMobileDetail] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [query, setQuery] = useState("");
 
@@ -1001,7 +1000,6 @@ function FeedbackTeamPageInner() {
       setOnlyToReview(false);
     }
     setSelectedId(postParam);
-    setMobileDetail(true);
     router.replace(pathname);
   }, [postParam, posts, pathname, router, state, onlyToReview]);
 
@@ -1050,7 +1048,7 @@ function FeedbackTeamPageInner() {
       {/* ── Liste ────────────────────────────────────────────────────────── */}
       <SecondarySidebar
         title={t("title")}
-        hiddenOnMobile={mobileDetail}
+        hiddenOnMobile
         filter={{
           value: query,
           onChange: setQuery,
@@ -1161,10 +1159,7 @@ function FeedbackTeamPageInner() {
                     categoryMap={categoryMap}
                     memberSeeds={memberSeeds}
                     teamLanguage={teamLanguage}
-                    onSelect={() => {
-                      setSelectedId(post.id);
-                      setMobileDetail(true);
-                    }}
+                    onSelect={() => setSelectedId(post.id)}
                   />
                 </li>
               ))}
@@ -1174,7 +1169,7 @@ function FeedbackTeamPageInner() {
       </SecondarySidebar>
 
       {/* ── Detail ──────────────────────────── ──────────────────────────── */}
-      <div className={cn("min-w-0 flex-1", !mobileDetail && "hidden md:block")}>
+      <div className="min-h-0 min-w-0 flex-1">
         {isPending || selectedId || posts.length > 0 ? (
           selectedId ? (
           <FeedbackDetail
@@ -1189,7 +1184,6 @@ function FeedbackTeamPageInner() {
             categories={categories}
             objectives={objectives}
             issues={issues}
-            onBack={() => setMobileDetail(false)}
             onChanged={refresh}
             onOpenIssue={setOpenIssueId}
           />
@@ -1299,7 +1293,6 @@ function FeedbackDetail({
   categories,
   objectives,
   issues,
-  onBack,
   onChanged,
   onOpenIssue,
 }: {
@@ -1318,7 +1311,6 @@ function FeedbackDetail({
   /** Project objectives — the promotion form selector. */
   objectives: Objective[];
   issues: Issue[];
-  onBack: () => void;
   onChanged: () => void;
   /** Opens the issue side panel directly (no navigation). */
   onOpenIssue: (issueId: string) => void;
@@ -1581,7 +1573,7 @@ function FeedbackDetail({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      {/* Top bar, sorting style: return (mobile) · identifiers (voice,
+      {/* Top bar: identifiers (voice,
           source, date) on the left · what we DO with the return on the right. What he
           EST — status, visibility, type, author — can be read below, in the
           key/value table, with the rest of its properties.
@@ -1589,15 +1581,6 @@ function FeedbackDetail({
           above, and a separate bar would cut it off from what it covers (even
           part as the pull request and the agent conversation). */}
       <AppContentHeader contentClassName="gap-2">
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label={t("title")}
-          className="md:hidden"
-          onClick={onBack}
-        >
-          <HugeiconsIcon icon={ArrowLeft01Icon} />
-        </Button>
         {/* What's left here: review alerts, the only things that require
             a reaction. The voices, the date and the origin came down
             in the key/value table, with the rest of what the return IS. */}

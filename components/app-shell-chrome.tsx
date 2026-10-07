@@ -1495,7 +1495,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       const scope = project ? "project" : "account";
       const allowed = settingsSections.filter((section) => section.scope === scope &&
         (!section.audience || section.audience === (project?.owner_id === user?.id ? "owner" : "member")));
-      return { key: `settings-${project?.id ?? "account"}`, title: project ? t("projectSettings") : t("accountSettings"),
+      return { key: `settings-${project?.id ?? "account"}`, title: project ? t("projectSettings") : t("accountSettings"), sidebarRoute: project ? `/projects/${project.id}/settings` : "/settings",
         sections: toMenuSections([...new Set(allowed.map((section) => section.tab))].map((tab) => {
           const entries = allowed.filter((section) => section.tab === tab);
           return { items: [{ key: tab, label: entries[0].tabLabel, icon: entries[0].icon,
@@ -1505,9 +1505,9 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     const panels = new Map<string, MobileMenuPanel>();
     projects.forEach((project) => {
       const base = `/projects/${project.id}`;
-      const resource = (kind: "objectives" | "pages" | "triage" | "feedback"): MobileMenuPanel => ({ key: `${project.id}-${kind}`, title: t(kind),
+      const resource = (kind: "objectives" | "pages" | "triage" | "feedback"): MobileMenuPanel => ({ key: `${project.id}-${kind}`, title: t(kind), sidebarRoute: kind !== "pages" ? `${base}/${kind}` : undefined,
         render: (navigation: MobileMenuNavigation) => <MobileProjectMenu {...navigation} projectId={project.id} kind={kind} /> });
-      panels.set(project.id, { key: `project-${project.id}`, title: project.name, sections: [{ items: [
+      panels.set(project.id, { key: `project-${project.id}`, title: project.name, icon: <ProjectOrb seed={projectOrbSeed(project)} iconUrl={project.icon_url} className="size-5" />, sections: [{ items: [
         { key: "tickets", label: t("tickets"), icon: menuIcon(Layout3ColumnIcon), href: base, active: pathname === base && !objectiveBoardId },
         { key: "objectives", label: t("objectives"), icon: menuIcon(Target01Icon), panel: resource("objectives"), active: pathname.startsWith(`${base}/objectives`) || (currentProject?.id === project.id && !!objectiveBoardId) },
         { key: "pages", label: t("pages"), icon: menuIcon(File02Icon), panel: resource("pages"), active: pathname.startsWith(`${base}/pages`) },
@@ -1519,12 +1519,17 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     const root = toMenuSections([...homeSections, ...accountSections]).map((section) => ({ ...section,
       items: section.items.map((item) => ({ ...item,
         panel: item.key.startsWith("project-") ? panels.get(item.key.slice("project-".length)) : item.key === "m-settings" ? settingsPanel()
-          : item.key === "routines" ? { key: "routines", title: t("routines"), render: (navigation: MobileMenuNavigation) => <MobileRoutinesMenu {...navigation} /> }
-          : item.key === "pull-requests" ? { key: "pull-requests", title: t("pullRequests"), render: (navigation: MobileMenuNavigation) => <MobilePullRequestsMenu {...navigation} /> }
+          : item.key === "routines" ? { key: "routines", title: t("routines"), sidebarRoute: "/routines", render: (navigation: MobileMenuNavigation) => <MobileRoutinesMenu {...navigation} /> }
+          : item.key === "pull-requests" ? { key: "pull-requests", title: t("pullRequests"), sidebarRoute: "/pull-requests", render: (navigation: MobileMenuNavigation) => <MobilePullRequestsMenu {...navigation} /> }
+          : item.key === "m-admin" ? { key: "admin", title: t("adminDashboard"), sidebarRoute: "/admin", sections: [{ items: [{ key: "overview", label: t("adminDashboard"), href: "/admin" }] }] }
+          : item.key === "m-trash" ? { key: "trash", title: t("trash"), sidebarRoute: "/trash", sections: [{ items: [{ key: "overview", label: t("trash"), href: "/trash" }] }] }
           : undefined,
       })),
     }));
-    return { sections: root, initialPanel: currentProject ? panels.get(currentProject.id) : undefined };
+    const projectPanel = currentProject ? panels.get(currentProject.id) : undefined;
+    const resourcePanel = projectPanel?.sections?.flatMap((section) => section.items).find((item) => item.panel && item.active)?.panel;
+    const globalPanel = root.flatMap((section) => section.items).find((item) => item.panel?.sidebarRoute === pathname)?.panel;
+    return { sections: root, initialPanels: projectPanel ? [projectPanel, ...(resourcePanel ? [resourcePanel] : [])] : globalPanel ? [globalPanel] : [] };
   }, [projects, homeSections, accountSections, settingsSections, user?.id, currentProject, pathname, objectiveBoardId, triageCounts, t]);
 
   // Opening the palette arms the cross-project index if idle hasn't yet, and

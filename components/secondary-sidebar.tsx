@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
+import { usePathname } from "next/navigation";
 import { cn, useMediaQuery } from "mangue-ui";
 import { useSecondarySidebar } from "@/lib/secondary-sidebar-context";
 import { SidebarFilterField } from "@/components/sidebar-filter-field";
@@ -41,9 +42,8 @@ const useIsoLayoutEffect =
  * - **≥ 768 px**: teleported INSIDE the primary sidebar (MIN-546) — the
  * filter/actions strip into the sidebar's top band, the item list right
  * below the back row. No resizing anywhere: the primary sidebar hosts it.
- * - **< 768 px**: rendered in place, exactly as before — column of the
- * page from `md`, whole page below, `hiddenOnMobile` assigning it
- * retail. The mobile does not move.
+ * - **< 768 px**: hosted in the navigation sheet when its route is open.
+ * Selection stays owned by the page; only the navigation moves into the menu.
  */
 export function SecondarySidebar({
   title,
@@ -80,8 +80,8 @@ export function SecondarySidebar({
   /** Actions of the title line (filters, creation button, etc.), pushed to the right. */
   actions?: ReactNode;
   /**
-   * Under `md`, the list and details take turns in full screen: goes here
-   * the “detail is open” state of the page. No effect above `md`.
+   * Hide the inline mobile fallback when navigation belongs to the menu.
+   * No effect on desktop or on the mobile menu portal.
    */
   hiddenOnMobile?: boolean;
   /**
@@ -92,7 +92,8 @@ export function SecondarySidebar({
   itemContextActions?: (target: Element) => ContextMenuAction[];
   children: ReactNode;
 }) {
-  const { headerSlot, slot, register, hosting } = useSecondarySidebar();
+  const { headerSlot, slot, register, hosting, mobileHost } = useSecondarySidebar();
+  const pathname = usePathname();
   const isMobileLayout = useMediaQuery("(max-width: 767px)");
   // Nothing in the server rendering: the space is reserved by the primary
   // sidebar's route-level panel anyway (routeHasSecondaryNav), and
@@ -168,6 +169,16 @@ export function SecondarySidebar({
       </div>
     </aside>
   );
+
+  if (isMobileLayout && mobileHost?.route === pathname) {
+    return <>
+      {createPortal(header, mobileHost.header)}
+      {createPortal(<div data-mobile-collection-navigation onClick={(event) => {
+        if (event.defaultPrevented || !(event.target instanceof Element)) return;
+        if (event.target.closest("a[href], [data-navigation-href], [data-sidebar-navigation-item]")) mobileHost.onNavigate();
+      }}>{children}</div>, mobileHost.body)}
+    </>;
+  }
 
   if (hoisted) {
     return (

@@ -65,13 +65,9 @@ const CreateRoutineWizard = dynamic(
 export function RoutinesPanel({
   selectedId,
   onSelect,
-  mobileDetail,
-  onBack,
 }: {
   selectedId: string | null;
   onSelect: (routineId: string | null) => void;
-  mobileDetail: boolean;
-  onBack: () => void;
 }) {
   const t = useTranslations("Routines");
   const tCommon = useTranslations("Common");
@@ -374,7 +370,7 @@ export function RoutinesPanel({
     <>
       <SecondarySidebar
         title={t("title")}
-        hiddenOnMobile={mobileDetail}
+        hiddenOnMobile
         filter={{
           value: query,
           onChange: setQuery,
@@ -407,10 +403,7 @@ export function RoutinesPanel({
       </SecondarySidebar>
 
       <div
-        className={cn(
-          "min-h-0 min-w-0 flex-1 flex-col md:flex",
-          mobileDetail ? "flex" : "hidden",
-        )}
+        className="flex min-h-0 min-w-0 flex-1 flex-col"
       >
         {selected ? (
           <RoutineDetail
@@ -418,7 +411,6 @@ export function RoutinesPanel({
             routine={selected}
             project={projectById.get(selected.project_id) ?? null}
             isOwner={selectedIsOwner}
-            onBack={onBack}
             onChanged={() => void refresh()}
             onDeleted={() => {
               onSelect(null);

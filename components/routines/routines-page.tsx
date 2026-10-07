@@ -14,16 +14,13 @@ export function RoutinesPage() {
   const searchParams = useSearchParams();
   const routineParam = searchParams.get("routine");
   const [selectedId, setSelectedId] = useState<string | null>(routineParam);
-  const [mobileDetail, setMobileDetail] = useState(Boolean(routineParam));
 
   useEffect(() => {
     setSelectedId(routineParam);
-    setMobileDetail(Boolean(routineParam));
   }, [routineParam]);
 
   const selectRoutine = (id: string | null) => {
     setSelectedId(id);
-    setMobileDetail(Boolean(id));
     router.replace(id ? `/routines?routine=${encodeURIComponent(id)}` : "/routines");
   };
 
@@ -39,11 +36,6 @@ export function RoutinesPage() {
       <RoutinesPanel
         selectedId={selectedId}
         onSelect={selectRoutine}
-        mobileDetail={mobileDetail}
-        onBack={() => {
-          setMobileDetail(false);
-          router.replace("/routines");
-        }}
       />
     </div>
   );

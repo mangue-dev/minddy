@@ -15,6 +15,7 @@ import { useAccountTheme } from "@/lib/use-account-theme";
 import { authDisplayName, type AuthNameMeta } from "@/lib/display-name";
 import { useMyAvatarSource } from "@/lib/use-my-avatar";
 import { UserAvatar } from "@/components/user-avatar";
+import { useBillingSummary } from "@/lib/use-billing-query";
 import type { AppNavSection } from "@/components/app-sidebar";
 import type { PaletteGroup, PaletteItem } from "@/components/header-search-pill";
 
@@ -168,10 +169,14 @@ export function useAccountActions(): {
 /** User identity block for the bottom of the mobile menu sheet (menuFooter). */
 export function MobileMenuFooter() {
   const t = useTranslations("Nav");
+  const tb = useTranslations("Billing");
   const { user } = useAuth();
+  const { status, usage } = useBillingSummary();
+  const planId = usage?.planId ?? status?.planId;
+  const planLabel = planId ? tb(({ free: "planFree", go: "planGo", pro: "planPro" } as const)[planId]) : null;
   const [desktopVersion, setDesktopVersion] = useState<string | null>(null);
   const meta = user?.user_metadata as AuthNameMeta | undefined;
-  const name = authDisplayName(meta, user?.email ?? null, t("accountFallback"));
+  const name = authDisplayName(meta, null, t("accountFallback"));
   const seed = useMyAvatarSource();
 
   useEffect(() => {
@@ -185,8 +190,8 @@ export function MobileMenuFooter() {
         <UserAvatar seed={seed} className="size-8" />
         <div className="min-w-0 flex-1">
           <div className="truncate text-sm font-medium">{name}</div>
-          {user?.email ? (
-            <div className="truncate text-xs text-muted-foreground">{user.email}</div>
+          {planLabel ? (
+            <div className="truncate text-xs text-muted-foreground">{planLabel}</div>
           ) : null}
         </div>
       </div>

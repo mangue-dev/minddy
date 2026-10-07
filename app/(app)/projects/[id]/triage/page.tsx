@@ -2,7 +2,7 @@
 
 import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowLeft01Icon, Cancel01Icon, CircleDotDashedIcon as CircleDotDashed, Copy01Icon, CheckIcon } from "@hugeicons/core-free-icons";
+import { Cancel01Icon, CircleDotDashedIcon as CircleDotDashed, Copy01Icon, CheckIcon } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppTabRouteBoundary, useAppTabRoute } from "@/lib/app-tab-route-context";
@@ -109,9 +109,6 @@ function TriagePage() {
   );
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  // On mobile the two panes stack: the list shows first, tapping a row slides
-  // to the detail; md+ always shows both.
-  const [mobileDetail, setMobileDetail] = useState(false);
   const [query, setQuery] = useState("");
 
   /**
@@ -318,13 +315,33 @@ function TriagePage() {
     // first in line, and the deep link would be lost cold.
     if (!triageIssues.some((i) => i.id === issueParam)) return;
     setSelectedId(issueParam);
-    setMobileDetail(true);
     router.replace(pathname);
   }, [issueParam, triageIssues, pathname, router]);
 
   useEffect(() => {
     if (selected) setTitle(selected.title);
   }, [selected?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Candidate canonical issues: anything except the triaged issue itself and
+  // issues that are themselves duplicates.
+  // Memoized: the picker options used to be rebuilt for EVERY issue on EVERY
+  // render (each title keystroke, each selection change), mapping the whole
+  // project into JSX-bearing options with the picker closed.
+  const duplicateOptions: PickerOption[] = useMemo(() => {
+    if (!selected || !project) return [];
+    return issues
+      .filter((i) => i.id !== selected.id && i.status !== "duplicate")
+      .map((i) => ({
+        value: i.id,
+        label: i.title,
+        keywords: [issueIdentifier(project.key, i.number)],
+        icon: (
+          <span className="font-mono text-xs text-muted-foreground">
+            {issueIdentifier(project.key, i.number)}
+          </span>
+        ),
+      }));
+  }, [selected, issues, project?.key]);
 
   if (projectsLoading && !project) {
     return (
@@ -372,7 +389,6 @@ function TriagePage() {
       toast.success(action === "accept" ? t("acceptedToast") : t("declinedToast"));
       setConfirming(null);
       setMessage("");
-      setMobileDetail(false);
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
@@ -388,29 +404,7 @@ function TriagePage() {
         id: canonical ? issueIdentifier(project.key, canonical.number) : "?",
       })
     );
-    setMobileDetail(false);
   };
-
-  // Candidate canonical issues: anything except the triaged issue itself and
-  // issues that are themselves duplicates.
-  // Memoized: the picker options used to be rebuilt for EVERY issue on EVERY
-  // render (each title keystroke, each selection change), mapping the whole
-  // project into JSX-bearing options with the picker closed.
-  const duplicateOptions: PickerOption[] = useMemo(() => {
-    if (!selected) return [];
-    return issues
-      .filter((i) => i.id !== selected.id && i.status !== "duplicate")
-      .map((i) => ({
-        value: i.id,
-        label: i.title,
-        keywords: [issueIdentifier(project.key, i.number)],
-        icon: (
-          <span className="font-mono text-xs text-muted-foreground">
-            {issueIdentifier(project.key, i.number)}
-          </span>
-        ),
-      }));
-  }, [selected, issues, project.key]);
 
   const fmtDay = (at: string): string =>
     format.dateTime(new Date(at), { day: "numeric", month: "short" });
@@ -438,7 +432,7 @@ function TriagePage() {
       {/* ── Left: pending list ─────────────────────────────────────────── */}
       <SecondarySidebar
         title={t("title")}
-        hiddenOnMobile={mobileDetail}
+        hiddenOnMobile
         filter={{
           value: query,
           onChange: setQuery,
@@ -478,10 +472,7 @@ function TriagePage() {
                 createdLabel={fmtDay(issue.created_at)}
                 open={issue.id === selectedId}
                 picked={bulkIds.has(issue.id)}
-                onOpen={() => {
-                  setSelectedId(issue.id);
-                  setMobileDetail(true);
-                }}
+                onOpen={() => setSelectedId(issue.id)}
                 onToggleBulk={toggleBulk}
               />
             ))}
@@ -491,28 +482,16 @@ function TriagePage() {
 
       {/* ── Right: full issue view ─────────────────────────────────────── */}
       <div
-        className={cn(
-          "min-h-0 min-w-0 flex-1 flex-col md:flex",
-          mobileDetail ? "flex" : "hidden"
-        )}
+        className="flex min-h-0 min-w-0 flex-1 flex-col"
       >
         {selected ? (
           <>
-            {/* Header: back (mobile) · identifier · triage actions */}
+            {/* Header: identifier · triage actions */}
             {/* Header WITHOUT border: this is the fading of the content that says it
  continues above, and a separate bar would cut it off from the
  it caps (same part as the pull request and the
  agent conversation). */}
             <AppContentHeader contentClassName="gap-2">
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                aria-label={t("backToList")}
-                className="md:hidden"
-                onClick={() => setMobileDetail(false)}
-              >
-                <HugeiconsIcon icon={ArrowLeft01Icon} />
-              </Button>
               <span className="font-mono text-sm text-muted-foreground">
                 {issueIdentifier(project.key, selected.number)}
               </span>
@@ -805,6 +784,7 @@ function TriageRow({
     <button
       ref={askNumoRef}
       type="button"
+      data-navigation-href={`/projects/${issue.project_id}/triage?issue=${encodeURIComponent(issue.id)}`}
       data-sidebar-filter-result
       aria-current={open ? "true" : undefined}
       aria-pressed={picked}

@@ -292,9 +292,6 @@ function ObjectivesInner() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMounted, setDialogMounted] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  // Under `md` the two panes take turns in full screen: the list first,
-  // the details after choosing.
-  const [mobileDetail, setMobileDetail] = useState(false);
   const [query, setQuery] = useState("");
   /**
    * The state shown by the column. Default “Assets”: an objectives page
@@ -381,7 +378,6 @@ function ObjectivesInner() {
         return;
       }
       setSelectedId(id);
-      setMobileDetail(true);
     },
     [dictationBusy, selectedId, t]
   );
@@ -431,7 +427,6 @@ function ObjectivesInner() {
       setState("all");
     }
     setSelectedId(openParam);
-    setMobileDetail(true);
     router.replace(pathname);
   }, [openParam, objectives, pathname, router, state]);
 
@@ -544,7 +539,7 @@ function ObjectivesInner() {
       {/* ── Column: project objectives ────────────────────────────── */}
       <SecondarySidebar
         title={t("title")}
-        hiddenOnMobile={mobileDetail}
+        hiddenOnMobile
         filter={{
           value: query,
           onChange: setQuery,
@@ -631,10 +626,7 @@ function ObjectivesInner() {
 
       {/* ── Detail: the open lens ───────────────────────────────────── */}
       <div
-        className={cn(
-          "min-h-0 min-w-0 flex-1 flex-col md:flex",
-          mobileDetail ? "flex" : "hidden"
-        )}
+        className="flex min-h-0 min-w-0 flex-1 flex-col"
       >
         {selected ? (
           <ObjectiveDetail
@@ -647,11 +639,7 @@ function ObjectivesInner() {
             onUpdate={updateObjective}
             onDelete={async (id) => {
               await deleteObjective(id);
-              // The selection effect above segues into the next objective;
-              // on mobile, there is nothing more to see: return to the list.
-              setMobileDetail(false);
             }}
-            onBack={() => setMobileDetail(false)}
             onBusyChange={setDictationBusy}
           />
         ) : (

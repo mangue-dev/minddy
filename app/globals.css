@@ -2955,6 +2955,14 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
   .mobile-bottom-sheet [data-mobile-sheet-close-wrapper] { display: contents; }
   .mobile-bottom-sheet [data-mobile-sheet-close-legacy] { display: none; }
   .mobile-bottom-sheet [data-mobile-sheet-toolbar] { top: 8px; right: 60px; min-height: 44px; }
+  .mobile-menu-sheet [data-mobile-collection-filter] .secondary-sidebar-header {
+    height: 44px;
+    padding-inline: 0;
+    border: 0;
+  }
+  .mobile-menu-sheet [data-mobile-collection-navigation] :is([data-sidebar-filter-result], [data-sidebar-navigation-item]) {
+    min-height: 44px;
+  }
   .mobile-bottom-sheet :is([data-slot="side-panel-header"], [data-slot="side-panel-footer"]) {
     border: 0;
     padding: 8px 16px;

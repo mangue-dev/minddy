@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
-import { ArrowLeft01Icon, Calendar01Icon, CircleIcon, DatabaseIcon, Delete02Icon, File02Icon, MessageMultiple01Icon, MoreHorizontalIcon, Target01Icon, Undo02Icon } from "@hugeicons/core-free-icons";
+import { Calendar01Icon, CircleIcon, DatabaseIcon, Delete02Icon, File02Icon, MessageMultiple01Icon, MoreHorizontalIcon, Target01Icon, Undo02Icon } from "@hugeicons/core-free-icons";
 import { useMemo, useState, type SVGProps } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import {
@@ -204,7 +204,6 @@ export default function TrashPage() {
     useTrashQuery();
   const [filter, setFilter] = useState<TrashFilter>("all");
   const [query, setQuery] = useState("");
-  const [mobileDetail, setMobileDetail] = useState(false);
   const [pending, setPending] = useState<TrashItem | null>(null);
   const [emptyOpen, setEmptyOpen] = useState(false);
 
@@ -292,7 +291,7 @@ export default function TrashPage() {
     <div className="flex h-full min-h-0">
       <SecondarySidebar
         title={t("title")}
-        hiddenOnMobile={mobileDetail}
+        hiddenOnMobile
         filter={{
           value: query,
           onChange: setQuery,
@@ -306,27 +305,14 @@ export default function TrashPage() {
           value={filter}
           onValueChange={(value) => {
             setFilter(value as TrashFilter);
-            setMobileDetail(true);
           }}
         />
       </SecondarySidebar>
 
       <div
-        className={cn(
-          "min-h-0 min-w-0 flex-1 flex-col md:flex",
-          mobileDetail ? "flex" : "hidden",
-        )}
+        className="flex min-h-0 min-w-0 flex-1 flex-col"
       >
         <AppContentHeader contentClassName="justify-end gap-4">
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label={t("title")}
-            className="mr-auto md:hidden"
-            onClick={() => setMobileDetail(false)}
-          >
-            <HugeiconsIcon icon={ArrowLeft01Icon} />
-          </Button>
           {items.length > 0 ? (
             <Button variant="ghost" onClick={() => setEmptyOpen(true)}>
               {t("emptyTrash")}

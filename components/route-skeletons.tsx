@@ -73,14 +73,14 @@ export function ListDetailSkeleton({
 }) {
   return (
     <div className="flex h-full min-h-0">
-      <SecondarySidebar>
+      <SecondarySidebar hiddenOnMobile>
         <div className="flex flex-col gap-2 pt-2 pb-4">
           {Array.from({ length: rows }).map((_, i) => (
             <Skeleton key={i} className={`${rowClassName} rounded-lg`} />
           ))}
         </div>
       </SecondarySidebar>
-      <div className="hidden min-h-0 min-w-0 flex-1 flex-col md:flex">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         {emptyHeader ? (
           <AppContentHeader />
         ) : (
@@ -122,7 +122,7 @@ export function PageTreeSkeleton({ rows = 7 }: { rows?: number }) {
   const indents = [0, 16, 16, 0, 16, 32, 0];
   return (
     <div className="flex h-full min-h-0">
-      <SecondarySidebar>
+      <SecondarySidebar hiddenOnMobile>
         <div className="flex flex-col gap-1.5 pt-2 pb-4">
           {Array.from({ length: rows }).map((_, i) => (
             <div key={i} className="flex items-center">
@@ -132,7 +132,7 @@ export function PageTreeSkeleton({ rows = 7 }: { rows?: number }) {
           ))}
         </div>
       </SecondarySidebar>
-      <div className="hidden min-h-0 min-w-0 flex-1 flex-col md:flex">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <div className="mx-auto w-full max-w-3xl px-6 py-10 md:px-10">
           <Skeleton className="size-12 rounded-lg" />
           <Skeleton className="mt-2 h-10 w-2/3" />

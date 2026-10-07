@@ -417,7 +417,6 @@ function PullRequestsPageInner() {
   const [query, setQuery] = useState("");
   const [limit, setLimit] = useState(PULL_REQUESTS_PAGE);
   const [selectedPrId, setSelectedPrId] = useState<string | null>(prParam);
-  const [mobileDetail, setMobileDetail] = useState(!!deepLink);
   // Related issue open in side panel (on top of page, no navigation).
   const [panel, setPanel] = useState<{ projectId: string; issueId: string } | null>(null);
   // Sections start expanded; each keeps its own collapse and show-more state.
@@ -460,7 +459,6 @@ function PullRequestsPageInner() {
   useEffect(() => {
     if (!deepLink) return;
     if (prParam) setSelectedPrId(prParam);
-    setMobileDetail(true);
   }, [deepLink, prParam]);
 
   // The HISTORICAL deep-link speaks in `run` (the “see pull request” links
@@ -729,7 +727,7 @@ function PullRequestsPageInner() {
       {/* ── Left: pull request list ─────────────────────────────────────── */}
       <SecondarySidebar
         title={t("title")}
-        hiddenOnMobile={mobileDetail}
+        hiddenOnMobile
         filter={{
           value: query,
           onChange: setQuery,
@@ -797,10 +795,7 @@ function PullRequestsPageInner() {
                 onLoadNextPage={() => void completed.fetchNextPage()}
                 onToggle={() => toggleGroup(g.key)}
                 onShowAll={() => setExpandedGroups((prev) => toggledSet(prev, g.key))}
-                onSelect={(prId) => {
-                  setSelectedPrId(prId);
-                  setMobileDetail(true);
-                }}
+                onSelect={setSelectedPrId}
               />
             ))}
 
@@ -832,16 +827,12 @@ function PullRequestsPageInner() {
 
       {/* ── Right: detail of the PR ────────────────────────────────────── */}
       <div
-        className={cn(
-          "min-h-0 min-w-0 flex-1 flex-col md:flex",
-          mobileDetail ? "flex" : "hidden",
-        )}
+        className="flex min-h-0 min-w-0 flex-1 flex-col"
       >
         {selected ? (
           <PrDetail
             key={selected.prId}
             item={selected}
-            onBack={() => setMobileDetail(false)}
             onRefetchList={() => void refetch()}
             onOptimisticStateChange={applyOptimisticState}
             onStateChange={applyConfirmedState}

@@ -1,7 +1,5 @@
 "use client";
 
-import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowLeft01Icon } from "@hugeicons/core-free-icons";
 import {
   Suspense,
   useCallback,
@@ -14,7 +12,7 @@ import {
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useReducedMotion } from "framer-motion";
-import { Button, cn } from "mangue-ui";
+import { cn } from "mangue-ui";
 import { AppIcon } from "@/components/icon";
 import { trackEvent } from "@/lib/analytics";
 import { AppContentHeader } from "@/components/app-content-header";
@@ -189,17 +187,12 @@ function SettingsTabs({
     : (visibleTabs[0]?.value ?? defaultTab);
   const activeTab = tabParam && validValues.has(tabParam) ? tabParam : fallback;
 
-  // Under `md`, the rail and the content take turns in full screen, like everywhere
-  // elsewhere in the app. A URL that NAMEs its tab directly opens the
-  // content: we arrive from the pallet or a link, not from the rail.
-  const [mobileDetail, setMobileDetail] = useState(!!tabParam);
   const contentFade = useScrollFade<HTMLDivElement>();
   const activeLabel =
     visibleTabs.find((t) => t.value === activeTab)?.label ?? title;
 
   const setActiveTab = useCallback(
     (value: string) => {
-      setMobileDetail(true);
       // Two screens share this shell: account settings (/settings) and
       // those of a project (/projects/<id>/settings). The path distinguishes them.
       trackEvent("settings_tab_switched", {
@@ -286,7 +279,6 @@ function SettingsTabs({
 
   const openSection = useCallback(
     (section: SettingsSection) => {
-      setMobileDetail(true);
       setQuery("");
       // `replace` and not `push`: we are already on the screen, only the destination
       // internal change — like a tab change, which does not stack either.
@@ -303,7 +295,7 @@ function SettingsTabs({
     <div className="flex h-full min-h-0">
       <SecondarySidebar
         title={title}
-        hiddenOnMobile={mobileDetail}
+        hiddenOnMobile
         filter={{
           value: query,
           onChange: setQuery,
@@ -365,10 +357,7 @@ function SettingsTabs({
       </SecondarySidebar>
 
       <div
-        className={cn(
-          "min-h-0 min-w-0 flex-1 flex-col md:flex",
-          mobileDetail ? "flex" : "hidden",
-        )}
+        className="flex min-h-0 min-w-0 flex-1 flex-col"
       >
         {/* The settings content keeps the same structural header as the other
             list/detail screens. It stays intentionally empty on desktop: the
@@ -377,15 +366,6 @@ function SettingsTabs({
         <AppContentHeader
           contentClassName="gap-2"
         >
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            className="md:hidden"
-            aria-label={title}
-            onClick={() => setMobileDetail(false)}
-          >
-            <HugeiconsIcon icon={ArrowLeft01Icon} />
-          </Button>
           <span className="truncate text-sm font-medium md:hidden">
             {activeLabel}
           </span>

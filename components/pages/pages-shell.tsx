@@ -207,7 +207,7 @@ function PagesShellInner() {
       {bare ? null : (
       <SecondarySidebar
         title={t("title")}
-        hiddenOnMobile={pathname !== base}
+        hiddenOnMobile
         filter={{
           value: query,
           onChange: setQuery,
@@ -254,12 +254,7 @@ function PagesShellInner() {
       )}
 
       <div
-        className={cn(
-          "min-h-0 min-w-0 flex-1 flex-col md:flex",
-          // Without secondary bar, there is no longer a “list on the left”
-          // leave alone on mobile: this panel IS the tab.
-          bare || pathname !== base ? "flex" : "hidden"
-        )}
+        className="flex min-h-0 min-w-0 flex-1 flex-col"
       >
         {activePageId ? (
           <PageView key={activePageId} projectId={projectId} pageId={activePageId} active={!validPreview} onNavigate={openPage} />

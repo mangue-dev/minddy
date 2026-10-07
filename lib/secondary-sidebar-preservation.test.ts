@@ -7,9 +7,10 @@ import { SecondarySidebar } from "@/components/secondary-sidebar";
 import { SecondarySidebarProvider, useSecondarySidebar } from "./secondary-sidebar-context";
 
 vi.mock("next/navigation", () => ({ usePathname: () => "/projects/project/pages" }));
+const viewport = vi.hoisted(() => ({ mobile: false }));
 vi.mock("mangue-ui", () => ({
   cn: (...values: unknown[]) => values.filter(Boolean).join(" "),
-  useMediaQuery: () => false,
+  useMediaQuery: () => viewport.mobile,
 }));
 vi.mock("@/components/issue-context-menu", () => ({
   IssueContextMenu: ({ position }: { position: unknown }) => position
@@ -42,6 +43,7 @@ function Workspace() {
 }
 
 beforeEach(async () => {
+  viewport.mobile = false;
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   container = document.createElement("div");
   document.body.append(container);
@@ -81,4 +83,46 @@ describe("secondary sidebar portal preservation", () => {
     expect(row.textContent).toBe("1");
     expect(scroller.scrollTop).toBe(340);
   });
+});
+
+it("hosts mobile collection selection in the menu while page state survives closing it", async () => {
+  viewport.mobile = true;
+  const onNavigate = vi.fn();
+  const header = document.createElement("div");
+  const body = document.createElement("div");
+  container.append(header, body);
+  function MobilePage() {
+    browse = useSecondarySidebar();
+    const [selected, setSelected] = useState("First item");
+    return createElement("main", null,
+      createElement("p", { "data-page-content": true }, selected),
+      createElement(SecondarySidebar, { title: "Collection", hiddenOnMobile: true, children: [
+        createElement("button", { key: "group", "data-group-toggle": true }, "Toggle group"),
+        createElement("button", { key: "item", "data-navigation-href": "/home", onClick: () => setSelected("Second item") }, "Choose second"),
+        createElement("button", { key: "category", "data-sidebar-navigation-item": true, onClick: () => setSelected("Category content") }, "Choose category"),
+      ] }),
+    );
+  }
+  await act(() => root.render(createElement(SecondarySidebarProvider, { children: createElement(MobilePage) })));
+  // These host nodes represent the menu's portal destinations.
+  document.body.append(header, body);
+  await act(() => browse.setMobileHost({ route: "/projects/project/pages", header, body, onNavigate }));
+  expect(header.textContent).toBe("Collection");
+  expect(body.querySelector("[data-mobile-collection-navigation]")).not.toBeNull();
+  expect(container.querySelector("[data-mobile-collection-navigation]")).toBeNull();
+  await act(() => body.querySelector<HTMLButtonElement>("[data-group-toggle]")!.click());
+  expect(onNavigate).not.toHaveBeenCalled();
+  await act(() => body.querySelector<HTMLButtonElement>("[data-navigation-href]")!.click());
+  expect(onNavigate).toHaveBeenCalledOnce();
+  expect(container.querySelector("[data-page-content]")?.textContent).toBe("Second item");
+  await act(() => body.querySelector<HTMLButtonElement>("[data-sidebar-navigation-item]")!.click());
+  expect(onNavigate).toHaveBeenCalledTimes(2);
+  expect(container.querySelector("[data-page-content]")?.textContent).toBe("Category content");
+  await act(() => browse.setMobileHost(null));
+  expect(body.textContent).toBe("");
+  expect(container.querySelector("[data-page-content]")?.textContent).toBe("Category content");
+  await act(() => browse.setMobileHost({ route: "/another-route", header, body, onNavigate }));
+  expect(body.textContent).toBe("");
+  await act(() => browse.setMobileHost(null));
+  header.remove(); body.remove();
 });

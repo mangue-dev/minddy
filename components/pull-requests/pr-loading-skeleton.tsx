@@ -161,10 +161,10 @@ export function PrDetailSkeleton() {
 export function PullRequestsSkeleton() {
   return (
     <div aria-busy="true" className="flex h-full min-h-0">
-      <SecondarySidebar actions={<Skeleton aria-hidden className="h-7 w-full" />}>
+      <SecondarySidebar hiddenOnMobile actions={<Skeleton aria-hidden className="h-7 w-full" />}>
         <PrListSkeleton />
       </SecondarySidebar>
-      <div className="hidden min-h-0 min-w-0 flex-1 md:flex">
+      <div className="flex min-h-0 min-w-0 flex-1">
         <PrDetailSkeleton />
       </div>
     </div>

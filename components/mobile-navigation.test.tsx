@@ -33,7 +33,7 @@ it("browses projects and resource levels without leaving the sheet until a final
   const branchAction = vi.fn();
   const objectives: MobileMenuPanel = { key: "beacon-objectives", title: "Objectives", sections: [{ items: [{ key: "overview", label: "All objectives", href: "/projects/beacon/objectives" }] }] };
   const beacon: MobileMenuPanel = { key: "beacon", title: "Beacon", sections: [{ items: [{ key: "objectives", label: "Objectives", href: "/projects/beacon/objectives", panel: objectives, onClick: branchAction }] }] };
-  const aurora: MobileMenuPanel = { key: "aurora", title: "Aurora", sections: [{ items: [{ key: "board", label: "Tickets", href: "/projects/aurora" }] }] };
+  const aurora: MobileMenuPanel = { key: "aurora", title: "Aurora", icon: <svg data-project-icon />, sections: [{ items: [{ key: "board", label: "Tickets", href: "/projects/aurora" }] }] };
   await act(() => root.render(<NextIntlClientProvider locale="en" messages={{ Nav: { goTo: "Go to", home: "Home", searchPlaceholder: "Search" }, Common: { back: "Back", close: "Close" } }}>
     <MobileNavigation initialPanel={aurora} sections={[{ items: [{ key: "beacon", label: "Beacon", href: "/projects/beacon", panel: beacon, onClick: branchAction }] }]} menuFooter={null} onSearch={() => {}} />
   </NextIntlClientProvider>));
@@ -41,6 +41,7 @@ it("browses projects and resource levels without leaving the sheet until a final
   const dialog = () => document.querySelector('[role="dialog"]');
   await click("[data-mobile-menu-trigger]");
   expect(dialog()?.textContent).toContain("Aurora");
+  expect(dialog()?.querySelector("[data-mobile-project-icon] [data-project-icon]")).not.toBeNull();
   await click('button[aria-label="Back"]');
   await click('[data-mobile-menu-branch="beacon"]');
   expect(dialog()?.textContent).toContain("Beacon");

@@ -1,12 +1,11 @@
 "use client";
 
-import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowLeft01Icon, BotIcon, DashboardCircleIcon, DollarCircleIcon as CircleDollarSign, UserGroupIcon } from "@hugeicons/core-free-icons";
+import { BotIcon, DashboardCircleIcon, DollarCircleIcon as CircleDollarSign, UserGroupIcon } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useReducedMotion } from "framer-motion";
 import dynamic from "next/dynamic";
-import { Skeleton, Button, cn } from "mangue-ui";
+import { Skeleton, cn } from "mangue-ui";
 import { useTranslations } from "next-intl";
 import { AppIcon } from "@/components/icon";
 import { SecondarySidebar } from "@/components/secondary-sidebar";
@@ -156,10 +155,6 @@ export function AdminDashboard() {
   const valid = (visibleTabs as readonly string[]).includes(requested ?? "");
   const active: AdminTab = valid ? (requested as AdminTab) : DEFAULT_TAB;
 
-  // Under `md`, the rail and the content take turns in full screen, like everywhere
-  // elsewhere in the app. A URL that NAMEs its tab directly opens the
-  // content: we arrive from the palette, a link or a push notification.
-  const [mobileDetail, setMobileDetail] = useState(valid);
   const [query, setQuery] = useState("");
 
   const items = useMemo(
@@ -191,7 +186,6 @@ export function AdminDashboard() {
 
   const setActive = useCallback(
     (value: string) => {
-      setMobileDetail(true);
       const params = new URLSearchParams(searchParams.toString());
       if (value === DEFAULT_TAB) params.delete("tab");
       else params.set("tab", value);
@@ -203,7 +197,6 @@ export function AdminDashboard() {
 
   const openSection = useCallback(
     (section: AdminSection) => {
-      setMobileDetail(true);
       setQuery("");
       const params = new URLSearchParams(searchParams.toString());
       if (section.tab === DEFAULT_TAB) params.delete("tab");
@@ -254,7 +247,7 @@ export function AdminDashboard() {
     <div className="flex h-full min-h-0">
       <SecondarySidebar
         title={t("pageTitle")}
-        hiddenOnMobile={mobileDetail}
+        hiddenOnMobile
         filter={{
           value: query,
           onChange: setQuery,
@@ -309,26 +302,12 @@ export function AdminDashboard() {
       </SecondarySidebar>
 
       <div
-        className={cn(
-          "min-h-0 min-w-0 flex-1 flex-col md:flex",
-          mobileDetail ? "flex" : "hidden",
-        )}
+        className="flex min-h-0 min-w-0 flex-1 flex-col"
       >
-        {/* Panel header, MOBILE only: return to rail and
- name of the open tab. On desktop the rail is on the screen and the
- is already highlighted. */}
+        {/* The active section is named in the mobile content header. */}
         <AppContentHeader
           contentClassName="gap-2"
         >
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            className="md:hidden"
-            aria-label={tCommon("back")}
-            onClick={() => setMobileDetail(false)}
-          >
-            <HugeiconsIcon icon={ArrowLeft01Icon} />
-          </Button>
           <span className="truncate text-sm font-medium md:hidden">
             {t(`tabs.${active}`)}
           </span>
