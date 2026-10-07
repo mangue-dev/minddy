@@ -5,6 +5,7 @@ import { createControlPlaneClient } from "./control-plane-client";
 import { reservePort } from "./free-port";
 import { localHost } from "./local-host";
 import { opencodeSupervisorDeps } from "./opencode-host";
+import { prepareSandboxGithubCli } from "./github-cli";
 import { runOpencodeTurn } from "./supervisor";
 import {
   isLocalJob,
@@ -76,10 +77,21 @@ async function runOpencodeTurnHere(
    * on an ephemeral port of itself and returns its URL.
    */
   const opencodePort = await reservePort();
-  return await runOpencodeTurn(job, job.opencodeInput, cp, host, {
-    ...opencodeSupervisorDeps({ port: opencodePort, layout: job.layout }),
-    opencodePort,
-  });
+  const cli = isLocalJob(job) ? null : await prepareSandboxGithubCli(job);
+  const previousEnv = Object.fromEntries(Object.keys(cli?.env ?? {}).map((key) => [key, process.env[key]]));
+  if (cli) Object.assign(process.env, cli.env);
+  try {
+    return await runOpencodeTurn(job, job.opencodeInput, cp, host, {
+      ...opencodeSupervisorDeps({ port: opencodePort, layout: job.layout }),
+      opencodePort,
+    });
+  } finally {
+    await cli?.close();
+    for (const [key, value] of Object.entries(previousEnv)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  }
 }
 
 /**

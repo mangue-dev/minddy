@@ -1033,6 +1033,8 @@ describe("les tools de plateforme", () => {
       workBranch: "refs/heads/main:stolen",
     });
     expect(res.status).toBe(400);
+    expect(String((res.body as { error: string }).error)).toContain(`expected "numo/agent-${RUN_ID.slice(0, 8)}"`);
+    expect(String((res.body as { error: string }).error)).toContain('received "refs/heads/main:stolen"');
     expect(h.prLandings).toEqual([]);
   });
 
@@ -1137,6 +1139,37 @@ describe("the run anchor does not narrow the `/tool/` surface", () => {
  * `/repo-auth` refreshes trusted infrastructure and returns no credential.
  */
 describe("forge authentication refresh", () => {
+  it("prepares repository-scoped CLI authentication without returning the token", async () => {
+    const result = await call("POST", "/github-cli");
+    expect(result.status).toBe(200);
+    expect(result.body).toEqual({ supported: true, repoFullName: "org/repo" });
+    expect(h.repoAccessAsked).toEqual(["github-cli"]);
+    expect(JSON.stringify(result.body)).not.toContain("tok-github-cli");
+  });
+
+  it("revokes CLI access with the run's membership, repository binding, or status", async () => {
+    h.creatorHasAccess = false;
+    expect((await call("POST", "/github-cli")).status).toBe(409);
+    h.creatorHasAccess = true;
+    h.repoBindingCurrent = false;
+    expect((await call("POST", "/github-cli")).status).toBe(409);
+    h.repoBindingCurrent = true;
+    h.run!.status = "completed";
+    expect((await call("POST", "/github-cli")).status).toBe(409);
+    expect(h.repoAccessAsked).toEqual([]);
+  });
+
+  it("does not provision GitHub CLI authentication for a GitLab run", async () => {
+    h.run!.repo_provider = "gitlab";
+    expect((await call("POST", "/github-cli")).body).toEqual({ supported: false });
+    expect(h.repoAccessAsked).toEqual([]);
+  });
+
+  it("rejects a fresh target that differs from the bound repository", async () => {
+    h.run!.repo_external_id = "other-repository";
+    expect((await call("POST", "/github-cli")).status).toBe(409);
+  });
+
   it("refreshes write access for a review session", async () => {
     h.run = { ...h.run, issue_id: null, pull_request_id: "pr-1" };
     const res = await call("POST", "/repo-auth");
