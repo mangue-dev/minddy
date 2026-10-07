@@ -6,6 +6,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "./dialog";
 import { SearchSelect } from "../search-select";
 import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
+import { MobileSheetScrollArea } from "./mobile-sheet";
 
 // Import only the tested primitives; the package barrel also loads an emoji JSON bundle.
 vi.mock("mangue-ui", async () => ({
@@ -13,6 +14,7 @@ vi.mock("mangue-ui", async () => ({
   ...await import("../../node_modules/mangue-ui/src/components/ui/sheet"),
   ...await import("../../node_modules/mangue-ui/src/components/ui/popover"),
   ...await import("../../node_modules/mangue-ui/src/components/ui/command"),
+  ...await import("../../node_modules/mangue-ui/src/components/ui/button"),
   ...await import("../../node_modules/mangue-ui/src/lib/utils"),
   Spinner: () => null,
   toast: { error: vi.fn() },
@@ -48,13 +50,14 @@ it("keeps a parent form open while selecting from a nested mobile sheet", async 
       </DialogContent>
     </Dialog>;
   }
-  await act(() => root.render(createElement(NextIntlClientProvider, { locale: "en", messages: { Picker: { search: "Search", noResults: "No results" } }, children: createElement(TooltipProvider, null, createElement(Form)) })));
+  await act(() => root.render(createElement(NextIntlClientProvider, { locale: "en", messages: { Common: { close: "Close" }, Picker: { search: "Search", noResults: "No results" } }, children: createElement(TooltipProvider, null, createElement(Form)) })));
   const button = (text: string) => [...document.querySelectorAll<HTMLButtonElement>("button")].find((node) => node.textContent === text)!;
   await act(() => button("Open form").click());
   expect(document.querySelector('[data-mobile-dialog]')).not.toBeNull();
   expect(document.activeElement).toBe(document.querySelector('[data-mobile-dialog]'));
   await act(() => button("Priority").click());
   expect(document.querySelector('[data-mobile-picker]')).not.toBeNull();
+  expect(document.querySelectorAll('[data-mobile-picker] [data-mobile-sheet-close]')).toHaveLength(1);
   expect(document.activeElement).toBe(document.querySelector('[data-mobile-picker]'));
   const search = document.querySelector<HTMLInputElement>('[data-mobile-picker] input')!;
   await act(() => search.focus());
@@ -64,10 +67,38 @@ it("keeps a parent form open while selecting from a nested mobile sheet", async 
   expect(selected).toHaveBeenCalledWith("high");
   expect(document.querySelector('[data-mobile-picker]')).toBeNull();
   expect(document.querySelector('[data-mobile-dialog]')).not.toBeNull();
+  await act(() => button("Priority").click());
+  await act(() => document.querySelector<HTMLElement>('[data-mobile-picker] [data-mobile-sheet-close]')!.click());
+  expect(document.querySelector('[data-mobile-picker]')).toBeNull();
+  expect(document.querySelectorAll('[data-mobile-dialog] [data-mobile-sheet-close]')).toHaveLength(1);
   await act(() => document.querySelector('[data-mobile-dialog]')!.dispatchEvent(new KeyboardEvent("keydown", { key: "a", bubbles: true })));
   expect(keydown).toHaveBeenCalled();
   await act(() => document.querySelector('[data-mobile-dialog] [data-slot="sheet-close"]')!.dispatchEvent(new MouseEvent("click", { bubbles: true })));
   expect(document.querySelector('[data-mobile-dialog]')).toBeNull();
+});
+
+it("forwards scroll and click handlers while fading only edges with hidden content", async () => {
+  const clicked = vi.fn();
+  const scrolled = vi.fn();
+  await act(() => root.render(<MobileSheetScrollArea onScroll={scrolled} className="list">
+    <button onClick={clicked}>Choose option</button>
+  </MobileSheetScrollArea>));
+  const scroller = container.querySelector<HTMLDivElement>(".list")!;
+  Object.defineProperties(scroller, { clientHeight: { value: 100 }, scrollHeight: { value: 300 } });
+  const scroll = async (top: number) => {
+    await act(() => { scroller.scrollTop = top; scroller.dispatchEvent(new Event("scroll")); });
+    await act(() => new Promise((resolve) => requestAnimationFrame(resolve)));
+  };
+  await scroll(0);
+  expect(scrolled).toHaveBeenCalled();
+  expect(container.querySelectorAll('[aria-hidden="true"]')).toHaveLength(1);
+  await scroll(100);
+  expect(container.querySelectorAll('[aria-hidden="true"]')).toHaveLength(2);
+  await scroll(200);
+  expect(container.querySelectorAll('[aria-hidden="true"]')).toHaveLength(1);
+  await act(() => scroller.querySelector<HTMLButtonElement>("button")!.click());
+  expect(clicked).toHaveBeenCalledOnce();
+  expect(scroller.querySelector('[aria-hidden="true"]')).toBeNull();
 });
 
 it("closes a mobile view picker before opening its creation form", async () => {
@@ -85,7 +116,7 @@ it("closes a mobile view picker before opening its creation form", async () => {
       </Dialog>
     </>;
   }
-  await act(() => root.render(createElement(NextIntlClientProvider, { locale: "en", messages: { Picker: { search: "Search", noResults: "No results" } }, children: createElement(TooltipProvider, null, createElement(Views)) })));
+  await act(() => root.render(createElement(NextIntlClientProvider, { locale: "en", messages: { Common: { close: "Close" }, Picker: { search: "Search", noResults: "No results" } }, children: createElement(TooltipProvider, null, createElement(Views)) })));
   await act(() => container.querySelector<HTMLButtonElement>("button")!.click());
   const action = [...document.querySelectorAll<HTMLElement>('[cmdk-item]')].find((node) => node.textContent === "New view")!;
   await act(() => action.click());

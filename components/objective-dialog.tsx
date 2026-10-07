@@ -1,5 +1,7 @@
 "use client";
 
+import { MobileSheetScrollArea } from "@/components/ui/mobile-sheet";
+
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/responsive-popover";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { CheckIcon } from "@hugeicons/core-free-icons";
@@ -505,7 +507,7 @@ export function ObjectiveDialog({
               : {})}
           >
             {composerEnabled && <DropOverlay show={drop.dragging} />}
-            <div className="creation-form-body">
+            <MobileSheetScrollArea className="creation-form-body">
               {mobile && composerEnabled && dictationControl}
               {/* Recent drafts — a row above the name to restore or delete an
                 abandoned draft (MIN-41). Hidden once the form has content. */}
@@ -627,7 +629,7 @@ export function ObjectiveDialog({
                 )}
               </div>
 
-            </div>
+            </MobileSheetScrollArea>
             {/* Submission stays visible while the mobile form body scrolls. */}
             <div className="creation-form-footer mt-6 flex flex-wrap items-center gap-3 sm:mt-8">
               {!mobile && composerEnabled && dictationControl}

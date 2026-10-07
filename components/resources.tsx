@@ -1,5 +1,7 @@
 "use client";
 
+import { CommandList } from "@/components/ui/command";
+
 import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, AttachmentIcon, Cancel01Icon, File02Icon, Link02Icon } from "@hugeicons/core-free-icons";
@@ -7,8 +9,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "@/components/app-link";
 import { useLocale, useTranslations } from "next-intl";
 import {
-  Button, Command, CommandEmpty, CommandInput, CommandItem, CommandList,
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+  Button, Command, CommandEmpty, CommandInput, CommandItem, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
   Input, Spinner, cn,
 } from "mangue-ui";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";

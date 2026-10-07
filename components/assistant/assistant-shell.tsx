@@ -641,6 +641,7 @@ export const AssistantShell = forwardRef<
   const compactHeader = compact && !embeddedConversationId ? (
     <div
       ref={historyAnchorRef}
+      data-mobile-sheet-header
       className="flex shrink-0 items-center gap-1 px-4 py-4"
     >
       <Popover open={historyOpen} onOpenChange={setHistoryOpen}>
@@ -668,7 +669,7 @@ export const AssistantShell = forwardRef<
           container={historyContainer}
           className="flex max-h-[360px] w-72 flex-col gap-0 overflow-hidden p-0"
         >
-          <div className="flex h-11 shrink-0 items-center border-b border-border px-3">
+          <div data-sheet-search className="flex h-11 shrink-0 items-center border-b border-border px-3">
             <SidebarFilterField {...sidebarFilter} />
           </div>
           <div className="scrollbar-quiet min-h-0 flex-1 overflow-y-auto p-1.5">
@@ -740,6 +741,7 @@ export const AssistantShell = forwardRef<
             <Button
               variant="ghost"
               size="icon-sm"
+              data-mobile-sheet-close
               aria-label={tc("close")}
               onClick={onClose}
             >
@@ -775,6 +777,7 @@ export const AssistantShell = forwardRef<
           variant="ghost"
           size="icon-sm"
           className="absolute top-2 right-2"
+          data-mobile-sheet-close
           aria-label={tc("close")}
           onClick={onClose}
         >

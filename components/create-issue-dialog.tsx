@@ -1,5 +1,7 @@
 "use client";
 
+import { MobileSheetScrollArea } from "@/components/ui/mobile-sheet";
+
 import { createUuid } from "@/lib/create-uuid";
 
 import { useEffect, useId, useRef, useState } from "react";
@@ -672,7 +674,7 @@ export function CreateIssueDialog({
             {...drop.handlers}
           >
             <DropOverlay show={drop.dragging} />
-            <div className="creation-form-body">
+            <MobileSheetScrollArea className="creation-form-body">
               {mobile && dictationControl}
               {/* Recent drafts — a row above the title to restore or delete an
                 abandoned draft (MIN-41). Hidden once the form has content. */}
@@ -854,7 +856,7 @@ export function CreateIssueDialog({
                 )}
               </div>
 
-            </div>
+            </MobileSheetScrollArea>
             {/* Submission stays visible while the mobile form body scrolls. */}
             <div className="creation-form-footer mt-6 flex flex-wrap items-center gap-3 sm:mt-8">
               {!mobile && dictationControl}

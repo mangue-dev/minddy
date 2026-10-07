@@ -1,10 +1,12 @@
 "use client";
 
+import { CommandList } from "@/components/ui/command";
+
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AddToListIcon, ArrowUpDownIcon, CheckIcon } from "@hugeicons/core-free-icons";
 import { useMemo, useState, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { Button, Command, CommandGroup, CommandInput, CommandItem, CommandList, commandFilter, cn, Spinner } from "mangue-ui";
+import { Button, Command, CommandGroup, CommandInput, CommandItem, commandFilter, cn, Spinner } from "mangue-ui";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/responsive-popover";
 import { ModelLogo, ProviderLogo } from "@/components/model-logo";
 import { formatModelName } from "@/lib/model-display";
@@ -397,7 +399,7 @@ export function ModelCombobox({
  tooltip per line was impossible (a disabled option does not emit
  any pointer event), and the reason must remain readable while browsing the catalog. */}
           {showCapHint && maxMultiplier != null ? (
-            <p className="border-t px-3 py-2 text-xs text-muted-foreground">
+            <p data-sheet-note className="border-t px-3 py-2 text-xs text-muted-foreground">
               {t("modelPlanCap", { plan: planLabel(planId), limit: maxMultiplier })}
             </p>
           ) : null}

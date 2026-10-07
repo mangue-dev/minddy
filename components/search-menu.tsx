@@ -1,5 +1,7 @@
 "use client";
 
+import { CommandList } from "@/components/ui/command";
+
 // Shared searchable menu: anchored popover on desktop, modal bottom sheet on
 // mobile. Field and pointer-anchored pickers share filtering and option state.
 
@@ -9,7 +11,7 @@ import { Search01Icon } from "@hugeicons/core-free-icons";
 import * as React from "react";
 import { useTranslations } from "next-intl";
 import { Command as CommandPrimitive } from "cmdk";
-import { Command, CommandEmpty, CommandList, CommandSeparator, cn } from "mangue-ui";
+import { Command, CommandEmpty, CommandSeparator, cn } from "mangue-ui";
 import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "@/components/ui/responsive-popover";
 import { Kbd } from "@/components/ui/kbd";
 import {
@@ -27,7 +29,7 @@ export const searchInputClass =
  *  looks identical everywhere. Pass the actual input (cmdk or plain) as child. */
 export function DropdownSearchRow({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex items-center gap-2 px-2 py-1">
+    <div data-sheet-search className="flex items-center gap-2 px-2 py-1">
       <HugeiconsIcon icon={Search01Icon} className="size-4 shrink-0 opacity-50" />
       {children}
     </div>

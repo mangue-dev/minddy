@@ -1,13 +1,13 @@
 "use client";
 
-import { focusMobileSheet } from "@/lib/mobile-sheet-focus";
+import { MobileSheetContent } from "./mobile-sheet";
 
 import * as React from "react";
 import { useTranslations } from "next-intl";
 import {
   Popover as DesktopPopover, PopoverTrigger as DesktopTrigger,
   PopoverContent as DesktopContent, PopoverAnchor as DesktopAnchor,
-  Sheet, SheetTrigger, SheetContent, SheetTitle, cn,
+  Sheet, SheetTrigger, SheetTitle, cn,
 } from "mangue-ui";
 import { useMobileLayout } from "@/lib/use-mobile-layout";
 
@@ -29,9 +29,9 @@ export function PopoverContent({ className, onOpenAutoFocus, container, align, s
   const mobile = React.useContext(MobilePopover);
   const t = useTranslations("Picker");
   if (!mobile) return <DesktopContent onOpenAutoFocus={onOpenAutoFocus} {...{ className, container, align, side, sideOffset, alignOffset, avoidCollisions, collisionPadding, collisionBoundary, sticky, hideWhenDetached, arrowPadding, updatePositionStrategy }} {...props} />;
-  return <SheetContent {...props} side="bottom" onOpenAutoFocus={(event) => { onOpenAutoFocus?.(event); focusMobileSheet(event); }} aria-describedby={undefined}
+  return <MobileSheetContent {...props} side="bottom" onOpenAutoFocus={onOpenAutoFocus} aria-describedby={undefined}
     data-mobile-picker className={cn("mobile-bottom-sheet mobile-picker-sheet gap-0 p-2 pt-12", className)}>
-    <SheetTitle className="sr-only">{mobileTitle ?? t("search")}</SheetTitle>
+    <SheetTitle className={mobileTitle ? "mobile-picker-title truncate" : "sr-only"}>{mobileTitle ?? t("search")}</SheetTitle>
     {props.children}
-  </SheetContent>;
+  </MobileSheetContent>;
 }

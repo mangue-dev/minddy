@@ -8,6 +8,7 @@ import { AppIcon } from "@/components/icon";
 import Link from "@/components/app-link";
 import { MobileNavActions } from "./mobile-nav-actions";
 import { Dialog, DialogContent, DialogTitle } from "./ui/dialog";
+import { MobileSheetScrollArea } from "./ui/mobile-sheet";
 import { cn, type NavSection, type NavItem } from "mangue-ui";
 
 export type MobileMenuPanel = {
@@ -68,17 +69,17 @@ export function MobileNavigation({ sections, initialPanel, menuFooter, onSearch 
     </nav>
     <Dialog open={menuOpen} onOpenChange={setMenuOpen}>
       <DialogContent className="mobile-menu-sheet" aria-describedby={undefined} onCloseAutoFocus={(event) => { event.preventDefault(); menuTrigger.current?.focus(); }}>
-        <div className="flex shrink-0 items-center gap-2 pr-10">
+        <div data-mobile-sheet-header className="flex shrink-0 items-center gap-2 pr-10">
           {panels.length > 0 && <button type="button" className="flex size-11 shrink-0 items-center justify-center rounded-xl hover:bg-control-hover"
             aria-label={tc("back")} onClick={() => setPanels((previous) => previous.slice(0, -1))}>
             <AppIcon icon={ArrowLeft01Icon} className="size-5" />
           </button>}
           <DialogTitle ref={heading} tabIndex={-1} className="min-w-0 truncate outline-none">{panel?.title ?? t("goTo")}</DialogTitle>
         </div>
-        <div key={panel?.key ?? "home"} className="min-h-0 space-y-4 overflow-y-auto overscroll-contain">
+        <MobileSheetScrollArea key={panel?.key ?? "home"} className="min-h-0 space-y-4 overflow-y-auto overscroll-contain">
           {panel?.render ? panel.render(navigation) : <MobileMenuRows sections={panel?.sections ?? sections} {...navigation} />}
           {menuFooter}
-        </div>
+        </MobileSheetScrollArea>
       </DialogContent>
     </Dialog>
   </>;

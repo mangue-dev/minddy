@@ -1,9 +1,9 @@
 "use client";
 
-import { focusMobileSheet } from "@/lib/mobile-sheet-focus";
+import { MobileSheetContent, MobileSheetScrollArea } from "./mobile-sheet";
 
 import * as React from "react";
-import { SidePanel as DesktopPanel, SidePanelContent as DesktopContent, Sheet, SheetContent, cn } from "mangue-ui";
+import { SidePanel as DesktopPanel, SidePanelContent as DesktopContent, SidePanelBody as DesktopBody, Sheet, cn } from "mangue-ui";
 import { useMobileLayout } from "@/lib/use-mobile-layout";
 
 const MobilePanel = React.createContext(false);
@@ -14,7 +14,10 @@ export function SidePanel(props: React.ComponentProps<typeof DesktopPanel>) {
 }
 export function SidePanelContent({ className, side, onOpenAutoFocus, ...props }: React.ComponentProps<typeof DesktopContent>) {
   if (!React.useContext(MobilePanel)) return <DesktopContent className={className} side={side} onOpenAutoFocus={onOpenAutoFocus} {...props} />;
-  return <SheetContent {...props} side="bottom" showCloseButton={false} onOpenAutoFocus={(event) => { onOpenAutoFocus?.(event); focusMobileSheet(event); }}
+  return <MobileSheetContent {...props} side="bottom" showCloseButton={false} onOpenAutoFocus={onOpenAutoFocus}
     className={cn("mobile-bottom-sheet mobile-side-panel-sheet gap-0 p-0", className)} />;
 }
-export { SidePanelBody, SidePanelClose, SidePanelDescription, SidePanelFooter, SidePanelHeader, SidePanelTitle, SidePanelTrigger } from "mangue-ui";
+export function SidePanelBody(props: React.ComponentProps<typeof DesktopBody>) {
+  return <MobileSheetScrollArea asChild><DesktopBody {...props} /></MobileSheetScrollArea>;
+}
+export { SidePanelClose, SidePanelDescription, SidePanelFooter, SidePanelHeader, SidePanelTitle, SidePanelTrigger } from "mangue-ui";

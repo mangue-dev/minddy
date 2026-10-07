@@ -218,7 +218,7 @@ export function PagePublishDialog({
                   </Button>
                 </div>
 
-                <div className="flex flex-col gap-3 border-t pt-3">
+                <div data-sheet-section className="flex flex-col gap-3 border-t pt-3">
                   <label className="flex items-start gap-2.5">
                     <Checkbox
                       checked={share.include_children}

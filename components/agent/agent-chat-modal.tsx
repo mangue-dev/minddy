@@ -1,5 +1,7 @@
 "use client";
 
+import { MobileSheetContent } from "@/components/ui/mobile-sheet";
+
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Cancel01Icon, CollapseIcon, ExpandIcon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
@@ -8,7 +10,6 @@ import { useMobileLayout } from "@/lib/use-mobile-layout";
 import {
   Button,
   Sheet,
-  SheetContent,
   SheetTitle,
 } from "mangue-ui";
 import {
@@ -65,9 +66,9 @@ export function AgentChatModal({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
+      <MobileSheetContent
         side={mobile ? "bottom" : "right"}
-        showCloseButton={false}
+        showCloseButton={mobile}
         overlayClassName={panelOverlayClassName(mobile ? "expanded" : displayMode)}
         data-mode={displayMode}
         className={panelSheetClassName(displayMode)}
@@ -108,6 +109,7 @@ export function AgentChatModal({
                   <Button
                     variant="ghost"
                     size="icon-sm"
+                    data-mobile-sheet-close
                     aria-label={tc("close")}
                     onClick={() => onOpenChange(false)}
                   >
@@ -121,7 +123,7 @@ export function AgentChatModal({
             </>
           }
         />
-      </SheetContent>
+      </MobileSheetContent>
     </Sheet>
   );
 }

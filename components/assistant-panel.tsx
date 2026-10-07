@@ -1,10 +1,12 @@
 "use client";
 
+import { MobileSheetContent } from "@/components/ui/mobile-sheet";
+
 import { focusMobileSheet } from "@/lib/mobile-sheet-focus";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Sheet, SheetContent, SheetTitle } from "mangue-ui";
+import { Sheet, SheetTitle } from "mangue-ui";
 import { useMobileLayout } from "@/lib/use-mobile-layout";
 import type { OpenAssistantOptions } from "@/lib/assistant-panel-context";
 import {
@@ -163,9 +165,9 @@ export function AssistantPanel() {
 
   return (
     <Sheet open={isOpen} onOpenChange={(open) => !open && close()}>
-      <SheetContent
+      <MobileSheetContent
         side={mobile ? "bottom" : "right"}
-        showCloseButton={false}
+        showCloseButton={mobile}
         onOpenAutoFocus={mobile ? focusMobileSheet : undefined}
         onCloseAutoFocus={mobile ? (event) => {
           event.preventDefault();
@@ -214,7 +216,7 @@ export function AssistantPanel() {
             pageContext={effectivePageContext}
           />
         </div>
-      </SheetContent>
+      </MobileSheetContent>
     </Sheet>
   );
 }

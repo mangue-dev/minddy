@@ -41,7 +41,7 @@ vi.mock("mangue-ui", () => {
     DialogContent: ({ children }: { children: React.ReactNode }) => React.createElement("div", { "data-dialog-content": true }, children),
     Sheet: ({ open, onOpenChange, children }: { open: boolean; onOpenChange: (next: boolean) => void; children: React.ReactNode }) =>
       open ? React.createElement("div", null, React.createElement("button", { type: "button", onClick: () => onOpenChange(false) }, "Close creation"), children) : null,
-    SheetContent: wrap, SheetTitle: wrap, SheetTrigger: wrap,
+    SheetContent: wrap, SheetTitle: wrap, SheetTrigger: wrap, SheetClose: wrap,
     DialogTitle: wrap, DropdownMenuLabel: wrap, CommandGroup: wrap,
     CommandItem: item, DropdownMenuItem: item,
     Spinner: () => null,
@@ -111,6 +111,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.stubGlobal("React", React);
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} });
   fixture.issues = [issue, { ...issue, id: "closed", title: "Closed issue", status: "done" }, { ...issue, id: "foreign", project_id: "other", title: "Foreign issue" }];
   fixture.objectives = [objective, { ...objective, id: "closed-goal", name: "Closed objective", status: "done" }, { ...objective, id: "foreign-goal", name: "Foreign objective", project_id: "other" }];
   fixture.mobile = false;

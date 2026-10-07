@@ -868,7 +868,7 @@ export function IssueSidePanel({
           onOpenAutoFocus={(e) => e.preventDefault()}
         >
           {/* Header: parent → identifier · agent state · dictate · more · close */}
-          <div className="flex shrink-0 items-center justify-between gap-4 px-6 pt-5 pb-3">
+          <div data-mobile-sheet-header className="flex shrink-0 items-center justify-between gap-4 px-6 pt-5 pb-3">
             <div className="flex min-w-0 items-center gap-1">
               <IssueParentMenu
                 key={issue.id}

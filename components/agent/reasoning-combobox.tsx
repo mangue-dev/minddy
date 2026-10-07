@@ -1,10 +1,12 @@
 "use client";
 
+import { CommandList } from "@/components/ui/command";
+
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowUpDownIcon, BrainIcon, CheckIcon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Button, Command, CommandItem, CommandList, cn } from "mangue-ui";
+import { Button, Command, CommandItem, cn } from "mangue-ui";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/responsive-popover";
 import { GENERIC_REASONING_LEVELS, type ReasoningLevel } from "@/lib/agent-reasoning";
 import type { MessageKey } from "@/lib/i18n-keys";

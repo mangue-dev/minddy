@@ -507,7 +507,7 @@ export function DateTimePicker({
             locale={dfLocale}
           />
         </React.Suspense>
-        {!dateOnly && <div className="flex flex-col gap-2.5 border-t border-border pt-3">
+        {!dateOnly && <div data-sheet-section className="flex flex-col gap-2.5 border-t border-border pt-3">
           <div className="flex items-center justify-between gap-3">
             <label htmlFor={switchId} className="text-sm text-muted-foreground">
               {t("addTime")}
