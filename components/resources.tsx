@@ -10,7 +10,7 @@ import Link from "@/components/app-link";
 import { useLocale, useTranslations } from "next-intl";
 import {
   Button, Command, CommandEmpty, CommandInput, CommandItem, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
-  Input, Spinner, cn,
+  Input, Spinner, cn, useTheme,
 } from "mangue-ui";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { EntityPill, type PillRadius } from "@/components/entity-pill";
@@ -18,6 +18,7 @@ import { ResourceTypeIcon } from "@/components/resource-type-icon";
 import {
   attachmentPreviewKind,
   isMarkdownFileName,
+  withAttachmentPreviewTheme,
   type AttachmentPreviewKind,
 } from "@/lib/attachment-preview";
 import { Markdown } from "@/components/markdown";
@@ -614,6 +615,7 @@ function AttachmentPreview({
   src: string;
   fileName: string;
 }) {
+  const { resolvedTheme } = useTheme();
   if (kind === "document" && isMarkdownFileName(fileName)) {
     return <MarkdownAttachmentPreview src={src} />;
   }
@@ -650,7 +652,7 @@ function AttachmentPreview({
   }
   return (
     <iframe
-      src={src}
+      src={withAttachmentPreviewTheme(src, resolvedTheme)}
       title={fileName}
       sandbox=""
       className="h-full w-full border-0 bg-white"

@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getProjectAccess } from "@/lib/server/project-access";
 import { getServiceClient } from "@/lib/supabase-service";
@@ -7,7 +8,7 @@ import { downloadAttachment, resolveAttachmentObjectPath } from
 import { verifyAttachmentRead } from "@/lib/server/encryption/attachment-url-token";
 import { decodeAttachmentRow } from "@/lib/server/attachment-content";
 import { attachmentPreviewKind, isCsvAttachment } from "@/lib/attachment-preview";
-import { csvPreviewCharset } from "@/lib/server/csv-preview";
+import { renderCsvPreview } from "@/lib/server/csv-preview";
 import {
   isInlineSafeMimeType,
   normalizeMimeType,
@@ -107,16 +108,26 @@ export async function GET(request: NextRequest) {
   const inline = preview
     ? attachmentPreviewKind(mimeType, fileName) !== null
     : !download && isInlineSafeMimeType(mimeType);
-  // Browsers download text/csv even inline; the sandbox blocks that download
-  // and leaves an empty iframe. Preview the unchanged bytes as inert text.
+  // CSV previews use static escaped HTML; downloads retain the original bytes.
   const previewCsv = preview && isCsvAttachment(mimeType, fileName);
+  let body = new Uint8Array(bytes);
+  if (previewCsv) {
+    const [locale, t] = await Promise.all([getLocale(), getTranslations("Resources")]);
+    body = new TextEncoder().encode(renderCsvPreview(bytes,
+      [attachment?.mime_type, pageFile?.mime_type, info?.contentType], {
+        fileName,
+        locale,
+        emptyMessage: t("csvPreviewEmpty"),
+        truncatedMessage: t("csvPreviewTruncated"),
+        theme: params.get("theme") === "dark" ? "dark" : "light",
+      }));
+  }
   const headers: Record<string, string> = {
     "Cache-Control": "private, no-store",
     "Content-Disposition": contentDisposition(inline, fileName),
-    "Content-Length": String(bytes.byteLength),
+    "Content-Length": String(body.byteLength),
     "Content-Type": previewCsv
-      ? `text/plain; charset=${csvPreviewCharset(bytes,
-        attachment?.mime_type, pageFile?.mime_type, info?.contentType)}`
+      ? "text/html; charset=utf-8"
       : mimeType || "application/octet-stream",
     "Cross-Origin-Resource-Policy": "same-origin",
     "Referrer-Policy": "no-referrer",
@@ -127,5 +138,5 @@ export async function GET(request: NextRequest) {
     headers["X-Frame-Options"] = "SAMEORIGIN";
   }
 
-  return new NextResponse(new Uint8Array(bytes), { headers });
+  return new NextResponse(body, { headers });
 }

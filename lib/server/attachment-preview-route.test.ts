@@ -1,6 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 import { tryToParsePath } from "next/dist/lib/try-to-parse-path";
+import { JSDOM } from "jsdom";
+
+vi.mock("next-intl/server", () => ({
+  getLocale: async () => "en",
+  getTranslations: async () => (key: string) => ({
+    csvPreviewEmpty: "This CSV is empty.",
+    csvPreviewTruncated: "This preview is shortened. Download the CSV to see all data.",
+  })[key],
+}));
 
 const getAuthedUser = vi.fn();
 const getProjectAccess = vi.fn();
@@ -148,7 +157,7 @@ describe("GET /api/attachments/file proxy", () => {
   });
 
   it.each(["text/csv", "application/csv", "application/octet-stream", "application/vnd.ms-excel"])(
-    "displays an opaque CSV attachment as plain text when storage reports %s",
+    "displays an opaque CSV attachment as a table when storage reports %s",
     async (mimeType) => {
       const csv = new TextEncoder().encode('\uFEFFName,Usage\r\n"Café",16\r\n');
       descriptor.mockResolvedValue({ data: {
@@ -163,13 +172,18 @@ describe("GET /api/attachments/file proxy", () => {
 
       const response = await GET(request(path));
 
-      expect(response.headers.get("content-type")).toBe("text/plain; charset=utf-8");
+      expect(response.headers.get("content-type")).toBe("text/html; charset=utf-8");
       expect(response.headers.get("content-disposition")).toBe("inline");
-      expect(response.headers.get("content-length")).toBe(String(csv.byteLength));
       expect(response.headers.get("content-security-policy")).toBe(PREVIEW_CSP);
       expect(response.headers.get("x-frame-options")).toBe("SAMEORIGIN");
       expect(response.headers.get("x-content-type-options")).toBe("nosniff");
-      expect(new Uint8Array(await response.arrayBuffer())).toEqual(csv);
+      const html = await response.text();
+      expect(response.headers.get("content-length")).toBe(String(Buffer.byteLength(html)));
+      const document = new JSDOM(html).window.document;
+      expect([...document.querySelectorAll("th")].map((cell) => cell.textContent))
+        .toEqual(["Name", "Usage"]);
+      expect([...document.querySelectorAll("td")].map((cell) => cell.textContent))
+        .toEqual(["Café", "16"]);
 
       for (const query of ["download=1", "preview=1&download=1", ""]) {
         const downloaded = await GET(request(path, query));
@@ -188,45 +202,58 @@ describe("GET /api/attachments/file proxy", () => {
 
     const response = await GET(request(`projects/${PROJECT}/resource/export`));
 
-    expect(response.headers.get("content-type")).toBe("text/plain; charset=utf-8");
+    expect(response.headers.get("content-type")).toBe("text/html; charset=utf-8");
     expect(response.headers.get("content-disposition")).toBe("inline");
+    expect(await response.text()).toContain("<td><div>Minddy</div></td>");
   });
+
+  it.each(["light", "dark", 'dark" onload="alert(1)'])(
+    "accepts only known CSV preview themes: %s", async (theme) => {
+      info.mockResolvedValue({ data: { contentType: "text/csv" }, error: null });
+      download.mockResolvedValue({ data: new Blob(["Name\nMinddy\n"]), error: null });
+      const response = await GET(request(`projects/${PROJECT}/resource/export.csv`,
+        `preview=1&theme=${encodeURIComponent(theme)}`));
+      const document = new JSDOM(await response.text()).window.document;
+      expect(document.documentElement.dataset.theme).toBe(theme === "dark" ? "dark" : "light");
+      expect(document.querySelector("[onload]")).toBeNull();
+    },
+  );
 
   const legacyCsv = Buffer.from("Name,Value\r\nCaf\xe9,\xa3\r\n", "latin1");
   const unicodeCsv = "Name,Value\r\nCafé,£\r\n";
   it.each([
     { name: "declared Windows-1252", bytes: legacyCsv,
-      mime: "text/csv; charset=windows-1252", charset: "windows-1252" },
+      mime: "text/csv; charset=windows-1252" },
     { name: "quoted Windows-1252", bytes: legacyCsv,
-      mime: 'text/csv; CHARSET="Windows-1252"', charset: "windows-1252" },
+      mime: 'text/csv; CHARSET="Windows-1252"' },
     { name: "Latin-1 browser alias", bytes: legacyCsv,
-      mime: "text/csv; charset=iso-8859-1", charset: "windows-1252" },
+      mime: "text/csv; charset=iso-8859-1" },
     { name: "undeclared Windows-1252", bytes: legacyCsv,
-      mime: "text/csv", charset: "windows-1252" },
+      mime: "text/csv" },
     { name: "unsupported charset", bytes: legacyCsv,
-      mime: "text/csv; charset=unknown-encoding", charset: "windows-1252" },
+      mime: "text/csv; charset=unknown-encoding" },
     { name: "undeclared UTF-8", bytes: Buffer.from(unicodeCsv, "utf8"),
-      mime: "text/csv", charset: "utf-8" },
+      mime: "text/csv" },
     { name: "UTF-8 BOM overriding metadata", bytes: Buffer.from(`\uFEFF${unicodeCsv}`, "utf8"),
-      mime: "text/csv; charset=windows-1252", charset: "utf-8" },
+      mime: "text/csv; charset=windows-1252" },
     { name: "UTF-16LE BOM overriding metadata", bytes: Buffer.from(`\uFEFF${unicodeCsv}`, "utf16le"),
-      mime: "text/csv; charset=windows-1252", charset: "utf-16le" },
+      mime: "text/csv; charset=windows-1252" },
     { name: "UTF-16BE BOM", bytes: Buffer.from(`\uFEFF${unicodeCsv}`, "utf16le").swap16(),
-      mime: "text/csv", charset: "utf-16be" },
-  ])("preserves characters and bytes in $name previews", async ({ bytes, mime, charset }) => {
+      mime: "text/csv" },
+  ])("preserves $name characters in tables and original download bytes", async ({ bytes, mime }) => {
     info.mockResolvedValue({ data: { contentType: mime }, error: null });
     download.mockResolvedValue({ data: new Blob([bytes]), error: null });
     const path = `projects/${PROJECT}/resource/export.csv`;
 
     const response = await GET(request(path));
-    const previewBytes = new Uint8Array(await response.arrayBuffer());
+    const html = await response.text();
 
-    expect(response.headers.get("content-type")).toBe(`text/plain; charset=${charset}`);
-    expect(response.headers.get("content-length")).toBe(String(bytes.byteLength));
+    expect(response.headers.get("content-type")).toBe("text/html; charset=utf-8");
+    expect(response.headers.get("content-length")).toBe(String(Buffer.byteLength(html)));
     expect(response.headers.get("content-disposition")).toBe("inline");
     expect(response.headers.get("content-security-policy")).toBe(PREVIEW_CSP);
-    expect(previewBytes).toEqual(new Uint8Array(bytes));
-    expect(new TextDecoder(charset).decode(previewBytes)).toBe(unicodeCsv);
+    expect([...new JSDOM(html).window.document.querySelectorAll("td")]
+      .map((cell) => cell.textContent)).toEqual(["Café", "£"]);
 
     const downloaded = await GET(request(path, "preview=1&download=1"));
     expect(downloaded.headers.get("content-type")).toBe("text/csv");
@@ -253,10 +280,8 @@ describe("GET /api/attachments/file proxy", () => {
 
       const response = await GET(request(`projects/${PROJECT}/opaque-id`));
 
-      expect(response.headers.get("content-type")).toBe("text/plain; charset=shift_jis");
-      const previewBytes = new Uint8Array(await response.arrayBuffer());
-      expect(previewBytes).toEqual(bytes);
-      expect(new TextDecoder("shift_jis").decode(previewBytes)).toBe("Name\n\u3042\n");
+      expect(response.headers.get("content-type")).toBe("text/html; charset=utf-8");
+      expect(await response.text()).toContain("<td><div>\u3042</div></td>");
     },
   );
 
@@ -266,9 +291,11 @@ describe("GET /api/attachments/file proxy", () => {
 
     const response = await GET(request(`projects/${PROJECT}/resource/export.csv`));
 
-    expect(response.headers.get("content-type")).toBe("text/plain; charset=utf-8");
+    expect(response.headers.get("content-type")).toBe("text/html; charset=utf-8");
     expect(response.headers.get("content-security-policy")).toBe(PREVIEW_CSP);
-    expect(await response.text()).toBe(markup);
+    const document = new JSDOM(await response.text()).window.document;
+    expect(document.querySelector("script")).toBeNull();
+    expect(document.querySelector("th")?.textContent).toBe('<script>alert("preview")</script>');
   });
 
   it("uses sniffed markup instead of a misleading image content type", async () => {

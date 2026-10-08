@@ -332,6 +332,8 @@
     "preview": "Vorschau",
     "previewLoading": "Vorschau wird geladen …",
     "previewFailed": "Die Dateivorschau konnte nicht geladen werden.",
+    "csvPreviewEmpty": "Diese CSV-Datei ist leer.",
+    "csvPreviewTruncated": "Diese Vorschau ist gekürzt. Laden Sie die CSV-Datei herunter, um alle Daten zu sehen.",
     "uploadFailed": "{name} konnte nicht hochgeladen werden.",
     "uploadingFile": "{name} wird hochgeladen…",
     "tooLarge": "{name} überschreitet {max} MB.",
