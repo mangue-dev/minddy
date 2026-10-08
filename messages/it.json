@@ -1450,7 +1450,7 @@
     "pageDesc": "Qualcuno ti menziona in una pagina oppure Numo ne aggiorna una per te."
   },
   "Push": {
-    "devicesTitle": "Avvisi di avviso",
+    "devicesTitle": "Notifiche push",
     "devicesDesc": "Ricevi un avviso sul tuo telefono o desktop quando qualcosa atterra nella tua casella di posta. Una voce per dispositivo; disattivare uno di loro, o rimuovere uno che non usi più.",
     "enableLabel": "Avvisa questo dispositivo",
     "enableDesc": "Il browser chiederà il permesso.",
@@ -1646,7 +1646,7 @@
     "heroTotalLabel": "{count, plural, one {ticket o attività completata negli ultimi 12 mesi} other {ticket e attività completati negli ultimi 12 mesi}}",
     "streakStory": "{count, plural, =0 {Nessuna striscia ancora} one {# giorno di seguito} other {# giorni consecutivi}}",
     "workLandscape": "Dove è andato il tuo lavoro",
-    "workLandscapeIntro": "{count, plural, =0 {Nessun ticket completato nei vostri progetti attivi ancora.} one {Ecco come # il ticket completato è distribuito tra i vostri progetti attivi.} other {Ecco come # I ticket completati vengono distribuiti tra i vostri progetti attivi.}}",
+    "workLandscapeIntro": "{count, plural, =0 {Non hai ancora ticket completati nei tuoi progetti attivi.} one {Ecco come si distribuisce # ticket completato tra i tuoi progetti attivi.} other {Ecco come si distribuiscono # ticket completati tra i tuoi progetti attivi.}}",
     "projectsBreakdown": "Progetti",
     "projectsBreakdownInfo": "I tuoi ticket completati per progetto attivo. Ogni barra utilizza il totale completo come sua scala.",
     "projectsBreakdownEmpty": "Nessun ticket completato in un progetto attivo.",

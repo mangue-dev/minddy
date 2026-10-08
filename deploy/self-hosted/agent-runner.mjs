@@ -131,13 +131,16 @@ async function ensureSandbox(name) {
     await docker("POST", `/v1.44/containers/${encodeURIComponent(containerName)}/start`);
   }
   if (created) {
-    await createExec(name, {
+    const initialized = await createExec(name, {
       cmd: "sh",
-      args: ["-c", "mkdir -p /vercel/sandbox /vercel/oc /vercel/home /vercel/npm-cache && chown -R 10001:10001 /vercel"],
+      args: ["-c", "mkdir -p /vercel/sandbox /vercel/oc /vercel/home /vercel/npm-cache"],
       cwd: "/",
       timeoutMs: 30_000,
-      _user: "0:0",
     });
+    if (initialized.exitCode !== 0) {
+      await removeSandbox(name, await inspectContainer(name));
+      throw new Error("sandbox initialization failed");
+    }
   }
   return { created };
 }

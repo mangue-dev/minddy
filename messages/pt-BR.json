@@ -1646,7 +1646,7 @@
     "heroTotalLabel": "{count, plural, one {item concluído (tarefa do projeto ou do caderno) nos últimos 12 meses} other {tarefas do projeto e do caderno concluídas nos últimos 12 meses}}",
     "streakStory": "{count, plural, =0 {Sem sequência ainda} one {# dia consecutivo} other {# dias seguidos}}",
     "workLandscape": "Para onde foi seu trabalho",
-    "workLandscapeIntro": "{count, plural, =0 {Ainda não há problemas concluídos em seus projetos ativos.} one {Veja como # o problema concluído é distribuído entre seus projetos ativos.} other {Veja como # concluído os problemas são distribuídos pelos seus projetos ativos.}}",
+    "workLandscapeIntro": "{count, plural, =0 {Ainda não há tarefas concluídas em seus projetos ativos.} one {Veja como # tarefa concluída se distribui entre seus projetos ativos.} other {Veja como # tarefas concluídas se distribuem entre seus projetos ativos.}}",
     "projectsBreakdown": "Projetos",
     "projectsBreakdownInfo": "Seus problemas concluídos por projeto ativo. Cada barra usa o total completo como escala.",
     "projectsBreakdownEmpty": "Não há problemas concluídos em um projeto ativo.",
