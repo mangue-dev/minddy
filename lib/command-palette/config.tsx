@@ -32,7 +32,7 @@ export interface ResolvedPaletteConfig {
   locale: string;
   /** Ordered category tabs (excluding the built-in "all"). */
   categories: CategoryDefinition[];
-  /** Grouping order by category id (favorites first, then declaration order). */
+  /** Grouping order by category id (declaration order). */
   categoryOrder: Record<string, number>;
   /** Action registry for this palette instance. */
   registry: ActionRegistry;
@@ -75,13 +75,12 @@ export function usePaletteConfig(): ResolvedPaletteConfig {
 // =============================================================================
 
 /**
- * Compute the grouping order map: favorites first, then categories in
- * declaration order.
+ * Compute the grouping order map from categories in declaration order.
  */
 export function buildCategoryOrder(
   categories: CategoryDefinition[]
 ): Record<string, number> {
-  const order: Record<string, number> = { favorites: 0 };
+  const order: Record<string, number> = {};
   categories.forEach((cat, i) => {
     if (cat.id !== "all") order[cat.id] = i + 1;
   });

@@ -18,7 +18,7 @@ export type { AppIcon, IconComponent } from "@/components/icon";
  * contacts, navigation targets…) and hands it to <CommandPalette items={…}>.
  */
 export interface PaletteItem {
-  /** Unique id. Also used for favorites & usage tracking. */
+  /** Unique id. Also used for usage tracking. */
   id: string;
   /** Main label. */
   title: string;
@@ -56,12 +56,6 @@ export interface PaletteItem {
   typeLabel?: string;
   /** Colored status dot displayed before the title. */
   statusDot?: "success" | "muted" | "warning" | "danger";
-  /**
-   * Whether the built-in "toggle favorite" action applies. Defaults to true.
-   * Set false for transient/system items (e.g. a bulk-selection entry) that
-   * shouldn't be favoritable.
-   */
-  favoritable?: boolean;
   /** Optional context id — items matching SearchContext.currentContextId get boosted. */
   contextId?: string;
   /** Optional sub-context id — items matching SearchContext.currentSubContextId get boosted. */
@@ -72,19 +66,13 @@ export interface PaletteItem {
   href?: string;
 }
 
-/** Internal: favorites are cloned into a "favorites" group with these extras. */
-export interface FavoritePaletteItem extends PaletteItem {
-  originalId: string;
-  originalFilterCategory: string;
-}
-
 // =============================================================================
 // CATEGORIES
 // =============================================================================
 
 /**
  * A filter tab / result group of the palette.
- * The "all" and "favorites" categories are built in.
+ * The "all" category is built in.
  */
 export interface CategoryDefinition {
   /** Category id, referenced by PaletteItem.filterCategory. */

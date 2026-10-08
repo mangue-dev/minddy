@@ -16,7 +16,6 @@ export const STRINGS_EN: PaletteStrings = {
   "search.quickAiAria": "Quick AI",
 
   // Groups / categories
-  "categories.favorites": "Favorites",
   "categories.other": "Other",
 
   // Results
@@ -42,8 +41,6 @@ export const STRINGS_EN: PaletteStrings = {
 
   // Default item actions
   "itemActions.open": "Open",
-  "itemActions.favorite.add": "Add to favorites",
-  "itemActions.favorite.remove": "Remove from favorites",
 };
 
 export const STRINGS_FR: PaletteStrings = {
@@ -55,7 +52,6 @@ export const STRINGS_FR: PaletteStrings = {
   "search.quickAiAria": "IA rapide",
 
   // Groups / categories
-  "categories.favorites": "Favoris",
   "categories.other": "Autre",
 
   // Results
@@ -81,8 +77,6 @@ export const STRINGS_FR: PaletteStrings = {
 
   // Default item actions
   "itemActions.open": "Ouvrir",
-  "itemActions.favorite.add": "Ajouter aux favoris",
-  "itemActions.favorite.remove": "Retirer des favoris",
 };
 
 const BUILT_IN: Record<string, PaletteStrings> = {

@@ -52,13 +52,9 @@ export interface ResultItemProps {
 
 /**
  * Entity type used for icon tinting (data-item-type attribute).
- * Favorite clones keep their original entity type.
  */
 function getItemType(item: PaletteItem): string | undefined {
-  if (item.entityType) return item.entityType;
-  const original = (item as PaletteItem & { originalFilterCategory?: string })
-    .originalFilterCategory;
-  return original ?? item.filterCategory;
+  return item.entityType || item.filterCategory;
 }
 
 // =============================================================================

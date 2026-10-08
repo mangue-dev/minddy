@@ -139,7 +139,7 @@ export class ActionRegistry {
 
   /**
    * Check whether an item deserves the actions submenu.
-   * Generic "basic" actions (open, favorite, open in a new tab…) are not
+   * Generic "basic" actions (open, open in a new tab…) are not
    * enough: a single one of them, or a handful, duplicates what Enter already
    * does — the submenu is reserved for items with real contextual actions.
    */
@@ -185,18 +185,12 @@ export class ActionRegistry {
 
   /**
    * Determine the entity type for a palette item.
-   * Explicit entityType wins; favorites use their original category;
-   * otherwise the filter category routes the item.
+   * Explicit entityType wins; otherwise the filter category routes the item.
    */
   private getEntityType(item: PaletteItem): string {
     if (item.entityType) return item.entityType;
 
-    const effectiveFilterCategory =
-      "originalFilterCategory" in item
-        ? (item as PaletteItem & { originalFilterCategory: string }).originalFilterCategory
-        : item.filterCategory;
-
-    return effectiveFilterCategory || "default";
+    return item.filterCategory || "default";
   }
 
   // ===========================================================================

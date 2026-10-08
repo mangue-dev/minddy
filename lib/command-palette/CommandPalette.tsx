@@ -27,8 +27,6 @@ import { createActionRegistry } from "./registry/ActionRegistry";
 import { ItemActionsProvider } from "./registry/providers/ItemActionsProvider";
 import {
   configureSearchStorage,
-  isFavorite as isFavoriteLocal,
-  toggleFavorite as toggleFavoriteLocal,
   recordUsage,
 } from "./search/engine";
 import { usePaletteStore } from "./store";
@@ -79,16 +77,12 @@ export interface CommandPaletteProps {
   strings?: PaletteStrings;
   /** Category definitions (tabs order, labels, boosts). */
   categories?: CategoryDefinition[];
-  /** localStorage key prefix for favorites/usage/history. Default "command-palette". */
+  /** localStorage key prefix for usage/history. Default "command-palette". */
   storagePrefix?: string;
   /** Actions popover shortcut key (with ⌘/Ctrl). Default "m". */
   actionsShortcutKey?: string;
   /** Compact mode: shows only the search bar until the user types. */
   compactMode?: boolean;
-  /** Favorite item ids (overrides the built-in localStorage favorites). */
-  favorites?: string[];
-  /** Toggle favorite callback (used with `favorites` for external storage). */
-  onToggleFavorite?: (itemId: string) => void;
   /** Enable query history recall (ArrowUp). Default true. */
   history?: boolean;
   /**
@@ -138,8 +132,6 @@ export function CommandPalette({
   storagePrefix = "command-palette",
   actionsShortcutKey = "m",
   compactMode = false,
-  favorites,
-  onToggleFavorite,
   history = true,
   quickAi,
   views,
@@ -206,13 +198,9 @@ export function CommandPalette({
       closeMenu: handleClose,
       navigate: onNavigate,
       showToast: onToast,
-      isFavorite: favorites
-        ? (id: string) => favorites.includes(id)
-        : isFavoriteLocal,
-      toggleFavorite: onToggleFavorite ?? toggleFavoriteLocal,
       meta: actionContextMeta ?? {},
     }),
-    [locale, t, handleClose, onNavigate, onToast, favorites, onToggleFavorite, actionContextMeta]
+    [locale, t, handleClose, onNavigate, onToast, actionContextMeta]
   );
 
   // Reset state when opening
@@ -312,7 +300,6 @@ export function CommandPalette({
         tabHint={tabView?.hint}
         quickAi={quickAi}
         compactMode={compactMode}
-        favorites={favorites}
         historyIndex={history ? queryHistory.historyIndex : -1}
         onHistoryNavigate={history ? queryHistory.navigate : undefined}
         onHistoryReset={history ? queryHistory.reset : undefined}
