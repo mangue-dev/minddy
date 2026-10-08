@@ -6451,6 +6451,16 @@
     "error": "La réponse n’a pas pu être générée. Réessayez dans un instant."
   },
   "Documentation": {
+    "navTitle": "Docs",
+    "welcome": "Bienvenue dans Minddy",
+    "gettingStarted": "Premiers pas",
+    "articles": "Articles",
+    "openArticle": "Ouvrir l’article",
+    "breadcrumb": "Fil d’Ariane",
+    "welcomeSummary": "Découvrez Minddy, exploitez votre propre instance ou connectez vos outils. Commencez par les guides ci-dessous, puis explorez les thèmes dans la barre latérale.",
+    "welcomeUse": "Choisissez d’abord où utiliser Minddy. Suivez ensuite une tâche de sa création à sa réalisation et apprenez à naviguer dans votre espace de travail.",
+    "welcomeOperate": "Vérifiez les options d’installation prises en charge avant de configurer un serveur. Une fois votre instance démarrée, préparez une sauvegarde avant la première mise à jour.",
+    "welcomeIntegrate": "Comprenez les liens entre projets, tickets et pages. Explorez l’architecture et connectez vos outils externes via MCP.",
     "title": "Documentation",
     "use": "Utiliser Minddy",
     "operate": "Exploiter votre propre instance",

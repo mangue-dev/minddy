@@ -6451,6 +6451,16 @@
     "error": "Não foi possível gerar a resposta. Tente novamente em instantes."
   },
   "Documentation": {
+    "navTitle": "Docs",
+    "welcome": "Boas-vindas ao Minddy",
+    "gettingStarted": "Primeiros passos",
+    "articles": "Artigos",
+    "openArticle": "Abrir artigo",
+    "breadcrumb": "Caminho de navegação",
+    "welcomeSummary": "Conheça o Minddy, administre sua própria instância ou conecte suas ferramentas. Comece pelos guias abaixo e depois explore os temas na barra lateral.",
+    "welcomeUse": "Primeiro, escolha onde usar o Minddy. Depois, acompanhe uma tarefa da criação à conclusão e aprenda a navegar pelo seu espaço de trabalho.",
+    "welcomeOperate": "Confira as opções de instalação compatíveis antes de configurar um servidor. Quando sua instância estiver funcionando, prepare um backup antes da primeira atualização.",
+    "welcomeIntegrate": "Entenda como projetos, tickets e páginas se relacionam. Explore a arquitetura e conecte ferramentas externas via MCP.",
     "title": "Documentação",
     "use": "Usar o Minddy",
     "operate": "Gerenciar sua própria instância",

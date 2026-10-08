@@ -333,7 +333,7 @@ export function CommandPalette({
           className={`desktop-palette-surface ${styles.palette} ${isSuccess ? styles.paletteSuccess : ""}`}
           role="dialog"
           aria-modal="true"
-          aria-label="Command palette"
+          aria-label={t("search.ariaLabel")}
         >
           {/* Success indicator overlay */}
           {isSuccess && (

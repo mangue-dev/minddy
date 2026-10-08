@@ -6451,6 +6451,16 @@
     "error": "Die Antwort konnte nicht erstellt werden. Versuche es gleich noch einmal."
   },
   "Documentation": {
+    "navTitle": "Doku",
+    "welcome": "Willkommen bei Minddy",
+    "gettingStarted": "Erste Schritte",
+    "articles": "Artikel",
+    "openArticle": "Artikel öffnen",
+    "breadcrumb": "Navigationspfad",
+    "welcomeSummary": "Lernen Sie Minddy kennen, betreiben Sie Ihre eigene Instanz oder verbinden Sie Ihre Werkzeuge. Beginnen Sie mit den folgenden Anleitungen und erkunden Sie danach die Themen in der Seitenleiste.",
+    "welcomeUse": "Entscheiden Sie zunächst, wo Sie Minddy nutzen möchten. Führen Sie dann eine Aufgabe von der Erstellung bis zum Abschluss durch und lernen Sie die Navigation im Arbeitsbereich kennen.",
+    "welcomeOperate": "Prüfen Sie die unterstützten Installationsmöglichkeiten, bevor Sie einen Server einrichten. Erstellen Sie nach dem Start Ihrer Instanz eine Sicherung vor dem ersten Update.",
+    "welcomeIntegrate": "Erfahren Sie, wie Projekte, Tickets und Seiten zusammenhängen. Erkunden Sie die Architektur und verbinden Sie externe Werkzeuge über MCP.",
     "title": "Dokumentation",
     "use": "Minddy nutzen",
     "operate": "Eine eigene Instanz betreiben",
