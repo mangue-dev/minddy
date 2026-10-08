@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 import type { Locale } from "@/i18n/config";
 import type { DocumentationArticle } from "@/lib/documentation";
 import { documentationPath } from "@/lib/documentation-core.mjs";
+import { localizedHref } from "@/lib/locale-href";
 import { MinddyLogo } from "@/components/minddy-logo";
 import { LanguageSwitcher } from "@/components/marketing/language-switcher";
 import { DocumentationMobileNavigation, DocumentationSearch, DocumentationSidebar } from "./documentation-navigation";
@@ -32,9 +33,11 @@ export async function DocumentationShell({ articles, locale, currentId, title, t
     <header className="fixed inset-x-0 top-0 z-30 flex h-24 items-center border-b border-border bg-background px-3 pb-8 sm:h-16 sm:px-6 sm:pb-0">
       <div className="flex shrink-0 items-center gap-2 lg:-ml-6 lg:h-16 lg:w-72 lg:gap-4 lg:border-r lg:border-border lg:pl-6 lg:pr-3">
         <DocumentationMobileNavigation {...navigation} />
-        <a href={documentationPath(null, locale)} className="flex items-center gap-3 rounded focus-visible:outline-2 focus-visible:outline-ring">
-          <MinddyLogo className="h-6" /><span aria-hidden className="text-border">|</span><span className="text-sm font-medium">{t("navTitle")}</span>
-        </a>
+        <div className="flex items-center gap-3">
+          <a href={localizedHref("/", locale)} aria-label="minddy" className="rounded focus-visible:outline-2 focus-visible:outline-ring"><MinddyLogo className="h-6" /></a>
+          <span aria-hidden className="text-border">|</span>
+          <a href={documentationPath(null, locale)} className="rounded text-sm font-medium focus-visible:outline-2 focus-visible:outline-ring">{t("navTitle")}</a>
+        </div>
         <div className="ml-2 lg:ml-auto"><DocumentationSearch articles={searchArticles}
           locale={locale} initialQuery={initialQuery} labels={{ search: t("search"), articles: t("articles"), noResults: t("noResults"), open: t("openArticle") }} /></div>
       </div>
