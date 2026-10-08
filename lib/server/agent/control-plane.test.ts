@@ -1038,6 +1038,19 @@ describe("les tools de plateforme", () => {
     expect(h.prLandings).toEqual([]);
   });
 
+  it("keeps the initial request branch after asynchronous title generation", async () => {
+    h.run = { ...h.run, prompt: "Update greeting whitespace", title: "Greeting update" };
+    const branch = `numo/update-greeting-whitespace-${RUN_ID.slice(0, 8)}`;
+    const res = await call("POST", "/tool/create_pr", {
+      args: { title: "Trim greeting names" },
+      pushed: { pushed: true, remoteUpdated: true, headSha: "abc" },
+      workBranch: branch,
+    });
+    expect(res.status).toBe(200);
+    expect(h.prLandings).toEqual([{ workBranch: branch, baseBranch: "main" }]);
+    expect(h.stamped.find((fields) => "branch_name" in fields)).toMatchObject({ branch_name: branch });
+  });
+
   it("ne servent PAS les tools de fichier — ils s'exécutent dans la VM", async () => {
     // 403 and not 404: the name is not in the game of this run, which is not the
     // same thing as “it doesn’t exist” (MIN-326).

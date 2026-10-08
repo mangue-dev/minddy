@@ -799,7 +799,8 @@ export async function executeAgentRun(
       generatedAgentBranchName({
         runId: run.id,
         issueIdentifier: issue?.identifier,
-        conversationTitle: run.title,
+        // The generated title can arrive after checkout. Only immutable launch
+        // content may determine the branch checked again by the control plane.
         prompt: run.prompt,
         branchPrefix,
       });
