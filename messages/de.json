@@ -1816,7 +1816,8 @@
     "savedViewRenamed": "“{name}“ umbenannt",
     "deleteSavedView": "Diese Ansicht vergessen",
     "savedViewDeleted": "„{name}“ vergessen",
-    "nameThisView": "Diese Ansicht benennen"
+    "nameThisView": "Diese Ansicht benennen",
+    "documentation": "Dokumentation"
   },
   "CommandPaletteActions": {
     "copied": "Kopiert",
@@ -5207,7 +5208,8 @@
     "screenshotClose": "Vorschau schließen",
     "voiceDemoErrorMicEmbedded": "Erlauben Sie den Mikrofonzugriff im Browser und versuchen Sie es erneut.",
     "agentsMcpRoles": "MCP ist ein Verbindungsstandard für KI-Tools. Verbinde einen Coding-Agenten mit minddy, damit er deine Aufgaben lesen und aktualisieren kann. Du kannst auch externe Dienste mit Numo verbinden, damit er deren Informationen und Aktionen nutzen kann.",
-    "agentsMore": "Und viele mehr…"
+    "agentsMore": "Und viele mehr…",
+    "navDocumentation": "Dokumentation"
   },
   "Pricing": {
     "metaTitle": "minddy Cloud-Preise und -Pläne",
@@ -6431,5 +6433,38 @@
     "submitAria": "Frage senden",
     "loading": "Antwort wird gesucht…",
     "error": "Die Antwort konnte nicht erstellt werden. Versuche es gleich noch einmal."
+  },
+  "Documentation": {
+    "title": "Dokumentation",
+    "use": "Minddy nutzen",
+    "operate": "Eine eigene Instanz betreiben",
+    "integrate": "Integrieren und verstehen",
+    "search": "Dokumentation durchsuchen",
+    "noResults": "Keine passenden Artikel. Verwende weniger Suchwörter oder lösche die Suche, um die Themen zu durchsuchen.",
+    "topics": "Themen",
+    "contents": "Auf dieser Seite",
+    "related": "Verwandte Artikel",
+    "report": "Fehler melden",
+    "reviewed": "Zuletzt geprüft",
+    "compatibility": "Kompatibilität",
+    "language": "Sprache",
+    "allAudiences": "Alle Zielgruppen",
+    "empty": "Es sind noch keine geprüften Artikel verfügbar.",
+    "skip": "Zum Artikel springen",
+    "audience": "Zielgruppe",
+    "clear": "Suche löschen",
+    "selfHosting": "Anleitung zum Selbsthosting lesen",
+    "description": "Produktabläufe, Installation und technische Referenz.",
+    "metaTitle": "Dokumentation",
+    "metaDescription": "Produktabläufe, Installation und technische Referenz.",
+    "draftPreview": "Entwurfsvorschau: Die Prüfung steht noch aus.",
+    "selfHostedEdition": "Selbst gehostet",
+    "webProfile": "Web",
+    "mobileProfile": "Mobil",
+    "desktopProfile": "Desktop",
+    "fullProfile": "Vollständiger Supabase-Stack",
+    "managedProfile": "Verwaltete Dienste",
+    "localProfile": "Lokale Entwicklung",
+    "sourceProfile": "Installation aus dem Quellcode"
   }
 }

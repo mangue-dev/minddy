@@ -13,6 +13,7 @@ import {
 import { setLocaleCookie } from "@/lib/set-locale";
 import { switchLocaleHref } from "@/lib/locale-href";
 import type { Locale } from "@/i18n/config";
+import { resolveDocumentationPath } from "@/lib/documentation-core.mjs";
 
 /**
  * The public footer language switcher.
@@ -41,7 +42,12 @@ export function LanguageSwitcher() {
     setSelected(next);
     await setLocaleCookie(next);
     const target = switchLocaleHref(pathname, next);
-    startTransition(() => (target ? router.push(target) : router.refresh()));
+    // A document navigation refreshes the shared root layout's locale provider.
+    if (target && resolveDocumentationPath(pathname)) {
+      window.location.assign(`${target}${window.location.hash}`);
+      return;
+    }
+    startTransition(() => (target ? router.push(`${target}${window.location.hash}`) : router.refresh()));
   };
 
   return (

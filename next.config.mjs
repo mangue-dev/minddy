@@ -2,6 +2,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import createNextIntlPlugin from "next-intl/plugin";
 import { commitsSinceVersion } from "./scripts/commits-since-version.mjs";
+import { documentationRoots } from "./lib/documentation-core.mjs";
 
 const dir = path.dirname(fileURLToPath(import.meta.url));
 
@@ -18,6 +19,8 @@ const withNextIntl = createNextIntlPlugin("./i18n/request.ts");
  * copied here and the test fails if the two diverge.
  */
 export const LOCALIZED_SLUG_REDIRECTS = [
+  ...Object.entries(documentationRoots).filter(([locale]) => locale !== "en")
+    .map(([locale, destination]) => ({ source: `/${locale.toLowerCase()}/docs`, destination })),
   { source: "/fr/pricing", destination: "/fr/tarifs" },
   { source: "/fr/self-hosting", destination: "/fr/auto-hebergement" },
   {
@@ -107,6 +110,7 @@ export const LOCALIZED_SLUG_REDIRECTS = [
  * `headers()`).
  */
 export const PUBLIC_ROUTE_PATHS = [
+  ...Object.values(documentationRoots),
   "/",
   "/pricing",
   "/mcp",
@@ -328,7 +332,7 @@ const nextConfig = {
    */
   outputFileTracingIncludes: {
     "/api/**": [".agent-vm/**", "content/knowledge/**"],
-    "/**": [".pages-md/**", "content/changelog/releases/*.json"],
+    "/**": [".pages-md/**", "content/changelog/releases/*.json", "content/documentation/**/*.md"],
   },
   // Bridge Vercel's server-only VERCEL_ENV into a public var so client
   // components (e.g. the sidebar env badge) can tell prod/preview/local apart.
@@ -351,6 +355,8 @@ const nextConfig = {
   },
   async redirects() {
     return [
+      ...Object.entries(documentationRoots).filter(([locale]) => locale !== "en")
+        .map(([locale, root]) => ({ source: `/${locale.toLowerCase()}/docs/:article`, destination: `${root}/:article`, permanent: true })),
       // The "Mes tickets" tabs merged into the tickets board as a system view —
       // old routes land there with it pre-selected (?view=my; extra query params
       // like ?issue= are preserved). Temporary (307): don't let browsers cache it.
@@ -490,7 +496,7 @@ const nextConfig = {
     //
     // Cache marketing pages only on configured application hosts.
     headers.push(
-      ...PUBLIC_ROUTE_PATHS.map((source) => ({
+      ...[...PUBLIC_ROUTE_PATHS, ...Object.values(documentationRoots).map(root => `${root}/:article`)].map((source) => ({
         source,
         has: [{ type: "host", value: PRIMARY_HOST_PATTERN }],
         headers: [

@@ -52,6 +52,7 @@ const PRODUCT_ENTRIES: ReadonlyArray<ProductEntry> = [
 
 /** Direct navigation complements the product menu with an overview and pricing. */
 const LINKS: ReadonlyArray<NavLink> = [
+  { href: "/docs", key: "navDocumentation" },
   { href: "/#workspace", key: "navHowItWorks" },
   { href: "/pricing", key: "navPricing" },
   { href: "https://github.com/mangue-dev/minddy", key: "navOpenSource", external: true },

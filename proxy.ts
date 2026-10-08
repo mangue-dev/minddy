@@ -2,6 +2,7 @@ import { supabaseServerFetchWithTimeout as supabaseServerFetch } from "@/lib/ser
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { isPrimaryHost, normalizeHost } from "@/lib/public-hosts";
+import { documentationPath, resolveDocumentationPath } from "@/lib/documentation-core.mjs";
 import { detectFromAcceptLanguage } from "@/lib/accept-language";
 import {
   PUBLIC_ROUTE_PATHS,
@@ -205,14 +206,15 @@ function sessionUserMetadata(
 function serveLocalizedPublicRoute(request: NextRequest, pathname: string): NextResponse {
   const route = routeByPath(pathname);
   const locale = localeForPublicPath(pathname) ?? "en";
-  const englishPath = route?.en ?? pathname;
+  const documentation = resolveDocumentationPath(pathname);
+  const englishPath = documentation ? documentationPath(documentation.id, "en") : route?.en ?? pathname;
   const headers: Record<string, string> = {
     [PUBLIC_THEME_HEADER]: "1",
     [LOCALE_HEADER]: locale,
     ...(route ? { [ROUTE_HEADER]: route.key } : {}),
   };
 
-  const markdownPath = route ? `/md?route=${route.key}&locale=${locale}` : null;
+  const markdownPath = route && !documentation ? `/md?route=${route.key}&locale=${locale}` : null;
 
   // Content negotiation (MIN-88). An agent who explicitly requests
   // Markdown receives the content of the page without the 440 KB of markup it
@@ -321,6 +323,9 @@ async function routeRequest(request: NextRequest) {
 
   const supabaseUrl = process.env.MINDDY_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.MINDDY_PUBLIC_SUPABASE_ANON_KEY;
+
+  // Official documentation is independent of sessions and backend availability.
+  if (resolveDocumentationPath(pathname)) return serveLocalizedPublicRoute(request, pathname);
 
   // Supabase not configured (empty .env) → don't block navigation.
   if (!supabaseUrl || !supabaseKey) {

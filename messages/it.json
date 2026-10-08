@@ -1816,7 +1816,8 @@
     "savedViewRenamed": "«{name}» rinominata",
     "deleteSavedView": "Dimentica questa vista",
     "savedViewDeleted": "«{name}» rimossa",
-    "nameThisView": "Nome questa vista"
+    "nameThisView": "Nome questa vista",
+    "documentation": "Documentazione"
   },
   "CommandPaletteActions": {
     "copied": "Copiato",
@@ -5207,7 +5208,8 @@
     "screenshotClose": "Chiudi anteprima",
     "voiceDemoErrorMicEmbedded": "Consenti l'accesso al microfono nel browser e riprova.",
     "agentsMcpRoles": "MCP è uno standard di connessione per strumenti IA. Collega un agente di programmazione a minddy per leggere e aggiornare le tue attività. Puoi anche collegare servizi esterni a Numo per consentirgli di usarne informazioni e azioni.",
-    "agentsMore": "E molti altri…"
+    "agentsMore": "E molti altri…",
+    "navDocumentation": "Documentazione"
   },
   "Pricing": {
     "metaTitle": "minddy Cloud prezzi e piani",
@@ -6431,5 +6433,38 @@
     "submitAria": "Invia la domanda",
     "loading": "Cerco la risposta…",
     "error": "Non è stato possibile generare la risposta. Riprova tra poco."
+  },
+  "Documentation": {
+    "title": "Documentazione",
+    "use": "Usare Minddy",
+    "operate": "Gestire la propria istanza",
+    "integrate": "Integrare e capire",
+    "search": "Cerca nella documentazione",
+    "noResults": "Nessun articolo trovato. Prova con meno parole o cancella la ricerca per consultare gli argomenti.",
+    "topics": "Argomenti",
+    "contents": "In questa pagina",
+    "related": "Articoli correlati",
+    "report": "Segnala un errore",
+    "reviewed": "Ultima revisione",
+    "compatibility": "Compatibilità",
+    "language": "Lingua",
+    "allAudiences": "Tutti i lettori",
+    "empty": "Non sono ancora disponibili articoli revisionati.",
+    "skip": "Vai all’articolo",
+    "audience": "Pubblico",
+    "clear": "Cancella la ricerca",
+    "selfHosting": "Leggi la guida all’hosting autonomo",
+    "description": "Procedure del prodotto, installazione e riferimenti tecnici.",
+    "metaTitle": "Documentazione",
+    "metaDescription": "Procedure del prodotto, installazione e riferimenti tecnici.",
+    "draftPreview": "Anteprima della bozza: la revisione è ancora da completare.",
+    "selfHostedEdition": "Self-hosted",
+    "webProfile": "Web",
+    "mobileProfile": "Mobile",
+    "desktopProfile": "Desktop",
+    "fullProfile": "Stack Supabase completo",
+    "managedProfile": "Servizi gestiti",
+    "localProfile": "Sviluppo locale",
+    "sourceProfile": "Installazione dal codice sorgente"
   }
 }

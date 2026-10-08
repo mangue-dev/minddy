@@ -1816,7 +1816,8 @@
     "savedViewRenamed": "“{name}” renamed",
     "deleteSavedView": "Forget this view",
     "savedViewDeleted": "“{name}” forgotten",
-    "nameThisView": "Name this view"
+    "nameThisView": "Name this view",
+    "documentation": "Documentation"
   },
   "CommandPaletteActions": {
     "copied": "Copied",
@@ -5207,7 +5208,8 @@
     "screenshotClose": "Close preview",
     "voiceDemoErrorMicEmbedded": "Allow microphone access in your browser, then try again.",
     "agentsMcpRoles": "MCP is a connection standard for AI tools. Connect a coding agent to minddy so it can read and update your tasks. You can also connect external services to Numo so it can use their information and actions.",
-    "agentsMore": "And more…"
+    "agentsMore": "And more…",
+    "navDocumentation": "Documentation"
   },
   "Pricing": {
     "metaTitle": "minddy Cloud pricing and plans",
@@ -6431,5 +6433,38 @@
     "submitAria": "Send the question",
     "loading": "Looking for the answer…",
     "error": "The answer could not be generated. Try again in a moment."
+  },
+  "Documentation": {
+    "title": "Documentation",
+    "use": "Use Minddy",
+    "operate": "Run your own instance",
+    "integrate": "Integrate and understand",
+    "search": "Search documentation",
+    "noResults": "No matching articles. Try fewer words or clear the search to browse topics.",
+    "topics": "Topics",
+    "contents": "On this page",
+    "related": "Related articles",
+    "report": "Report an error",
+    "reviewed": "Last reviewed",
+    "compatibility": "Compatibility",
+    "language": "Language",
+    "allAudiences": "All readers",
+    "empty": "No reviewed articles are available yet.",
+    "skip": "Skip to the article",
+    "audience": "Reader",
+    "clear": "Clear search",
+    "selfHosting": "Read the self-hosting guide",
+    "description": "Product workflows, installation and technical reference.",
+    "metaTitle": "Documentation",
+    "metaDescription": "Product workflows, installation and technical reference.",
+    "draftPreview": "Draft preview: review is still pending.",
+    "selfHostedEdition": "Self-hosted",
+    "webProfile": "Web",
+    "mobileProfile": "Mobile",
+    "desktopProfile": "Desktop",
+    "fullProfile": "Full Supabase stack",
+    "managedProfile": "Managed services",
+    "localProfile": "Local development",
+    "sourceProfile": "Source installation"
   }
 }

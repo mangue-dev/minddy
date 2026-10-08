@@ -2,6 +2,9 @@ import type { MetadataRoute } from "next";
 import { PUBLIC_ROUTES, publicRouteVariants } from "@/lib/public-routes";
 import { getChangelogIndex } from "@/lib/server/changelog";
 import { SITE_URL } from "@/lib/site";
+import { getPublishedDocumentation } from "@/lib/server/documentation";
+import { documentationPath } from "@/lib/documentation-core.mjs";
+import { locales } from "@/i18n/config";
 
 /**
  * Sitemap for every explicit public locale URL (MIN-88). `/login` and
@@ -22,7 +25,7 @@ export const revalidate = 60;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const latestRelease = (await getChangelogIndex())[0]?.publishedAt;
-  return PUBLIC_ROUTES.flatMap((route) => {
+  const publicPages = PUBLIC_ROUTES.flatMap((route) => {
     const variants = publicRouteVariants(route);
     const languages = Object.fromEntries(
       variants.map(({ locale, path }) => [locale, `${SITE_URL}${path}`]),
@@ -37,4 +40,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       alternates: { languages },
     }));
   });
+  const articles = getPublishedDocumentation("en").flatMap(article => {
+    const languages = Object.fromEntries(locales.map(locale => [locale, `${SITE_URL}${documentationPath(article.id, locale)}`]));
+    languages["x-default"] = `${SITE_URL}${documentationPath(article.id, "en")}`;
+    return locales.map(locale => ({ url: `${SITE_URL}${documentationPath(article.id, locale)}`,
+      lastModified: getPublishedDocumentation(locale).find(item => item.id === article.id)!.updatedAt,
+      changeFrequency: "monthly" as const, priority: 0.7, alternates: { languages } }));
+  });
+  return [...publicPages, ...articles];
 }

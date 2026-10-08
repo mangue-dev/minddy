@@ -1816,7 +1816,8 @@
     "savedViewRenamed": "« {name} » renommée",
     "deleteSavedView": "Oublier cette vue",
     "savedViewDeleted": "« {name} » oubliée",
-    "nameThisView": "Donner un nom à la vue"
+    "nameThisView": "Donner un nom à la vue",
+    "documentation": "Documentation"
   },
   "CommandPaletteActions": {
     "copied": "Copié",
@@ -5207,7 +5208,8 @@
     "screenshotClose": "Fermer la prévisualisation",
     "voiceDemoErrorMicEmbedded": "Autorisez le microphone dans votre navigateur, puis réessayez.",
     "agentsMcpRoles": "MCP est un standard de connexion pour les outils IA. Connectez un agent de développement à minddy pour qu’il puisse lire et modifier vos tâches. Vous pouvez aussi connecter des services externes à Numo pour lui donner accès à leurs informations et actions.",
-    "agentsMore": "Et plus encore…"
+    "agentsMore": "Et plus encore…",
+    "navDocumentation": "Documentation"
   },
   "Pricing": {
     "metaTitle": "Tarifs et plans minddy Cloud",
@@ -6431,5 +6433,38 @@
     "submitAria": "Envoyer la question",
     "loading": "Recherche de la réponse…",
     "error": "La réponse n’a pas pu être générée. Réessayez dans un instant."
+  },
+  "Documentation": {
+    "title": "Documentation",
+    "use": "Utiliser Minddy",
+    "operate": "Exploiter votre propre instance",
+    "integrate": "Intégrer et comprendre",
+    "search": "Rechercher dans la documentation",
+    "noResults": "Aucun article trouvé. Essayez avec moins de mots ou effacez la recherche pour parcourir les thèmes.",
+    "topics": "Thèmes",
+    "contents": "Sur cette page",
+    "related": "Articles associés",
+    "report": "Signaler une erreur",
+    "reviewed": "Dernière relecture",
+    "compatibility": "Compatibilité",
+    "language": "Langue",
+    "allAudiences": "Tous les publics",
+    "empty": "Aucun article relu n’est encore disponible.",
+    "skip": "Aller à l’article",
+    "audience": "Public",
+    "clear": "Effacer la recherche",
+    "selfHosting": "Lire le guide d’auto-hébergement",
+    "description": "Parcours du produit, installation et références techniques.",
+    "metaTitle": "Documentation",
+    "metaDescription": "Parcours du produit, installation et références techniques.",
+    "draftPreview": "Aperçu du brouillon : la revue reste à effectuer.",
+    "selfHostedEdition": "Auto-hébergé",
+    "webProfile": "Web",
+    "mobileProfile": "Mobile",
+    "desktopProfile": "Bureau",
+    "fullProfile": "Stack Supabase complète",
+    "managedProfile": "Services gérés",
+    "localProfile": "Développement local",
+    "sourceProfile": "Installation depuis les sources"
   }
 }

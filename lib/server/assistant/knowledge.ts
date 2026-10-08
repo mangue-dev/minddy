@@ -2,6 +2,9 @@ import "server-only";
 
 import fs from "node:fs";
 import path from "node:path";
+import type { Locale } from "@/i18n/config";
+import { documentationPath, normalizeDocumentationText, searchDocumentation } from "@/lib/documentation-core.mjs";
+import { getPublishedDocumentation } from "@/lib/server/documentation";
 
 export type KnowledgeAudience = "end-user" | "developer" | "both";
 
@@ -14,13 +17,14 @@ export interface KnowledgeArticle {
   tags: string[];
   lastReviewed: string;
   content: string;
+  sourceUrl?: string;
+  revision?: number;
 }
 
 const CONTENT_DIR = path.join(process.cwd(), "content", "knowledge");
 const AUDIENCES: ReadonlySet<KnowledgeAudience> = new Set(["end-user", "developer", "both"]);
 
 let cache: KnowledgeArticle[] | null = null;
-let byId: Map<string, KnowledgeArticle> | null = null;
 let topicList: string | null = null;
 
 function parseFrontmatter(raw: string): { data: Record<string, unknown>; body: string } {
@@ -78,21 +82,25 @@ function loadKnowledge(): KnowledgeArticle[] {
   if (articles.length === 0) throw new Error(`No valid knowledge articles found at ${CONTENT_DIR}.`);
   articles.sort((a, b) => a.id.localeCompare(b.id));
   cache = articles;
-  byId = index;
   return articles;
 }
 
-export function getKnowledgeArticle(query: string): KnowledgeArticle | null {
+export function getKnowledgeArticle(query: string, locale: Locale = "en"): KnowledgeArticle | null {
   const normalized = query.toLowerCase().trim();
   if (!normalized) return null;
-  loadKnowledge();
-  const exact = byId!.get(normalized);
+  const official = getPublishedDocumentation(locale);
+  const exactOfficial = official.find(article => article.id === normalized || article.aliases.includes(normalized));
+  if (exactOfficial) return asKnowledgeArticle(exactOfficial);
+  const hit = searchDocumentation(official, query, 1)[0];
+  if (hit) return asKnowledgeArticle(official.find(article => article.id === hit.id)!);
+  const available = getKnowledgeArticles(locale);
+  const exact = available.find(article => article.id === normalized);
   if (exact) return exact;
-  const tokens = normalized.replace(/[^a-z0-9-]+/g, " ").split(/\s+/).filter(Boolean);
+  const tokens = normalizeDocumentationText(normalized).split(/\s+/).filter(Boolean);
   let best: { article: KnowledgeArticle; score: number } | null = null;
-  for (const article of cache!) {
-    const topicText = [article.id, article.title, ...article.tags].join(" ").toLowerCase();
-    const contentText = article.content.toLowerCase();
+  for (const article of available) {
+    const topicText = normalizeDocumentationText([article.id, article.title, ...article.tags].join(" "));
+    const contentText = normalizeDocumentationText(article.content);
     const score = tokens.reduce(
       (total, token) =>
         total +
@@ -105,7 +113,10 @@ export function getKnowledgeArticle(query: string): KnowledgeArticle | null {
   return best?.article ?? null;
 }
 
-export function getKnowledgeTopicList(): string {
+export function getKnowledgeTopicList(locale: Locale = "en"): string {
+  const official = getPublishedDocumentation(locale);
+  if (official.length) return getKnowledgeArticles(locale)
+    .map(article => `- **${article.title}** (topic: \`${article.id}\`): ${article.summary}`).join("\n");
   if (topicList) return topicList;
   topicList = loadKnowledge()
     .map((article) => `- **${article.title}** (topic: \`${article.id}\`): ${article.summary}`)
@@ -113,9 +124,22 @@ export function getKnowledgeTopicList(): string {
   return topicList;
 }
 
-/** All loaded articles, in catalog order — for callers that ground one prompt
- * on the whole knowledge base (the FAQ ask box reads it inline instead of
- * retrieving one topic). */
-export function getKnowledgeArticles(): KnowledgeArticle[] {
-  return loadKnowledge();
+/** Metadata catalog or at most four relevant sources for bounded FAQ retrieval. */
+export function getKnowledgeArticles(locale: Locale = "en", query?: string): KnowledgeArticle[] {
+  const official = getPublishedDocumentation(locale);
+  const migrated = new Set(official.flatMap(article => [article.id, ...article.aliases]));
+  const articles = [...official.map(asKnowledgeArticle), ...loadKnowledge().filter(article => !migrated.has(article.id))];
+  if (!query) return articles;
+  const tokens = normalizeDocumentationText(query).split(/\s+/).filter(token => token.length > 2);
+  return articles.map(article => ({ article, score: tokens.reduce((score, token) => score
+    + (normalizeDocumentationText(`${article.title} ${article.summary} ${article.tags.join(" ")}`).includes(token) ? 5 : 0)
+    + (normalizeDocumentationText(article.content).includes(token) ? 1 : 0), 0) }))
+    .filter(item => item.score > 0).sort((a, b) => b.score - a.score).slice(0, 4).map(item => item.article);
+}
+
+function asKnowledgeArticle(article: ReturnType<typeof getPublishedDocumentation>[number]): KnowledgeArticle {
+  return { id: article.id, title: article.title, summary: article.summary, category: article.topic,
+    audience: article.audiences.some(audience => ["member", "owner", "visitor"].includes(audience)) ? "both" : "developer",
+    tags: article.tags, lastReviewed: article.review.date!, content: article.content,
+    sourceUrl: documentationPath(article.id, article.locale), revision: article.revision };
 }

@@ -1816,7 +1816,8 @@
     "savedViewRenamed": "«{name}» renombrada",
     "deleteSavedView": "Olvidar esta vista",
     "savedViewDeleted": "«{name}» olvidada",
-    "nameThisView": "Ponle un nombre a esta vista"
+    "nameThisView": "Ponle un nombre a esta vista",
+    "documentation": "Documentación"
   },
   "CommandPaletteActions": {
     "copied": "Copiado",
@@ -5207,7 +5208,8 @@
     "screenshotClose": "Cerrar vista previa",
     "voiceDemoErrorMicEmbedded": "Permita el acceso al micrófono en su navegador e inténtelo de nuevo.",
     "agentsMcpRoles": "MCP es un estándar de conexión para herramientas de IA. Conecta un agente de programación a minddy para que lea y actualice tus tareas. También puedes conectar servicios externos a Numo para que utilice su información y sus acciones.",
-    "agentsMore": "Y muchos más…"
+    "agentsMore": "Y muchos más…",
+    "navDocumentation": "Documentación"
   },
   "Pricing": {
     "metaTitle": "Precios y planes de minddy Cloud",
@@ -6431,5 +6433,38 @@
     "submitAria": "Enviar la pregunta",
     "loading": "Buscando la respuesta…",
     "error": "No se pudo generar la respuesta. Inténtalo de nuevo en un momento."
+  },
+  "Documentation": {
+    "title": "Documentación",
+    "use": "Usar Minddy",
+    "operate": "Gestionar tu propia instancia",
+    "integrate": "Integrar y comprender",
+    "search": "Buscar en la documentación",
+    "noResults": "No se encontraron artículos. Prueba con menos palabras o borra la búsqueda para explorar los temas.",
+    "topics": "Temas",
+    "contents": "En esta página",
+    "related": "Artículos relacionados",
+    "report": "Informar de un error",
+    "reviewed": "Última revisión",
+    "compatibility": "Compatibilidad",
+    "language": "Idioma",
+    "allAudiences": "Todos los públicos",
+    "empty": "Todavía no hay artículos revisados disponibles.",
+    "skip": "Ir al artículo",
+    "audience": "Público",
+    "clear": "Borrar búsqueda",
+    "selfHosting": "Leer la guía de autoalojamiento",
+    "description": "Flujos del producto, instalación y referencias técnicas.",
+    "metaTitle": "Documentación",
+    "metaDescription": "Flujos del producto, instalación y referencias técnicas.",
+    "draftPreview": "Vista previa del borrador: la revisión sigue pendiente.",
+    "selfHostedEdition": "Alojamiento propio",
+    "webProfile": "Web",
+    "mobileProfile": "Móvil",
+    "desktopProfile": "Escritorio",
+    "fullProfile": "Stack completo de Supabase",
+    "managedProfile": "Servicios gestionados",
+    "localProfile": "Desarrollo local",
+    "sourceProfile": "Instalación desde el código fuente"
   }
 }

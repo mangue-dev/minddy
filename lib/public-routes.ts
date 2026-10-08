@@ -32,6 +32,7 @@
 import { CHANGELOG_LAST_MODIFIED } from "@/lib/changelog";
 import type { Namespace } from "@/lib/i18n-keys";
 import { locales, type Locale } from "@/i18n/config";
+import { documentationRoots, resolveDocumentationPath } from "@/lib/documentation-core.mjs";
 
 export interface PublicRoute {
   /** Stable key, used by `publicPageMetadata` and links. */
@@ -56,6 +57,16 @@ export interface PublicRoute {
 }
 
 export const PUBLIC_ROUTES = [
+  {
+    key: "documentation",
+    en: documentationRoots.en,
+    fr: documentationRoots.fr,
+    localized: { de: documentationRoots.de, es: documentationRoots.es,
+      it: documentationRoots.it, "pt-BR": documentationRoots["pt-BR"] },
+    namespace: "Documentation",
+    lastModified: "2026-10-08",
+    priority: 0.9,
+  },
   {
     key: "home",
     en: "/",
@@ -337,7 +348,7 @@ const PATH_TO_VARIANT = new Map<string, { route: PublicRoute; locale: Locale }>(
 
 /** Locale declared by an explicit public URL, or `null` for a non-public path. */
 export function localeForPublicPath(pathname: string): Locale | null {
-  return PATH_TO_VARIANT.get(pathname)?.locale ?? null;
+  return PATH_TO_VARIANT.get(pathname)?.locale ?? resolveDocumentationPath(pathname)?.locale as Locale | null ?? null;
 }
 
 const BY_PATH = new Map<string, PublicRoute>(

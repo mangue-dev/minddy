@@ -878,13 +878,13 @@ export async function executeTool(
     }
     if (toolName === "get_help") {
       const topic = typeof args.topic === "string" ? args.topic : "";
-      const article = getKnowledgeArticle(topic);
+      const article = getKnowledgeArticle(topic, resolveApplicationLocale(ctx.locale));
       return article
         ? { result: article, success: true }
         : {
             result: {
               error: `No knowledge article found for "${topic}".`,
-              topics: getKnowledgeTopicList(),
+              topics: getKnowledgeTopicList(resolveApplicationLocale(ctx.locale)),
             },
             success: false,
           };

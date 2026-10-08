@@ -123,6 +123,15 @@ describe("buildFaqAnswerPrompt", () => {
   it("forbids inventing facts", () => {
     expect(prompt).toContain("Never invent prices, limits, dates, or product capabilities.");
   });
+
+  it("omits an oversized procedure completely instead of cutting off its warnings", () => {
+    const large = { ...articles[0], sourceUrl: "/docs/restore-an-instance", revision: 3, content: "procedure ".repeat(1000) + "STOP: preserve encryption keys." };
+    const result = buildFaqAnswerPrompt({ section: "landing", items: [], articles: [large], locale: "en" });
+    expect(result).toContain("Full procedure omitted");
+    expect(result).toContain("/docs/restore-an-instance");
+    expect(result).not.toContain("procedure procedure");
+    expect(result).toContain("do not infer its steps or conditions");
+  });
 });
 
 describe("extractFaqAnswer", () => {

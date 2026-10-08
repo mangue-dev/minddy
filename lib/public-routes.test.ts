@@ -18,6 +18,7 @@ import nextConfig, {
 } from "../next.config.mjs";
 import { isPrimaryHost } from "./public-hosts";
 import { locales } from "@/i18n/config";
+import { documentationRoots } from "./documentation-core.mjs";
 
 const REPO_ROOT = path.resolve(__dirname, "..");
 
@@ -184,7 +185,7 @@ describe("CDN cache headers on application hosts", () => {
   it("gates every public-cache header on a primary host", async () => {
     const entries = await cacheEntries();
     expect(entries.map((entry) => entry.source).sort()).toEqual(
-      [...PUBLIC_ROUTE_PATHS].sort(),
+      [...PUBLIC_ROUTE_PATHS, ...Object.values(documentationRoots).map(root => `${root}/:article`)].sort(),
     );
     for (const entry of entries) {
       expect(entry.has).toEqual([

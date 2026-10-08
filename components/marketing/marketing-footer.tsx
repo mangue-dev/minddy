@@ -50,6 +50,7 @@ const COLUMNS: ReadonlyArray<FooterColumn> = [
   {
     titleKey: "footerColResources",
     links: [
+      { href: "/docs", labelKey: "navDocumentation" },
       // The MCP server doc at the top of the column (MIN-93): it is the only one
       // site resource which is really one, and the internal link which must
       // be seen from all pages — a crawler counts incoming links.
