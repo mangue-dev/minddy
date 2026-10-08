@@ -1616,7 +1616,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         />
       }
     >
-      <div id="app-tab-content" role={appTabs ? "tabpanel" : undefined} aria-labelledby={activeAppTabId ? `app-tab-${activeAppTabId}` : undefined} className="h-full min-h-0">{appTabs ? <AppTabViewHost>{children}</AppTabViewHost> : children}</div>
+      <div id="app-tab-content" role={appTabs ? "tabpanel" : undefined} aria-labelledby={activeAppTabId ? `app-tab-${activeAppTabId}` : undefined} className="h-full min-h-0"><AppTabViewHost>{children}</AppTabViewHost></div>
       <ContentToaster />
       {/* Command palette (⌘K / ⌘P / F, sidebar search) — same groups as
  mobile nav search, tickets enriched with actions (⌘;). The cross-project

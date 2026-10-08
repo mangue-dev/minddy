@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { act, createElement } from "react";
 import { createRoot } from "react-dom/client";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AppTabsProvider, useOptionalAppTabs, useOptionalAppTabNavigation, useOptionalAppTabSession } from "./app-tabs-context";
 
@@ -24,7 +25,7 @@ async function mount() {
     contexts = [useOptionalAppTabs(), useOptionalAppTabNavigation(), useOptionalAppTabSession()];
     return createElement("span", null, "Page content");
   }
-  await act(() => root.render(createElement(AppTabsProvider, null, createElement(Page))));
+  await act(() => root.render(createElement(QueryClientProvider, { client: new QueryClient() }, createElement(AppTabsProvider, null, createElement(Page)))));
   cleanup = async () => { await act(() => root.unmount()); container.remove(); vi.unstubAllGlobals(); };
   return { container, contexts };
 }
@@ -75,7 +76,7 @@ it("waits for mobile editor saves and blocks a rejected departure", async () => 
   const container = document.createElement("div"); document.body.appendChild(container);
   const root = createRoot(container);
   cleanup = async () => { await act(() => root.unmount()); container.remove(); vi.unstubAllGlobals(); };
-  await act(() => root.render(createElement(AppTabsProvider, null, createElement(Editor))));
+  await act(() => root.render(createElement(QueryClientProvider, { client: new QueryClient() }, createElement(AppTabsProvider, null, createElement(Editor)))));
   await act(async () => { open("/home", navigate); await Promise.resolve(); });
   expect(navigate).not.toHaveBeenCalled();
   await act(async () => { release(false); await Promise.resolve(); });

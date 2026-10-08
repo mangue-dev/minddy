@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
+import { APP_LAYOUT_BOOTSTRAP } from "./app-layout-bootstrap.generated";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { APP_LAYOUT_POLICY, buildAppLayoutScript, isMobileLayout, resolveMobileLayout, subscribeAppLayout, type AppLayoutInput } from "./app-layout";
+import { APP_LAYOUT_POLICY, isMobileLayout, resolveMobileLayout, subscribeAppLayout, type AppLayoutInput } from "./app-layout";
 
 const input = (width: number, height: number, touch = true, orientation: AppLayoutInput["orientation"] = height >= width ? "portrait" : "landscape"): AppLayoutInput => ({ width, height, touch, screenWidth: width, screenHeight: height, orientation });
 const cases: [string, AppLayoutInput, boolean][] = [
@@ -43,7 +44,7 @@ describe("adaptive application layout", () => {
     emulate(value);
     expect(isMobileLayout()).toBe(mobile);
     // The pre-paint script must agree with the runtime decision in every case.
-    new Function(buildAppLayoutScript())();
+    new Function(APP_LAYOUT_BOOTSTRAP)();
     expect(document.documentElement.dataset.appLayout).toBe(mobile ? "mobile" : "desktop");
   });
 

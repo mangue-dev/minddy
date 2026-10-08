@@ -11,6 +11,7 @@
     "check:deployment-db": "node scripts/check-deployment-database.mjs",
     "build:agent-vm": "node scripts/build-agent-vm.mjs",
     "build:pages-md": "node scripts/build-pages-md.mjs",
+    "build:app-layout": "node scripts/build-app-layout.mjs",
     "desktop:dev": "node scripts/dev-desktop.mjs",
     "desktop:check": "node scripts/desktop-fingerprint.mjs --explain",
     "desktop:release": "npm --prefix desktop run dist && node scripts/publish-desktop.mjs",

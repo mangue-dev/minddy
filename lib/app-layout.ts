@@ -93,8 +93,3 @@ export function subscribeAppLayout(notify: () => void) {
     }
   };
 }
-
-/** The serialized functions have no module dependencies or user-controlled input. */
-export function buildAppLayoutScript(): string {
-  return `(function(){var p=${JSON.stringify(APP_LAYOUT_POLICY)};document.documentElement.dataset.appLayout=(${resolveMobileLayout.toString()})((${readAppLayoutInput.toString()})(p),p)?"mobile":"desktop";})();`;
-}

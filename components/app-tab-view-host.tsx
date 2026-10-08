@@ -5,7 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
 import { appTabSurfaceLoaders } from "@/lib/app-tab-surfaces";
 import { usePathname, useSearchParams } from "next/navigation";
-import { AppTabNavigationScope, useAppTabs } from "@/lib/app-tabs-context";
+import { AppTabNavigationScope, useAppTabs, useOptionalAppTabs } from "@/lib/app-tabs-context";
 import { AppTabRouteProvider } from "@/lib/app-tab-route-context";
 import { nextReadActivationSequence } from "@/lib/read-activation-sequence";
 import { normalizeAppTabLocation } from "@/lib/app-tab-location";
@@ -76,6 +76,16 @@ const RetainedBoard = memo(function RetainedBoard({ view, active }: { view: Reta
 
 /** One bounded host retains recent destinations while React suspends hidden effects. */
 export function AppTabViewHost({ children }: { children: ReactNode }) {
+  const tabs = useOptionalAppTabs();
+  const pathname = usePathname();
+  const retained = !!tabs && !!retainedAppViewKind(pathname);
+  return <>
+    {tabs ? <DesktopTabViews /> : null}
+    {!retained && children}
+  </>;
+}
+
+function DesktopTabViews() {
   const { tabs, activeId, session } = useAppTabs();
   const client = useQueryClient();
   const pathname = usePathname();
@@ -121,7 +131,6 @@ export function AppTabViewHost({ children }: { children: ReactNode }) {
     }
     setState({ location, tabId, tabIds, views, visits });
   }
-  const kind = retainedAppViewKind(pathname);
   useLayoutEffect(() => {
     const qualifies = (id: string | null, href: string) => isRetainedDestination(views, id, href);
     session.isRetainedDestination = qualifies;
@@ -132,9 +141,8 @@ export function AppTabViewHost({ children }: { children: ReactNode }) {
   useEffect(() => observeRetainedBoardData(client, views), [client, views]);
   return <>
     {views.map((view) => {
-      const active = !!kind && view.tabId === tabId && view.route.pathname === pathname;
+      const active = !!retainedAppViewKind(pathname) && view.tabId === tabId && view.route.pathname === pathname;
       return <RetainedBoard key={view.key} view={view} active={active} />;
     })}
-    {!kind && children}
   </>;
 }
