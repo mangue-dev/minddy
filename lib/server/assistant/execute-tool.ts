@@ -1924,7 +1924,7 @@ export async function executeTool(
         }
 
         if (commentId) {
-          const { data: comment, error } = await ctx.supabase.from("comments")
+          const { data: comment, error } = await commentStore(ctx.supabase, "comments", ctx.userId)
             .select("id,issue_id,objective_id,author_id").eq("id", commentId).maybeSingle();
           if (error || !comment || comment.issue_id !== (issueId || null)
             || comment.objective_id !== (objectiveId || null) || comment.author_id !== ctx.userId) {

@@ -3,6 +3,7 @@ import type { ToolContext } from "./execute-tool";
 import { executeTool } from "./execute-tool";
 import { EncryptedStore } from "@/lib/server/encryption/store";
 import { encodeNumoUserMessage } from "@/lib/server/numo/user-message-content";
+import { encodeWorkerParentMessage } from "@/lib/server/agent/worker-parent-content";
 import { encodeAttachmentValue } from "@/lib/server/attachment-content";
 import { attachmentOffset, copyConversationAttachment, listConversationAttachments,
   readConversationAttachment, resolveConversationAttachment,
@@ -59,6 +60,7 @@ function database() {
       insert(row: Row) { persisted.push(row); return q; },
       single: async () => ({ data: { id: "saved-message" }, error: null }),
       eq(key: string, value: unknown) { filters.push((row) => row[key] === value); return q; },
+      in(key: string, values: unknown[]) { filters.push((row) => values.includes(row[key])); return q; },
       is(key: string, value: unknown) { filters.push((row) => (row[key] ?? null) === value); return q; },
       order: () => q,
       range(from: number, to: number) { ranges.push(from); start = from; end = to + 1; return q; },
@@ -95,6 +97,41 @@ beforeEach(() => {
 });
 
 describe("conversation file references", () => {
+  async function workerMessage(marker: "worker_steering" | "worker_input") {
+    const encrypted = await encodeWorkerParentMessage(PROJECT, MESSAGE, {
+      content: "Please also use this file", context: null,
+      metadata: { attachments: [file()] },
+    });
+    tables.assistant_messages = [{ ...message(), ...encrypted, user_payload_version: 0,
+      metadata: { [marker]: { run_id: "worker" } } }];
+    tables.agent_runs = [{ id: "worker", project_id: PROJECT }];
+    expect(JSON.stringify(tables.assistant_messages)).not.toContain("notes.txt");
+  }
+
+  it.each(["worker_steering", "worker_input"] as const)(
+    "discovers, reads and copies files from encrypted %s messages", async (marker) => {
+      await workerMessage(marker);
+      expect(await listConversationAttachments(ctx())).toMatchObject({ total: 1,
+        attachments: [{ attachment_id: REF, file_name: "notes.txt" }] });
+      expect(await readConversationAttachment(ctx(), REF)).toMatchObject({ content: "hello" });
+      await copyConversationAttachment(ctx(), REF, { projectId: PROJECT, issueId: ISSUE, createdBy: USER });
+      expect(h.insert).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+        resources: [expect.objectContaining({ file_name: "notes.txt" })],
+      }));
+    });
+
+  it("refuses protected worker files when the associated run is no longer readable", async () => {
+    await workerMessage("worker_steering");
+    tables.agent_runs = [];
+    await expect(listConversationAttachments(ctx())).rejects.toThrow("project is not authorized");
+    await expect(readConversationAttachment(ctx(), REF)).rejects.toThrow("project is not authorized");
+    await expect(copyConversationAttachment(ctx(), REF, {
+      projectId: PROJECT, issueId: ISSUE, createdBy: USER,
+    })).rejects.toThrow("project is not authorized");
+    expect(h.download).not.toHaveBeenCalled();
+    expect(h.upload).not.toHaveBeenCalled();
+  });
+
   it("reads protected metadata and encrypted project filenames without exposing storage paths", async () => {
     const projectFile = file({ id: "resource", project_id: PROJECT, storage_path: `projects/${PROJECT}/object`,
       file_name: await encodeAttachmentValue("attachments", PROJECT, "resource", "file_name", "private.txt") });

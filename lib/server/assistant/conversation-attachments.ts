@@ -4,6 +4,7 @@ import type { ToolContext } from "./execute-tool";
 import type { ChatMessage } from "./loop";
 import { buildAttachmentParts, type PromptAttachment } from "./attachment-parts";
 import { decodeNumoUserMessage } from "@/lib/server/numo/user-message-content";
+import { hydrateWorkerParentCopies } from "@/lib/server/agent/worker-parent-content";
 import { decodeAttachmentRow } from "@/lib/server/attachment-content";
 import { getProjectAccess } from "@/lib/server/project-access";
 import { downloadAttachment, insertAttachments, MAX_ATTACHMENT_BYTES,
@@ -74,7 +75,8 @@ export async function listConversationAttachments(ctx: ToolContext, offset = 0) 
       .order("created_at", { ascending: true }).order("id", { ascending: true })
       .range(start, start + 199);
     if (error) throw new Error("Unable to read conversation attachments.");
-    for (const row of data ?? []) {
+    const messages = await hydrateWorkerParentCopies(ctx.supabase, data ?? [], ctx.userId);
+    for (const row of messages) {
       for (const file of await messageFiles(ctx, row as MessageRow)) {
         if (total >= offset && files.length < 20) files.push(summary(file));
         total++;
@@ -92,7 +94,8 @@ export async function resolveConversationAttachment(ctx: ToolContext, reference:
   const { data, error } = await ctx.supabase.from("assistant_messages").select(MESSAGE_COLUMNS)
     .eq("conversation_id", ctx.conversationId).eq("role", "user").eq("id", match[1]).maybeSingle();
   if (error || !data) throw new Error("Attachment not found in this conversation.");
-  const file = (await messageFiles(ctx, data as MessageRow)).find((item) => item.attachment_id === reference);
+  const [message] = await hydrateWorkerParentCopies(ctx.supabase, [data], ctx.userId);
+  const file = (await messageFiles(ctx, message as MessageRow)).find((item) => item.attachment_id === reference);
   if (!file) throw new Error("Attachment not found or no longer accessible.");
   // Metadata is already decrypted. Do not ask the prompt builder to decode it again.
   return { ...file, id: undefined, project_id: undefined };
