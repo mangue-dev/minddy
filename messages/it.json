@@ -332,6 +332,8 @@
     "preview": "Anteprima",
     "previewLoading": "Caricamento dell’anteprima…",
     "previewFailed": "Impossibile caricare l’anteprima di questo file.",
+    "csvPreviewEmpty": "Questo CSV è vuoto.",
+    "csvPreviewTruncated": "Questa anteprima è ridotta. Scarica il CSV per vedere tutti i dati.",
     "uploadFailed": "Impossibile caricare {name}.",
     "uploadingFile": "Caricamento {name}…",
     "tooLarge": "{name} supera {max} MB.",

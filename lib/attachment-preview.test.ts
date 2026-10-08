@@ -4,7 +4,28 @@ import {
   attachmentPreviewKind,
   isCsvAttachment,
   isMarkdownFileName,
+  withAttachmentPreviewTheme,
 } from "@/lib/attachment-preview";
+
+describe("withAttachmentPreviewTheme", () => {
+  it("preserves signed access values and PDF fragments while replacing the theme", () => {
+    const url = new URL(withAttachmentPreviewTheme(
+      "/api/attachments/file?path=chat%2Fuser%2Ffile.csv&preview=1&expires=123&version=2&sig=a%2Bb%2Fc&theme=light#page=3",
+      "dark",
+    ), "https://minddy.test");
+    expect(Object.fromEntries(url.searchParams)).toEqual({
+      path: "chat/user/file.csv", preview: "1", expires: "123", version: "2",
+      sig: "a+b/c", theme: "dark",
+    });
+    expect(url.hash).toBe("#page=3");
+    expect(url.searchParams.getAll("theme")).toEqual(["dark"]);
+  });
+
+  it("keeps absolute URLs and works without an existing query", () => {
+    expect(withAttachmentPreviewTheme("https://minddy.test/file#page=2", "light"))
+      .toBe("https://minddy.test/file?theme=light#page=2");
+  });
+});
 
 describe("attachmentPreviewKind", () => {
   it.each([

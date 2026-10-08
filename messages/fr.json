@@ -332,6 +332,8 @@
     "preview": "Aperçu",
     "previewLoading": "Chargement de l’aperçu…",
     "previewFailed": "Impossible de charger l’aperçu de ce fichier.",
+    "csvPreviewEmpty": "Ce CSV est vide.",
+    "csvPreviewTruncated": "Cet aperçu est limité. Téléchargez le CSV pour voir toutes les données.",
     "uploadFailed": "Impossible d'envoyer {name}.",
     "uploadingFile": "Envoi de {name}…",
     "tooLarge": "{name} dépasse {max} Mo.",

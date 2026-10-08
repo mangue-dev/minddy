@@ -2,6 +2,18 @@ import { normalizeMimeType } from "@/lib/inline-safe";
 
 export type AttachmentPreviewKind = "image" | "document" | "audio" | "video";
 
+/** Add a presentation preference without changing signed attachment parameters. */
+export function withAttachmentPreviewTheme(src: string, theme: "light" | "dark"): string {
+  const hashIndex = src.indexOf("#");
+  const hash = hashIndex === -1 ? "" : src.slice(hashIndex);
+  const base = hashIndex === -1 ? src : src.slice(0, hashIndex);
+  const queryIndex = base.indexOf("?");
+  const path = queryIndex === -1 ? base : base.slice(0, queryIndex);
+  const params = new URLSearchParams(queryIndex === -1 ? "" : base.slice(queryIndex + 1));
+  params.set("theme", theme);
+  return `${path}?${params}${hash}`;
+}
+
 const CSV_MIME_TYPES: ReadonlySet<string> = new Set([
   "text/csv",
   "text/x-csv",

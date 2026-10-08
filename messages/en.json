@@ -332,6 +332,8 @@
     "preview": "Preview",
     "previewLoading": "Loading preview…",
     "previewFailed": "Couldn't load this file preview.",
+    "csvPreviewEmpty": "This CSV is empty.",
+    "csvPreviewTruncated": "This preview is shortened. Download the CSV to see all data.",
     "uploadFailed": "Couldn't upload {name}.",
     "uploadingFile": "Uploading {name}…",
     "tooLarge": "{name} exceeds {max} MB.",
