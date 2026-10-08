@@ -8,7 +8,7 @@ import {
   gitRelayConfig,
   gitRelayTarget,
 } from "./agent-runner-git-relay.mjs";
-import { agentSandboxStorage } from "./agent-runner-storage.mjs";
+import { agentSandboxStorage, base64FileChunks } from "./agent-runner-storage.mjs";
 
 const socketPath = process.env.DOCKER_HOST?.replace(/^unix:\/\//, "") || "/var/run/docker.sock";
 const secret = process.env.AGENT_RUNNER_SECRET?.trim();
@@ -440,11 +440,11 @@ const server = createServer(async (request, response) => {
         if (typeof file.content !== "string") throw Object.assign(new Error("file content must be base64"), { status: 400 });
         const temporary = `${target}.minddy-write`;
         await runUtility(name, `mkdir -p ${shellQuote(path.dirname(target))}; : > ${shellQuote(temporary)}`);
-        for (let offset = 0; offset < file.content.length; offset += 262_144) {
+        for (const chunk of base64FileChunks(file.content)) {
           await runUtility(
             name,
             `printf %s "$MINDDY_FILE" | base64 -d >> ${shellQuote(temporary)}`,
-            { MINDDY_FILE: file.content.slice(offset, offset + 262_144) },
+            { MINDDY_FILE: chunk },
           );
         }
         await runUtility(name, `mv ${shellQuote(temporary)} ${shellQuote(target)}`);

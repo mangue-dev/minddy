@@ -12,3 +12,11 @@ export function agentSandboxStorage() {
     },
   };
 }
+
+/** Stay below Linux's per-argument limit when passing file data to Docker exec. */
+export function* base64FileChunks(content) {
+  const chunkSize = 65_536;
+  for (let offset = 0; offset < content.length; offset += chunkSize) {
+    yield content.slice(offset, offset + chunkSize);
+  }
+}

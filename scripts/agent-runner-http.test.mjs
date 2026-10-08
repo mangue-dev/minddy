@@ -7,6 +7,20 @@ import { createServer as createHttpServer } from "node:http";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
+import { base64FileChunks } from "../deploy/self-hosted/agent-runner-storage.mjs";
+
+test("large binary files retain their bytes within Linux exec environment bounds", () => {
+  const original = Buffer.alloc(1_200_000);
+  for (let i = 0; i < original.length; i++) original[i] = i % 256;
+  const chunks = [...base64FileChunks(original.toString("base64"))];
+  assert.ok(chunks.length > 1);
+  for (const chunk of chunks) {
+    assert.equal(chunk.length % 4, 0);
+    assert.ok(Buffer.byteLength(`MINDDY_FILE=${chunk}\0`) < 131_072);
+  }
+  assert.deepEqual(Buffer.concat(chunks.map(chunk => Buffer.from(chunk, "base64"))), original);
+  assert.deepEqual([...base64FileChunks("")], []);
+});
 
 // Exercise the real HTTP boundary without a Docker daemon or production secrets.
 async function startRunner(t, script = "deploy/self-hosted/agent-runner.mjs") {
