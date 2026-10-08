@@ -371,7 +371,7 @@ export async function copyResourcesToProject(
 
 /** The parent columns of an attachment row — exactly one of the four ids is
     set (the attachments_parent_ck constraint). */
-interface AttachmentParent {
+export interface AttachmentParent {
   projectId: string;
   issueId?: string | null;
   objectiveId?: string | null;

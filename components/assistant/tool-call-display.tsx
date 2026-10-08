@@ -410,6 +410,16 @@ const TOOL_META: Record<string, ToolMeta> = {
       return success ? t("commentAdded") : t("addCommentFailed");
     },
   },
+  list_conversation_attachments: {
+    icon: FileStack,
+    getLabel: (_a, _r, success, status, t) => status === "running"
+      ? t("listingConversationFiles") : success ? t("conversationFilesListed") : t("listConversationFilesFailed"),
+  },
+  read_conversation_attachment: {
+    icon: FileSearchIcon,
+    getLabel: (_a, _r, success, status, t) => status === "running"
+      ? t("readingConversationFile") : success ? t("conversationFileRead") : t("readConversationFileFailed"),
+  },
   add_resource: {
     icon: Link02Icon,
     getLabel: (_args, _result, success, status, t) => {

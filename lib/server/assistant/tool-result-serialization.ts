@@ -17,6 +17,9 @@ export function getToolResultCharLimit(
   args: Record<string, unknown> = {},
 ): number {
   switch (toolName) {
+    case "list_conversation_attachments":
+    case "read_conversation_attachment":
+      return 24_000;
     // MCP results are already byte-bounded; preserve schemas and pagination.
     case "list_mcp_tools":
     case "call_mcp_tool":
