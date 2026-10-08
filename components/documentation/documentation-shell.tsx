@@ -32,12 +32,12 @@ export async function DocumentationShell({ articles, locale, currentId, title, t
   return <>
     <a href="#documentation-article" className="sr-only z-50 rounded bg-background p-3 focus:not-sr-only focus:fixed focus:top-2">{t("skip")}</a>
     <header className="fixed inset-x-0 top-0 z-30 flex h-24 items-center border-b border-border bg-background px-3 pb-8 sm:h-16 sm:px-6 sm:pb-0">
-      <div className="flex shrink-0 items-center gap-2 lg:w-[15.5rem] lg:gap-4">
+      <div className="flex shrink-0 items-center gap-2 lg:-ml-6 lg:h-16 lg:w-72 lg:gap-4 lg:border-r lg:border-border lg:pl-6 lg:pr-3">
         <DocumentationMobileNavigation {...navigation} />
         <a href={documentationPath(null, locale)} className="flex items-center gap-3 rounded focus-visible:outline-2 focus-visible:outline-ring">
-          <MinddyLogo className="h-6" /><span className="text-sm font-medium">{t("navTitle")}</span>
+          <MinddyLogo className="h-6" /><span aria-hidden className="text-border">|</span><span className="text-sm font-medium">{t("navTitle")}</span>
         </a>
-        <div className="ml-2 lg:ml-auto lg:pr-4"><DocumentationSearch articles={searchArticles}
+        <div className="ml-2 lg:ml-auto"><DocumentationSearch articles={searchArticles}
           locale={locale} initialQuery={initialQuery} labels={{ search: t("search"), articles: t("articles"), noResults: t("noResults"), open: t("openArticle") }} /></div>
       </div>
       <nav aria-label={t("breadcrumb")} className="absolute inset-x-6 bottom-0 flex h-8 min-w-0 items-center gap-3 text-xs sm:static sm:mx-6 sm:h-auto sm:flex-1 sm:text-[13px]">

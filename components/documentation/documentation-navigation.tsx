@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowRight01Icon, BookOpen01Icon, Cancel01Icon, Menu01Icon, Search01Icon } from "@hugeicons/core-free-icons";
 import { Button, Collapsible, CollapsibleContent, CollapsibleTrigger, Sheet, SheetClose, SheetContent, SheetTitle, SheetTrigger, Tooltip, TooltipContent, TooltipTrigger } from "mangue-ui";
@@ -8,6 +9,7 @@ import type { Locale } from "@/i18n/config";
 import type { DocumentationArticle, DocumentationSearchEntry } from "@/lib/documentation";
 import { documentationPath, searchDocumentation } from "@/lib/documentation-core.mjs";
 import { CommandPalette, usePaletteStore } from "@/lib/command-palette";
+import { useDocumentationTopics } from "@/lib/use-documentation-topics";
 import "@/components/command-palette.css";
 
 export type DocumentationNavigationEntry = Pick<DocumentationArticle, "id" | "title" | "topic">;
@@ -24,19 +26,24 @@ export function DocumentationMobileContents({ sections, label }: { sections: Doc
   </Collapsible>;
 }
 
-export function DocumentationSidebar({ articles, locale, currentId, labels }: {
+export function DocumentationSidebar({ articles, locale, currentId, labels, onNavigate }: {
   articles: DocumentationNavigationEntry[];
   locale: Locale;
   currentId: string | null;
   labels: { topics: string; welcome: string; close: string };
+  onNavigate?: () => void;
 }) {
   const startTopic = articles.find(article => article.id === "first-project")?.topic;
   const topics = [...new Set(articles.map(article => article.topic))].sort((a, b) =>
     a === startTopic ? -1 : b === startTopic ? 1 : a.localeCompare(b, locale));
+  // Article IDs keep topic preferences stable when the reader changes language.
+  const topicKeys = new Map(topics.map(topic => [topic, articles.filter(article => article.topic === topic).map(article => article.id).sort()[0]]));
+  const activeTopic = articles.find(article => article.id === currentId)?.topic;
+  const folds = useDocumentationTopics(activeTopic ? topicKeys.get(activeTopic) : undefined);
   return <nav aria-label={labels.topics} className="space-y-1 px-4 py-6">
-    <a href={documentationPath(null, locale)} aria-current={currentId === null ? "page" : undefined}
-      className="mb-4 block rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground aria-[current=page]:bg-muted aria-[current=page]:text-foreground focus-visible:outline-2 focus-visible:outline-ring">{labels.welcome}</a>
-    {topics.map(topic => <Collapsible key={topic}>
+    <Link href={documentationPath(null, locale)} prefetch={false} onNavigate={onNavigate} aria-current={currentId === null ? "page" : undefined}
+      className="mb-4 block rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground aria-[current=page]:bg-muted aria-[current=page]:text-foreground focus-visible:outline-2 focus-visible:outline-ring">{labels.welcome}</Link>
+    {topics.map(topic => <Collapsible key={topic} open={folds.isOpen(topicKeys.get(topic)!)} onOpenChange={open => folds.setOpen(topicKeys.get(topic)!, open)}>
       <CollapsibleTrigger className="group flex min-h-10 w-full items-center gap-2 rounded-md px-3 py-2 text-left text-[13px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring">
         <HugeiconsIcon icon={ArrowRight01Icon} className="size-3.5 shrink-0 transition-transform duration-200 group-data-[state=open]:rotate-90 motion-reduce:transition-none" aria-hidden />
         <span className={articles.some(article => article.topic === topic && article.id === currentId) ? "text-foreground" : undefined}>{topic}</span>
@@ -44,8 +51,8 @@ export function DocumentationSidebar({ articles, locale, currentId, labels }: {
       <CollapsibleContent className="motion-reduce:animate-none">
         <ul className="ml-4 space-y-0.5 border-l border-border py-1 pl-2">
           {articles.filter(article => article.topic === topic).map(article => <li key={article.id}>
-            <a href={documentationPath(article.id, locale)} aria-current={article.id === currentId ? "page" : undefined}
-              className="block rounded-md px-3 py-2 text-[13px] leading-5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground aria-[current=page]:bg-muted aria-[current=page]:font-medium aria-[current=page]:text-foreground focus-visible:outline-2 focus-visible:outline-ring">{article.title}</a>
+            <Link href={documentationPath(article.id, locale)} prefetch={false} onNavigate={onNavigate} aria-current={article.id === currentId ? "page" : undefined}
+              className="block rounded-md px-3 py-2 text-[13px] leading-5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground aria-[current=page]:bg-muted aria-[current=page]:font-medium aria-[current=page]:text-foreground focus-visible:outline-2 focus-visible:outline-ring">{article.title}</Link>
           </li>)}
         </ul>
       </CollapsibleContent>
@@ -54,7 +61,8 @@ export function DocumentationSidebar({ articles, locale, currentId, labels }: {
 }
 
 export function DocumentationMobileNavigation(props: Parameters<typeof DocumentationSidebar>[0]) {
-  return <Sheet>
+  const [open, setOpen] = useState(false);
+  return <Sheet open={open} onOpenChange={setOpen}>
     <SheetTrigger asChild><Button variant="ghost" size="icon" aria-label={props.labels.topics} className="lg:hidden">
       <HugeiconsIcon icon={Menu01Icon} className="size-4" aria-hidden />
     </Button></SheetTrigger>
@@ -63,7 +71,7 @@ export function DocumentationMobileNavigation(props: Parameters<typeof Documenta
         <HugeiconsIcon icon={Cancel01Icon} className="size-4" aria-hidden />
       </Button></SheetClose>
       <SheetTitle className="px-7 pt-6 text-sm">{props.labels.topics}</SheetTitle>
-      <DocumentationSidebar {...props} />
+      <DocumentationSidebar {...props} onNavigate={() => setOpen(false)} />
     </SheetContent>
   </Sheet>;
 }
