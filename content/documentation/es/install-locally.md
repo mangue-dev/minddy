@@ -2,7 +2,7 @@
 {
   "id": "install-locally",
   "locale": "es",
-  "title": "Ejecutar una instancia local desde la aplicación de escritorio",
+  "title": "Instancias locales",
   "summary": "Prepare un clon dedicado a la evaluación con Node.js 24, pnpm 10.28.0, Git, Supabase CLI y Docker en ejecución.",
   "topic": "Administrar una instancia",
   "type": "tutorial",
@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 1,
-  "sourceRevision": 1,
+  "revision": 2,
+  "sourceRevision": 2,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -36,17 +36,19 @@
     ]
   },
   "review": {
-    "revision": 1,
-    "fact": "agent:/root/automation_account_documentation (independent primary-source and final correction review)",
-    "language": "Codex agent review_documentation_locales: independent complete English/Spanish meaning and idiom review, not human review",
-    "date": "2026-10-08"
+    "revision": 2,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison)",
+    "date": "2026-10-09"
   },
   "related": [
     "workspace-encryption",
     "self-hosted-diagnostics"
   ],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Ejecutar una instancia local desde la aplicación de escritorio"
+  ],
   "figures": [
     {
       "id": "install-locally-flow",
@@ -54,7 +56,7 @@
       "src": "/documentation/es/install-locally-flow.svg",
       "alt": "Diagrama: La aplicación de escritorio selecciona el clon. Aplicación loopback: puerto 6463. Supabase mínimo y datos duraderos. Salir detiene la aplicación y el backend.",
       "caption": "Estos componentes tienen responsabilidades distintas. La aplicación de escritorio selecciona el clon. Aplicación loopback: puerto 6463. Supabase mínimo y datos duraderos. Salir detiene la aplicación y el backend.",
-      "revision": 1,
+      "revision": 2,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -69,7 +71,7 @@
       "src": "/documentation/es/install-locally-wizard.png",
       "alt": "Asistente público de instalación con el perfil de este ordenador seleccionado.",
       "caption": "Elija la instalación personal cuando la aplicación de escritorio deba gestionar los servicios locales.",
-      "revision": 1,
+      "revision": 2,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -84,6 +86,7 @@
   ]
 }
 ---
+
 ## Ejecutar una instancia local desde la aplicación de escritorio {#install-locally}
 
 Prepare un clon dedicado a la evaluación con Node.js 24, pnpm 10.28.0, Git, Supabase CLI y Docker en ejecución. Reserve al menos 4 GB de RAM libre, dos núcleos y 10 GB libres en SSD; se recomiendan 8 GB, cuatro núcleos y 20 GB. Instale primero la aplicación de escritorio firmada desde la página de descargas. En Windows se distribuye mediante Microsoft Store; macOS y Linux tienen sus descargas correspondientes. Seleccione en el clon la versión que desea evaluar antes de instalar las dependencias.
@@ -105,8 +108,6 @@ pnpm install --frozen-lockfile
 ## Dejar que la aplicación gestione los servicios {#launch}
 
 Abra el menú nativo minddy. En Windows y Linux, pulse Alt para mostrar la barra de menús; en macOS, utilice la barra global. Abra el diálogo de conexión al servidor, elija la opción de instancia local y seleccione la raíz del clon. La aplicación ejecuta self-host:local --no-open, prepara un Supabase mínimo, aplica las migraciones y la configuración de Storage, compila cuando hace falta y espera a que /api/health responda antes de abrir el registro. Solo escucha en loopback, en el puerto 6463, recuerda la carpeta y controla tanto el inicio como la parada.
-
-
 
 ## Recuperarse de un fallo {#recover}
 

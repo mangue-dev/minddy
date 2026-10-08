@@ -2,7 +2,7 @@
 {
   "id": "encryption-and-data-boundaries",
   "locale": "es",
-  "title": "Comprender el cifrado y los datos que no oculta",
+  "title": "Cifrado y límites de protección de datos",
   "summary": "Tras la configuración y migración previstas, Minddy cifra contenido y archivos antes de las escrituras persistentes mediante cifrado autenticado en el servidor.",
   "topic": "Conceptos técnicos",
   "type": "explanation",
@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 1,
-  "sourceRevision": 1,
+  "revision": 2,
+  "sourceRevision": 2,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -40,18 +40,20 @@
     ]
   },
   "review": {
-    "revision": 1,
-    "fact": "agent:/root/automation_account_documentation (independent targeted primary-source review)",
-    "language": "Codex agent review_documentation_locales: independent complete English/Spanish meaning and idiom review, not human review",
-    "date": "2026-10-08"
+    "revision": 2,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison)",
+    "date": "2026-10-09"
   },
   "related": [
     "workspace-encryption",
-    "restore-and-roll-back",
+    "backups-and-restoration",
     "permissions-and-public-links"
   ],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Comprender el cifrado y los datos que no oculta"
+  ],
   "figures": [
     {
       "id": "encryption-and-data-boundaries-flow",
@@ -59,7 +61,7 @@
       "src": "/documentation/es/encryption-and-data-boundaries-flow.svg",
       "alt": "Diagrama: Contenido cifrado y claves envueltas. Raíz en configuración protegida del servidor. Runtime autorizado puede descifrar. Exports y proveedores necesitan protección aparte.",
       "caption": "Estos componentes tienen responsabilidades distintas. Contenido cifrado y claves envueltas. Raíz en configuración protegida del servidor. Runtime autorizado puede descifrar. Exports y proveedores necesitan protección aparte.",
-      "revision": 1,
+      "revision": 2,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -74,6 +76,7 @@
   ]
 }
 ---
+
 ## Comprender el cifrado y los datos que no oculta {#encryption-and-data-boundaries}
 
 Tras la configuración y migración previstas, Minddy cifra contenido y archivos antes de las escrituras persistentes mediante cifrado autenticado en el servidor. Las claves de proyecto, usuario y sistema están versionadas y protegidas por una raíz fuera de PostgreSQL. Una copia aislada de la base de datos no permite leer el contenido protegido sin las claves. La aplicación lo descifra para usuarios autorizados, búsqueda y procesamiento de IA autorizado, incluso sin una sesión interactiva. Un entorno de ejecución comprometido o el acceso a datos y claves supera ese límite: el cifrado no excluye al operador mediante una protección de extremo a extremo.
@@ -83,8 +86,6 @@ Tras la configuración y migración previstas, Minddy cifra contenido y archivos
 ## Reconocer datos legibles y exportados {#exceptions}
 
 Auth conserva el email de inicio de sesión. Los identificadores, las claves de proyecto e incidencia, los estados, las prioridades, las fechas y los metadatos permitidos siguen siendo consultables. Las publicaciones son legibles por decisión de quien publica. Proteja por separado las exportaciones, los archivos descargados, el navegador y los datos enviados a proveedores externos de IA, email, Git o MCP. Un indicador no demuestra que el historial se haya convertido o eliminado de copias, registros y proveedores. Examinar el código no prueba que la migración de cifrado se haya ejecutado en producción de Minddy Cloud.
-
-
 
 ## Preservar la recuperación {#recovery}
 

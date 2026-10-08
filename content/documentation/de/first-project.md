@@ -2,7 +2,7 @@
 {
   "id": "first-project",
   "locale": "de",
-  "title": "Dein erstes Problem abschließen",
+  "title": "Erste Schritte",
   "summary": "Erstelle ein Projekt oder tritt einem bei, erfasse eine Aufgabe und schließe sie nach Prüfung des Ergebnisses ab.",
   "topic": "Erste Schritte",
   "type": "tutorial",
@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 2,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -42,21 +42,22 @@
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "2026-10-08",
-    "language": "2026-10-08",
-    "date": "2026-10-08"
+    "revision": 5,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
+    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison)",
+    "date": "2026-10-09"
   },
   "related": [
-    "account-access",
-    "project-members",
-    "create-an-issue",
-    "issue-statuses"
+    "accounts",
+    "projects",
+    "issues"
   ],
   "aliases": [
     "core-tracker"
   ],
-  "tags": [],
+  "tags": [
+    "Dein erstes Problem abschließen"
+  ],
   "figures": [
     {
       "id": "first-project-steps",
@@ -64,7 +65,7 @@
       "src": "/documentation/de/reader-first-project.png",
       "alt": "Abgeschlossenes Demo-Ticket mit Beschreibung und gespeichertem Kommentar.",
       "caption": "Der abgeschlossene Status dokumentiert die Prüfung des Anwendungsablaufs. Er belegt keine Prüfung des E-Mail-Links der Beispielwebsite.",
-      "revision": 3,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

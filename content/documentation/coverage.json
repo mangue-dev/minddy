@@ -15,7 +15,7 @@
   },
   {
     "workflow": "S02",
-    "article": "account-access",
+    "article": "accounts",
     "outcome": "Register, confirm email, sign in and sign out",
     "audiences": [
       "member"
@@ -29,7 +29,7 @@
   },
   {
     "workflow": "S03",
-    "article": "account-recovery",
+    "article": "accounts",
     "outcome": "Recover account access after password or MFA problems",
     "audiences": [
       "member"
@@ -57,7 +57,7 @@
   },
   {
     "workflow": "S05",
-    "article": "project-settings",
+    "article": "projects",
     "outcome": "Create, rename and configure a project",
     "audiences": [
       "owner"
@@ -71,7 +71,7 @@
   },
   {
     "workflow": "S06",
-    "article": "project-members",
+    "article": "projects",
     "outcome": "Invite, accept/decline and manage collaborators",
     "audiences": [
       "owner",
@@ -101,7 +101,7 @@
   },
   {
     "workflow": "W01",
-    "article": "create-an-issue",
+    "article": "issues",
     "outcome": "Create and edit a useful issue with properties",
     "audiences": [
       "member"
@@ -115,7 +115,7 @@
   },
   {
     "workflow": "W02",
-    "article": "issue-statuses",
+    "article": "issues",
     "outcome": "Move work through triage to done or another terminal state",
     "audiences": [
       "member"
@@ -129,7 +129,7 @@
   },
   {
     "workflow": "W03",
-    "article": "triage-incoming-work",
+    "article": "issues",
     "outcome": "Review incoming work before planning it",
     "audiences": [
       "owner",
@@ -144,7 +144,7 @@
   },
   {
     "workflow": "W04",
-    "article": "bulk-issue-actions",
+    "article": "issues",
     "outcome": "Select and update several issues safely",
     "audiences": [
       "member"
@@ -158,7 +158,7 @@
   },
   {
     "workflow": "W05",
-    "article": "issue-dependencies",
+    "article": "issues",
     "outcome": "Model blocking related and duplicate issues",
     "audiences": [
       "member"
@@ -172,7 +172,7 @@
   },
   {
     "workflow": "W06",
-    "article": "sub-issues",
+    "article": "issues",
     "outcome": "Split work into children and change or remove a parent",
     "audiences": [
       "member"
@@ -186,7 +186,7 @@
   },
   {
     "workflow": "W07",
-    "article": "implementation-plans",
+    "article": "issues",
     "outcome": "Maintain ordered plan tasks alongside the description",
     "audiences": [
       "member"
@@ -200,7 +200,7 @@
   },
   {
     "workflow": "W08",
-    "article": "issue-discussion-and-resources",
+    "article": "issues",
     "outcome": "Discuss work and attach context or files",
     "audiences": [
       "member"
@@ -214,7 +214,7 @@
   },
   {
     "workflow": "W09",
-    "article": "recurring-issues",
+    "article": "issues",
     "outcome": "Configure repeated issue creation",
     "audiences": [
       "owner"
@@ -242,7 +242,7 @@
   },
   {
     "workflow": "W11",
-    "article": "objective-dependencies-and-momentum",
+    "article": "objectives",
     "outcome": "Interpret objective relations progress and forecasts",
     "audiences": [
       "member"
@@ -270,7 +270,7 @@
   },
   {
     "workflow": "W13",
-    "article": "views-and-filters",
+    "article": "views",
     "outcome": "Create and reuse a view without changing the underlying issues",
     "audiences": [
       "member"
@@ -284,7 +284,7 @@
   },
   {
     "workflow": "W14",
-    "article": "share-a-view",
+    "article": "views",
     "outcome": "Publish and revoke a read-only view",
     "audiences": [
       "owner",
@@ -299,7 +299,7 @@
   },
   {
     "workflow": "W15",
-    "article": "search-and-shortcuts",
+    "article": "navigation",
     "outcome": "Find work and act with keyboard commands",
     "audiences": [
       "member"
@@ -370,7 +370,7 @@
   },
   {
     "workflow": "P01",
-    "article": "create-and-organize-pages",
+    "article": "pages",
     "outcome": "Build a nested project wiki and find favorite pages",
     "audiences": [
       "member"
@@ -384,7 +384,7 @@
   },
   {
     "workflow": "P02",
-    "article": "page-editor",
+    "article": "pages",
     "outcome": "Write a page with blocks callouts and links to work",
     "audiences": [
       "member"
@@ -398,7 +398,7 @@
   },
   {
     "workflow": "P03",
-    "article": "page-comments-and-collaboration",
+    "article": "pages",
     "outcome": "Discuss a page and understand live viewing or conflicts",
     "audiences": [
       "member"
@@ -412,7 +412,7 @@
   },
   {
     "workflow": "P04",
-    "article": "page-files",
+    "article": "pages",
     "outcome": "Upload and retrieve page attachments",
     "audiences": [
       "member"
@@ -426,7 +426,7 @@
   },
   {
     "workflow": "P05",
-    "article": "page-history",
+    "article": "pages",
     "outcome": "Inspect history and restore a previous page revision",
     "audiences": [
       "member"
@@ -440,7 +440,7 @@
   },
   {
     "workflow": "P06",
-    "article": "publish-a-page",
+    "article": "pages",
     "outcome": "Share a page read-only and revoke access",
     "audiences": [
       "member",
@@ -455,7 +455,7 @@
   },
   {
     "workflow": "P07",
-    "article": "import-export-and-print-pages",
+    "article": "pages",
     "outcome": "Move page content or produce a readable export",
     "audiences": [
       "member"
@@ -469,7 +469,7 @@
   },
   {
     "workflow": "P08",
-    "article": "create-a-database",
+    "article": "databases",
     "outcome": "Create a database and define its columns",
     "audiences": [
       "member"
@@ -483,7 +483,7 @@
   },
   {
     "workflow": "P09",
-    "article": "database-cells-and-entries",
+    "article": "databases",
     "outcome": "Edit values and work with an entry as a full page",
     "audiences": [
       "member"
@@ -497,7 +497,7 @@
   },
   {
     "workflow": "P10",
-    "article": "change-a-database-schema",
+    "article": "databases",
     "outcome": "Rename reorder hide convert or delete columns",
     "audiences": [
       "member"
@@ -511,7 +511,7 @@
   },
   {
     "workflow": "P11",
-    "article": "import-a-database",
+    "article": "databases",
     "outcome": "Import external database rows with a reviewed mapping",
     "audiences": [
       "member"
@@ -525,7 +525,7 @@
   },
   {
     "workflow": "F01",
-    "article": "publish-a-feedback-board",
+    "article": "feedback",
     "outcome": "Enable and configure a public feedback board",
     "audiences": [
       "owner"
@@ -539,7 +539,7 @@
   },
   {
     "workflow": "F02",
-    "article": "submit-and-follow-feedback",
+    "article": "feedback",
     "outcome": "Submit vote comment and follow a request",
     "audiences": [
       "visitor"
@@ -553,7 +553,7 @@
   },
   {
     "workflow": "F03",
-    "article": "moderate-feedback",
+    "article": "feedback",
     "outcome": "Review incoming requests privately and respond publicly",
     "audiences": [
       "owner",
@@ -568,7 +568,7 @@
   },
   {
     "workflow": "F04",
-    "article": "feedback-to-issue",
+    "article": "feedback",
     "outcome": "Merge duplicates and link requests to delivered work",
     "audiences": [
       "owner",
@@ -583,7 +583,7 @@
   },
   {
     "workflow": "F05",
-    "article": "feedback-pages-and-views",
+    "article": "feedback",
     "outcome": "Add published pages or shared views to a public board",
     "audiences": [
       "owner",
@@ -598,7 +598,7 @@
   },
   {
     "workflow": "F06",
-    "article": "feedback-ingestion-and-sso",
+    "article": "api-and-webhooks",
     "outcome": "Connect a product to feedback collection and identity",
     "audiences": [
       "integrator"
@@ -612,7 +612,7 @@
   },
   {
     "workflow": "N01",
-    "article": "work-with-numo",
+    "article": "numo",
     "outcome": "Open a contextual conversation and complete a project task",
     "audiences": [
       "member"
@@ -626,7 +626,7 @@
   },
   {
     "workflow": "N02",
-    "article": "numo-permissions-and-approvals",
+    "article": "numo",
     "outcome": "Understand actions credentials approvals and context boundaries",
     "audiences": [
       "member",
@@ -641,7 +641,7 @@
   },
   {
     "workflow": "N03",
-    "article": "delegate-code-work",
+    "article": "code-work",
     "outcome": "Turn an issue into checked repository work and an attached PR",
     "audiences": [
       "member"
@@ -655,7 +655,7 @@
   },
   {
     "workflow": "N04",
-    "article": "review-pull-requests",
+    "article": "code-work",
     "outcome": "Inspect changes discussions checks reviews and linked work",
     "audiences": [
       "member"
@@ -669,7 +669,7 @@
   },
   {
     "workflow": "N05",
-    "article": "recover-numo-work",
+    "article": "numo",
     "outcome": "Handle interrupted failed waiting or usage-limited work",
     "audiences": [
       "member"
@@ -712,7 +712,7 @@
   },
   {
     "workflow": "N08",
-    "article": "numo-mcp-connections",
+    "article": "numo",
     "outcome": "Connect test reconnect disable or remove a personal MCP service",
     "audiences": [
       "member"
@@ -726,7 +726,7 @@
   },
   {
     "workflow": "N09",
-    "article": "external-minddy-mcp",
+    "article": "minddy-mcp",
     "outcome": "Connect an external assistant to authorized Minddy work",
     "audiences": [
       "integrator",
@@ -741,7 +741,7 @@
   },
   {
     "workflow": "N10",
-    "article": "git-accounts-and-repositories",
+    "article": "git",
     "outcome": "Connect GitHub or GitLab and link a project repository",
     "audiences": [
       "owner",
@@ -756,7 +756,7 @@
   },
   {
     "workflow": "N11",
-    "article": "forge-issue-sync",
+    "article": "git",
     "outcome": "Enable issue synchronization and resolve conflicts",
     "audiences": [
       "owner",
@@ -771,7 +771,7 @@
   },
   {
     "workflow": "A01",
-    "article": "profile-and-preferences",
+    "article": "accounts",
     "outcome": "Configure avatar language theme and send preferences",
     "audiences": [
       "member"
@@ -785,7 +785,7 @@
   },
   {
     "workflow": "A02",
-    "article": "account-security",
+    "article": "accounts",
     "outcome": "Enroll verify and manage two-factor authentication",
     "audiences": [
       "member"
@@ -799,7 +799,7 @@
   },
   {
     "workflow": "A03",
-    "article": "devices-and-notifications",
+    "article": "applications",
     "outcome": "Enable and troubleshoot web or native notifications",
     "audiences": [
       "member"
@@ -813,7 +813,7 @@
   },
   {
     "workflow": "A04",
-    "article": "ai-keys-and-models",
+    "article": "ai-settings-and-usage",
     "outcome": "Configure compatible personal AI providers and model defaults",
     "audiences": [
       "member"
@@ -841,7 +841,7 @@
   },
   {
     "workflow": "A06",
-    "article": "import-issues",
+    "article": "issues",
     "outcome": "Import Linear Jira or generic CSV after reviewing field mapping",
     "audiences": [
       "owner"
@@ -869,7 +869,7 @@
   },
   {
     "workflow": "A08",
-    "article": "plans-and-ai-usage",
+    "article": "ai-settings-and-usage",
     "outcome": "Choose a Cloud plan and understand budget consumption",
     "audiences": [
       "member"
@@ -883,7 +883,7 @@
   },
   {
     "workflow": "A09",
-    "article": "privacy-and-account-deletion",
+    "article": "accounts",
     "outcome": "Manage analytics consent and understand data/deletion choices",
     "audiences": [
       "member"
@@ -897,7 +897,7 @@
   },
   {
     "workflow": "A10",
-    "article": "web-and-mobile",
+    "article": "applications",
     "outcome": "Use browser and mobile layouts to finish core tasks",
     "audiences": [
       "member"
@@ -911,7 +911,7 @@
   },
   {
     "workflow": "A11",
-    "article": "install-the-pwa",
+    "article": "applications",
     "outcome": "Install and use the PWA on supported mobile browsers",
     "audiences": [
       "member"
@@ -925,7 +925,7 @@
   },
   {
     "workflow": "A12",
-    "article": "desktop-app",
+    "article": "applications",
     "outcome": "Install desktop choose an instance use tabs and update it",
     "audiences": [
       "member",
@@ -940,7 +940,7 @@
   },
   {
     "workflow": "H01",
-    "article": "self-hosted-compatibility",
+    "article": "installation",
     "outcome": "Select a supported topology release and host",
     "audiences": [
       "operator"
@@ -968,7 +968,7 @@
   },
   {
     "workflow": "H03",
-    "article": "install-a-server",
+    "article": "installation",
     "outcome": "Install the full reference profile for a shared instance",
     "audiences": [
       "operator"
@@ -982,7 +982,7 @@
   },
   {
     "workflow": "H04",
-    "article": "managed-or-source-installation",
+    "article": "installation",
     "outcome": "Use managed Supabase or the supported source path",
     "audiences": [
       "operator"
@@ -1038,7 +1038,7 @@
   },
   {
     "workflow": "H08",
-    "article": "proxy-network-and-jobs",
+    "article": "instance-configuration",
     "outcome": "Expose the right origins and operate scheduled jobs",
     "audiences": [
       "operator"
@@ -1052,7 +1052,7 @@
   },
   {
     "workflow": "H09",
-    "article": "optional-providers",
+    "article": "instance-configuration",
     "outcome": "Enable chosen AI Git MCP push or analytics capabilities",
     "audiences": [
       "operator"
@@ -1080,7 +1080,7 @@
   },
   {
     "workflow": "H11",
-    "article": "back-up-the-reference-instance",
+    "article": "backups-and-restoration",
     "outcome": "Create and verify a complete consistent full-profile backup",
     "audiences": [
       "operator"
@@ -1094,7 +1094,7 @@
   },
   {
     "workflow": "H12",
-    "article": "logical-and-provider-backups",
+    "article": "backups-and-restoration",
     "outcome": "Back up a source or managed database and object storage",
     "audiences": [
       "operator"
@@ -1122,7 +1122,7 @@
   },
   {
     "workflow": "H14",
-    "article": "restore-and-roll-back",
+    "article": "backups-and-restoration",
     "outcome": "Restore a complete matching set to a blank target",
     "audiences": [
       "operator"
@@ -1224,7 +1224,7 @@
   },
   {
     "workflow": "T05",
-    "article": "numo-execution-model",
+    "article": "numo",
     "outcome": "Understand conversation turns tools routines and workers",
     "audiences": [
       "integrator",
@@ -1239,7 +1239,7 @@
   },
   {
     "workflow": "T06",
-    "article": "mcp-tool-reference",
+    "article": "minddy-mcp",
     "outcome": "Use Minddy MCP discovery issue plans pages and routines",
     "audiences": [
       "integrator"
@@ -1253,7 +1253,7 @@
   },
   {
     "workflow": "T07",
-    "article": "integration-api-and-webhooks",
+    "article": "api-and-webhooks",
     "outcome": "Send issues or feedback and receive signed event updates",
     "audiences": [
       "integrator"

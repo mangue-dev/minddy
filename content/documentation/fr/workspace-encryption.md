@@ -2,7 +2,7 @@
 {
   "id": "workspace-encryption",
   "locale": "fr",
-  "title": "Configurer le chiffrement et conserver ses clés",
+  "title": "Chiffrement de l’espace de travail",
   "summary": "Vérifiez le chiffrement applicable à votre version et conservez les clés de récupération des identifiants et du contenu.",
   "topic": "Exploiter une instance",
   "type": "guide",
@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -36,18 +36,19 @@
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "agent:/root/review_documentation_locales (independent current release-boundary, configuration and complete-body condition revalidation)",
-    "language": "agent:/root/review_documentation_locales (independent complete current summary/body/caption reading and meaning parity review)",
-    "date": "2026-10-08"
+    "revision": 3,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun)",
+    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review)",
+    "date": "2026-10-09"
   },
   "related": [
     "encryption-and-data-boundaries",
-    "back-up-the-reference-instance",
-    "restore-and-roll-back"
+    "backups-and-restoration"
   ],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Configurer le chiffrement et conserver ses clés"
+  ],
   "figures": [
     {
       "id": "workspace-encryption-flow",
@@ -55,7 +56,7 @@
       "src": "/documentation/fr/workspace-encryption-flow.svg",
       "alt": "Schéma: Racine dédiée hors de PostgreSQL. Clés projet, utilisateur et système enveloppées. Déchiffrement autorisé sur le serveur. Restauration base + Storage + mêmes clés.",
       "caption": "Ces composants ont des responsabilités distinctes. Racine dédiée hors de PostgreSQL. Clés projet, utilisateur et système enveloppées. Déchiffrement autorisé sur le serveur. Restauration base + Storage + mêmes clés.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

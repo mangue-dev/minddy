@@ -2,8 +2,8 @@
 {
   "id": "glossary-and-data-model",
   "locale": "it",
-  "title": "Comprendere progetti, ticket, obiettivi e lavoro personale",
-  "summary": "Un progetto riunisce il lavoro condiviso: membri, ticket, categorie, viste, pagine, integrazioni e feedback.",
+  "title": "Glossario e modello dei dati",
+  "summary": "Comprendi il ruolo di progetti, ticket, obiettivi, cicli personali, pagine, database e feedback e le loro relazioni.",
   "topic": "Concetti tecnici",
   "type": "explanation",
   "audiences": [
@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 1,
-  "sourceRevision": 1,
+  "revision": 2,
+  "sourceRevision": 2,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -40,17 +40,19 @@
     ]
   },
   "review": {
-    "revision": 1,
-    "fact": "agent:/root/automation_account_documentation (independent targeted primary-source review)",
-    "language": "agent:/root/automation_account_documentation (complete independent article and caption review)",
-    "date": "2026-10-08"
+    "revision": 2,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
+    "date": "2026-10-09"
   },
   "related": [
     "permissions-and-public-links",
-    "numo-execution-model"
+    "numo"
   ],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Comprendere progetti, ticket, obiettivi e lavoro personale"
+  ],
   "figures": [
     {
       "id": "glossary-and-data-model-flow",
@@ -58,7 +60,7 @@
       "src": "/documentation/it/glossary-and-data-model-flow.svg",
       "alt": "Schema: Progetto: lavoro e conoscenza condivisi. Ticket: lavoro; obiettivo: risultato. Ciclo personale: lavoro fra progetti. Pagina: contesto; feedback: bisogno.",
       "caption": "Questi componenti hanno responsabilità distinte. Progetto: lavoro e conoscenza condivisi. Ticket: lavoro; obiettivo: risultato. Ciclo personale: lavoro fra progetti. Pagina: contesto; feedback: bisogno.",
-      "revision": 1,
+      "revision": 2,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

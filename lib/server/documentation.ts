@@ -5,6 +5,8 @@ import { cache } from "react";
 import { documentationLocales, isPublishedDocumentation, parseDocumentation } from "@/lib/documentation-core.mjs";
 import type { DocumentationArticle } from "@/lib/documentation";
 import type { Locale } from "@/i18n/config";
+import legacyRoutes from "@/content/documentation/legacy-routes.json";
+import type { DocumentationLegacyRoute } from "@/lib/documentation-core.mjs";
 
 const ROOT = path.join(process.cwd(), "content/documentation");
 
@@ -30,7 +32,11 @@ export const getPublishedDocumentation = cache((locale: Locale): DocumentationAr
 });
 
 export function getDocumentationArticle(id: string, locale: Locale): DocumentationArticle | null {
-  return getPublishedDocumentation(locale).find(article => article.id === id) ?? null;
+  return getPublishedDocumentation(locale).find(article => article.id === id || article.aliases.includes(id)) ?? null;
+}
+
+export function getLegacyDocumentationRoute(id: string): DocumentationLegacyRoute | undefined {
+  return (legacyRoutes as Record<string, DocumentationLegacyRoute>)[id];
 }
 
 /** Local review only. Production, sitemap and Numo always use published content. */

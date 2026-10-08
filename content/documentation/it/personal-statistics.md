@@ -2,7 +2,7 @@
 {
   "id": "personal-statistics",
   "locale": "it",
-  "title": "Leggere le statistiche personali di lavoro",
+  "title": "Statistiche personali",
   "summary": "Confronta attività completata e misure di tempo entro il loro ambito effettivo.",
   "topic": "Pianificare e trovare lavoro",
   "type": "explanation",
@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -40,18 +40,20 @@
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "2026-10-08",
-    "language": "2026-10-08",
-    "date": "2026-10-08"
+    "revision": 3,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
+    "date": "2026-10-09"
   },
   "related": [
     "personal-cycle",
     "objectives",
-    "plans-and-ai-usage"
+    "ai-settings-and-usage"
   ],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Leggere le statistiche personali di lavoro"
+  ],
   "figures": [
     {
       "id": "personal-statistics-steps",
@@ -59,7 +61,7 @@
       "src": "/documentation/it/reader-statistics.png",
       "alt": "Statistiche personali con griglia annuale, ripartizioni, ritmo di lavoro e totali complessivi.",
       "caption": "Questo account dimostrativo ha un ticket completato e undici creati. Le statistiche mostrate sono reali; i nomi del progetto e dell’obiettivo sono stati tradotti per l’illustrazione.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

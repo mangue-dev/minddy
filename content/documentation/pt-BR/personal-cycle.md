@@ -2,7 +2,7 @@
 {
   "id": "personal-cycle",
   "locale": "pt-BR",
-  "title": "Planejar um ciclo pessoal",
+  "title": "Ciclos pessoais",
   "summary": "Selecione trabalho entre projetos para um período de planejamento semanal ou de duas semanas.",
   "topic": "Planejar e encontrar trabalho",
   "type": "guide",
@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 1,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -39,18 +39,19 @@
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "2026-10-08",
-    "language": "2026-10-08",
-    "date": "2026-10-08"
+    "revision": 4,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
+    "date": "2026-10-09"
   },
   "related": [
-    "views-and-filters",
-    "bulk-issue-actions",
-    "issue-dependencies"
+    "views",
+    "issues"
   ],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Planejar um ciclo pessoal"
+  ],
   "figures": [
     {
       "id": "personal-cycle-steps",
@@ -58,7 +59,7 @@
       "src": "/documentation/pt-BR/reader-cycle.png",
       "alt": "Ticket de demonstração no backlog do ciclo pessoal.",
       "caption": "A inclusão atribuiu o ticket ao titular do ciclo e preservou o status backlog.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

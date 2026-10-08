@@ -2,8 +2,8 @@
 {
   "id": "architecture-and-data-flows",
   "locale": "pt-BR",
-  "title": "Seguir fluxos entre aplicação, banco e provedores",
-  "summary": "O Next.js fornece a interface e as APIs autorizadas.",
+  "title": "Arquitetura e fluxos de dados",
+  "summary": "Acompanhe solicitações e dados entre Minddy, Supabase, agendador, sandbox e provedores externos, distinguindo serviços persistentes e destinos dos dados.",
   "topic": "Conceitos técnicos",
   "type": "explanation",
   "audiences": [
@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 1,
-  "sourceRevision": 1,
+  "revision": 2,
+  "sourceRevision": 2,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -39,18 +39,20 @@
     ]
   },
   "review": {
-    "revision": 1,
-    "fact": "agent:/root/automation_account_documentation (independent targeted primary-source review)",
-    "language": "agent:/root/automation_account_documentation (complete independent article and caption review)",
-    "date": "2026-10-08"
+    "revision": 2,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
+    "date": "2026-10-09"
   },
   "related": [
-    "optional-providers",
+    "instance-configuration",
     "storage-and-attachments",
-    "numo-execution-model"
+    "numo"
   ],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Seguir fluxos entre aplicação, banco e provedores"
+  ],
   "figures": [
     {
       "id": "architecture-and-data-flows-flow",
@@ -58,7 +60,7 @@
       "src": "/documentation/pt-BR/architecture-and-data-flows-flow.svg",
       "alt": "Diagrama: Navegador e aplicação autenticada. Supabase: PostgreSQL, Auth, Storage, Realtime. Agendador independente e runner confiável. Provedores opcionais: destinos separados.",
       "caption": "Estes componentes têm responsabilidades distintas. Navegador e aplicação autenticada. Supabase: PostgreSQL, Auth, Storage, Realtime. Agendador independente e runner confiável. Provedores opcionais: destinos separados.",
-      "revision": 1,
+      "revision": 2,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

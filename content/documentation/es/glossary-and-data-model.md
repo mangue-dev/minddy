@@ -2,7 +2,7 @@
 {
   "id": "glossary-and-data-model",
   "locale": "es",
-  "title": "Comprender proyectos, incidencias, objetivos y trabajo personal",
+  "title": "Glosario y modelo de datos",
   "summary": "Un proyecto reúne el trabajo compartido: miembros, incidencias, categorías, vistas, páginas, integraciones y feedback.",
   "topic": "Conceptos técnicos",
   "type": "explanation",
@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 1,
-  "sourceRevision": 1,
+  "revision": 2,
+  "sourceRevision": 2,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -40,17 +40,19 @@
     ]
   },
   "review": {
-    "revision": 1,
-    "fact": "agent:/root/automation_account_documentation (independent targeted primary-source review)",
-    "language": "Codex agent review_documentation_locales: independent complete English/Spanish meaning and idiom review, not human review",
-    "date": "2026-10-08"
+    "revision": 2,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison)",
+    "date": "2026-10-09"
   },
   "related": [
     "permissions-and-public-links",
-    "numo-execution-model"
+    "numo"
   ],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Comprender proyectos, incidencias, objetivos y trabajo personal"
+  ],
   "figures": [
     {
       "id": "glossary-and-data-model-flow",
@@ -58,7 +60,7 @@
       "src": "/documentation/es/glossary-and-data-model-flow.svg",
       "alt": "Diagrama: Proyecto: trabajo y conocimiento compartidos. Incidencia: trabajo; objetivo: resultado. Ciclo personal: trabajo entre proyectos. Página: contexto; feedback: necesidad.",
       "caption": "Estos componentes tienen responsabilidades distintas. Proyecto: trabajo y conocimiento compartidos. Incidencia: trabajo; objetivo: resultado. Ciclo personal: trabajo entre proyectos. Página: contexto; feedback: necesidad.",
-      "revision": 1,
+      "revision": 2,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -73,6 +75,7 @@
   ]
 }
 ---
+
 ## Comprender proyectos, incidencias, objetivos y trabajo personal {#glossary-and-data-model}
 
 Un proyecto reúne el trabajo compartido: miembros, incidencias, categorías, vistas, páginas, integraciones y feedback. Una incidencia describe una tarea concreta con estado y responsable; puede incluir un plan, una fecha límite, un objetivo, categorías, relaciones, comentarios y recursos. Un objetivo agrupa incidencias para seguir un resultado y su progreso. El ciclo personal selecciona el trabajo de una persona durante una o dos semanas, incluso de distintos proyectos. No es un sprint compartido ni un objetivo.
@@ -82,8 +85,6 @@ Un proyecto reúne el trabajo compartido: miembros, incidencias, categorías, vi
 ## Distinguir conocimiento y solicitudes {#knowledge-and-feedback}
 
 Una página conserva contexto duradero, como una especificación, decisión o procedimiento. Puede incluir subpáginas, archivos y discusiones. Una base de datos de páginas añade propiedades a sus entradas, que siguen siendo páginas completas. El feedback representa una necesidad con votos y estado público, distinta de la incidencia interna; al enlazarlo con una incidencia, su estado público sigue automáticamente el estado de ese trabajo. Una vista filtra y ordena incidencias sin modificarlas. El cuaderno conserva notas y casillas privadas: convierta una nota en incidencia cuando el proyecto deba seguirla.
-
-
 
 ## Comprobar con un ejemplo {#example}
 

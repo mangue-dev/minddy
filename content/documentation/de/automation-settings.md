@@ -2,7 +2,7 @@
 {
   "id": "automation-settings",
   "locale": "de",
-  "title": "Automatische Ticketarbeit konfigurieren",
+  "title": "Ticket-Automatisierung",
   "summary": "Kontopräferenzen von Projekteigentümerregeln unterscheiden.",
   "topic": "Konto und Apps",
   "type": "guide",
@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 2,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (cd1843e12)",
     "editions": [
@@ -40,14 +40,16 @@
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "2026-10-08",
-    "language": "2026-10-08",
-    "date": "2026-10-08"
+    "revision": 4,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
+    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison)",
+    "date": "2026-10-09"
   },
   "related": [],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Automatische Ticketarbeit konfigurieren"
+  ],
   "figures": [
     {
       "id": "automation-settings-workflow",
@@ -55,7 +57,7 @@
       "src": "/documentation/de/automation-settings-workflow.png",
       "alt": "Automatisierungsvoreinstellung ohne ausgewähltes Preset.",
       "caption": "Ohne Voreinstellung startet dieses Konto keine automatischen Arbeiten.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -70,7 +72,7 @@
       "src": "/documentation/de/automation-settings-projects-workflow.png",
       "alt": "Projektauswahl für Kontoautomatisierungen.",
       "caption": "Projektauswahl für Kontoautomatisierungen. Beide Demonstrationsprojekte sind hier deaktiviert; keine Automatisierung wird gestartet.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -92,7 +94,6 @@
 Öffnen Sie Automatisierungen in den Kontoeinstellungen. Wählen Sie eine Voreinstellung, lesen Sie ihre Erklärung und den geschätzten Verbrauch, legen Sie die Startverzögerung fest und wählen Sie die Aufwandsgrößen für automatische Schritte. Schätzungen hängen vom verfügbaren Kontingent ab und sind keine festen Preise. Prüfen Sie das Worker-Modell in den KI-Einstellungen des Kontos, bevor Sie Codearbeit aktivieren. Dieselbe Seite zeigt Automatisierungsschalter für Projekte, deren Inhaber Sie sind. Mitglieder können nicht das Projekt eines anderen Inhabers aktivieren.
 
 ![Automatisierungsvoreinstellung ohne ausgewähltes Preset.](/documentation/de/automation-settings-workflow.png)
-
 
 ## Mechanismen unterscheiden {#mechanisms}
 

@@ -2,7 +2,7 @@
 {
   "id": "architecture-and-data-flows",
   "locale": "de",
-  "title": "Datenflüsse zwischen Anwendung, Datenbank und Anbietern",
+  "title": "Architektur und Datenflüsse",
   "summary": "Next.js liefert Oberfläche und autorisierte Server-APIs.",
   "topic": "Technische Grundlagen",
   "type": "explanation",
@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 1,
-  "sourceRevision": 1,
+  "revision": 2,
+  "sourceRevision": 2,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -39,18 +39,20 @@
     ]
   },
   "review": {
-    "revision": 1,
-    "fact": "agent:/root/automation_account_documentation (independent targeted primary-source review)",
-    "language": "agent:/root/automation_account_documentation (complete independent article and caption review)",
-    "date": "2026-10-08"
+    "revision": 2,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
+    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison)",
+    "date": "2026-10-09"
   },
   "related": [
-    "optional-providers",
+    "instance-configuration",
     "storage-and-attachments",
-    "numo-execution-model"
+    "numo"
   ],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Datenflüsse zwischen Anwendung, Datenbank und Anbietern"
+  ],
   "figures": [
     {
       "id": "architecture-and-data-flows-flow",
@@ -58,7 +60,7 @@
       "src": "/documentation/de/architecture-and-data-flows-flow.svg",
       "alt": "Diagramm: Browser und authentifizierte Anwendung. Supabase: PostgreSQL, Auth, Storage, Realtime. Unabhängiger Scheduler und vertrauenswürdiger Runner. Optionale Anbieter: getrennte Datenziele.",
       "caption": "Diese Komponenten haben unterschiedliche Aufgaben. Browser und authentifizierte Anwendung. Supabase: PostgreSQL, Auth, Storage, Realtime. Unabhängiger Scheduler und vertrauenswürdiger Runner. Optionale Anbieter: getrennte Datenziele.",
-      "revision": 1,
+      "revision": 2,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

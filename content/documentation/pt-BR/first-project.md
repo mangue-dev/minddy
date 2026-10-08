@@ -2,7 +2,7 @@
 {
   "id": "first-project",
   "locale": "pt-BR",
-  "title": "Concluir seu primeira tarefa",
+  "title": "Primeiros passos",
   "summary": "Crie um projeto ou entre em um existente, registre uma tarefa e conclua-a depois de verificar o resultado.",
   "topic": "Primeiros passos",
   "type": "tutorial",
@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 4,
-  "sourceRevision": 2,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -42,21 +42,22 @@
     ]
   },
   "review": {
-    "revision": 4,
-    "fact": "2026-10-08",
-    "language": "2026-10-08",
-    "date": "2026-10-08"
+    "revision": 5,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
+    "date": "2026-10-09"
   },
   "related": [
-    "account-access",
-    "project-members",
-    "create-an-issue",
-    "issue-statuses"
+    "accounts",
+    "projects",
+    "issues"
   ],
   "aliases": [
     "core-tracker"
   ],
-  "tags": [],
+  "tags": [
+    "Concluir seu primeira tarefa"
+  ],
   "figures": [
     {
       "id": "first-project-steps",
@@ -64,7 +65,7 @@
       "src": "/documentation/pt-BR/reader-first-project.png",
       "alt": "Ticket de demonstração concluído com descrição e comentário salvo.",
       "caption": "O status concluído registra a verificação do percurso no aplicativo. Não afirma que o link de e-mail do site de exemplo foi testado.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

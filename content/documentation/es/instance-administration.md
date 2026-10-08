@@ -2,7 +2,7 @@
 {
   "id": "instance-administration",
   "locale": "es",
-  "title": "Usar la consola de administración de la instancia",
+  "title": "Administración de la instancia",
   "summary": "Administrar la instancia es distinto de ser propietario de un proyecto.",
   "topic": "Administrar una instancia",
   "type": "guide",
@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 1,
-  "sourceRevision": 1,
+  "revision": 2,
+  "sourceRevision": 2,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -39,17 +39,19 @@
     ]
   },
   "review": {
-    "revision": 1,
-    "fact": "agent:/root/automation_account_documentation (independent targeted primary-source review)",
-    "language": "Codex agent review_documentation_locales: independent complete English/Spanish meaning and idiom review, not human review",
-    "date": "2026-10-08"
+    "revision": 2,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison)",
+    "date": "2026-10-09"
   },
   "related": [
     "authentication-and-email",
     "instance-configuration"
   ],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Usar la consola de administración de la instancia"
+  ],
   "figures": [
     {
       "id": "instance-administration-flow",
@@ -57,7 +59,7 @@
       "src": "/documentation/es/instance-administration-overview.png",
       "alt": "Resumen de administración con métricas agregadas de cuentas, incorporación y contenido.",
       "caption": "Resumen muestra indicadores agregados de la instancia. Finanzas no aparece en este perfil de demostración porque no hay una clave gestionada de OpenRouter configurada.",
-      "revision": 1,
+      "revision": 2,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -72,7 +74,7 @@
       "src": "/documentation/es/instance-administration-users.png",
       "alt": "Asistencia de cuentas con búsqueda por correo exacto, sin directorio de contenido personal.",
       "caption": "Usuarios abre una cuenta concreta para asistencia o facturación; la pantalla inicial no enumera actividad privada ni contenido personal.",
-      "revision": 1,
+      "revision": 2,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -87,7 +89,7 @@
       "src": "/documentation/es/instance-administration-models.png",
       "alt": "Configuración de modelos de IA y razonamiento de la instancia.",
       "caption": "Modelos configura valores predeterminados y usos específicos. La captura muestra la configuración existente; no se cambió ningún modelo ni proveedor.",
-      "revision": 1,
+      "revision": 2,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -102,6 +104,7 @@
   ]
 }
 ---
+
 ## Usar la consola de administración de la instancia {#instance-administration}
 
 Administrar la instancia es distinto de ser propietario de un proyecto. ADMIN_EMAILS contiene las direcciones de cuentas confirmadas autorizadas en el servidor; app_metadata.role=admin firmado por el servidor también es un origen de rol válido. La sesión de administrador exige aal2, MFA verificada y comprobaciones actuales de cuenta y sesión. Si fallan, se deniega el acceso. Inicie sesión, complete TOTP y abra /admin. No cambie roles en la base de datos para evitar el registro MFA. La consola y sus API privadas siguen siendo noindex.
@@ -118,8 +121,6 @@ Administrar la instancia es distinto de ser propietario de un proyecto. ADMIN_EM
 ## Usar capacidades disponibles {#panels}
 
 La consola incluye Resumen, Usuarios, Modelos y, cuando está disponible, Finanzas. Finanzas queda oculto sin una capacidad OpenRouter gestionada vinculada. La asignación de planes depende de la facturación configurada o de un override existente. Abrir la consola no añade facturación Cloud a una instancia self-hosted sin proveedores comerciales. Revise modelos, valores predeterminados, usuarios y cuotas en la versión instalada antes de cambiar nada. Los cambios afectan a toda la instancia: utilice cuentas de demostración para comprobarlos.
-
-
 
 ## Mantener responsabilidades operativas {#responsibilities}
 

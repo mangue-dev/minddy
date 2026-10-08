@@ -2,7 +2,7 @@
 {
   "id": "personal-statistics",
   "locale": "en",
-  "title": "Read your personal work statistics",
+  "title": "Personal statistics",
   "summary": "Compare completion activity and time measurements within their actual scope.",
   "topic": "Plan and find work",
   "type": "explanation",
@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -40,18 +40,20 @@
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "2026-10-08",
-    "language": "2026-10-08",
-    "date": "2026-10-08"
+    "revision": 3,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun)",
+    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review)",
+    "date": "2026-10-09"
   },
   "related": [
     "personal-cycle",
     "objectives",
-    "plans-and-ai-usage"
+    "ai-settings-and-usage"
   ],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Read your personal work statistics"
+  ],
   "figures": [
     {
       "id": "personal-statistics-steps",
@@ -59,7 +61,7 @@
       "src": "/documentation/en/reader-statistics.png",
       "alt": "Personal statistics showing the annual activity grid, breakdowns, work rhythm and all-time totals.",
       "caption": "This demonstration account has one completed issue and eleven created issues. The displayed statistics are real; project and objective names were localized for display.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

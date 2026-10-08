@@ -2,7 +2,7 @@
 {
   "id": "notifications-and-inbox",
   "locale": "it",
-  "title": "Seguire notifiche e inviti nella posta in arrivo",
+  "title": "Posta in arrivo e notifiche",
   "summary": "Controlla attività non letta e menzioni, poi regola le preferenze di notifica dell’account.",
   "topic": "Pianificare e trovare lavoro",
   "type": "guide",
@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -37,18 +37,20 @@
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "2026-10-08",
-    "language": "2026-10-08",
-    "date": "2026-10-08"
+    "revision": 5,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
+    "date": "2026-10-09"
   },
   "related": [
-    "project-members",
-    "devices-and-notifications",
-    "profile-and-preferences"
+    "projects",
+    "applications",
+    "accounts"
   ],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Seguire notifiche e inviti nella posta in arrivo"
+  ],
   "figures": [
     {
       "id": "notifications-and-inbox-steps",
@@ -56,7 +58,7 @@
       "src": "/documentation/it/work-inbox.png",
       "alt": "Schede della posta in arrivo e lista vuota degli elementi non letti.",
       "caption": "La scheda Non letto vuota indica che la vista non contiene elementi non letti. Tutti mostra le altre notifiche conservate.",
-      "revision": 2,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

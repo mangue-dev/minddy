@@ -347,3 +347,20 @@ production-build checks. The historical findings and first-lot limits above
 remain unchanged; later evidence does not turn them into successful tests.
 No human acceptance, unchanged-tag installation, current Cloud deployment
 version or production deployment is inferred from the delivered candidate.
+
+## Editorial direction change: 2026-10-09
+
+The owner requested one guide per recognizable feature or subject throughout
+the documentation, including self-hosted operations. This supersedes the
+initial preference for separate narrowly scoped task articles. Readers choose
+the feature first, then use the hierarchical contents to reach its tasks,
+explanations, reference and recovery steps. A navigation domain still contains
+several guides; it does not become one oversized article.
+
+The [feature-guide migration](min-664-feature-guides.md) consolidates the 90
+source articles into 42 guides in each of six languages, with the same 90
+retained workflows and localized illustrations. It preserves independent
+features and audience-specific prerequisites, maintains legacy article/section
+links and updates the editorial contract. Earlier study findings, operational
+evidence and release qualifications remain historical evidence; a structural
+rewrite does not establish a newer release or a fresh operational execution.

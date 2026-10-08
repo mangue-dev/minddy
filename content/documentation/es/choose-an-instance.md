@@ -2,7 +2,7 @@
 {
   "id": "choose-an-instance",
   "locale": "es",
-  "title": "Elegir Cloud o tu propia instancia",
+  "title": "Instancias Cloud y autoalojadas",
   "summary": "Compara quién gestiona el servicio, adónde van los datos y qué proveedores opcionales debes configurar.",
   "topic": "Primeros pasos",
   "type": "explanation",
@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 1,
-  "sourceRevision": 1,
+  "revision": 2,
+  "sourceRevision": 2,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "v0.11.0",
     "editions": [
@@ -36,21 +36,22 @@
     ]
   },
   "review": {
-    "revision": 1,
-    "fact": "2026-10-08",
-    "language": "2026-10-08",
-    "date": "2026-10-08"
+    "revision": 2,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison)",
+    "date": "2026-10-09"
   },
   "related": [
-    "install-a-server",
-    "managed-or-source-installation",
+    "installation",
     "transfer-between-instances",
     "architecture-and-data-flows"
   ],
   "aliases": [
     "open-source"
   ],
-  "tags": [],
+  "tags": [
+    "Elegir Cloud o tu propia instancia"
+  ],
   "figures": [
     {
       "id": "responsibilities",
@@ -58,7 +59,7 @@
       "src": "/documentation/es/responsibilities.svg",
       "alt": "Responsabilidad de gestión: Gestionado por Minddy, Gestionado por ti.",
       "caption": "Los mismos servicios del núcleo necesitan un operador en ambos modelos. Los proveedores opcionales siguen siendo servicios separados.",
-      "revision": 1,
+      "revision": 2,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

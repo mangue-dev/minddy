@@ -1,0 +1,2301 @@
+{
+  "id": "feature-guides-it-pt-BR-review-2026-10-09",
+  "reviewer": "agent:/root/italian_portuguese_review",
+  "reviewDate": "2026-10-09",
+  "languages": [
+    "it",
+    "pt-BR"
+  ],
+  "reviewScope": "Independent editorial review of localized titles, summaries, section hierarchy and newly authored feature overviews; source-section comparison for retained procedural meaning across every guide.",
+  "source": "Original locale corpus captured in /tmp/minddy-mega-articles/content/documentation; migration mapping content/documentation/legacy-routes.json.",
+  "editorialStandard": "docs/documentation-editorial-guide.md",
+  "actualChecks": [
+    "Read the complete title, summary and heading inventories for both locales. Reviewed all newly authored overviews and summary changes against source procedures and localized terminology.",
+    "Compared all 225 original section bodies per locale with their mapped destination. Only the listed body edits differ after normalizing whitespace and Markdown link destinations; headings are compared by IDs/order separately.",
+    "Checked every original section ID through its legacy mapping and preserved relative section order. No added section IDs or reordered procedures.",
+    "Compared all original fenced executable examples byte-for-byte and all inherited figure manifests including caption, alt text, source, capture date and review flags, allowing only the guide revision increment.",
+    "Read the retained page publication/export/import, database schema/import, Numo authorization/recovery, project membership, Git synchronization, notification/offline and operational warning passages to substantiate new scope statements.",
+    "Confirmed Portuguese UI terminology in messages/pt-BR.json: Issue.entity=Problema and Issue.entityPlural=Problemas. Generic guide title and new issue references use this terminology; the guide opening explicitly explains the retained issue synonym.",
+    "Confirmed duplicate installation warnings retain their complete first occurrence and a linked, scope-specific reminder at the second occurrence, with applicable warnings still before commands."
+  ],
+  "changes": [
+    "Added localized overview paragraphs to all 19 multi-source feature guides per locale; retained procedure entry points, access boundaries, profiles and recovery qualifications.",
+    "Rewrote incomplete or imperative-inconsistent summaries for operational and single-feature guides. Clarified PWA installation and the absence of a generic page import action.",
+    "Improved localized headings without changing their IDs/order, including persistent Numo turns, backup completion, authentication email setup and page export/database archive import.",
+    "Changed newly authored Portuguese Tickets titles/references to Problemas in accordance with actual UI labels; retained literal API/tool identifiers and prior source terminology.",
+    "Replaced two duplicated installation warning paragraphs per locale with same-page cross-references and a direct applicable warning, keeping all original warning facts in the first occurrence.",
+    "Repaired the Italian first-project Smart Fill sentence subject, the Portuguese grammatical gender of console in instance administration and the Portuguese explicit read-only doctor description."
+  ],
+  "limits": [
+    "No new installation, backup, restoration, application mutation or browser procedure was executed by this reviewer. Existing procedural evidence and screenshot captures remain inherited from their original review.",
+    "No human native-speaker review or new screenshot capture is claimed. Source comparison verifies retention, not current release behavior.",
+    "Parent agent owns complete documentation, lint, tests, browser validation and pull-request publication."
+  ],
+  "locales": [
+    {
+      "locale": "it",
+      "sourceArticles": 90,
+      "guides": 42,
+      "sourceSections": 225,
+      "retainedSectionBodiesIgnoringMarkdownLinkDestinations": 222,
+      "figureManifestsPreservedExceptRevision": 102,
+      "executableExamplesPreserved": 30,
+      "articles": [
+        {
+          "id": "first-project",
+          "revision": 5,
+          "sourceArticles": [
+            "first-project"
+          ],
+          "workflows": [
+            "S01"
+          ],
+          "audiences": [
+            "member"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "sourceSectionIds": [
+            "first-project",
+            "first-use-recovery"
+          ],
+          "executableExamplesPreserved": 0,
+          "sectionBodyChanges": [
+            {
+              "source": "first-project",
+              "section": "first-project",
+              "destination": "first-project"
+            }
+          ]
+        },
+        {
+          "id": "choose-an-instance",
+          "revision": 2,
+          "sourceArticles": [
+            "choose-an-instance"
+          ],
+          "workflows": [
+            "S07"
+          ],
+          "audiences": [
+            "member",
+            "operator"
+          ],
+          "compatibility": "v0.11.0",
+          "sourceSectionIds": [
+            "choose-an-instance",
+            "responsibilities",
+            "services",
+            "next-step"
+          ],
+          "executableExamplesPreserved": 0,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "accounts",
+          "revision": 6,
+          "sourceArticles": [
+            "account-access",
+            "account-security",
+            "account-recovery",
+            "profile-and-preferences",
+            "privacy-and-account-deletion"
+          ],
+          "workflows": [
+            "S02",
+            "A02",
+            "S03",
+            "A01",
+            "A09"
+          ],
+          "audiences": [
+            "member"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5); 0.11.1 candidate (cd1843e12)",
+          "sourceSectionIds": [
+            "account-access",
+            "session-and-mail",
+            "account-security",
+            "recovery",
+            "account-recovery",
+            "mfa-recovery",
+            "profile-and-preferences",
+            "preferences",
+            "privacy-and-account-deletion",
+            "deletion"
+          ],
+          "executableExamplesPreserved": 0,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "transfer-between-instances",
+          "revision": 4,
+          "sourceArticles": [
+            "transfer-between-instances"
+          ],
+          "workflows": [
+            "A07"
+          ],
+          "audiences": [
+            "member"
+          ],
+          "compatibility": "0.11.1 candidate (cd1843e12)",
+          "sourceSectionIds": [
+            "transfer-between-instances",
+            "exclusions"
+          ],
+          "executableExamplesPreserved": 0,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "applications",
+          "revision": 4,
+          "sourceArticles": [
+            "web-and-mobile",
+            "install-the-pwa",
+            "desktop-app",
+            "devices-and-notifications"
+          ],
+          "workflows": [
+            "A10",
+            "A11",
+            "A12",
+            "A03"
+          ],
+          "audiences": [
+            "member",
+            "operator"
+          ],
+          "compatibility": "0.11.1 candidate (cd1843e12)",
+          "sourceSectionIds": [
+            "web-and-mobile",
+            "access",
+            "install-the-pwa",
+            "operation",
+            "desktop-app",
+            "desktop-app-operation",
+            "devices-and-notifications",
+            "platforms"
+          ],
+          "executableExamplesPreserved": 0,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "projects",
+          "revision": 5,
+          "sourceArticles": [
+            "project-settings",
+            "project-members"
+          ],
+          "workflows": [
+            "S05",
+            "S06"
+          ],
+          "audiences": [
+            "owner",
+            "member"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "sourceSectionIds": [
+            "project-settings",
+            "project-removal",
+            "project-members",
+            "member-permissions",
+            "invitation-recovery"
+          ],
+          "executableExamplesPreserved": 0,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "issues",
+          "revision": 5,
+          "sourceArticles": [
+            "create-an-issue",
+            "triage-incoming-work",
+            "issue-statuses",
+            "issue-discussion-and-resources",
+            "issue-dependencies",
+            "sub-issues",
+            "implementation-plans",
+            "recurring-issues",
+            "bulk-issue-actions",
+            "import-issues"
+          ],
+          "workflows": [
+            "W01",
+            "W03",
+            "W02",
+            "W08",
+            "W05",
+            "W06",
+            "W07",
+            "W09",
+            "W04",
+            "A06"
+          ],
+          "audiences": [
+            "member",
+            "owner"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5); 0.11.1 candidate (cd1843e12)",
+          "sourceSectionIds": [
+            "create-an-issue",
+            "issue-save",
+            "triage-incoming-work",
+            "triage-order",
+            "issue-statuses",
+            "closed-work",
+            "issue-discussion-and-resources",
+            "resource-access",
+            "issue-dependencies",
+            "blocker-state",
+            "sub-issues",
+            "change-parent",
+            "implementation-plans",
+            "plan-progress",
+            "recurring-issues",
+            "recurrence-change",
+            "bulk-issue-actions",
+            "bulk-results",
+            "import-issues",
+            "result"
+          ],
+          "executableExamplesPreserved": 0,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "objectives",
+          "revision": 5,
+          "sourceArticles": [
+            "objectives",
+            "objective-dependencies-and-momentum"
+          ],
+          "workflows": [
+            "W10",
+            "W11"
+          ],
+          "audiences": [
+            "member"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "sourceSectionIds": [
+            "objectives",
+            "objective-progress",
+            "objective-dependencies-and-momentum",
+            "momentum"
+          ],
+          "executableExamplesPreserved": 0,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "views",
+          "revision": 4,
+          "sourceArticles": [
+            "views-and-filters",
+            "share-a-view"
+          ],
+          "workflows": [
+            "W13",
+            "W14"
+          ],
+          "audiences": [
+            "member"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "sourceSectionIds": [
+            "views-and-filters",
+            "view-recovery",
+            "share-a-view",
+            "revoke-view"
+          ],
+          "executableExamplesPreserved": 0,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "navigation",
+          "revision": 4,
+          "sourceArticles": [
+            "navigation",
+            "search-and-shortcuts"
+          ],
+          "workflows": [
+            "S04",
+            "W15"
+          ],
+          "audiences": [
+            "member"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "sourceSectionIds": [
+            "navigation",
+            "panels",
+            "tabs",
+            "search-and-shortcuts",
+            "shortcut-alternatives"
+          ],
+          "executableExamplesPreserved": 0,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "notifications-and-inbox",
+          "revision": 5,
+          "sourceArticles": [
+            "notifications-and-inbox"
+          ],
+          "workflows": [
+            "W16"
+          ],
+          "audiences": [
+            "member"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "sourceSectionIds": [
+            "notifications-and-inbox",
+            "notification-preferences"
+          ],
+          "executableExamplesPreserved": 0,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "personal-cycle",
+          "revision": 4,
+          "sourceArticles": [
+            "personal-cycle"
+          ],
+          "workflows": [
+            "W12"
+          ],
+          "audiences": [
+            "member"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "sourceSectionIds": [
+            "personal-cycle",
+            "cycle-results"
+          ],
+          "executableExamplesPreserved": 0,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "task-notebook",
+          "revision": 3,
+          "sourceArticles": [
+            "task-notebook"
+          ],
+          "workflows": [
+            "W17"
+          ],
+          "audiences": [
+            "member"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "sourceSectionIds": [
+            "task-notebook",
+            "promote-note"
+          ],
+          "executableExamplesPreserved": 0,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "personal-statistics",
+          "revision": 3,
+          "sourceArticles": [
+            "personal-statistics"
+          ],
+          "workflows": [
+            "W18"
+          ],
+          "audiences": [
+            "member"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "sourceSectionIds": [
+            "personal-statistics",
+            "statistics-limits"
+          ],
+          "executableExamplesPreserved": 0,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "trash-and-recovery",
+          "revision": 4,
+          "sourceArticles": [
+            "trash-and-recovery"
+          ],
+          "workflows": [
+            "W19"
+          ],
+          "audiences": [
+            "member",
+            "owner"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "sourceSectionIds": [
+            "trash-and-recovery",
+            "permanent-removal"
+          ],
+          "executableExamplesPreserved": 0,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "pages",
+          "revision": 5,
+          "sourceArticles": [
+            "create-and-organize-pages",
+            "page-editor",
+            "page-comments-and-collaboration",
+            "page-files",
+            "page-history",
+            "publish-a-page",
+            "import-export-and-print-pages"
+          ],
+          "workflows": [
+            "P01",
+            "P02",
+            "P03",
+            "P04",
+            "P05",
+            "P06",
+            "P07"
+          ],
+          "audiences": [
+            "member",
+            "visitor"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "sourceSectionIds": [
+            "create-and-organize-pages",
+            "page-tree",
+            "page-editor",
+            "editor-save",
+            "page-comments-and-collaboration",
+            "page-conflict",
+            "page-files",
+            "file-access",
+            "page-history",
+            "restore-page-version",
+            "publish-a-page",
+            "revoke-page",
+            "import-export-and-print-pages",
+            "export-fidelity"
+          ],
+          "executableExamplesPreserved": 0,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "databases",
+          "revision": 5,
+          "sourceArticles": [
+            "create-a-database",
+            "database-cells-and-entries",
+            "change-a-database-schema",
+            "import-a-database"
+          ],
+          "workflows": [
+            "P08",
+            "P09",
+            "P10",
+            "P11"
+          ],
+          "audiences": [
+            "member"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "sourceSectionIds": [
+            "create-a-database",
+            "database-types",
+            "database-cells-and-entries",
+            "entry-actions",
+            "database-display",
+            "change-a-database-schema",
+            "convert-column",
+            "import-a-database",
+            "database-import-result"
+          ],
+          "executableExamplesPreserved": 0,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "feedback",
+          "revision": 3,
+          "sourceArticles": [
+            "publish-a-feedback-board",
+            "submit-and-follow-feedback",
+            "moderate-feedback",
+            "feedback-to-issue",
+            "feedback-pages-and-views"
+          ],
+          "workflows": [
+            "F01",
+            "F02",
+            "F03",
+            "F04",
+            "F05"
+          ],
+          "audiences": [
+            "owner",
+            "visitor",
+            "member"
+          ],
+          "compatibility": "0.11.1 candidate (cd1843e12)",
+          "sourceSectionIds": [
+            "publish-a-feedback-board",
+            "channels",
+            "submit-and-follow-feedback",
+            "follow",
+            "moderate-feedback",
+            "responses",
+            "feedback-to-issue",
+            "work",
+            "feedback-pages-and-views",
+            "visibility"
+          ],
+          "executableExamplesPreserved": 0,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "numo",
+          "revision": 2,
+          "sourceArticles": [
+            "work-with-numo",
+            "numo-permissions-and-approvals",
+            "numo-execution-model",
+            "numo-mcp-connections",
+            "recover-numo-work"
+          ],
+          "workflows": [
+            "N01",
+            "N02",
+            "T05",
+            "N08",
+            "N05"
+          ],
+          "audiences": [
+            "member",
+            "owner",
+            "integrator",
+            "operator"
+          ],
+          "compatibility": "0.11.1 candidate (cd1843e12); 0.11.1 candidate (89ebb59a5)",
+          "sourceSectionIds": [
+            "work-with-numo",
+            "continue",
+            "numo-permissions-and-approvals",
+            "authorization",
+            "context",
+            "numo-execution-model",
+            "state",
+            "mutations",
+            "numo-mcp-connections",
+            "manage",
+            "recover-numo-work",
+            "recovery"
+          ],
+          "executableExamplesPreserved": 0,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "code-work",
+          "revision": 2,
+          "sourceArticles": [
+            "delegate-code-work",
+            "review-pull-requests"
+          ],
+          "workflows": [
+            "N03",
+            "N04"
+          ],
+          "audiences": [
+            "member"
+          ],
+          "compatibility": "0.11.1 candidate (cd1843e12)",
+          "sourceSectionIds": [
+            "delegate-code-work",
+            "continuation",
+            "review-pull-requests",
+            "decision"
+          ],
+          "executableExamplesPreserved": 0,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "git",
+          "revision": 2,
+          "sourceArticles": [
+            "git-accounts-and-repositories",
+            "forge-issue-sync"
+          ],
+          "workflows": [
+            "N10",
+            "N11"
+          ],
+          "audiences": [
+            "owner",
+            "member",
+            "integrator"
+          ],
+          "compatibility": "0.11.1 candidate (cd1843e12)",
+          "sourceSectionIds": [
+            "git-accounts-and-repositories",
+            "recovery",
+            "forge-issue-sync",
+            "forge-issue-sync-recovery"
+          ],
+          "executableExamplesPreserved": 0,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "scheduled-routines",
+          "revision": 2,
+          "sourceArticles": [
+            "scheduled-routines"
+          ],
+          "workflows": [
+            "N06"
+          ],
+          "audiences": [
+            "owner"
+          ],
+          "compatibility": "0.11.1 candidate (cd1843e12)",
+          "sourceSectionIds": [
+            "scheduled-routines",
+            "runs"
+          ],
+          "executableExamplesPreserved": 0,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "repository-skills",
+          "revision": 3,
+          "sourceArticles": [
+            "repository-skills"
+          ],
+          "workflows": [
+            "N07"
+          ],
+          "audiences": [
+            "member",
+            "integrator"
+          ],
+          "compatibility": "0.11.1 candidate (cd1843e12)",
+          "sourceSectionIds": [
+            "repository-skills",
+            "selection"
+          ],
+          "executableExamplesPreserved": 0,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "ai-settings-and-usage",
+          "revision": 5,
+          "sourceArticles": [
+            "ai-keys-and-models",
+            "plans-and-ai-usage"
+          ],
+          "workflows": [
+            "A04",
+            "A08"
+          ],
+          "audiences": [
+            "member"
+          ],
+          "compatibility": "0.11.1 candidate (cd1843e12)",
+          "sourceSectionIds": [
+            "ai-keys-and-models",
+            "models",
+            "plans-and-ai-usage",
+            "consumption",
+            "plan-capacities"
+          ],
+          "executableExamplesPreserved": 0,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "automation-settings",
+          "revision": 4,
+          "sourceArticles": [
+            "automation-settings"
+          ],
+          "workflows": [
+            "A05"
+          ],
+          "audiences": [
+            "owner"
+          ],
+          "compatibility": "0.11.1 candidate (cd1843e12)",
+          "sourceSectionIds": [
+            "automation-settings",
+            "mechanisms"
+          ],
+          "executableExamplesPreserved": 0,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "minddy-mcp",
+          "revision": 2,
+          "sourceArticles": [
+            "external-minddy-mcp",
+            "mcp-tool-reference"
+          ],
+          "workflows": [
+            "N09",
+            "T06"
+          ],
+          "audiences": [
+            "integrator",
+            "member"
+          ],
+          "compatibility": "0.11.1 candidate (cd1843e12); 0.11.1 candidate (89ebb59a5)",
+          "sourceSectionIds": [
+            "external-minddy-mcp",
+            "access",
+            "mcp-tool-reference",
+            "issue-plans",
+            "pages-and-routines",
+            "example"
+          ],
+          "executableExamplesPreserved": 1,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "installation",
+          "revision": 2,
+          "sourceArticles": [
+            "self-hosted-compatibility",
+            "install-a-server",
+            "managed-or-source-installation"
+          ],
+          "workflows": [
+            "H01",
+            "H03",
+            "H04"
+          ],
+          "audiences": [
+            "operator"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "sourceSectionIds": [
+            "self-hosted-compatibility",
+            "verify-release",
+            "support",
+            "known-runner-limits",
+            "install-a-server",
+            "install",
+            "accept",
+            "install-a-server-known-runner-limits",
+            "runner-workaround",
+            "adapted-start",
+            "managed-or-source-installation",
+            "managed",
+            "source"
+          ],
+          "executableExamplesPreserved": 7,
+          "sectionBodyChanges": [
+            {
+              "source": "install-a-server",
+              "section": "known-runner-limits",
+              "destination": "install-a-server-known-runner-limits"
+            },
+            {
+              "source": "install-a-server",
+              "section": "runner-workaround",
+              "destination": "runner-workaround"
+            }
+          ]
+        },
+        {
+          "id": "install-locally",
+          "revision": 2,
+          "sourceArticles": [
+            "install-locally"
+          ],
+          "workflows": [
+            "H02"
+          ],
+          "audiences": [
+            "operator"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "sourceSectionIds": [
+            "install-locally",
+            "launch",
+            "recover"
+          ],
+          "executableExamplesPreserved": 1,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "instance-configuration",
+          "revision": 2,
+          "sourceArticles": [
+            "instance-configuration",
+            "optional-providers",
+            "proxy-network-and-jobs"
+          ],
+          "workflows": [
+            "H05",
+            "H09",
+            "H08"
+          ],
+          "audiences": [
+            "operator"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "sourceSectionIds": [
+            "instance-configuration",
+            "secrets",
+            "capabilities",
+            "optional-providers",
+            "configure",
+            "git-and-code",
+            "proxy-network-and-jobs",
+            "schedules",
+            "maintenance"
+          ],
+          "executableExamplesPreserved": 0,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "authentication-and-email",
+          "revision": 2,
+          "sourceArticles": [
+            "authentication-and-email"
+          ],
+          "workflows": [
+            "H06"
+          ],
+          "audiences": [
+            "operator"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "sourceSectionIds": [
+            "authentication-and-email",
+            "managed",
+            "verify"
+          ],
+          "executableExamplesPreserved": 1,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "storage-and-attachments",
+          "revision": 2,
+          "sourceArticles": [
+            "storage-and-attachments"
+          ],
+          "workflows": [
+            "H07"
+          ],
+          "audiences": [
+            "operator"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "sourceSectionIds": [
+            "storage-and-attachments",
+            "access",
+            "recover",
+            "docker-desktop"
+          ],
+          "executableExamplesPreserved": 2,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "workspace-encryption",
+          "revision": 3,
+          "sourceArticles": [
+            "workspace-encryption"
+          ],
+          "workflows": [
+            "H10"
+          ],
+          "audiences": [
+            "operator"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "sourceSectionIds": [
+            "workspace-encryption",
+            "existing-data",
+            "recovery"
+          ],
+          "executableExamplesPreserved": 1,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "backups-and-restoration",
+          "revision": 2,
+          "sourceArticles": [
+            "back-up-the-reference-instance",
+            "logical-and-provider-backups",
+            "restore-and-roll-back"
+          ],
+          "workflows": [
+            "H11",
+            "H12",
+            "H14"
+          ],
+          "audiences": [
+            "operator"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "sourceSectionIds": [
+            "back-up-the-reference-instance",
+            "context",
+            "backup",
+            "verify",
+            "logical-and-provider-backups",
+            "provider",
+            "outage",
+            "bytes",
+            "logical-and-provider-backups-verify",
+            "restore-and-roll-back",
+            "physical",
+            "logical",
+            "restore-and-roll-back-verify"
+          ],
+          "executableExamplesPreserved": 12,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "update-an-instance",
+          "revision": 2,
+          "sourceArticles": [
+            "update-an-instance"
+          ],
+          "workflows": [
+            "H13"
+          ],
+          "audiences": [
+            "operator"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "sourceSectionIds": [
+            "update-an-instance",
+            "full",
+            "managed-source",
+            "verify"
+          ],
+          "executableExamplesPreserved": 2,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "self-hosted-diagnostics",
+          "revision": 2,
+          "sourceArticles": [
+            "self-hosted-diagnostics"
+          ],
+          "workflows": [
+            "H15"
+          ],
+          "audiences": [
+            "operator"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "sourceSectionIds": [
+            "self-hosted-diagnostics",
+            "symptoms",
+            "recovery"
+          ],
+          "executableExamplesPreserved": 1,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "instance-administration",
+          "revision": 2,
+          "sourceArticles": [
+            "instance-administration"
+          ],
+          "workflows": [
+            "H16"
+          ],
+          "audiences": [
+            "operator"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "sourceSectionIds": [
+            "instance-administration",
+            "panels",
+            "responsibilities"
+          ],
+          "executableExamplesPreserved": 0,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "architecture-and-data-flows",
+          "revision": 2,
+          "sourceArticles": [
+            "architecture-and-data-flows"
+          ],
+          "workflows": [
+            "T03"
+          ],
+          "audiences": [
+            "operator",
+            "integrator"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "sourceSectionIds": [
+            "architecture-and-data-flows",
+            "requests",
+            "providers"
+          ],
+          "executableExamplesPreserved": 0,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "glossary-and-data-model",
+          "revision": 2,
+          "sourceArticles": [
+            "glossary-and-data-model"
+          ],
+          "workflows": [
+            "T01"
+          ],
+          "audiences": [
+            "member",
+            "integrator"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "sourceSectionIds": [
+            "glossary-and-data-model",
+            "knowledge-and-feedback",
+            "example"
+          ],
+          "executableExamplesPreserved": 0,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "permissions-and-public-links",
+          "revision": 2,
+          "sourceArticles": [
+            "permissions-and-public-links"
+          ],
+          "workflows": [
+            "T02"
+          ],
+          "audiences": [
+            "owner",
+            "integrator"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "sourceSectionIds": [
+            "permissions-and-public-links",
+            "publication",
+            "revocation"
+          ],
+          "executableExamplesPreserved": 0,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "encryption-and-data-boundaries",
+          "revision": 2,
+          "sourceArticles": [
+            "encryption-and-data-boundaries"
+          ],
+          "workflows": [
+            "T04"
+          ],
+          "audiences": [
+            "member",
+            "operator"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "sourceSectionIds": [
+            "encryption-and-data-boundaries",
+            "exceptions",
+            "recovery"
+          ],
+          "executableExamplesPreserved": 0,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "api-and-webhooks",
+          "revision": 3,
+          "sourceArticles": [
+            "integration-api-and-webhooks",
+            "feedback-ingestion-and-sso"
+          ],
+          "workflows": [
+            "T07",
+            "F06"
+          ],
+          "audiences": [
+            "integrator"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5); 0.11.1 candidate (cd1843e12)",
+          "sourceSectionIds": [
+            "integration-api-and-webhooks",
+            "send",
+            "receive",
+            "limits",
+            "feedback-ingestion-and-sso",
+            "errors",
+            "sso"
+          ],
+          "executableExamplesPreserved": 2,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "integration-troubleshooting",
+          "revision": 2,
+          "sourceArticles": [
+            "integration-troubleshooting"
+          ],
+          "workflows": [
+            "T08"
+          ],
+          "audiences": [
+            "integrator"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "sourceSectionIds": [
+            "integration-troubleshooting",
+            "oauth",
+            "webhooks",
+            "git"
+          ],
+          "executableExamplesPreserved": 0,
+          "sectionBodyChanges": []
+        }
+      ]
+    },
+    {
+      "locale": "pt-BR",
+      "sourceArticles": 90,
+      "guides": 42,
+      "sourceSections": 225,
+      "retainedSectionBodiesIgnoringMarkdownLinkDestinations": 219,
+      "figureManifestsPreservedExceptRevision": 102,
+      "executableExamplesPreserved": 30,
+      "articles": [
+        {
+          "id": "first-project",
+          "revision": 5,
+          "sourceArticles": [
+            "first-project"
+          ],
+          "workflows": [
+            "S01"
+          ],
+          "audiences": [
+            "member"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "sourceSectionIds": [
+            "first-project",
+            "first-use-recovery"
+          ],
+          "executableExamplesPreserved": 0,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "choose-an-instance",
+          "revision": 2,
+          "sourceArticles": [
+            "choose-an-instance"
+          ],
+          "workflows": [
+            "S07"
+          ],
+          "audiences": [
+            "member",
+            "operator"
+          ],
+          "compatibility": "v0.11.0",
+          "sourceSectionIds": [
+            "choose-an-instance",
+            "responsibilities",
+            "services",
+            "next-step"
+          ],
+          "executableExamplesPreserved": 0,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "accounts",
+          "revision": 6,
+          "sourceArticles": [
+            "account-access",
+            "account-security",
+            "account-recovery",
+            "profile-and-preferences",
+            "privacy-and-account-deletion"
+          ],
+          "workflows": [
+            "S02",
+            "A02",
+            "S03",
+            "A01",
+            "A09"
+          ],
+          "audiences": [
+            "member"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5); 0.11.1 candidate (cd1843e12)",
+          "sourceSectionIds": [
+            "account-access",
+            "session-and-mail",
+            "account-security",
+            "recovery",
+            "account-recovery",
+            "mfa-recovery",
+            "profile-and-preferences",
+            "preferences",
+            "privacy-and-account-deletion",
+            "deletion"
+          ],
+          "executableExamplesPreserved": 0,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "transfer-between-instances",
+          "revision": 4,
+          "sourceArticles": [
+            "transfer-between-instances"
+          ],
+          "workflows": [
+            "A07"
+          ],
+          "audiences": [
+            "member"
+          ],
+          "compatibility": "0.11.1 candidate (cd1843e12)",
+          "sourceSectionIds": [
+            "transfer-between-instances",
+            "exclusions"
+          ],
+          "executableExamplesPreserved": 0,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "applications",
+          "revision": 4,
+          "sourceArticles": [
+            "web-and-mobile",
+            "install-the-pwa",
+            "desktop-app",
+            "devices-and-notifications"
+          ],
+          "workflows": [
+            "A10",
+            "A11",
+            "A12",
+            "A03"
+          ],
+          "audiences": [
+            "member",
+            "operator"
+          ],
+          "compatibility": "0.11.1 candidate (cd1843e12)",
+          "sourceSectionIds": [
+            "web-and-mobile",
+            "access",
+            "install-the-pwa",
+            "operation",
+            "desktop-app",
+            "desktop-app-operation",
+            "devices-and-notifications",
+            "platforms"
+          ],
+          "executableExamplesPreserved": 0,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "projects",
+          "revision": 5,
+          "sourceArticles": [
+            "project-settings",
+            "project-members"
+          ],
+          "workflows": [
+            "S05",
+            "S06"
+          ],
+          "audiences": [
+            "owner",
+            "member"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "sourceSectionIds": [
+            "project-settings",
+            "project-removal",
+            "project-members",
+            "member-permissions",
+            "invitation-recovery"
+          ],
+          "executableExamplesPreserved": 0,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "issues",
+          "revision": 5,
+          "sourceArticles": [
+            "create-an-issue",
+            "triage-incoming-work",
+            "issue-statuses",
+            "issue-discussion-and-resources",
+            "issue-dependencies",
+            "sub-issues",
+            "implementation-plans",
+            "recurring-issues",
+            "bulk-issue-actions",
+            "import-issues"
+          ],
+          "workflows": [
+            "W01",
+            "W03",
+            "W02",
+            "W08",
+            "W05",
+            "W06",
+            "W07",
+            "W09",
+            "W04",
+            "A06"
+          ],
+          "audiences": [
+            "member",
+            "owner"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5); 0.11.1 candidate (cd1843e12)",
+          "sourceSectionIds": [
+            "create-an-issue",
+            "issue-save",
+            "triage-incoming-work",
+            "triage-order",
+            "issue-statuses",
+            "closed-work",
+            "issue-discussion-and-resources",
+            "resource-access",
+            "issue-dependencies",
+            "blocker-state",
+            "sub-issues",
+            "change-parent",
+            "implementation-plans",
+            "plan-progress",
+            "recurring-issues",
+            "recurrence-change",
+            "bulk-issue-actions",
+            "bulk-results",
+            "import-issues",
+            "result"
+          ],
+          "executableExamplesPreserved": 0,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "objectives",
+          "revision": 5,
+          "sourceArticles": [
+            "objectives",
+            "objective-dependencies-and-momentum"
+          ],
+          "workflows": [
+            "W10",
+            "W11"
+          ],
+          "audiences": [
+            "member"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "sourceSectionIds": [
+            "objectives",
+            "objective-progress",
+            "objective-dependencies-and-momentum",
+            "momentum"
+          ],
+          "executableExamplesPreserved": 0,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "views",
+          "revision": 4,
+          "sourceArticles": [
+            "views-and-filters",
+            "share-a-view"
+          ],
+          "workflows": [
+            "W13",
+            "W14"
+          ],
+          "audiences": [
+            "member"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "sourceSectionIds": [
+            "views-and-filters",
+            "view-recovery",
+            "share-a-view",
+            "revoke-view"
+          ],
+          "executableExamplesPreserved": 0,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "navigation",
+          "revision": 4,
+          "sourceArticles": [
+            "navigation",
+            "search-and-shortcuts"
+          ],
+          "workflows": [
+            "S04",
+            "W15"
+          ],
+          "audiences": [
+            "member"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "sourceSectionIds": [
+            "navigation",
+            "panels",
+            "tabs",
+            "search-and-shortcuts",
+            "shortcut-alternatives"
+          ],
+          "executableExamplesPreserved": 0,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "notifications-and-inbox",
+          "revision": 5,
+          "sourceArticles": [
+            "notifications-and-inbox"
+          ],
+          "workflows": [
+            "W16"
+          ],
+          "audiences": [
+            "member"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "sourceSectionIds": [
+            "notifications-and-inbox",
+            "notification-preferences"
+          ],
+          "executableExamplesPreserved": 0,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "personal-cycle",
+          "revision": 4,
+          "sourceArticles": [
+            "personal-cycle"
+          ],
+          "workflows": [
+            "W12"
+          ],
+          "audiences": [
+            "member"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "sourceSectionIds": [
+            "personal-cycle",
+            "cycle-results"
+          ],
+          "executableExamplesPreserved": 0,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "task-notebook",
+          "revision": 3,
+          "sourceArticles": [
+            "task-notebook"
+          ],
+          "workflows": [
+            "W17"
+          ],
+          "audiences": [
+            "member"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "sourceSectionIds": [
+            "task-notebook",
+            "promote-note"
+          ],
+          "executableExamplesPreserved": 0,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "personal-statistics",
+          "revision": 3,
+          "sourceArticles": [
+            "personal-statistics"
+          ],
+          "workflows": [
+            "W18"
+          ],
+          "audiences": [
+            "member"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "sourceSectionIds": [
+            "personal-statistics",
+            "statistics-limits"
+          ],
+          "executableExamplesPreserved": 0,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "trash-and-recovery",
+          "revision": 4,
+          "sourceArticles": [
+            "trash-and-recovery"
+          ],
+          "workflows": [
+            "W19"
+          ],
+          "audiences": [
+            "member",
+            "owner"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "sourceSectionIds": [
+            "trash-and-recovery",
+            "permanent-removal"
+          ],
+          "executableExamplesPreserved": 0,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "pages",
+          "revision": 5,
+          "sourceArticles": [
+            "create-and-organize-pages",
+            "page-editor",
+            "page-comments-and-collaboration",
+            "page-files",
+            "page-history",
+            "publish-a-page",
+            "import-export-and-print-pages"
+          ],
+          "workflows": [
+            "P01",
+            "P02",
+            "P03",
+            "P04",
+            "P05",
+            "P06",
+            "P07"
+          ],
+          "audiences": [
+            "member",
+            "visitor"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "sourceSectionIds": [
+            "create-and-organize-pages",
+            "page-tree",
+            "page-editor",
+            "editor-save",
+            "page-comments-and-collaboration",
+            "page-conflict",
+            "page-files",
+            "file-access",
+            "page-history",
+            "restore-page-version",
+            "publish-a-page",
+            "revoke-page",
+            "import-export-and-print-pages",
+            "export-fidelity"
+          ],
+          "executableExamplesPreserved": 0,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "databases",
+          "revision": 5,
+          "sourceArticles": [
+            "create-a-database",
+            "database-cells-and-entries",
+            "change-a-database-schema",
+            "import-a-database"
+          ],
+          "workflows": [
+            "P08",
+            "P09",
+            "P10",
+            "P11"
+          ],
+          "audiences": [
+            "member"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "sourceSectionIds": [
+            "create-a-database",
+            "database-types",
+            "database-cells-and-entries",
+            "entry-actions",
+            "database-display",
+            "change-a-database-schema",
+            "convert-column",
+            "import-a-database",
+            "database-import-result"
+          ],
+          "executableExamplesPreserved": 0,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "feedback",
+          "revision": 3,
+          "sourceArticles": [
+            "publish-a-feedback-board",
+            "submit-and-follow-feedback",
+            "moderate-feedback",
+            "feedback-to-issue",
+            "feedback-pages-and-views"
+          ],
+          "workflows": [
+            "F01",
+            "F02",
+            "F03",
+            "F04",
+            "F05"
+          ],
+          "audiences": [
+            "owner",
+            "visitor",
+            "member"
+          ],
+          "compatibility": "0.11.1 candidate (cd1843e12)",
+          "sourceSectionIds": [
+            "publish-a-feedback-board",
+            "channels",
+            "submit-and-follow-feedback",
+            "follow",
+            "moderate-feedback",
+            "responses",
+            "feedback-to-issue",
+            "work",
+            "feedback-pages-and-views",
+            "visibility"
+          ],
+          "executableExamplesPreserved": 0,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "numo",
+          "revision": 2,
+          "sourceArticles": [
+            "work-with-numo",
+            "numo-permissions-and-approvals",
+            "numo-execution-model",
+            "numo-mcp-connections",
+            "recover-numo-work"
+          ],
+          "workflows": [
+            "N01",
+            "N02",
+            "T05",
+            "N08",
+            "N05"
+          ],
+          "audiences": [
+            "member",
+            "owner",
+            "integrator",
+            "operator"
+          ],
+          "compatibility": "0.11.1 candidate (cd1843e12); 0.11.1 candidate (89ebb59a5)",
+          "sourceSectionIds": [
+            "work-with-numo",
+            "continue",
+            "numo-permissions-and-approvals",
+            "authorization",
+            "context",
+            "numo-execution-model",
+            "state",
+            "mutations",
+            "numo-mcp-connections",
+            "manage",
+            "recover-numo-work",
+            "recovery"
+          ],
+          "executableExamplesPreserved": 0,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "code-work",
+          "revision": 2,
+          "sourceArticles": [
+            "delegate-code-work",
+            "review-pull-requests"
+          ],
+          "workflows": [
+            "N03",
+            "N04"
+          ],
+          "audiences": [
+            "member"
+          ],
+          "compatibility": "0.11.1 candidate (cd1843e12)",
+          "sourceSectionIds": [
+            "delegate-code-work",
+            "continuation",
+            "review-pull-requests",
+            "decision"
+          ],
+          "executableExamplesPreserved": 0,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "git",
+          "revision": 2,
+          "sourceArticles": [
+            "git-accounts-and-repositories",
+            "forge-issue-sync"
+          ],
+          "workflows": [
+            "N10",
+            "N11"
+          ],
+          "audiences": [
+            "owner",
+            "member",
+            "integrator"
+          ],
+          "compatibility": "0.11.1 candidate (cd1843e12)",
+          "sourceSectionIds": [
+            "git-accounts-and-repositories",
+            "recovery",
+            "forge-issue-sync",
+            "forge-issue-sync-recovery"
+          ],
+          "executableExamplesPreserved": 0,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "scheduled-routines",
+          "revision": 2,
+          "sourceArticles": [
+            "scheduled-routines"
+          ],
+          "workflows": [
+            "N06"
+          ],
+          "audiences": [
+            "owner"
+          ],
+          "compatibility": "0.11.1 candidate (cd1843e12)",
+          "sourceSectionIds": [
+            "scheduled-routines",
+            "runs"
+          ],
+          "executableExamplesPreserved": 0,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "repository-skills",
+          "revision": 3,
+          "sourceArticles": [
+            "repository-skills"
+          ],
+          "workflows": [
+            "N07"
+          ],
+          "audiences": [
+            "member",
+            "integrator"
+          ],
+          "compatibility": "0.11.1 candidate (cd1843e12)",
+          "sourceSectionIds": [
+            "repository-skills",
+            "selection"
+          ],
+          "executableExamplesPreserved": 0,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "ai-settings-and-usage",
+          "revision": 5,
+          "sourceArticles": [
+            "ai-keys-and-models",
+            "plans-and-ai-usage"
+          ],
+          "workflows": [
+            "A04",
+            "A08"
+          ],
+          "audiences": [
+            "member"
+          ],
+          "compatibility": "0.11.1 candidate (cd1843e12)",
+          "sourceSectionIds": [
+            "ai-keys-and-models",
+            "models",
+            "plans-and-ai-usage",
+            "consumption",
+            "plan-capacities"
+          ],
+          "executableExamplesPreserved": 0,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "automation-settings",
+          "revision": 4,
+          "sourceArticles": [
+            "automation-settings"
+          ],
+          "workflows": [
+            "A05"
+          ],
+          "audiences": [
+            "owner"
+          ],
+          "compatibility": "0.11.1 candidate (cd1843e12)",
+          "sourceSectionIds": [
+            "automation-settings",
+            "mechanisms"
+          ],
+          "executableExamplesPreserved": 0,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "minddy-mcp",
+          "revision": 2,
+          "sourceArticles": [
+            "external-minddy-mcp",
+            "mcp-tool-reference"
+          ],
+          "workflows": [
+            "N09",
+            "T06"
+          ],
+          "audiences": [
+            "integrator",
+            "member"
+          ],
+          "compatibility": "0.11.1 candidate (cd1843e12); 0.11.1 candidate (89ebb59a5)",
+          "sourceSectionIds": [
+            "external-minddy-mcp",
+            "access",
+            "mcp-tool-reference",
+            "issue-plans",
+            "pages-and-routines",
+            "example"
+          ],
+          "executableExamplesPreserved": 1,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "installation",
+          "revision": 2,
+          "sourceArticles": [
+            "self-hosted-compatibility",
+            "install-a-server",
+            "managed-or-source-installation"
+          ],
+          "workflows": [
+            "H01",
+            "H03",
+            "H04"
+          ],
+          "audiences": [
+            "operator"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "sourceSectionIds": [
+            "self-hosted-compatibility",
+            "verify-release",
+            "support",
+            "known-runner-limits",
+            "install-a-server",
+            "install",
+            "accept",
+            "install-a-server-known-runner-limits",
+            "runner-workaround",
+            "adapted-start",
+            "managed-or-source-installation",
+            "managed",
+            "source"
+          ],
+          "executableExamplesPreserved": 7,
+          "sectionBodyChanges": [
+            {
+              "source": "install-a-server",
+              "section": "known-runner-limits",
+              "destination": "install-a-server-known-runner-limits"
+            },
+            {
+              "source": "install-a-server",
+              "section": "runner-workaround",
+              "destination": "runner-workaround"
+            }
+          ]
+        },
+        {
+          "id": "install-locally",
+          "revision": 2,
+          "sourceArticles": [
+            "install-locally"
+          ],
+          "workflows": [
+            "H02"
+          ],
+          "audiences": [
+            "operator"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "sourceSectionIds": [
+            "install-locally",
+            "launch",
+            "recover"
+          ],
+          "executableExamplesPreserved": 1,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "instance-configuration",
+          "revision": 2,
+          "sourceArticles": [
+            "instance-configuration",
+            "optional-providers",
+            "proxy-network-and-jobs"
+          ],
+          "workflows": [
+            "H05",
+            "H09",
+            "H08"
+          ],
+          "audiences": [
+            "operator"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "sourceSectionIds": [
+            "instance-configuration",
+            "secrets",
+            "capabilities",
+            "optional-providers",
+            "configure",
+            "git-and-code",
+            "proxy-network-and-jobs",
+            "schedules",
+            "maintenance"
+          ],
+          "executableExamplesPreserved": 0,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "authentication-and-email",
+          "revision": 2,
+          "sourceArticles": [
+            "authentication-and-email"
+          ],
+          "workflows": [
+            "H06"
+          ],
+          "audiences": [
+            "operator"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "sourceSectionIds": [
+            "authentication-and-email",
+            "managed",
+            "verify"
+          ],
+          "executableExamplesPreserved": 1,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "storage-and-attachments",
+          "revision": 2,
+          "sourceArticles": [
+            "storage-and-attachments"
+          ],
+          "workflows": [
+            "H07"
+          ],
+          "audiences": [
+            "operator"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "sourceSectionIds": [
+            "storage-and-attachments",
+            "access",
+            "recover",
+            "docker-desktop"
+          ],
+          "executableExamplesPreserved": 2,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "workspace-encryption",
+          "revision": 3,
+          "sourceArticles": [
+            "workspace-encryption"
+          ],
+          "workflows": [
+            "H10"
+          ],
+          "audiences": [
+            "operator"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "sourceSectionIds": [
+            "workspace-encryption",
+            "existing-data",
+            "recovery"
+          ],
+          "executableExamplesPreserved": 1,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "backups-and-restoration",
+          "revision": 2,
+          "sourceArticles": [
+            "back-up-the-reference-instance",
+            "logical-and-provider-backups",
+            "restore-and-roll-back"
+          ],
+          "workflows": [
+            "H11",
+            "H12",
+            "H14"
+          ],
+          "audiences": [
+            "operator"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "sourceSectionIds": [
+            "back-up-the-reference-instance",
+            "context",
+            "backup",
+            "verify",
+            "logical-and-provider-backups",
+            "provider",
+            "outage",
+            "bytes",
+            "logical-and-provider-backups-verify",
+            "restore-and-roll-back",
+            "physical",
+            "logical",
+            "restore-and-roll-back-verify"
+          ],
+          "executableExamplesPreserved": 12,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "update-an-instance",
+          "revision": 2,
+          "sourceArticles": [
+            "update-an-instance"
+          ],
+          "workflows": [
+            "H13"
+          ],
+          "audiences": [
+            "operator"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "sourceSectionIds": [
+            "update-an-instance",
+            "full",
+            "managed-source",
+            "verify"
+          ],
+          "executableExamplesPreserved": 2,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "self-hosted-diagnostics",
+          "revision": 2,
+          "sourceArticles": [
+            "self-hosted-diagnostics"
+          ],
+          "workflows": [
+            "H15"
+          ],
+          "audiences": [
+            "operator"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "sourceSectionIds": [
+            "self-hosted-diagnostics",
+            "symptoms",
+            "recovery"
+          ],
+          "executableExamplesPreserved": 1,
+          "sectionBodyChanges": [
+            {
+              "source": "self-hosted-diagnostics",
+              "section": "self-hosted-diagnostics",
+              "destination": "self-hosted-diagnostics"
+            }
+          ]
+        },
+        {
+          "id": "instance-administration",
+          "revision": 2,
+          "sourceArticles": [
+            "instance-administration"
+          ],
+          "workflows": [
+            "H16"
+          ],
+          "audiences": [
+            "operator"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "sourceSectionIds": [
+            "instance-administration",
+            "panels",
+            "responsibilities"
+          ],
+          "executableExamplesPreserved": 0,
+          "sectionBodyChanges": [
+            {
+              "source": "instance-administration",
+              "section": "instance-administration",
+              "destination": "instance-administration"
+            },
+            {
+              "source": "instance-administration",
+              "section": "panels",
+              "destination": "panels"
+            },
+            {
+              "source": "instance-administration",
+              "section": "responsibilities",
+              "destination": "responsibilities"
+            }
+          ]
+        },
+        {
+          "id": "architecture-and-data-flows",
+          "revision": 2,
+          "sourceArticles": [
+            "architecture-and-data-flows"
+          ],
+          "workflows": [
+            "T03"
+          ],
+          "audiences": [
+            "operator",
+            "integrator"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "sourceSectionIds": [
+            "architecture-and-data-flows",
+            "requests",
+            "providers"
+          ],
+          "executableExamplesPreserved": 0,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "glossary-and-data-model",
+          "revision": 2,
+          "sourceArticles": [
+            "glossary-and-data-model"
+          ],
+          "workflows": [
+            "T01"
+          ],
+          "audiences": [
+            "member",
+            "integrator"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "sourceSectionIds": [
+            "glossary-and-data-model",
+            "knowledge-and-feedback",
+            "example"
+          ],
+          "executableExamplesPreserved": 0,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "permissions-and-public-links",
+          "revision": 2,
+          "sourceArticles": [
+            "permissions-and-public-links"
+          ],
+          "workflows": [
+            "T02"
+          ],
+          "audiences": [
+            "owner",
+            "integrator"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "sourceSectionIds": [
+            "permissions-and-public-links",
+            "publication",
+            "revocation"
+          ],
+          "executableExamplesPreserved": 0,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "encryption-and-data-boundaries",
+          "revision": 2,
+          "sourceArticles": [
+            "encryption-and-data-boundaries"
+          ],
+          "workflows": [
+            "T04"
+          ],
+          "audiences": [
+            "member",
+            "operator"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "sourceSectionIds": [
+            "encryption-and-data-boundaries",
+            "exceptions",
+            "recovery"
+          ],
+          "executableExamplesPreserved": 0,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "api-and-webhooks",
+          "revision": 3,
+          "sourceArticles": [
+            "integration-api-and-webhooks",
+            "feedback-ingestion-and-sso"
+          ],
+          "workflows": [
+            "T07",
+            "F06"
+          ],
+          "audiences": [
+            "integrator"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5); 0.11.1 candidate (cd1843e12)",
+          "sourceSectionIds": [
+            "integration-api-and-webhooks",
+            "send",
+            "receive",
+            "limits",
+            "feedback-ingestion-and-sso",
+            "errors",
+            "sso"
+          ],
+          "executableExamplesPreserved": 2,
+          "sectionBodyChanges": []
+        },
+        {
+          "id": "integration-troubleshooting",
+          "revision": 2,
+          "sourceArticles": [
+            "integration-troubleshooting"
+          ],
+          "workflows": [
+            "T08"
+          ],
+          "audiences": [
+            "integrator"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "sourceSectionIds": [
+            "integration-troubleshooting",
+            "oauth",
+            "webhooks",
+            "git"
+          ],
+          "executableExamplesPreserved": 0,
+          "sectionBodyChanges": []
+        }
+      ]
+    }
+  ],
+  "revisionFinalization": "Parent raised current guide, English source and figure revisions above the highest inherited revision in every locale. Article wording was unchanged by this metadata correction; this record identifies the resulting guide revisions."
+}

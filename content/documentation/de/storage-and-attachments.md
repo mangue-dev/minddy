@@ -2,7 +2,7 @@
 {
   "id": "storage-and-attachments",
   "locale": "de",
-  "title": "Storage dauerhaft betreiben und Anhänge prüfen",
+  "title": "Speicher und Anhänge",
   "summary": "PostgreSQL speichert Storage-Objektmetadaten und Anwendungsreferenzen.",
   "topic": "Instanz betreiben",
   "type": "guide",
@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 1,
-  "sourceRevision": 1,
+  "revision": 2,
+  "sourceRevision": 2,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -38,18 +38,18 @@
     ]
   },
   "review": {
-    "revision": 1,
-    "fact": "agent:/root/automation_account_documentation (independent targeted primary-source review); agent:/root/review_documentation_locales (independent final lifecycle/Storage delta review; prior complete review retained)",
-    "language": "agent:/root/automation_account_documentation (complete independent article and caption review); agent:/root/review_documentation_locales (independent final lifecycle/Storage delta review; prior complete review retained)",
-    "date": "2026-10-08"
+    "revision": 2,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
+    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison)",
+    "date": "2026-10-09"
   },
   "related": [
-    "back-up-the-reference-instance",
-    "logical-and-provider-backups",
-    "restore-and-roll-back"
+    "backups-and-restoration"
   ],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Storage dauerhaft betreiben und Anhänge prüfen"
+  ],
   "figures": [
     {
       "id": "storage-and-attachments-flow",
@@ -57,7 +57,7 @@
       "src": "/documentation/de/storage-and-attachments-flow.svg",
       "alt": "Diagramm: Autorisierter Anwendungsdateizugriff. PostgreSQL-Objektmetadaten. Rohbytes im Dateisystem oder S3. Passende Konfiguration und Schlüssel.",
       "caption": "Diese Komponenten haben unterschiedliche Aufgaben. Autorisierter Anwendungsdateizugriff. PostgreSQL-Objektmetadaten. Rohbytes im Dateisystem oder S3. Passende Konfiguration und Schlüssel.",
-      "revision": 1,
+      "revision": 2,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

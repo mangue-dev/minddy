@@ -2,7 +2,7 @@
 {
   "id": "transfer-between-instances",
   "locale": "es",
-  "title": "Transferir datos entre instancias",
+  "title": "Transferencia de datos de la cuenta",
   "summary": "Exportar JSON privado, importar de forma aditiva y revisar conflictos y exclusiones.",
   "topic": "Cuenta y aplicaciones",
   "type": "guide",
@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 1,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (cd1843e12)",
     "editions": [
@@ -38,14 +38,16 @@
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "2026-10-08",
-    "language": "2026-10-08",
-    "date": "2026-10-08"
+    "revision": 4,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison)",
+    "date": "2026-10-09"
   },
   "related": [],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Transferir datos entre instancias"
+  ],
   "figures": [
     {
       "id": "transfer-between-instances-workflow",
@@ -53,7 +55,7 @@
       "src": "/documentation/es/transfer-between-instances-workflow.png",
       "alt": "Ajustes de transferencia con botón para importar un archivo.",
       "caption": "Elige el JSON intacto exportado de la cuenta de origen; revisa el resultado antes de cerrar.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -68,7 +70,7 @@
       "src": "/documentation/es/transfer-between-instances-export-workflow.png",
       "alt": "Control de exportación de la cuenta.",
       "caption": "Control de exportación de la cuenta. El archivo excluye claves y tokens; la captura muestra el botón antes de descargarlo.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -83,7 +85,7 @@
       "src": "/documentation/es/transfer-between-instances-result.png",
       "alt": "Resultado de importación con cero identificadores reasignados y cero membresías omitidas.",
       "caption": "Esta importación real de datos personales no presenta conflictos de identificadores ni membresías omitidas. Revise los recuentos y pulse Recargar la cuenta o cierre el diálogo para recargarla.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

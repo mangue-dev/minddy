@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { documentationLocales, documentationPath, isPublishedDocumentation, parseDocumentation, resolveDocumentationPath, searchDocumentation, localizeDocumentationLink } from "./documentation-core.mjs";
+import { documentationLocales, documentationPath, isPublishedDocumentation, parseDocumentation, resolveDocumentationPath, searchDocumentation, localizeDocumentationLink, migratedDocumentationHref } from "./documentation-core.mjs";
 import { localizedHref, switchLocaleHref } from "./locale-href";
 import type { DocumentationArticle } from "./documentation";
 
@@ -68,5 +68,25 @@ describe("official documentation boundaries", () => {
     expect(results).toHaveLength(25);
     expect(results[0].id).toBe("article-24");
     expect(results[0].href).toContain("#recovery");
+  });
+
+  it("migrates old task URLs without losing queries or ambiguous legacy fragments", () => {
+    const route = { article: "git", section: "forge-issue-sync", sections: { "forge-issue-sync": "forge-issue-sync", recovery: "forge-issue-sync-recovery" } };
+    expect(migratedDocumentationHref("forge-issue-sync", "fr", route, "?q=git", "#recovery"))
+      .toBe("/fr/documentation/git?q=git#forge-issue-sync-recovery");
+    expect(migratedDocumentationHref("forge-issue-sync", "de", route))
+      .toBe("/de/dokumentation/git#forge-issue-sync");
+    expect(migratedDocumentationHref("forge-issue-sync", "en", route, "", "#future-section"))
+      .toBe("/docs/git#future-section");
+    expect(migratedDocumentationHref("git", "en", route)).toBeNull();
+    expect(migratedDocumentationHref("unknown", "en", undefined)).toBeNull();
+  });
+
+  it("opens the matching task heading inside a feature guide instead of an earlier mention", () => {
+    const guide = { ...article, id: "issues", locale: "en" as const, title: "Issues", summary: "Manage issues.", tags: [],
+      content: "## Create an issue {#create}\n\nMaintain an implementation plan separately.\n\n## Implementation plans {#plans}\n\nOpen the Plan tab and maintain implementation plan tasks." };
+    const hit = searchDocumentation([guide], "implementation plan")[0];
+    expect(hit.href).toBe("/docs/issues#plans");
+    expect(hit.excerpt).toContain("Open the Plan tab");
   });
 });

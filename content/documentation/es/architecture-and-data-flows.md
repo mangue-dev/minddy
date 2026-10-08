@@ -2,7 +2,7 @@
 {
   "id": "architecture-and-data-flows",
   "locale": "es",
-  "title": "Seguir los flujos entre aplicación, base y proveedores",
+  "title": "Arquitectura y flujos de datos",
   "summary": "Next.js proporciona la interfaz y las API autorizadas.",
   "topic": "Conceptos técnicos",
   "type": "explanation",
@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 1,
-  "sourceRevision": 1,
+  "revision": 2,
+  "sourceRevision": 2,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -39,18 +39,20 @@
     ]
   },
   "review": {
-    "revision": 1,
-    "fact": "agent:/root/automation_account_documentation (independent targeted primary-source review)",
-    "language": "Codex agent review_documentation_locales: independent complete English/Spanish meaning and idiom review, not human review",
-    "date": "2026-10-08"
+    "revision": 2,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison)",
+    "date": "2026-10-09"
   },
   "related": [
-    "optional-providers",
+    "instance-configuration",
     "storage-and-attachments",
-    "numo-execution-model"
+    "numo"
   ],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Seguir los flujos entre aplicación, base y proveedores"
+  ],
   "figures": [
     {
       "id": "architecture-and-data-flows-flow",
@@ -58,7 +60,7 @@
       "src": "/documentation/es/architecture-and-data-flows-flow.svg",
       "alt": "Diagrama: Navegador y aplicación autenticada. Supabase: PostgreSQL, Auth, Storage, Realtime. Planificador independiente y runner fiable. Proveedores opcionales: destinos separados.",
       "caption": "Estos componentes tienen responsabilidades distintas. Navegador y aplicación autenticada. Supabase: PostgreSQL, Auth, Storage, Realtime. Planificador independiente y runner fiable. Proveedores opcionales: destinos separados.",
-      "revision": 1,
+      "revision": 2,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -73,6 +75,7 @@
   ]
 }
 ---
+
 ## Seguir los flujos entre aplicación, base y proveedores {#architecture-and-data-flows}
 
 Next.js proporciona la interfaz y las API autorizadas. Supabase proporciona PostgreSQL, Auth, Storage y Realtime. PostgreSQL conserva registros de aplicación, cuentas, datos de plataforma y metadatos de archivos; Storage conserva los bytes. La configuración protegida contiene claves y parámetros de los proveedores. Los contenedores pueden recrearse, pero los volúmenes, los bytes y las claves deben persistir. Una restauración completa reúne esos elementos en el mismo punto de recuperación.
@@ -82,8 +85,6 @@ Next.js proporciona la interfaz y las API autorizadas. Supabase proporciona Post
 ## Seguir una solicitud {#requests}
 
 El navegador utiliza las URL de origen públicas de Minddy y Supabase. Auth crea la sesión; el servidor comprueba el usuario y el objeto antes de operar. Realtime propaga los cambios. En full, el servidor usa Kong en la red interna sin cambiar las URL del navegador ni los enlaces de cuenta. El planificador envía peticiones HTTP autenticadas sin un navegador. Cuando Numo necesita trabajar con código, el runner de confianza crea sandboxes restringidas para el repositorio vinculado; esas sandboxes no reciben secretos de la instancia ni el socket Docker.
-
-
 
 ## Identificar destinos externos {#providers}
 

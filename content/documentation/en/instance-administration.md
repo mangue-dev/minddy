@@ -2,7 +2,7 @@
 {
   "id": "instance-administration",
   "locale": "en",
-  "title": "Use the instance administrator console",
+  "title": "Instance administration",
   "summary": "Instance administration is separate from project ownership.",
   "topic": "Operate an instance",
   "type": "guide",
@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 1,
-  "sourceRevision": 1,
+  "revision": 2,
+  "sourceRevision": 2,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -39,17 +39,19 @@
     ]
   },
   "review": {
-    "revision": 1,
-    "fact": "agent:/root/automation_account_documentation (independent targeted primary-source review)",
-    "language": "agent:/root/automation_account_documentation (complete independent article and caption review)",
-    "date": "2026-10-08"
+    "revision": 2,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun)",
+    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review)",
+    "date": "2026-10-09"
   },
   "related": [
     "authentication-and-email",
     "instance-configuration"
   ],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Use the instance administrator console"
+  ],
   "figures": [
     {
       "id": "instance-administration-flow",
@@ -57,7 +59,7 @@
       "src": "/documentation/en/instance-administration-overview.png",
       "alt": "Administrator overview with aggregate account, onboarding and content metrics.",
       "caption": "Overview shows aggregate instance indicators. Finances is absent on this demonstration profile because no managed OpenRouter key is configured.",
-      "revision": 1,
+      "revision": 2,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -72,7 +74,7 @@
       "src": "/documentation/en/instance-administration-users.png",
       "alt": "Account support panel with exact email lookup and no directory of user content.",
       "caption": "Users opens a specific account for support or billing; the initial screen does not list private activity or personal content.",
-      "revision": 1,
+      "revision": 2,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -87,7 +89,7 @@
       "src": "/documentation/en/instance-administration-models.png",
       "alt": "Instance AI model and reasoning settings.",
       "caption": "Models configures defaults and dedicated uses. This capture shows the existing configuration; no model or provider setting was changed.",
-      "revision": 1,
+      "revision": 2,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

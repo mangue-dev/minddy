@@ -2,7 +2,7 @@
 {
   "id": "task-notebook",
   "locale": "es",
-  "title": "Capturar notas en el cuaderno privado",
+  "title": "Cuaderno de tareas",
   "summary": "Escribe notas rápidas y convierte una tarea seleccionada en trabajo del proyecto cuando necesite seguimiento.",
   "topic": "Planificar y encontrar trabajo",
   "type": "guide",
@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -41,18 +41,20 @@
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "2026-10-08",
-    "language": "2026-10-08",
-    "date": "2026-10-08"
+    "revision": 3,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison)",
+    "date": "2026-10-09"
   },
   "related": [
-    "create-an-issue",
-    "work-with-numo",
-    "create-and-organize-pages"
+    "issues",
+    "numo",
+    "pages"
   ],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Capturar notas en el cuaderno privado"
+  ],
   "figures": [
     {
       "id": "task-notebook-steps",
@@ -60,7 +62,7 @@
       "src": "/documentation/es/work-task-notebook.png",
       "alt": "Tareas personales de demostración traducidas en el cuaderno.",
       "caption": "El cuaderno mantiene los pasos personales fuera de la jerarquía de incidencias del proyecto. Los estados del ejemplo no se modifican.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

@@ -2,7 +2,7 @@
 {
   "id": "first-project",
   "locale": "fr",
-  "title": "Terminer votre premier ticket",
+  "title": "Premiers pas",
   "summary": "Créez ou rejoignez un projet, décrivez une tâche et clôturez-la après avoir vérifié son résultat.",
   "topic": "Premiers pas",
   "type": "tutorial",
@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -42,21 +42,22 @@
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "2026-10-08",
-    "language": "2026-10-08",
-    "date": "2026-10-08"
+    "revision": 5,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun)",
+    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review)",
+    "date": "2026-10-09"
   },
   "related": [
-    "account-access",
-    "project-members",
-    "create-an-issue",
-    "issue-statuses"
+    "accounts",
+    "projects",
+    "issues"
   ],
   "aliases": [
     "core-tracker"
   ],
-  "tags": [],
+  "tags": [
+    "Terminer votre premier ticket"
+  ],
   "figures": [
     {
       "id": "first-project-steps",
@@ -64,7 +65,7 @@
       "src": "/documentation/fr/reader-first-project.png",
       "alt": "Ticket de démonstration terminé, avec description et commentaire enregistré.",
       "caption": "L’état terminé correspond au contrôle du parcours applicatif. Il ne signifie pas que le lien e-mail du site d’exemple a été testé.",
-      "revision": 2,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -92,7 +93,7 @@ Utilisez un compte sur l’instance souhaitée. Dans cet exemple, créez un proj
 
 ![Ticket de démonstration terminé, avec description et commentaire enregistré.](/documentation/fr/reader-first-project.png)
 
-## Retrouver un résultat inattendu {#first-use-recovery}
+## Résoudre un résultat inattendu {#first-use-recovery}
 
 Une invitation concerne un compte et une instance précis. Si elle manque, vérifiez l’adresse fournie au propriétaire et ouvrez la boîte de réception de cette même instance. Connaître le nom d’un projet ne permet pas de le rejoindre. Si un ticket disparaît du tableau après un changement d’état, retirez les filtres ou recherchez son identifiant avant d’en créer un autre.
 

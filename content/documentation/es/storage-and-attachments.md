@@ -2,7 +2,7 @@
 {
   "id": "storage-and-attachments",
   "locale": "es",
-  "title": "Mantener Storage duradero y diagnosticar archivos adjuntos",
+  "title": "Almacenamiento y archivos adjuntos",
   "summary": "PostgreSQL conserva los metadatos de los objetos Storage y las referencias de la aplicación; el backend Storage conserva sus bytes.",
   "topic": "Administrar una instancia",
   "type": "guide",
@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 1,
-  "sourceRevision": 1,
+  "revision": 2,
+  "sourceRevision": 2,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -38,18 +38,18 @@
     ]
   },
   "review": {
-    "revision": 1,
-    "fact": "agent:/root/automation_account_documentation (independent targeted primary-source review); agent:/root/review_documentation_locales (independent final lifecycle/Storage delta review; prior complete review retained)",
-    "language": "Codex agent review_documentation_locales: independent complete English/Spanish meaning and idiom review, not human review; agent:/root/review_documentation_locales (independent final lifecycle/Storage delta review; prior complete review retained)",
-    "date": "2026-10-08"
+    "revision": 2,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison)",
+    "date": "2026-10-09"
   },
   "related": [
-    "back-up-the-reference-instance",
-    "logical-and-provider-backups",
-    "restore-and-roll-back"
+    "backups-and-restoration"
   ],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Mantener Storage duradero y diagnosticar archivos adjuntos"
+  ],
   "figures": [
     {
       "id": "storage-and-attachments-flow",
@@ -57,7 +57,7 @@
       "src": "/documentation/es/storage-and-attachments-flow.svg",
       "alt": "Diagrama: Acceso a archivo autorizado. Metadatos PostgreSQL del objeto. Bytes brutos en archivos o S3. Configuración y claves correspondientes.",
       "caption": "Estos componentes tienen responsabilidades distintas. Acceso a archivo autorizado. Metadatos PostgreSQL del objeto. Bytes brutos en archivos o S3. Configuración y claves correspondientes.",
-      "revision": 1,
+      "revision": 2,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -72,6 +72,7 @@
   ]
 }
 ---
+
 ## Mantener Storage duradero y diagnosticar archivos adjuntos {#storage-and-attachments}
 
 PostgreSQL conserva los metadatos de los objetos Storage y las referencias de la aplicación; el backend Storage conserva sus bytes. Ambos deben pertenecer a la misma instancia y al mismo punto de copia. El perfil full con almacenamiento filesystem persiste los bytes en docker/volumes/storage de la distribución upstream fijada. Un backend compatible con S3 necesita un snapshot independiente de los bytes originales. Los archivos efímeros de los contenedores no son Storage duradero. Vigile la capacidad para la base de datos, los adjuntos y las copias, y mantenga estas últimas fuera del disco activo de Storage.
@@ -81,8 +82,6 @@ PostgreSQL conserva los metadatos de los objetos Storage y las referencias de la
 ## Comprobar acceso autorizado {#access}
 
 La aplicación verifica la autorización antes de permitir descargar archivos privados de páginas e incidencias. Publicar una página expone solo los archivos del conjunto publicado mediante URL firmadas; no convierte el bucket en público ni abre las rutas privadas. Que exista un objeto en disco no demuestra que sus metadatos, políticas, clave de cifrado o permisos sean correctos. Con una cuenta de demostración, suba y descargue un archivo y compare su SHA-256. Repita la prueba tras restaurar para cada bucket utilizado.
-
-
 
 ## Recuperarse de un fallo {#recover}
 

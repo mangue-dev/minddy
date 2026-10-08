@@ -2,7 +2,7 @@
 {
   "id": "storage-and-attachments",
   "locale": "fr",
-  "title": "Conserver Storage durable et diagnostiquer les pièces jointes",
+  "title": "Stockage et pièces jointes",
   "summary": "PostgreSQL conserve les métadonnées des objets Storage et les références applicatives.",
   "topic": "Exploiter une instance",
   "type": "guide",
@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 1,
-  "sourceRevision": 1,
+  "revision": 2,
+  "sourceRevision": 2,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -38,18 +38,18 @@
     ]
   },
   "review": {
-    "revision": 1,
-    "fact": "agent:/root/automation_account_documentation (independent targeted primary-source review); agent:/root/review_documentation_locales (independent final lifecycle/Storage delta review; prior complete review retained)",
-    "language": "agent:/root/automation_account_documentation (complete independent article and caption review); agent:/root/review_documentation_locales (independent final lifecycle/Storage delta review; prior complete review retained)",
-    "date": "2026-10-08"
+    "revision": 2,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun)",
+    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review)",
+    "date": "2026-10-09"
   },
   "related": [
-    "back-up-the-reference-instance",
-    "logical-and-provider-backups",
-    "restore-and-roll-back"
+    "backups-and-restoration"
   ],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Conserver Storage durable et diagnostiquer les pièces jointes"
+  ],
   "figures": [
     {
       "id": "storage-and-attachments-flow",
@@ -57,7 +57,7 @@
       "src": "/documentation/fr/storage-and-attachments-flow.svg",
       "alt": "Schéma: Accès fichier autorisé par l’application. Métadonnées d’objets PostgreSQL. Octets bruts sur fichiers ou S3. Configuration et clés correspondantes.",
       "caption": "Ces composants ont des responsabilités distinctes. Accès fichier autorisé par l’application. Métadonnées d’objets PostgreSQL. Octets bruts sur fichiers ou S3. Configuration et clés correspondantes.",
-      "revision": 1,
+      "revision": 2,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -84,7 +84,7 @@ PostgreSQL conserve les métadonnées des objets Storage et les références app
 
 Les fichiers privés de pages et tickets passent par l’autorisation applicative avant qu’un téléchargement soit généré. Publier une page expose uniquement les fichiers de l’ensemble publié au moyen d’URLs signées ; cela ne rend pas le bucket public ni la route privée anonyme. Un objet présent sur disque ne prouve pas que métadonnées, politiques, clé et permissions sont correctes. Avec un compte de démonstration, téléversez puis téléchargez un fichier et comparez son SHA-256. Recommencez après restauration dans chaque bucket utilisé.
 
-## Récupérer une panne {#recover}
+## Résoudre une panne de fichier {#recover}
 
 Lancez le vérificateur Supabase, vérifiez pile et clé service-role, puis comparez enregistrements des objets, octets du backend et clés conservées. Corrigez la panne de service, politique ou configuration avant de réessayer. Ne supprimez jamais un bucket avatars non vide pour éliminer un avertissement. Restaurer les enregistrements SQL seuls ne restaure pas les octets. Pour S3, restaurez le snapshot brut du backend, sans passer par /storage/v1/s3 qui peut produire des métadonnées contradictoires.
 

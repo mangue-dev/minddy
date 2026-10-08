@@ -2,7 +2,7 @@
 {
   "id": "encryption-and-data-boundaries",
   "locale": "en",
-  "title": "Understand encryption and the data it does not hide",
+  "title": "Encryption and data boundaries",
   "summary": "When configured and migrated, Minddy encrypts workspace content and files before durable writes with authenticated server-side encryption.",
   "topic": "Technical concepts",
   "type": "explanation",
@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 1,
-  "sourceRevision": 1,
+  "revision": 2,
+  "sourceRevision": 2,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -40,18 +40,20 @@
     ]
   },
   "review": {
-    "revision": 1,
-    "fact": "agent:/root/automation_account_documentation (independent targeted primary-source review)",
-    "language": "agent:/root/automation_account_documentation (complete independent article and caption review)",
-    "date": "2026-10-08"
+    "revision": 2,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun)",
+    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review)",
+    "date": "2026-10-09"
   },
   "related": [
     "workspace-encryption",
-    "restore-and-roll-back",
+    "backups-and-restoration",
     "permissions-and-public-links"
   ],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Understand encryption and the data it does not hide"
+  ],
   "figures": [
     {
       "id": "encryption-and-data-boundaries-flow",
@@ -59,7 +61,7 @@
       "src": "/documentation/en/encryption-and-data-boundaries-flow.svg",
       "alt": "Diagram: Encrypted durable content and wrapped keys. Root key stays in protected server configuration. Authorized runtime can decrypt content. Exports and external providers need separate care.",
       "caption": "These components have distinct responsibilities. Encrypted durable content and wrapped keys. Root key stays in protected server configuration. Authorized runtime can decrypt content. Exports and external providers need separate care.",
-      "revision": 1,
+      "revision": 2,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

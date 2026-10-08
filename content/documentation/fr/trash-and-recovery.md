@@ -2,7 +2,7 @@
 {
   "id": "trash-and-recovery",
   "locale": "fr",
-  "title": "Restaurer du travail supprimé",
+  "title": "Corbeille et restauration",
   "summary": "Retrouvez un objet, restaurez ses dépendances et distinguez la suppression définitive.",
   "topic": "Planifier et retrouver le travail",
   "type": "guide",
@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 1,
-  "sourceRevision": 1,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -36,18 +36,20 @@
     ]
   },
   "review": {
-    "revision": 1,
-    "fact": "agent:/root/automation_account_documentation (independent primary-source comparison)",
-    "language": "agent:/root/automation_account_documentation (independent complete article review)",
-    "date": "2026-10-08"
+    "revision": 4,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun)",
+    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review)",
+    "date": "2026-10-09"
   },
   "related": [
-    "page-history",
-    "privacy-and-account-deletion",
-    "project-settings"
+    "pages",
+    "accounts",
+    "projects"
   ],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Restaurer du travail supprimé"
+  ],
   "figures": [
     {
       "id": "trash-and-recovery-steps",
@@ -55,7 +57,7 @@
       "src": "/documentation/fr/reader-trash.png",
       "alt": "Ticket de démonstration récupérable avec trente jours restants dans la corbeille.",
       "caption": "Les actions de la ligne permettent de restaurer le ticket. Vider la corbeille est une opération permanente distincte.",
-      "revision": 1,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

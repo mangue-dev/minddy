@@ -2,7 +2,7 @@
 {
   "id": "storage-and-attachments",
   "locale": "en",
-  "title": "Keep Storage durable and diagnose attachments",
+  "title": "Storage and attachments",
   "summary": "PostgreSQL stores Storage object metadata and application file references.",
   "topic": "Operate an instance",
   "type": "guide",
@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 1,
-  "sourceRevision": 1,
+  "revision": 2,
+  "sourceRevision": 2,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -38,18 +38,18 @@
     ]
   },
   "review": {
-    "revision": 1,
-    "fact": "agent:/root/automation_account_documentation (independent targeted primary-source review); agent:/root/review_documentation_locales (independent final lifecycle/Storage delta review; prior complete review retained)",
-    "language": "agent:/root/automation_account_documentation (complete independent article and caption review); agent:/root/review_documentation_locales (independent final lifecycle/Storage delta review; prior complete review retained)",
-    "date": "2026-10-08"
+    "revision": 2,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun)",
+    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review)",
+    "date": "2026-10-09"
   },
   "related": [
-    "back-up-the-reference-instance",
-    "logical-and-provider-backups",
-    "restore-and-roll-back"
+    "backups-and-restoration"
   ],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Keep Storage durable and diagnose attachments"
+  ],
   "figures": [
     {
       "id": "storage-and-attachments-flow",
@@ -57,7 +57,7 @@
       "src": "/documentation/en/storage-and-attachments-flow.svg",
       "alt": "Diagram: Authorized application file access. PostgreSQL object metadata. Raw filesystem or S3 backend bytes. Matching configuration and recovery keys.",
       "caption": "These components have distinct responsibilities. Authorized application file access. PostgreSQL object metadata. Raw filesystem or S3 backend bytes. Matching configuration and recovery keys.",
-      "revision": 1,
+      "revision": 2,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

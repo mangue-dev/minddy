@@ -2,7 +2,7 @@
 {
   "id": "trash-and-recovery",
   "locale": "es",
-  "title": "Restaurar trabajo eliminado",
+  "title": "Papelera y recuperación",
   "summary": "Encuentra un objeto eliminado, restaura sus dependencias y distingue la eliminación definitiva.",
   "topic": "Planificar y encontrar trabajo",
   "type": "guide",
@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 1,
-  "sourceRevision": 1,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -36,18 +36,20 @@
     ]
   },
   "review": {
-    "revision": 1,
-    "fact": "2026-10-08",
-    "language": "2026-10-08",
-    "date": "2026-10-08"
+    "revision": 4,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison)",
+    "date": "2026-10-09"
   },
   "related": [
-    "page-history",
-    "privacy-and-account-deletion",
-    "project-settings"
+    "pages",
+    "accounts",
+    "projects"
   ],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Restaurar trabajo eliminado"
+  ],
   "figures": [
     {
       "id": "trash-and-recovery-steps",
@@ -55,7 +57,7 @@
       "src": "/documentation/es/reader-trash.png",
       "alt": "Incidencia de demostración recuperable con treinta días restantes en la papelera.",
       "caption": "Las acciones de la fila permiten restaurarla. Vaciar la papelera es una operación permanente independiente.",
-      "revision": 1,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

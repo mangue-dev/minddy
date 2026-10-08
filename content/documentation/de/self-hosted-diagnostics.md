@@ -2,7 +2,7 @@
 {
   "id": "self-hosted-diagnostics",
   "locale": "de",
-  "title": "Fehler einer selbstgehosteten Installation eingrenzen",
+  "title": "Instanzdiagnose",
   "summary": "Führen Sie den nur lesenden doctor aus dem tatsächlich installierten Release-Checkout und der geschützten Umgebung aus.",
   "topic": "Instanz betreiben",
   "type": "troubleshooting",
@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 1,
-  "sourceRevision": 1,
+  "revision": 2,
+  "sourceRevision": 2,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -36,10 +36,10 @@
     ]
   },
   "review": {
-    "revision": 1,
-    "fact": "agent:/root/automation_account_documentation (independent targeted primary-source review)",
-    "language": "agent:/root/automation_account_documentation (complete independent article and caption review)",
-    "date": "2026-10-08"
+    "revision": 2,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
+    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison)",
+    "date": "2026-10-09"
   },
   "related": [
     "instance-configuration",
@@ -47,7 +47,9 @@
     "storage-and-attachments"
   ],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Fehler einer selbstgehosteten Installation eingrenzen"
+  ],
   "figures": [],
   "requiredFigures": []
 }

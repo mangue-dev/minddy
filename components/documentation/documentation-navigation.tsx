@@ -106,6 +106,7 @@ export function DocumentationSearch({ articles, locale, initialQuery = "", label
         const article = articles.find(article => article.id === item.id);
         const query = usePaletteStore.getState().query;
         const result = article && searchDocumentation([article], query)[0];
+        setOpen(false);
         window.location.assign(result?.href ?? item.href!);
       }} />
   </>;

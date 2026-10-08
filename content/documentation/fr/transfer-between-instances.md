@@ -2,7 +2,7 @@
 {
   "id": "transfer-between-instances",
   "locale": "fr",
-  "title": "Transférer ses données entre instances",
+  "title": "Transfert des données du compte",
   "summary": "Exporter un JSON privé, importer par ajout et vérifier conflits et exclusions.",
   "topic": "Compte et applications",
   "type": "guide",
@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 1,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (cd1843e12)",
     "editions": [
@@ -38,14 +38,16 @@
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "2026-10-08",
-    "language": "2026-10-08",
-    "date": "2026-10-08"
+    "revision": 4,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun)",
+    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review)",
+    "date": "2026-10-09"
   },
   "related": [],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Transférer ses données entre instances"
+  ],
   "figures": [
     {
       "id": "transfer-between-instances-workflow",
@@ -53,7 +55,7 @@
       "src": "/documentation/fr/transfer-between-instances-workflow.png",
       "alt": "Réglages du transfert avec le bouton d’importation de fichier.",
       "caption": "Choisissez le JSON intact exporté depuis le compte source ; vérifiez le résultat avant de fermer.",
-      "revision": 2,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -68,7 +70,7 @@
       "src": "/documentation/fr/transfer-between-instances-export-workflow.png",
       "alt": "Commande d’export du compte.",
       "caption": "Commande d’export du compte. L’export exclut les clés et les jetons ; la capture montre le bouton avant téléchargement.",
-      "revision": 2,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -83,7 +85,7 @@
       "src": "/documentation/fr/transfer-between-instances-result.png",
       "alt": "Résultat d’import avec zéro identifiant réattribué et zéro adhésion ignorée.",
       "caption": "Cet import réel de données personnelles ne rencontre aucun conflit d’identifiant et aucune adhésion ignorée. Vérifiez les compteurs, puis choisissez Recharger le compte ou fermez la boîte de dialogue.",
-      "revision": 2,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -108,7 +110,6 @@ Connectez-vous à l’instance source et ouvrez la section Données des réglage
 L’import ajoute des données au lieu de remplacer la destination. Les identifiants sont conservés lorsqu’ils peuvent être réutilisés sans risque ; les conflits reçoivent de nouveaux identifiants. Le résultat indique les identifiants remappés et les adhésions ignorées. Les références d’adhésion à des projets existants ne sont restaurées que si le projet cible existe déjà et que la référence est autorisée. Après le rechargement de la page, vérifiez les projets, tickets, pages et données personnelles.
 
 ![Réglages du transfert avec le bouton d’importation de fichier.](/documentation/fr/transfer-between-instances-workflow.png)
-
 
 ## Reconnecter les services {#exclusions}
 

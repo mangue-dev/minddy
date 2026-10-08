@@ -2,7 +2,7 @@
 {
   "id": "integration-troubleshooting",
   "locale": "en",
-  "title": "Recover an OAuth, MCP, webhook or Git connection failure",
+  "title": "Connection troubleshooting",
   "summary": "Minddy MCP connects an external assistant to Minddy; personal MCP connections let Numo call another server.",
   "topic": "Technical concepts",
   "type": "troubleshooting",
@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 1,
-  "sourceRevision": 1,
+  "revision": 2,
+  "sourceRevision": 2,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -39,17 +39,19 @@
     ]
   },
   "review": {
-    "revision": 1,
-    "fact": "agent:/root/automation_account_documentation (independent targeted primary-source review)",
-    "language": "agent:/root/automation_account_documentation (complete independent article and caption review)",
-    "date": "2026-10-08"
+    "revision": 2,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun)",
+    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review)",
+    "date": "2026-10-09"
   },
   "related": [
-    "integration-api-and-webhooks",
-    "mcp-tool-reference"
+    "api-and-webhooks",
+    "minddy-mcp"
   ],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Recover an OAuth, MCP, webhook or Git connection failure"
+  ],
   "figures": [
     {
       "id": "integration-troubleshooting-flow",
@@ -57,7 +59,7 @@
       "src": "/documentation/en/integration-troubleshooting-error.png",
       "alt": "MCP connection loading error with the Try again button.",
       "caption": "Try again reloads the connections after the network becomes available.",
-      "revision": 1,
+      "revision": 2,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

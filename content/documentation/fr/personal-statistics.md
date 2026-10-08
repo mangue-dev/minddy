@@ -2,7 +2,7 @@
 {
   "id": "personal-statistics",
   "locale": "fr",
-  "title": "Lire vos statistiques personnelles",
+  "title": "Statistiques personnelles",
   "summary": "Comparez l’activité terminée et les temps mesurés dans leur périmètre réel.",
   "topic": "Planifier et retrouver le travail",
   "type": "explanation",
@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -40,18 +40,20 @@
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "2026-10-08",
-    "language": "2026-10-08",
-    "date": "2026-10-08"
+    "revision": 3,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun)",
+    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review)",
+    "date": "2026-10-09"
   },
   "related": [
     "personal-cycle",
     "objectives",
-    "plans-and-ai-usage"
+    "ai-settings-and-usage"
   ],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Lire vos statistiques personnelles"
+  ],
   "figures": [
     {
       "id": "personal-statistics-steps",
@@ -59,7 +61,7 @@
       "src": "/documentation/fr/reader-statistics.png",
       "alt": "Statistiques personnelles avec grille annuelle, répartitions, rythme de travail et totaux depuis le début.",
       "caption": "Ce compte de démonstration compte un ticket terminé et onze tickets créés. Les statistiques affichées sont réelles ; les noms du projet et de l’objectif ont été localisés pour l’illustration.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -79,7 +81,7 @@
 
 Ouvrez les statistiques depuis la navigation du compte. Lisez la grille d’activité annuelle, les répartitions par projet, catégorie et objectif, la section du rythme et les totaux historiques. L’écran affiche ses périodes prévues ; il n’a pas de filtre de dates pour choisir un autre intervalle. Cet écran résume votre travail ; il n’établit pas un classement des performances d’un autre membre.
 
-Consultez tickets terminés, rythme, jours actifs, séries et temps pour examiner votre activité. La grille d’activité compte les événements de réalisation de tickets et de tâches du carnet, regroupés en jours calendaires dans votre fuseau. Un jour actif contient au moins un de ces événements ; la série courante tolère un jour présent vide, puis s’arrête au prochain jour vide. Le total historique des tickets terminés déduplique les identifiants : un compte d’événements et un total de tickets distincts ne répondent pas à la même question.
+Consultez tickets terminés, rythme, jours actifs, séries et temps pour examiner votre activité. La grille d’activité compte les événements de réalisation de tickets et de tâches du carnet, regroupés en jours calendaires dans votre fuseau. Un jour actif contient au moins un de ces événements ; la série courante tolère l’absence d’activité aujourd’hui, puis s’arrête au premier jour sans activité dans les jours précédents. Le total historique des tickets terminés déduplique les identifiants : un compte d’événements et un total de tickets distincts ne répondent pas à la même question.
 
 Le temps par effort est la médiane du temps écoulé entre le premier passage enregistré d’un ticket en cours et sa réalisation, pour les tickets terminés qui vous sont attribués et possèdent effort et horodatages nécessaires. Il comprend le temps d’attente écoulé ; ce n’est pas un chronomètre d’heures travaillées. La vue des quantités montre la taille de l’échantillon. Une médiane absente peut indiquer l’absence de mesures admissibles, pas une durée nulle. Lisez les unités et la période décrite par chaque section avant de comparer les valeurs.
 

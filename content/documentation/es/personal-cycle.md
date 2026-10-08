@@ -2,7 +2,7 @@
 {
   "id": "personal-cycle",
   "locale": "es",
-  "title": "Planificar un ciclo personal",
+  "title": "Ciclos personales",
   "summary": "Selecciona trabajo entre proyectos para un periodo de planificación semanal o quincenal.",
   "topic": "Planificar y encontrar trabajo",
   "type": "guide",
@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 1,
-  "sourceRevision": 1,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -39,18 +39,19 @@
     ]
   },
   "review": {
-    "revision": 1,
-    "fact": "2026-10-08",
-    "language": "2026-10-08",
-    "date": "2026-10-08"
+    "revision": 4,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison)",
+    "date": "2026-10-09"
   },
   "related": [
-    "views-and-filters",
-    "bulk-issue-actions",
-    "issue-dependencies"
+    "views",
+    "issues"
   ],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Planificar un ciclo personal"
+  ],
   "figures": [
     {
       "id": "personal-cycle-steps",
@@ -58,7 +59,7 @@
       "src": "/documentation/es/reader-cycle.png",
       "alt": "Incidencia de demostración en el backlog del ciclo personal.",
       "caption": "Al añadirla se asignó al titular del ciclo y se conservó su estado de backlog.",
-      "revision": 1,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

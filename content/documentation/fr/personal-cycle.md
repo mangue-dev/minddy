@@ -2,7 +2,7 @@
 {
   "id": "personal-cycle",
   "locale": "fr",
-  "title": "Planifier votre cycle personnel",
+  "title": "Cycles personnels",
   "summary": "Choisissez du travail dans plusieurs projets pour une semaine ou une quinzaine.",
   "topic": "Planifier et retrouver le travail",
   "type": "guide",
@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 1,
-  "sourceRevision": 1,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -39,18 +39,19 @@
     ]
   },
   "review": {
-    "revision": 1,
-    "fact": "agent:/root/automation_account_documentation (independent primary-source comparison)",
-    "language": "agent:/root/automation_account_documentation (independent complete article review)",
-    "date": "2026-10-08"
+    "revision": 4,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun)",
+    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review)",
+    "date": "2026-10-09"
   },
   "related": [
-    "views-and-filters",
-    "bulk-issue-actions",
-    "issue-dependencies"
+    "views",
+    "issues"
   ],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Planifier votre cycle personnel"
+  ],
   "figures": [
     {
       "id": "personal-cycle-steps",
@@ -58,7 +59,7 @@
       "src": "/documentation/fr/reader-cycle.png",
       "alt": "Ticket de démonstration dans le backlog du cycle personnel.",
       "caption": "L’ajout à ce cycle a attribué le ticket au propriétaire du cycle tout en conservant l’état backlog.",
-      "revision": 1,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

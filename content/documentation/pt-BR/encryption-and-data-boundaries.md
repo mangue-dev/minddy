@@ -2,7 +2,7 @@
 {
   "id": "encryption-and-data-boundaries",
   "locale": "pt-BR",
-  "title": "Entender criptografia e dados ainda visíveis",
+  "title": "Criptografia e limites de proteção de dados",
   "summary": "Após a configuração e a migração previstas, o Minddy cifra conteúdos e arquivos antes das gravações persistentes usando criptografia autenticada no servidor.",
   "topic": "Conceitos técnicos",
   "type": "explanation",
@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 1,
-  "sourceRevision": 1,
+  "revision": 2,
+  "sourceRevision": 2,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -40,18 +40,20 @@
     ]
   },
   "review": {
-    "revision": 1,
-    "fact": "agent:/root/automation_account_documentation (independent targeted primary-source review)",
-    "language": "agent:/root/automation_account_documentation (complete independent article and caption review)",
-    "date": "2026-10-08"
+    "revision": 2,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
+    "date": "2026-10-09"
   },
   "related": [
     "workspace-encryption",
-    "restore-and-roll-back",
+    "backups-and-restoration",
     "permissions-and-public-links"
   ],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Entender criptografia e dados ainda visíveis"
+  ],
   "figures": [
     {
       "id": "encryption-and-data-boundaries-flow",
@@ -59,7 +61,7 @@
       "src": "/documentation/pt-BR/encryption-and-data-boundaries-flow.svg",
       "alt": "Diagrama: Conteúdo cifrado e chaves empacotadas. Raiz na configuração protegida do servidor. Runtime autorizado pode decifrar. Exports e provedores precisam proteção separada.",
       "caption": "Estes componentes têm responsabilidades distintas. Conteúdo cifrado e chaves empacotadas. Raiz na configuração protegida do servidor. Runtime autorizado pode decifrar. Exports e provedores precisam proteção separada.",
-      "revision": 1,
+      "revision": 2,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

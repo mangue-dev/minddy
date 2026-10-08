@@ -2,7 +2,7 @@
 {
   "id": "choose-an-instance",
   "locale": "fr",
-  "title": "Choisir le Cloud ou votre propre instance",
+  "title": "Instances Cloud et auto-hébergées",
   "summary": "Comparez les responsabilités d’exploitation, les destinations des données et les fournisseurs optionnels à configurer.",
   "topic": "Premiers pas",
   "type": "explanation",
@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 1,
-  "sourceRevision": 1,
+  "revision": 2,
+  "sourceRevision": 2,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "v0.11.0",
     "editions": [
@@ -36,21 +36,22 @@
     ]
   },
   "review": {
-    "revision": 1,
-    "fact": "agent:/root/automation_account_documentation (independent primary-source comparison)",
-    "language": "agent:/root/automation_account_documentation (independent complete article review)",
-    "date": "2026-10-08"
+    "revision": 2,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun)",
+    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review)",
+    "date": "2026-10-09"
   },
   "related": [
-    "install-a-server",
-    "managed-or-source-installation",
+    "installation",
     "transfer-between-instances",
     "architecture-and-data-flows"
   ],
   "aliases": [
     "open-source"
   ],
-  "tags": [],
+  "tags": [
+    "Choisir le Cloud ou votre propre instance"
+  ],
   "figures": [
     {
       "id": "responsibilities",
@@ -58,7 +59,7 @@
       "src": "/documentation/fr/responsibilities.svg",
       "alt": "Responsabilité d’exploitation: Exploité par Minddy, Exploité par vous.",
       "caption": "Les mêmes services du cœur nécessitent un opérateur dans les deux modèles. Les fournisseurs optionnels restent des services distincts.",
-      "revision": 1,
+      "revision": 2,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -103,4 +104,4 @@ Examinez les permissions et les conditions de traitement des données avant d’
 
 ## Sources et prochaine étape {#next-step}
 
-Le dépôt de référence est [mangue-dev/minddy](https://github.com/mangue-dev/minddy), sous GNU AGPL v3.0 uniquement. Respectez la licence et les règles de nommage pour les versions modifiées ou hébergées. Pour installer une instance, ouvrez le guide public d’auto-hébergement et son assistant. Avant de transférer votre travail, consultez le guide de transfert entre instances : les identifiants et les abonnements ne sont pas transférés avec les données du compte.
+Le dépôt de référence est [mangue-dev/minddy](https://github.com/mangue-dev/minddy), sous GNU AGPL v3.0 uniquement. Respectez la licence et les règles de nommage pour les versions modifiées ou hébergées. Pour installer une instance, ouvrez le [guide d’installation auto-hébergée](/fr/documentation/installation) et son assistant. Avant de transférer votre travail, consultez le [guide de transfert entre instances](/fr/documentation/transfer-between-instances) : les identifiants et les abonnements ne sont pas transférés avec les données du compte.

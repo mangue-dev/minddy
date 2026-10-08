@@ -2,7 +2,7 @@
 {
   "id": "notifications-and-inbox",
   "locale": "pt-BR",
-  "title": "Acompanhar notificações e convites na caixa de entrada",
+  "title": "Caixa de entrada e notificações",
   "summary": "Revise atividade não lida e menções, depois ajuste as preferências de notificação da conta.",
   "topic": "Planejar e encontrar trabalho",
   "type": "guide",
@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -37,18 +37,20 @@
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "2026-10-08",
-    "language": "2026-10-08",
-    "date": "2026-10-08"
+    "revision": 5,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
+    "date": "2026-10-09"
   },
   "related": [
-    "project-members",
-    "devices-and-notifications",
-    "profile-and-preferences"
+    "projects",
+    "applications",
+    "accounts"
   ],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Acompanhar notificações e convites na caixa de entrada"
+  ],
   "figures": [
     {
       "id": "notifications-and-inbox-steps",
@@ -56,7 +58,7 @@
       "src": "/documentation/pt-BR/work-inbox.png",
       "alt": "Abas da caixa de entrada e lista vazia de itens não lidos.",
       "caption": "A aba Não lidos vazia indica que essa visualização não tem itens não lidos. Todos mostra outras notificações mantidas.",
-      "revision": 2,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

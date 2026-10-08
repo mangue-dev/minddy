@@ -2,7 +2,7 @@
 {
   "id": "install-locally",
   "locale": "en",
-  "title": "Run a local instance from the desktop app",
+  "title": "Local instances",
   "summary": "Use a dedicated clone for evaluation with Node.js 24, pnpm 10.28.0, Git, Supabase CLI and a running Docker daemon.",
   "topic": "Operate an instance",
   "type": "tutorial",
@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 1,
-  "sourceRevision": 1,
+  "revision": 2,
+  "sourceRevision": 2,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -36,17 +36,19 @@
     ]
   },
   "review": {
-    "revision": 1,
-    "fact": "agent:/root/automation_account_documentation (independent primary-source and final correction review)",
-    "language": "agent:/root/automation_account_documentation (complete independent article and final correction review)",
-    "date": "2026-10-08"
+    "revision": 2,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun)",
+    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review)",
+    "date": "2026-10-09"
   },
   "related": [
     "workspace-encryption",
     "self-hosted-diagnostics"
   ],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Run a local instance from the desktop app"
+  ],
   "figures": [
     {
       "id": "install-locally-flow",
@@ -54,7 +56,7 @@
       "src": "/documentation/en/install-locally-flow.svg",
       "alt": "Diagram: Desktop app selects the clone. Loopback application: port 6463. Minimal Supabase and durable data. Quitting stops app and backend.",
       "caption": "These components have distinct responsibilities. Desktop app selects the clone. Loopback application: port 6463. Minimal Supabase and durable data. Quitting stops app and backend.",
-      "revision": 1,
+      "revision": 2,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -69,7 +71,7 @@
       "src": "/documentation/en/install-locally-wizard.png",
       "alt": "Public installation wizard with the local computer profile selected.",
       "caption": "Choose the personal installation when the desktop app will manage the local services.",
-      "revision": 1,
+      "revision": 2,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

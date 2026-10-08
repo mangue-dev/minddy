@@ -2,7 +2,7 @@
 {
   "id": "choose-an-instance",
   "locale": "it",
-  "title": "Scegliere Cloud o una propria istanza",
+  "title": "Istanze Cloud e self-hosted",
   "summary": "Confronta le responsabilità di gestione, le destinazioni dei dati e i fornitori opzionali da configurare.",
   "topic": "Primi passi",
   "type": "explanation",
@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 1,
-  "sourceRevision": 1,
+  "revision": 2,
+  "sourceRevision": 2,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "v0.11.0",
     "editions": [
@@ -36,21 +36,22 @@
     ]
   },
   "review": {
-    "revision": 1,
-    "fact": "2026-10-08",
-    "language": "2026-10-08",
-    "date": "2026-10-08"
+    "revision": 2,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
+    "date": "2026-10-09"
   },
   "related": [
-    "install-a-server",
-    "managed-or-source-installation",
+    "installation",
     "transfer-between-instances",
     "architecture-and-data-flows"
   ],
   "aliases": [
     "open-source"
   ],
-  "tags": [],
+  "tags": [
+    "Scegliere Cloud o una propria istanza"
+  ],
   "figures": [
     {
       "id": "responsibilities",
@@ -58,7 +59,7 @@
       "src": "/documentation/it/responsibilities.svg",
       "alt": "Responsabilità di gestione: Gestito da Minddy, Gestito da te.",
       "caption": "Gli stessi servizi del nucleo richiedono un operatore in entrambi i modelli. I fornitori opzionali restano servizi separati.",
-      "revision": 1,
+      "revision": 2,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

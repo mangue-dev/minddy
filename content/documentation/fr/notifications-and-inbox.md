@@ -2,7 +2,7 @@
 {
   "id": "notifications-and-inbox",
   "locale": "fr",
-  "title": "Suivre les notifications et invitations",
+  "title": "Boîte de réception et notifications",
   "summary": "Examinez activité non lue et mentions, puis ajustez vos préférences de notification.",
   "topic": "Planifier et retrouver le travail",
   "type": "guide",
@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -37,18 +37,20 @@
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "2026-10-08",
-    "language": "2026-10-08",
-    "date": "2026-10-08"
+    "revision": 5,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun)",
+    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review)",
+    "date": "2026-10-09"
   },
   "related": [
-    "project-members",
-    "devices-and-notifications",
-    "profile-and-preferences"
+    "projects",
+    "applications",
+    "accounts"
   ],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Suivre les notifications et invitations"
+  ],
   "figures": [
     {
       "id": "notifications-and-inbox-steps",
@@ -56,7 +58,7 @@
       "src": "/documentation/fr/work-inbox.png",
       "alt": "Onglets de la boîte de réception et liste non lue vide.",
       "caption": "L’onglet Non lues vide indique l’absence d’éléments non lus dans cette vue ; Toutes permet d’examiner les autres notifications conservées.",
-      "revision": 2,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -84,4 +86,4 @@ Les invitations de projet en attente y figurent aussi. Acceptez ou refusez aprè
 
 Les préférences de notification du compte déterminent les activités reçues. La livraison navigateur, PWA ou desktop nécessite aussi l’enregistrement de l’appareil et la permission du système. Désactiver un canal d’appareil diffère d’un changement des filtres d’activité internes.
 
-Si une notification mène à un contenu inaccessible, vérifiez adhésion et éventuelle suppression. Pour un push manquant, contrôlez permission et enregistrement avec le guide des appareils ; la boîte de réception reste utile pour examiner l’activité. Ne transmettez ni cookies de session ni contenu privé de notification dans des captures de diagnostic.
+Si une notification mène à un contenu inaccessible, vérifiez adhésion et éventuelle suppression. Pour un push manquant, contrôlez permission et enregistrement avec la [section des notifications d’appareil](/fr/documentation/applications#devices-and-notifications) ; la boîte de réception reste utile pour examiner l’activité. Ne transmettez ni cookies de session ni contenu privé de notification dans des captures de diagnostic.

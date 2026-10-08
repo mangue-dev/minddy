@@ -67,3 +67,14 @@ test("translations preserve publication identities and operating conditions", ()
   assert.match(result.output, /audiences parity differs/);
   assert.match(result.output, /compatibility parity differs/);
 });
+
+test("legacy task routes require a declared alias and complete target sections in every locale", () => {
+  const root = fixture(article => ({ ...article, aliases: ["old-task"] }));
+  const filename = path.join(root, "content/documentation/legacy-routes.json");
+  writeFileSync(filename, JSON.stringify({ "old-task": { article: "guide", section: "start", sections: { recovery: "start" } } }));
+  assert.equal(check(root).status, 0);
+  writeFileSync(filename, JSON.stringify({ "old-task": { article: "guide", section: "start", sections: { recovery: "missing" } } }));
+  assert.match(check(root).output, /missing destination section missing/);
+  writeFileSync(filename, JSON.stringify({ "undeclared-task": { article: "guide", section: "start", sections: { recovery: "start" } } }));
+  assert.match(check(root).output, /not a declared article alias/);
+});

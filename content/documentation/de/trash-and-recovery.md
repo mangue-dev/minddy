@@ -2,7 +2,7 @@
 {
   "id": "trash-and-recovery",
   "locale": "de",
-  "title": "Gelöschte Arbeit wiederherstellen",
+  "title": "Papierkorb und Wiederherstellung",
   "summary": "Finde ein gelöschtes Objekt, stelle seine Voraussetzungen wieder her und unterscheide die endgültige Entfernung.",
   "topic": "Arbeit planen und finden",
   "type": "guide",
@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 1,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -36,18 +36,20 @@
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "2026-10-08",
-    "language": "2026-10-08",
-    "date": "2026-10-08"
+    "revision": 4,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
+    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison)",
+    "date": "2026-10-09"
   },
   "related": [
-    "page-history",
-    "privacy-and-account-deletion",
-    "project-settings"
+    "pages",
+    "accounts",
+    "projects"
   ],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Gelöschte Arbeit wiederherstellen"
+  ],
   "figures": [
     {
       "id": "trash-and-recovery-steps",
@@ -55,7 +57,7 @@
       "src": "/documentation/de/reader-trash.png",
       "alt": "Wiederherstellbares Demo-Ticket mit dreißig verbleibenden Tagen im Papierkorb.",
       "caption": "Über die Zeilenaktionen stellst du das Ticket wieder her. Das Leeren des Papierkorbs ist ein eigener endgültiger Vorgang.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

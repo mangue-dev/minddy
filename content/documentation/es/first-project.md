@@ -2,7 +2,7 @@
 {
   "id": "first-project",
   "locale": "es",
-  "title": "Completar tu primera incidencia",
+  "title": "Primeros pasos",
   "summary": "Crea un proyecto o únete a uno, registra una tarea y ciérrala cuando hayas comprobado su resultado.",
   "topic": "Primeros pasos",
   "type": "tutorial",
@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 2,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -42,21 +42,22 @@
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "2026-10-08",
-    "language": "2026-10-08",
-    "date": "2026-10-08"
+    "revision": 5,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison)",
+    "date": "2026-10-09"
   },
   "related": [
-    "account-access",
-    "project-members",
-    "create-an-issue",
-    "issue-statuses"
+    "accounts",
+    "projects",
+    "issues"
   ],
   "aliases": [
     "core-tracker"
   ],
-  "tags": [],
+  "tags": [
+    "Completar tu primera incidencia"
+  ],
   "figures": [
     {
       "id": "first-project-steps",
@@ -64,7 +65,7 @@
       "src": "/documentation/es/reader-first-project.png",
       "alt": "Incidencia de demostración completada con su descripción y comentario guardado.",
       "caption": "El estado completado registra la comprobación del recorrido de la aplicación. No afirma que se probara el enlace de correo del sitio de ejemplo.",
-      "revision": 3,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

@@ -2,8 +2,8 @@
 {
   "id": "automation-settings",
   "locale": "pt-BR",
-  "title": "Configurar trabalho automático nas tarefas",
-  "summary": "Separar preferências da conta e regras exclusivas do proprietário.",
+  "title": "Automação de problemas",
+  "summary": "Configure as automações da conta e diferencie as regras do projeto reservadas ao proprietário.",
   "topic": "Conta e aplicativos",
   "type": "guide",
   "audiences": [
@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 2,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (cd1843e12)",
     "editions": [
@@ -40,14 +40,16 @@
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "2026-10-08",
-    "language": "2026-10-08",
-    "date": "2026-10-08"
+    "revision": 4,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
+    "date": "2026-10-09"
   },
   "related": [],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Configurar trabalho automático nas tarefas"
+  ],
   "figures": [
     {
       "id": "automation-settings-workflow",
@@ -55,7 +57,7 @@
       "src": "/documentation/pt-BR/automation-settings-workflow.png",
       "alt": "Predefinição de automação sem opção selecionada.",
       "caption": "Sem predefinição selecionada, esta conta não inicia trabalho automático.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -70,7 +72,7 @@
       "src": "/documentation/pt-BR/automation-settings-projects-workflow.png",
       "alt": "Seleção de projetos para as automações da conta.",
       "caption": "Seleção de projetos para as automações da conta. Os dois projetos de demonstração estão desativados; nenhuma automação é iniciada.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -92,7 +94,6 @@
 Abra a seção Automações nas configurações da conta. Escolha uma configuração predefinida, leia a explicação e a estimativa de uso, defina o atraso inicial e escolha quais tamanhos de esforço permitem etapas automáticas. As estimativas dependem do saldo disponível e não são preços fixos. Antes de habilitar o trabalho de código, confira o modelo do worker nas configurações de IA da conta. A mesma página lista os controles de automação dos projetos que você possui; membros não podem habilitar o projeto de outro proprietário.
 
 ![Predefinição de automação sem opção selecionada.](/documentation/pt-BR/automation-settings-workflow.png)
-
 
 ## Diferenciar mecanismos {#mechanisms}
 

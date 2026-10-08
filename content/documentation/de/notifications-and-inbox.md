@@ -2,7 +2,7 @@
 {
   "id": "notifications-and-inbox",
   "locale": "de",
-  "title": "Benachrichtigungen und Einladungen im Posteingang verfolgen",
+  "title": "Posteingang und Benachrichtigungen",
   "summary": "Prüfe ungelesene Aktivität und Erwähnungen und passe anschließend die Benachrichtigungseinstellungen an.",
   "topic": "Arbeit planen und finden",
   "type": "guide",
@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 4,
-  "sourceRevision": 2,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -37,18 +37,20 @@
     ]
   },
   "review": {
-    "revision": 4,
-    "fact": "2026-10-08",
-    "language": "2026-10-08",
-    "date": "2026-10-08"
+    "revision": 5,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
+    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison)",
+    "date": "2026-10-09"
   },
   "related": [
-    "project-members",
-    "devices-and-notifications",
-    "profile-and-preferences"
+    "projects",
+    "applications",
+    "accounts"
   ],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Benachrichtigungen und Einladungen im Posteingang verfolgen"
+  ],
   "figures": [
     {
       "id": "notifications-and-inbox-steps",
@@ -56,7 +58,7 @@
       "src": "/documentation/de/work-inbox.png",
       "alt": "Posteingang-Tabs und leere Liste ungelesener Einträge.",
       "caption": "Ein leerer Tab Ungelesen bedeutet, dass diese Ansicht keine ungelesenen Einträge enthält. Unter Alle findest du weitere gespeicherte Benachrichtigungen.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

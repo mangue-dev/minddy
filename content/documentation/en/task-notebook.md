@@ -2,7 +2,7 @@
 {
   "id": "task-notebook",
   "locale": "en",
-  "title": "Capture notes in the private notebook",
+  "title": "Task notebook",
   "summary": "Write quick notes and turn a selected task into project work when it needs tracking.",
   "topic": "Plan and find work",
   "type": "guide",
@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -41,18 +41,20 @@
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "2026-10-08",
-    "language": "2026-10-08",
-    "date": "2026-10-08"
+    "revision": 3,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun)",
+    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review)",
+    "date": "2026-10-09"
   },
   "related": [
-    "create-an-issue",
-    "work-with-numo",
-    "create-and-organize-pages"
+    "issues",
+    "numo",
+    "pages"
   ],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Capture notes in the private notebook"
+  ],
   "figures": [
     {
       "id": "task-notebook-steps",
@@ -60,7 +62,7 @@
       "src": "/documentation/en/work-task-notebook.png",
       "alt": "Localized demonstration tasks in the personal notebook.",
       "caption": "The notebook keeps personal steps outside the project issue hierarchy. The sample task states remain unchanged.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

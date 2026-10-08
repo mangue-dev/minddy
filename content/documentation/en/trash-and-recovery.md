@@ -2,7 +2,7 @@
 {
   "id": "trash-and-recovery",
   "locale": "en",
-  "title": "Restore deleted work",
+  "title": "Trash and recovery",
   "summary": "Find a deleted object, restore its dependencies and distinguish permanent removal.",
   "topic": "Plan and find work",
   "type": "guide",
@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 1,
-  "sourceRevision": 1,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -36,18 +36,20 @@
     ]
   },
   "review": {
-    "revision": 1,
-    "fact": "agent:/root/automation_account_documentation (independent primary-source comparison)",
-    "language": "agent:/root/automation_account_documentation (independent complete article review)",
-    "date": "2026-10-08"
+    "revision": 4,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun)",
+    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review)",
+    "date": "2026-10-09"
   },
   "related": [
-    "page-history",
-    "privacy-and-account-deletion",
-    "project-settings"
+    "pages",
+    "accounts",
+    "projects"
   ],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Restore deleted work"
+  ],
   "figures": [
     {
       "id": "trash-and-recovery-steps",
@@ -55,7 +57,7 @@
       "src": "/documentation/en/reader-trash.png",
       "alt": "Recoverable demonstration issue with thirty days remaining in trash.",
       "caption": "Use the row’s actions to restore the issue. Emptying trash is a separate permanent operation.",
-      "revision": 1,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

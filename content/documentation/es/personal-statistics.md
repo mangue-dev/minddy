@@ -2,7 +2,7 @@
 {
   "id": "personal-statistics",
   "locale": "es",
-  "title": "Leer tus estadísticas personales de trabajo",
+  "title": "Estadísticas personales",
   "summary": "Compara la actividad completada y las mediciones de tiempo dentro de su alcance real.",
   "topic": "Planificar y encontrar trabajo",
   "type": "explanation",
@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -40,18 +40,20 @@
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "2026-10-08",
-    "language": "2026-10-08",
-    "date": "2026-10-08"
+    "revision": 3,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison)",
+    "date": "2026-10-09"
   },
   "related": [
     "personal-cycle",
     "objectives",
-    "plans-and-ai-usage"
+    "ai-settings-and-usage"
   ],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Leer tus estadísticas personales de trabajo"
+  ],
   "figures": [
     {
       "id": "personal-statistics-steps",
@@ -59,7 +61,7 @@
       "src": "/documentation/es/reader-statistics.png",
       "alt": "Estadísticas personales con cuadrícula anual, desgloses, ritmo de trabajo y totales históricos.",
       "caption": "Esta cuenta de demostración tiene un ticket completado y once creados. Las estadísticas mostradas son reales; los nombres del proyecto y del objetivo se tradujeron para la ilustración.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

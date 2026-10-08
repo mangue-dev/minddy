@@ -2,7 +2,7 @@
 {
   "id": "self-hosted-diagnostics",
   "locale": "en",
-  "title": "Diagnose a self-hosted installation",
+  "title": "Instance diagnostics",
   "summary": "Run the read-only doctor from the exact release checkout and installed environment.",
   "topic": "Operate an instance",
   "type": "troubleshooting",
@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 1,
-  "sourceRevision": 1,
+  "revision": 2,
+  "sourceRevision": 2,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -36,10 +36,10 @@
     ]
   },
   "review": {
-    "revision": 1,
-    "fact": "agent:/root/automation_account_documentation (independent targeted primary-source review)",
-    "language": "agent:/root/automation_account_documentation (complete independent article and caption review)",
-    "date": "2026-10-08"
+    "revision": 2,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun)",
+    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review)",
+    "date": "2026-10-09"
   },
   "related": [
     "instance-configuration",
@@ -47,7 +47,9 @@
     "storage-and-attachments"
   ],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Diagnose a self-hosted installation"
+  ],
   "figures": [],
   "requiredFigures": []
 }

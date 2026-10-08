@@ -2,7 +2,7 @@
 {
   "id": "personal-statistics",
   "locale": "pt-BR",
-  "title": "Ler suas estatísticas pessoais de trabalho",
+  "title": "Estatísticas pessoais",
   "summary": "Compare atividade concluída e medidas de tempo dentro do escopo real.",
   "topic": "Planejar e encontrar trabalho",
   "type": "explanation",
@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -40,18 +40,20 @@
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "2026-10-08",
-    "language": "2026-10-08",
-    "date": "2026-10-08"
+    "revision": 3,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
+    "date": "2026-10-09"
   },
   "related": [
     "personal-cycle",
     "objectives",
-    "plans-and-ai-usage"
+    "ai-settings-and-usage"
   ],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Ler suas estatísticas pessoais de trabalho"
+  ],
   "figures": [
     {
       "id": "personal-statistics-steps",
@@ -59,7 +61,7 @@
       "src": "/documentation/pt-BR/reader-statistics.png",
       "alt": "Estatísticas pessoais com grade anual, distribuições, ritmo de trabalho e totais históricos.",
       "caption": "Esta conta de demonstração tem uma tarefa concluída e onze criadas. As estatísticas exibidas são reais; os nomes do projeto e do objetivo foram traduzidos para a ilustração.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

@@ -2,8 +2,8 @@
 {
   "id": "install-locally",
   "locale": "pt-BR",
-  "title": "Executar uma instância local pelo aplicativo desktop",
-  "summary": "Use um clone dedicado à avaliação com Node.js 24, pnpm 10.28.0, Git, Supabase CLI e Docker em execução.",
+  "title": "Instâncias locais",
+  "summary": "Execute uma instância local pelo app desktop, prepare os requisitos e preserve os dados ao iniciar, parar ou recuperar os serviços.",
   "topic": "Operar uma instância",
   "type": "tutorial",
   "audiences": [
@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 1,
-  "sourceRevision": 1,
+  "revision": 2,
+  "sourceRevision": 2,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -36,17 +36,19 @@
     ]
   },
   "review": {
-    "revision": 1,
-    "fact": "agent:/root/automation_account_documentation (independent primary-source and final correction review)",
-    "language": "agent:/root/automation_account_documentation (complete independent article and final correction review)",
-    "date": "2026-10-08"
+    "revision": 2,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
+    "date": "2026-10-09"
   },
   "related": [
     "workspace-encryption",
     "self-hosted-diagnostics"
   ],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Executar uma instância local pelo aplicativo desktop"
+  ],
   "figures": [
     {
       "id": "install-locally-flow",
@@ -54,7 +56,7 @@
       "src": "/documentation/pt-BR/install-locally-flow.svg",
       "alt": "Diagrama: Aplicativo desktop seleciona clone. Aplicação loopback: porta 6463. Supabase mínimo e dados duráveis. Sair para aplicativo e backend.",
       "caption": "Estes componentes têm responsabilidades distintas. Aplicativo desktop seleciona clone. Aplicação loopback: porta 6463. Supabase mínimo e dados duráveis. Sair para aplicativo e backend.",
-      "revision": 1,
+      "revision": 2,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -69,7 +71,7 @@
       "src": "/documentation/pt-BR/install-locally-wizard.png",
       "alt": "Assistente público de instalação com o perfil deste computador selecionado.",
       "caption": "Escolha a instalação pessoal quando o aplicativo de desktop for gerenciar os serviços locais.",
-      "revision": 1,
+      "revision": 2,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

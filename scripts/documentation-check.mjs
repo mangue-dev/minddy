@@ -75,6 +75,30 @@ for (const locale of documentationLocales) {
 }
 const byKey = new Map(articles.map(article => [`${article.locale}:${article.id}`, article]));
 if (byKey.size !== articles.length) fail("Duplicate article identities.");
+const migrationFile = path.join(corpusRoot, "legacy-routes.json");
+if (fs.existsSync(migrationFile)) {
+  const migrations = JSON.parse(fs.readFileSync(migrationFile, "utf8"));
+  for (const [id, route] of Object.entries(migrations)) {
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id) || !text(route.article)
+      || !text(route.section) || !route.sections || typeof route.sections !== "object"
+      || Array.isArray(route.sections) || !Object.keys(route.sections).length) {
+      fail(`Invalid legacy documentation route: ${id}`);
+      continue;
+    }
+    for (const locale of documentationLocales) {
+      const destination = byKey.get(`${locale}:${route.article}`);
+      if (!destination || (destination.id !== id && !destination.aliases.includes(id))) {
+        fail(`${locale}: legacy route ${id} is not a declared article alias`);
+        continue;
+      }
+      for (const section of [route.section, ...Object.values(route.sections)]) {
+        if (!text(section) || !destination.sections.some(item => item.id === section)) {
+          fail(`${locale}: legacy route ${id} has a missing destination section ${section}`);
+        }
+      }
+    }
+  }
+}
 for (const locale of documentationLocales) {
   const aliases = new Map();
   for (const article of articles.filter(item => item.locale === locale)) for (const alias of article.aliases) {

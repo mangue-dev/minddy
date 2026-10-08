@@ -2,8 +2,8 @@
 {
   "id": "update-an-instance",
   "locale": "it",
-  "title": "Aggiornare conservando la possibilità di recupero",
-  "summary": "Aggiorna una release pubblicata alla volta.",
+  "title": "Aggiornamenti dell’istanza",
+  "summary": "Aggiorna l’istanza una release alla volta, conserva un backup completo e verifica migrazioni e recupero prima di riaprire il servizio.",
   "topic": "Gestire un’istanza",
   "type": "guide",
   "audiences": [
@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 1,
-  "sourceRevision": 1,
+  "revision": 2,
+  "sourceRevision": 2,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -36,18 +36,18 @@
     ]
   },
   "review": {
-    "revision": 1,
-    "fact": "agent:/root/automation_account_documentation (independent targeted primary-source review); agent:/root/review_documentation_locales (independent final lifecycle/Storage delta review; prior complete review retained)",
-    "language": "agent:/root/automation_account_documentation (complete independent article and caption review); agent:/root/review_documentation_locales (independent final lifecycle/Storage delta review; prior complete review retained)",
-    "date": "2026-10-08"
+    "revision": 2,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
+    "date": "2026-10-09"
   },
   "related": [
-    "back-up-the-reference-instance",
-    "logical-and-provider-backups",
-    "restore-and-roll-back"
+    "backups-and-restoration"
   ],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Aggiornare conservando la possibilità di recupero"
+  ],
   "figures": [
     {
       "id": "update-an-instance-flow",
@@ -55,7 +55,7 @@
       "src": "/documentation/it/update-an-instance-flow.svg",
       "alt": "Schema: Fermare scritture e job. Sigillare backup completo precedente. Migrazioni destinazione, poi applicazione. Verificare recupero e riaprire.",
       "caption": "Segui le fasi in questo ordine. Fermare scritture e job. Sigillare backup completo precedente. Migrazioni destinazione, poi applicazione. Verificare recupero e riaprire.",
-      "revision": 1,
+      "revision": 2,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -81,7 +81,7 @@ Aggiorna una release pubblicata alla volta. Leggi note di release, migrazioni e 
 
 Usa il contesto Compose full dell’articolo sul backup a freddo. Ferma ingressi, scritture, worker e scheduler, poi crea una copia sigillata completa. Copia l’ambiente con permessi 0600 in TARGET_ENV_FILE e modifica solo MINDDY_RELEASE, MINDDY_IMAGE, MINDDY_DEPLOY_DIR e MINDDY_ENV_FILE secondo le identità verificate della destinazione. Conserva URL, credenziali, chiavi e scelte di funzionalità. La sequenza avvia il backend, applica le migrazioni e controlla applicazione e runner mentre Caddy e scheduler rimangono fermi.
 
-Nell’aggiornamento da v0.10.30 a v0.11.0, la versione di destinazione introduce MINDDY_DATA_ROOT_KEY. Aggiungi la chiave soltanto se la configurazione esistente non contiene una radice e conserva tutti i segreti già usati per cifrare le credenziali. Il comando seguente scrive una nuova radice di 32 byte direttamente nel file di destinazione protetto, senza mostrarla, e rifiuta di sostituire un valore salvato non valido. La sola radice non attiva la cifratura dei contenuti. Prima di avviare la destinazione, applica gli [adattamenti vincolati del runner e delle funzioni offline](/it/documentazione/install-a-server#runner-workaround) e conserva RUNNER_FIX_OVERRIDE in ogni operazione Compose. Il profilo è esplicitamente adattato e non dimostra l’installazione riuscita del tag storico invariato.
+Nell’aggiornamento da v0.10.30 a v0.11.0, la versione di destinazione introduce MINDDY_DATA_ROOT_KEY. Aggiungi la chiave soltanto se la configurazione esistente non contiene una radice e conserva tutti i segreti già usati per cifrare le credenziali. Il comando seguente scrive una nuova radice di 32 byte direttamente nel file di destinazione protetto, senza mostrarla, e rifiuta di sostituire un valore salvato non valido. La sola radice non attiva la cifratura dei contenuti. Prima di avviare la destinazione, applica gli [adattamenti vincolati del runner e delle funzioni offline](/it/documentazione/installation#runner-workaround) e conserva RUNNER_FIX_OVERRIDE in ogni operazione Compose. Il profilo è esplicitamente adattato e non dimostra l’installazione riuscita del tag storico invariato.
 
 ```bash
 export TARGET_RELEASE_DIR=/srv/minddy/releases/vX.Y.NEXT
@@ -135,7 +135,7 @@ Per managed OCI, segui la stessa sequenza di ambiente e immagine usando backup e
 I comandi Compose locali della procedura dai sorgenti seguente riguardano solo un backend controllato dall’operatore. Con Supabase gestito sostituisci arresto, avvio e accesso alle migrazioni del backend con le operazioni supportate dal provider. Conserva l’ambiente Minddy protetto e il backup completo del provider, poi avvia l’applicazione di destinazione verificata.
 
 
-Per la procedura dai sorgenti, imposta MINDDY_REPO sul repository versionato, SUPABASE_COMPOSE_DIR sul backend controllato descritto nel [contesto del backup logico](/it/documentazione/logical-and-provider-backups#outage), TO_TAG sul prossimo tag effettivamente pubblicato e verificato e TARGET_RELEASE_DIR sul suo checkout distinto già compilato. Fornisci in privato le variabili database e API pubblica corrispondenti. Dopo bootstrap e verifica, avvia la destinazione con pnpm start o con il supervisore esistente dietro la manutenzione; riapri solo dopo i controlli seguenti.
+Per la procedura dai sorgenti, imposta MINDDY_REPO sul repository versionato, SUPABASE_COMPOSE_DIR sul backend controllato descritto nel [contesto del backup logico](/it/documentazione/backups-and-restoration#outage), TO_TAG sul prossimo tag effettivamente pubblicato e verificato e TARGET_RELEASE_DIR sul suo checkout distinto già compilato. Fornisci in privato le variabili database e API pubblica corrispondenti. Dopo bootstrap e verifica, avvia la destinazione con pnpm start o con il supervisore esistente dietro la manutenzione; riapri solo dopo i controlli seguenti.
 
 ```bash
 test "$(git -C "$TARGET_RELEASE_DIR" rev-parse HEAD)" = \

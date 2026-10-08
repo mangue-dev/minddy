@@ -19,16 +19,29 @@ applicable edition and release, evidence to check, and needed illustrations.
 Identify what the reader already knows and any prerequisites they need. These
 notes belong in the review record; the article should lead with its subject.
 
-Choose a title that a reader would search for, such as a concrete task or an
-observable problem. The opening should answer the question or establish the
-outcome and scope. Avoid a general introduction about productivity, modern
-teams, or the importance of documentation.
+Choose a recognizable feature or subject as the article title, such as
+"Issues", "Pages", "Instance configuration", or "Backups and restoration".
+Use the localized product term. The opening should define the scope and help
+the reader choose the relevant procedure from the contents. Avoid a general
+introduction about productivity, modern teams, or the importance of documentation.
 
-Use the matrix to find omissions, then decide article boundaries by reader
-need. Several related outcomes can share a page when their sections are easy
-to find. Split a page when it mixes audiences or makes readers work through
-unrelated instructions. Each section must add an action, fact, explanation,
-decision, or useful recovery step.
+Use the matrix to find omissions, then group related outcomes into one feature
+guide. This applies to every documentation domain, including operations and
+integration. Give each task a descriptive level-two heading; nest its checks,
+reference and recovery sections at level three. The contents must let a reader
+reach a procedure without reading preceding tasks. Keep permissions and
+prerequisites beside the action they govern, including when they differ within
+a guide. Split separate features or materially different audiences, such as
+end-user account access and operator authentication configuration. Do not make
+one article cover an entire navigation domain. Each section must add an action,
+fact, explanation, decision, or useful recovery step.
+
+This feature-first rule supersedes the initial preference for narrow task
+articles, following the owner's 2026-10-09 request. It changes how readers find
+the information, not the required detail or the 90 workflow outcomes. See the
+[migration review](plans/min-664-feature-guides.md) for boundaries, legacy links
+and validation. A tutorial or a feature already covered by one useful article
+can keep its own page; there is no target page length or minimum number of tasks.
 
 ## Set the right depth
 

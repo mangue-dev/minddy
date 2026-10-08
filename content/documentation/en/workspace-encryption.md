@@ -2,7 +2,7 @@
 {
   "id": "workspace-encryption",
   "locale": "en",
-  "title": "Configure workspace encryption and preserve its keys",
+  "title": "Workspace encryption",
   "summary": "Check encryption behavior for your release and preserve credential and workspace recovery keys.",
   "topic": "Operate an instance",
   "type": "guide",
@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -36,18 +36,19 @@
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "agent:/root/review_documentation_locales (independent current release-boundary, configuration and complete-body condition revalidation)",
-    "language": "agent:/root/review_documentation_locales (independent complete current summary/body/caption reading and meaning parity review)",
-    "date": "2026-10-08"
+    "revision": 3,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun)",
+    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review)",
+    "date": "2026-10-09"
   },
   "related": [
     "encryption-and-data-boundaries",
-    "back-up-the-reference-instance",
-    "restore-and-roll-back"
+    "backups-and-restoration"
   ],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Configure workspace encryption and preserve its keys"
+  ],
   "figures": [
     {
       "id": "workspace-encryption-flow",
@@ -55,7 +56,7 @@
       "src": "/documentation/en/workspace-encryption-flow.svg",
       "alt": "Diagram: Dedicated root outside PostgreSQL. Wrapped project, user and system keys. Authorized server decryption. Database + Storage + matching keys restore.",
       "caption": "These components have distinct responsibilities. Dedicated root outside PostgreSQL. Wrapped project, user and system keys. Authorized server decryption. Database + Storage + matching keys restore.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

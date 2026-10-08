@@ -2,8 +2,8 @@
 {
   "id": "permissions-and-public-links",
   "locale": "pt-BR",
-  "title": "Entender permissões e links públicos",
-  "summary": "O servidor verifica o acesso ao projeto em cada operação.",
+  "title": "Permissões e links públicos",
+  "summary": "Diferencie acesso ao projeto e conteúdo publicado, confira o que um visitante vê e verifique a revogação dos links.",
   "topic": "Conceitos técnicos",
   "type": "explanation",
   "audiences": [
@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 1,
-  "sourceRevision": 1,
+  "revision": 2,
+  "sourceRevision": 2,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -41,18 +41,20 @@
     ]
   },
   "review": {
-    "revision": 1,
-    "fact": "agent:/root/automation_account_documentation (independent targeted primary-source review)",
-    "language": "agent:/root/automation_account_documentation (complete independent article and caption review)",
-    "date": "2026-10-08"
+    "revision": 2,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
+    "date": "2026-10-09"
   },
   "related": [
-    "publish-a-page",
-    "share-a-view",
+    "pages",
+    "views",
     "encryption-and-data-boundaries"
   ],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Entender permissões e links públicos"
+  ],
   "figures": [
     {
       "id": "permissions-and-public-links-flow",
@@ -60,7 +62,7 @@
       "src": "/documentation/pt-BR/permissions-and-public-links-flow.svg",
       "alt": "Diagrama: Permissões de conta e projeto. Objeto privado ou publicação explícita. Só conjunto publicado e arquivos assinados. Revogar link; arquivos expiram depois.",
       "caption": "Estes componentes têm responsabilidades distintas. Permissões de conta e projeto. Objeto privado ou publicação explícita. Só conjunto publicado e arquivos assinados. Revogar link; arquivos expiram depois.",
-      "revision": 1,
+      "revision": 2,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

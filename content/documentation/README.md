@@ -7,6 +7,13 @@ become public through recursive discovery.
 
 ## Article contract
 
+Organize the entire manual into feature guides, including self-hosted operations
+and technical subjects. Use a recognizable localized feature title, a useful
+scope paragraph, and a hierarchical contents list with task headings and nested
+checks/reference/recovery. Retain the complete task instructions and conditions.
+The [feature-guide migration](../../docs/plans/min-664-feature-guides.md) explains
+the change from the initial narrow task articles and the 42-guide catalog.
+
 Use a stable ASCII article ID as the filename in every locale. Explicit locale
 roots translate the URL; article IDs remain stable across languages. Every
 heading is level two or three and ends with a semantic ID, for example
@@ -63,7 +70,18 @@ Do not treat a passing draft check as completion of the ticket.
    `npm run check:owned-english` and relevant tests. Use
    `npm run check:documentation:release` before calling the manual complete.
 7. Publish the coherent six-locale release set through the normal reviewed PR.
-   Slug changes need redirects. Do not deploy during ticket implementation.
+   Slug changes need a legacy URL migration. Do not deploy during ticket implementation.
+
+`legacy-routes.json` maps every original article and its section IDs to the
+current feature guide. Retired article IDs also remain knowledge aliases. The
+server renders the current published guide at an old URL, with its canonical
+metadata and noindex on the legacy URL; only canonical guides enter the sitemap.
+The browser then replaces the URL, retaining queries and resolving the original
+fragment to its new section. A server-only redirect cannot inspect fragments.
+Without JavaScript, the full guide remains readable at the legacy URL. Internal
+links and welcome cards use canonical guide IDs directly. The documentation
+checker verifies every mapped section and alias in all six locales. Preserve
+this mapping when changing a section or guide again.
 
 ## Source migration
 

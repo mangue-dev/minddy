@@ -2,8 +2,8 @@
 {
   "id": "transfer-between-instances",
   "locale": "pt-BR",
-  "title": "Transferir dados entre instâncias",
-  "summary": "Exportar JSON privado, importar por adição e conferir conflitos e exclusões.",
+  "title": "Transferência de dados da conta",
+  "summary": "Exporte os dados da sua conta em um JSON privado, importe-os sem substituir os existentes e confira conflitos e exclusões.",
   "topic": "Conta e aplicativos",
   "type": "guide",
   "audiences": [
@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 1,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (cd1843e12)",
     "editions": [
@@ -38,14 +38,16 @@
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "2026-10-08",
-    "language": "2026-10-08",
-    "date": "2026-10-08"
+    "revision": 4,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
+    "date": "2026-10-09"
   },
   "related": [],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Transferir dados entre instâncias"
+  ],
   "figures": [
     {
       "id": "transfer-between-instances-workflow",
@@ -53,7 +55,7 @@
       "src": "/documentation/pt-BR/transfer-between-instances-workflow.png",
       "alt": "Configurações de transferência com botão para importar um arquivo.",
       "caption": "Escolha o JSON íntegro exportado da conta de origem; confira o resultado antes de fechar.",
-      "revision": 2,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -68,7 +70,7 @@
       "src": "/documentation/pt-BR/transfer-between-instances-export-workflow.png",
       "alt": "Controle de exportação da conta.",
       "caption": "Controle de exportação da conta. O arquivo exclui chaves e tokens; a captura mostra o botão antes do download.",
-      "revision": 2,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -83,7 +85,7 @@
       "src": "/documentation/pt-BR/transfer-between-instances-result.png",
       "alt": "Resultado da importação com zero IDs remapeados e zero participações não restauradas.",
       "caption": "Esta importação real de dados pessoais não apresenta conflitos de IDs nem participações não restauradas. Confira as contagens e selecione Recarregar a conta ou feche a janela para recarregá-la.",
-      "revision": 2,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -108,7 +110,6 @@ Entre na instância de origem e abra a seção Dados nas configurações da cont
 A importação acrescenta dados sem substituir os que já existem no destino. Os identificadores são mantidos quando podem ser reutilizados com segurança; os conflitos recebem novos identificadores. O resultado informa os identificadores remapeados e as associações a projetos ignoradas. As referências de associação a projetos existentes só são restauradas quando o projeto de destino já existe e a referência é autorizada. Após o recarregamento da página, confira projetos, tarefas, páginas e dados pessoais.
 
 ![Configurações de transferência com botão para importar um arquivo.](/documentation/pt-BR/transfer-between-instances-workflow.png)
-
 
 ## Reconectar serviços {#exclusions}
 

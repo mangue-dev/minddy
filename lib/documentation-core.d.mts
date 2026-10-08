@@ -3,6 +3,10 @@ import type { Locale } from "../i18n/config";
 export const documentationLocales: Locale[];
 export const documentationRoots: Record<Locale, string>;
 export function documentationPath(id: string | null, locale: Locale | string): string;
+export interface DocumentationLegacyRoute {
+  article: string; section: string; sections: Record<string, string>;
+}
+export function migratedDocumentationHref(id: string, locale: Locale, route: DocumentationLegacyRoute | undefined, search?: string, hash?: string): string | null;
 export function resolveDocumentationPath(pathname: string): { locale: Locale; id: string | null } | null;
 export function localizeDocumentationLink(href: string | undefined, locale: Locale): string | undefined;
 export function parseDocumentation(raw: string): DocumentationArticle;

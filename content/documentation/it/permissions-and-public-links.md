@@ -2,8 +2,8 @@
 {
   "id": "permissions-and-public-links",
   "locale": "it",
-  "title": "Comprendere permessi e link pubblici",
-  "summary": "Il server verifica l’accesso al progetto per ogni operazione.",
+  "title": "Autorizzazioni e link pubblici",
+  "summary": "Distingui accesso al progetto e contenuti pubblicati, controlla cosa vede un visitatore e verifica la revoca dei link.",
   "topic": "Concetti tecnici",
   "type": "explanation",
   "audiences": [
@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 1,
-  "sourceRevision": 1,
+  "revision": 2,
+  "sourceRevision": 2,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -41,18 +41,20 @@
     ]
   },
   "review": {
-    "revision": 1,
-    "fact": "agent:/root/automation_account_documentation (independent targeted primary-source review)",
-    "language": "agent:/root/automation_account_documentation (complete independent article and caption review)",
-    "date": "2026-10-08"
+    "revision": 2,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
+    "date": "2026-10-09"
   },
   "related": [
-    "publish-a-page",
-    "share-a-view",
+    "pages",
+    "views",
     "encryption-and-data-boundaries"
   ],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Comprendere permessi e link pubblici"
+  ],
   "figures": [
     {
       "id": "permissions-and-public-links-flow",
@@ -60,7 +62,7 @@
       "src": "/documentation/it/permissions-and-public-links-flow.svg",
       "alt": "Schema: Permessi account e progetto. Oggetto privato o pubblicazione esplicita. Solo insieme pubblicato e file firmati. Revocare link; file scadono successivamente.",
       "caption": "Questi componenti hanno responsabilità distinte. Permessi account e progetto. Oggetto privato o pubblicazione esplicita. Solo insieme pubblicato e file firmati. Revocare link; file scadono successivamente.",
-      "revision": 1,
+      "revision": 2,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

@@ -2,8 +2,8 @@
 {
   "id": "storage-and-attachments",
   "locale": "it",
-  "title": "Mantenere Storage duraturo e diagnosticare allegati",
-  "summary": "PostgreSQL conserva metadati Storage e riferimenti agli oggetti; il backend Storage conserva i byte.",
+  "title": "Archiviazione e allegati",
+  "summary": "Mantieni coerenti metadati e byte di Storage, verifica i download autorizzati e recupera gli allegati con i dati e le chiavi corrispondenti.",
   "topic": "Gestire un’istanza",
   "type": "guide",
   "audiences": [
@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 1,
-  "sourceRevision": 1,
+  "revision": 2,
+  "sourceRevision": 2,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -38,18 +38,18 @@
     ]
   },
   "review": {
-    "revision": 1,
-    "fact": "agent:/root/automation_account_documentation (independent targeted primary-source review); agent:/root/review_documentation_locales (independent final lifecycle/Storage delta review; prior complete review retained)",
-    "language": "agent:/root/automation_account_documentation (complete independent article and caption review); agent:/root/review_documentation_locales (independent final lifecycle/Storage delta review; prior complete review retained)",
-    "date": "2026-10-08"
+    "revision": 2,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
+    "date": "2026-10-09"
   },
   "related": [
-    "back-up-the-reference-instance",
-    "logical-and-provider-backups",
-    "restore-and-roll-back"
+    "backups-and-restoration"
   ],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Mantenere Storage duraturo e diagnosticare allegati"
+  ],
   "figures": [
     {
       "id": "storage-and-attachments-flow",
@@ -57,7 +57,7 @@
       "src": "/documentation/it/storage-and-attachments-flow.svg",
       "alt": "Schema: Accesso file autorizzato. Metadati oggetto PostgreSQL. Byte grezzi su filesystem o S3. Configurazione e chiavi corrispondenti.",
       "caption": "Questi componenti hanno responsabilità distinte. Accesso file autorizzato. Metadati oggetto PostgreSQL. Byte grezzi su filesystem o S3. Configurazione e chiavi corrispondenti.",
-      "revision": 1,
+      "revision": 2,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

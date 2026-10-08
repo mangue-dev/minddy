@@ -2,8 +2,8 @@
 {
   "id": "glossary-and-data-model",
   "locale": "pt-BR",
-  "title": "Entender projetos, issues, objetivos e trabalho pessoal",
-  "summary": "Um projeto reúne o trabalho compartilhado: membros, issues, categorias, visualizações, páginas, integrações e feedback.",
+  "title": "Glossário e modelo de dados",
+  "summary": "Entenda o papel de projetos, problemas, objetivos, ciclos pessoais, páginas, bancos de dados e feedback e suas relações.",
   "topic": "Conceitos técnicos",
   "type": "explanation",
   "audiences": [
@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 1,
-  "sourceRevision": 1,
+  "revision": 2,
+  "sourceRevision": 2,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -40,17 +40,20 @@
     ]
   },
   "review": {
-    "revision": 1,
-    "fact": "agent:/root/automation_account_documentation (independent targeted primary-source review)",
-    "language": "agent:/root/automation_account_documentation (complete independent article and caption review)",
-    "date": "2026-10-08"
+    "revision": 2,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
+    "date": "2026-10-09"
   },
   "related": [
     "permissions-and-public-links",
-    "numo-execution-model"
+    "numo"
   ],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Entender projetos, problemas, objetivos e trabalho pessoal",
+    "Entender projetos, issues, objetivos e trabalho pessoal"
+  ],
   "figures": [
     {
       "id": "glossary-and-data-model-flow",
@@ -58,7 +61,7 @@
       "src": "/documentation/pt-BR/glossary-and-data-model-flow.svg",
       "alt": "Diagrama: Projeto: trabalho e conhecimento compartilhados. Issue: trabalho; objetivo: resultado. Ciclo pessoal: trabalho entre projetos. Página: contexto; feedback: necessidade.",
       "caption": "Estes componentes têm responsabilidades distintas. Projeto: trabalho e conhecimento compartilhados. Issue: trabalho; objetivo: resultado. Ciclo pessoal: trabalho entre projetos. Página: contexto; feedback: necessidade.",
-      "revision": 1,
+      "revision": 2,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -74,7 +77,7 @@
 }
 ---
 
-## Entender projetos, issues, objetivos e trabalho pessoal {#glossary-and-data-model}
+## Entender projetos, problemas, objetivos e trabalho pessoal {#glossary-and-data-model}
 
 Um projeto reúne o trabalho compartilhado: membros, issues, categorias, visualizações, páginas, integrações e feedback. Uma issue descreve uma atividade específica com status e responsável; pode ter plano, prazo, objetivo, categorias, relações, comentários e recursos. Um objetivo reúne issues para acompanhar um resultado e seu progresso. Já o ciclo pessoal seleciona o trabalho de uma pessoa para uma ou duas semanas, inclusive de projetos diferentes. Ele não é uma sprint compartilhada nem um objetivo.
 

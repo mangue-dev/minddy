@@ -2,7 +2,7 @@
 {
   "id": "glossary-and-data-model",
   "locale": "de",
-  "title": "Projekte, Tickets, Ziele und persönliche Arbeit verstehen",
+  "title": "Glossar und Datenmodell",
   "summary": "Ein Projekt ist der gemeinsame Bereich für Mitglieder, Tickets, Kategorien, gespeicherte Ansichten, Seiten, Integrationen und Feedbackboard.",
   "topic": "Technische Grundlagen",
   "type": "explanation",
@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 1,
-  "sourceRevision": 1,
+  "revision": 2,
+  "sourceRevision": 2,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -40,17 +40,19 @@
     ]
   },
   "review": {
-    "revision": 1,
-    "fact": "agent:/root/automation_account_documentation (independent targeted primary-source review)",
-    "language": "agent:/root/automation_account_documentation (complete independent article and caption review)",
-    "date": "2026-10-08"
+    "revision": 2,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
+    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison)",
+    "date": "2026-10-09"
   },
   "related": [
     "permissions-and-public-links",
-    "numo-execution-model"
+    "numo"
   ],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Projekte, Tickets, Ziele und persönliche Arbeit verstehen"
+  ],
   "figures": [
     {
       "id": "glossary-and-data-model-flow",
@@ -58,7 +60,7 @@
       "src": "/documentation/de/glossary-and-data-model-flow.svg",
       "alt": "Diagramm: Projekt: gemeinsame Arbeit und Wissen. Ticket: Arbeit; Ziel: Ergebnis. Persönlicher Zyklus: projektübergreifende Arbeit. Seite: dauerhafter Kontext; Feedback: Bedarf.",
       "caption": "Diese Komponenten haben unterschiedliche Aufgaben. Projekt: gemeinsame Arbeit und Wissen. Ticket: Arbeit; Ziel: Ergebnis. Persönlicher Zyklus: projektübergreifende Arbeit. Seite: dauerhafter Kontext; Feedback: Bedarf.",
-      "revision": 1,
+      "revision": 2,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

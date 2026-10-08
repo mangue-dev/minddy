@@ -2,7 +2,7 @@
 {
   "id": "update-an-instance",
   "locale": "en",
-  "title": "Update an instance without losing recovery",
+  "title": "Instance updates",
   "summary": "Upgrade one published release at a time.",
   "topic": "Operate an instance",
   "type": "guide",
@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 1,
-  "sourceRevision": 1,
+  "revision": 2,
+  "sourceRevision": 2,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -36,18 +36,18 @@
     ]
   },
   "review": {
-    "revision": 1,
-    "fact": "agent:/root/automation_account_documentation (independent targeted primary-source review); agent:/root/review_documentation_locales (independent final lifecycle/Storage delta review; prior complete review retained)",
-    "language": "agent:/root/automation_account_documentation (complete independent article and caption review); agent:/root/review_documentation_locales (independent final lifecycle/Storage delta review; prior complete review retained)",
-    "date": "2026-10-08"
+    "revision": 2,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun)",
+    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review)",
+    "date": "2026-10-09"
   },
   "related": [
-    "back-up-the-reference-instance",
-    "logical-and-provider-backups",
-    "restore-and-roll-back"
+    "backups-and-restoration"
   ],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Update an instance without losing recovery"
+  ],
   "figures": [
     {
       "id": "update-an-instance-flow",
@@ -55,7 +55,7 @@
       "src": "/documentation/en/update-an-instance-flow.svg",
       "alt": "Diagram: Stop writes and scheduled work. Seal a complete pre-update backup. Target migrations, then target application. Verify recovery and reopen access.",
       "caption": "Read the stages in order. Stop writes and scheduled work. Seal a complete pre-update backup. Target migrations, then target application. Verify recovery and reopen access.",
-      "revision": 1,
+      "revision": 2,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -80,9 +80,9 @@ Upgrade one published release at a time. Inspect release notes, migration differ
 
 ## Update the full reference profile {#full}
 
-Use the full-profile Compose context from the cold-backup article. Stop public ingress, all writes, workers and scheduler, then make the complete sealed backup. Copy the current environment mode 0600 to TARGET_ENV_FILE and change only MINDDY_RELEASE, MINDDY_IMAGE, MINDDY_DEPLOY_DIR and MINDDY_ENV_FILE for the verified target. Preserve URLs, credentials, encryption keys and feature choices. Run the sequence below from the installed context. It starts only backend dependencies, applies target migrations and checks application/runner readiness while scheduler and Caddy remain stopped.
+Use the [installed full-profile Compose context](/docs/backups-and-restoration#context). Stop public ingress, all writes, workers and scheduler, then make the complete sealed backup. Copy the current environment mode 0600 to TARGET_ENV_FILE and change only MINDDY_RELEASE, MINDDY_IMAGE, MINDDY_DEPLOY_DIR and MINDDY_ENV_FILE for the verified target. Preserve URLs, credentials, encryption keys and feature choices. Run the sequence below from the installed context. It starts only backend dependencies, applies target migrations and checks application/runner readiness while scheduler and Caddy remain stopped.
 
-For the v0.10.30 to v0.11.0 update, the target introduces MINDDY_DATA_ROOT_KEY. Add it only when the existing configuration has no root; preserve every existing credential-encryption secret. The command below writes a new 32-byte root directly to the protected target file without displaying it and refuses to replace an invalid saved value. A root alone does not enable workspace-content encryption. Before starting this target, apply the [pinned runner and offline-function adaptations](/docs/install-a-server#runner-workaround) and retain RUNNER_FIX_OVERRIDE in every Compose operation. This is an explicitly adapted profile, not a successful installation of the unchanged historical tag.
+For the v0.10.30 to v0.11.0 update, the target introduces MINDDY_DATA_ROOT_KEY. Add it only when the existing configuration has no root; preserve every existing credential-encryption secret. The command below writes a new 32-byte root directly to the protected target file without displaying it and refuses to replace an invalid saved value. A root alone does not enable workspace-content encryption. Before starting this target, apply the [pinned runner and offline-function adaptations](/docs/installation#runner-workaround) and retain RUNNER_FIX_OVERRIDE in every Compose operation. This is an explicitly adapted profile, not a successful installation of the unchanged historical tag.
 
 ```bash
 export TARGET_RELEASE_DIR=/srv/minddy/releases/vX.Y.NEXT
@@ -136,7 +136,7 @@ Managed OCI uses the same protected target-environment and image sequence, with 
 The local Compose commands in the following source procedure apply only when the operator controls that backend. With provider-managed Supabase, replace backend stop/start and migration access with the provider’s supported operations, retain the protected Minddy environment and complete provider data backup, then run the verified target application.
 
 
-For the source procedure, set MINDDY_REPO to the tagged source repository, SUPABASE_COMPOSE_DIR to the operator-controlled backend from the [logical backup context](/docs/logical-and-provider-backups#outage), TO_TAG to the actual next published and verified tag, and TARGET_RELEASE_DIR to its separately built checkout. Supply the matching database and public API variables privately. After bootstrap and verification, start the target with pnpm start or your existing process supervisor behind maintenance, then reopen only after the checks below.
+For the source procedure, set MINDDY_REPO to the tagged source repository, SUPABASE_COMPOSE_DIR to the operator-controlled backend from the [logical backup context](/docs/backups-and-restoration#outage), TO_TAG to the actual next published and verified tag, and TARGET_RELEASE_DIR to its separately built checkout. Supply the matching database and public API variables privately. After bootstrap and verification, start the target with pnpm start or your existing process supervisor behind maintenance, then reopen only after the checks below.
 
 ```bash
 test "$(git -C "$TARGET_RELEASE_DIR" rev-parse HEAD)" = \

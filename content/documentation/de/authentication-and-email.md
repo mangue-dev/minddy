@@ -2,7 +2,7 @@
 {
   "id": "authentication-and-email",
   "locale": "de",
-  "title": "Kontomails, MFA und Wiederherstellung konfigurieren",
+  "title": "Authentifizierung und E-Mail",
   "summary": "Auth-E-Mails gehören zu Supabase/GoTrue.",
   "topic": "Instanz betreiben",
   "type": "guide",
@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 1,
-  "sourceRevision": 1,
+  "revision": 2,
+  "sourceRevision": 2,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -37,17 +37,19 @@
     ]
   },
   "review": {
-    "revision": 1,
-    "fact": "agent:/root/automation_account_documentation (independent targeted primary-source review)",
-    "language": "agent:/root/automation_account_documentation (complete independent article and caption review)",
-    "date": "2026-10-08"
+    "revision": 2,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
+    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison)",
+    "date": "2026-10-09"
   },
   "related": [
     "instance-administration",
     "self-hosted-diagnostics"
   ],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Kontomails, MFA und Wiederherstellung konfigurieren"
+  ],
   "figures": [
     {
       "id": "authentication-and-email-flow",
@@ -55,7 +57,7 @@
       "src": "/documentation/de/authentication-and-email-flow.svg",
       "alt": "Diagramm: Auth-Origin und Weiterleitungen. Eigenes SMTP und versionierte Vorlagen. Bestätigung und Passwortanmeldung. TOTP, Wiederherstellung, alte Passwortprüfung.",
       "caption": "Lesen Sie die Schritte in dieser Reihenfolge. Auth-Origin und Weiterleitungen. Eigenes SMTP und versionierte Vorlagen. Bestätigung und Passwortanmeldung. TOTP, Wiederherstellung, alte Passwortprüfung.",
-      "revision": 1,
+      "revision": 2,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -76,7 +78,7 @@
 Auth-E-Mails gehören zu Supabase/GoTrue. Resend-Anwendungsbenachrichtigungen konfigurieren weder Bestätigung noch Passwortwiederherstellung. Behalten Sie bei full das Minddy-Overlay in jedem Compose-Aufruf. Setzen Sie SITE_URL, API_EXTERNAL_URL, SUPABASE_PUBLIC_URL und ADDITIONAL_REDIRECT_URLS auf Ihre Origins. Konfigurieren Sie SMTP_ADMIN_EMAIL, SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS und SMTP_SENDER_NAME mit Ihrem Anbieter. Lassen Sie Bestätigung eingeschaltet und starten Sie Auth im installierten Compose-Kontext neu.
 
 
-Definieren Sie vor den folgenden compose-Befehlen die Funktion für das installierte full-Profil aus [dem Referenzkontext für Compose](/de/dokumentation/back-up-the-reference-instance#context).
+Definieren Sie vor den folgenden compose-Befehlen die Funktion für das installierte full-Profil aus [dem Referenzkontext für Compose](/de/dokumentation/backups-and-restoration#context).
 
 ```bash
 compose up -d --wait auth

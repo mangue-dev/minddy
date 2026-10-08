@@ -2,8 +2,8 @@
 {
   "id": "self-hosted-diagnostics",
   "locale": "it",
-  "title": "Diagnosticare un’installazione self-hosted",
-  "summary": "Esegui il doctor di sola lettura dalla release installata con il suo ambiente protetto.",
+  "title": "Diagnostica dell’istanza",
+  "summary": "Esegui il doctor in sola lettura, associa sintomi e controlli e conserva dati e segreti durante la diagnosi.",
   "topic": "Gestire un’istanza",
   "type": "troubleshooting",
   "audiences": [
@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 1,
-  "sourceRevision": 1,
+  "revision": 2,
+  "sourceRevision": 2,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -36,10 +36,10 @@
     ]
   },
   "review": {
-    "revision": 1,
-    "fact": "agent:/root/automation_account_documentation (independent targeted primary-source review)",
-    "language": "agent:/root/automation_account_documentation (complete independent article and caption review)",
-    "date": "2026-10-08"
+    "revision": 2,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
+    "date": "2026-10-09"
   },
   "related": [
     "instance-configuration",
@@ -47,7 +47,9 @@
     "storage-and-attachments"
   ],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Diagnosticare un’installazione self-hosted"
+  ],
   "figures": [],
   "requiredFigures": []
 }

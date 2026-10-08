@@ -2,7 +2,7 @@
 {
   "id": "choose-an-instance",
   "locale": "pt-BR",
-  "title": "Escolher o Cloud ou sua própria instância",
+  "title": "Instâncias Cloud e auto-hospedadas",
   "summary": "Compare quem opera o serviço, para onde os dados vão e quais provedores opcionais você configura.",
   "topic": "Primeiros passos",
   "type": "explanation",
@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 1,
-  "sourceRevision": 1,
+  "revision": 2,
+  "sourceRevision": 2,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "v0.11.0",
     "editions": [
@@ -36,21 +36,22 @@
     ]
   },
   "review": {
-    "revision": 1,
-    "fact": "2026-10-08",
-    "language": "2026-10-08",
-    "date": "2026-10-08"
+    "revision": 2,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
+    "date": "2026-10-09"
   },
   "related": [
-    "install-a-server",
-    "managed-or-source-installation",
+    "installation",
     "transfer-between-instances",
     "architecture-and-data-flows"
   ],
   "aliases": [
     "open-source"
   ],
-  "tags": [],
+  "tags": [
+    "Escolher o Cloud ou sua própria instância"
+  ],
   "figures": [
     {
       "id": "responsibilities",
@@ -58,7 +59,7 @@
       "src": "/documentation/pt-BR/responsibilities.svg",
       "alt": "Responsabilidade de operação: Operado pelo Minddy, Operado por você.",
       "caption": "Os mesmos serviços do núcleo precisam de um operador nos dois modelos. Provedores opcionais continuam sendo serviços separados.",
-      "revision": 1,
+      "revision": 2,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

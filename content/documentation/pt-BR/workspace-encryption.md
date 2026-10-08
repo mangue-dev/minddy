@@ -2,7 +2,7 @@
 {
   "id": "workspace-encryption",
   "locale": "pt-BR",
-  "title": "Configurar criptografia e preservar chaves",
+  "title": "Criptografia do espaço de trabalho",
   "summary": "Verifique a criptografia da sua versão e preserve as chaves de recuperação das credenciais e do conteúdo do espaço de trabalho.",
   "topic": "Operar uma instância",
   "type": "guide",
@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -36,18 +36,19 @@
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "agent:/root/review_documentation_locales (independent current release-boundary, configuration and complete-body condition revalidation)",
-    "language": "agent:/root/review_documentation_locales (independent complete current summary/body/caption reading and meaning parity review)",
-    "date": "2026-10-08"
+    "revision": 3,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
+    "date": "2026-10-09"
   },
   "related": [
     "encryption-and-data-boundaries",
-    "back-up-the-reference-instance",
-    "restore-and-roll-back"
+    "backups-and-restoration"
   ],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Configurar criptografia e preservar chaves"
+  ],
   "figures": [
     {
       "id": "workspace-encryption-flow",
@@ -55,7 +56,7 @@
       "src": "/documentation/pt-BR/workspace-encryption-flow.svg",
       "alt": "Diagrama: Raiz dedicada fora de PostgreSQL. Chaves projeto, usuário e sistema empacotadas. Decifragem autorizada no servidor. Restaurar banco + Storage + mesmas chaves.",
       "caption": "Estes componentes têm responsabilidades distintas. Raiz dedicada fora de PostgreSQL. Chaves projeto, usuário e sistema empacotadas. Decifragem autorizada no servidor. Restaurar banco + Storage + mesmas chaves.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

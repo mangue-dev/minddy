@@ -2,7 +2,7 @@
 {
   "id": "workspace-encryption",
   "locale": "de",
-  "title": "Arbeitsbereich verschlüsseln und Schlüssel erhalten",
+  "title": "Arbeitsbereichsverschlüsselung",
   "summary": "Prüfen Sie die Verschlüsselung Ihrer Version und bewahren Sie die Wiederherstellungsschlüssel für Zugangsdaten und Arbeitsbereichsinhalte auf.",
   "topic": "Instanz betreiben",
   "type": "guide",
@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -36,18 +36,19 @@
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "agent:/root/review_documentation_locales (independent current release-boundary, configuration and complete-body condition revalidation)",
-    "language": "agent:/root/review_documentation_locales (independent complete current summary/body/caption reading and meaning parity review)",
-    "date": "2026-10-08"
+    "revision": 3,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
+    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison)",
+    "date": "2026-10-09"
   },
   "related": [
     "encryption-and-data-boundaries",
-    "back-up-the-reference-instance",
-    "restore-and-roll-back"
+    "backups-and-restoration"
   ],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Arbeitsbereich verschlüsseln und Schlüssel erhalten"
+  ],
   "figures": [
     {
       "id": "workspace-encryption-flow",
@@ -55,7 +56,7 @@
       "src": "/documentation/de/workspace-encryption-flow.svg",
       "alt": "Diagramm: Eigener Wurzelschlüssel außerhalb PostgreSQL. Umschlossene Projekt-, Nutzer-, Systemschlüssel. Autorisierte Serverentschlüsselung. Restore: Datenbank + Storage + passende Schlüssel.",
       "caption": "Diese Komponenten haben unterschiedliche Aufgaben. Eigener Wurzelschlüssel außerhalb PostgreSQL. Umschlossene Projekt-, Nutzer-, Systemschlüssel. Autorisierte Serverentschlüsselung. Restore: Datenbank + Storage + passende Schlüssel.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

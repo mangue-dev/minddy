@@ -2,22 +2,23 @@
 {
   "id": "objectives",
   "locale": "es",
-  "title": "Seguir un resultado con un objetivo",
-  "summary": "Crea un resultado del proyecto, vincula incidencias y examina su progreso.",
+  "title": "Objetivos",
+  "summary": "Define el resultado de un proyecto, vincula el trabajo e interpreta el progreso, las dependencias y el ritmo.",
   "topic": "Proyectos e incidencias",
   "type": "guide",
   "audiences": [
     "member"
   ],
   "workflows": [
-    "W10"
+    "W10",
+    "W11"
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 1,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -32,22 +33,32 @@
     "evidence": [
       "content/knowledge/core-tracker.md",
       "components/objective-dialog.tsx",
-      "components/objective-detail.tsx"
+      "components/objective-detail.tsx",
+      "components/objective-relations-section.tsx",
+      "components/objective-momentum.tsx",
+      "lib/relation-constants.ts",
+      "lib/server/issue-relations.ts",
+      "lib/objective-momentum.ts"
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "2026-10-08",
-    "language": "2026-10-08",
-    "date": "2026-10-08"
+    "revision": 5,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison)",
+    "date": "2026-10-09"
   },
   "related": [
-    "objective-dependencies-and-momentum",
-    "create-an-issue",
-    "personal-cycle"
+    "issues",
+    "personal-cycle",
+    "personal-statistics"
   ],
-  "aliases": [],
-  "tags": [],
+  "aliases": [
+    "objective-dependencies-and-momentum"
+  ],
+  "tags": [
+    "Seguir un resultado con un objetivo",
+    "Interpretar dependencias y ritmo de los objetivos"
+  ],
   "figures": [
     {
       "id": "objectives-steps",
@@ -55,7 +66,22 @@
       "src": "/documentation/es/reader-objectives.png",
       "alt": "Diálogo de creación de objetivo sin enviar con un nombre de resultado de ejemplo.",
       "caption": "Nombra el resultado antes de elegir responsable, fecha objetivo y estado. Este diálogo no ha creado un segundo objetivo.",
-      "revision": 3,
+      "revision": 5,
+      "reviewed": true,
+      "capturedAt": "2026-10-08",
+      "viewport": [
+        1280,
+        1080
+      ],
+      "theme": "light"
+    },
+    {
+      "id": "objective-dependencies-and-momentum-steps",
+      "kind": "screenshot",
+      "src": "/documentation/es/reader-objective-momentum.png",
+      "alt": "Ritmo del objetivo tras completar realmente una incidencia de demostración.",
+      "caption": "Lee el ritmo junto al trabajo vinculado. El historial disponible aún no permite mostrar una fecha estimada de finalización.",
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -66,12 +92,15 @@
     }
   ],
   "requiredFigures": [
-    "objectives-steps"
+    "objectives-steps",
+    "objective-dependencies-and-momentum-steps"
   ]
 }
 ---
 
-## Crear y completar un objetivo con trabajo {#objectives}
+Un objetivo define un resultado dentro de un proyecto y agrupa el trabajo correspondiente. Esta guía explica su configuración, la lectura del progreso y las dependencias, además del significado y los límites de la señal de ritmo.
+
+## Seguir un resultado con un objetivo {#objectives}
 
 Abre el destino de objetivos del proyecto y crea un objetivo. Nombra el resultado que quieres, añade contexto útil y define los campos disponibles de responsable, fecha objetivo, color y estado. Un objetivo pertenece a un proyecto; es distinto de un ciclo personal que abarque varios proyectos. La persona responsable se encarga del resultado; seleccionarla no transfiere la propiedad del proyecto.
 
@@ -79,8 +108,22 @@ Abre cada incidencia relevante y elige el objetivo en sus propiedades, o utiliza
 
 ![Diálogo de creación de objetivo sin enviar con un nombre de resultado de ejemplo.](/documentation/es/reader-objectives.png)
 
-## Leer el progreso antes de cerrar {#objective-progress}
+### Leer el progreso antes de cerrar {#objective-progress}
 
 Revisa las incidencias completadas y activas junto con el progreso del objetivo. Un indicador resume el trabajo vinculado; no puede determinar si un resultado del producto es aceptable. Revisa tareas que falten y trabajo cancelado o duplicado antes de marcar el objetivo como completado.
 
 Utiliza el ciclo de vida del objetivo para distinguir resultados planificados, en marcha, completados y cancelados. Una fecha objetivo es una meta, mientras que una previsión es una estimación basada en actividad. Si el objetivo parece vacío, comprueba la vinculación de incidencias y los filtros en lugar de recrearlo. Eliminar un objetivo utiliza la papelera recuperable y no es un cambio de estado ordinario.
+
+## Interpretar dependencias y ritmo de los objetivos {#objective-dependencies-and-momentum}
+
+Abre el objetivo y sus relaciones. Comprueba qué resultado depende de otro y lee las relaciones de bloqueo entre incidencias cuando expliquen la restricción. La organización entre principal e hijas, un vínculo y una dependencia de bloqueo responden a preguntas distintas; comprueba la dirección antes de cambiar una relación.
+
+Una relación de bloqueo puede conectar una incidencia u otro objetivo con este objetivo dentro del mismo proyecto. Sus incidencias abiertas heredan el bloqueo pendiente: la relación mostrada identifica tanto el requisito real como el objetivo que lo transmite. No se almacena una nueva relación directa en cada incidencia. Cerrar el requisito o el objetivo bloqueado, o retirar una incidencia de ese objetivo, elimina el bloqueo heredado correspondiente. Resuelve el requisito real o corrige una relación obsoleta. Cambiar únicamente la fecha objetivo no completa las incidencias que lo bloquean.
+
+### Interpretar la señal de ritmo {#momentum}
+
+El ritmo resume el trabajo completado recientemente. Puede estar acelerándose, estable, ralentizándose o detenido, con estados separados para objetivos no iniciados, completados y cancelados. Úsalo para identificar un resultado que necesite atención y después lee las incidencias y la actividad subyacentes.
+
+La fecha estimada requiere al menos dos finalizaciones, una semana completa observada, esfuerzo entregado positivo y trabajo pendiente. Solo contribuyen las incidencias vinculadas actualmente; una finalización anterior a la creación del objetivo no genera un ritmo reciente artificial. Con una fecha objetivo válida, el historial abarca desde la creación hasta esa fecha y el rendimiento utiliza el tiempo observado desde la creación, incluido el transcurrido después de una fecha incumplida. Sin una fecha objetivo válida, el cálculo utiliza un historial móvil de ocho semanas y una ventana de previsión de 28 días. Un historial escaso o un cambio reciente de alcance reducen su utilidad. La estimación no es una fecha prometida y no incluye trabajo invisible que no hayas vinculado. Compara la fecha objetivo, el trabajo pendiente y las restricciones reales antes de cambiar compromisos.
+
+![Ritmo del objetivo tras completar realmente una incidencia de demostración.](/documentation/es/reader-objective-momentum.png)

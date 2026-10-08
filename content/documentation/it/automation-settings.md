@@ -2,8 +2,8 @@
 {
   "id": "automation-settings",
   "locale": "it",
-  "title": "Configurare il lavoro automatico sui ticket",
-  "summary": "Separare preferenze dell’account e regole riservate al proprietario.",
+  "title": "Automazione dei ticket",
+  "summary": "Configura le automazioni dell’account e distingui le regole del progetto riservate al proprietario.",
   "topic": "Account e applicazioni",
   "type": "guide",
   "audiences": [
@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 2,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (cd1843e12)",
     "editions": [
@@ -40,14 +40,16 @@
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "2026-10-08",
-    "language": "2026-10-08",
-    "date": "2026-10-08"
+    "revision": 4,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
+    "date": "2026-10-09"
   },
   "related": [],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Configurare il lavoro automatico sui ticket"
+  ],
   "figures": [
     {
       "id": "automation-settings-workflow",
@@ -55,7 +57,7 @@
       "src": "/documentation/it/automation-settings-workflow.png",
       "alt": "Preimpostazione di automazione senza alcuna opzione selezionata.",
       "caption": "Senza preimpostazione selezionata, questo account non avvia lavoro automatico.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -70,7 +72,7 @@
       "src": "/documentation/it/automation-settings-projects-workflow.png",
       "alt": "Selezione dei progetti per le automazioni dell’account.",
       "caption": "Selezione dei progetti per le automazioni dell’account. Entrambi i progetti dimostrativi sono disattivati; non viene avviata alcuna automazione.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -92,7 +94,6 @@
 Apri la sezione Automazioni nelle impostazioni dell’account. Scegli una configurazione predefinita, leggi la spiegazione e la stima di utilizzo, imposta il ritardo di avvio e scegli quali dimensioni di impegno consentono i passaggi automatici. Le stime dipendono dal budget disponibile e non sono prezzi fissi. Prima di abilitare il lavoro sul codice, controlla il modello del worker nelle impostazioni IA dell’account. La stessa pagina elenca gli interruttori di automazione per i progetti di cui sei proprietario; un membro non può abilitare il progetto di un altro proprietario.
 
 ![Preimpostazione di automazione senza alcuna opzione selezionata.](/documentation/it/automation-settings-workflow.png)
-
 
 ## Distinguere i meccanismi {#mechanisms}
 

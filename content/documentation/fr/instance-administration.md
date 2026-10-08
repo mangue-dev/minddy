@@ -2,7 +2,7 @@
 {
   "id": "instance-administration",
   "locale": "fr",
-  "title": "Utiliser la console d’administration de l’instance",
+  "title": "Administration d’instance",
   "summary": "L’administration de l’instance est distincte de la propriété d’un projet.",
   "topic": "Exploiter une instance",
   "type": "guide",
@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 1,
-  "sourceRevision": 1,
+  "revision": 2,
+  "sourceRevision": 2,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -39,17 +39,19 @@
     ]
   },
   "review": {
-    "revision": 1,
-    "fact": "agent:/root/automation_account_documentation (independent targeted primary-source review)",
-    "language": "agent:/root/automation_account_documentation (complete independent article and caption review)",
-    "date": "2026-10-08"
+    "revision": 2,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun)",
+    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review)",
+    "date": "2026-10-09"
   },
   "related": [
     "authentication-and-email",
     "instance-configuration"
   ],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Utiliser la console d’administration de l’instance"
+  ],
   "figures": [
     {
       "id": "instance-administration-flow",
@@ -57,7 +59,7 @@
       "src": "/documentation/fr/instance-administration-overview.png",
       "alt": "Vue d’ensemble administrateur avec indicateurs agrégés des comptes, de l’accueil et du contenu.",
       "caption": "Vue d’ensemble affiche les indicateurs agrégés de l’instance. Finances est absent sur ce profil de démonstration, car aucune clé OpenRouter gérée n’est configurée.",
-      "revision": 1,
+      "revision": 2,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -72,7 +74,7 @@
       "src": "/documentation/fr/instance-administration-users.png",
       "alt": "Panneau d’assistance aux comptes avec recherche par adresse exacte, sans annuaire du contenu personnel.",
       "caption": "Utilisateurs ouvre un compte précis pour l’assistance ou la facturation ; l’écran initial ne liste ni activité privée ni contenu personnel.",
-      "revision": 1,
+      "revision": 2,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -87,7 +89,7 @@
       "src": "/documentation/fr/instance-administration-models.png",
       "alt": "Réglages des modèles IA et du raisonnement de l’instance.",
       "caption": "Modèles règle les valeurs par défaut et les usages dédiés. La capture montre la configuration existante ; aucun réglage de modèle ou de fournisseur n’a été modifié.",
-      "revision": 1,
+      "revision": 2,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

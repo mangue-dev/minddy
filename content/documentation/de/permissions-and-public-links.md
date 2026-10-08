@@ -2,7 +2,7 @@
 {
   "id": "permissions-and-public-links",
   "locale": "de",
-  "title": "Berechtigungen und öffentliche Links verstehen",
+  "title": "Berechtigungen und öffentliche Links",
   "summary": "Der Server prüft Projektzugriff bei jedem zugeordneten Vorgang.",
   "topic": "Technische Grundlagen",
   "type": "explanation",
@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 1,
-  "sourceRevision": 1,
+  "revision": 2,
+  "sourceRevision": 2,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -41,18 +41,20 @@
     ]
   },
   "review": {
-    "revision": 1,
-    "fact": "agent:/root/automation_account_documentation (independent targeted primary-source review)",
-    "language": "agent:/root/automation_account_documentation (complete independent article and caption review)",
-    "date": "2026-10-08"
+    "revision": 2,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
+    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison)",
+    "date": "2026-10-09"
   },
   "related": [
-    "publish-a-page",
-    "share-a-view",
+    "pages",
+    "views",
     "encryption-and-data-boundaries"
   ],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Berechtigungen und öffentliche Links verstehen"
+  ],
   "figures": [
     {
       "id": "permissions-and-public-links-flow",
@@ -60,7 +62,7 @@
       "src": "/documentation/de/permissions-and-public-links-flow.svg",
       "alt": "Diagramm: Konto- und Projektberechtigungen. Privates Objekt oder bewusste Veröffentlichung. Nur veröffentlichter Satz; signierte Dateien. Link widerrufen; Dateilinks laufen später ab.",
       "caption": "Diese Komponenten haben unterschiedliche Aufgaben. Konto- und Projektberechtigungen. Privates Objekt oder bewusste Veröffentlichung. Nur veröffentlichter Satz; signierte Dateien. Link widerrufen; Dateilinks laufen später ab.",
-      "revision": 1,
+      "revision": 2,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

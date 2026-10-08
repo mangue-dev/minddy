@@ -2,7 +2,7 @@
 {
   "id": "choose-an-instance",
   "locale": "en",
-  "title": "Choose Cloud or your own instance",
+  "title": "Cloud and self-hosted instances",
   "summary": "Compare who operates the service, where data goes, and which optional providers you configure.",
   "topic": "Get started",
   "type": "explanation",
@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 1,
-  "sourceRevision": 1,
+  "revision": 2,
+  "sourceRevision": 2,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "v0.11.0",
     "editions": [
@@ -36,21 +36,22 @@
     ]
   },
   "review": {
-    "revision": 1,
-    "fact": "agent:/root/automation_account_documentation (independent primary-source comparison)",
-    "language": "agent:/root/automation_account_documentation (independent complete article review)",
-    "date": "2026-10-08"
+    "revision": 2,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun)",
+    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review)",
+    "date": "2026-10-09"
   },
   "related": [
-    "install-a-server",
-    "managed-or-source-installation",
+    "installation",
     "transfer-between-instances",
     "architecture-and-data-flows"
   ],
   "aliases": [
     "open-source"
   ],
-  "tags": [],
+  "tags": [
+    "Choose Cloud or your own instance"
+  ],
   "figures": [
     {
       "id": "responsibilities",
@@ -58,7 +59,7 @@
       "src": "/documentation/en/responsibilities.svg",
       "alt": "Operating responsibility: Operated by Minddy, Operated by you.",
       "caption": "The same core services need an operator in either model. Optional providers remain separate services.",
-      "revision": 1,
+      "revision": 2,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -103,4 +104,4 @@ Review provider permissions and data terms before enabling an integration. Git c
 
 ## Source and next step {#next-step}
 
-The canonical source is [mangue-dev/minddy](https://github.com/mangue-dev/minddy), under GNU AGPL v3.0 only. Keep the license and naming policy in mind for modified or hosted deployments. For installation, open the public self-hosting guide and its guided installer. Before transferring existing work, check the instance transfer guide: credentials and subscriptions are not transferred with account data.
+The canonical source is [mangue-dev/minddy](https://github.com/mangue-dev/minddy), under GNU AGPL v3.0 only. Keep the license and naming policy in mind for modified or hosted deployments. For installation, open the [self-hosted installation guide](/docs/installation) and its guided installer. Before transferring existing work, check the [account-data transfer guide](/docs/transfer-between-instances): credentials and subscriptions are not transferred with account data.

@@ -2,7 +2,7 @@
 {
   "id": "workspace-encryption",
   "locale": "es",
-  "title": "Configurar el cifrado y conservar las claves",
+  "title": "Cifrado del espacio de trabajo",
   "summary": "Compruebe el cifrado de su versión y conserve las claves de recuperación de credenciales y contenido del espacio de trabajo.",
   "topic": "Administrar una instancia",
   "type": "guide",
@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -36,18 +36,19 @@
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "agent:/root/review_documentation_locales (independent current release-boundary, configuration and complete-body condition revalidation)",
-    "language": "agent:/root/review_documentation_locales (independent complete current summary/body/caption reading and meaning parity review)",
-    "date": "2026-10-08"
+    "revision": 3,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison)",
+    "date": "2026-10-09"
   },
   "related": [
     "encryption-and-data-boundaries",
-    "back-up-the-reference-instance",
-    "restore-and-roll-back"
+    "backups-and-restoration"
   ],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Configurar el cifrado y conservar las claves"
+  ],
   "figures": [
     {
       "id": "workspace-encryption-flow",
@@ -55,7 +56,7 @@
       "src": "/documentation/es/workspace-encryption-flow.svg",
       "alt": "Diagrama: Raíz dedicada fuera de PostgreSQL. Claves de proyecto, usuario y sistema envueltas. Descifrado autorizado en servidor. Restaurar base + Storage + mismas claves.",
       "caption": "Estos componentes tienen responsabilidades distintas. Raíz dedicada fuera de PostgreSQL. Claves de proyecto, usuario y sistema envueltas. Descifrado autorizado en servidor. Restaurar base + Storage + mismas claves.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -70,6 +71,7 @@
   ]
 }
 ---
+
 ## Configurar el cifrado y conservar las claves {#workspace-encryption}
 
 Las opciones --encryption del instalador y del bootstrap descritas aquí pertenecen a las herramientas del candidato 0.11.1 identificado. El instalador y el bootstrap publicados en v0.11.0 no las aceptan. El runtime de esa versión reconoce MINDDY_CONTENT_ENCRYPTION_ENABLED; el servicio Compose de referencia carga el archivo protegido mediante env_file. Un cambio explícito del flag exige, por tanto, recrear el servicio de la aplicación con el mismo entorno y comprobar el esquema y el comportamiento real. Una clave MINDDY_DATA_ROOT_KEY generada no demuestra que el contenido del espacio esté cifrado. Utilice herramientas y configuración correspondientes y verificadas explícitamente para la versión elegida antes de recibir usuarios o modificar una instancia existente.
@@ -85,8 +87,6 @@ pnpm bootstrap:supabase -- --minimal --app-url http://localhost:6463 --encryptio
 ## Tratar datos existentes y repeticiones {#existing-data}
 
 Una configuración existente sin el indicador permanece desactivada hasta que la cambie deliberadamente. Repetir el instalador conserva el indicador y la raíz; una elección explícita contradictoria se rechaza. No genere una clave nueva para reparar una instancia cifrada: recupere la original. Aplique el esquema requerido y la verificación antes de importar datos. La tarea de mantenimiento avanza por lotes en la conversión histórica y la rotación. Activar el indicador no demuestra que se hayan convertido todos los contenidos antiguos o sus copias. Desactivarlo no descifra los datos protegidos ni permite nuevas escrituras en claro en los ámbitos protegidos.
-
-
 
 ## Preservar la recuperación {#recovery}
 

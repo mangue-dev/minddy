@@ -2,7 +2,7 @@
 {
   "id": "task-notebook",
   "locale": "de",
-  "title": "Notizen im privaten Aufgabenheft festhalten",
+  "title": "Aufgabennotizbuch",
   "summary": "Schreibe schnelle Notizen und überführe eine ausgewählte Aufgabe bei Bedarf in nachverfolgte Projektarbeit.",
   "topic": "Arbeit planen und finden",
   "type": "guide",
@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -41,18 +41,20 @@
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "2026-10-08",
-    "language": "2026-10-08",
-    "date": "2026-10-08"
+    "revision": 3,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
+    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison)",
+    "date": "2026-10-09"
   },
   "related": [
-    "create-an-issue",
-    "work-with-numo",
-    "create-and-organize-pages"
+    "issues",
+    "numo",
+    "pages"
   ],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Notizen im privaten Aufgabenheft festhalten"
+  ],
   "figures": [
     {
       "id": "task-notebook-steps",
@@ -60,7 +62,7 @@
       "src": "/documentation/de/work-task-notebook.png",
       "alt": "Übersetzte persönliche Demo-Aufgaben im Notizbuch.",
       "caption": "Das Notizbuch hält persönliche Schritte außerhalb der Tickethierarchie des Projekts fest. Die Zustände der Beispielaufgaben bleiben unverändert.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

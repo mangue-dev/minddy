@@ -2,7 +2,7 @@
 {
   "id": "automation-settings",
   "locale": "es",
-  "title": "Configurar trabajo automático de incidencias",
+  "title": "Automatización de tickets",
   "summary": "Separar preferencias de cuenta de reglas exclusivas del propietario.",
   "topic": "Cuenta y aplicaciones",
   "type": "guide",
@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 2,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (cd1843e12)",
     "editions": [
@@ -40,14 +40,16 @@
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "2026-10-08",
-    "language": "2026-10-08",
-    "date": "2026-10-08"
+    "revision": 4,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison)",
+    "date": "2026-10-09"
   },
   "related": [],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Configurar trabajo automático de incidencias"
+  ],
   "figures": [
     {
       "id": "automation-settings-workflow",
@@ -55,7 +57,7 @@
       "src": "/documentation/es/automation-settings-workflow.png",
       "alt": "Preajuste de automatización sin ninguna opción seleccionada.",
       "caption": "Sin preajuste seleccionado, esta cuenta no inicia trabajo automático.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -70,7 +72,7 @@
       "src": "/documentation/es/automation-settings-projects-workflow.png",
       "alt": "Selección de proyectos para las automatizaciones de la cuenta.",
       "caption": "Selección de proyectos para las automatizaciones de la cuenta. Los dos proyectos de demostración están desactivados; no se inicia ninguna automatización.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

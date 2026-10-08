@@ -2,7 +2,7 @@
 {
   "id": "choose-an-instance",
   "locale": "de",
-  "title": "Cloud oder eine eigene Instanz wählen",
+  "title": "Cloud und selbst gehostete Instanzen",
   "summary": "Vergleiche den Betriebsaufwand, die Datenziele und die optionalen Anbieter, die du selbst einrichtest.",
   "topic": "Erste Schritte",
   "type": "explanation",
@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 1,
-  "sourceRevision": 1,
+  "revision": 2,
+  "sourceRevision": 2,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "v0.11.0",
     "editions": [
@@ -36,21 +36,22 @@
     ]
   },
   "review": {
-    "revision": 1,
-    "fact": "2026-10-08",
-    "language": "2026-10-08",
-    "date": "2026-10-08"
+    "revision": 2,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
+    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison)",
+    "date": "2026-10-09"
   },
   "related": [
-    "install-a-server",
-    "managed-or-source-installation",
+    "installation",
     "transfer-between-instances",
     "architecture-and-data-flows"
   ],
   "aliases": [
     "open-source"
   ],
-  "tags": [],
+  "tags": [
+    "Cloud oder eine eigene Instanz wählen"
+  ],
   "figures": [
     {
       "id": "responsibilities",
@@ -58,7 +59,7 @@
       "src": "/documentation/de/responsibilities.svg",
       "alt": "Betriebsverantwortung: Von Minddy betrieben, Von dir betrieben.",
       "caption": "In beiden Modellen müssen dieselben Kerndienste betrieben werden. Optionale Anbieter bleiben separate Dienste.",
-      "revision": 1,
+      "revision": 2,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

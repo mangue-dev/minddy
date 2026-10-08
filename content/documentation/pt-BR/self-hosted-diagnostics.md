@@ -2,8 +2,8 @@
 {
   "id": "self-hosted-diagnostics",
   "locale": "pt-BR",
-  "title": "Diagnosticar uma instalação self-hosted",
-  "summary": "Execute o doctor de leitura a partir da versão instalada com seu ambiente protegido.",
+  "title": "Diagnóstico da instância",
+  "summary": "Execute o doctor em modo somente leitura, associe sintomas e verificações e preserve dados e segredos durante o diagnóstico.",
   "topic": "Operar uma instância",
   "type": "troubleshooting",
   "audiences": [
@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 1,
-  "sourceRevision": 1,
+  "revision": 2,
+  "sourceRevision": 2,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -36,10 +36,10 @@
     ]
   },
   "review": {
-    "revision": 1,
-    "fact": "agent:/root/automation_account_documentation (independent targeted primary-source review)",
-    "language": "agent:/root/automation_account_documentation (complete independent article and caption review)",
-    "date": "2026-10-08"
+    "revision": 2,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
+    "date": "2026-10-09"
   },
   "related": [
     "instance-configuration",
@@ -47,7 +47,9 @@
     "storage-and-attachments"
   ],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Diagnosticar uma instalação self-hosted"
+  ],
   "figures": [],
   "requiredFigures": []
 }
@@ -55,7 +57,7 @@
 
 ## Diagnosticar uma instalação self-hosted {#self-hosted-diagnostics}
 
-Execute o doctor de leitura a partir da versão instalada com seu ambiente protegido. Para --mode full, forneça o Compose upstream; para managed, forneça a conexão do provedor. O doctor verifica compatibilidade, configuração, containers, DNS, TLS, aplicação, disco, agendador e runner. As verificações de banco, migrações e Storage exigem uma conexão. O relatório oculta segredos, mas você ainda precisa revisá-lo antes de compartilhar. A saúde dos serviços não comprova entrega de email, decifragem ou recuperação de arquivos.
+Execute o doctor em modo somente leitura a partir da versão instalada com seu ambiente protegido. Para --mode full, forneça o Compose upstream; para managed, forneça a conexão do provedor. O doctor verifica compatibilidade, configuração, containers, DNS, TLS, aplicação, disco, agendador e runner. As verificações de banco, migrações e Storage exigem uma conexão. O relatório oculta segredos, mas você ainda precisa revisá-lo antes de compartilhar. A saúde dos serviços não comprova entrega de email, decifragem ou recuperação de arquivos.
 
 ```bash
 pnpm self-host:doctor -- --mode full --env-file "$MINDDY_ENV_FILE" \

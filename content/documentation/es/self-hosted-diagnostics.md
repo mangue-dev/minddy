@@ -2,7 +2,7 @@
 {
   "id": "self-hosted-diagnostics",
   "locale": "es",
-  "title": "Diagnosticar una instalación self-hosted",
+  "title": "Diagnóstico de la instancia",
   "summary": "Ejecute doctor, que es de solo lectura, desde el checkout exacto de la versión y con el entorno instalado.",
   "topic": "Administrar una instancia",
   "type": "troubleshooting",
@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 1,
-  "sourceRevision": 1,
+  "revision": 2,
+  "sourceRevision": 2,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -36,10 +36,10 @@
     ]
   },
   "review": {
-    "revision": 1,
-    "fact": "agent:/root/automation_account_documentation (independent targeted primary-source review)",
-    "language": "Codex agent review_documentation_locales: independent complete English/Spanish meaning and idiom review, not human review",
-    "date": "2026-10-08"
+    "revision": 2,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison)",
+    "date": "2026-10-09"
   },
   "related": [
     "instance-configuration",
@@ -47,11 +47,14 @@
     "storage-and-attachments"
   ],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Diagnosticar una instalación self-hosted"
+  ],
   "figures": [],
   "requiredFigures": []
 }
 ---
+
 ## Diagnosticar una instalación self-hosted {#self-hosted-diagnostics}
 
 Ejecute doctor, que es de solo lectura, desde el checkout exacto de la versión y con el entorno instalado. Para --mode full, indique el Compose upstream; para managed, proporcione la conexión del proveedor. Comprueba compatibilidad, configuración, contenedores, DNS/TLS, aplicación, disco, planificador y runner. Las verificaciones de base de datos, migraciones y Storage necesitan la conexión correspondiente. El informe oculta secretos, pero debe revisarlo antes de compartirlo. Que la aplicación esté activa no demuestra la entrega de email, la lectura de datos cifrados ni la recuperación de archivos.
@@ -64,8 +67,6 @@ pnpm self-host:doctor -- --mode full --env-file "$MINDDY_ENV_FILE" \
 ## Asociar síntoma y comprobación {#symptoms}
 
 Si recibe muchos 401 tras restaurar, compruebe que JWT y las claves anon y service-role pertenecen al mismo entorno. Para subidas fallidas o archivos 404, compare políticas Storage, registros, bytes originales y claves. Si faltan relaciones, conserve el primer error de migración, compruebe disco, bloqueos y URL de destino y repita bootstrap solo después de resolver la causa. No marque manualmente como aplicadas las migraciones fallidas. Para Realtime, compruebe publication, JWT, el proxy WebSocket y los registros. Si cron no se ejecuta o devuelve 401, verifique en privado el planificador, la URL de origen y CRON_SECRET.
-
-
 
 ## Preservar la recuperación {#recovery}
 

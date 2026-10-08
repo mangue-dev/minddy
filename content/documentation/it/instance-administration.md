@@ -2,8 +2,8 @@
 {
   "id": "instance-administration",
   "locale": "it",
-  "title": "Usare la console di amministrazione dell’istanza",
-  "summary": "Amministrare l’istanza è diverso da possedere un progetto.",
+  "title": "Amministrazione dell’istanza",
+  "summary": "Accedi alla console amministrativa con MFA, usa i controlli disponibili e distingui amministrazione dell’istanza e proprietà del progetto.",
   "topic": "Gestire un’istanza",
   "type": "guide",
   "audiences": [
@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 1,
-  "sourceRevision": 1,
+  "revision": 2,
+  "sourceRevision": 2,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -39,17 +39,19 @@
     ]
   },
   "review": {
-    "revision": 1,
-    "fact": "agent:/root/automation_account_documentation (independent targeted primary-source review)",
-    "language": "agent:/root/automation_account_documentation (complete independent article and caption review)",
-    "date": "2026-10-08"
+    "revision": 2,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
+    "date": "2026-10-09"
   },
   "related": [
     "authentication-and-email",
     "instance-configuration"
   ],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Usare la console di amministrazione dell’istanza"
+  ],
   "figures": [
     {
       "id": "instance-administration-flow",
@@ -57,7 +59,7 @@
       "src": "/documentation/it/instance-administration-overview.png",
       "alt": "Panoramica amministratore con indicatori aggregati di account, introduzione e contenuti.",
       "caption": "Panoramica mostra gli indicatori aggregati dell’istanza. Finanze non compare in questo profilo dimostrativo perché non è configurata una chiave OpenRouter gestita.",
-      "revision": 1,
+      "revision": 2,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -72,7 +74,7 @@
       "src": "/documentation/it/instance-administration-users.png",
       "alt": "Assistenza account con ricerca per indirizzo email esatto, senza elenco di contenuti personali.",
       "caption": "Utenti apre un account specifico per assistenza o fatturazione; la schermata iniziale non elenca attività private né contenuti personali.",
-      "revision": 1,
+      "revision": 2,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -87,7 +89,7 @@
       "src": "/documentation/it/instance-administration-models.png",
       "alt": "Impostazioni dei modelli IA e del ragionamento dell’istanza.",
       "caption": "Modelli configura valori predefiniti e usi specifici. La schermata mostra la configurazione esistente; nessun modello o provider è stato modificato.",
-      "revision": 1,
+      "revision": 2,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -114,7 +116,7 @@ Amministrare l’istanza è diverso da possedere un progetto. ADMIN_EMAILS elenc
 
 ![Impostazioni dei modelli IA e del ragionamento dell’istanza.](/documentation/it/instance-administration-models.png)
 
-## Usare le capacità disponibili {#panels}
+## Usare i controlli disponibili {#panels}
 
 La console comprende Panoramica, Utenti, Modelli e, quando disponibile, Finanze. Finanze è nascosto senza OpenRouter gestito; l’assegnazione di un piano dipende dalla fatturazione abilitata o da un override già presente. Aprire la console non aggiunge la fatturazione Cloud a un’istanza self-hosted senza provider commerciali. Controlla modelli, valori predefiniti, utenti e quote nella release installata prima di modificare. I cambiamenti interessano tutta l’istanza: verificali con un account demo.
 

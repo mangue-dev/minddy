@@ -2,7 +2,7 @@
 {
   "id": "personal-statistics",
   "locale": "de",
-  "title": "Deine persönliche Arbeitsstatistik lesen",
+  "title": "Persönliche Statistiken",
   "summary": "Vergleiche Abschlüsse und Zeitmessungen innerhalb ihres tatsächlichen Geltungsbereichs.",
   "topic": "Arbeit planen und finden",
   "type": "explanation",
@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -40,18 +40,20 @@
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "2026-10-08",
-    "language": "2026-10-08",
-    "date": "2026-10-08"
+    "revision": 3,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
+    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison)",
+    "date": "2026-10-09"
   },
   "related": [
     "personal-cycle",
     "objectives",
-    "plans-and-ai-usage"
+    "ai-settings-and-usage"
   ],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Deine persönliche Arbeitsstatistik lesen"
+  ],
   "figures": [
     {
       "id": "personal-statistics-steps",
@@ -59,7 +61,7 @@
       "src": "/documentation/de/reader-statistics.png",
       "alt": "Persönliche Statistik mit Jahresraster, Aufschlüsselungen, Arbeitsrhythmus und Gesamtzahlen.",
       "caption": "Das Demokonto zeigt ein abgeschlossenes und elf erstellte Tickets. Die angezeigten Statistiken sind echt; Projekt- und Zielnamen wurden für die Darstellung übersetzt.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

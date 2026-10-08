@@ -2,7 +2,7 @@
 {
   "id": "notifications-and-inbox",
   "locale": "es",
-  "title": "Seguir notificaciones e invitaciones en la bandeja de entrada",
+  "title": "Bandeja de entrada y notificaciones",
   "summary": "Revisa la actividad sin leer y las menciones, y ajusta las preferencias de notificación de tu cuenta.",
   "topic": "Planificar y encontrar trabajo",
   "type": "guide",
@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -37,18 +37,20 @@
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "2026-10-08",
-    "language": "2026-10-08",
-    "date": "2026-10-08"
+    "revision": 5,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison)",
+    "date": "2026-10-09"
   },
   "related": [
-    "project-members",
-    "devices-and-notifications",
-    "profile-and-preferences"
+    "projects",
+    "applications",
+    "accounts"
   ],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Seguir notificaciones e invitaciones en la bandeja de entrada"
+  ],
   "figures": [
     {
       "id": "notifications-and-inbox-steps",
@@ -56,7 +58,7 @@
       "src": "/documentation/es/work-inbox.png",
       "alt": "Pestañas de la bandeja de entrada y lista sin elementos no leídos.",
       "caption": "La pestaña Sin leer vacía indica que esta vista no contiene elementos sin leer. Todos muestra otras notificaciones conservadas.",
-      "revision": 2,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

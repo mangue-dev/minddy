@@ -2,7 +2,7 @@
 {
   "id": "automation-settings",
   "locale": "fr",
-  "title": "Configurer le travail automatique des tickets",
+  "title": "Automatisation des tickets",
   "summary": "Distinguer préférences du compte et règles de projet réservées au propriétaire.",
   "topic": "Compte et applications",
   "type": "guide",
@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 2,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (cd1843e12)",
     "editions": [
@@ -40,14 +40,16 @@
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "2026-10-08",
-    "language": "2026-10-08",
-    "date": "2026-10-08"
+    "revision": 4,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun)",
+    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review)",
+    "date": "2026-10-09"
   },
   "related": [],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Configurer le travail automatique des tickets"
+  ],
   "figures": [
     {
       "id": "automation-settings-workflow",
@@ -55,7 +57,7 @@
       "src": "/documentation/fr/automation-settings-workflow.png",
       "alt": "Préréglage d’automatisation sur Aucun.",
       "caption": "Aucun préréglage n’est sélectionné : ce compte ne démarre pas de travail automatique.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -70,7 +72,7 @@
       "src": "/documentation/fr/automation-settings-projects-workflow.png",
       "alt": "Choix des projets pour les automatisations du compte.",
       "caption": "Choix des projets pour les automatisations du compte. Les deux projets de démonstration sont désactivés ici ; aucune automatisation ne démarre.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -92,7 +94,6 @@
 Ouvrez la section Automatisations des réglages du compte. Choisissez un préréglage, examinez son explication et l’utilisation estimée, réglez le délai de démarrage et choisissez les tailles d’effort qui autorisent les étapes automatiques. Les estimations dépendent du budget disponible et ne sont pas des prix fixes. Vérifiez le modèle du worker dans les réglages IA du compte avant d’activer le travail sur le code. La même page liste les contrôles d’automatisation des projets dont vous êtes propriétaire ; les membres ne peuvent pas activer le projet d’un autre propriétaire.
 
 ![Préréglage d’automatisation sur Aucun.](/documentation/fr/automation-settings-workflow.png)
-
 
 ## Distinguer les mécanismes {#mechanisms}
 

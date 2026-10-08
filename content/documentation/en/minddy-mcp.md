@@ -1,0 +1,166 @@
+---
+{
+  "id": "minddy-mcp",
+  "locale": "en",
+  "title": "Minddy MCP",
+  "summary": "Connect an external assistant to Minddy, control its access and discover the available MCP tools and safe update patterns.",
+  "topic": "Numo and integrations",
+  "type": "guide",
+  "audiences": [
+    "integrator",
+    "member"
+  ],
+  "workflows": [
+    "N09",
+    "T06"
+  ],
+  "visibility": "public",
+  "status": "published",
+  "revision": 2,
+  "sourceRevision": 2,
+  "owner": "@mangue-dev",
+  "updatedAt": "2026-10-09",
+  "compatibility": {
+    "version": "0.11.1 candidate (cd1843e12); 0.11.1 candidate (89ebb59a5)",
+    "editions": [
+      "Cloud",
+      "self-hosted"
+    ],
+    "profiles": [
+      "web",
+      "mobile",
+      "desktop",
+      "full",
+      "managed"
+    ],
+    "evidence": [
+      "app/(marketing)/mcp/page.tsx",
+      "app/api/mcp/route.ts",
+      "lib/site.ts",
+      "components/settings/mcp-connect-panel.tsx",
+      "components/settings/account-connected-apps-section.tsx",
+      "content/documentation/reviews/remaining-account-capture-candidates.json",
+      "content/documentation/reviews/mcp-access-capture-candidates.json",
+      "lib/server/mcp/catalog.ts",
+      "lib/server/mcp/tools.ts",
+      "lib/server/mcp/page-tools.ts",
+      "lib/server/mcp/auth.ts",
+      "app/llms-full.txt/route.ts"
+    ]
+  },
+  "review": {
+    "revision": 2,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun)",
+    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review)",
+    "date": "2026-10-09"
+  },
+  "related": [
+    "numo",
+    "integration-troubleshooting"
+  ],
+  "aliases": [
+    "external-minddy-mcp",
+    "mcp-tool-reference"
+  ],
+  "tags": [
+    "Connect an external assistant to Minddy MCP",
+    "Use Minddy MCP safely and discover its current tools"
+  ],
+  "figures": [
+    {
+      "id": "external-minddy-mcp-workflow",
+      "kind": "screenshot",
+      "src": "/documentation/en/external-minddy-mcp-workflow.png",
+      "alt": "Minddy MCP client picker for Claude, Codex and other assistants.",
+      "caption": "Select your client to display its installation command or configuration.",
+      "revision": 2,
+      "reviewed": true,
+      "capturedAt": "2026-10-08",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "theme": "light"
+    },
+    {
+      "id": "external-minddy-mcp-install-workflow",
+      "kind": "screenshot",
+      "src": "/documentation/en/external-minddy-mcp-install-workflow.png",
+      "alt": "Codex installation dialog on the local instance.",
+      "caption": "Codex installation dialog on the local instance. Use your own instance origin; the displayed command was not executed for this capture.",
+      "revision": 2,
+      "reviewed": true,
+      "capturedAt": "2026-10-08",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "theme": "light"
+    },
+    {
+      "id": "external-minddy-mcp-accesses-workflow",
+      "kind": "screenshot",
+      "src": "/documentation/en/external-minddy-mcp-accesses-workflow.png",
+      "alt": "Connected applications list with no active grant.",
+      "caption": "Review authorized applications here. The demonstration account has no active grant; no authorization or revocation was executed.",
+      "revision": 2,
+      "reviewed": true,
+      "capturedAt": "2026-10-08",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "theme": "light"
+    }
+  ],
+  "requiredFigures": [
+    "external-minddy-mcp-workflow",
+    "external-minddy-mcp-install-workflow",
+    "external-minddy-mcp-accesses-workflow"
+  ]
+}
+---
+
+Minddy MCP lets an external assistant use Minddy tools under your account’s access. Connect the assistant through the instance’s setup flow, review or revoke its access in account settings, and read the current tool schemas before changing issues, pages or routines.
+
+## Connect an external assistant to Minddy MCP {#external-minddy-mcp}
+
+Open the instance's public MCP setup page and choose the instructions for your client. Use the endpoint displayed there, ending in `/api/mcp`. For self-hosting, use your instance origin, not the Cloud origin. The client must support the remote MCP connection and OAuth flow shown by the guide.
+
+Complete sign-in in the browser and inspect the authorization request before granting access. The connection acts as your Minddy account; it does not obtain access to projects you cannot use. Start with a read request for an issue you can already open, then check that the returned project is the intended one.
+
+![Minddy MCP client picker for Claude, Codex and other assistants.](/documentation/en/external-minddy-mcp-workflow.png)
+
+### Scope and revocation {#access}
+
+External clients can use available Minddy tools for issues, plans, comments, pages, feedback, cycles, routines and the task notebook within their authorized permissions. The MCP server is available on every Cloud plan; running the client's AI still depends on that client's configuration and costs.
+
+Account settings' Minddy MCP section lists external client access and its revocation controls. Revoke a client when you no longer trust or use it. This is separate from MCP for Numo, which connects Numo to other services. Never paste access tokens into issues, public feedback or screenshots.
+
+![Codex installation dialog on the local instance.](/documentation/en/external-minddy-mcp-install-workflow.png)
+
+![Connected applications list with no active grant.](/documentation/en/external-minddy-mcp-accesses-workflow.png)
+
+## Use Minddy MCP safely and discover its current tools {#mcp-tool-reference}
+
+Minddy exposes /api/mcp with Streamable HTTP, stateless tools and OAuth 2.1. Connect as your own account through browser consent; old static mdyk_ keys are not accepted. Start with minddy_list_projects to obtain accessible project UUIDs, then read the connected server tool schemas. /llms-full.txt is generated from those registrations and provides the exact current parameters. Do not guess tools from an old copied list. Project-scoped tools recheck access and return stable error codes.
+
+### Read issues before changing their plans {#issue-plans}
+
+minddy_get_issue accepts an issue UUID, an issue identifier such as DEMO-42, or a bare issue number; project_id is supplied separately. Its plan_tasks provide zero-based task_index values. minddy_update_plan_task accepts a tasks batch with pending, in_progress, completed or cancelled states. The whole batch fails on an invalid index. Use minddy_append_to_plan for additions and minddy_edit_issue_text with a unique exact old_string/new_string for a passage. Re-read if the match is stale; replacing the entire plan can overwrite another person’s progress. Questions under ## Questions do not count as plan tasks.
+
+### Use revision guards and owner scope {#pages-and-routines}
+
+minddy_list_pages maps hierarchy; minddy_search_pages finds title/body excerpts and minddy_get_page reads the full Markdown, comments and database values. Use append/edit tools for partial changes and current version guards for full replacement. Preserve file/image URLs exactly. minddy_create_page with database=true creates a database; minddy_update_page_database requires database revision for schema edits, previous value for cells and preview/apply tokens for conversions. Owner-only routine tools create, pause, retime or remove scheduled requests. Read existing routines first to avoid duplicates. Resource uploads through minddy_add_resource are capped at 10 MB; page tools do not invent file URLs.
+
+### Verify the returned state {#example}
+
+The sanitized example updates the first task of an already-read plan. Replace the project UUID and issue with values from discovery; task_index must come from the latest read. Confirm returned plan_tasks and plan_progress. On access errors, check the account/project authorization; on stale conflicts, read again and apply only the intended change. Do not retry an uncertain external mutation before checking its result.
+
+```json
+{
+  "project_id": "00000000-0000-4000-8000-000000000001",
+  "issue": "DEMO-42",
+  "tasks": [{"task_index": 0, "state": "in_progress"}]
+}
+```

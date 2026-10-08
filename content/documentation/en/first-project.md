@@ -2,7 +2,7 @@
 {
   "id": "first-project",
   "locale": "en",
-  "title": "Complete your first issue",
+  "title": "Getting started",
   "summary": "Create or join a project, record one task and close it when its result is verified.",
   "topic": "Get started",
   "type": "tutorial",
@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -42,21 +42,22 @@
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "2026-10-08",
-    "language": "2026-10-08",
-    "date": "2026-10-08"
+    "revision": 5,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun)",
+    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review)",
+    "date": "2026-10-09"
   },
   "related": [
-    "account-access",
-    "project-members",
-    "create-an-issue",
-    "issue-statuses"
+    "accounts",
+    "projects",
+    "issues"
   ],
   "aliases": [
     "core-tracker"
   ],
-  "tags": [],
+  "tags": [
+    "Complete your first issue"
+  ],
   "figures": [
     {
       "id": "first-project-steps",
@@ -64,7 +65,7 @@
       "src": "/documentation/en/reader-first-project.png",
       "alt": "Completed demonstration issue with its description and saved comment.",
       "caption": "The completed state records the application reader check. It does not assert that the example website’s email link was tested.",
-      "revision": 2,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

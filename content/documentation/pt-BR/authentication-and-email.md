@@ -2,8 +2,8 @@
 {
   "id": "authentication-and-email",
   "locale": "pt-BR",
-  "title": "Configurar emails de conta, MFA e recuperação",
-  "summary": "Os emails de conta dependem do Supabase e do GoTrue.",
+  "title": "Autenticação e e-mail",
+  "summary": "Configure os e-mails de autenticação, redirecionamentos e MFA no Supabase e verifique confirmação, acesso e recuperação.",
   "topic": "Operar uma instância",
   "type": "guide",
   "audiences": [
@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 1,
-  "sourceRevision": 1,
+  "revision": 2,
+  "sourceRevision": 2,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -37,17 +37,20 @@
     ]
   },
   "review": {
-    "revision": 1,
-    "fact": "agent:/root/automation_account_documentation (independent targeted primary-source review)",
-    "language": "agent:/root/automation_account_documentation (complete independent article and caption review)",
-    "date": "2026-10-08"
+    "revision": 2,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
+    "date": "2026-10-09"
   },
   "related": [
     "instance-administration",
     "self-hosted-diagnostics"
   ],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Configurar e-mails de conta, MFA e recuperação",
+    "Configurar emails de conta, MFA e recuperação"
+  ],
   "figures": [
     {
       "id": "authentication-and-email-flow",
@@ -55,7 +58,7 @@
       "src": "/documentation/pt-BR/authentication-and-email-flow.svg",
       "alt": "Diagrama: Origem Auth e redirecionamentos. SMTP próprio e modelos versionados. Confirmação e login com senha. Testes TOTP, recuperação e senha antiga.",
       "caption": "Siga as etapas nesta ordem. Origem Auth e redirecionamentos. SMTP próprio e modelos versionados. Confirmação e login com senha. Testes TOTP, recuperação e senha antiga.",
-      "revision": 1,
+      "revision": 2,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -71,12 +74,12 @@
 }
 ---
 
-## Configurar emails de conta, MFA e recuperação {#authentication-and-email}
+## Configurar e-mails de conta, MFA e recuperação {#authentication-and-email}
 
 Os emails de conta dependem do Supabase e do GoTrue. Resend para notificações da aplicação não configura confirmação nem recuperação de senha. No perfil full, mantenha o overlay Minddy em cada comando Compose. Defina SITE_URL, API_EXTERNAL_URL, SUPABASE_PUBLIC_URL e ADDITIONAL_REDIRECT_URLS para as origens da sua instância. Configure SMTP_ADMIN_EMAIL, SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS e SMTP_SENDER_NAME com os valores do seu provedor. Mantenha a confirmação de email ativa e reinicie Auth no contexto instalado.
 
 
-Antes de usar compose abaixo, defina a função do perfil full instalado a partir do [contexto Compose de referência](/pt-br/documentacao/back-up-the-reference-instance#context).
+Antes de usar compose abaixo, defina a função do perfil full instalado a partir do [contexto Compose de referência](/pt-br/documentacao/backups-and-restoration#context).
 
 ```bash
 compose up -d --wait auth

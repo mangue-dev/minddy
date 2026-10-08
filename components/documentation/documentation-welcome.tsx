@@ -19,10 +19,10 @@ export async function DocumentationWelcome({ articles, locale, query = "", previ
       { id: "choose-an-instance", icon: CloudServerIcon }, { id: "first-project", icon: Rocket01Icon }, { id: "navigation", icon: Compass01Icon },
     ] },
     { id: "operate", title: t("operate"), intro: t("welcomeOperate"), articles: [
-      { id: "self-hosted-compatibility", icon: CheckmarkCircle01Icon }, { id: "install-a-server", icon: ServerStack01Icon }, { id: "back-up-the-reference-instance", icon: DatabaseIcon },
+      { id: "installation", icon: CheckmarkCircle01Icon }, { id: "instance-configuration", icon: ServerStack01Icon }, { id: "backups-and-restoration", icon: DatabaseIcon },
     ] },
     { id: "integrate", title: t("integrate"), intro: t("welcomeIntegrate"), articles: [
-      { id: "glossary-and-data-model", icon: WorkflowSquare01Icon }, { id: "architecture-and-data-flows", icon: Share01Icon }, { id: "external-minddy-mcp", icon: ApiIcon },
+      { id: "glossary-and-data-model", icon: WorkflowSquare01Icon }, { id: "architecture-and-data-flows", icon: Share01Icon }, { id: "minddy-mcp", icon: ApiIcon },
     ] },
   ];
   const sections = guides.map(({ id, title }) => ({ id, title, level: 2 }));

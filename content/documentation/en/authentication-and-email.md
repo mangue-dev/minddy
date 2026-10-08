@@ -2,7 +2,7 @@
 {
   "id": "authentication-and-email",
   "locale": "en",
-  "title": "Configure account email, MFA and recovery",
+  "title": "Authentication and email",
   "summary": "Auth email belongs to Supabase/GoTrue.",
   "topic": "Operate an instance",
   "type": "guide",
@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 1,
-  "sourceRevision": 1,
+  "revision": 2,
+  "sourceRevision": 2,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -37,17 +37,19 @@
     ]
   },
   "review": {
-    "revision": 1,
-    "fact": "agent:/root/automation_account_documentation (independent targeted primary-source review)",
-    "language": "agent:/root/automation_account_documentation (complete independent article and caption review)",
-    "date": "2026-10-08"
+    "revision": 2,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun)",
+    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review)",
+    "date": "2026-10-09"
   },
   "related": [
     "instance-administration",
     "self-hosted-diagnostics"
   ],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Configure account email, MFA and recovery"
+  ],
   "figures": [
     {
       "id": "authentication-and-email-flow",
@@ -55,7 +57,7 @@
       "src": "/documentation/en/authentication-and-email-flow.svg",
       "alt": "Diagram: Configured Auth origin and redirects. Operator SMTP and versioned templates. Confirmation gesture and password login. TOTP, recovery and revoked-password tests.",
       "caption": "Read the stages in order. Configured Auth origin and redirects. Operator SMTP and versioned templates. Confirmation gesture and password login. TOTP, recovery and revoked-password tests.",
-      "revision": 1,
+      "revision": 2,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -76,7 +78,7 @@
 Auth email belongs to Supabase/GoTrue. Application notifications through Resend do not configure confirmation or password recovery. In the full profile, retain the Minddy overlay in every Compose command. Set SITE_URL, API_EXTERNAL_URL, SUPABASE_PUBLIC_URL and ADDITIONAL_REDIRECT_URLS to your selected origins. Configure SMTP_ADMIN_EMAIL, SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS and SMTP_SENDER_NAME with your own provider. Keep confirmation enabled and restart Auth in the installed Compose context.
 
 
-Before using compose below, set the installed full-profile function from [the reference Compose context](/docs/back-up-the-reference-instance#context).
+Before using compose below, set the installed full-profile function from [the reference Compose context](/docs/backups-and-restoration#context).
 
 ```bash
 compose up -d --wait auth

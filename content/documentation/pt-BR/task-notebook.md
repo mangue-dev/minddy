@@ -2,7 +2,7 @@
 {
   "id": "task-notebook",
   "locale": "pt-BR",
-  "title": "Registrar notas no caderno privado",
+  "title": "Caderno de tarefas",
   "summary": "Escreva notas rápidas e transforme uma tarefa selecionada em trabalho do projeto quando precisar de acompanhamento.",
   "topic": "Planejar e encontrar trabalho",
   "type": "guide",
@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -41,18 +41,20 @@
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "2026-10-08",
-    "language": "2026-10-08",
-    "date": "2026-10-08"
+    "revision": 3,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
+    "date": "2026-10-09"
   },
   "related": [
-    "create-an-issue",
-    "work-with-numo",
-    "create-and-organize-pages"
+    "issues",
+    "numo",
+    "pages"
   ],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Registrar notas no caderno privado"
+  ],
   "figures": [
     {
       "id": "task-notebook-steps",
@@ -60,7 +62,7 @@
       "src": "/documentation/pt-BR/work-task-notebook.png",
       "alt": "Tarefas pessoais de demonstração traduzidas no caderno.",
       "caption": "O caderno acompanha etapas pessoais fora da hierarquia de tickets do projeto. Os status das tarefas de exemplo permanecem iguais.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

@@ -2,7 +2,7 @@
 {
   "id": "glossary-and-data-model",
   "locale": "en",
-  "title": "Understand projects, issues, objectives and personal work",
+  "title": "Glossary and data model",
   "summary": "A project is the shared workspace for members, issues, categories, saved views, pages, integrations and its feedback board.",
   "topic": "Technical concepts",
   "type": "explanation",
@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 1,
-  "sourceRevision": 1,
+  "revision": 2,
+  "sourceRevision": 2,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -40,17 +40,19 @@
     ]
   },
   "review": {
-    "revision": 1,
-    "fact": "agent:/root/automation_account_documentation (independent targeted primary-source review)",
-    "language": "agent:/root/automation_account_documentation (complete independent article and caption review)",
-    "date": "2026-10-08"
+    "revision": 2,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun)",
+    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review)",
+    "date": "2026-10-09"
   },
   "related": [
     "permissions-and-public-links",
-    "numo-execution-model"
+    "numo"
   ],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Understand projects, issues, objectives and personal work"
+  ],
   "figures": [
     {
       "id": "glossary-and-data-model-flow",
@@ -58,7 +60,7 @@
       "src": "/documentation/en/glossary-and-data-model-flow.svg",
       "alt": "Diagram: Project: shared work and knowledge. Issue: work; objective: intended result. Personal cycle: one user's cross-project work. Page: durable context; feedback: user need.",
       "caption": "These components have distinct responsibilities. Project: shared work and knowledge. Issue: work; objective: intended result. Personal cycle: one user's cross-project work. Page: durable context; feedback: user need.",
-      "revision": 1,
+      "revision": 2,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

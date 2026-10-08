@@ -2,7 +2,7 @@
 {
   "id": "trash-and-recovery",
   "locale": "pt-BR",
-  "title": "Restaurar trabalho excluído",
+  "title": "Lixeira e recuperação",
   "summary": "Encontre um objeto excluído, restaure suas dependências e diferencie a remoção permanente.",
   "topic": "Planejar e encontrar trabalho",
   "type": "guide",
@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 1,
-  "sourceRevision": 1,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -36,18 +36,20 @@
     ]
   },
   "review": {
-    "revision": 1,
-    "fact": "2026-10-08",
-    "language": "2026-10-08",
-    "date": "2026-10-08"
+    "revision": 4,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
+    "date": "2026-10-09"
   },
   "related": [
-    "page-history",
-    "privacy-and-account-deletion",
-    "project-settings"
+    "pages",
+    "accounts",
+    "projects"
   ],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Restaurar trabalho excluído"
+  ],
   "figures": [
     {
       "id": "trash-and-recovery-steps",
@@ -55,7 +57,7 @@
       "src": "/documentation/pt-BR/reader-trash.png",
       "alt": "Ticket de demonstração recuperável com trinta dias restantes na lixeira.",
       "caption": "As ações da linha permitem restaurá-lo. Esvaziar a lixeira é uma operação permanente separada.",
-      "revision": 1,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

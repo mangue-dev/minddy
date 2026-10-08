@@ -2,7 +2,7 @@
 {
   "id": "instance-administration",
   "locale": "de",
-  "title": "Die Administrationskonsole einer Instanz verwenden",
+  "title": "Instanzverwaltung",
   "summary": "Instanzadministration ist von Projekteigentum getrennt.",
   "topic": "Instanz betreiben",
   "type": "guide",
@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 1,
-  "sourceRevision": 1,
+  "revision": 2,
+  "sourceRevision": 2,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -39,17 +39,19 @@
     ]
   },
   "review": {
-    "revision": 1,
-    "fact": "agent:/root/automation_account_documentation (independent targeted primary-source review)",
-    "language": "agent:/root/automation_account_documentation (complete independent article and caption review)",
-    "date": "2026-10-08"
+    "revision": 2,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
+    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison)",
+    "date": "2026-10-09"
   },
   "related": [
     "authentication-and-email",
     "instance-configuration"
   ],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Die Administrationskonsole einer Instanz verwenden"
+  ],
   "figures": [
     {
       "id": "instance-administration-flow",
@@ -57,7 +59,7 @@
       "src": "/documentation/de/instance-administration-overview.png",
       "alt": "Admin-Übersicht mit zusammengefassten Konto-, Einführungs- und Inhaltskennzahlen.",
       "caption": "Übersicht zeigt zusammengefasste Kennzahlen der Instanz. Finanzen fehlt in diesem Demoprofil, weil kein verwalteter OpenRouter-Schlüssel eingerichtet ist.",
-      "revision": 1,
+      "revision": 2,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -72,7 +74,7 @@
       "src": "/documentation/de/instance-administration-users.png",
       "alt": "Kontosupport mit Suche nach der genauen E-Mail-Adresse ohne Verzeichnis privater Inhalte.",
       "caption": "Benutzer öffnet ein bestimmtes Konto für Support oder Abrechnung; die Startansicht listet weder private Aktivitäten noch persönliche Inhalte auf.",
-      "revision": 1,
+      "revision": 2,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -87,7 +89,7 @@
       "src": "/documentation/de/instance-administration-models.png",
       "alt": "KI-Modell- und Reasoning-Einstellungen der Instanz.",
       "caption": "Modelle legt Standardwerte und besondere Verwendungszwecke fest. Die Aufnahme zeigt die vorhandene Konfiguration; keine Modell- oder Anbietereinstellung wurde geändert.",
-      "revision": 1,
+      "revision": 2,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

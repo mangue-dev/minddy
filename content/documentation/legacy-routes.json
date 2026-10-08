@@ -1,0 +1,767 @@
+{
+  "first-project": {
+    "article": "first-project",
+    "section": "first-project",
+    "sections": {
+      "first-project": "first-project",
+      "first-use-recovery": "first-use-recovery"
+    }
+  },
+  "choose-an-instance": {
+    "article": "choose-an-instance",
+    "section": "choose-an-instance",
+    "sections": {
+      "choose-an-instance": "choose-an-instance",
+      "responsibilities": "responsibilities",
+      "services": "services",
+      "next-step": "next-step"
+    }
+  },
+  "account-access": {
+    "article": "accounts",
+    "section": "account-access",
+    "sections": {
+      "account-access": "account-access",
+      "session-and-mail": "session-and-mail"
+    }
+  },
+  "account-security": {
+    "article": "accounts",
+    "section": "account-security",
+    "sections": {
+      "account-security": "account-security",
+      "recovery": "recovery"
+    }
+  },
+  "account-recovery": {
+    "article": "accounts",
+    "section": "account-recovery",
+    "sections": {
+      "account-recovery": "account-recovery",
+      "mfa-recovery": "mfa-recovery"
+    }
+  },
+  "profile-and-preferences": {
+    "article": "accounts",
+    "section": "profile-and-preferences",
+    "sections": {
+      "profile-and-preferences": "profile-and-preferences",
+      "preferences": "preferences"
+    }
+  },
+  "privacy-and-account-deletion": {
+    "article": "accounts",
+    "section": "privacy-and-account-deletion",
+    "sections": {
+      "privacy-and-account-deletion": "privacy-and-account-deletion",
+      "deletion": "deletion"
+    }
+  },
+  "transfer-between-instances": {
+    "article": "transfer-between-instances",
+    "section": "transfer-between-instances",
+    "sections": {
+      "transfer-between-instances": "transfer-between-instances",
+      "exclusions": "exclusions"
+    }
+  },
+  "web-and-mobile": {
+    "article": "applications",
+    "section": "web-and-mobile",
+    "sections": {
+      "web-and-mobile": "web-and-mobile",
+      "access": "access"
+    }
+  },
+  "install-the-pwa": {
+    "article": "applications",
+    "section": "install-the-pwa",
+    "sections": {
+      "install-the-pwa": "install-the-pwa",
+      "operation": "operation"
+    }
+  },
+  "desktop-app": {
+    "article": "applications",
+    "section": "desktop-app",
+    "sections": {
+      "desktop-app": "desktop-app",
+      "operation": "desktop-app-operation"
+    }
+  },
+  "devices-and-notifications": {
+    "article": "applications",
+    "section": "devices-and-notifications",
+    "sections": {
+      "devices-and-notifications": "devices-and-notifications",
+      "platforms": "platforms"
+    }
+  },
+  "project-settings": {
+    "article": "projects",
+    "section": "project-settings",
+    "sections": {
+      "project-settings": "project-settings",
+      "project-removal": "project-removal"
+    }
+  },
+  "project-members": {
+    "article": "projects",
+    "section": "project-members",
+    "sections": {
+      "project-members": "project-members",
+      "member-permissions": "member-permissions",
+      "invitation-recovery": "invitation-recovery"
+    }
+  },
+  "create-an-issue": {
+    "article": "issues",
+    "section": "create-an-issue",
+    "sections": {
+      "create-an-issue": "create-an-issue",
+      "issue-save": "issue-save"
+    }
+  },
+  "triage-incoming-work": {
+    "article": "issues",
+    "section": "triage-incoming-work",
+    "sections": {
+      "triage-incoming-work": "triage-incoming-work",
+      "triage-order": "triage-order"
+    }
+  },
+  "issue-statuses": {
+    "article": "issues",
+    "section": "issue-statuses",
+    "sections": {
+      "issue-statuses": "issue-statuses",
+      "closed-work": "closed-work"
+    }
+  },
+  "issue-discussion-and-resources": {
+    "article": "issues",
+    "section": "issue-discussion-and-resources",
+    "sections": {
+      "issue-discussion-and-resources": "issue-discussion-and-resources",
+      "resource-access": "resource-access"
+    }
+  },
+  "issue-dependencies": {
+    "article": "issues",
+    "section": "issue-dependencies",
+    "sections": {
+      "issue-dependencies": "issue-dependencies",
+      "blocker-state": "blocker-state"
+    }
+  },
+  "sub-issues": {
+    "article": "issues",
+    "section": "sub-issues",
+    "sections": {
+      "sub-issues": "sub-issues",
+      "change-parent": "change-parent"
+    }
+  },
+  "implementation-plans": {
+    "article": "issues",
+    "section": "implementation-plans",
+    "sections": {
+      "implementation-plans": "implementation-plans",
+      "plan-progress": "plan-progress"
+    }
+  },
+  "recurring-issues": {
+    "article": "issues",
+    "section": "recurring-issues",
+    "sections": {
+      "recurring-issues": "recurring-issues",
+      "recurrence-change": "recurrence-change"
+    }
+  },
+  "bulk-issue-actions": {
+    "article": "issues",
+    "section": "bulk-issue-actions",
+    "sections": {
+      "bulk-issue-actions": "bulk-issue-actions",
+      "bulk-results": "bulk-results"
+    }
+  },
+  "import-issues": {
+    "article": "issues",
+    "section": "import-issues",
+    "sections": {
+      "import-issues": "import-issues",
+      "result": "result"
+    }
+  },
+  "objectives": {
+    "article": "objectives",
+    "section": "objectives",
+    "sections": {
+      "objectives": "objectives",
+      "objective-progress": "objective-progress"
+    }
+  },
+  "objective-dependencies-and-momentum": {
+    "article": "objectives",
+    "section": "objective-dependencies-and-momentum",
+    "sections": {
+      "objective-dependencies-and-momentum": "objective-dependencies-and-momentum",
+      "momentum": "momentum"
+    }
+  },
+  "views-and-filters": {
+    "article": "views",
+    "section": "views-and-filters",
+    "sections": {
+      "views-and-filters": "views-and-filters",
+      "view-recovery": "view-recovery"
+    }
+  },
+  "share-a-view": {
+    "article": "views",
+    "section": "share-a-view",
+    "sections": {
+      "share-a-view": "share-a-view",
+      "revoke-view": "revoke-view"
+    }
+  },
+  "navigation": {
+    "article": "navigation",
+    "section": "navigation",
+    "sections": {
+      "navigation": "navigation",
+      "panels": "panels",
+      "tabs": "tabs"
+    }
+  },
+  "search-and-shortcuts": {
+    "article": "navigation",
+    "section": "search-and-shortcuts",
+    "sections": {
+      "search-and-shortcuts": "search-and-shortcuts",
+      "shortcut-alternatives": "shortcut-alternatives"
+    }
+  },
+  "notifications-and-inbox": {
+    "article": "notifications-and-inbox",
+    "section": "notifications-and-inbox",
+    "sections": {
+      "notifications-and-inbox": "notifications-and-inbox",
+      "notification-preferences": "notification-preferences"
+    }
+  },
+  "personal-cycle": {
+    "article": "personal-cycle",
+    "section": "personal-cycle",
+    "sections": {
+      "personal-cycle": "personal-cycle",
+      "cycle-results": "cycle-results"
+    }
+  },
+  "task-notebook": {
+    "article": "task-notebook",
+    "section": "task-notebook",
+    "sections": {
+      "task-notebook": "task-notebook",
+      "promote-note": "promote-note"
+    }
+  },
+  "personal-statistics": {
+    "article": "personal-statistics",
+    "section": "personal-statistics",
+    "sections": {
+      "personal-statistics": "personal-statistics",
+      "statistics-limits": "statistics-limits"
+    }
+  },
+  "trash-and-recovery": {
+    "article": "trash-and-recovery",
+    "section": "trash-and-recovery",
+    "sections": {
+      "trash-and-recovery": "trash-and-recovery",
+      "permanent-removal": "permanent-removal"
+    }
+  },
+  "create-and-organize-pages": {
+    "article": "pages",
+    "section": "create-and-organize-pages",
+    "sections": {
+      "create-and-organize-pages": "create-and-organize-pages",
+      "page-tree": "page-tree"
+    }
+  },
+  "page-editor": {
+    "article": "pages",
+    "section": "page-editor",
+    "sections": {
+      "page-editor": "page-editor",
+      "editor-save": "editor-save"
+    }
+  },
+  "page-comments-and-collaboration": {
+    "article": "pages",
+    "section": "page-comments-and-collaboration",
+    "sections": {
+      "page-comments-and-collaboration": "page-comments-and-collaboration",
+      "page-conflict": "page-conflict"
+    }
+  },
+  "page-files": {
+    "article": "pages",
+    "section": "page-files",
+    "sections": {
+      "page-files": "page-files",
+      "file-access": "file-access"
+    }
+  },
+  "page-history": {
+    "article": "pages",
+    "section": "page-history",
+    "sections": {
+      "page-history": "page-history",
+      "restore-page-version": "restore-page-version"
+    }
+  },
+  "publish-a-page": {
+    "article": "pages",
+    "section": "publish-a-page",
+    "sections": {
+      "publish-a-page": "publish-a-page",
+      "revoke-page": "revoke-page"
+    }
+  },
+  "import-export-and-print-pages": {
+    "article": "pages",
+    "section": "import-export-and-print-pages",
+    "sections": {
+      "import-export-and-print-pages": "import-export-and-print-pages",
+      "export-fidelity": "export-fidelity"
+    }
+  },
+  "create-a-database": {
+    "article": "databases",
+    "section": "create-a-database",
+    "sections": {
+      "create-a-database": "create-a-database",
+      "database-types": "database-types"
+    }
+  },
+  "database-cells-and-entries": {
+    "article": "databases",
+    "section": "database-cells-and-entries",
+    "sections": {
+      "database-cells-and-entries": "database-cells-and-entries",
+      "entry-actions": "entry-actions",
+      "database-display": "database-display"
+    }
+  },
+  "change-a-database-schema": {
+    "article": "databases",
+    "section": "change-a-database-schema",
+    "sections": {
+      "change-a-database-schema": "change-a-database-schema",
+      "convert-column": "convert-column"
+    }
+  },
+  "import-a-database": {
+    "article": "databases",
+    "section": "import-a-database",
+    "sections": {
+      "import-a-database": "import-a-database",
+      "database-import-result": "database-import-result"
+    }
+  },
+  "publish-a-feedback-board": {
+    "article": "feedback",
+    "section": "publish-a-feedback-board",
+    "sections": {
+      "publish-a-feedback-board": "publish-a-feedback-board",
+      "channels": "channels"
+    }
+  },
+  "submit-and-follow-feedback": {
+    "article": "feedback",
+    "section": "submit-and-follow-feedback",
+    "sections": {
+      "submit-and-follow-feedback": "submit-and-follow-feedback",
+      "follow": "follow"
+    }
+  },
+  "moderate-feedback": {
+    "article": "feedback",
+    "section": "moderate-feedback",
+    "sections": {
+      "moderate-feedback": "moderate-feedback",
+      "responses": "responses"
+    }
+  },
+  "feedback-to-issue": {
+    "article": "feedback",
+    "section": "feedback-to-issue",
+    "sections": {
+      "feedback-to-issue": "feedback-to-issue",
+      "work": "work"
+    }
+  },
+  "feedback-pages-and-views": {
+    "article": "feedback",
+    "section": "feedback-pages-and-views",
+    "sections": {
+      "feedback-pages-and-views": "feedback-pages-and-views",
+      "visibility": "visibility"
+    }
+  },
+  "work-with-numo": {
+    "article": "numo",
+    "section": "work-with-numo",
+    "sections": {
+      "work-with-numo": "work-with-numo",
+      "continue": "continue"
+    }
+  },
+  "numo-permissions-and-approvals": {
+    "article": "numo",
+    "section": "numo-permissions-and-approvals",
+    "sections": {
+      "numo-permissions-and-approvals": "numo-permissions-and-approvals",
+      "authorization": "authorization",
+      "context": "context"
+    }
+  },
+  "numo-execution-model": {
+    "article": "numo",
+    "section": "numo-execution-model",
+    "sections": {
+      "numo-execution-model": "numo-execution-model",
+      "state": "state",
+      "mutations": "mutations"
+    }
+  },
+  "numo-mcp-connections": {
+    "article": "numo",
+    "section": "numo-mcp-connections",
+    "sections": {
+      "numo-mcp-connections": "numo-mcp-connections",
+      "manage": "manage"
+    }
+  },
+  "recover-numo-work": {
+    "article": "numo",
+    "section": "recover-numo-work",
+    "sections": {
+      "recover-numo-work": "recover-numo-work",
+      "recovery": "recovery"
+    }
+  },
+  "delegate-code-work": {
+    "article": "code-work",
+    "section": "delegate-code-work",
+    "sections": {
+      "delegate-code-work": "delegate-code-work",
+      "continuation": "continuation"
+    }
+  },
+  "review-pull-requests": {
+    "article": "code-work",
+    "section": "review-pull-requests",
+    "sections": {
+      "review-pull-requests": "review-pull-requests",
+      "decision": "decision"
+    }
+  },
+  "git-accounts-and-repositories": {
+    "article": "git",
+    "section": "git-accounts-and-repositories",
+    "sections": {
+      "git-accounts-and-repositories": "git-accounts-and-repositories",
+      "recovery": "recovery"
+    }
+  },
+  "forge-issue-sync": {
+    "article": "git",
+    "section": "forge-issue-sync",
+    "sections": {
+      "forge-issue-sync": "forge-issue-sync",
+      "recovery": "forge-issue-sync-recovery"
+    }
+  },
+  "scheduled-routines": {
+    "article": "scheduled-routines",
+    "section": "scheduled-routines",
+    "sections": {
+      "scheduled-routines": "scheduled-routines",
+      "runs": "runs"
+    }
+  },
+  "repository-skills": {
+    "article": "repository-skills",
+    "section": "repository-skills",
+    "sections": {
+      "repository-skills": "repository-skills",
+      "selection": "selection"
+    }
+  },
+  "ai-keys-and-models": {
+    "article": "ai-settings-and-usage",
+    "section": "ai-keys-and-models",
+    "sections": {
+      "ai-keys-and-models": "ai-keys-and-models",
+      "models": "models"
+    }
+  },
+  "plans-and-ai-usage": {
+    "article": "ai-settings-and-usage",
+    "section": "plans-and-ai-usage",
+    "sections": {
+      "plans-and-ai-usage": "plans-and-ai-usage",
+      "consumption": "consumption",
+      "plan-capacities": "plan-capacities"
+    }
+  },
+  "automation-settings": {
+    "article": "automation-settings",
+    "section": "automation-settings",
+    "sections": {
+      "automation-settings": "automation-settings",
+      "mechanisms": "mechanisms"
+    }
+  },
+  "external-minddy-mcp": {
+    "article": "minddy-mcp",
+    "section": "external-minddy-mcp",
+    "sections": {
+      "external-minddy-mcp": "external-minddy-mcp",
+      "access": "access"
+    }
+  },
+  "mcp-tool-reference": {
+    "article": "minddy-mcp",
+    "section": "mcp-tool-reference",
+    "sections": {
+      "mcp-tool-reference": "mcp-tool-reference",
+      "issue-plans": "issue-plans",
+      "pages-and-routines": "pages-and-routines",
+      "example": "example"
+    }
+  },
+  "self-hosted-compatibility": {
+    "article": "installation",
+    "section": "self-hosted-compatibility",
+    "sections": {
+      "self-hosted-compatibility": "self-hosted-compatibility",
+      "verify-release": "verify-release",
+      "support": "support",
+      "known-runner-limits": "known-runner-limits"
+    }
+  },
+  "install-a-server": {
+    "article": "installation",
+    "section": "install-a-server",
+    "sections": {
+      "install-a-server": "install-a-server",
+      "install": "install",
+      "accept": "accept",
+      "known-runner-limits": "install-a-server-known-runner-limits",
+      "runner-workaround": "runner-workaround",
+      "adapted-start": "adapted-start"
+    }
+  },
+  "managed-or-source-installation": {
+    "article": "installation",
+    "section": "managed-or-source-installation",
+    "sections": {
+      "managed-or-source-installation": "managed-or-source-installation",
+      "managed": "managed",
+      "source": "source"
+    }
+  },
+  "install-locally": {
+    "article": "install-locally",
+    "section": "install-locally",
+    "sections": {
+      "install-locally": "install-locally",
+      "launch": "launch",
+      "recover": "recover"
+    }
+  },
+  "instance-configuration": {
+    "article": "instance-configuration",
+    "section": "instance-configuration",
+    "sections": {
+      "instance-configuration": "instance-configuration",
+      "secrets": "secrets",
+      "capabilities": "capabilities"
+    }
+  },
+  "optional-providers": {
+    "article": "instance-configuration",
+    "section": "optional-providers",
+    "sections": {
+      "optional-providers": "optional-providers",
+      "configure": "configure",
+      "git-and-code": "git-and-code"
+    }
+  },
+  "proxy-network-and-jobs": {
+    "article": "instance-configuration",
+    "section": "proxy-network-and-jobs",
+    "sections": {
+      "proxy-network-and-jobs": "proxy-network-and-jobs",
+      "schedules": "schedules",
+      "maintenance": "maintenance"
+    }
+  },
+  "authentication-and-email": {
+    "article": "authentication-and-email",
+    "section": "authentication-and-email",
+    "sections": {
+      "authentication-and-email": "authentication-and-email",
+      "managed": "managed",
+      "verify": "verify"
+    }
+  },
+  "storage-and-attachments": {
+    "article": "storage-and-attachments",
+    "section": "storage-and-attachments",
+    "sections": {
+      "storage-and-attachments": "storage-and-attachments",
+      "access": "access",
+      "recover": "recover",
+      "docker-desktop": "docker-desktop"
+    }
+  },
+  "workspace-encryption": {
+    "article": "workspace-encryption",
+    "section": "workspace-encryption",
+    "sections": {
+      "workspace-encryption": "workspace-encryption",
+      "existing-data": "existing-data",
+      "recovery": "recovery"
+    }
+  },
+  "back-up-the-reference-instance": {
+    "article": "backups-and-restoration",
+    "section": "back-up-the-reference-instance",
+    "sections": {
+      "back-up-the-reference-instance": "back-up-the-reference-instance",
+      "context": "context",
+      "backup": "backup",
+      "verify": "verify"
+    }
+  },
+  "logical-and-provider-backups": {
+    "article": "backups-and-restoration",
+    "section": "logical-and-provider-backups",
+    "sections": {
+      "logical-and-provider-backups": "logical-and-provider-backups",
+      "provider": "provider",
+      "outage": "outage",
+      "bytes": "bytes",
+      "verify": "logical-and-provider-backups-verify"
+    }
+  },
+  "restore-and-roll-back": {
+    "article": "backups-and-restoration",
+    "section": "restore-and-roll-back",
+    "sections": {
+      "restore-and-roll-back": "restore-and-roll-back",
+      "physical": "physical",
+      "logical": "logical",
+      "verify": "restore-and-roll-back-verify"
+    }
+  },
+  "update-an-instance": {
+    "article": "update-an-instance",
+    "section": "update-an-instance",
+    "sections": {
+      "update-an-instance": "update-an-instance",
+      "full": "full",
+      "managed-source": "managed-source",
+      "verify": "verify"
+    }
+  },
+  "self-hosted-diagnostics": {
+    "article": "self-hosted-diagnostics",
+    "section": "self-hosted-diagnostics",
+    "sections": {
+      "self-hosted-diagnostics": "self-hosted-diagnostics",
+      "symptoms": "symptoms",
+      "recovery": "recovery"
+    }
+  },
+  "instance-administration": {
+    "article": "instance-administration",
+    "section": "instance-administration",
+    "sections": {
+      "instance-administration": "instance-administration",
+      "panels": "panels",
+      "responsibilities": "responsibilities"
+    }
+  },
+  "architecture-and-data-flows": {
+    "article": "architecture-and-data-flows",
+    "section": "architecture-and-data-flows",
+    "sections": {
+      "architecture-and-data-flows": "architecture-and-data-flows",
+      "requests": "requests",
+      "providers": "providers"
+    }
+  },
+  "glossary-and-data-model": {
+    "article": "glossary-and-data-model",
+    "section": "glossary-and-data-model",
+    "sections": {
+      "glossary-and-data-model": "glossary-and-data-model",
+      "knowledge-and-feedback": "knowledge-and-feedback",
+      "example": "example"
+    }
+  },
+  "permissions-and-public-links": {
+    "article": "permissions-and-public-links",
+    "section": "permissions-and-public-links",
+    "sections": {
+      "permissions-and-public-links": "permissions-and-public-links",
+      "publication": "publication",
+      "revocation": "revocation"
+    }
+  },
+  "encryption-and-data-boundaries": {
+    "article": "encryption-and-data-boundaries",
+    "section": "encryption-and-data-boundaries",
+    "sections": {
+      "encryption-and-data-boundaries": "encryption-and-data-boundaries",
+      "exceptions": "exceptions",
+      "recovery": "recovery"
+    }
+  },
+  "integration-api-and-webhooks": {
+    "article": "api-and-webhooks",
+    "section": "integration-api-and-webhooks",
+    "sections": {
+      "integration-api-and-webhooks": "integration-api-and-webhooks",
+      "send": "send",
+      "receive": "receive",
+      "limits": "limits"
+    }
+  },
+  "feedback-ingestion-and-sso": {
+    "article": "api-and-webhooks",
+    "section": "feedback-ingestion-and-sso",
+    "sections": {
+      "feedback-ingestion-and-sso": "feedback-ingestion-and-sso",
+      "errors": "errors",
+      "sso": "sso"
+    }
+  },
+  "integration-troubleshooting": {
+    "article": "integration-troubleshooting",
+    "section": "integration-troubleshooting",
+    "sections": {
+      "integration-troubleshooting": "integration-troubleshooting",
+      "oauth": "oauth",
+      "webhooks": "webhooks",
+      "git": "git"
+    }
+  }
+}

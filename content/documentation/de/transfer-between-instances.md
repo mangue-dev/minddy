@@ -2,7 +2,7 @@
 {
   "id": "transfer-between-instances",
   "locale": "de",
-  "title": "Kontodaten zwischen Instanzen übertragen",
+  "title": "Übertragung von Kontodaten",
   "summary": "Privates JSON exportieren, ergänzend importieren und Konflikte sowie Ausschlüsse prüfen.",
   "topic": "Konto und Apps",
   "type": "guide",
@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 1,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (cd1843e12)",
     "editions": [
@@ -38,14 +38,16 @@
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "2026-10-08",
-    "language": "2026-10-08",
-    "date": "2026-10-08"
+    "revision": 4,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
+    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison)",
+    "date": "2026-10-09"
   },
   "related": [],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Kontodaten zwischen Instanzen übertragen"
+  ],
   "figures": [
     {
       "id": "transfer-between-instances-workflow",
@@ -53,7 +55,7 @@
       "src": "/documentation/de/transfer-between-instances-workflow.png",
       "alt": "Datenübertragung mit Schaltfläche zum Import einer Datei.",
       "caption": "Wähle die unveränderte JSON-Exportdatei des Quellkontos. Prüfe das Importergebnis vor dem Schließen.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -68,7 +70,7 @@
       "src": "/documentation/de/transfer-between-instances-export-workflow.png",
       "alt": "Exportfunktion des Kontos.",
       "caption": "Exportfunktion des Kontos. Der Export enthält keine Schlüssel oder Tokens; die Aufnahme zeigt die Schaltfläche vor dem Download.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -83,7 +85,7 @@
       "src": "/documentation/de/transfer-between-instances-result.png",
       "alt": "Importergebnis mit null neu vergebenen IDs und null ausgelassenen Mitgliedschaften.",
       "caption": "Dieser echte Import persönlicher Daten enthält keine ID-Konflikte und keine ausgelassenen Mitgliedschaften. Prüfen Sie die Zahlen und laden Sie das Konto über die Schaltfläche oder durch Schließen des Dialogs neu.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -108,7 +110,6 @@ Melden Sie sich an der Quellinstanz an und öffnen Sie den Bereich Daten in den 
 Der Import fügt Daten hinzu, statt das Ziel zu ersetzen. Kennungen bleiben erhalten, wenn sie sicher wiederverwendbar sind; Konflikte erhalten neue Kennungen. Das Ergebnis nennt neu zugeordnete Kennungen und übersprungene Mitgliedschaften. Mitgliedschaftsreferenzen zu bestehenden Projekten werden nur wiederhergestellt, wenn das Zielprojekt bereits existiert und die Referenz autorisiert ist. Prüfen Sie nach dem Neuladen Projekte, Tickets, Seiten und persönliche Daten.
 
 ![Datenübertragung mit Schaltfläche zum Import einer Datei.](/documentation/de/transfer-between-instances-workflow.png)
-
 
 ## Dienste neu verbinden {#exclusions}
 

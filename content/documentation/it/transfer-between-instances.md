@@ -2,8 +2,8 @@
 {
   "id": "transfer-between-instances",
   "locale": "it",
-  "title": "Trasferire dati tra istanze",
-  "summary": "Esportare JSON privato, importare in aggiunta e verificare conflitti ed esclusioni.",
+  "title": "Trasferimento dei dati dell’account",
+  "summary": "Esporta i dati del tuo account in un JSON privato, importali senza sostituire quelli esistenti e verifica conflitti ed esclusioni.",
   "topic": "Account e applicazioni",
   "type": "guide",
   "audiences": [
@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 1,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (cd1843e12)",
     "editions": [
@@ -38,14 +38,16 @@
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "2026-10-08",
-    "language": "2026-10-08",
-    "date": "2026-10-08"
+    "revision": 4,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
+    "date": "2026-10-09"
   },
   "related": [],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Trasferire dati tra istanze"
+  ],
   "figures": [
     {
       "id": "transfer-between-instances-workflow",
@@ -53,7 +55,7 @@
       "src": "/documentation/it/transfer-between-instances-workflow.png",
       "alt": "Impostazioni di trasferimento con pulsante per importare un file.",
       "caption": "Scegli il JSON integro esportato dall’account di origine; controlla il risultato prima di chiudere.",
-      "revision": 2,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -68,7 +70,7 @@
       "src": "/documentation/it/transfer-between-instances-export-workflow.png",
       "alt": "Controllo di esportazione dell’account.",
       "caption": "Controllo di esportazione dell’account. Il file esclude chiavi e token; la cattura mostra il pulsante prima del download.",
-      "revision": 2,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -83,7 +85,7 @@
       "src": "/documentation/it/transfer-between-instances-result.png",
       "alt": "Risultato dell’importazione con zero identificativi riassegnati e zero iscrizioni escluse.",
       "caption": "Questa importazione reale di dati personali non presenta conflitti di identificativi né iscrizioni escluse. Controlla i conteggi, poi scegli Ricarica l’account o chiudi la finestra per ricaricarlo.",
-      "revision": 2,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -108,7 +110,6 @@ Accedi all’istanza di origine e apri la sezione Dati nelle impostazioni dell�
 L’importazione aggiunge dati senza sostituire quelli della destinazione. Gli identificatori vengono conservati quando possono essere riutilizzati in sicurezza; in caso di conflitto ne vengono assegnati di nuovi. Il risultato indica gli identificatori rimappati e le appartenenze ai progetti ignorate. I riferimenti di appartenenza a progetti esistenti vengono ripristinati solo se il progetto di destinazione esiste già e il riferimento è autorizzato. Dopo il ricaricamento della pagina, controlla progetti, ticket, pagine e dati personali.
 
 ![Impostazioni di trasferimento con pulsante per importare un file.](/documentation/it/transfer-between-instances-workflow.png)
-
 
 ## Ricollegare servizi {#exclusions}
 

@@ -2,7 +2,7 @@
 {
   "id": "integration-troubleshooting",
   "locale": "de",
-  "title": "OAuth-, MCP-, Webhook- oder Git-Verbindung wiederherstellen",
+  "title": "Fehlerbehebung bei Verbindungen",
   "summary": "Minddy MCP verbindet externe Assistenten mit Minddy; persönliche MCP-Verbindungen lassen Numo fremde Server aufrufen.",
   "topic": "Technische Grundlagen",
   "type": "troubleshooting",
@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 1,
-  "sourceRevision": 1,
+  "revision": 2,
+  "sourceRevision": 2,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -39,17 +39,19 @@
     ]
   },
   "review": {
-    "revision": 1,
-    "fact": "agent:/root/automation_account_documentation (independent targeted primary-source review)",
-    "language": "agent:/root/automation_account_documentation (complete independent article and caption review)",
-    "date": "2026-10-08"
+    "revision": 2,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
+    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison)",
+    "date": "2026-10-09"
   },
   "related": [
-    "integration-api-and-webhooks",
-    "mcp-tool-reference"
+    "api-and-webhooks",
+    "minddy-mcp"
   ],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "OAuth-, MCP-, Webhook- oder Git-Verbindung wiederherstellen"
+  ],
   "figures": [
     {
       "id": "integration-troubleshooting-flow",
@@ -57,7 +59,7 @@
       "src": "/documentation/de/integration-troubleshooting-error.png",
       "alt": "Ladefehler der MCP-Verbindungen mit der Schaltfläche Erneut versuchen.",
       "caption": "Erneut versuchen lädt die Verbindungen neu, sobald das Netzwerk wieder verfügbar ist.",
-      "revision": 1,
+      "revision": 2,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

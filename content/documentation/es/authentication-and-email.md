@@ -2,7 +2,7 @@
 {
   "id": "authentication-and-email",
   "locale": "es",
-  "title": "Configurar correo de cuentas, MFA y recuperación",
+  "title": "Autenticación y correo electrónico",
   "summary": "Los emails de cuenta dependen de Supabase y GoTrue.",
   "topic": "Administrar una instancia",
   "type": "guide",
@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 1,
-  "sourceRevision": 1,
+  "revision": 2,
+  "sourceRevision": 2,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -37,17 +37,19 @@
     ]
   },
   "review": {
-    "revision": 1,
-    "fact": "agent:/root/automation_account_documentation (independent targeted primary-source review)",
-    "language": "Codex agent review_documentation_locales: independent complete English/Spanish meaning and idiom review, not human review",
-    "date": "2026-10-08"
+    "revision": 2,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison)",
+    "date": "2026-10-09"
   },
   "related": [
     "instance-administration",
     "self-hosted-diagnostics"
   ],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Configurar correo de cuentas, MFA y recuperación"
+  ],
   "figures": [
     {
       "id": "authentication-and-email-flow",
@@ -55,7 +57,7 @@
       "src": "/documentation/es/authentication-and-email-flow.svg",
       "alt": "Diagrama: Origen Auth y redirecciones configurados. SMTP propio y plantillas versionadas. Confirmación e inicio de sesión. Pruebas TOTP, recuperación y contraseña antigua.",
       "caption": "Siga las etapas en este orden. Origen Auth y redirecciones configurados. SMTP propio y plantillas versionadas. Confirmación e inicio de sesión. Pruebas TOTP, recuperación y contraseña antigua.",
-      "revision": 1,
+      "revision": 2,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -70,11 +72,12 @@
   ]
 }
 ---
+
 ## Configurar correo de cuentas, MFA y recuperación {#authentication-and-email}
 
 Los emails de cuenta dependen de Supabase y GoTrue. Las notificaciones de la aplicación mediante Resend no configuran la confirmación ni la recuperación de contraseña. En full, conserve el overlay Minddy en cada comando Compose. Defina SITE_URL, API_EXTERNAL_URL, SUPABASE_PUBLIC_URL y ADDITIONAL_REDIRECT_URLS con las URL de origen de su instancia. Configure SMTP_ADMIN_EMAIL, SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS y SMTP_SENDER_NAME con su proveedor. Mantenga activa la confirmación y reinicie Auth en el contexto instalado.
 
-Antes de ejecutar compose, defina la función del perfil full instalado siguiendo [el contexto Compose de referencia](/es/documentacion/back-up-the-reference-instance#context).
+Antes de ejecutar compose, defina la función del perfil full instalado siguiendo [el contexto Compose de referencia](/es/documentacion/backups-and-restoration#context).
 
 ```bash
 compose up -d --wait auth
@@ -85,8 +88,6 @@ compose up -d --wait auth
 ## Configurar Supabase gestionado {#managed}
 
 En Authentication del proyecto gestionado, configure Site URL y la redirección exacta `<app-origin>/auth/callback`. Configure su SMTP y las dos plantillas versionadas de confirmación y recuperación. La plantilla de confirmación utiliza token_hash y type=signup. Exija contraseñas de al menos ocho caracteres con minúsculas, mayúsculas y números y habilite el registro y la verificación TOTP. Active la comprobación de contraseñas comprometidas cuando esté disponible y registre las limitaciones del proveedor. El overlay full deniega el acceso si esa comprobación falla y necesita acceso saliente a api.pwnedpasswords.com. Registre la duración de las sesiones, la rotación de refresh tokens, la revocación y los límites de Auth: el bootstrap SQL no configura esos controles de plataforma.
-
-
 
 ## Verificar el resultado {#verify}
 

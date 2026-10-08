@@ -2,7 +2,7 @@
 {
   "id": "permissions-and-public-links",
   "locale": "fr",
-  "title": "Comprendre permissions et liens publics",
+  "title": "Permissions et liens publics",
   "summary": "Le serveur contrôle l’accès au projet à chaque opération.",
   "topic": "Concepts techniques",
   "type": "explanation",
@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 1,
-  "sourceRevision": 1,
+  "revision": 2,
+  "sourceRevision": 2,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-09",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -41,18 +41,20 @@
     ]
   },
   "review": {
-    "revision": 1,
-    "fact": "agent:/root/automation_account_documentation (independent targeted primary-source review)",
-    "language": "agent:/root/automation_account_documentation (complete independent article and caption review)",
-    "date": "2026-10-08"
+    "revision": 2,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun)",
+    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review)",
+    "date": "2026-10-09"
   },
   "related": [
-    "publish-a-page",
-    "share-a-view",
+    "pages",
+    "views",
     "encryption-and-data-boundaries"
   ],
   "aliases": [],
-  "tags": [],
+  "tags": [
+    "Comprendre permissions et liens publics"
+  ],
   "figures": [
     {
       "id": "permissions-and-public-links-flow",
@@ -60,7 +62,7 @@
       "src": "/documentation/fr/permissions-and-public-links-flow.svg",
       "alt": "Schéma: Contrôles du compte et du projet. Objet privé ou publication explicite. Ensemble publié uniquement et fichiers signés. Révoquer le lien ; fichiers signés expirent après.",
       "caption": "Ces composants ont des responsabilités distinctes. Contrôles du compte et du projet. Objet privé ou publication explicite. Ensemble publié uniquement et fichiers signés. Révoquer le lien ; fichiers signés expirent après.",
-      "revision": 1,
+      "revision": 2,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
