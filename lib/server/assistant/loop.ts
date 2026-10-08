@@ -1,4 +1,5 @@
 import "server-only";
+import { withConversationAttachmentPreviews } from "./conversation-attachments";
 import { visibleAssistantContent } from "./visible-content";
 import { hasSerializedToolCall, looksLikePendingAction } from "@/lib/ai-completion";
 import { randomUUID } from "node:crypto";
@@ -236,6 +237,8 @@ export interface ProcessChatContext extends ToolContext {
 }
 
 const RETRYABLE_READ_TOOLS = new Set([
+  "list_conversation_attachments",
+  "read_conversation_attachment",
   "get_help",
   "list_projects",
   "list_global_filter_options",
@@ -470,12 +473,16 @@ export async function processChat(
           closeRound();
           break;
         }
+        const modelMessages = await withConversationAttachmentPreviews(messages, context, () =>
+          aiRuntime.provider === "openrouter"
+            ? getModelInputModalities(requestModel, aiRuntime.apiKey)
+            : Promise.resolve(new Set(["text"])));
         call = await fetchAiChat(
           aiRuntime,
           requestModel,
           (m) => ({
             model: m,
-            messages,
+            messages: modelMessages,
             stream: true,
             maxOutputTokens: reasoningMaxTokens(4096, reasoningLevel),
             reasoning: { effort: reasoningLevel },
@@ -974,6 +981,7 @@ export async function processChat(
         messages.push({
           role: "tool",
           tool_call_id: acc.id,
+          name: acc.name,
           content: serializeToolResult(
             forModel,
             getToolResultCharLimit(acc.name, args)

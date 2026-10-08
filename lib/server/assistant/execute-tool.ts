@@ -65,6 +65,8 @@ import {
   answerNumoWorkerInput,
   type WorkerInputCorrelation,
 } from "@/lib/server/numo/worker-mediation";
+import { attachmentOffset, listConversationAttachments, readConversationAttachment,
+  copyConversationAttachment } from "./conversation-attachments";
 import { insertAttachments } from "@/lib/server/attachments";
 import { FaviconError } from "@/lib/server/favicon";
 import { resolveLinkResource } from "@/lib/server/link-resource";
@@ -1197,6 +1199,13 @@ export async function executeTool(
       return executeScratchpadTool(toolName, args, ctx);
     }
 
+    if (toolName === "list_conversation_attachments") {
+      return { result: await listConversationAttachments(ctx, attachmentOffset(args.offset)), success: true };
+    }
+    if (toolName === "read_conversation_attachment") {
+      return { result: await readConversationAttachment(ctx, args.attachment_id, attachmentOffset(args.offset)), success: true };
+    }
+
     // ── Project scope resolution (all remaining tools) ──────────────────
     const target = await resolveAssistantProjectTarget(
       ctx,
@@ -1878,22 +1887,13 @@ export async function executeTool(
         return { result: { comment: result.comment }, success: true };
       }
 
-      /**
-       * Numo has no file to send: its half of the resource is the
-       * LINK. The target is a ticket OR a goal, never both — a
-       * `insertAttachments` with two parents would violate attachments_parent_ck.
-       */
       case "add_resource": {
         const url = typeof args.url === "string" ? args.url.trim() : "";
-        const pageId =
-          typeof args.page_id === "string" ? args.page_id.trim() : "";
-        if (!!url === !!pageId) {
-          return toolError(
-            url
-              ? "A resource is a link OR a page: send url, or page_id, not both."
-              : "Nothing to attach: send url for a link, or page_id for a page " +
-                  "of the wiki (list_pages).",
-          );
+        const pageId = typeof args.page_id === "string" ? args.page_id.trim() : "";
+        const attachmentId = typeof args.attachment_id === "string" ? args.attachment_id.trim() : "";
+        const commentId = typeof args.comment_id === "string" ? args.comment_id.trim() : "";
+        if ([url, pageId, attachmentId].filter(Boolean).length !== 1) {
+          return toolError("Send exactly one of url, page_id or attachment_id.");
         }
         const issueId = typeof args.issue_id === "string" ? args.issue_id : "";
         const objectiveId =
@@ -1921,6 +1921,23 @@ export async function executeTool(
           if (!objective) {
             return toolError("Objective not found in this project.");
           }
+        }
+
+        if (commentId) {
+          const { data: comment, error } = await commentStore(ctx.supabase, "comments", ctx.userId)
+            .select("id,issue_id,objective_id,author_id").eq("id", commentId).maybeSingle();
+          if (error || !comment || comment.issue_id !== (issueId || null)
+            || comment.objective_id !== (objectiveId || null) || comment.author_id !== ctx.userId) {
+            return toolError("Comment not found on this parent or not authored by you.");
+          }
+        }
+        if (attachmentId) {
+          const row = await copyConversationAttachment(ctx, attachmentId, {
+            projectId, issueId: issueId || null, objectiveId: objectiveId || null,
+            commentId: commentId || null, createdBy: ctx.userId,
+          });
+          return { result: { resource: { id: row.id, kind: "file", file_name: row.file_name,
+            mime_type: row.mime_type, size_bytes: row.size_bytes, comment_id: row.comment_id } }, success: true };
         }
 
         let resource;
@@ -1959,7 +1976,7 @@ export async function executeTool(
             projectId,
             issueId: issueId || null,
             objectiveId: objectiveId || null,
-            commentId: null,
+            commentId: commentId || null,
             createdBy: ctx.userId,
             resources: [resource],
           });
