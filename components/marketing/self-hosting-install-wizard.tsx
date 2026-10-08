@@ -29,6 +29,7 @@ interface GuideLinks {
   download: string;
   release: string;
   operations: string;
+  compatibility?: string;
 }
 
 interface EmailTemplate {
@@ -957,6 +958,7 @@ export function SelfHostingInstallWizard({
           <div className="min-w-0">
             <div key={currentStage.id} className="animate-in fade-in duration-200 motion-reduce:animate-none">
               <h1 ref={headingRef} tabIndex={-1} className="max-w-3xl text-[clamp(2rem,3.8vw,3.25rem)] leading-[1.1] font-medium tracking-[-0.045em] text-balance outline-none">{currentStage.title}</h1>
+              {links.compatibility && <p className="mt-4 text-sm leading-relaxed"><a href={links.compatibility} className="underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-ring">{copy.releaseRequirements}</a></p>}
               {currentStage.body && <p className="mt-5 max-w-2xl text-base leading-relaxed text-pretty text-muted-foreground">{currentStage.body}</p>}
               <div className="mt-8 min-w-0">{currentStage.content}</div>
             </div>

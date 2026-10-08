@@ -5488,6 +5488,7 @@
     "dnsSupabase": "Supabase API",
     "dnsTarget": "server IP",
     "releaseTitle": "Get the supported release",
+    "releaseRequirements": "Review compatibility and known release limitations before running the commands.",
     "releaseBody": "Download {release}, verify its files and image, then install its tools. Keep this terminal open for the following steps.",
     "verifyRelease": "Verify release files and image",
     "releaseVerificationBody": "Before running code, follow the linked verification steps. They require curl, Node.js, pnpm and Cosign, and set IMAGE to the verified digest. Stop if any check fails. Then install the dependencies below.",
@@ -6465,6 +6466,9 @@
     "fullProfile": "Full Supabase stack",
     "managedProfile": "Managed services",
     "localProfile": "Local development",
-    "sourceProfile": "Source installation"
+    "sourceProfile": "Source installation",
+    "articleLabel": "Article",
+    "localeLabel": "Language",
+    "revisionLabel": "Revision"
   }
 }

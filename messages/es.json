@@ -4166,14 +4166,14 @@
     "emptyTitle": "No hay nada por clasificar",
     "accept": "Aceptar",
     "markDuplicate": "Marcar como duplicado...",
-    "decline": "Reducción",
+    "decline": "Rechazar",
     "acceptConfirmTitle": "Aceptar {id}?",
-    "declineConfirmTitle": "Reducción {id}?",
+    "declineConfirmTitle": "¿Rechazar {id}?",
     "acceptConfirmDescription": "La incidencia se une al atraso con los campos que estableces.",
-    "declineConfirmDescription": "La incidencia está cancelado. Todavía lo puede encontrar en la columna Cancelada.",
+    "declineConfirmDescription": "La incidencia pasará al estado cancelado. Podrás encontrarla en la columna de incidencias canceladas.",
     "messagePlaceholder": "Añade un mensaje (opcional); utiliza @ para mencionar",
     "acceptedToast": "La incidencia fue aceptada y trasladada al atraso.",
-    "declinedToast": "La incidencia se redujo.",
+    "declinedToast": "La incidencia se ha rechazado.",
     "duplicateToast": "Marcado como duplicado de {id}.",
     "noSelection": "Selecciona una incidencia para clasificarla.",
     "backToList": "Volver a la lista"
@@ -5488,6 +5488,7 @@
     "dnsSupabase": "Supabase API",
     "dnsTarget": "IP servidor",
     "releaseTitle": "Obtener la versión soportada",
+    "releaseRequirements": "Revisa la compatibilidad y las limitaciones conocidas de la versión antes de ejecutar los comandos.",
     "releaseBody": "Descarga {release}, verifica sus archivos y su imagen e instala después sus herramientas. Mantén este terminal abierto para los siguientes pasos.",
     "releaseVerificationBody": "Antes de ejecutar código, sigue los pasos de verificación del enlace. Requieren curl, Node.js, pnpm y Cosign, y asignan a IMAGE el digest verificado. Detente si falla alguna comprobación. Después instala las dependencias indicadas abajo.",
     "verifyRelease": "Verificar los archivos y la imagen",
@@ -6465,6 +6466,9 @@
     "fullProfile": "Stack completo de Supabase",
     "managedProfile": "Servicios gestionados",
     "localProfile": "Desarrollo local",
-    "sourceProfile": "Instalación desde el código fuente"
+    "sourceProfile": "Instalación desde el código fuente",
+    "articleLabel": "Artículo",
+    "localeLabel": "Idioma",
+    "revisionLabel": "Revisión"
   }
 }

@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 import { getLocale, getTranslations } from "next-intl/server";
 import { Button } from "mangue-ui/components/ui/button";
 import { cn } from "mangue-ui/lib/utils";
-import packageJson from "@/package.json";
+import { selfHostingRelease } from "@/lib/self-hosting-release";
 import { publicPageMetadata } from "@/lib/seo";
 import type { Locale } from "@/i18n/config";
 import { localizedHref } from "@/lib/locale-href";
@@ -36,7 +36,7 @@ export default async function SelfHostingPage() {
   const locale = (await getLocale()) as Locale;
   const t = await getTranslations("SelfHosting");
   const installHref = localizedHref("/self-hosting/install", locale);
-  const releaseBase = `${MINDDY_REPOSITORY_URL}/blob/v${packageJson.version}`;
+  const releaseBase = `${MINDDY_REPOSITORY_URL}/blob/${selfHostingRelease.tag}`;
   const documentation = getPublishedDocumentation(locale);
   const operationsArticle = documentation.find(article => article.id === "back-up-the-reference-instance");
   const td = await getTranslations("Documentation");

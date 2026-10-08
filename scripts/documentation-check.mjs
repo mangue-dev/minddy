@@ -90,7 +90,7 @@ for (const article of articles) {
   else {
     if (article.sourceRevision !== source.revision) fail(`${context}: stale translation revision`);
     if (JSON.stringify(article.sections.map(section => section.id)) !== JSON.stringify(source.sections.map(section => section.id))) fail(`${context}: section parity differs`);
-    for (const key of ["workflows", "related", "requiredFigures"]) if (JSON.stringify(article[key]) !== JSON.stringify(source[key])) fail(`${context}: ${key} parity differs`);
+    for (const key of ["type", "audiences", "workflows", "related", "aliases", "requiredFigures", "compatibility"]) if (JSON.stringify(article[key]) !== JSON.stringify(source[key])) fail(`${context}: ${key} parity differs`);
   }
   for (const id of article.related) {
     const related = byKey.get(`${article.locale}:${id}`);

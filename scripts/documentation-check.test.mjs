@@ -57,3 +57,13 @@ test("private links and missing required locale images block release", () => {
   assert.match(result.output, /unresolved local link/);
   assert.match(result.output, /unregistered image/);
 });
+
+
+test("translations preserve publication identities and operating conditions", () => {
+  const root = fixture(article => article.locale === "de" ? { ...article, aliases: ["retired-guide"], audiences: ["operator"], compatibility: { ...article.compatibility, profiles: ["desktop"] } } : article);
+  const result = check(root);
+  assert.notEqual(result.status, 0);
+  assert.match(result.output, /aliases parity differs/);
+  assert.match(result.output, /audiences parity differs/);
+  assert.match(result.output, /compatibility parity differs/);
+});

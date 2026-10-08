@@ -2259,10 +2259,10 @@
     "recurring": "Recorrente",
     "daily": "Todos os dias",
     "weekly": "Todas as semanas",
-    "monthly": "Todas mês",
+    "monthly": "Todos os meses",
     "yearly": "Todos os anos",
     "everyDay": "Todos os dias",
-    "everyWeekOn": "Todos {weekday}",
+    "everyWeekOn": "Toda semana: {weekday}",
     "everyMonthOn": "Todo dia {day} do mês",
     "everyYearOn": "Todos {date}",
     "atTime": "{label} às {time}",
@@ -5488,6 +5488,7 @@
     "dnsSupabase": "Supabase API",
     "dnsTarget": "IP do servidor",
     "releaseTitle": "Obtenha a versão suportada",
+    "releaseRequirements": "Confira a compatibilidade e as limitações conhecidas da versão antes de executar os comandos.",
     "releaseBody": "Baixe {release}, verifique os arquivos e a imagem e depois instale as ferramentas. Mantenha este terminal aberto para as próximas etapas.",
     "releaseVerificationBody": "Antes de executar código, siga as etapas de verificação do link. Elas exigem curl, Node.js, pnpm e Cosign e definem IMAGE com o digest verificado. Pare se alguma verificação falhar. Depois instale as dependências indicadas abaixo.",
     "verifyRelease": "Verificar os arquivos e a imagem",
@@ -6465,6 +6466,9 @@
     "fullProfile": "Stack completo do Supabase",
     "managedProfile": "Serviços gerenciados",
     "localProfile": "Desenvolvimento local",
-    "sourceProfile": "Instalação a partir do código-fonte"
+    "sourceProfile": "Instalação a partir do código-fonte",
+    "articleLabel": "Artigo",
+    "localeLabel": "Idioma",
+    "revisionLabel": "Revisão"
   }
 }

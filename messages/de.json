@@ -5488,6 +5488,7 @@
     "dnsSupabase": "Supabase API",
     "dnsTarget": "Server-IP",
     "releaseTitle": "Unterstützte Version herunterladen",
+    "releaseRequirements": "Prüfe die Kompatibilität und die bekannten Einschränkungen der Version, bevor du die Befehle ausführst.",
     "releaseBody": "Lade {release} herunter, prüfe die Dateien und das Image und installiere dann die Werkzeuge. Lass dieses Terminal für die nächsten Schritte geöffnet.",
     "releaseVerificationBody": "Führe vor dem Ausführen von Code die verlinkten Prüfschritte aus. Sie benötigen curl, Node.js, pnpm und Cosign und setzen IMAGE auf den geprüften Digest. Brich ab, wenn eine Prüfung fehlschlägt. Installiere danach die unten aufgeführten Abhängigkeiten.",
     "verifyRelease": "Release-Dateien und Image prüfen",
@@ -6465,6 +6466,9 @@
     "fullProfile": "Vollständiger Supabase-Stack",
     "managedProfile": "Verwaltete Dienste",
     "localProfile": "Lokale Entwicklung",
-    "sourceProfile": "Installation aus dem Quellcode"
+    "sourceProfile": "Installation aus dem Quellcode",
+    "articleLabel": "Artikel",
+    "localeLabel": "Sprache",
+    "revisionLabel": "Revision"
   }
 }
