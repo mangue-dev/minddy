@@ -1,5 +1,7 @@
 "use client";
 
+import { CommandList } from "@/components/ui/command";
+
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowUpDownIcon, CheckIcon, WorkflowCircle01Icon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
@@ -8,7 +10,6 @@ import {
   Button,
   Command,
   CommandItem,
-  CommandList,
   cn,
   Popover,
   PopoverContent,

@@ -1,5 +1,7 @@
 "use client";
 
+import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
+
 import { HugeiconsIcon } from "@hugeicons/react";
 import { LinkSquare01Icon, Edit04Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useId, useState } from "react";
@@ -7,13 +9,9 @@ import type { Editor } from "@tiptap/core";
 import { BubbleMenu } from "@tiptap/react/menus";
 import {
   Button,
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
   Input,
 } from "mangue-ui";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useTranslations } from "next-intl";
 
 function shouldShowLinkMenu({ editor }: { editor: Editor }): boolean {
@@ -111,7 +109,7 @@ export function MarkdownLinkEditDialog({
           </label>
           <Input
             id={inputId}
-            autoFocus
+            autoFocus={allowInputAutoFocus()}
             type="text"
             inputMode="url"
             autoComplete="off"

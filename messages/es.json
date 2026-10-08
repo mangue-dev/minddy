@@ -1312,6 +1312,8 @@
     "desktopBannerText": "Descarga la aplicación de escritorio para llegar más lejos",
     "desktopBannerCta": "Descargar",
     "desktopBannerDismiss": "No volver a mostrar",
+    "pwaInstallHint": "Instalar minddy en este dispositivo",
+    "pwaInstallTitle": "Instalar minddy",
     "tips": {
       "palette": "Busca cualquier pantalla o incidencia y ejecuta acciones desde la paleta de comandos.",
       "cheatsheet": "Consulta todos los atajos de teclado en un solo lugar.",

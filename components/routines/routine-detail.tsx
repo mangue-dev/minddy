@@ -1,5 +1,6 @@
 "use client";
 
+import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Alert01Icon, ArrowLeft01Icon, ArrowRight01Icon, Delete02Icon, GitPullRequestIcon, MoreHorizontalIcon, PauseCircleIcon, Edit04Icon, PlayIcon } from "@hugeicons/core-free-icons";
 import { useEffect, useRef, useState, type ReactNode } from "react";
@@ -109,7 +110,6 @@ export function RoutineDetail({
   routine,
   project,
   isOwner,
-  onBack,
   onChanged,
   onDeleted,
 }: {
@@ -124,7 +124,6 @@ export function RoutineDetail({
   /** Gestures (switch, throw, edit, delete) are up to the owner
    * alone — a button that leads to a 403 is not displayed. */
   isOwner: boolean;
-  onBack: () => void;
   onChanged: () => void;
   onDeleted: () => void;
 }) {
@@ -373,15 +372,6 @@ export function RoutineDetail({
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
       {/* The title and controls share the same 60 px bar as every detail pane. */}
       <AppContentHeader contentClassName="gap-2">
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label={tAgents("backToList")}
-          className="md:hidden"
-          onClick={onBack}
-        >
-          <HugeiconsIcon icon={ArrowLeft01Icon} />
-        </Button>
         {project ? (
           <ProjectOrb
             seed={projectOrbSeed(project)}
@@ -1133,7 +1123,7 @@ function RoutineEditor({
         {/* The SAME field as the `job` step of the wizard — it's literally the
             same component: dictation, input ceiling and limited height. */}
         <RoutinePromptField
-          autoFocus
+          autoFocus={allowInputAutoFocus()}
           projectId={projectId}
           baseBranch={null}
           value={draft.prompt}

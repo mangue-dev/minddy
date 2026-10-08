@@ -1,26 +1,24 @@
 "use client";
 
+import { MobileSheetScrollArea } from "@/components/ui/mobile-sheet";
+
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/responsive-popover";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { CheckIcon } from "@hugeicons/core-free-icons";
 import { createUuid } from "@/lib/create-uuid";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   Button,
-  Dialog,
-  DialogContent,
-  DialogTitle,
   DropdownMenuItem,
   DropdownMenuLabel,
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
   Spinner,
   SplitButton,
   cn,
   toast,
 } from "mangue-ui";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { AutoTextarea } from "@/components/auto-textarea";
 import { CreationRelationPills, CreationRelationsCompact } from "@/components/creation-relations";
 // Deferred editor: keeps tiptap (~1.5 MB) out of the objectives route —
@@ -39,7 +37,8 @@ import { ProjectOrb } from "@/components/project-orb";
 import { projectOrbSeed } from "@/lib/project-orb-colors";
 import { DraftRecoveryRow } from "@/components/draft-recovery-row";
 import { CloseDraftDialog } from "@/components/close-draft-dialog";
-import { DictateButton } from "@/components/ai-elements/dictate-button";
+import { CreationDictation, CreationProperty } from "@/components/creation-form-layout";
+import { useMobileLayout } from "@/lib/use-mobile-layout";
 import {
   AddResourceButton,
   ResourcePills,
@@ -47,7 +46,6 @@ import {
   pasteFileHandler,
   useFileDrop,
 } from "@/components/resources";
-import { NumoIcon } from "@/components/numo-icon";
 import { SendShortcutTooltip } from "@/components/send-shortcut";
 import { AgentBeamOverlay } from "@/components/agent-beam";
 import { useAttachmentUploads } from "@/lib/use-attachment-uploads";
@@ -139,14 +137,14 @@ function ColorCompact({
           <span className="text-muted-foreground">{t("colorFieldLabel")}</span>
         </button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-auto p-2">
+      <PopoverContent mobileTitle={t("colorFieldLabel")} align="start" className="w-auto p-2">
         <div className="flex flex-wrap items-center gap-1.5">
           <button
             type="button"
             onClick={() => pick(null)}
             aria-label={t("noColor")}
             className={cn(
-              "flex size-6 items-center justify-center rounded-full border border-border text-[10px] text-muted-foreground",
+              "flex size-6 app-mobile:size-11 items-center justify-center rounded-full border border-border text-[10px] text-muted-foreground",
               value === null && "ring-2 ring-ring ring-offset-2 ring-offset-background"
             )}
           >
@@ -218,6 +216,9 @@ export function ObjectiveDialog({
   ) => Promise<unknown>;
 }) {
   const t = useTranslations("Objectives");
+  const mobile = useMobileLayout() === true;
+  const tField = useTranslations("Field");
+  const titleId = useId();
   const tCommon = useTranslations("Common");
   const tDrafts = useTranslations("Drafts");
   const tRelations = useTranslations("Relations");
@@ -479,123 +480,67 @@ export function ObjectiveDialog({
       applyPatch,
     });
 
+  const dictationControl = <CreationDictation mobile={mobile} busy={numoBusy} busyLabel={t("numoWorking")}
+    context="objective_form" onTranscription={(text) => { track("objective_dictation_used", { surface: "create_dialog" }); onTranscript(text); }}
+    disabled={submitting} shortcutKey="mod+shift+d" onProcessingChange={setTranscribing} />;
+
   return (
     <>
       <Dialog open={open} onOpenChange={handleOpenChange}>
-        {/* Same three margins as the ticket creation dialog: 32 px at
- wide, 20 px under `sm` (the modal now only makes the window less
- 32 px), and nothing under 480 px — mangue-ui then switches to bottom sheet
- (vaul) which already sets its own 16 px on content. */}
         <DialogContent
-          className="p-8 max-sm:p-5 data-vaul-drawer:p-0 sm:max-w-2xl"
+          aria-describedby={undefined}
+          className="creation-sheet p-8 max-sm:p-5 sm:max-w-2xl"
           onInteractOutside={keepOverlayOpenForPopper}
         >
           {/* Screen reader title: when editing, the name of the objective says
  better what it is than a generic title. */}
-          <DialogTitle className="sr-only">
+          <DialogTitle className={mobile ? "shrink-0 pr-10" : "sr-only"}>
             {objective ? objective.name : t("newObjective")}
           </DialogTitle>
 
           <form
             {...submitShortcut}
             onSubmit={handleSubmit}
-            className="relative flex flex-col rounded-lg"
+            className="creation-form relative flex flex-col rounded-lg"
             {...(composerEnabled
               ? { onPaste: pasteFileHandler(uploads.addFiles), ...drop.handlers }
               : {})}
           >
             {composerEnabled && <DropOverlay show={drop.dragging} />}
-            {/* Recent drafts — a row above the name to restore or delete an
-              abandoned draft (MIN-41). Hidden once the form has content. */}
-            {composerEnabled &&
-              form.name.trim() === "" &&
-              form.description.trim() === "" && (
-                <DraftRecoveryRow
-                  drafts={drafts.drafts.map((d) => ({ id: d.id, title: d.name }))}
-                  onRecover={recoverDraft}
-                  onDelete={drafts.remove}
+            <MobileSheetScrollArea className="creation-form-body">
+              {mobile && composerEnabled && dictationControl}
+              {/* Recent drafts — a row above the name to restore or delete an
+                abandoned draft (MIN-41). Hidden once the form has content. */}
+              {composerEnabled &&
+                form.name.trim() === "" &&
+                form.description.trim() === "" && (
+                  <DraftRecoveryRow
+                    drafts={drafts.drafts.map((d) => ({ id: d.id, title: d.name }))}
+                    onRecover={recoverDraft}
+                    onDelete={drafts.remove}
+                    className="mb-3"
+                  />
+                )}
+              {/* Resources are context — they sit ABOVE the text being written. */}
+              {composerEnabled && (
+                <ResourcePills
+                  resources={uploads.pending.filter((p) => p.status === "done")}
+                  pending={uploads.pending}
+                  onRemove={(a) => {
+                    // A link has no storage path — match on whichever identifies it.
+                    const match = uploads.pending.find((p) =>
+                      a.kind === "link"
+                        ? p.url === a.url
+                        : p.storage_path === a.storage_path
+                    );
+                    if (match) uploads.remove(match.localId);
+                  }}
+                  onRemovePending={uploads.remove}
                   className="mb-3"
                 />
               )}
-            {/* Resources are context — they sit ABOVE the text being written. */}
-            {composerEnabled && (
-              <ResourcePills
-                resources={uploads.pending.filter((p) => p.status === "done")}
-                pending={uploads.pending}
-                onRemove={(a) => {
-                  // A link has no storage path — match on whichever identifies it.
-                  const match = uploads.pending.find((p) =>
-                    a.kind === "link"
-                      ? p.url === a.url
-                      : p.storage_path === a.storage_path
-                  );
-                  if (match) uploads.remove(match.localId);
-                }}
-                onRemovePending={uploads.remove}
-                className="mb-3"
-              />
-            )}
-            {composerEnabled && (
-              <CreationRelationPills
-                projectId={projectId!}
-                projectKey={currentProject?.key ?? projectKey ?? ""}
-                active={open}
-                value={relations}
-                onChange={setRelations}
-                disabled={submitting}
-              />
-            )}
-            <AutoTextarea
-              autoFocus
-              required
-              value={form.name}
-              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-              onKeyDown={(e) => {
-                if (e.key !== "Enter") return;
-                e.preventDefault();
-                void submit();
-              }}
-              placeholder={t("namePlaceholder")}
-              className="w-full overflow-hidden bg-transparent text-xl leading-tight font-semibold outline-none placeholder:text-muted-foreground/50 sm:text-2xl"
-            />
-            <MarkdownEditor
-              key={editorKey}
-              mentions={mentions}
-              value={form.description}
-              onCommit={(description) => setForm((f) => ({ ...f, description }))}
-              onEmptyChange={(empty) => {
-                editorNonEmptyRef.current = !empty;
-              }}
-              placeholder={t("descriptionPlaceholder")}
-              className="mt-2 min-h-16"
-            />
-
-            {/* Options — one compact inline row, like the create-issue dialog */}
-            <div className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1.5">
-              <ObjectiveStatusCompact
-                value={form.status}
-                onChange={(status) => setForm((f) => ({ ...f, status }))}
-              />
-              <AssigneeCompact
-                value={form.lead_user_id}
-                onChange={(lead_user_id) => setForm((f) => ({ ...f, lead_user_id }))}
-                members={members}
-                noneLabel={t("noLead")}
-              />
-              <DateTimePicker
-                variant="ghost"
-                value={form.target_date}
-                onChange={(target_date) => setForm((f) => ({ ...f, target_date }))}
-                placeholder={t("targetDatePlaceholder")}
-                ariaLabel={t("targetDatePlaceholder")}
-                tooltip={t("targetDatePlaceholder")}
-              />
-              <ColorCompact
-                value={form.color}
-                onChange={(color) => setForm((f) => ({ ...f, color }))}
-              />
               {composerEnabled && (
-                <CreationRelationsCompact
+                <CreationRelationPills
                   projectId={projectId!}
                   projectKey={currentProject?.key ?? projectKey ?? ""}
                   active={open}
@@ -604,43 +549,90 @@ export function ObjectiveDialog({
                   disabled={submitting}
                 />
               )}
-            </div>
+              <label htmlFor={titleId} className="creation-field-label">{tField("title")}</label>
+              <AutoTextarea
+                id={titleId}
+                enterKeyHint={mobile ? "next" : undefined}
+                autoFocus={!mobile}
+                required
+                value={form.name}
+                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                onKeyDown={(e) => {
+                  if (e.key !== "Enter") return;
+                  e.preventDefault();
+                  if (mobile && !e.metaKey && !e.ctrlKey) {
+                    e.currentTarget.form?.querySelector<HTMLElement>(".creation-description [contenteditable=true]")?.focus();
+                    return;
+                  }
+                  void submit();
+                }}
+                placeholder={t("namePlaceholder")}
+                className="creation-title w-full overflow-hidden bg-transparent text-xl leading-tight font-semibold outline-none placeholder:text-muted-foreground/50 sm:text-2xl"
+              />
+              <div className="creation-field-label">{tField("description")}</div>
+              <MarkdownEditor
+                key={editorKey}
+                mentions={mentions}
+                value={form.description}
+                onCommit={(description) => setForm((f) => ({ ...f, description }))}
+                onEmptyChange={(empty) => {
+                  editorNonEmptyRef.current = !empty;
+                }}
+                placeholder={t("descriptionPlaceholder")}
+                className="creation-description mt-2 min-h-16"
+              />
 
-            {/* Bottom bar — voice dictation at left, create controls at right,
- like the create-issue dialog: it goes to the line under `sm`,
- where the button takes a line of its own, full width. */}
-            <div className="mt-6 flex flex-wrap items-center gap-3 sm:mt-8">
-              {composerEnabled &&
-                (numoBusy ? (
-                  <>
-                    <span
-                      className="-ml-2 inline-flex size-8 shrink-0 items-center justify-center"
-                      aria-hidden
-                    >
-                      <NumoIcon
-                        state="thinking"
-                        className="size-6 text-primary animate-in fade-in duration-300"
-                      />
-                    </span>
-                    <span className="sr-only" role="status">
-                      {t("numoWorking")}
-                    </span>
-                  </>
-                ) : (
-                  <DictateButton
-                    context="objective_form"
-                    onTranscription={(text) => {
-                      track("objective_dictation_used", {
-                        surface: "create_dialog",
-                      });
-                      onTranscript(text);
-                    }}
-                    disabled={submitting}
-                    shortcutKey="mod+shift+d"
-                    onProcessingChange={setTranscribing}
-                    className="-ml-2"
+              {/* Property values stay compact on desktop and receive labels on mobile. */}
+              <div className="creation-properties mt-4 flex flex-wrap items-center gap-x-2 gap-y-1.5">
+                <CreationProperty mobile={mobile} label={t("statusFieldLabel")}>
+                  <ObjectiveStatusCompact
+                    value={form.status}
+                    onChange={(status) => setForm((f) => ({ ...f, status }))}
                   />
-                ))}
+                </CreationProperty>
+                <CreationProperty mobile={mobile} label={t("leadFieldLabel")}>
+                  <AssigneeCompact
+                    showValue={mobile}
+                    value={form.lead_user_id}
+                    onChange={(lead_user_id) => setForm((f) => ({ ...f, lead_user_id }))}
+                    members={members}
+                    noneLabel={t("noLead")}
+                  />
+                </CreationProperty>
+                <CreationProperty mobile={mobile} label={t("targetDatePlaceholder")}>
+                  <DateTimePicker
+                    variant="ghost"
+                    value={form.target_date}
+                    onChange={(target_date) => setForm((f) => ({ ...f, target_date }))}
+                    placeholder={t("targetDatePlaceholder")}
+                    ariaLabel={t("targetDatePlaceholder")}
+                    tooltip={t("targetDatePlaceholder")}
+                  />
+                </CreationProperty>
+                <CreationProperty mobile={mobile} label={t("colorFieldLabel")}>
+                  <ColorCompact
+                    value={form.color}
+                    onChange={(color) => setForm((f) => ({ ...f, color }))}
+                  />
+                </CreationProperty>
+                {composerEnabled && (
+                  <CreationProperty mobile={mobile} label={tRelations("relations")}>
+                    <CreationRelationsCompact
+                      projectId={projectId!}
+                      projectKey={currentProject?.key ?? projectKey ?? ""}
+                      active={open}
+                      value={relations}
+                      onChange={setRelations}
+                      disabled={submitting}
+                    />
+                  </CreationProperty>
+                )}
+              </div>
+
+            </MobileSheetScrollArea>
+            {/* Submission stays visible while the mobile form body scrolls. */}
+            <div className="creation-form-footer mt-6 flex flex-wrap items-center gap-3 sm:mt-8">
+              {!mobile && composerEnabled && dictationControl}
               {composerEnabled && (
                 <AddResourceButton
                   onFiles={uploads.addFiles}
@@ -652,7 +644,7 @@ export function ObjectiveDialog({
               )}
               {/* No Cancel button: the dialog's own close X already does
                   that job. */}
-              <div className="ml-auto flex items-center justify-end gap-2 max-sm:w-full">
+              <div className="creation-submit ml-auto flex items-center justify-end gap-2 app-mobile:w-full">
                 {showSplit ? (
                   /* The tooltip attaches to the action, not the chevron: its
  props pass through `SplitButton` to the left button,
@@ -669,8 +661,8 @@ export function ObjectiveDialog({
                         !form.name.trim() ||
                         uploads.uploading
                       }
-                      className="max-sm:w-full"
-                      actionClassName="max-sm:flex-1"
+                      className="app-mobile:w-full"
+                      actionClassName="app-mobile:flex-1"
                       menuLabel={t("createInOtherProject")}
                       menu={<>
                         {relations.length > 0 && <DropdownMenuLabel className="max-w-60 whitespace-normal">{tRelations("crossProjectUnavailable")}</DropdownMenuLabel>}
@@ -695,7 +687,7 @@ export function ObjectiveDialog({
                   >
                     <Button
                       type="submit"
-                      className="rounded-full px-4 max-sm:w-full"
+                      className="rounded-full px-4 app-mobile:w-full"
                       disabled={
                         submitting ||
                         numoBusy ||

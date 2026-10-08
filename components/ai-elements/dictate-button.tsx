@@ -133,6 +133,8 @@ export interface DictateButtonProps {
   /** Recalled when {@link DictateButtonProps.autoStart} has just launched a
    * socket — the signal to disarm the flag on the host side. */
   onAutoStart?: () => void;
+  /** Display the current action beside the microphone in prominent controls. */
+  showLabel?: boolean;
   className?: string;
 }
 
@@ -210,6 +212,7 @@ export function DictateButton({
   autoStart = false,
   onAutoStart,
   className,
+  showLabel = false,
 }: DictateButtonProps) {
   const t = useTranslations("Dictate");
   const locale = useLocale();
@@ -566,10 +569,7 @@ export function DictateButton({
                 type="button"
                 onClick={handleClick}
                 disabled={disabled || status === "starting" || status === "processing"}
-                // When recording, the STOP button: that's what you need
-                // announce, whatever the label at rest. A tooltip
-                // which promises a result (“we complete the return”) would describe
-                // sinon un bouton qui fait l'inverse.
+                // Announce the stop action while recording, independently of the idle label.
                 aria-label={
                   isRecording ? t("stop") : (tooltipLabel ?? t("start"))
                 }
@@ -577,6 +577,7 @@ export function DictateButton({
                 className={cn(
                   "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50",
                   isRecording && "text-brand",
+                  showLabel && "h-auto w-auto min-h-11 gap-2 px-3 py-2",
                   floating && "absolute bottom-2 right-2 z-10",
                   // `display:none` and not a disassembly: the element remains the anchor
                   // of the popover, and it becomes visible again in the same rendering as
@@ -592,6 +593,9 @@ export function DictateButton({
                 ) : (
                   <HugeiconsIcon icon={Mic01Icon} className="h-4 w-4" />
                 )}
+                {showLabel && <span className="min-w-0 text-left text-sm font-medium">
+                  {isRecording ? t("stop") : status === "starting" ? t("starting") : status === "processing" ? t("inFlight") : (tooltipLabel ?? t("start"))}
+                </span>}
               </button>
             </PopoverTrigger>
           </TooltipTrigger>

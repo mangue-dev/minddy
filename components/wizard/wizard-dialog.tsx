@@ -8,13 +8,10 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   Button,
   ConfirmDeleteDialog,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
   Spinner,
   cn,
 } from "mangue-ui";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { WizardStepper } from "@/components/wizard/wizard-stepper";
 import { SendShortcutTooltip } from "@/components/send-shortcut";
 import { useSubmitShortcut } from "@/lib/keyboard/use-submit-shortcut";
@@ -174,12 +171,13 @@ export function WizardDialog<Id extends string>({
         <DialogTitle className="sr-only">{label}</DialogTitle>
         <DialogDescription className="sr-only">{step.title}</DialogDescription>
 
-        <div className="absolute top-4 right-4 z-30">
+        <div data-mobile-sheet-close-wrapper className="absolute top-4 right-4 z-30">
           <Button
             variant="ghost"
             size="sm"
             className="h-8 w-8 p-0"
             onClick={() => onOpenChange(false)}
+            data-mobile-sheet-close
             aria-label={tCommon("close")}
           >
             <HugeiconsIcon icon={Cancel01Icon} className="h-4 w-4" />
@@ -256,7 +254,7 @@ export function WizardDialog<Id extends string>({
               </p>
             )}
 
-            <div className="flex w-full flex-col items-center gap-3">
+            <div data-mobile-sheet-actions className="flex w-full flex-col items-center gap-3">
               {!step.hideSubmit && (
                 <SendShortcutTooltip
                   scope="form"

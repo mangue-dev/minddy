@@ -11,25 +11,15 @@ import { useCallback, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   Button,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  SidePanel,
-  SidePanelBody,
-  SidePanelContent,
-  SidePanelDescription,
-  SidePanelHeader,
-  SidePanelTitle,
   Spinner,
   toast,
 } from "mangue-ui";
+import { SidePanel, SidePanelBody, SidePanelContent, SidePanelDescription, SidePanelHeader, SidePanelTitle } from "@/components/ui/side-panel";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ForgeUserAvatar } from "@/components/git/forge-user-avatar";
 import { GitLogin } from "@/components/git/git-login";
 import { NumoIcon } from "@/components/numo-icon";

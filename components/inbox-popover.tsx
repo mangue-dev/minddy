@@ -4,7 +4,8 @@ import { useEffect, useRef, type Dispatch, type SetStateAction } from "react";
 import dynamic from "next/dynamic";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Popover, PopoverAnchor, PopoverContent, Spinner } from "mangue-ui";
+import { Spinner } from "mangue-ui";
+import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/responsive-popover";
 import { OPEN_INBOX_EVENT } from "@/lib/inbox-launcher";
 
 const InboxContent = dynamic(() => import("@/components/inbox-content"), {
@@ -16,7 +17,7 @@ const InboxContent = dynamic(() => import("@/components/inbox-content"), {
 });
 
 function visibleTrigger() {
-  return Array.from(document.querySelectorAll<HTMLElement>("[data-inbox-trigger]"))
+  return Array.from(document.querySelectorAll<HTMLElement>("[data-inbox-trigger], [data-mobile-menu-trigger]"))
     .find((element) => element.getBoundingClientRect().width > 0);
 }
 
@@ -60,13 +61,14 @@ export function InboxPopover({ open, onOpenChange: setOpen }: {
       <PopoverContent
         ref={contentRef}
         id="inbox-popover"
+        mobileTitle={t("title")}
         aria-label={t("title")}
         side="bottom"
         align="start"
         sideOffset={8}
         collisionPadding={12}
         updatePositionStrategy="always"
-        className="h-[min(600px,calc(100dvh-96px))] max-h-[var(--radix-popover-content-available-height)] w-[480px] max-w-[calc(100vw-24px)] gap-0 overflow-hidden p-0"
+        className="mobile-inbox-sheet h-[min(600px,calc(100dvh-96px))] max-h-[var(--radix-popover-content-available-height)] w-[480px] max-w-[calc(100vw-24px)] gap-0 overflow-hidden p-0"
         onOpenAutoFocus={(event) => {
           event.preventDefault();
           contentRef.current?.focus({ preventScroll: true });

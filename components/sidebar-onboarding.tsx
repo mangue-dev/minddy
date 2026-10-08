@@ -7,8 +7,9 @@ import { ArrowDown01Icon, ArrowRight01Icon, CheckIcon, MoreHorizontalIcon, Party
 import {
   Button, Collapsible, CollapsibleContent, CollapsibleTrigger,
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
-  DialogClose, Popover, PopoverContent, PopoverTrigger, Spinner, cn, toast,
+  Popover, PopoverContent, PopoverTrigger, Spinner, cn, toast,
 } from "mangue-ui";
+import { DialogClose } from "@/components/ui/dialog";
 import Link from "@/components/app-link";
 import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";

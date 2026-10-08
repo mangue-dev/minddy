@@ -1,13 +1,15 @@
 "use client";
 
+import { MobileSheetContent } from "@/components/ui/mobile-sheet";
+
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Cancel01Icon, CollapseIcon, ExpandIcon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { useMobileLayout } from "@/lib/use-mobile-layout";
 import {
   Button,
   Sheet,
-  SheetContent,
   SheetTitle,
 } from "mangue-ui";
 import {
@@ -52,6 +54,7 @@ export function AgentChatModal({
   initialRunId?: string | null;
 }) {
   const t = useTranslations("Agent");
+  const mobile = useMobileLayout() === true;
   const tc = useTranslations("Common");
   const ta = useTranslations("Assistant");
 
@@ -63,10 +66,10 @@ export function AgentChatModal({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="right"
-        showCloseButton={false}
-        overlayClassName={panelOverlayClassName(displayMode)}
+      <MobileSheetContent
+        side={mobile ? "bottom" : "right"}
+        showCloseButton={mobile}
+        overlayClassName={panelOverlayClassName(mobile ? "expanded" : displayMode)}
         data-mode={displayMode}
         className={panelSheetClassName(displayMode)}
       >
@@ -85,7 +88,7 @@ export function AgentChatModal({
                   <Button
                     variant="ghost"
                     size="icon-sm"
-                    className="hidden md:inline-flex"
+                    className="hidden app-desktop:inline-flex"
                     aria-label={isExpanded ? ta("collapse") : ta("expand")}
                     onClick={toggleDisplayMode}
                   >
@@ -106,6 +109,7 @@ export function AgentChatModal({
                   <Button
                     variant="ghost"
                     size="icon-sm"
+                    data-mobile-sheet-close
                     aria-label={tc("close")}
                     onClick={() => onOpenChange(false)}
                   >
@@ -119,7 +123,7 @@ export function AgentChatModal({
             </>
           }
         />
-      </SheetContent>
+      </MobileSheetContent>
     </Sheet>
   );
 }

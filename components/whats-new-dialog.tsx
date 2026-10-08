@@ -5,11 +5,8 @@ import { Cancel01Icon } from "@hugeicons/core-free-icons";
 import { useLocale, useTranslations } from "next-intl";
 import {
   Button,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
 } from "mangue-ui";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import type { Locale } from "@/i18n/config";
 import { ChangelogEntries } from "@/components/changelog-entries";
 import { useScrollFade } from "@/lib/use-scroll-fade";
@@ -43,10 +40,11 @@ export function WhatsNewDialog({
         {/* No tooltip on this cross, unlike the notebook: it receives
  the initial focus of the dialog, so the tooltip would open by itself
  over the title — and would swallow the first Esc. */}
-        <div className="absolute top-3.5 right-3.5 z-30">
+        <div data-mobile-sheet-close-wrapper className="absolute top-3.5 right-3.5 z-30">
           <Button
             variant="ghost"
             size="icon-sm"
+            data-mobile-sheet-close
             aria-label={tc("close")}
             onClick={() => onOpenChange(false)}
             className="rounded-full text-muted-foreground hover:text-foreground"

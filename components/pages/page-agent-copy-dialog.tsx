@@ -1,5 +1,6 @@
 "use client";
 
+import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
@@ -79,7 +80,7 @@ export function PageAgentCopyDialog({
       }}
     >
       <Textarea
-        autoFocus
+        autoFocus={allowInputAutoFocus()}
         value={instructions}
         onChange={(e) => setInstructions(e.target.value)}
             // ⌘/Ctrl+Valid entry; Enter only remains a newline,

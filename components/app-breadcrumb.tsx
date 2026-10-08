@@ -255,9 +255,9 @@ function MobileBreadcrumb({
   }
 
   return (
-    <div className="flex min-w-0 flex-1 items-center desktop:hidden">
+    <div className="flex min-w-0 flex-1 items-center app-desktop:hidden">
       <div className="flex min-w-0 flex-1 justify-start">
-        {/* Mobile mode, under 768 px: the sidebar is no longer rendered, and
+        {/* Mobile layout: the sidebar is no longer rendered, and
  the macOS buttons fall right on the back button below — the
  top-left corner of the window is this line. This corner guard
  pushes them out of the way (MIN-293). Don't render anything else.
@@ -324,8 +324,8 @@ export function AppBreadcrumb({
 
   return (
     <>
-      {/* Desktop (≥768px): the full animated trail. */}
-      <nav className="hidden min-w-0 items-center gap-2 desktop:flex">
+      {/* Desktop layout: the full animated trail. */}
+      <nav className="hidden min-w-0 items-center gap-2 app-desktop:flex">
         <Link
           href="/home"
           className={cn(
@@ -423,7 +423,7 @@ export function AppBreadcrumb({
         </BreadcrumbLevel>
       </nav>
 
-      {/* Mobile (<768px): two-stage back + current level. */}
+      {/* Mobile layout: two-stage back + current level. */}
       <MobileBreadcrumb
         project={project}
         objective={objective}

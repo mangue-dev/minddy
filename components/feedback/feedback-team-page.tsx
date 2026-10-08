@@ -1,7 +1,10 @@
 "use client";
+
+import { useMobileCollectionState } from "@/lib/mobile-collection-state";
+import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
-import { Add01Icon, Alert01Icon, ArrowLeft01Icon, ArrowRight01Icon, ArrowUp01Icon, Cancel01Icon, CancelCircleIcon as Ban, Clock01Icon, Copy01Icon, Delete02Icon, FilterIcon, GitMergeIcon, GlobeIcon, LanguageCircleIcon, Link02Icon, LockIcon, MessageMultiple01Icon, MoreHorizontalIcon, SentIcon, Shield01Icon, SparklesIcon, CheckIcon, Undo02Icon } from "@hugeicons/core-free-icons";
+import { Add01Icon, Alert01Icon, ArrowRight01Icon, ArrowUp01Icon, Cancel01Icon, CancelCircleIcon as Ban, Clock01Icon, Copy01Icon, Delete02Icon, FilterIcon, GitMergeIcon, GlobeIcon, LanguageCircleIcon, Link02Icon, LockIcon, MessageMultiple01Icon, MoreHorizontalIcon, SentIcon, Shield01Icon, SparklesIcon, CheckIcon, Undo02Icon } from "@hugeicons/core-free-icons";
 import { feedbackQueryOptions } from "@/lib/feedback-query";
 import { useAppTabChange } from "@/lib/use-app-tab-change";
 
@@ -18,12 +21,6 @@ import {
   CommandItem,
   CommandSeparator,
   ConfirmDeleteDialog,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -36,11 +33,12 @@ import {
   cn,
   toast,
 } from "mangue-ui";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 // ChevronUp renders the post vote count.
 import { EmptyScene } from "@/components/empty-scene";
 import { AppContentHeader } from "@/components/app-content-header";
 import { FeedbackSetupWizard } from "@/components/feedback/feedback-setup-wizard";
-import { SecondarySidebar } from "@/components/secondary-sidebar";
+import { CollectionSidebar, type SidebarBrowseTarget } from "@/components/secondary-sidebar";
 import { matchesFilter } from "@/components/sidebar-filter-field";
 import { SearchMenu } from "@/components/search-menu";
 import { SearchSelect, checkedProps } from "@/components/search-select";
@@ -770,11 +768,11 @@ function FeedbackRow({
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 
-export function FeedbackTeamPage() {
-  return <AppTabRouteBoundary><FeedbackTeamPageInner /></AppTabRouteBoundary>;
+export function FeedbackTeamPage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
+  return <AppTabRouteBoundary><FeedbackTeamPageInner browse={browse} /></AppTabRouteBoundary>;
 }
 
-function FeedbackTeamPageInner() {
+function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   const t = useTranslations("FeedbackBoard");
   const tCommon = useTranslations("Common");
   const format = useFormatter();
@@ -801,16 +799,15 @@ function FeedbackTeamPageInner() {
   const boardEnabled = listData?.board_enabled ?? false;
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [mobileDetail, setMobileDetail] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useMobileCollectionState(`/projects/${projectId}/feedback`, "query", "");
 
   // We arrive on this page to decide what is not decided: the
   // column therefore opens on the open returns, and not on the hundreds
   // archives which buried them.
-  const [state, setState] = useState<FeedbackStateFilter>("unresolved");
-  const [sort, setSort] = useState<FeedbackSort>("top");
-  const [onlyToReview, setOnlyToReview] = useState(false);
+  const [state, setState] = useMobileCollectionState<FeedbackStateFilter>(`/projects/${projectId}/feedback`, "state", "unresolved");
+  const [sort, setSort] = useMobileCollectionState<FeedbackSort>(`/projects/${projectId}/feedback`, "sort", "top");
+  const [onlyToReview, setOnlyToReview] = useMobileCollectionState(`/projects/${projectId}/feedback`, "onlyToReview", false);
   const toReviewCount = useMemo(() => posts.filter(needsHumanReview).length, [posts]);
   useEffect(() => {
     if (toReviewCount === 0 && onlyToReview) setOnlyToReview(false);
@@ -904,7 +901,7 @@ function FeedbackTeamPageInner() {
   // The proposed name bears the PROJECT, as on the objectives: the field is arriving
   // pre-selected, Enter accepts it, and “Returns” for short is the same
   // name on each project — the second view would overwrite the first.
-  usePublishCurrentView({
+  usePublishCurrentView(browse ? null : {
     href: buildViewHref(pathname, searchParams.toString(), {
       post: selectedPost?.id ?? null,
     }),
@@ -916,7 +913,7 @@ function FeedbackTeamPageInner() {
   });
 
   useAssistantContext(
-    project
+    !browse && project
       ? selectedPost
         ? { projectId, feedbackId: selectedPost.id, feedbackTitle: selectedPost.title }
         : { projectId }
@@ -1005,7 +1002,6 @@ function FeedbackTeamPageInner() {
       setOnlyToReview(false);
     }
     setSelectedId(postParam);
-    setMobileDetail(true);
     router.replace(pathname);
   }, [postParam, posts, pathname, router, state, onlyToReview]);
 
@@ -1027,6 +1023,7 @@ function FeedbackTeamPageInner() {
       onOpenChange={setCreateOpen}
       onCreated={(postId) => {
         refresh();
+        if (browse) browse.onSelect(`/projects/${projectId}/feedback?post=${encodeURIComponent(postId)}`);
         // A return just entered is opened: it falls into the filter by
         // default. But if the column is elsewhere, open it without bringing it back there
         // would select a post that the list does not show.
@@ -1045,16 +1042,10 @@ function FeedbackTeamPageInner() {
   // remain within reach in the pane: grab one in your hand, and go and
   // adjust the collection — it is she who then fills the page.
 
-  return (
-    /* “@” when hovering over a row of the column opens Numo on this return
-       (MIN-105). The context passes through the secondary bar portal, which
-       is only deported to the DOM. */
-    <AskNumoFeedbackProvider onAskNumo={handleAskNumo}>
-    <div className="flex h-full min-h-0">
-      {/* ── Liste ────────────────────────────────────────────────────────── */}
-      <SecondarySidebar
+  const sidebar = (
+      <CollectionSidebar browse={browse}
         title={t("title")}
-        hiddenOnMobile={mobileDetail}
+        hiddenOnMobile
         filter={{
           value: query,
           onChange: setQuery,
@@ -1165,20 +1156,29 @@ function FeedbackTeamPageInner() {
                     categoryMap={categoryMap}
                     memberSeeds={memberSeeds}
                     teamLanguage={teamLanguage}
-                    onSelect={() => {
-                      setSelectedId(post.id);
-                      setMobileDetail(true);
-                    }}
+                    onSelect={() => setSelectedId(post.id)}
                   />
                 </li>
               ))}
             </ul>
           )}
         </div>
-      </SecondarySidebar>
+      </CollectionSidebar>
+  );
+
+  if (browse) return <AskNumoFeedbackProvider onAskNumo={handleAskNumo}>{sidebar}{createDialog}</AskNumoFeedbackProvider>;
+
+  return (
+    /* “@” when hovering over a row of the column opens Numo on this return
+       (MIN-105). The context passes through the secondary bar portal, which
+       is only deported to the DOM. */
+    <AskNumoFeedbackProvider onAskNumo={handleAskNumo}>
+    <div className="flex h-full min-h-0">
+      {/* ── List ────────────────────────────────────────────────────────── */}
+      {sidebar}
 
       {/* ── Detail ──────────────────────────── ──────────────────────────── */}
-      <div className={cn("min-w-0 flex-1", !mobileDetail && "hidden md:block")}>
+      <div className="min-h-0 min-w-0 flex-1">
         {isPending || selectedId || posts.length > 0 ? (
           selectedId ? (
           <FeedbackDetail
@@ -1193,7 +1193,6 @@ function FeedbackTeamPageInner() {
             categories={categories}
             objectives={objectives}
             issues={issues}
-            onBack={() => setMobileDetail(false)}
             onChanged={refresh}
             onOpenIssue={setOpenIssueId}
           />
@@ -1303,7 +1302,6 @@ function FeedbackDetail({
   categories,
   objectives,
   issues,
-  onBack,
   onChanged,
   onOpenIssue,
 }: {
@@ -1322,7 +1320,6 @@ function FeedbackDetail({
   /** Project objectives — the promotion form selector. */
   objectives: Objective[];
   issues: Issue[];
-  onBack: () => void;
   onChanged: () => void;
   /** Opens the issue side panel directly (no navigation). */
   onOpenIssue: (issueId: string) => void;
@@ -1585,7 +1582,7 @@ function FeedbackDetail({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      {/* Top bar, sorting style: return (mobile) · identifiers (voice,
+      {/* Top bar: identifiers (voice,
           source, date) on the left · what we DO with the return on the right. What he
           EST — status, visibility, type, author — can be read below, in the
           key/value table, with the rest of its properties.
@@ -1593,15 +1590,6 @@ function FeedbackDetail({
           above, and a separate bar would cut it off from what it covers (even
           part as the pull request and the agent conversation). */}
       <AppContentHeader contentClassName="gap-2">
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label={t("title")}
-          className="md:hidden"
-          onClick={onBack}
-        >
-          <HugeiconsIcon icon={ArrowLeft01Icon} />
-        </Button>
         {/* What's left here: review alerts, the only things that require
             a reaction. The voices, the date and the origin came down
             in the key/value table, with the rest of what the return IS. */}
@@ -1694,7 +1682,7 @@ function FeedbackDetail({
       <div
         ref={detailFade.ref}
         {...detailFade.scrollProps}
-        className="min-h-0 flex-1 overflow-y-auto px-4 py-6 md:px-6"
+        className="min-h-0 flex-1 overflow-y-auto px-4 py-6 app-desktop:px-6"
       >
         <div className="mx-auto flex max-w-3xl flex-col gap-6">
         {post.suggested_merge_into_id && post.suggested_title && (
@@ -2097,7 +2085,7 @@ function FeedbackDetail({
         </div>
       </div>
 
-      <div className="dock-above-nav shrink-0 bg-background px-4 py-3 md:px-6">
+      <div className="dock-above-nav shrink-0 bg-background px-4 py-3 app-desktop:px-6">
         <div className="mx-auto max-w-3xl">
           <CommentComposer
             members={members}
@@ -2264,7 +2252,7 @@ function MergeDialog({
             <DialogDescription>{t("mergeDialogDesc")}</DialogDescription>
           </DialogHeader>
           <Input
-            autoFocus
+            autoFocus={allowInputAutoFocus()}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={t("mergeSearchPlaceholder")}
@@ -2365,7 +2353,7 @@ function LinkIssueDialog({
           <DialogDescription>{t("linkIssueDialogDesc")}</DialogDescription>
         </DialogHeader>
         <Input
-          autoFocus
+          autoFocus={allowInputAutoFocus()}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder={t("linkIssueSearchPlaceholder")}
@@ -2635,7 +2623,7 @@ function NewAuthorFields({
   return (
     <div className="flex min-w-0 flex-1 items-center gap-2">
       <Input
-        autoFocus
+        autoFocus={allowInputAutoFocus()}
         type="email"
         value={email}
         onChange={(e) => onEmailChange(e.target.value)}
@@ -2874,7 +2862,7 @@ function InternalFeedbackDialog({
       >
         <DialogTitle className="sr-only">{t("internalDialogTitle")}</DialogTitle>
         <AutoTextarea
-          autoFocus
+          autoFocus={allowInputAutoFocus()}
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           onKeyDown={(e) => {

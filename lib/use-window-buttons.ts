@@ -1,5 +1,6 @@
 "use client";
 
+import { useMobileLayout } from "./use-mobile-layout";
 import { useEffect, useState } from "react";
 
 import {
@@ -22,35 +23,9 @@ import { trace } from "./desktop/trace";
  * switch to full screen; it follows the result, and this file reads it.
  */
 
-/**
- * The layout toggle point (`--breakpoint-desktop` of the app).
- * Below this width, the AppShell no longer renders the sidebars: this is
- * the header which is found in the top left corner, therefore under the buttons.
- */
-const DESKTOP_BREAKPOINT_PX = 768;
-
-/**
- * Is the sidebar rendered? (≥768px)
- *
- * What depends on it: **who hosts the macOS buttons**. They live in the line
- * mark of the bar, but the AppShell removes it below 768 px — it remains
- * CLIMB (`display: none`), which is the trap: without this question, it
- * kept asking for a slot that no one saw. Under 768 px, it is the header
- * which welcomes them.
- *
- * `false` on the first render, server as client — there is no `matchMedia`
- * to query on the server side, and assuming it would cause the hydration to diverge.
- */
+/** Native window buttons follow the same layout decision as the sidebar. */
 export function useWideLayout(): boolean {
-  const [wide, setWide] = useState(false);
-  useEffect(() => {
-    const mq = window.matchMedia(`(min-width: ${DESKTOP_BREAKPOINT_PX}px)`);
-    const sync = () => setWide(mq.matches);
-    sync();
-    mq.addEventListener("change", sync);
-    return () => mq.removeEventListener("change", sync);
-  }, []);
-  return wide;
+  return useMobileLayout() === false;
 }
 
 /* ─── Who hosts the buttons ────────────────────── ────────────────────── */
@@ -76,7 +51,7 @@ const CLOSED: WindowButtonsSlot = { reserved: false, ready: false };
  * What the surface that hosts them should display in their place.
  *
  * `hosts`: is this surface the one that welcomes them at the moment? There
- * sidebar above 768 px, header below — view
+ * sidebar in desktop layout, header in mobile layout — see
  * `useWideLayout`. A surface that does not host reserves nothing.
  *
  * The place simply follows the state announced by the main process: in full

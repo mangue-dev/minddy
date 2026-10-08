@@ -3,9 +3,10 @@
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
-  Button, Dialog, DialogContent, DialogDescription, DialogFooter,
-  DialogHeader, DialogTitle, Spinner,
+  Button,
+  Spinner,
 } from "mangue-ui";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useUnlinkPullRequestIssue } from "@/lib/use-unlink-pull-request-issue";
 
 type UnlinkTarget = { prId: string; issueId: string; identifier: string };

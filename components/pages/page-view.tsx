@@ -1017,7 +1017,7 @@ function PageSurface({
             the chrome is used to place itself there. Title and blocks therefore share the
             same left edge, and the hover margin falls into the reserve instead
             to shift the body under the title. */}
-        <div className={cn("relative mx-auto w-full px-6 py-10", panel ? "max-w-3xl md:px-16" : page.database_schema != null ? "max-w-none md:pl-24 md:pr-10" : "max-w-3xl md:pl-24 md:pr-10")}>
+        <div className={cn("relative mx-auto w-full px-6 py-10", panel ? "max-w-3xl app-desktop:px-16" : page.database_schema != null ? "max-w-none app-desktop:pl-24 app-desktop:pr-10" : "max-w-3xl app-desktop:pl-24 app-desktop:pr-10")}>
           {page.database_schema != null && <DatabaseSetupBanner projectId={projectId} page={summary ?? page} />}
           <PageHeader
             title={title}

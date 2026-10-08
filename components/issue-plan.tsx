@@ -1,5 +1,6 @@
 "use client";
 
+import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
 import { ArrowDown01Icon, CodeSimpleIcon as Code2, Copy01Icon, Edit04Icon, Search01Icon, TaskDone01Icon } from "@hugeicons/core-free-icons";
@@ -132,7 +133,7 @@ export function IssuePlan({
             }
           }}
           placeholder={t("editorPlaceholder")}
-          autoFocus
+          autoFocus={allowInputAutoFocus()}
           spellCheck={false}
           className="min-h-[45vh] w-full resize-y rounded-lg bg-control p-3 font-mono text-sm leading-relaxed outline-none placeholder:text-muted-foreground/50 focus-visible:bg-control-hover"
         />

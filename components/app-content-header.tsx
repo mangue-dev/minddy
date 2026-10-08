@@ -11,8 +11,8 @@ type AppContentHeaderProps = ComponentProps<"div"> & {
  * Its height is shared by the primary and secondary sidebar headers through
  * --app-content-header-height, initialized from APP_CONTENT_HEADER_HEIGHT.
  * It stays above the pane's scrolling content with an opaque surface.
- * Dense localized action sets stay on one line and remain horizontally
- * reachable instead of making the header taller than the surrounding chrome.
+ * Desktop toolbars keep dense actions on one line. Mobile callers collapse
+ * long destination lists into pickers so the header never scrolls.
  *
  * Its side padding is derived from the strip's own geometry (MIN-584):
  * --app-content-header-pad-x is half the strip minus the 16px radius of a
@@ -29,7 +29,7 @@ export function AppContentHeader({
   return (
     <div
       className={cn(
-        "app-content-header sticky top-0 z-[35] h-[var(--app-content-header-height)] shrink-0 overflow-x-auto overflow-y-hidden bg-background overscroll-x-contain",
+        "app-content-header sticky top-0 z-[35] h-[var(--app-content-header-height)] shrink-0 app-mobile:overflow-hidden app-desktop:overflow-x-auto overflow-y-hidden bg-background overscroll-x-contain",
         "[-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
         className,
       )}
@@ -37,7 +37,7 @@ export function AppContentHeader({
     >
       <div
         className={cn(
-          "flex h-full min-w-full flex-nowrap items-center px-[var(--app-content-header-pad-x)]",
+          "flex h-full min-w-0 app-desktop:min-w-full flex-nowrap items-center px-[var(--app-content-header-pad-x)]",
           contentClassName,
         )}
       >

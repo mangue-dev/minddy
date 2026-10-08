@@ -8,16 +8,11 @@ import { useTranslations } from "next-intl";
 import {
   Badge,
   Button,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
   Input,
   Spinner,
   toast,
 } from "mangue-ui";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useMembersQuery } from "@/lib/use-members-query";
 import { usePlanGates } from "@/lib/use-billing-query";
 import {

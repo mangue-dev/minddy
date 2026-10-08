@@ -1,5 +1,6 @@
 "use client";
 
+import { isMobileLayout } from "@/lib/app-layout";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, File02Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useRef } from "react";
@@ -30,7 +31,7 @@ export function PagesHome({
   useEffect(() => {
     if (restored.current || loading) return;
     restored.current = true;
-    if (!window.matchMedia("(min-width: 768px)").matches) return;
+    if (isMobileLayout()) return;
     const last = readLastPage(projectId);
     if (last && byId.has(last)) {
       replacePagesHistory(pageHref(projectId, last));

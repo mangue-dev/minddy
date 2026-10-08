@@ -370,7 +370,7 @@ function PageRow({
 
   return (
     <>
-    <div
+    <div data-sidebar-page-row
       className={cn(
         "group/page relative flex items-center rounded-md pr-1 transition-colors",
         active ? "bg-muted" : "hover:bg-muted/60 focus-within:bg-muted/60",
@@ -481,7 +481,7 @@ function PageRow({
 
       {/* Both hover gestures. They reserve their place (`opacity`, not
           `hidden`): without this the title would be shortened when the mouse passes. */}
-      <div
+      <div data-sidebar-page-row-actions
         className={cn(
           "flex shrink-0 items-center opacity-0 transition-opacity",
           "group-hover/page:opacity-100 group-focus-within/page:opacity-100",

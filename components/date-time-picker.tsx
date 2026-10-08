@@ -6,6 +6,7 @@
 // and renders one of four triggers via `variant`. Values are ISO strings
 // (local wall-clock time preserved); `null` means unset.
 
+import { Popover, PopoverContent, PopoverTrigger, PopoverAnchor } from "@/components/ui/responsive-popover";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { DateTimeIcon, RepeatIcon } from "@hugeicons/core-free-icons";
 import { AppIcon } from "@/components/icon";
@@ -20,10 +21,6 @@ import {
   ptBR as rdpPtBR,
 } from "react-day-picker/locale";
 import {
-  Popover,
-  PopoverAnchor,
-  PopoverContent,
-  PopoverTrigger,
   SegmentedControl,
   Select,
   SelectContent,
@@ -59,7 +56,7 @@ const DEFAULT_HOUR = 9;
 const CalendarSurface = React.lazy(() =>
   import("@/components/calendar").then((m) => ({ default: m.Calendar })),
 );
-const CALENDAR_FALLBACK = "h-[300px] w-72 animate-pulse rounded-md bg-muted/50";
+const CALENDAR_FALLBACK = "h-[300px] w-full app-desktop:w-72 animate-pulse rounded-md bg-muted/50";
 
 // "anchored" has no visible trigger: it opens (controlled) at `anchor`, the
 // mouse position — used by the keyboard field shortcuts (issue-field-shortcuts).
@@ -435,6 +432,7 @@ export function DateTimePicker({
         </PopoverTrigger>
       )}
       <PopoverContent
+        mobileTitle={ariaLabel ?? placeholder ?? t("placeholder")}
         align={
           variant === "field" || variant === "ghost" || variant === "anchored"
             ? "start"
@@ -509,7 +507,7 @@ export function DateTimePicker({
             locale={dfLocale}
           />
         </React.Suspense>
-        {!dateOnly && <div className="flex flex-col gap-2.5 border-t border-border pt-3">
+        {!dateOnly && <div data-sheet-section className="flex flex-col gap-2.5 border-t border-border pt-3">
           <div className="flex items-center justify-between gap-3">
             <label htmlFor={switchId} className="text-sm text-muted-foreground">
               {t("addTime")}

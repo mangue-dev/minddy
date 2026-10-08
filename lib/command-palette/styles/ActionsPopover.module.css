@@ -225,57 +225,55 @@
    MOBILE STYLES
    ============================================================================= */
 
-@media (max-width: 767px) {
-  .popoverWrapper {
-    position: fixed;
-    bottom: 0;
-    right: 0;
-    left: 0;
-    z-index: 9999;
-  }
+:global(html[data-app-layout="mobile"]) .popoverWrapper {
+  position: fixed;
+  bottom: 0;
+  right: 0;
+  left: 0;
+  z-index: 9999;
+}
 
-  .popover {
-    width: 100%;
-    max-height: 60vh;
-    border-radius: var(--cp-radius-xl, 12px) var(--cp-radius-xl, 12px) 0 0;
-    animation: popoverMobileSlideIn 200ms ease-out;
-    /* Reset transform for mobile (sheet slides from bottom) */
-    transform: none;
-  }
+:global(html[data-app-layout="mobile"]) .popover {
+  width: 100%;
+  max-height: 60vh;
+  border-radius: var(--cp-radius-xl, 12px) var(--cp-radius-xl, 12px) 0 0;
+  animation: popoverMobileSlideIn 200ms ease-out;
+  /* Reset transform for mobile (sheet slides from bottom) */
+  transform: none;
+}
 
-  @keyframes popoverMobileSlideIn {
-    from {
-      opacity: 0;
-      transform: translateY(100%);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
+@keyframes popoverMobileSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
   }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 
-  .searchContainer {
-    padding: 12px 16px;
-  }
+:global(html[data-app-layout="mobile"]) .searchContainer {
+  padding: 12px 16px;
+}
 
-  .actionsList {
-    padding: 8px;
-    max-height: none;
-  }
+:global(html[data-app-layout="mobile"]) .actionsList {
+  padding: 8px;
+  max-height: none;
+}
 
-  .actionItem {
-    padding: 12px;
-    min-height: 44px;
-  }
+:global(html[data-app-layout="mobile"]) .actionItem {
+  padding: 12px;
+  min-height: 44px;
+}
 
-  .actionIcon {
-    width: 18px;
-    height: 18px;
-  }
+:global(html[data-app-layout="mobile"]) .actionIcon {
+  width: 18px;
+  height: 18px;
+}
 
-  .actionLabel {
-    font-size: 14px;
-  }
+:global(html[data-app-layout="mobile"]) .actionLabel {
+  font-size: 14px;
 }
 
 /* =============================================================================

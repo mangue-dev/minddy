@@ -11,6 +11,8 @@
   background: var(--cp-bg);
 }
 
+:global(html[data-app-layout="mobile"]) .container { height: 44px; padding-inline: 16px 60px; }
+
 .iconWrapper {
   display: flex;
   align-items: center;

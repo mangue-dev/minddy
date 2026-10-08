@@ -1,8 +1,11 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowDown01Icon, ArrowLeft01Icon, ArrowRight01Icon, ArrowUpRight01Icon, Analytics01Icon, CreditCardIcon, Delete02Icon, HelpCircleIcon, Home01Icon, LogOutIcon, Megaphone01Icon, Settings01Icon, Shield01Icon, CheckIcon } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, ArrowLeft01Icon, ArrowRight01Icon, ArrowUpRight01Icon, Analytics01Icon, CreditCardIcon, Delete02Icon, HelpCircleIcon, HistoryIcon, Home01Icon, LogOutIcon, Megaphone01Icon, Settings01Icon, Shield01Icon, CheckIcon } from "@hugeicons/core-free-icons";
 import { AppIcon } from "@/components/icon";
+import { useMobileAccountIdentity } from "@/components/mobile-account";
+import { Dialog, DialogContent, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { MobileSheetScrollArea } from "@/components/ui/mobile-sheet";
 import {
   useCallback,
   useEffect,
@@ -11,6 +14,7 @@ import {
   useState,
   type MouseEvent,
   type ReactNode,
+  type Ref,
 } from "react";
 import Link from "@/components/app-link";
 import dynamic from "next/dynamic";
@@ -18,7 +22,7 @@ import { APP_VERSION } from "@/lib/app-version";
 import { getDesktopBridge } from "@/lib/desktop/bridge";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import {
   Button,
   DropdownMenu,
@@ -74,8 +78,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import type { MessageKey } from "@/lib/i18n-keys";
-import type { ChangelogPageContent } from "@/lib/changelog-types";
-import type { Locale } from "@/i18n/config";
 import type { Project } from "@/lib/types";
 
 /** Expanded width the sidebar keeps on every level — the old secondary
@@ -131,6 +133,8 @@ export type AppNavItem = Omit<NavItem, "icon"> & {
   descends?: boolean;
   /** Additional right-click actions for rows that represent editable objects. */
   contextActions?: ContextMenuAction[];
+  /** A mobile browse target; selecting it changes levels without navigation. */
+  browseKey?: string;
 };
 export type AppNavSection = Omit<NavSection, "items"> & { items: AppNavItem[] };
 
@@ -148,10 +152,10 @@ const ProductFeedbackDialog = dynamic(
 
 /* ─── Brand ────────────────────────────────────────────────────────── */
 
-function SidebarQuickActions() {
+function SidebarQuickActions({ onCreate }: { onCreate?: () => void }) {
   return (
     <div className={cn("flex w-full min-w-0 shrink-0 gap-1")}>
-      <NewMenu variant="sidebar" collapsed={false} />
+      <NewMenu variant="sidebar" collapsed={false} onAction={onCreate} />
     </div>
   );
 }
@@ -258,6 +262,7 @@ function SidebarRow({ item }: { item: AppNavItem }) {
         data-sidebar-navigation-item
         aria-current={active ? "page" : undefined}
         onClick={item.onClick}
+        data-mobile-menu-branch={item.browseKey}
         disabled={item.disabled}
         onContextMenu={openContextMenu}
         className={cn(rowClass, "text-left", "w-full")}
@@ -309,6 +314,14 @@ function SidebarRow({ item }: { item: AppNavItem }) {
   );
 }
 
+/** Mobile and desktop navigation use the same rows and section geometry. */
+export function SidebarRows({ sections, renderItem }: { sections: AppNavSection[]; renderItem?: (item: AppNavItem) => ReactNode }) {
+  return <>{sections.map((section, index) => <section key={section.key ?? index} className={cn(index > 0 && "mt-4")}>
+    {section.label && <h2 className={cn("truncate pt-1 pr-3 pb-1 text-[11px] font-medium tracking-wide text-sidebar-foreground/45", ROW_PL)}>{section.label}</h2>}
+    <ul className="flex flex-col gap-1">{section.items.map((item) => <li key={item.key}>{renderItem?.(item) ?? <SidebarRow item={item} />}</li>)}</ul>
+  </section>)}</>;
+}
+
 function SidebarNav({
   sections,
   currentProject,
@@ -346,62 +359,43 @@ function SidebarNav({
         resetBack();
       }}
     >
-      {sections.map((section, index) => (
-        <div key={section.key ?? index} className={cn(index > 0 && "mt-4")}>
-          {section.label ? (
-            <div
-              className={cn(
-                "truncate pt-1 pr-3 pb-1 text-[11px] font-medium tracking-wide text-sidebar-foreground/45",
-                ROW_PL,
-              )}
-            >
-              {section.label}
-            </div>
-          ) : null}
-          <ul className="flex flex-col gap-1">
-            {section.items.map((item) => (
-              <li key={item.key}>
-                {item.key === "home-back" && currentProject ? (
-                  <ProjectContextRow
-                    homeItem={item}
-                    currentProject={currentProject}
-                    projects={projects}
-                    onMenuOpenChange={onMenuOpenChange}
-                    onBack={onBack}
-                  />
-                ) : (
-                  <SidebarRow item={item} />
-                )}
-              </li>
-            ))}
-          </ul>
-        </div>
-      ))}
+      <SidebarRows sections={sections} renderItem={(item) => item.key === "home-back" && currentProject
+        ? <ProjectContextRow homeItem={item} currentProject={currentProject} projects={projects} onMenuOpenChange={onMenuOpenChange} onBack={onBack} />
+        : undefined} />
     </nav>
   );
 }
 
-function ProjectContextRow({
+export function ProjectContextRow({
   homeItem,
   currentProject,
   projects,
   onMenuOpenChange,
   onBack,
+  onProjectSelect,
 }: {
   homeItem: AppNavItem;
   currentProject: Project;
   projects: Project[];
   onMenuOpenChange?: (open: boolean) => void;
   onBack?: () => void;
+  onProjectSelect?: (project: Project) => void;
 }) {
   const tk = useTranslations("Keyboard");
+  const tNav = useTranslations("Nav");
   const pathname = usePathname();
   const prefetchProject = usePrefetchProject();
   const homeActions = useNavigationContextActions(homeItem.href);
   const [homeMenuPosition, setHomeMenuPosition] = useState<{ x: number; y: number } | null>(null);
 
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const ProjectTrigger = onProjectSelect ? "button" : DropdownMenuTrigger;
   const projectTrigger = (
-    <DropdownMenuTrigger
+    <ProjectTrigger
+      type="button"
+      onClick={onProjectSelect ? () => setPickerOpen(true) : undefined}
+      aria-haspopup={onProjectSelect ? "dialog" : undefined}
+      aria-expanded={onProjectSelect ? pickerOpen : undefined}
       aria-label={currentProject.name}
       className={cn(
         "flex h-9 items-center rounded-lg text-sm font-medium text-sidebar-foreground/70 outline-none transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-foreground focus-visible:bg-sidebar-accent focus-visible:text-sidebar-foreground",
@@ -415,13 +409,11 @@ function ProjectContextRow({
       />
       <span className="min-w-0 flex-1 truncate">{currentProject.name}</span>
       <HugeiconsIcon icon={ArrowDown01Icon} className="size-3.5 shrink-0 text-sidebar-foreground/45" aria-hidden />
-    </DropdownMenuTrigger>
+    </ProjectTrigger>
   );
 
-  return (
-    <>
-    <DropdownMenu onOpenChange={onMenuOpenChange}>
-      <div className="flex items-center gap-1">
+  const contextRow = (
+      <div data-sidebar-project-context className="flex items-center gap-1">
         <Tooltip delayDuration={SIDEBAR_TOOLTIP_DELAY_MS} disableHoverableContent>
           <TooltipTrigger asChild>
             {/* The back gesture of the project panel: one level up IN THE
@@ -457,6 +449,29 @@ function ProjectContextRow({
         </Tooltip>
         {projectTrigger}
       </div>
+  );
+  if (onProjectSelect) return <>
+    {contextRow}
+    <Dialog open={pickerOpen} onOpenChange={setPickerOpen}>
+      <DialogContent aria-describedby={undefined}>
+        <DialogTitle>{tNav("switchProject")}</DialogTitle>
+        <MobileSheetScrollArea>
+          {projects.map((project) => <button key={project.id} type="button"
+            onClick={() => { setPickerOpen(false); onProjectSelect(project); }}
+            className="flex min-h-11 w-full items-center gap-2 rounded-lg px-3 text-left text-sm hover:bg-muted">
+            <ProjectOrb seed={projectOrbSeed(project)} iconUrl={project.icon_url} className="size-[18px] rounded-[5px]" />
+            <span className="min-w-0 flex-1 truncate">{project.name}</span>
+            {project.id === currentProject.id && <HugeiconsIcon icon={CheckIcon} className="size-4 shrink-0" />}
+          </button>)}
+        </MobileSheetScrollArea>
+      </DialogContent>
+    </Dialog>
+  </>;
+
+  return (
+    <>
+    <DropdownMenu onOpenChange={onMenuOpenChange}>
+      {contextRow}
 
       {/* No label above the switcher list: the row itself names the project,
             the menu holds nothing but projects. */}
@@ -499,8 +514,10 @@ function ProjectContextRow({
 
 function AccountButton({
   onMenuOpenChange,
+  mobile = false,
 }: {
   onMenuOpenChange?: (open: boolean) => void;
+  mobile?: boolean;
 }) {
   const t = useTranslations("Nav");
   const tCommon = useTranslations("Common");
@@ -508,6 +525,7 @@ function AccountButton({
   const { capabilities } = useRuntimeConfig();
   const hasManagedService = capabilities.managedBilling?.configured || capabilities.managedAi?.configured;
   const { status } = useBillingSummary();
+  const mobileIdentity = useMobileAccountIdentity();
   const tBilling = useTranslations("Billing");
   const planLabels: Record<BillingPlanId, "planFree" | "planGo" | "planPro"> = { free: "planFree", go: "planGo", pro: "planPro" };
   const planName = hasManagedService && status && (status.managedBilling || status.managedAi)
@@ -521,7 +539,7 @@ function AccountButton({
   const [confirmationOpen, setConfirmationOpen] = useState(false);
   const confirmationPendingRef = useRef(false);
   const meta = user?.user_metadata as AuthNameMeta | undefined;
-  const name = authDisplayName(meta, user?.email ?? null, t("accountFallback"));
+  const name = mobile ? mobileIdentity.name : authDisplayName(meta, user?.email ?? null, t("accountFallback"));
   const seed = useMyAvatarSource();
 
   useEffect(() => {
@@ -546,6 +564,44 @@ function AccountButton({
     setConfirmationOpen(false);
     void signOut();
   };
+
+  if (mobile) {
+    const destinations = [
+      { href: "/settings?tab=profile", label: name, icon: null },
+      ...(hasManagedService ? [{ href: "/billing", label: t("billing"), icon: CreditCardIcon }] : []),
+      { href: "/settings", label: t("accountSettings"), icon: Settings01Icon },
+      { href: "/trash", label: t("trash"), icon: Delete02Icon },
+      { href: "/statistics", label: t("statistics"), icon: Analytics01Icon },
+      ...(isAdmin ? [{ href: "/admin", label: t("adminDashboard"), icon: Shield01Icon }] : []),
+    ];
+    return <>
+      <button type="button" data-mobile-sidebar-account aria-haspopup="dialog" aria-expanded={menuOpen}
+        onClick={() => setMenuOpen(true)} className={cn("flex h-10 w-full items-center gap-3 rounded-lg pr-3 text-left outline-none transition-colors hover:bg-sidebar-accent focus-visible:bg-sidebar-accent", AVATAR_PL)}>
+        <UserAvatar seed={seed} className="size-[22px] shrink-0" />
+        <span className="min-w-0 flex-1 truncate text-sm font-medium">{name}</span>
+      </button>
+      <Dialog open={menuOpen} onOpenChange={setMenuOpen}>
+        <DialogContent aria-describedby={undefined} onCloseAutoFocus={finishOpeningSignOutConfirmation}>
+          <DialogTitle>{t("account")}</DialogTitle>
+          <MobileSheetScrollArea>
+            {destinations.map(({ href, label, icon }) => <Link key={href} href={href} onClick={() => setMenuOpen(false)} className="flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm hover:bg-muted">
+              {icon ? <AppIcon icon={icon} className="size-[18px] shrink-0" /> : <UserAvatar seed={seed} className="size-[22px] shrink-0" />}<span className="min-w-0 truncate">{label}</span>
+            </Link>)}
+            <button type="button" onClick={openSignOutConfirmation} className="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-sm text-destructive hover:bg-muted">
+              <AppIcon icon={LogOutIcon} className="size-[18px]" />{t("signOut")}
+            </button>
+          </MobileSheetScrollArea>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={confirmationOpen} onOpenChange={setConfirmationOpen}>
+        <DialogContent aria-describedby={confirmationDescriptionId}>
+          <DialogTitle>{t("signOutConfirmTitle")}</DialogTitle>
+          <p id={confirmationDescriptionId} className="text-sm text-muted-foreground">{t("signOutConfirmDescription")}</p>
+          <DialogFooter><Button variant="outline" onClick={() => setConfirmationOpen(false)}>{tCommon("cancel")}</Button><Button variant="destructive" onClick={confirmSignOut}>{t("signOut")}</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>;
+  }
 
   return (
     <Popover open={confirmationOpen} onOpenChange={setConfirmationOpen}>
@@ -673,41 +729,20 @@ function AccountButton({
   );
 }
 
-function ChangelogTimelineMarker({
-  position,
-}: {
-  position: "first" | "middle" | "last";
-}) {
-  return (
-    <span
-      aria-hidden
-      className="relative flex w-4 shrink-0 self-stretch items-center justify-center"
-    >
-      {position !== "first" ? (
-        <span className="absolute top-0 h-[calc(50%-6px)] w-px bg-border" />
-      ) : null}
-      <span className="relative z-10 size-2.5 rounded-full border-2 border-muted-foreground/60 bg-popover" />
-      {position !== "last" ? (
-        <span className="absolute bottom-0 h-[calc(50%-6px)] w-px bg-border" />
-      ) : null}
-    </span>
-  );
-}
-
 function ChangelogButton({
   productFeedbackIntegrationEnabled,
   productFeedbackUrl,
   onMenuOpenChange,
   portalOwner,
+  mobile = false,
 }: {
+  mobile?: boolean;
   productFeedbackIntegrationEnabled: boolean;
   productFeedbackUrl: string | null;
   onMenuOpenChange?: (open: boolean) => void;
   portalOwner: string;
 }) {
   const t = useTranslations("Nav");
-  const locale = useLocale() as Locale;
-  const [preview, setPreview] = useState<ChangelogPageContent | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMounted, setDialogMounted] = useState(false);
@@ -725,16 +760,6 @@ function ChangelogButton({
     onMenuOpenChange?.(nextOpen);
   };
 
-  useEffect(() => {
-    if (!menuOpen) return;
-    let active = true;
-    fetch(`/api/changelog?locale=${encodeURIComponent(locale)}`).then(response => {
-      if (!response.ok) throw new Error("Changelog preview unavailable");
-      return response.json() as Promise<ChangelogPageContent>;
-    }).then(result => { if (active) setPreview(result); }).catch(() => { /* The full changelog offers retry. */ });
-    return () => { active = false; };
-  }, [menuOpen, locale]);
-
   const control = (
     <button
       type="button"
@@ -744,6 +769,40 @@ function ChangelogButton({
       <HugeiconsIcon icon={HelpCircleIcon} className="size-[18px]" />
     </button>
   );
+
+  if (mobile) return <>
+    <button type="button" aria-label={t("whatsNew")} aria-haspopup="dialog" aria-expanded={menuOpen} onClick={() => handleMenuOpenChange(true)} className={SIDEBAR_COMPACT_CONTROL_CLASS}><HugeiconsIcon icon={HelpCircleIcon} className="size-[18px]" /></button>
+    <Dialog open={menuOpen} onOpenChange={handleMenuOpenChange}>
+      <DialogContent aria-describedby={undefined}>
+        <DialogTitle>{t("whatsNew")}</DialogTitle>
+        <MobileSheetScrollArea>
+          <button
+            type="button"
+            className="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-left text-sm hover:bg-muted"
+            onClick={() => {
+              handleMenuOpenChange(false);
+              setDialogMounted(true);
+              setDialogOpen(true);
+            }}
+          >
+            <AppIcon icon={HistoryIcon} className="size-[18px] shrink-0" />
+            <span className="min-w-0 truncate">{t("viewFullChangelog")}</span>
+          </button>
+          {(productFeedbackIntegrationEnabled || productFeedbackUrl) && <button type="button" className="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-left text-sm hover:bg-muted" onClick={() => {
+            handleMenuOpenChange(false);
+            if (productFeedbackIntegrationEnabled) { setFeedbackDialogMounted(true); setFeedbackDialogOpen(true); }
+            else if (productFeedbackUrl) window.open(productFeedbackUrl, "_blank", "noopener,noreferrer");
+          }}><AppIcon icon={Megaphone01Icon} className="size-[18px] shrink-0" /><span className="min-w-0 truncate">{t("shareFeedback")}</span></button>}
+          <div className="space-y-2 px-3 pt-3 text-xs text-muted-foreground">
+            <p className="flex items-center justify-between gap-3"><span>{t("webVersion")}</span><span className="shrink-0 tabular-nums">{APP_VERSION}</span></p>
+            {desktopVersion && <p className="flex items-center justify-between gap-3"><span>{t("appVersion")}</span><span className="shrink-0 tabular-nums">{desktopVersion}</span></p>}
+          </div>
+        </MobileSheetScrollArea>
+      </DialogContent>
+    </Dialog>
+    {dialogMounted && <WhatsNewDialog open={dialogOpen} onOpenChange={setDialogOpen} />}
+    {feedbackDialogMounted && <ProductFeedbackDialog open={feedbackDialogOpen} onOpenChange={setFeedbackDialogOpen} />}
+  </>;
 
   return (
     <>
@@ -758,30 +817,15 @@ function ChangelogButton({
           <DropdownMenuLabel className="font-normal text-muted-foreground">
             {t("whatsNew")}
           </DropdownMenuLabel>
-          <ol>
-            {(preview?.releases.slice(0, 3) ?? []).map((entry, index) => (
-              <li
-                key={entry.version}
-                className="flex h-8 items-center gap-1.5 px-2.5 text-sm leading-tight"
-              >
-                <ChangelogTimelineMarker
-                  position={index === 0 ? "first" : "middle"}
-                />
-                <span className="min-w-0 flex-1 truncate">
-                  {`v${entry.version} · ${entry.title}`}
-                </span>
-              </li>
-            ))}
-          </ol>
           <DropdownMenuItem
             onSelect={() => {
               handleMenuOpenChange(false);
               setDialogMounted(true);
               setDialogOpen(true);
             }}
-            className="h-8 gap-1.5 px-2.5 py-0 max-[1199px]:py-0"
+            className="py-1.5 max-[1199px]:py-1.5"
           >
-            <ChangelogTimelineMarker position="last" />
+            <HugeiconsIcon icon={HistoryIcon} className="size-4 shrink-0 text-muted-foreground" />
             <span className="min-w-0 flex-1 truncate">
               {t("viewFullChangelog")}
             </span>
@@ -846,21 +890,24 @@ function ChangelogButton({
 function SidebarFooter({
   onMenuOpenChange,
   portalOwner,
+  mobile = false,
 }: {
   onMenuOpenChange?: (open: boolean) => void;
   portalOwner: string;
+  mobile?: boolean;
 }) {
   const { productFeedbackIntegrationEnabled, productFeedbackUrl } = useRuntimeConfig();
   return (
     <div className="flex items-center gap-0.5">
       <div className="min-w-9 flex-1">
-        <AccountButton onMenuOpenChange={onMenuOpenChange} />
+        <AccountButton mobile={mobile} onMenuOpenChange={onMenuOpenChange} />
       </div>
       <UsageIndicator
         variant="sidebar"
         onOpenChange={onMenuOpenChange}
       />
       <ChangelogButton
+        mobile={mobile}
         portalOwner={portalOwner}
         productFeedbackIntegrationEnabled={productFeedbackIntegrationEnabled}
         productFeedbackUrl={productFeedbackUrl}
@@ -868,6 +915,68 @@ function SidebarFooter({
       />
     </div>
   );
+}
+
+/** The same sidebar surface and pinned footer surround both navigation layouts. */
+export function SidebarFrame({ id, mobile = false, children, onLayerOpenChange, onNavigate, focusRef }: {
+  id: string; mobile?: boolean; children: ReactNode;
+  onLayerOpenChange?: (open: boolean) => void; onNavigate?: () => void; focusRef?: Ref<HTMLElement>;
+}) {
+  return <aside ref={focusRef} tabIndex={mobile ? -1 : undefined} id={id} data-sidebar-navigation data-mobile-sidebar={mobile || undefined}
+    style={{ width: mobile ? "100%" : EXPANDED_WIDTH }}
+    className="flex h-full min-h-0 flex-col overflow-hidden bg-sidebar text-sidebar-foreground outline-none"
+    onClickCapture={mobile ? (event) => { if (isPlainNavigationClick(event) && event.target instanceof Element && event.target.closest("a[href]")) onNavigate?.(); } : undefined}>
+    {children}
+    <SidebarOnboarding mobile={mobile} onLayerOpenChange={onLayerOpenChange} />
+    <div data-sidebar-footer className={cn("shrink-0 pt-2 pb-2.5", GUTTER)}><SidebarFooter portalOwner={id} mobile={mobile} onMenuOpenChange={onLayerOpenChange} /></div>
+  </aside>;
+}
+
+/** The desktop command/filter band is shared without mobile-specific chrome. */
+export function SidebarTopBand({ secondary = false, headerRef, onCreate }: {
+  secondary?: boolean; headerRef?: Ref<HTMLDivElement>; onCreate?: () => void;
+}) {
+  return (
+      <div
+        className={cn(
+          "sidebar-brand-row relative flex h-[var(--app-content-header-height)] shrink-0 items-center",
+          // Level 2/3: the teleported filter strip carries its own gutter, so
+          // the band's px-2.5 must not wrap it a second time.
+          !secondary && GUTTER,
+          // The other levels close the band with the same hairline the
+          // level-2/3 filter strip draws (border-b on its header): the
+          // command row is separated from the option rows below on every
+          // level.
+          !secondary && "border-b border-border",
+        )}
+      >
+        <div className={cn("flex h-full w-full min-w-0 items-center", secondary && "hidden")}>
+          <SidebarQuickActions onCreate={onCreate} />
+        </div>
+        <div
+          ref={headerRef}
+          className={cn(
+            "relative h-[var(--app-content-header-height)] w-full min-w-0",
+            !secondary && "hidden",
+          )}
+        />
+      </div>
+  );
+}
+
+/** The secondary-level browse row uses the same geometry in both layouts. */
+export function SidebarBackRow({ label, onBack, ariaLabel }: {
+  label: string; onBack: () => void; ariaLabel?: string;
+}) {
+  return <div className="shrink-0 pt-[calc((var(--app-content-header-height)-2.25rem)/2)] pb-2">
+    <div className={GUTTER}>
+      <button type="button" data-sidebar-back onClick={onBack} aria-label={ariaLabel}
+        className={cn("relative flex h-9 w-full min-w-0 items-center rounded-lg text-sm font-medium transition-colors", ROW_PL, "pr-3 text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-foreground focus-visible:bg-sidebar-accent focus-visible:text-sidebar-foreground")}>
+        <HugeiconsIcon icon={ArrowLeft01Icon} className="absolute left-[9px] top-1/2 size-[18px] shrink-0 -translate-y-1/2" aria-hidden />
+        <span className="min-w-0 flex-1 truncate text-center">{label}</span>
+      </button>
+    </div>
+  </div>;
 }
 
 /* ─── Levels (MIN-546) ─────────────────────────────────────────────── */
@@ -930,7 +1039,7 @@ export function secondaryNavBackTarget(
  *
  * The teleport points (`headerSlot`, `slot`) are installed by the level-2/3
  * panel and stay mounted across route changes within it — the pages' bars
- * portal INTO the sidebar. Under 768 px none of this renders (mobile shell).
+ * portal INTO the sidebar. In mobile layout none of this renders (mobile shell).
  */
 export function AppSidebar({
   sections,
@@ -1013,32 +1122,11 @@ export function AppSidebar({
         {back && (
           <SidebarPanelTransition
             key={`back:${back.href}:${back.label}`}
-            className="absolute inset-x-0 top-0 pt-[calc((var(--app-content-header-height)-2.25rem)/2)] pb-2"
+            className="absolute inset-x-0 top-0"
             offset={16}
             transition={shellTransition}
           >
-            {/* Same geometry as a nav row — gutter, 36 px height, rounded
-                control, regular weight — it is a row, not a title stuck to
-                the border. */}
-            <div className={GUTTER}>
-              <button
-                type="button"
-                onClick={goBack}
-                className={cn(
-                  "relative flex h-9 w-full min-w-0 items-center rounded-lg text-sm font-medium transition-colors",
-                  ROW_PL,
-                  "pr-3",
-                  "text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-foreground focus-visible:bg-sidebar-accent focus-visible:text-sidebar-foreground",
-                )}
-              >
-                {/* Out of the flow: the label is centered on the FULL row
-                    width, the chevron does not push it off-center. */}
-                <HugeiconsIcon icon={ArrowLeft01Icon} className="absolute left-[9px] top-1/2 size-[18px] shrink-0 -translate-y-1/2" aria-hidden />
-                <span className="min-w-0 flex-1 truncate text-center">
-                  {back.label}
-                </span>
-              </button>
-            </div>
+            <SidebarBackRow label={back.label} onBack={goBack} />
           </SidebarPanelTransition>
         )}
       </AnimatePresence>
@@ -1059,41 +1147,11 @@ export function AppSidebar({
   }, [onLayerOpenChange]);
 
   return (
-    <aside
-      id={railId}
-      data-sidebar-navigation
-      style={{ width: EXPANDED_WIDTH }}
-      className={cn(
-        "flex h-full flex-col overflow-hidden bg-sidebar text-sidebar-foreground",
-      )}
-    >
+    <SidebarFrame id={railId} onLayerOpenChange={handleMenuOpenChange}>
       {/* The top band COMMANDS the column: level 2/3 keeps the page's filter
           strip teleported here, the other levels the creation controls.
           Pinned strip — what drives the list should be here. */}
-      <div
-        className={cn(
-          "sidebar-brand-row relative flex h-[var(--app-content-header-height)] shrink-0 items-center",
-          // Level 2/3: the teleported filter strip carries its own gutter, so
-          // the band's px-2.5 must not wrap it a second time.
-          !showSecondary && GUTTER,
-          // The other levels close the band with the same hairline the
-          // level-2/3 filter strip draws (border-b on its header): the
-          // command row is separated from the option rows below on every
-          // level.
-          !showSecondary && "border-b border-border",
-        )}
-      >
-        <div className={cn("flex h-full w-full min-w-0 items-center", showSecondary && "hidden")}>
-          <SidebarQuickActions />
-        </div>
-        <div
-          ref={setHeaderSlot}
-          className={cn(
-            "relative h-[var(--app-content-header-height)] w-full min-w-0",
-            !showSecondary && "hidden",
-          )}
-        />
-      </div>
+      <SidebarTopBand secondary={showSecondary} headerRef={setHeaderSlot} />
 
       {/* All levels live in the same flex-1 area, stacked absolutely so a
           swap animates over a stable layout instead of resizing anything. */}
@@ -1155,16 +1213,6 @@ export function AppSidebar({
         />
       </div>
 
-      <SidebarOnboarding onLayerOpenChange={handleMenuOpenChange} />
-
-      {/* The account line is the only option present on EVERY level — the
-          separator keeps it apart from whichever level runs above it. */}
-      <div className={cn("pt-2 pb-2.5", GUTTER)}>
-        <SidebarFooter
-          portalOwner={railId}
-          onMenuOpenChange={handleMenuOpenChange}
-        />
-      </div>
-    </aside>
+    </SidebarFrame>
   );
 }

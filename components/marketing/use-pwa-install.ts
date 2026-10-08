@@ -9,10 +9,14 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 /** Capture Chromium's one-shot PWA install invitation for a user-triggered CTA. */
-export function usePwaInstall() {
+export function usePwaInstall(enabled = true) {
   const [promptEvent, setPromptEvent] = useState<BeforeInstallPromptEvent | null>(null);
 
   useEffect(() => {
+    if (!enabled) {
+      setPromptEvent(null);
+      return;
+    }
     const capturePrompt = (event: Event) => {
       event.preventDefault();
       setPromptEvent(event as BeforeInstallPromptEvent);
@@ -25,10 +29,10 @@ export function usePwaInstall() {
       window.removeEventListener("beforeinstallprompt", capturePrompt);
       window.removeEventListener("appinstalled", clearPrompt);
     };
-  }, []);
+  }, [enabled]);
 
   const promptInstall = useCallback(async (): Promise<InstallOutcome | null> => {
-    if (!promptEvent) return null;
+    if (!enabled || !promptEvent) return null;
 
     const currentPrompt = promptEvent;
     setPromptEvent(null);
@@ -37,7 +41,7 @@ export function usePwaInstall() {
     } catch {
       return null;
     }
-  }, [promptEvent]);
+  }, [enabled, promptEvent]);
 
-  return { canPrompt: promptEvent !== null, promptInstall };
+  return { canPrompt: enabled && promptEvent !== null, promptInstall };
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 import { useTranslations } from "next-intl";
 import { BoxesIcon as Boxes, PlugIcon as Plug } from "@hugeicons/core-free-icons";
 import { Checkbox, Input } from "mangue-ui";
@@ -98,7 +99,7 @@ export function useWebhookSteps({
  before the missing schema could be added. We are the ones who validate
 , and `inputMode` keeps the correct keyboard on mobile. */}
           <Input
-            autoFocus
+            autoFocus={allowInputAutoFocus()}
             type="text"
             inputMode="url"
             autoComplete="url"

@@ -1,21 +1,12 @@
 "use client";
 
+import { CommandList } from "@/components/ui/command";
+
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowUpDownIcon, CheckIcon } from "@hugeicons/core-free-icons";
 import { useMemo, useState } from "react";
-import {
-  Button,
-  Command,
-  CommandInput,
-  CommandItem,
-  CommandList,
-  commandFilter,
-  cn,
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-  Spinner,
-} from "mangue-ui";
+import { Button, Command, CommandInput, CommandItem, commandFilter, cn, Spinner } from "mangue-ui";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/responsive-popover";
 import { ProviderLogo } from "@/components/model-logo";
 import { formatModelName } from "@/lib/model-display";
 import {

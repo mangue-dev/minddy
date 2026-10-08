@@ -1312,6 +1312,8 @@
     "desktopBannerText": "Scaricare l'app desktop per andare oltre",
     "desktopBannerCta": "Scarica",
     "desktopBannerDismiss": "Non mostrarlo più.",
+    "pwaInstallHint": "Installa minddy su questo dispositivo",
+    "pwaInstallTitle": "Installa minddy",
     "tips": {
       "palette": "Cercare qualsiasi schermo o ticket e eseguire azioni dalla tavolozza di comando.",
       "cheatsheet": "Vedi ogni scorciatoia da tastiera in un unico luogo.",

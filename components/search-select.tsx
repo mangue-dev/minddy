@@ -186,6 +186,7 @@ export function SearchSelect({
   onChange,
   options,
   noneOption,
+  menuActions,
   createOption,
   open: controlledOpen,
   onOpenChange,
@@ -195,6 +196,8 @@ export function SearchSelect({
   onChange: (v: string | null) => void;
   options: PickerOption[];
   noneOption?: { label: string; icon?: React.ReactNode };
+  /** Always-visible actions, distinct from query-based entity creation. */
+  menuActions?: { id: string; label: string; icon?: React.ReactNode; onSelect: () => void }[];
   /** Last line “Add…” (see {@link PickerCreateOption}). */
   createOption?: PickerCreateOption;
   /** Controlled open state (e.g. driven by a keyboard shortcut). */
@@ -237,6 +240,15 @@ export function SearchSelect({
           </CommandItem>
         ))}
       </CommandGroup>
+      {menuActions?.length ? <>
+        <CommandSeparator alwaysRender className="my-1" />
+        <CommandGroup forceMount>
+          {menuActions.map((action) => <CommandItem key={action.id} value={action.id} forceMount
+            onSelect={() => { setOpen(false); requestAnimationFrame(action.onSelect); }}>
+            {action.icon}<span className="truncate">{action.label}</span>
+          </CommandItem>)}
+        </CommandGroup>
+      </> : null}
       {createOption && (
         <PickerCreateRow
           create={createOption}

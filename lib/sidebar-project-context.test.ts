@@ -29,7 +29,8 @@ describe("primary sidebar project context", () => {
     expect(contextRow).toContain("<ProjectOrb");
     expect(contextRow).toContain("icon={ArrowLeft01Icon}");
     expect(contextRow).toContain("icon={ArrowDown01Icon}");
-    expect(contextRow).toContain("<DropdownMenuTrigger");
+    expect(contextRow).toContain("<ProjectTrigger");
+    expect(contextRow).toContain('onProjectSelect ? "button" : DropdownMenuTrigger');
   });
 
   it("keeps project data and menu state wired through the persistent sidebar", () => {
@@ -39,7 +40,9 @@ describe("primary sidebar project context", () => {
     // Two nav panels share the wiring: the project panel of the route, and
     // the home panel the back rows lift to from a project page.
     expect(sidebar.match(/<SidebarNav\s/g)).toHaveLength(2);
-    expect(sidebar.match(/onMenuOpenChange=\{handleMenuOpenChange\}/g)).toHaveLength(3);
+    expect(sidebar.match(/onMenuOpenChange=\{handleMenuOpenChange\}/g)).toHaveLength(2);
+    expect(sidebar).toContain("<SidebarFrame id={railId} onLayerOpenChange={handleMenuOpenChange}>");
+    expect(sidebar).toContain("<SidebarFooter portalOwner={id} mobile={mobile} onMenuOpenChange={onLayerOpenChange}");
     expect(shell).toContain("pinned={sidebarLayerOpen}");
     expect(shell).toContain("onLayerOpenChange={setSidebarLayerOpen}");
     expect(shell).toContain("homeSections={homeDesktopSections}");
@@ -47,7 +50,7 @@ describe("primary sidebar project context", () => {
 
   it("keeps the back rows sidebar-only: they lift a level, they never navigate", () => {
     expect(sidebar).not.toContain("router.push");
-    expect(sidebar).toContain("onClick={goBack}");
+    expect(sidebar).toContain("<SidebarBackRow label={back.label} onBack={goBack}");
     expect(sidebar).toContain("onClick={onBack}");
   });
 

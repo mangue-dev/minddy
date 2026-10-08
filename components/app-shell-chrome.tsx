@@ -13,7 +13,6 @@ import {
   useState,
   type ComponentType,
 } from "react";
-import Link from "@/components/app-link";
 import dynamic from "next/dynamic";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useAppNavigation, useAppRouter } from "@/lib/use-app-router";
@@ -21,12 +20,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import {
   AppShell,
-  MobileNav,
   cn,
   toast,
-  useMediaQuery,
-  type CommandMenuGroup,
-  type NavSection,
 } from "mangue-ui";
 import {
   AppIcon,
@@ -65,9 +60,10 @@ import {
   type PaletteItem,
 } from "@/components/header-search-pill";
 import { usePlanGates } from "@/lib/use-billing-query";
-import { MobileNavActions } from "@/components/mobile-nav-actions";
-import { SidebarOnboarding } from "@/components/sidebar-onboarding";
-import { MobileMenuFooter, useAccountActions } from "@/components/mobile-account";
+import { useMobileLayout, useMobileViewport } from "@/lib/use-mobile-layout";
+import { MobileProjectMenu, MobileRoutinesMenu, MobilePullRequestsMenu, MobileSettingsMenu } from "@/components/mobile-project-menu";
+import { MobileNavigation, type MobileMenuSection, type MobileMenuPanel, type MobileMenuNavigation } from "@/components/mobile-navigation";
+import { useAccountActions } from "@/components/mobile-account";
 import { AppTopBar } from "@/components/app-top-bar";
 import { AppTabViewHost } from "@/components/app-tab-view-host";
 import { useOptionalAppTabNavigation } from "@/lib/app-tabs-context";
@@ -115,36 +111,6 @@ import {
   loadScratchpadModal,
   preloadSurface,
 } from "@/lib/lazy-app-surfaces";
-
-/**
- * How many rows from OTHER projects the mobile surfaces get, per data group.
- *
- * The desktop palette is virtualized (react-window mounts only visible rows),
- * so it takes the whole list. mangue-ui's MobileNav is not: its cmdk search
- * sheet and its "⋯" menu mount every item they're given, and cross-project
- * search would hand them thousands.
- */
-const MOBILE_CROSS_PROJECT_ROWS = 100;
-
-/** The project the user is in, complete (exactly what mobile had before
- *  MIN-91), plus the most recently updated rows from the other projects.
- *  `rows` arrives current-project-first, index order after (mergeByProject). */
-function capForMobile<T extends { project_id: string }>(
-  rows: T[],
-  currentProjectId: string | null
-): T[] {
-  const capped: T[] = [];
-  let others = 0;
-  for (const r of rows) {
-    if (currentProjectId && r.project_id === currentProjectId) {
-      capped.push(r);
-    } else if (others < MOBILE_CROSS_PROJECT_ROWS) {
-      others++;
-      capped.push(r);
-    }
-  }
-  return capped.length === rows.length ? rows : capped;
-}
 
 // The CSV export is deferred like the creation dialogs: a dialog that we
 // opens from ⌘K a few times in the life of an account has nothing to do in the
@@ -203,17 +169,8 @@ function menuIcon(icon: AppIcon): IconComponent {
   return Array.isArray(icon) ? dataIcon(icon) : (icon as IconComponent);
 }
 
-function toMenuGroups(groups: PaletteGroup[]): CommandMenuGroup[] {
-  return groups.map((group) => ({
-    ...group,
-    items: group.items.map((item) => ({
-      ...item,
-      icon: item.icon ? menuIcon(item.icon) : undefined,
-    })),
-  }));
-}
 
-function toMenuSections(sections: AppNavSection[]): NavSection[] {
+function toMenuSections(sections: AppNavSection[]): MobileMenuSection[] {
   return sections.map((section) => ({
     ...section,
     items: section.items.map((item) => ({
@@ -300,6 +257,7 @@ function identifierBadge(id: string) {
 }
 
 export function AppShellChrome({ children }: { children: React.ReactNode }) {
+  useMobileViewport();
   // A root marker keeps application typography scoped without repeatedly
   // matching relational :has() selectors against the entire workspace DOM.
   useLayoutEffect(() => {
@@ -368,7 +326,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   );
   const { setOpen: setCheatsheetOpen } = useCheatsheet();
   const { hidden: sidebarHidden } = useSidebarVisibility();
-  const mobileLayout = useMediaQuery("(max-width: 767px)");
+  const mobileLayout = useMobileLayout() === true;
 
   // Command palette open state — shared by the header search pill and the
   // lightweight global shortcut launcher. The full palette mounts on demand.
@@ -1236,7 +1194,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
 
   // Prepare the full model during the palette's idle warmup and retain it
   // between openings. Narrow windows also need the full model when a keyboard
-  // shortcut opens the palette; MobileNav's separate list stays capped below.
+  // shortcut opens the palette.
   const desktopDataGroups = useMemo(
     () =>
       paletteMounted && (!mobileLayout || paletteOpen)
@@ -1259,24 +1217,6 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     ]
   );
 
-  // MobileNav opens its own sheet. Prepare its bounded model only on mobile;
-  // a CSS-hidden mobile navigation must not duplicate this work on desktop.
-  const mobileDataGroups = useMemo(
-    () =>
-      mobileLayout ? buildDataGroups(
-        capForMobile(paletteIssues, currentProjectId),
-        capForMobile(paletteObjectives, currentProjectId),
-        capForMobile(palettePages, currentProjectId)
-      ) : [],
-    [
-      buildDataGroups,
-      paletteIssues,
-      paletteObjectives,
-      palettePages,
-      currentProjectId,
-      mobileLayout,
-    ]
-  );
 
   const inboxItem: AppNavItem = {
     key: "inbox",
@@ -1530,15 +1470,13 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   const [sidebarLayerOpen, setSidebarLayerOpen] = useState(false);
   const [inboxOpen, setInboxOpen] = useState(false);
 
-  // Account/global options (statistics, feedback, theme, sign out). On desktop
-  // they live in the sidebar footer; on mobile they move into the menu sheet +
-  // command palette from a single source so both stay in sync.
-  const { menuSections: accountSections, commandGroup: accountCommandGroup } =
+  // Both sidebar layouts expose account/global options in their pinned footer;
+  // the command palette keeps the same account destinations available.
+  const { commandGroup: accountCommandGroup } =
     useAccountActions();
 
-  // Palette = orders + data + account (used by the desktop pill too). Tea
-  // mobile menu sheet gains the account sections so it fully replaces the
-  // sidebar, and takes the capped data groups.
+  // Both layouts share the virtualized command palette and full data index.
+  // Mobile account destinations also appear in the navigation sheet.
   const paletteGroups = useMemo(
     () => [
       ...commandGroups,
@@ -1548,21 +1486,42 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     ],
     [commandGroups, settingsGroups, desktopDataGroups, accountCommandGroup]
   );
-  const mobilePaletteGroups = useMemo(
-    () =>
-      toMenuGroups([
-        ...commandGroups,
-        ...settingsGroups,
-        ...mobileDataGroups,
-        accountCommandGroup,
-      ]),
-    [commandGroups, settingsGroups, mobileDataGroups, accountCommandGroup]
-  );
 
-  const mobileMenuSections = useMemo(
-    () => toMenuSections([...sections, ...accountSections]),
-    [sections, accountSections]
-  );
+  const mobileNavigation = useMemo(() => {
+    const settingsPanel = (project?: Project): MobileMenuPanel => ({
+      key: `settings-${project?.id ?? "account"}`,
+      title: project ? t("projectSettings") : t("accountSettings"),
+      sidebarRoute: project ? `/projects/${project.id}/settings` : "/settings",
+      render: (navigation: MobileMenuNavigation) => <MobileSettingsMenu {...navigation} projectId={project?.id} />,
+    });
+    const panels = new Map<string, MobileMenuPanel>();
+    projects.forEach((project) => {
+      const base = `/projects/${project.id}`;
+      const resource = (kind: "objectives" | "pages" | "triage" | "feedback"): MobileMenuPanel => ({ key: `${project.id}-${kind}`, title: t(kind), sidebarRoute: kind === "pages" && pathname.startsWith(`${base}/pages`) ? pathname : `${base}/${kind}`,
+        render: (navigation: MobileMenuNavigation) => <MobileProjectMenu {...navigation} projectId={project.id} kind={kind} /> });
+      panels.set(project.id, { key: `project-${project.id}`, title: project.name, project, sections: [{ items: [
+        { key: "tickets", label: t("tickets"), icon: menuIcon(Layout3ColumnIcon), href: base, active: pathname === base && !objectiveBoardId },
+        { key: "objectives", label: t("objectives"), icon: menuIcon(Target01Icon), panel: resource("objectives"), active: pathname.startsWith(`${base}/objectives`) || (currentProject?.id === project.id && !!objectiveBoardId) },
+        { key: "pages", label: t("pages"), icon: menuIcon(File02Icon), panel: resource("pages"), active: pathname.startsWith(`${base}/pages`) },
+        { key: "triage", label: t("triage"), icon: menuIcon(TriageNavIcon), panel: resource("triage"), active: pathname.startsWith(`${base}/triage`), ...countBadges(triageCounts[project.id]?.triage ?? 0, t("triageBadge", {count: triageCounts[project.id]?.triage ?? 0})) },
+        { key: "feedback", label: t("feedback"), icon: menuIcon(MessageMultiple01Icon), panel: resource("feedback"), active: pathname.startsWith(`${base}/feedback`), ...countBadges(triageCounts[project.id]?.feedback ?? 0, t("feedbackBadge", {count: triageCounts[project.id]?.feedback ?? 0})) },
+        { key: "settings", label: t("projectSettings"), icon: menuIcon(Settings01Icon), panel: settingsPanel(project), active: pathname.startsWith(`${base}/settings`) },
+      ] }] });
+    });
+    const root = toMenuSections(homeSections).map((section) => ({ ...section,
+      items: section.items.map((item) => ({ ...item,
+        panel: item.key.startsWith("project-") ? panels.get(item.key.slice("project-".length))
+          : item.key === "routines" ? { key: "routines", title: t("routines"), sidebarRoute: "/routines", render: (navigation: MobileMenuNavigation) => <MobileRoutinesMenu {...navigation} /> }
+          : item.key === "pull-requests" ? { key: "pull-requests", title: t("pullRequests"), sidebarRoute: "/pull-requests", render: (navigation: MobileMenuNavigation) => <MobilePullRequestsMenu {...navigation} /> }
+          : undefined,
+      })),
+    }));
+    const projectPanel = currentProject ? panels.get(currentProject.id) : undefined;
+    const resourcePanel = projectPanel?.sections?.flatMap((section) => section.items).find((item) => item.panel && item.active)?.panel;
+    const globalPanel = root.flatMap((section) => section.items).find((item) => item.panel?.sidebarRoute === pathname)?.panel
+      ?? (pathname === "/settings" ? settingsPanel() : pathname === "/trash" || pathname === "/admin" ? { key: pathname, title: t(pathname === "/trash" ? "trash" : "adminDashboard"), sidebarRoute: pathname } : undefined);
+    return { sections: root, projects, initialPanels: projectPanel ? [projectPanel, ...(resourcePanel ? [resourcePanel] : [])] : globalPanel ? [globalPanel] : [] };
+  }, [projects, homeSections, currentProject, pathname, objectiveBoardId, triageCounts, t]);
 
   // Opening the palette arms the cross-project index if idle hasn't yet, and
   // revalidates it when the snapshot has aged (no-op while fresh).
@@ -1605,7 +1564,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   }, [appTabs?.session]);
 
   return (
-    <div className="app-workspace flex h-dvh w-full min-w-0 flex-col overflow-hidden">
+    <div className="app-workspace relative flex h-dvh w-full min-w-0 flex-col overflow-hidden">
       {appTabs && (
         <AppTopBar
           hidden={sidebarHidden}
@@ -1651,18 +1610,13 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         </div>
       }
       mobileNav={
-        <MobileNav
-          sections={mobileMenuSections}
-          commandGroups={mobilePaletteGroups}
-          actions={<MobileNavActions />}
-          menuFooter={<><SidebarOnboarding mobile /><MobileMenuFooter /></>}
-          linkComponent={Link}
-          searchPlaceholder={t("searchPlaceholder")}
-          emptyMessage={t("noResults")}
+        <MobileNavigation
+          {...mobileNavigation}
+          onSearch={() => handlePaletteOpenChange(true)}
         />
       }
     >
-      <div id="app-tab-content" role={appTabs ? "tabpanel" : undefined} aria-labelledby={activeAppTabId ? `app-tab-${activeAppTabId}` : undefined} className="h-full min-h-0">{appTabs ? <AppTabViewHost>{children}</AppTabViewHost> : children}</div>
+      <div id="app-tab-content" role={appTabs ? "tabpanel" : undefined} aria-labelledby={activeAppTabId ? `app-tab-${activeAppTabId}` : undefined} className="h-full min-h-0"><AppTabViewHost>{children}</AppTabViewHost></div>
       <ContentToaster />
       {/* Command palette (⌘K / ⌘P / F, sidebar search) — same groups as
  mobile nav search, tickets enriched with actions (⌘;). The cross-project

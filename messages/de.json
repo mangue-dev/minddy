@@ -1312,6 +1312,8 @@
     "desktopBannerText": "Laden Sie die Desktop-App herunter, um weiter zu gehen",
     "desktopBannerCta": "Herunterladen",
     "desktopBannerDismiss": "Dieses nicht mehr anzeigen",
+    "pwaInstallHint": "minddy auf diesem Gerät installieren",
+    "pwaInstallTitle": "minddy installieren",
     "tips": {
       "palette": "Suchen Sie nach einem Bildschirm oder Problem und führen Sie Aktionen aus der Befehlspalette aus.",
       "cheatsheet": "Sehen Sie alle Tastenkombinationen an einem Ort.",

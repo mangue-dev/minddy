@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import { usePathname } from "next/navigation";
+import { MobileCollectionStateProvider } from "@/lib/mobile-collection-state";
 
 /**
  * How many back presses the sidebar may stack on top of one route. Two: a
@@ -41,10 +42,12 @@ const MAX_BACK_LEVELS = 2;
  * secondary level): a page reads it to dock its bar away instead of letting
  * it fall back inline and reflow the content.
  *
- * Under `desktop` (768 px) none of this applies: the bar remains where
- * it is written, in the page, and the mobile behavior does not move.
+ * In mobile layout, collection pages expose their filters and lists through a
+ * separate host in the mobile menu. Selection remains owned by the page.
  */
 interface SecondarySidebar {
+  mobileHost: MobileSidebarHost | null;
+  setMobileHost: (host: MobileSidebarHost | null) => void;
   /** The frame element where pages teleport their bar's header (desktop only). */
   headerSlot: HTMLElement | null;
   setHeaderSlot: (el: HTMLElement | null) => void;
@@ -75,6 +78,18 @@ interface SecondarySidebar {
 
 const SecondarySidebarContext = createContext<SecondarySidebar | null>(null);
 
+export type MobileSidebarHost = {
+  route: string;
+  header: HTMLElement;
+  body: HTMLElement;
+  onNavigate: () => void;
+};
+
+/** Menu-only hosts are optional for isolated navigation components. */
+export function useMobileSecondarySidebar() {
+  return useContext(SecondarySidebarContext);
+}
+
 export function useSecondarySidebar(): SecondarySidebar {
   const ctx = useContext(SecondarySidebarContext);
   if (!ctx) {
@@ -91,6 +106,7 @@ export function SecondarySidebarProvider({
   children: ReactNode;
 }) {
   const pathname = usePathname();
+  const [mobileHost, setMobileHost] = useState<MobileSidebarHost | null>(null);
   const [headerSlot, setHeaderSlot] = useState<HTMLElement | null>(null);
   const [slot, setSlot] = useState<HTMLElement | null>(null);
   // An ACCOUNT, not a boolean: between two pages with a secondary bar, the old one
@@ -128,6 +144,8 @@ export function SecondarySidebarProvider({
 
   const value = useMemo<SecondarySidebar>(
     () => ({
+      mobileHost,
+      setMobileHost,
       headerSlot,
       setHeaderSlot,
       slot,
@@ -139,12 +157,12 @@ export function SecondarySidebarProvider({
       resetBack,
       hosting,
     }),
-    [headerSlot, slot, count, register, backLevel, goBack, resetBack, hosting],
+    [mobileHost, headerSlot, slot, count, register, backLevel, goBack, resetBack, hosting],
   );
 
   return (
     <SecondarySidebarContext.Provider value={value}>
-      {children}
+      <MobileCollectionStateProvider>{children}</MobileCollectionStateProvider>
     </SecondarySidebarContext.Provider>
   );
 }

@@ -6,15 +6,10 @@ import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   Button,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
   cn,
   toast,
 } from "mangue-ui";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { MCP_AGENTS, type McpAgent } from "@/lib/mcp-agents";
 import { McpAgentLogo } from "@/components/mcp-agent-logo";
 

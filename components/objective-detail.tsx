@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowLeft01Icon, Delete02Icon, Mic01Icon, MoreHorizontalIcon, TaskEdit01Icon, CheckIcon } from "@hugeicons/core-free-icons";
+import { Delete02Icon, Mic01Icon, MoreHorizontalIcon, TaskEdit01Icon, CheckIcon } from "@hugeicons/core-free-icons";
 import { hasVisibleOpenDialog } from "@/lib/visible-overlays";
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -193,7 +193,6 @@ export function ObjectiveDetail({
   issues,
   onUpdate,
   onDelete,
-  onBack,
   onBusyChange,
 }: {
   objective: Objective;
@@ -206,7 +205,6 @@ export function ObjectiveDetail({
   onUpdate: (id: string, updates: ObjectiveUpdateInput) => Promise<unknown>;
   onDelete: (id: string) => Promise<void>;
   /** Under `md`, the list and the detail take turns: return control to the list. */
-  onBack: () => void;
   /**
  * The dictation is IN FLIGHT (audio gone, patch not returned). The page uses it to
  * refuse to change the objective until Numo responds: the patch targets
@@ -385,16 +383,6 @@ export function ObjectiveDetail({
  the objective - the left column designates it, the title writes it in big
  just below - it only describes what we DO there. */}
       <AppContentHeader contentClassName="gap-1.5">
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label={t("backToList")}
-          className="md:hidden"
-          onClick={onBack}
-        >
-          <HugeiconsIcon icon={ArrowLeft01Icon} />
-        </Button>
-
         <div className="ml-auto flex shrink-0 items-center gap-1.5">
           {/* Numo resumes dictation: the microphone has disappeared in the menu, the acknowledgment of
  work in progress remains here, in the place occupied by the command. */}
@@ -483,7 +471,7 @@ export function ObjectiveDetail({
       <div
         ref={fade.ref}
         {...fade.scrollProps}
-        className="min-h-0 flex-1 overflow-y-auto px-4 py-6 md:px-6"
+        className="min-h-0 flex-1 overflow-y-auto px-4 py-6 app-desktop:px-6"
       >
         <div className="mx-auto flex max-w-3xl flex-col gap-4">
           <AutoTextarea
@@ -588,7 +576,7 @@ export function ObjectiveDetail({
         </div>
       </div>
 
-      <div className="dock-above-nav shrink-0 bg-background px-4 py-3 md:px-6">
+      <div className="dock-above-nav shrink-0 bg-background px-4 py-3 app-desktop:px-6">
         <div className="mx-auto max-w-3xl">
           <CommentComposer
             members={members}

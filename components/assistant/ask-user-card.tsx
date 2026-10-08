@@ -1,5 +1,7 @@
 "use client";
 
+import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
+
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Cancel01Icon, CheckIcon, SquareIcon } from "@hugeicons/core-free-icons";
 import { useEffect, useRef, useState } from "react";
@@ -258,7 +260,7 @@ export function AskUserCard({ questions, onAnswer, onSkip }: AskUserCardProps) {
         </span>
       )}
       <Input
-        autoFocus={!freeOnly}
+        autoFocus={!freeOnly && allowInputAutoFocus()}
         value={draft?.otherValue ?? ""}
         disabled={!live}
         placeholder={t("freeAnswerPlaceholder")}

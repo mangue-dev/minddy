@@ -1,5 +1,7 @@
 "use client";
 
+import { useMobileLayout } from "@/lib/use-mobile-layout";
+
 import * as React from "react";
 import { cn } from "mangue-ui";
 
@@ -62,6 +64,8 @@ export function Kbd({
   children,
   ...props
 }: KbdProps) {
+  const mobile = useMobileLayout();
+  if (mobile !== false) return null;
   const square = isSingleGlyph(children);
   return (
     <kbd
@@ -128,6 +132,8 @@ export function KbdSequence({
   size = "default",
   className,
 }: KbdSequenceProps) {
+  const mobile = useMobileLayout();
+  if (mobile !== false) return null;
   const sep = renderSeparator(separator);
   return (
     <span className={cn("inline-flex items-center gap-1", className)}>

@@ -1,5 +1,7 @@
 "use client";
 
+import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
+
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, ArrowUp01Icon, AttachmentIcon, Layers01Icon, SquareIcon } from "@hugeicons/core-free-icons";
 import {
@@ -1242,7 +1244,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     );
 
     useEffect(() => {
-      if (noBorder && editorRef.current) {
+      if (noBorder && allowInputAutoFocus() && editorRef.current) {
         editorRef.current.focus();
       }
     }, [noBorder]);

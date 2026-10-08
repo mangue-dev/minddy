@@ -76,13 +76,11 @@
    MOBILE STYLES
    ============================================================================= */
 
-@media (max-width: 767px) {
-  .searchView {
-    /* On mobile, fill the available space */
-    flex: 1;
-  }
+:global(html[data-app-layout="mobile"]) .searchView {
+  /* On mobile, fill the available space */
+  flex: 1;
+}
 
-  .resultsContainer {
-    flex: 1;
-  }
+:global(html[data-app-layout="mobile"]) .resultsContainer {
+  flex: 1;
 }

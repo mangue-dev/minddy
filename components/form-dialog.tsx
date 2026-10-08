@@ -3,13 +3,8 @@
 import type { ComponentProps, FormEvent, ReactNode } from "react";
 import {
   Button,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
 } from "mangue-ui";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DictateButton } from "@/components/ai-elements/dictate-button";
 import { SendShortcutTooltip } from "@/components/send-shortcut";
 import type { DictationContext } from "@/lib/dictation-context";
@@ -132,15 +127,17 @@ export function FormDialogActions({
   return (
     <DialogFooter className={className}>
       {dictation ? (
-        <DictateButton
-          onTranscription={dictation.onTranscription}
-          context={dictation.context}
-          feature={dictation.feature}
-          disabled={dictation.disabled || submitting}
-          onProcessingChange={dictation.onProcessingChange}
-          autoStart={dictation.autoStart}
-          className="mr-auto -ml-2"
-        />
+        <div data-sheet-auxiliary-action className="mr-auto">
+          <DictateButton
+            onTranscription={dictation.onTranscription}
+            context={dictation.context}
+            feature={dictation.feature}
+            disabled={dictation.disabled || submitting}
+            onProcessingChange={dictation.onProcessingChange}
+            autoStart={dictation.autoStart}
+            className="mr-auto -ml-2"
+          />
+        </div>
       ) : null}
       {cancelLabel ? (
         <Button type="button" variant="ghost" disabled={submitting} onClick={onCancel}>

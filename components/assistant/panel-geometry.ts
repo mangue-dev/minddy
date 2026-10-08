@@ -19,20 +19,20 @@ export type PanelDisplayMode = "compact" | "expanded";
 // 32px = the surface's 16px (rounded-2xl) + the 16px gutter (assistant shell
 // padding), so the input's corners keep an equal, true offset from the panel.
 const COMPACT_DESKTOP =
-  "md:!inset-auto md:!top-auto md:!left-auto md:!right-3 md:!bottom-9 " +
+  "app-desktop:!inset-auto app-desktop:!top-auto app-desktop:!left-auto app-desktop:!right-3 app-desktop:!bottom-9 " +
   // `assistant-panel-anchor` re-docks right/bottom to shell corner centered on
   // ultrawide (see globals.css); the extension does not carry it and remains centered
   // on the viewport.
   "assistant-panel-anchor " +
-  "md:!w-[min(450px,calc(100vw-24px))] md:!max-w-none " +
-  "md:!h-[min(600px,calc(100dvh-96px))] " +
-  "md:rounded-[32px] md:rounded-br-(--app-pane-radius) md:border md:border-l md:origin-bottom-right";
+  "app-desktop:!w-[min(450px,calc(100vw-24px))] app-desktop:!max-w-none " +
+  "app-desktop:!h-[min(600px,calc(100dvh-96px))] " +
+  "app-desktop:rounded-[32px] app-desktop:rounded-br-(--app-pane-radius) app-desktop:border app-desktop:border-l app-desktop:origin-bottom-right";
 
 // Expanded: centered, LARGE format — a pane-mirror modal (`dialog-pane-mirror`,
 // see globals.css): the exact box, radius and border of the app content pane.
 // The morph uses explicit dimensions to interpolate into the pane geometry.
 const EXPANDED_DESKTOP =
-  "dialog-pane-mirror assistant-panel-expanded md:origin-center";
+  "dialog-pane-mirror assistant-panel-expanded app-desktop:origin-center";
 
 /** Classes of the panel's SheetContent, depending on the display mode. */
 export function panelSheetClassName(displayMode: PanelDisplayMode): string {
@@ -46,13 +46,12 @@ export function panelSheetClassName(displayMode: PanelDisplayMode): string {
     // Compact ⇄ extended fluid morph — see globals.css `.assistant-panel-morph`.
     "assistant-panel-morph",
     displayMode === "expanded" ? EXPANDED_DESKTOP : COMPACT_DESKTOP,
-    "md:data-open:!slide-in-from-right-0 md:data-closed:!slide-out-to-right-0",
-    "md:data-open:zoom-in-95 md:data-closed:zoom-out-95",
-    "md:shadow-[0_20px_50px_-15px_rgba(0,0,0,0.35),0_4px_12px_-4px_rgba(0,0,0,0.12)]",
-    // Mobile: almost full screen with a slight inset (floating map).
-    "max-md:!inset-2 max-md:!h-auto max-md:!w-auto max-md:!max-w-none",
-    "max-md:rounded-[30px] max-md:border",
-    "max-md:pb-[env(safe-area-inset-bottom)]",
+    "app-desktop:data-open:!slide-in-from-right-0 app-desktop:data-closed:!slide-out-to-right-0",
+    "app-desktop:data-open:zoom-in-95 app-desktop:data-closed:zoom-out-95",
+    "app-desktop:shadow-[0_20px_50px_-15px_rgba(0,0,0,0.35),0_4px_12px_-4px_rgba(0,0,0,0.12)]",
+    // Mobile has one fixed bottom-sheet size, independent of desktop display mode.
+    "mobile-assistant-sheet",
+
   );
 }
 

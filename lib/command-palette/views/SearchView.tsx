@@ -14,6 +14,8 @@
 
 "use client";
 
+import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
+
 import React, { useMemo, useCallback, useState, useEffect, useRef, type ReactNode } from "react";
 import { usePaletteConfig } from "../config";
 import { ActionsPopover } from "../components/ActionsPopover";
@@ -147,7 +149,7 @@ export function SearchView({
   const handleCloseActionsPopover = useCallback(() => {
     closeActionsPopover();
     setTimeout(() => {
-      searchInputRef.current?.focus();
+      if (allowInputAutoFocus()) searchInputRef.current?.focus();
     }, 50);
   }, [closeActionsPopover]);
 
@@ -401,7 +403,9 @@ export function SearchView({
 
   // Mobile gestures
   const gestures = useMobileGestures({
-    onSwipeLeft: (item) => openActionsForItem(item),
+    onSwipeLeft: (item) => {
+      if (registry.hasActionsForItem(item, viewActionContext)) openActionsForItem(item);
+    },
     enabled: isTouchDevice,
   });
 
@@ -449,14 +453,14 @@ export function SearchView({
   // Touch handlers for an item
   const getTouchHandlers = useCallback(
     (item: PaletteItem) => {
-      if (!isTouchDevice) return {};
+      if (!isTouchDevice || !hasActions(item)) return {};
       return {
         onTouchStart: (e: React.TouchEvent) => gestures.onTouchStart(e, item),
         onTouchMove: gestures.onTouchMove,
         onTouchEnd: gestures.onTouchEnd,
       };
     },
-    [isTouchDevice, gestures]
+    [isTouchDevice, gestures, hasActions]
   );
 
   // ArrowDown expands in compact mode

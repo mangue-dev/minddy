@@ -1,7 +1,5 @@
 "use client";
 
-import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowLeft01Icon } from "@hugeicons/core-free-icons";
 import {
   Suspense,
   useCallback,
@@ -14,11 +12,13 @@ import {
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useReducedMotion } from "framer-motion";
-import { Button, cn } from "mangue-ui";
+import { cn } from "mangue-ui";
 import { AppIcon } from "@/components/icon";
 import { trackEvent } from "@/lib/analytics";
 import { AppContentHeader } from "@/components/app-content-header";
-import { SecondarySidebar } from "@/components/secondary-sidebar";
+import { CollectionSidebar, type SidebarBrowseTarget } from "@/components/secondary-sidebar";
+import { AppTabRouteBoundary, useAppTabRoute } from "@/lib/app-tab-route-context";
+import { useMobileCollectionState } from "@/lib/mobile-collection-state";
 import { SidebarNavRail } from "@/components/sidebar-nav-rail";
 import { matchesFilter } from "@/components/sidebar-filter-field";
 import { useScrollFade } from "@/lib/use-scroll-fade";
@@ -45,6 +45,7 @@ export type SettingsTab = {
 };
 
 type SettingsShellProps = {
+  browse?: SidebarBrowseTarget;
   title: string;
   defaultTab: string;
   tabs: SettingsTab[];
@@ -148,19 +149,21 @@ export function SettingsShell({
   tabs,
   audience,
   filterPlaceholder,
+  browse,
 }: SettingsShellProps) {
   return (
     // SettingsTabs reads `?tab=`; useSearchParams needs a Suspense boundary
     // so the route can still be statically prerendered.
-    <Suspense fallback={<div className="min-h-64" />}>
+    <Suspense fallback={<div className="min-h-64" />}><AppTabRouteBoundary>
       <SettingsTabs
+        browse={browse}
         title={title}
         defaultTab={defaultTab}
         tabs={tabs}
         audience={audience}
         filterPlaceholder={filterPlaceholder}
       />
-    </Suspense>
+    </AppTabRouteBoundary></Suspense>
   );
 }
 
@@ -170,11 +173,15 @@ function SettingsTabs({
   tabs,
   audience,
   filterPlaceholder,
+  browse,
 }: SettingsShellProps) {
   const tCommon = useTranslations("Common");
   const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
+  const livePathname = usePathname();
+  const liveSearchParams = useSearchParams();
+  const route = useAppTabRoute();
+  const pathname = browse ? route.pathname : livePathname;
+  const searchParams = browse ? route.searchParams : liveSearchParams;
   const reduceMotion = useReducedMotion();
 
   const visibleTabs = useMemo(() => tabs.filter((t) => !t.hidden), [tabs]);
@@ -189,17 +196,10 @@ function SettingsTabs({
     : (visibleTabs[0]?.value ?? defaultTab);
   const activeTab = tabParam && validValues.has(tabParam) ? tabParam : fallback;
 
-  // Under `md`, the rail and the content take turns in full screen, like everywhere
-  // elsewhere in the app. A URL that NAMEs its tab directly opens the
-  // content: we arrive from the pallet or a link, not from the rail.
-  const [mobileDetail, setMobileDetail] = useState(!!tabParam);
   const contentFade = useScrollFade<HTMLDivElement>();
-  const activeLabel =
-    visibleTabs.find((t) => t.value === activeTab)?.label ?? title;
 
   const setActiveTab = useCallback(
     (value: string) => {
-      setMobileDetail(true);
       // Two screens share this shell: account settings (/settings) and
       // those of a project (/projects/<id>/settings). The path distinguishes them.
       trackEvent("settings_tab_switched", {
@@ -251,13 +251,13 @@ function SettingsTabs({
 
   useSectionFocus(focus, !!reduceMotion);
 
-  // ── Recherche de sections ────────────────────────────────────────────────
+  // Section search uses the same catalog as the command palette.
   // The miter rail answers "where is it?" ", but what we type is the name of
   // the CARD: “pace”, “sensitive zone”, “act on your behalf” — none of
   // these words is not a tab. The ⌘K palette already knows how to find them; the column
   // replays exactly the same path, with the same catalog and the same URL
   // (right tab, unrolled anchor, highlighted map) — cf. settingsSectionHref.
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useMobileCollectionState(pathname, "query", "");
   const allSections = useSettingsSections();
   const scope = pathname.startsWith("/projects/") ? "project" : "account";
   const projectId = projectIdFromPath(pathname);
@@ -286,7 +286,6 @@ function SettingsTabs({
 
   const openSection = useCallback(
     (section: SettingsSection) => {
-      setMobileDetail(true);
       setQuery("");
       // `replace` and not `push`: we are already on the screen, only the destination
       // internal change — like a tab change, which does not stack either.
@@ -297,13 +296,11 @@ function SettingsTabs({
     [router, projectId],
   );
 
-  return (
-    // The ROW of the screen: the rail leaves in the secondary sidebar (by
-    // gate, in the chassis) and the cards remain on the right.
-    <div className="flex h-full min-h-0">
-      <SecondarySidebar
+  const sidebar = (
+      <CollectionSidebar
+        browse={browse}
         title={title}
-        hiddenOnMobile={mobileDetail}
+        hiddenOnMobile
         filter={{
           value: query,
           onChange: setQuery,
@@ -362,39 +359,26 @@ function SettingsTabs({
             }}
           />
         )}
-      </SecondarySidebar>
+      </CollectionSidebar>
+  );
+  if (browse) return sidebar;
+
+  return (
+    // The ROW of the screen: the rail leaves in the secondary sidebar (by
+    // gate, in the chassis) and the cards remain on the right.
+    <div className="flex h-full min-h-0">
+      {sidebar}
 
       <div
-        className={cn(
-          "min-h-0 min-w-0 flex-1 flex-col md:flex",
-          mobileDetail ? "flex" : "hidden",
-        )}
+        className="flex min-h-0 min-w-0 flex-1 flex-col"
       >
-        {/* The settings content keeps the same structural header as the other
-            list/detail screens. It stays intentionally empty on desktop: the
-            secondary rail already names the active tab, while the blank header
-            gives the settings cards the expected top breathing room. */}
-        <AppContentHeader
-          contentClassName="gap-2"
-        >
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            className="md:hidden"
-            aria-label={title}
-            onClick={() => setMobileDetail(false)}
-          >
-            <HugeiconsIcon icon={ArrowLeft01Icon} />
-          </Button>
-          <span className="truncate text-sm font-medium md:hidden">
-            {activeLabel}
-          </span>
-        </AppContentHeader>
+        {/* Navigation already names the active tab; keep the shared spacing. */}
+        <AppContentHeader />
 
         <div
           ref={contentFade.ref}
           {...contentFade.scrollProps}
-          className="min-h-0 flex-1 overflow-y-auto px-4 pt-1 pb-8 md:px-6 md:pt-6"
+          className="min-h-0 flex-1 overflow-y-auto px-4 pt-1 pb-8 app-desktop:px-6 app-desktop:pt-6"
         >
           <div className={cn("mx-auto flex flex-col gap-4", SETTINGS_MAX_WIDTH)}>
             {/* Only the open tab is mounted — that's already what it did

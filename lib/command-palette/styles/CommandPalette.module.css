@@ -78,30 +78,28 @@
    MOBILE STYLES
    ============================================================================= */
 
-@media (max-width: 767px) {
-  .overlay {
-    padding-top: 0;
-    align-items: flex-end;
-  }
+:global(html[data-app-layout="mobile"]) .overlay {
+  padding-top: 0;
+  align-items: flex-end;
+}
 
-  .palette {
-    max-width: 100%;
-    max-height: 90vh;
-    height: 90vh;
-    height: 90svh;
-    border-radius: var(--cp-radius-2xl, var(--cp-radius-xl)) var(--cp-radius-2xl, var(--cp-radius-xl)) 0 0;
-    animation: paletteMobileSlideIn 300ms ease-out;
-  }
+:global(html[data-app-layout="mobile"]) .palette {
+  max-width: 100%;
+  max-height: 90vh;
+  height: 90vh;
+  height: 90svh;
+  border-radius: var(--cp-radius-2xl, var(--cp-radius-xl)) var(--cp-radius-2xl, var(--cp-radius-xl)) 0 0;
+  animation: paletteMobileSlideIn 300ms ease-out;
+}
 
-  @keyframes paletteMobileSlideIn {
-    from {
-      opacity: 0;
-      transform: translateY(100%);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
+@keyframes paletteMobileSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 

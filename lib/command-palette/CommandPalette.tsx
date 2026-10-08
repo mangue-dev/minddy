@@ -18,6 +18,8 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { useMobileLayout } from "@/lib/use-mobile-layout";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { PaletteConfigProvider, buildCategoryOrder, type ResolvedPaletteConfig } from "./config";
 import { createTranslate, type PaletteStrings } from "./i18n";
 import { CheckIcon } from "./icons";
@@ -147,6 +149,7 @@ export function CommandPalette({
   isSuccess = false,
   onFormSuccess,
 }: CommandPaletteProps) {
+  const mobile = useMobileLayout() === true;
   const view = usePaletteStore((s) => s.view);
   const isActionsPopoverOpen = usePaletteStore((s) => s.isActionsPopoverOpen);
   const setView = usePaletteStore((s) => s.setView);
@@ -318,6 +321,15 @@ export function CommandPalette({
       />
     );
   };
+
+  if (mobile) return <PaletteConfigProvider value={config}>
+    <Dialog open={isOpen} onOpenChange={(next) => { if (!next) handleClose(); }}>
+      <DialogContent className="mobile-command-palette" aria-describedby={undefined}>
+        <DialogTitle className="sr-only">{t("search.placeholder")}</DialogTitle>
+        {isSuccess ? <div className="flex min-h-32 items-center justify-center"><CheckIcon /></div> : renderView()}
+      </DialogContent>
+    </Dialog>
+  </PaletteConfigProvider>;
 
   return (
     <PaletteConfigProvider value={config}>

@@ -226,7 +226,7 @@ export function PrReadinessMenuItem({ readiness, disabled, onSelect }: {
   const pending = !readiness || readiness.state === "review_requested" ||
     readiness.state === "checks_running" || readiness.state === "status_unavailable";
   return (
-    <DropdownMenuItem data-testid="pr-readiness-menu" className="md:hidden"
+    <DropdownMenuItem data-testid="pr-readiness-menu" className="app-desktop:hidden"
       disabled={disabled} onSelect={onSelect} aria-haspopup="dialog">
       <AppIcon icon={ready ? CheckIcon : pending ? Clock01Icon : AlertCircleIcon}
         className={cn(

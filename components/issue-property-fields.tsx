@@ -63,7 +63,7 @@ export function PropertyRow({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex min-h-9 items-center justify-between gap-3">
+    <div data-property-row className="flex min-h-9 items-center justify-between gap-3">
       <span className={cn("shrink-0 text-sm text-foreground", labelClassName)}>{label}</span>
       <div className="flex min-w-0 flex-1 items-center justify-end">{children}</div>
     </div>

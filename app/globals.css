@@ -7,16 +7,14 @@
 @source "../node_modules/streamdown/dist/*.js";
 @source "../node_modules/@streamdown/code/dist/*.js";
 
-/* The shell remains a desktop application from 768 px: primary navigation and
-   the full command palette. Below this threshold only, the pill
-   mobile navigation takes over. 768–1199 px displays use the
-   retracted side panel (see AppShellChrome), rather than the mobile interface.
-   This redefinition, after the mango-ui tokens, aligns `desktop:` and
-   `max-desktop:` on the same threshold. */
+/* App chrome follows the shared runtime policy, including tablet orientation.
+   Ordinary content grids keep Tailwind's independent width breakpoints. */
 @theme {
-  --breakpoint-desktop: 768px;
+  --breakpoint-desktop: 1024px;
   --breakpoint-wide: 1200px;
 }
+@custom-variant app-mobile (&:where(html[data-app-layout="mobile"] *));
+@custom-variant app-desktop (&:where(html[data-app-layout="desktop"] *));
 
 /* One hover cursor for the whole app (MIN-587): buttons and every other
    interactive element show the default arrow, never the pointer hand. The
@@ -51,17 +49,11 @@
   cursor: default;
 }
 
-/* `mangue-ui` is also compiled by Turbopack as a dependency: according to the
-   development cache, its `desktop:` utilities can keep the
-   published threshold (1200 px) while those in the application have already read the theme
-   above. The shell cannot be cut in two: this layer
-   forces the three primitives of chromium in the intermediate slice, with a
-   higher specificity than library utilities.
+/* Dependency chrome can retain compiled width utilities. Match its shell
+   wrappers to the same layout attribute as the application components. */
+:root[data-app-layout="desktop"] {
+  .app-shell main { padding-bottom: 0; }
 
-   It is voluntarily limited to `.app-shell`: public pages keep
-   their own adaptations, and this rule does not arbitrarily expand any
-   l'interface. */
-@media (768px <= width < 1200px) {
   .app-shell .desktop\:flex {
     display: flex !important;
   }
@@ -75,6 +67,11 @@
   .app-shell > .desktop\:flex {
     display: flex !important;
   }
+}
+
+:root[data-app-layout="mobile"] {
+  .app-shell .desktop\:flex { display: none !important; }
+  .app-shell .desktop\:hidden { display: flex !important; }
 }
 
 /* In the Electron app, the fixed strip that allows you to move the window covers
@@ -93,18 +90,14 @@ html[data-desktop-app] .sidebar-nav-hotzone {
 .compact-window-controls-clearance {
   display: none;
 }
-@media (width < 768px) {
-  html[data-desktop-platform="darwin"] .compact-window-controls-clearance {
+:root[data-app-layout="mobile"] {
+  &[data-desktop-platform="darwin"] .compact-window-controls-clearance {
     display: flex;
   }
 }
 
-/* mango-ui gives menu options a higher touch target up to
-   1199 px (`max-[1199px]:min-h-10`). However, the application remains desktop
-   from 768 px: in this section, the menus must regain their density of
-   desktop (the original `py-1.5`). The rule is outside layer and `!important` for
-   also cover utilities already compiled in the dependency. */
-@media (width >= 768px) {
+/* Desktop dropdowns keep their density even on a touch-capable wide viewport. */
+:root[data-app-layout="desktop"] {
   [data-slot="dropdown-menu-item"],
   [data-slot="dropdown-menu-checkbox-item"],
   [data-slot="dropdown-menu-radio-item"],
@@ -506,7 +499,7 @@ button[data-variant="ghost"] {
    shared surface makes it one continuous frame. The content column (header
    clearance + <main>, mangue-ui app-shell's right child) floats over it as a
    rounded card, clear of the right and bottom window edges, flush against the
-   top bar above and the sidebar on its left. Desktop only; below 768 px the
+   top bar above and the sidebar on its left. Desktop only; in mobile layout the
    shell keeps its classic full-bleed layout and floating pill navigation.
 
    `--app-pane-radius` is the single source of the pane's corner rounding: the
@@ -535,7 +528,7 @@ button[data-variant="ghost"] {
   );
 }
 
-@media (min-width: 768px) {
+:root[data-app-layout="desktop"] {
   .app-shell {
     background: var(--sidebar);
   }
@@ -721,7 +714,7 @@ button[data-variant="ghost"] {
   }
 
   /* Both modes use numeric dimensions and the same right/bottom anchors. */
-  @media (min-width: 768px) {
+  :root[data-app-layout="desktop"] {
     [data-slot="sheet-content"].assistant-panel-expanded {
       top: auto !important;
       left: auto !important;
@@ -1083,46 +1076,17 @@ button[data-variant="ghost"] {
   padding: 0;
 }
 
-/* Mobile bottom nav (mangue-ui <MobileNav>): hide the auto "More" (⋯) menu and
-   its leading hairline divider. Every destination is reachable from the Menu
-   sheet + Search, and Numo / "+" have their own dedicated buttons — the extra
-   overflow menu is redundant. Targets the stable aria-label on the pill. */
-nav[aria-label="Navigation"] button[aria-label="More options"],
-nav[aria-label="Navigation"]
-  span[aria-hidden]:has(+ button[aria-label="More options"]) {
-  display: none;
-}
-
-/* ─── Clearing the mobile navigation bar ──────────────────────────
-   mango-ui reserves 6 rem at the bottom of the content (AppShell: `max-desktop:pb-[calc(
-   6rem+env(safe-area-inset-bottom))]`) so that nothing goes unnoticed
-   floating. However, the pill only measures 3 rem of buttons plus its low anchor:
-   the reserve releases one and a half times what was needed, and on mobile this
-   surplus is paid for everywhere — the end of a list, the last column of a board,
-   and especially the screens which ANCHOR a field at the foot (composing it with a pull
-   request, that of an agent session). There, the gap is not made up for
-   scrolling: there REMAINS on the screen, around forty pixels of space between the
-   bar and field, on the narrowest surface of the product.
-
-   We therefore base the reservation on what the pill really measures, plus a net
-   of air — only one rule, so all the pages at once. It targets <main>
-   of the shell (the only one of the app, cf. the class placed on the AppShell in
-   components/app-shell-chrome.tsx) and wins without `!important`: a
-   Tailwind utility lives in @layer, and an out-of-layer rule beats anything that
-   is layered, regardless of the specificity.
-
-   TO KEEP UPDATED WITH mangue-ui: the two measurements below copy its
-   geometry, and `lib/mobile-nav-clearance.test.ts` fails if it moves. */
+/* The fixed mobile bar owns its geometry. Keep the shell's reserve aligned
+   with its 48px buttons and safe-area anchor, plus a small content gutter. */
 :root {
-  /* The pill: 3 rem of buttons (MobileNavItem, `h-12`) + its bottom anchor
-     (MobileNav : `pb-[max(1rem,env(safe-area-inset-bottom))]`). */
+  /* Three rem of buttons plus the safe bottom anchor. */
   --mobile-nav-height: calc(3rem + max(1rem, env(safe-area-inset-bottom)));
   /* What we keep free under the content: the pill and a trickle of air. */
   --mobile-nav-clearance: calc(var(--mobile-nav-height) + 0.75rem);
 }
 
-/* 768px = `--breakpoint-desktop`, the point where the pill appears. */
-@media (width < 768px) {
+/* Reserve the actual navigation height whenever the mobile layout is active. */
+:root[data-app-layout="mobile"] {
   .app-shell main {
     padding-bottom: var(--mobile-nav-clearance);
   }
@@ -2194,9 +2158,9 @@ html[data-app-shell] [data-radix-scroll-area-viewport][style*="overflow-y: scrol
    when it comes from the sidebar. Not a pixel more either: beyond that, the
    box would come out of the column.
 
-   Under `md`, the column is only 24 px indented: the extended box would overflow
+   In mobile layout, the column is only 24px indented: the extended box would overflow
    of the container that passes by. And there's no hovering on a touchscreen. */
-@media (min-width: 768px) {
+:root[data-app-layout="desktop"] {
   .page-editor[data-gutter] .ProseMirror {
     padding-left: 96px;
     margin-left: -96px;
@@ -2841,7 +2805,7 @@ html[data-desktop-platform="darwin"]
   flex-shrink: 0;
 }
 
-@media (width < 768px) {
+:root[data-app-layout="mobile"] {
   .content-toaster[data-sonner-toaster][data-x-position="center"] {
     bottom: calc(var(--mobile-nav-clearance) + 1rem);
   }
@@ -2870,9 +2834,9 @@ html[data-desktop-platform="darwin"]
     box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
   }
 }
-@media (min-width: 768px) {
+:root[data-app-layout="desktop"] {
   .app-top-bar { display: flex; }
-  html[data-desktop-app][data-app-top-bar] .desktop-drag-band { display: none; }
+  &[data-desktop-app][data-app-top-bar] .desktop-drag-band { display: none; }
 }
 html[data-desktop-app] .app-top-bar,
 html[data-desktop-app] .app-content-header { -webkit-app-region: drag; }
@@ -2892,8 +2856,8 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
   z-index: 30;
   -webkit-app-region: drag;
 }
-@media (max-width: 767px) {
-  html[data-integrated-caption-controls]:not([data-desktop-platform="darwin"]) .app-workspace::before {
+:root[data-app-layout="mobile"] {
+  &[data-integrated-caption-controls]:not([data-desktop-platform="darwin"]) .app-workspace::before {
     content: "";
     display: block;
     height: 44px;
@@ -2914,4 +2878,432 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
 }
 @media (prefers-reduced-motion: reduce) {
   .review-logo-shimmer { animation: none; }
+}
+
+/* Mobile sheets share one breakpoint and viewport budget. Wide data surfaces
+   (boards, tables, code and diffs) retain their own intentional scroll areas. */
+:root[data-app-layout="mobile"] {
+  .app-workspace, .app-shell main, #app-tab-content {
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: clip;
+  }
+
+  .mobile-bottom-sheet[data-slot="sheet-content"],
+  .mobile-assistant-sheet[data-slot="sheet-content"],
+  [data-slot="alert-dialog-content"] {
+    inset: auto 0 var(--mobile-keyboard-inset, 0px);
+    width: 100%;
+    max-width: none;
+    max-height: calc(var(--mobile-viewport-height, 100dvh) - max(1rem, env(safe-area-inset-top)));
+    height: auto;
+    margin: 0;
+    translate: none;
+    transform: none;
+    border-radius: 24px 24px 0 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+
+  .mobile-bottom-sheet[data-slot="sheet-content"] {
+    padding-top: 8px;
+    border: 0;
+    background: var(--card);
+  }
+  .mobile-bottom-sheet [data-calendar] { width: 100%; }
+  .mobile-bottom-sheet [data-calendar] :is(.rdp-weekday, .rdp-day) {
+    flex: 1 1 0;
+    min-width: 0;
+    width: auto;
+  }
+  .mobile-bottom-sheet [data-calendar] :is(.rdp-day, button[data-day]) { height: 44px; }
+  .mobile-bottom-sheet [data-calendar] button[data-day] { width: 100%; }
+  .mobile-bottom-sheet [data-calendar] :is(.rdp-button_previous, .rdp-button_next) { width: 44px; height: 44px; }
+  .mobile-bottom-sheet [data-calendar] .rdp-month_caption { height: 44px; }
+  .mobile-bottom-sheet :is([data-slot="dialog-header"], [data-slot="sheet-header"]),
+  .mobile-bottom-sheet > [data-slot="sheet-title"]:not(.sr-only) {
+    min-height: 44px;
+    justify-content: center;
+    padding-right: 44px;
+  }
+  .mobile-bottom-sheet > [data-slot="sheet-title"]:not(.sr-only) {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    flex-shrink: 0;
+  }
+  .mobile-bottom-sheet [data-mobile-sheet-header] {
+    min-height: 44px;
+    padding-right: 60px;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+  .mobile-bottom-sheet :is([data-mobile-sheet-close], [data-slot="sheet-close"], [data-slot="side-panel-close"]) {
+    position: absolute;
+    z-index: 30;
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    top: 8px;
+    right: 8px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    color: var(--muted-foreground);
+    background: transparent;
+  }
+  .mobile-bottom-sheet :is([data-mobile-sheet-header], [data-mobile-sheet-toolbar], [data-slot="dialog-header"], [data-slot="sheet-header"], [data-slot="side-panel-header"]) button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  .mobile-bottom-sheet [data-mobile-sheet-header-actions] { margin: 0; gap: 8px; flex-shrink: 0; }
+  .mobile-bottom-sheet [data-mobile-sheet-toolbar] { gap: 8px; }
+  .mobile-assistant-sheet .app-content-header > div { padding-right: 60px; }
+  .mobile-assistant-sheet .app-content-header button { min-height: 44px; min-width: 44px; }
+  [data-property-row] { min-height: 52px; }
+  [data-property-row] :is(button, a[role="button"]) { min-height: 44px; min-width: 44px; }
+  [data-bulk-issue-actions] button { min-height: 44px; min-width: 44px; }
+  :is([data-slot="sheet-overlay"], [data-slot="dialog-overlay"], [data-slot="alert-dialog-overlay"]) {
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+  }
+  .mobile-bottom-sheet [data-mobile-sheet-close-wrapper] { display: contents; }
+  .mobile-bottom-sheet [data-mobile-sheet-close-legacy] { display: none; }
+  .mobile-bottom-sheet [data-mobile-sheet-toolbar] { top: 8px; right: 60px; min-height: 44px; }
+  [data-mobile-sidebar-workspace] { background: var(--sidebar); }
+  .mobile-sidebar-reveal :is([data-sidebar-navigation-item], [data-sidebar-filter-result], [data-navigation-href], [data-sidebar-back]) { min-height: 44px; }
+  .mobile-sidebar-reveal [data-sidebar-filter-result] { min-width: 44px; }
+  .mobile-sidebar-reveal :is([data-mobile-collection-navigation], [data-sidebar-browse-collection]) button { min-height: 44px; }
+  .mobile-sidebar-reveal [class~="group/project"] button { min-height: 44px; min-width: 44px; opacity: 1; pointer-events: auto; }
+  .mobile-sidebar-reveal :is([data-sidebar-footer], [data-sidebar-project-context], .secondary-sidebar-header) button { min-height: 44px; min-width: 44px; }
+  .mobile-sidebar-reveal [data-sidebar-page-row] button { min-height: 44px; min-width: 44px; }
+  .mobile-sidebar-reveal [data-sidebar-page-row-actions] { opacity: 1; }
+  .mobile-sidebar-reveal .sidebar-brand-row button { min-height: 44px; }
+  .mobile-sidebar-reveal [data-sidebar-footer] {
+    padding-bottom: max(10px, env(safe-area-inset-bottom));
+  }
+  .mobile-sidebar-reveal [data-mobile-sheet-scroll] > div { touch-action: pan-y; }
+  .mobile-sidebar-reveal [data-mobile-sidebar] { touch-action: pan-y; }
+  .mobile-sidebar-reveal [data-scroll-fade] { --card: var(--sidebar); }
+  .mobile-sidebar-reveal [data-mobile-sheet-scroll] { --card: var(--sidebar); }
+  .mobile-sidebar-reveal {
+    position: absolute;
+    inset: 0 auto auto 0;
+    height: var(--mobile-viewport-height, 100dvh);
+    padding-top: env(safe-area-inset-top);
+    z-index: 0;
+    touch-action: pan-y;
+    overflow: hidden;
+    transform-origin: center;
+    transform: scale(calc(0.94 + var(--mobile-sidebar-progress, 0) * 0.06));
+    opacity: calc(0.65 + var(--mobile-sidebar-progress, 0) * 0.35);
+    transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1), opacity 260ms cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: transform, opacity;
+  }
+  .mobile-sidebar-reveal[data-mobile-sidebar-dragging="true"] { transition: none; }
+  .app-shell[data-mobile-sidebar-surface] {
+    position: relative;
+    z-index: 1;
+    transform: translate3d(var(--mobile-sidebar-offset, 0px), 0, 0);
+    background: var(--background);
+    overflow: hidden;
+    border-radius: var(--mobile-sidebar-radius, 0px) 0 0 var(--mobile-sidebar-radius, 0px);
+    transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1), border-radius 260ms cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: transform;
+    touch-action: pan-y pinch-zoom;
+  }
+  &:has([data-mobile-sidebar-surface]) { overscroll-behavior-x: none; }
+  .app-shell[data-mobile-sidebar-open="true"] { box-shadow: -8px 0 32px rgb(0 0 0 / 0.08); }
+  .app-shell[data-mobile-sidebar-dragging="true"] { transition: none; }
+  [data-mobile-sidebar-dismiss] {
+    position: absolute;
+    inset: 0 0 0 auto;
+    z-index: 2;
+    width: auto;
+    border: 0;
+    padding: 0;
+    background: transparent;
+    touch-action: pan-y;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .app-shell[data-mobile-sidebar-surface] { transition: none; }
+    .mobile-sidebar-reveal { transform: none; opacity: 1; transition: none; }
+  }
+  .mobile-bottom-sheet :is([data-slot="side-panel-header"], [data-slot="side-panel-footer"]) {
+    border: 0;
+    padding: 8px 16px;
+  }
+  .mobile-bottom-sheet [data-slot="side-panel-header"] { padding-right: 60px; }
+  .mobile-bottom-sheet [data-slot="side-panel-header"] { min-height: 44px; align-items: center; padding-top: 0; }
+  .mobile-bottom-sheet :is([cmdk-separator], [data-slot="separator"], hr) { display: none; }
+  .mobile-bottom-sheet :is([cmdk-root], [data-slot="command"]) {
+    background: var(--card);
+    border-radius: 0;
+    padding: 0;
+  }
+  .mobile-bottom-sheet :is([data-slot="dialog-footer"], [data-slot="side-panel-footer"]),
+  [data-slot="alert-dialog-footer"] {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    border: 0;
+  }
+  .mobile-bottom-sheet :is([data-slot="dialog-footer"], [data-slot="side-panel-footer"]) > :last-child:only-child,
+  [data-slot="alert-dialog-footer"] > :last-child:only-child {
+    grid-column: 1 / -1;
+  }
+  .mobile-bottom-sheet [data-sheet-auxiliary-action] { grid-column: 1 / -1; }
+  .mobile-bottom-sheet :is([data-slot="dialog-footer"], [data-slot="side-panel-footer"]) > button,
+  [data-slot="alert-dialog-footer"] > button {
+    min-height: 44px;
+    height: auto;
+    min-width: 0;
+    width: 100%;
+    white-space: normal;
+    margin: 0;
+  }
+  [data-slot="alert-dialog-footer"]:has(> :nth-child(3)) > :last-child { grid-column: 1 / -1; }
+  [data-slot="alert-dialog-footer"] > * { order: 0; min-width: 0; }
+  [data-slot="alert-dialog-cancel"] { border: 0; background: transparent; box-shadow: none; }
+  [data-slot="alert-dialog-content"] {
+    border: 0;
+    padding: 16px;
+    translate: 0 0 !important;
+  }
+  [data-slot="alert-dialog-header"] { text-align: left; place-items: start; }
+  .mobile-bottom-sheet [data-mobile-sheet-actions] {
+    position: sticky;
+    bottom: 0;
+    flex-direction: row-reverse;
+    gap: 8px;
+    padding-block: 16px 0;
+    background: var(--card);
+  }
+  .mobile-bottom-sheet [data-mobile-sheet-actions] > button {
+    flex: 1;
+    min-height: 44px;
+    height: auto;
+  }
+  .mobile-bottom-sheet [data-mobile-sheet-actions]::before {
+    content: "";
+    position: absolute;
+    inset: -16px 0 auto;
+    height: 16px;
+    pointer-events: none;
+    background: linear-gradient(to bottom, transparent, var(--card));
+  }
+  .mobile-picker-sheet[data-slot="sheet-content"] {
+    max-height: min(75dvh, calc(var(--mobile-viewport-height, 100dvh) - 1rem));
+    overflow: hidden;
+    padding: 52px 16px max(16px, env(safe-area-inset-bottom));
+  }
+  .mobile-picker-sheet:has([data-sheet-search], [data-slot="command-input-wrapper"])[data-slot="sheet-content"] {
+    padding-top: 8px;
+  }
+  .mobile-picker-sheet > .mobile-picker-title {
+    position: absolute;
+    inset: 8px 60px auto 16px;
+  }
+  .mobile-picker-sheet:has([data-sheet-search], [data-slot="command-input-wrapper"]) > .mobile-picker-title {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    min-height: 0;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .mobile-bottom-sheet :is([data-sheet-note], [data-sheet-section]) { border: 0; }
+  .mobile-picker-sheet :is([data-sheet-search], [data-slot="command-input-wrapper"]) {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 44px 0 0;
+    flex-shrink: 0;
+    border: 0;
+  }
+  .mobile-picker-sheet [data-slot="input-group"] {
+    flex: 1;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+  .mobile-picker-sheet [cmdk-root] {
+    display: flex;
+    min-height: 0;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .mobile-picker-sheet [cmdk-list] {
+    min-height: 0;
+    max-height: min(50dvh, calc(var(--mobile-viewport-height, 100dvh) - 7rem));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .mobile-picker-sheet [cmdk-item] {
+    min-height: 44px;
+  }
+  .mobile-assistant-sheet[data-slot="sheet-content"] {
+    height: calc(var(--mobile-viewport-height, 100dvh) - max(1rem, env(safe-area-inset-top)));
+    overflow: hidden;
+    transition: none;
+    border: 0;
+  }
+  .mobile-assistant-sheet > div {
+    min-height: 0;
+  }
+  .mobile-assistant-sheet [data-mobile-sheet-close]:not([data-slot="sheet-close"]) { display: none; }
+  .mobile-command-palette[data-slot="sheet-content"] {
+    height: min(85dvh, calc(var(--mobile-viewport-height, 100dvh) - 1rem));
+    padding: 8px 0 max(1rem, env(safe-area-inset-bottom));
+    gap: 0;
+    overflow: hidden;
+    --cp-bg: var(--card);
+  }
+  [data-mobile-navigation] {
+    bottom: var(--mobile-keyboard-inset, 0px);
+  }
+  .app-content-header > div {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+:root[data-app-layout="mobile"] {
+  .mobile-side-panel-sheet[data-slot="sheet-content"] {
+    height: calc(var(--mobile-viewport-height, 100dvh) - max(1rem, env(safe-area-inset-top)));
+    overflow: hidden;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .mobile-side-panel-sheet [data-slot="side-panel-body"] {
+    min-height: 0;
+    overscroll-behavior: contain;
+  }
+}
+
+:root[data-app-layout="mobile"] {
+  .mobile-inbox-sheet[data-slot="sheet-content"] {
+    height: min(85dvh, calc(var(--mobile-viewport-height, 100dvh) - 1rem));
+    max-height: calc(var(--mobile-viewport-height, 100dvh) - 1rem);
+    padding-top: 3rem;
+  }
+  .mobile-inbox-sheet .divide-y > :not(:last-child) { border-bottom-width: 0; }
+}
+
+.creation-field-label { display: none; }
+.creation-title { display: block; }
+
+:root[data-app-layout="mobile"] {
+  .creation-sheet[data-slot="sheet-content"] {
+    height: min(92dvh, calc(var(--mobile-viewport-height, 100dvh) - 1rem));
+    padding: 8px 1rem max(1rem, env(safe-area-inset-bottom));
+    gap: 1rem;
+    overflow: hidden;
+  }
+  .creation-form {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .creation-form-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+    padding: 0 2px 1rem;
+  }
+  .creation-dictation { margin-bottom: 1rem; }
+  .creation-field-label {
+    display: block;
+    margin: 1rem 0 0.5rem;
+    font-size: 0.75rem;
+    color: var(--muted-foreground);
+  }
+  .creation-title, .creation-description {
+    margin: 0;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 0.75rem;
+    font-size: 1rem;
+    line-height: 1.5;
+  }
+  .creation-description { min-height: 6rem; }
+  .creation-description .ProseMirror { font-size: 1rem; }
+  .creation-title:focus, .creation-description:focus-within { border-color: var(--ring); }
+  .creation-properties {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+  }
+  .creation-property {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 0.5rem 0.5rem 0;
+  }
+  .creation-property > button {
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    height: auto;
+    padding-inline: 0;
+    justify-content: flex-start;
+    overflow: hidden;
+  }
+  .creation-property > button span:not(.sr-only) {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .creation-form-footer {
+    flex-shrink: 0;
+    margin-top: 0;
+    padding-top: 0.5rem;
+    border-top: 0;
+    gap: 0.5rem;
+  }
+  .creation-form-footer > button, .creation-submit button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  .creation-submit { width: 100%; }
+  .creation-submit > *, .creation-submit button[type="submit"] { flex: 1; }
+}
+
+:root[data-app-layout="mobile"] {
+  .creation-property > button,
+  .creation-property > button:hover,
+  .creation-property > button:focus-visible,
+  .creation-property > button[aria-expanded=true] {
+    background-color: transparent;
+  }
+  .creation-property:focus-within { border-color: var(--ring); }
+  .creation-property > button:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: -2px;
+  }
+  .creation-smart-fill {
+    grid-column: 1 / -1;
+    display: flex;
+    min-height: 56px;
+    align-items: center;
+    gap: 1rem;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 0.75rem;
+  }
+}
+
+/* Single-column boards use persistent pagination instead of a scrollbar. */
+@media (width < 640px) {
+  .mobile-kanban-scroller { scrollbar-width: none; }
+  .mobile-kanban-scroller::-webkit-scrollbar { display: none; }
 }

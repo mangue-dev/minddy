@@ -6,11 +6,11 @@ import { WINDOW_BUTTONS_WIDTH } from "@/lib/sidebar-window-controls";
 export { WINDOW_BUTTONS_WIDTH } from "@/lib/sidebar-window-controls";
 
 /**
- * Reserve native macOS controls in the content header below 768 px.
+ * Reserve native macOS controls in the content header in mobile layout.
  *
  * The buttons stay visible whatever the page shows — dialogs, palettes and
- * drawers leave them in place, full screen is macOS's own business. Below
- * 768 px the sidebar no longer hosts them, so the header keeps their slot.
+ * drawers leave them in place, full screen is macOS's own business. In mobile
+ * layout the sidebar no longer hosts them, so the header keeps their slot.
  */
 const HEADER_PADDING_PX = 16;
 

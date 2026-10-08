@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, createElement } from "react";
+import { act, createElement, useEffect, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -14,12 +14,15 @@ import { createHomeTab } from "./app-tabs";
 import type { AppTabsSession } from "./app-tabs-session";
 
 const query = vi.hoisted(() => ({ isPending: false, isError: false, refetch: vi.fn() }));
-const router = vi.hoisted(() => ({ push: vi.fn() }));
+const router = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn() }));
+const viewport = vi.hoisted(() => ({ mobile: false as boolean | undefined }));
+const queryCalls = vi.hoisted(() => vi.fn());
 const auth = vi.hoisted(() => ({ user: { id: "owner" } as { id: string } | null }));
+vi.mock("./use-mobile-layout", () => ({ useMobileLayout: () => viewport.mobile }));
 vi.mock("./auth-context", () => ({ useAuth: () => auth }));
 vi.mock("./use-app-tabs-query", () => ({
   appTabsQueryKey: (owner: string) => ["app-tabs", owner],
-  useAppTabsQuery: () => query,
+  useAppTabsQuery: (...args: unknown[]) => { queryCalls(...args); return query; },
 }));
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
 vi.mock("@/components/app-tab-route-sync", () => ({ AppTabRouteSync: () => null }));
@@ -50,6 +53,8 @@ function Actions() {
 
 beforeEach(async () => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  viewport.mobile = false;
+  router.replace.mockClear();
   sessionStorage.clear();
   auth.user = { id: "owner" };
   renders = { strip: 0, navigation: 0, actions: 0 };
@@ -75,9 +80,50 @@ afterEach(async () => {
   client.clear();
   container.remove();
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 
 describe("application tab subscriptions", () => {
+  it("keeps descendant drafts mounted across unresolved, mobile and desktop layouts", async () => {
+    let mounts = 0, unmounts = 0;
+    let update!: (value: string) => void;
+    let contexts: unknown[] = [];
+    function Draft() {
+      const [value, setValue] = useState("");
+      update = setValue;
+      contexts = [useOptionalAppTabs(), useOptionalAppTabNavigation(), useOptionalAppTabSession()];
+      useEffect(() => { mounts++; return () => { unmounts++; }; }, []);
+      return createElement("input", { value, readOnly: true });
+    }
+    const tree = () => createElement(QueryClientProvider, { client },
+      createElement(AppTabsProvider, { children: createElement(Draft) }));
+    await act(() => root.render(tree()));
+    await act(() => update("An unfinished ticket description"));
+    const input = container.querySelector("input");
+    for (const mode of [undefined, true, false, true]) {
+      queryCalls.mockClear();
+      viewport.mobile = mode;
+      await act(() => root.render(tree()));
+      expect(container.querySelector("input")).toBe(input);
+      expect(input?.value).toBe("An unfinished ticket description");
+      expect(mounts).toBe(1);
+      expect(unmounts).toBe(0);
+      if (mode !== false) {
+        expect(contexts).toEqual([null, null, null]);
+        expect(queryCalls).not.toHaveBeenCalled();
+      }
+    }
+  });
+  it("does not reset the current page when a desktop reload rotates into mobile", async () => {
+    window.history.replaceState(null, "", "/projects/example");
+    vi.spyOn(performance, "getEntriesByType").mockReturnValue([{ type: "reload" } as PerformanceNavigationTiming]);
+    const tree = () => createElement(QueryClientProvider, { client },
+      createElement(AppTabsProvider, { children: createElement(Page) }));
+    viewport.mobile = true;
+    await act(() => root.render(tree()));
+    expect(router.replace).not.toHaveBeenCalled();
+    expect(window.location.pathname).toBe("/projects/example");
+  });
   it("replaces the session on account switches and clears optional contexts on sign-out", async () => {
     let values: unknown[] = [];
     function OptionalConsumers() {

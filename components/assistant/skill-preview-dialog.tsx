@@ -6,11 +6,8 @@ import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   Button,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
 } from "mangue-ui";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Markdown } from "@/components/markdown";
 import { useScrollFade } from "@/lib/use-scroll-fade";
 import type {
@@ -67,10 +64,11 @@ export function SkillPreviewDialog({
         showCloseButton={false}
         className="dialog-pane-mirror flex h-[var(--spacing-dialog-h)] max-h-[calc(100dvh-2rem)] max-w-[calc(100%-2rem)] flex-col overflow-hidden p-0 -translate-x-0 -translate-y-0 rounded-(--app-pane-radius) sm:max-h-[var(--spacing-dialog-h)] sm:max-w-[var(--spacing-dialog-w)]"
       >
-        <div className="absolute top-3.5 right-3.5 z-30">
+        <div data-mobile-sheet-close-wrapper className="absolute top-3.5 right-3.5 z-30">
           <Button
             variant="ghost"
             size="icon-sm"
+            data-mobile-sheet-close
             aria-label={tc("close")}
             onClick={() => onOpenChange(false)}
             className="rounded-full text-muted-foreground hover:text-foreground"
@@ -105,7 +103,7 @@ export function SkillPreviewDialog({
                 {t("skillPreviewError")}
               </p>
             ) : (
-              <div className="mt-8 border-t border-border pt-8">
+              <div data-sheet-section className="mt-8 border-t border-border pt-8">
                 <p className="mb-6 text-sm leading-relaxed text-muted-foreground">
                   {loaded.description}
                 </p>

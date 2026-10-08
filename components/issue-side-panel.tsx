@@ -12,12 +12,6 @@ import { useTranslations } from "next-intl";
 import {
   Button,
   ConfirmDeleteDialog,
-  SidePanel,
-  SidePanelBody,
-  SidePanelClose,
-  SidePanelContent,
-  SidePanelFooter,
-  SidePanelTitle,
   Tabs,
   TabsContent,
   TabsList,
@@ -25,6 +19,7 @@ import {
   cn,
   toast,
 } from "mangue-ui";
+import { SidePanel, SidePanelBody, SidePanelClose, SidePanelContent, SidePanelFooter, SidePanelTitle } from "@/components/ui/side-panel";
 import {
   AssigneeValue,
   CategoryValue,
@@ -873,7 +868,7 @@ export function IssueSidePanel({
           onOpenAutoFocus={(e) => e.preventDefault()}
         >
           {/* Header: parent → identifier · agent state · dictate · more · close */}
-          <div className="flex shrink-0 items-center justify-between gap-4 px-6 pt-5 pb-3">
+          <div data-mobile-sheet-header className="flex shrink-0 items-center justify-between gap-4 px-6 pt-5 pb-3">
             <div className="flex min-w-0 items-center gap-1">
               <IssueParentMenu
                 key={issue.id}
@@ -922,7 +917,7 @@ export function IssueSidePanel({
                 />
               )}
             </div>
-            <div className="-mr-1.5 flex items-center gap-0.5">
+            <div data-mobile-sheet-header-actions className="-mr-1.5 flex items-center gap-0.5">
               <IssueActionsMenu
                 key={issue.id}
                 actions={menuActions}

@@ -101,6 +101,7 @@ import type { PaletteStrings } from "@/lib/command-palette/i18n";
 import { createMinddyEntityActionsProvider } from "@/lib/command-palette/registry/providers/MinddyEntityActionsProvider";
 import { paletteDestinationHref } from "@/lib/palette-destination";
 import { useOptionalAppTabSession } from "@/lib/app-tabs-context";
+import { useMobileLayout } from "@/lib/use-mobile-layout";
 import type {
   Issue,
   Member,
@@ -224,6 +225,8 @@ export function CommandPalette({
   onDestinationSelect,
   onPrefetchDestination,
 }: CommandPaletteProps) {
+  const mobile = useMobileLayout() === true;
+  const navigationSearch = destinationOnly || mobile;
   const { track } = useAnalytics();
   const locale = useLocale();
   const tIssueUI = useTranslations("IssueUI");
@@ -385,7 +388,12 @@ export function CommandPalette({
     const mapped = groups.flatMap((g, gi) => {
       const cat = g.key ?? g.heading ?? `group-${gi}`;
       return g.items
-        .filter((it) => !HIDDEN_KEYS.has(it.key) && (!destinationOnly || paletteDestinationHref(it.href) !== null))
+        .filter((it) => {
+          if (HIDDEN_KEYS.has(it.key)) return false;
+          if (!navigationSearch || paletteDestinationHref(it.href) !== null) return true;
+          // Tickets and navigation panels can open in place without a tab destination.
+          return mobile && !destinationOnly && (it.entityType === "issue" || ["go-inbox", "open-notes", "go-agents", "cmd-shortcuts"].includes(it.key));
+        })
         .map((it): CpPaletteItem => {
           const Icon = it.icon;
           const issue = it.entityType === "issue" ? (it.data as PaletteIssue) : null;
@@ -426,7 +434,7 @@ export function CommandPalette({
     });
 
     // “Change theme”: Enter/⌘; opens the select inline (provider "theme")
-    if (!destinationOnly) mapped.push({
+    if (!navigationSearch) mapped.push({
       id: "cmd-theme",
       title: themeLabel,
       keywords: ["theme", "thème", "apparence", "appearance", "dark", "light", "sombre", "clair"],
@@ -465,7 +473,7 @@ export function CommandPalette({
     // per view, when we reopen the views every day. No `execute` → the
     // select opens the inline name field (provider "saved-view-actions"),
     // like the grouped mode fields. The screen is only read upon validation.
-    if (!destinationOnly) mapped.push({
+    if (!navigationSearch) mapped.push({
       id: "cmd-save-view",
       title: tNav("saveCurrentView"),
       keywords: [
@@ -487,7 +495,7 @@ export function CommandPalette({
     });
 
     return mapped;
-  }, [groups, themeLabel, track, savedViews, router, tNav, projects, destinationOnly, onDestinationSelect]);
+  }, [groups, themeLabel, track, savedViews, router, tNav, projects, navigationSearch, mobile, destinationOnly, onDestinationSelect]);
 
   // === Contextual issue actions (⌘; / →) ===
   // Each action opens an inline form with one field: the select opens
@@ -1362,7 +1370,7 @@ export function CommandPalette({
   const paletteItems = showBulk ? bulkItems : items;
   const paletteCategories = showBulk
     ? bulkCategories
-    : destinationOnly
+    : navigationSearch
       ? categories.filter((category) => items.some((item) => item.filterCategory === category.id))
       : categories;
 
@@ -1370,6 +1378,9 @@ export function CommandPalette({
   // destination, bulk mode names the selection it acts on, and the usual
   // generic line applies otherwise (host override of the shell's own string).
   const paletteStrings = useMemo<PaletteStrings | undefined>(() => {
+    if (mobile && !showBulk) {
+      return { "search.placeholder": tNav("searchPlaceholder") };
+    }
     if (showBulk && bulkRequest) {
       return {
         "search.placeholder": tAction("bulkSearchPlaceholder", { count: bulkRequest.count }),
@@ -1379,7 +1390,7 @@ export function CommandPalette({
       return { "search.placeholder": tAction("newTabSearchPlaceholder") };
     }
     return undefined;
-  }, [showBulk, bulkRequest, destinationOnly, tAction]);
+  }, [showBulk, bulkRequest, destinationOnly, mobile, tNav, tAction]);
 
   return (
     <CommandPaletteShell
@@ -1387,7 +1398,7 @@ export function CommandPalette({
       onClose={() => onOpenChange(false)}
       items={paletteItems}
       categories={paletteCategories}
-      providers={destinationOnly ? [] : providers}
+      providers={navigationSearch && !showBulk ? [] : providers}
       locale={locale}
       strings={paletteStrings}
       // The page project is a BOOST of relevance, not a filter: its
@@ -1403,7 +1414,7 @@ export function CommandPalette({
         else toast(message);
       }}
       onHoverPrefetch={handleHoverPrefetch}
-quickAi={destinationOnly ? undefined : {
+      quickAi={navigationSearch ? undefined : {
         icon: <NumoActionIcon className="size-4" />,
         onSelect: (query) => {
           // Filled query → auto-sent to Numo; empty query → the panel just

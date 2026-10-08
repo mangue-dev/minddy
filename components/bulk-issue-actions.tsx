@@ -90,8 +90,8 @@ export function BulkIssueActions({
   // No `backdrop-blur`: `bg-background/95` already completely hides the background,
   // the blur was not visible and cost a composition layer (MIN-323).
   return (
-    <div className="fixed bottom-5 left-1/2 z-40 flex -translate-x-1/2 items-center gap-1 rounded-full border border-border bg-background/95 p-1.5 shadow-xl">
-      <span className="px-3 text-sm font-medium whitespace-nowrap">
+    <div data-bulk-issue-actions className="fixed bottom-5 app-mobile:bottom-[var(--mobile-nav-clearance)] left-1/2 z-40 flex -translate-x-1/2 items-center gap-1 rounded-full border border-border bg-background/95 p-1.5 shadow-xl app-mobile:max-w-[calc(100%-2rem)]">
+      <span className="min-w-0 px-3 text-sm font-medium whitespace-nowrap app-mobile:truncate app-mobile:px-1">
         {t("selected", { count })}
       </span>
       <Button

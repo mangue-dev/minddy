@@ -1,5 +1,8 @@
 "use client";
 
+import { useMobileLayout } from "@/lib/use-mobile-layout";
+
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/responsive-popover";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, BulbIcon, Cancel01Icon, Clock01Icon, CollapseIcon, ExpandIcon, Search01Icon, TaskEdit01Icon } from "@hugeicons/core-free-icons";
 import {
@@ -16,9 +19,6 @@ import { useTranslations } from "next-intl";
 import {
   Button,
   cn,
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
   Sheet,
   SheetContent,
   SheetTitle,
@@ -176,6 +176,7 @@ export const AssistantShell = forwardRef<
   const isExpanded = displayMode === "expanded";
   // Expanded mode keeps the conversation centered (mx-auto) but widens the
   // reading column to use more of the larger surface.
+  const mobile = useMobileLayout() === true;
   const convoMaxW = isExpanded ? "max-w-4xl" : "max-w-3xl";
   const t = useTranslations("Assistant");
   const tc = useTranslations("Common");
@@ -640,6 +641,7 @@ export const AssistantShell = forwardRef<
   const compactHeader = compact && !embeddedConversationId ? (
     <div
       ref={historyAnchorRef}
+      data-mobile-sheet-header
       className="flex shrink-0 items-center gap-1 px-4 py-4"
     >
       <Popover open={historyOpen} onOpenChange={setHistoryOpen}>
@@ -660,13 +662,14 @@ export const AssistantShell = forwardRef<
           </TooltipContent>
         </Tooltip>
         <PopoverContent
+          mobileTitle={t("conversations")}
           side="bottom"
           align="start"
           sideOffset={6}
           container={historyContainer}
           className="flex max-h-[360px] w-72 flex-col gap-0 overflow-hidden p-0"
         >
-          <div className="flex h-11 shrink-0 items-center border-b border-border px-3">
+          <div data-sheet-search className="flex h-11 shrink-0 items-center border-b border-border px-3">
             <SidebarFilterField {...sidebarFilter} />
           </div>
           <div className="scrollbar-quiet min-h-0 flex-1 overflow-y-auto p-1.5">
@@ -695,7 +698,7 @@ export const AssistantShell = forwardRef<
             <Button
               variant="ghost"
               size="icon-sm"
-              className="hidden md:inline-flex"
+              className="hidden app-desktop:inline-flex"
               aria-label={isExpanded ? t("collapse") : t("expand")}
               onClick={onToggleDisplayMode}
             >
@@ -738,6 +741,7 @@ export const AssistantShell = forwardRef<
             <Button
               variant="ghost"
               size="icon-sm"
+              data-mobile-sheet-close
               aria-label={tc("close")}
               onClick={onClose}
             >
@@ -773,6 +777,7 @@ export const AssistantShell = forwardRef<
           variant="ghost"
           size="icon-sm"
           className="absolute top-2 right-2"
+          data-mobile-sheet-close
           aria-label={tc("close")}
           onClick={onClose}
         >
@@ -809,7 +814,7 @@ export const AssistantShell = forwardRef<
       {/* Mobile sidebar sheet — only outside compact mode (compact uses Popover). */}
       {!compact && (
         <Sheet open={mobileSidebarOpen} onOpenChange={setMobileSidebarOpen}>
-          <SheetContent side="left" className="w-[280px] p-0 md:hidden">
+          <SheetContent side="left" className="w-[280px] p-0 app-desktop:hidden">
             <SheetTitle className="sr-only">{t("title")}</SheetTitle>
             <div className="flex h-full min-h-0 flex-col bg-sidebar">
               <div className="secondary-sidebar-header flex h-[var(--app-content-header-height)] shrink-0 items-center gap-2 border-b border-border px-4">
@@ -830,7 +835,7 @@ export const AssistantShell = forwardRef<
 
         {/* Mobile conversations toggle — non-compact only. */}
         {!compact && (
-          <div className="flex shrink-0 items-center gap-2 border-b border-border px-3 py-2 md:hidden">
+          <div className="flex shrink-0 items-center gap-2 border-b border-border px-3 py-2 app-desktop:hidden">
             <Button
               variant="ghost"
               size="sm"
@@ -876,8 +881,8 @@ export const AssistantShell = forwardRef<
                 <ConversationContent
                    className={
                      compact
-                       ? `mx-auto w-full ${convoMaxW} gap-6 p-4 md:p-4`
-                       : `mx-auto w-full ${convoMaxW} gap-6 p-4 md:p-6`
+                       ? `mx-auto w-full ${convoMaxW} gap-6 p-4 app-desktop:p-4`
+                       : `mx-auto w-full ${convoMaxW} gap-6 p-4 app-desktop:p-6`
                    }
                  >
                   {blocks.map((block) => {
@@ -1091,7 +1096,7 @@ export const AssistantShell = forwardRef<
                       {state.error}
                     </div>
                   ) : null}
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  {!mobile && <div className="hidden grid-cols-1 gap-3 app-desktop:grid app-desktop:grid-cols-2">
                     {STARTERS.map(({ key, icon: Icon, iconClassName }) => {
                       const title = t(`starter.${key}.title` as const);
                       const prompt = t(`starter.${key}.prompt` as const);
@@ -1112,7 +1117,7 @@ export const AssistantShell = forwardRef<
                         </Button>
                       );
                     })}
-                  </div>
+                  </div>}
                 </div>
               </div>
             )}
@@ -1123,7 +1128,7 @@ export const AssistantShell = forwardRef<
             <div
               className={cn(
                 `mx-auto w-full min-w-0 ${convoMaxW} shrink-0`,
-                compact ? "px-4" : "px-2 md:px-0",
+                compact ? "px-4" : "px-2 app-desktop:px-0",
                 "sticky bottom-0 pb-4",
               )}
             >

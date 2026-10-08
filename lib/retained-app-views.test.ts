@@ -9,7 +9,7 @@ import { isRetainedDestination, retainAppView, retainedAppViewKind } from "./ret
 import { useAppTabRoute } from "./app-tab-route-context";
 
 const state = vi.hoisted(() => ({
-  path: "/all", search: "", activeId: "board", activeHref: "/all",
+  path: "/all", search: "", activeId: "board", activeHref: "/all", mobile: false,
   tabs: [{ id: "board" }, { id: "pages" }, { id: "other" }, { id: "fourth" }],
 }));
 vi.mock("next/navigation", () => ({
@@ -21,6 +21,7 @@ vi.mock("./runtime-config-provider", () => ({ useRuntimeConfig: () => ({ siteNam
 vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key }));
 vi.mock("./app-tabs-context", () => ({
   useAppTabs: () => ({ tabs: state.tabs, activeId: state.activeId, session: state }),
+  useOptionalAppTabs: () => state.mobile ? null : ({ tabs: state.tabs, activeId: state.activeId, session: state }),
   AppTabNavigationScope: ({ children }: { children: React.ReactNode }) => children,
 }));
 vi.mock("@/components/board-loading-skeleton", () => ({ BoardLoadingSkeleton: () => null }));
@@ -46,12 +47,12 @@ function Board() {
 let root: Root;
 let container: HTMLDivElement;
 let client: QueryClient;
-const render = async () => { await act(() => root.render(createElement(QueryClientProvider, { client }, createElement(AppTabViewHost, { children: createElement("p", null, "Other screen") })))); };
+const render = async (children = createElement("p", null, "Other screen")) => { await act(() => root.render(createElement(QueryClientProvider, { client }, createElement(AppTabViewHost, { children })))); };
 
 beforeEach(() => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   Object.assign(state, {
-    path: "/all", search: "", activeId: "board", activeHref: "/all",
+    path: "/all", search: "", activeId: "board", activeHref: "/all", mobile: false,
     tabs: [{ id: "board" }, { id: "pages" }, { id: "other" }, { id: "fourth" }],
     getActiveHref: () => state.activeHref,
     getSnapshot: () => ({ activeId: state.activeId }),
@@ -72,6 +73,19 @@ afterEach(async () => {
 });
 
 describe("bounded retained board views", () => {
+  it("preserves ordinary route DOM and unfinished input across mobile and desktop layouts", async () => {
+    Object.assign(state, { path: "/home", activeHref: "/home" });
+    const children = createElement("input", { defaultValue: "" });
+    await render(children);
+    const input = container.querySelector("input")!;
+    input.value = "Unfinished home draft";
+    for (const mobile of [true, false, true]) {
+      state.mobile = mobile;
+      await render(children);
+      expect(container.querySelector("input")).toBe(input);
+      expect(input.value).toBe("Unfinished home draft");
+    }
+  });
   it("does not evict frequent boards for an unmounted large PR diff", async () => {
     state.tabs = Array.from({ length: 12 }, (_, index) => ({ id: `t${index}` }));
     client.setQueryData(["me", "board"], { issues: Array(600).fill({}) });

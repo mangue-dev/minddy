@@ -1,5 +1,6 @@
 "use client";
 
+import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Copy01Icon, GlobeIcon, Key02Icon, Mail01Icon, Plug01Icon, CheckIcon } from "@hugeicons/core-free-icons";
 import type { IconSvgElement } from "@hugeicons/react";
@@ -453,7 +454,7 @@ export function FeedbackSetupWizard({
         <div className="flex flex-col gap-3">
           <div className="relative">
             <Textarea
-              autoFocus
+              autoFocus={allowInputAutoFocus()}
               value={placement}
               onChange={(e) => setPlacement(e.target.value)}
               placeholder={t("feedbackWizardPlacementPlaceholder")}

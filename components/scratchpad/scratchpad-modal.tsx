@@ -1,15 +1,13 @@
 "use client";
 
+import { useMobileLayout } from "@/lib/use-mobile-layout";
+
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Cancel01Icon, Copy01Icon, Delete02Icon, MoreHorizontalIcon, CheckIcon } from "@hugeicons/core-free-icons";
 import { useEffect, useRef, useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import {
   Button,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -18,6 +16,7 @@ import {
   Spinner,
   toast,
 } from "mangue-ui";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { NumoIcon } from "@/components/numo-icon";
 import { buildScratchpadPrompt } from "@/lib/scratchpad-prompt";
 import { resolvePromptCopyAutoStart } from "@/lib/prompt-copy-auto-start";
@@ -43,13 +42,14 @@ import {
  * ready-to-paste agent prompt.
  */
 export function ScratchpadModal() {
+  const mobile = useMobileLayout() === true;
   const { isOpen, setOpen } = useScratchpad();
   const t = useTranslations("Scratchpad");
 
   return (
     <Dialog open={isOpen} onOpenChange={setOpen}>
       <DialogContent
-        showCloseButton={false}
+        showCloseButton={mobile}
         // The `/` menu is portaled to <body> so the window, not the note's
         // scroll box, bounds it — which makes Radix read a click in it as a
         // click outside the dialog. Keep the notebook open for those.
@@ -198,7 +198,7 @@ function ScratchpadBody() {
         </div>
       )}
 
-      <div className="absolute top-3.5 right-3.5 z-30 flex items-center gap-1">
+      <div data-mobile-sheet-toolbar className="absolute top-3.5 right-3.5 z-30 flex items-center gap-1">
         {!isLoading && (
           <DropdownMenu>
             <Tooltip>
@@ -238,6 +238,7 @@ function ScratchpadBody() {
             <Button
               variant="ghost"
               size="icon-sm"
+              data-mobile-sheet-close-legacy
               aria-label={t("close")}
               onClick={() => setOpen(false)}
               className="rounded-full text-muted-foreground hover:text-foreground"

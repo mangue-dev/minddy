@@ -1,7 +1,9 @@
 "use client";
-import { createContext, Suspense, useContext, useEffect, useMemo, useRef, useSyncExternalStore, type ReactNode } from "react";
+import { MobileNavigationContext, useMobileNavigation } from "./mobile-navigation-context";
+import { useMobileLayout } from "./use-mobile-layout";
+import { createContext, Suspense, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { useAuth } from "./auth-context";
 import { createAppTab, deleteAppTab, patchAppTab, moveAppTab } from "./app-tabs-api";
 import { AppTabsSession, type AppTabsSnapshot } from "./app-tabs-session";
@@ -28,34 +30,98 @@ const Context = createContext<AppTabsValue | null>(null);
 // dependency cycle through this provider.
 const SessionContext = createContext<AppTabsSession | null>(null);
 
+const emptySnapshot = () => null;
+const noSubscription = () => () => {};
+type QueryState = { session: AppTabsSession; loading: boolean; loadError: boolean; reload: () => void };
+
 export function AppTabsProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
-  return user ? <AccountTabs key={user.id} owner={user.id}>{children}</AccountTabs> : children;
+  const mobile = useMobileLayout();
+  const client = useQueryClient();
+  const router = useRouter();
+  const previous = useRef<{ owner: string; mobile: boolean } | null>(null);
+  const freshSession = !previous.current || previous.current.owner !== user?.id;
+  const resumeAtCurrentRoute = !freshSession && previous.current?.mobile === true;
+  const owner = user?.id;
+  const desktop = mobile === false && !!owner;
+  // Only the desktop controller owns account queries, restoration and writes.
+  const session = useMemo(() => desktop && owner ? createAccountSession(owner, client) : null, [desktop, owner, client]);
+  const snapshot = useSyncExternalStore(session?.subscribe ?? noSubscription, session?.getSnapshot ?? emptySnapshot, session?.getSnapshot ?? emptySnapshot);
+  const [queryState, setQueryState] = useState<QueryState | null>(null);
+  const mobileNavigation = useMemo(() => {
+    const guards = new Set<() => Promise<boolean>>();
+    let pending = false;
+    return {
+      registerDeparture: (guard: () => Promise<boolean>) => { guards.add(guard); return () => { guards.delete(guard); }; },
+      open: (navigate: () => void) => {
+        if (pending) return;
+        pending = true;
+        void (async () => {
+          try {
+            for (const guard of guards) if (!(await guard())) return;
+            navigate();
+          } catch (error) { console.error("Unable to save before navigation", error); }
+          finally { pending = false; }
+        })();
+      },
+    };
+  }, [user?.id]);
+  useEffect(() => {
+    if (!user) { previous.current = null; return; }
+    if (mobile === undefined) return;
+    const navigation = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming | undefined;
+    // Reload-to-Home belongs to a fresh mobile session, never a rotation.
+    if (mobile && freshSession && navigation?.type === "reload" && window.location.pathname !== "/home") router.replace("/home");
+    previous.current = { owner: user.id, mobile };
+  }, [user, mobile, freshSession, router]);
+  const value = useMemo(() => session && snapshot ? {
+    ...snapshot, session,
+    loading: queryState?.session === session ? queryState.loading : true,
+    loadError: queryState?.session === session ? queryState.loadError : false,
+    reload: queryState?.session === session ? queryState.reload : () => {},
+  } : null, [session, snapshot, queryState]);
+  const navigation = useMemo(() => session ? { session, activeId: snapshot?.activeId ?? null } : null, [session, snapshot?.activeId]);
+  // Keep the provider topology and descendant drafts stable across layout changes.
+  return <SessionContext.Provider key={owner ?? "signed-out"} value={session}><NavigationContext.Provider value={navigation}>
+    <Context.Provider value={value}><MobileNavigationContext.Provider value={owner && mobile === true ? mobileNavigation : null}>
+      {session && owner ? <AccountTabSync key={owner} owner={owner} session={session} resumeAtCurrentRoute={resumeAtCurrentRoute} onQueryState={setQueryState} /> : null}
+      {session ? <PrBackgroundSync /> : null}
+      {session ? <Suspense fallback={null}><AppTabRouteSync /></Suspense> : null}
+      {children}
+    </MobileNavigationContext.Provider></Context.Provider>
+  </NavigationContext.Provider></SessionContext.Provider>;
 }
 
-function AccountTabs({ owner, children }: { owner: string; children: ReactNode }) {
+function createAccountSession(owner: string, client: QueryClient) {
+  const key = appTabsQueryKey(owner);
+  const abort = new AbortController();
+  async function write<T>(operation: () => Promise<T>): Promise<T> {
+    await client.cancelQueries({ queryKey: key });
+    try { return await operation(); }
+    finally { void client.invalidateQueries({ queryKey: key }); }
+  }
+  const controller = new AppTabsSession(owner, {
+    create: (ensure, id) => write(() => createAppTab(ensure, id, abort.signal)),
+    patch: (tab, patch) => write(() => patchAppTab(tab, patch, abort.signal)),
+    close: (tab) => write(() => deleteAppTab(tab, abort.signal)),
+    move: (tab, beforeId) => write(() => moveAppTab(tab, beforeId, abort.signal)),
+  });
+  controller.onDispose = () => abort.abort();
+  return controller;
+}
+
+function AccountTabSync({ owner, session, resumeAtCurrentRoute, onQueryState }: {
+  owner: string; session: AppTabsSession; resumeAtCurrentRoute: boolean;
+  onQueryState: (state: QueryState) => void;
+}) {
+  const keepCurrentRoute = useRef(resumeAtCurrentRoute).current;
   const client = useQueryClient();
   const router = useRouter();
   const query = useAppTabsQuery(owner);
   const storageKey = appTabsStorageKey(owner);
-  const session = useMemo(() => {
-    const key = appTabsQueryKey(owner);
-    const abort = new AbortController();
-    async function write<T>(operation: () => Promise<T>): Promise<T> {
-      await client.cancelQueries({ queryKey: key });
-      try { return await operation(); }
-      finally { void client.invalidateQueries({ queryKey: key }); }
-    }
-    const controller = new AppTabsSession(owner, {
-      create: (ensure, id) => write(() => createAppTab(ensure, id, abort.signal)),
-      patch: (tab, patch) => write(() => patchAppTab(tab, patch, abort.signal)),
-      close: (tab) => write(() => deleteAppTab(tab, abort.signal)),
-      move: (tab, beforeId) => write(() => moveAppTab(tab, beforeId, abort.signal)),
-    });
-    controller.onDispose = () => abort.abort();
-    return controller;
-  }, [owner, client]);
-  const snapshot = useSyncExternalStore(session.subscribe, session.getSnapshot, session.getSnapshot);
+  useLayoutEffect(() => {
+    onQueryState({ session, loading: query.isPending, loadError: query.isError, reload: () => { void query.refetch(); } });
+  }, [session, query.isPending, query.isError, query.refetch, onQueryState]);
   const mounted = useRef(false);
   useEffect(() => {
     const preparation = createPrTabPreparation(client);
@@ -113,17 +179,19 @@ function AccountTabs({ owner, children }: { owner: string; children: ReactNode }
     void (async () => {
       let restored: { id: string; href: string } | undefined;
       try {
-        const raw = JSON.parse(sessionStorage.getItem(storageKey) ?? "null");
-        if (raw?.format !== "minddy-local-v1") removeLocalSnapshot(sessionStorage, storageKey);
-        else {
-          const value = await restoreLocalSnapshot(sessionStorage, storageKey, "window-tabs");
-          if (value && typeof value === "object" && "id" in value && "href" in value && typeof value.id === "string" && typeof value.href === "string") restored = { id: value.id, href: value.href };
+        if (!keepCurrentRoute) {
+          const raw = JSON.parse(sessionStorage.getItem(storageKey) ?? "null");
+          if (raw?.format !== "minddy-local-v1") removeLocalSnapshot(sessionStorage, storageKey);
+          else {
+            const value = await restoreLocalSnapshot(sessionStorage, storageKey, "window-tabs");
+            if (value && typeof value === "object" && "id" in value && "href" in value && typeof value.id === "string" && typeof value.href === "string") restored = { id: value.id, href: value.href };
+          }
         }
       } catch { /* Server-backed tab destinations remain available. */ }
-      if (!cancelled) await session.initialize(window.location.pathname + window.location.search + window.location.hash, restored);
+      if (!cancelled) await session.initialize(window.location.pathname + window.location.search + window.location.hash, restored, keepCurrentRoute);
     })();
     return () => { cancelled = true; };
-  }, [query.data, session, storageKey]);
+  }, [query.data, session, storageKey, keepCurrentRoute]);
   // A refresh hides the page first: push the pending location write out
   // immediately, or the next load restores a destination the session outgrew.
   useEffect(() => {
@@ -138,14 +206,7 @@ function AccountTabs({ owner, children }: { owner: string; children: ReactNode }
       document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [session]);
-  const value = useMemo(() => ({ ...snapshot, session, loading: query.isPending,
-    loadError: query.isError, reload: () => { void query.refetch(); } }), [snapshot, session, query.isPending, query.isError, query.refetch]);
-  const navigation = useMemo(() => ({ session, activeId: snapshot.activeId }), [session, snapshot.activeId]);
-  return <SessionContext.Provider value={session}><NavigationContext.Provider value={navigation}><Context.Provider value={value}>
-    <PrBackgroundSync />
-    <Suspense fallback={null}><AppTabRouteSync /></Suspense>
-    {children}
-  </Context.Provider></NavigationContext.Provider></SessionContext.Provider>;
+  return null;
 }
 
 export const useOptionalAppTabs = () => useContext(Context);
@@ -167,5 +228,6 @@ export function useAppTabs() {
 /** Every mounted editor, including database previews, participates in departure. */
 export function useAppTabDeparture(guard: () => Promise<boolean>) {
   const session = useOptionalAppTabSession();
-  useEffect(() => session?.registerDeparture(guard), [session, guard]);
+  const mobile = useMobileNavigation();
+  useEffect(() => session?.registerDeparture(guard) ?? mobile?.registerDeparture(guard), [session, mobile, guard]);
 }

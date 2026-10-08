@@ -1,30 +1,18 @@
 "use client";
 
+import { CommandList } from "@/components/ui/command";
+
+import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, AttachmentIcon, Cancel01Icon, File02Icon, Link02Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useRef, useState } from "react";
 import Link from "@/components/app-link";
 import { useLocale, useTranslations } from "next-intl";
 import {
-  Button,
-  CommandDialog,
-  CommandEmpty,
-  CommandInput,
-  CommandItem,
-  CommandList,
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  Input,
-  Spinner,
-  cn,
+  Button, Command, CommandEmpty, CommandInput, CommandItem, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+  Input, Spinner, cn,
 } from "mangue-ui";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { EntityPill, type PillRadius } from "@/components/entity-pill";
 import { ResourceTypeIcon } from "@/components/resource-type-icon";
 import {
@@ -268,30 +256,25 @@ export function AddPageDialog({
 }) {
   const t = useTranslations("Resources");
   return (
-    <CommandDialog
-      open={open}
-      onOpenChange={onOpenChange}
-      title={t("pageDialogTitle")}
-      description={t("pageSearchPlaceholder")}
-      className="sm:max-w-lg"
-    >
-      <CommandInput placeholder={t("pageSearchPlaceholder")} />
-      {/* The search field is placed in a `p-1 pb-0`: the list takes the
- SAME indentation (4px) on each side - otherwise the options bite an edge
- that the field respects - and its `pt` makes the gutter that was missing
- between the two. */}
-      <CommandList className="p-1">
-        {open && (
-          <PageOptions
-            projectId={projectId}
-            onSelect={(page) => {
-              onOpenChange(false);
-              onSelect(page);
-            }}
-          />
-        )}
-      </CommandList>
-    </CommandDialog>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-lg" aria-describedby={undefined}>
+        <DialogTitle className="sr-only">{t("pageDialogTitle")}</DialogTitle>
+        <Command>
+          <CommandInput placeholder={t("pageSearchPlaceholder")} />
+          <CommandList className="p-1">
+            {open && (
+              <PageOptions
+                projectId={projectId}
+                onSelect={(page) => {
+                  onOpenChange(false);
+                  onSelect(page);
+                }}
+              />
+            )}
+          </CommandList>
+        </Command>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -412,7 +395,7 @@ export function AddLinkDialog({
  `normalizeWebUrl` is there to complete. `inputMode` is enough to get
  to get the URL keyboard on mobile, without native validation. */}
           <Input
-            autoFocus
+            autoFocus={allowInputAutoFocus()}
             type="text"
             inputMode="url"
             autoComplete="off"

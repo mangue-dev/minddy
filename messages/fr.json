@@ -1312,6 +1312,8 @@
     "desktopBannerText": "Téléchargez l'app de bureau pour aller plus loin",
     "desktopBannerCta": "Télécharger",
     "desktopBannerDismiss": "Ne plus afficher",
+    "pwaInstallHint": "Installer minddy sur cet appareil",
+    "pwaInstallTitle": "Installer minddy",
     "tips": {
       "palette": "Recherchez un écran ou un ticket et lancez une action depuis la palette de commandes.",
       "cheatsheet": "Affichez tous les raccourcis clavier au même endroit.",
@@ -1789,7 +1791,7 @@
     "version": "Version",
     "webVersion": "Version web",
     "appVersion": "Version de l'application",
-    "viewFullChangelog": "Voir le changelog complet",
+    "viewFullChangelog": "Voir le changelog entier",
     "account": "Compte",
     "appearance": "Apparence",
     "hideSidebar": "Masquer la sidebar",

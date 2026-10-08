@@ -179,9 +179,9 @@ describe("cibles de toucher", () => {
     expect(css).toContain("min-height: 44px;");
   });
 
-  it("les options de dropdown redeviennent compactes dès 768 px", () => {
+  it("keeps dropdown options compact in desktop layout", () => {
     const css = read(GLOBALS);
-    expect(css).toContain("@media (width >= 768px)");
+    expect(css).toContain(':root[data-app-layout="desktop"]');
     expect(css).toContain('[data-slot="dropdown-menu-item"]');
     expect(css).toContain("padding-block: 0.375rem !important;");
     // The dependency keeps its touch setting until 1200 px, so the override

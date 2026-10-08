@@ -1,5 +1,7 @@
 "use client";
 
+import { useMobileCollectionState } from "@/lib/mobile-collection-state";
+
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, Calendar01Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useMemo, useState } from "react";
@@ -8,7 +10,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button, Skeleton, cn } from "mangue-ui";
 import { EmptyScene } from "@/components/empty-scene";
-import { SecondarySidebar } from "@/components/secondary-sidebar";
+import { CollectionSidebar, type SidebarBrowseTarget } from "@/components/secondary-sidebar";
 import { matchesFilter } from "@/components/sidebar-filter-field";
 import {
   PROJECT_GROUP_INDENT,
@@ -65,13 +67,11 @@ const CreateRoutineWizard = dynamic(
 export function RoutinesPanel({
   selectedId,
   onSelect,
-  mobileDetail,
-  onBack,
+  browse,
 }: {
+  browse?: SidebarBrowseTarget;
   selectedId: string | null;
   onSelect: (routineId: string | null) => void;
-  mobileDetail: boolean;
-  onBack: () => void;
 }) {
   const t = useTranslations("Routines");
   const tCommon = useTranslations("Common");
@@ -88,8 +88,8 @@ export function RoutinesPanel({
   const [wizardProjectId, setWizardProjectId] = useState<string | null>(null);
   const [wizardOpen, setWizardOpen] = useState(false);
   const [wizardMounted, setWizardMounted] = useState(false);
-  const [query, setQuery] = useState("");
-  const [collapsedGroups, setCollapsedGroups] = useState<ReadonlySet<string>>(
+  const [query, setQuery] = useMobileCollectionState("/routines", "query", "");
+  const [collapsedGroups, setCollapsedGroups] = useMobileCollectionState<ReadonlySet<string>>("/routines", "collapsedGroups",
     () => new Set(),
   );
 
@@ -97,7 +97,7 @@ export function RoutinesPanel({
   // selection (or first "+"). An idle tab is the cheapest moment to pull
   // them: the first routine click then paints without a chunk wait.
   useEffect(() => {
-    if (selectedId) return;
+    if (browse || selectedId) return;
     const warm = () => {
       void import("@/components/routines/routine-detail");
       void import("@/components/routines/create-routine-wizard");
@@ -108,7 +108,7 @@ export function RoutinesPanel({
     }
     const timer = setTimeout(warm, 2000);
     return () => clearTimeout(timer);
-  }, [selectedId]);
+  }, [selectedId, browse]);
 
   const projectById = useMemo(
     () => new Map(projects.map((p) => [p.id, p])),
@@ -220,7 +220,7 @@ export function RoutinesPanel({
  * to announce.
  */
   useAssistantContext(
-    selected
+    !browse && selected
       ? {
           projectId: selected.project_id,
           routineId: selected.id,
@@ -370,11 +370,10 @@ export function RoutinesPanel({
     </div>
   );
 
-  return (
-    <>
-      <SecondarySidebar
+  const sidebar = (
+      <CollectionSidebar browse={browse}
         title={t("title")}
-        hiddenOnMobile={mobileDetail}
+        hiddenOnMobile
         filter={{
           value: query,
           onChange: setQuery,
@@ -404,13 +403,29 @@ export function RoutinesPanel({
         }
       >
         {list}
-      </SecondarySidebar>
+      </CollectionSidebar>
+  );
+
+  const wizard = wizardMounted ? (
+        <CreateRoutineWizard
+          open={wizardOpen}
+          onOpenChange={setWizardOpen}
+          initialProjectId={wizardProjectId}
+          onCreated={(routine) => {
+            void refresh();
+            onSelect(routine.id);
+          }}
+        />
+      ) : null;
+
+  if (browse) return <>{sidebar}{wizard}</>;
+
+  return (
+    <>
+      {sidebar}
 
       <div
-        className={cn(
-          "min-h-0 min-w-0 flex-1 flex-col md:flex",
-          mobileDetail ? "flex" : "hidden",
-        )}
+        className="flex min-h-0 min-w-0 flex-1 flex-col"
       >
         {selected ? (
           <RoutineDetail
@@ -418,7 +433,6 @@ export function RoutinesPanel({
             routine={selected}
             project={projectById.get(selected.project_id) ?? null}
             isOwner={selectedIsOwner}
-            onBack={onBack}
             onChanged={() => void refresh()}
             onDeleted={() => {
               onSelect(null);
@@ -460,17 +474,7 @@ export function RoutinesPanel({
         )}
       </div>
 
-      {wizardMounted ? (
-        <CreateRoutineWizard
-          open={wizardOpen}
-          onOpenChange={setWizardOpen}
-          initialProjectId={wizardProjectId}
-          onCreated={(routine) => {
-            void refresh();
-            onSelect(routine.id);
-          }}
-        />
-      ) : null}
+      {wizard}
     </>
   );
 }

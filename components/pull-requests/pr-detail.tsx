@@ -1,4 +1,5 @@
 "use client";
+import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 import { PrLinkedIssues, linkedIssues } from "./pr-linked-issues";
 
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -8,11 +9,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import {
   Button,
-  Checkbox,  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
+  Checkbox,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -27,6 +24,7 @@ import {
   cn,
   toast,
 } from "mangue-ui";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ForgeUserAvatar } from "@/components/git/forge-user-avatar";
 import { AppContentHeader } from "@/components/app-content-header";
 import { BotBadge, GitLogin } from "@/components/git/git-login";
@@ -488,7 +486,7 @@ export function ThreadComment({
             posting={saving}
             placeholder={t(isDescription ? "editDescriptionPlaceholder" : "editCommentPlaceholder")}
             submitLabel={t("saveChanges")}
-            autoFocus
+            autoFocus={allowInputAutoFocus()}
           />
         ) : (
           <Markdown
@@ -624,14 +622,12 @@ function readNumoMergeMarker(): NumoMergeMarker | null {
 
 export function PrDetail({
   item,
-  onBack,
   onRefetchList,
   onOptimisticStateChange,
   onStateChange,
   onOpenIssue,
 }: {
   item: PullRequestListItem;
-  onBack: () => void;
   onRefetchList: () => void;
   /** Patches the sidebar upon clicking and renders a restoration if the forge refuses. */
   onOptimisticStateChange: (
@@ -1716,7 +1712,7 @@ export function PrDetail({
   ]);
 
   const mobileStatusActions = <>
-    <DropdownMenuSeparator className="md:hidden" />
+    <DropdownMenuSeparator className="app-desktop:hidden" />
     <PrStateControl inMenu state={badgeState} canChange={!!canWrite}
       disabled={!!acting || isWorking || readState !== "fresh"}
       onChange={(state) => setConfirmAction({ kind: "state", state })} />
@@ -1745,16 +1741,12 @@ export function PrDetail({
         <div className="flex h-full flex-col items-center justify-center gap-3 text-sm text-muted-foreground" role="alert">
           <p>{t(readState === "error" ? "readFailed" : "readPaused")}</p>
           <Button variant="ghost" size="sm" onClick={() => void refetchPr()}>{t("readRetry")}</Button>
-          <Button variant="ghost" size="sm" onClick={onBack}>{t("backToList")}</Button>
         </div>
       ) : <div className="flex h-full min-h-0 flex-col">
         <AppContentHeader>
-          <Button variant="ghost" size="icon-sm" aria-label={t("backToList")} className="md:hidden" onClick={onBack}>
-            <HugeiconsIcon icon={ArrowLeft01Icon} />
-          </Button>
           <PrHeaderActionsSkeleton />
         </AppContentHeader>
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 md:px-6">
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 app-desktop:px-6">
           <div data-testid="pr-detail-loading-content" className="mx-auto flex w-full max-w-3xl flex-col gap-6 py-6" aria-hidden>
             <PrMetadataSkeleton />
             <PrStatusSkeleton />
@@ -1764,20 +1756,11 @@ export function PrDetail({
       </div>
     }>
     <div className="flex h-full min-h-0 flex-col">
-      {/* Header: back (mobile) · identifier · actions */}
+      {/* Header: identifier · actions */}
       {/* Header WITHOUT border: it's the fade of the thread that says it continues
           above, and a separate bar would cut it off from what it covers (even
           party than the agent conversation). */}
       <AppContentHeader contentClassName="gap-2">
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label={t("backToList")}
-          className="md:hidden"
-          onClick={onBack}
-        >
-          <HugeiconsIcon icon={ArrowLeft01Icon} />
-        </Button>
         {/* The project orb opens the header, like that of a conversation
             the agent: the column no longer says the project line by line (it is
             written once, on the header of his accordion), and the detail is
@@ -1835,7 +1818,7 @@ export function PrDetail({
         </span>
         {/* Background merge work appears in the insight rows across navigation. */}
         {isWorking ? (
-          <span className="hidden items-center gap-1.5 text-xs text-muted-foreground md:inline-flex">
+          <span className="hidden items-center gap-1.5 text-xs text-muted-foreground app-desktop:inline-flex">
             <Spinner />
             {t("numoWorking")}
           </span>
@@ -1889,7 +1872,7 @@ export function PrDetail({
                 {mobileStatusActions}
               </DropdownMenuContent>
             </DropdownMenu>
-            <div className="hidden md:block">
+            <div className="hidden app-desktop:block">
               <PrStateControl state={badgeState} canChange={!!canWrite} disabled={!!acting || isWorking || readState !== "fresh"}
                 onChange={(state) => setConfirmAction({ kind: "state", state })} />
             </div>
@@ -2007,7 +1990,7 @@ export function PrDetail({
             {/* Open state and merge state read side by side, AFTER the more
                 menu: first what we can do, then what the PR is, then what
                 still stands between it and the merge. */}
-            <div className="hidden md:block">
+            <div className="hidden app-desktop:block">
               <PrStateControl state={badgeState} canChange={!!canWrite} disabled={!!acting || isWorking || readState !== "fresh"}
                 onChange={(state) => setConfirmAction({ kind: "state", state })} />
             </div>
@@ -2022,7 +2005,7 @@ export function PrDetail({
                   }
                 }}
                 position={readinessPosition}
-                triggerClassName="hidden md:inline-flex"
+                triggerClassName="hidden app-desktop:inline-flex"
                 readiness={effectiveReadiness}
                 providerName={REPO_PROVIDERS[item.provider].displayName}
                 canAct={canActOnBlocker}
@@ -2040,7 +2023,7 @@ export function PrDetail({
                 onOpenChecks={() => setChecksDetailsOpen(true)}
               />
             ) : (
-              <PrReadinessBadge readiness={null} className="hidden md:inline-flex" />
+              <PrReadinessBadge readiness={null} className="hidden app-desktop:inline-flex" />
             )}
           </div>
         )}
@@ -2072,7 +2055,7 @@ export function PrDetail({
           // scrolling, not on its edge — a `py-6` here stopped the header from
           // 24 px file too low, and `scroll-padding-top: 0` changes nothing.
           // When lowered, it scrolls with the content and the header sticks to the banner.
-          className="h-full overflow-y-auto px-4 md:px-6"
+          className="h-full overflow-y-auto px-4 app-desktop:px-6"
         >
         <div className="mx-auto flex max-w-3xl flex-col gap-6 py-6">
           {/* PR title + meta. The TITLE of the pull request, not that of the
@@ -2453,7 +2436,7 @@ export function PrDetail({
             variant="ghost"
             size="icon-sm"
             aria-label={t("scrollToTop")}
-            className="absolute bottom-4 right-4 z-20 rounded-full border border-border bg-card text-muted-foreground shadow-md hover:text-foreground md:right-6"
+            className="absolute bottom-4 right-4 z-20 hidden rounded-full border border-border bg-card text-muted-foreground shadow-md hover:text-foreground app-desktop:inline-flex app-desktop:right-6"
             onClick={() =>
               scrollContainerRef.current?.scrollTo({ top: 0, behavior: "smooth" })
             }
@@ -2475,7 +2458,7 @@ export function PrDetail({
             value={titleDraft}
             onChange={(event) => setTitleDraft(event.target.value)}
             maxLength={256}
-            autoFocus
+            autoFocus={allowInputAutoFocus()}
             className="h-9 w-full rounded-md bg-control px-3 text-sm outline-none focus-visible:bg-control-hover"
             onKeyDown={(event) => {
               if (event.key === "Enter" && titleDraft.trim()) void saveTitle();
@@ -2841,7 +2824,7 @@ export function PrDetail({
                     : "reviewPlaceholder",
               )}
               rows={reviewMode === "findings" ? 5 : 4}
-              autoFocus
+              autoFocus={allowInputAutoFocus()}
               // Height-capped like the merge dialog's commit message: the
               // base `field-sizing-content` would grow the box with the
               // message until it dwarfed the dialog — past the cap the box

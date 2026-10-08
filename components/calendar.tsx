@@ -1,6 +1,6 @@
 "use client";
 
-// Themed calendar built on react-day-picker v9. Self-contained (no external
+// Themed calendar built on react-day-picker. Self-contained (no external
 // stylesheet): every part is styled with mangue-ui design tokens so it matches
 // the app in light and dark, and reads cleanly on desktop and mobile.
 
@@ -26,6 +26,7 @@ export function Calendar({
   const defaults = getDefaultClassNames();
   return (
     <DayPicker
+      data-calendar=""
       showOutsideDays={showOutsideDays}
       className={cn("w-fit", className)}
       classNames={{
@@ -92,10 +93,7 @@ function CalendarDayButton({
 
   const selected = modifiers.selected;
   const today = modifiers.today && !selected;
-  // Home edit, generic: a REPORTED day, indented from the day
-  // selected. The due date picker uses this to show the next
-  // occurrences of a recurring ticket (MIN-136) — we see at a glance on
-  // on which days the ticket will drop.
+  // Show upcoming occurrences of a recurring ticket without replacing selection.
   const highlighted = modifiers.highlighted && !selected;
 
   return (

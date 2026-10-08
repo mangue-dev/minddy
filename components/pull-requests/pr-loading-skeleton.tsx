@@ -129,8 +129,8 @@ export function PrStatusSkeleton() {
 export function PrHeaderActionsSkeleton() {
   return (
     <div aria-hidden className="ml-auto flex gap-2">
-      <Skeleton className="size-8 rounded-full md:w-16" />
-      <Skeleton className="hidden h-8 w-28 rounded-full md:block" />
+      <Skeleton className="size-8 rounded-full app-desktop:w-16" />
+      <Skeleton className="hidden h-8 w-28 rounded-full app-desktop:block" />
     </div>
   );
 }
@@ -144,7 +144,7 @@ export function PrDetailSkeleton() {
         <Skeleton aria-hidden className="h-4 w-24" />
         <PrHeaderActionsSkeleton />
       </AppContentHeader>
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 md:px-6">
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 app-desktop:px-6">
         <div className="mx-auto flex max-w-3xl flex-col gap-6 py-6">
           <PrMetadataSkeleton />
           <PrStatusSkeleton />
@@ -161,10 +161,10 @@ export function PrDetailSkeleton() {
 export function PullRequestsSkeleton() {
   return (
     <div aria-busy="true" className="flex h-full min-h-0">
-      <SecondarySidebar actions={<Skeleton aria-hidden className="h-7 w-full" />}>
+      <SecondarySidebar hiddenOnMobile actions={<Skeleton aria-hidden className="h-7 w-full" />}>
         <PrListSkeleton />
       </SecondarySidebar>
-      <div className="hidden min-h-0 min-w-0 flex-1 md:flex">
+      <div className="flex min-h-0 min-w-0 flex-1">
         <PrDetailSkeleton />
       </div>
     </div>

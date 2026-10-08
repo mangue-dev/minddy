@@ -9,6 +9,9 @@
 
 "use client";
 
+import { useMobileLayout } from "@/lib/use-mobile-layout";
+import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
+
 import React, { useCallback, useEffect, useRef, type ReactNode } from "react";
 import { Kbd } from "@/components/ui/kbd";
 import { usePaletteConfig } from "../config";
@@ -81,13 +84,14 @@ export function SearchBar({
   onHistoryNavigate,
   disableHistoryOnArrowUp = false,
 }: SearchBarProps) {
+  const mobile = useMobileLayout() === true;
   const { t, categories } = usePaletteConfig();
   const internalInputRef = useRef<HTMLInputElement>(null);
   const inputRef = externalInputRef ?? internalInputRef;
 
   // Focus input on mount if autoFocus is true
   useEffect(() => {
-    if (autoFocus && inputRef.current) {
+    if (autoFocus && allowInputAutoFocus() && inputRef.current) {
       // Small delay to ensure the menu animation has started
       const timer = setTimeout(() => {
         inputRef.current?.focus();
@@ -183,7 +187,7 @@ export function SearchBar({
         <div className={styles.historyBadge}>{t("search.historyMode")}</div>
       )}
 
-      {quickAi && historyIndex < 0 && (
+      {!mobile && quickAi && historyIndex < 0 && (
         <button
           type="button"
           className={styles.quickAiButton}
@@ -195,7 +199,7 @@ export function SearchBar({
         </button>
       )}
 
-      {value.length > 0 && onTab && tabHint && historyIndex < 0 && (
+      {!mobile && value.length > 0 && onTab && tabHint && historyIndex < 0 && (
         <div className={styles.tabHint}>
           <Kbd>Tab</Kbd>
           <span className={styles.tabLabel}>{tabHint}</span>

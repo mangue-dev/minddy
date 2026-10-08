@@ -9,7 +9,9 @@ import {
 import { useCallback, useState } from "react";
 import Link from "@/components/app-link";
 import { useTranslations } from "next-intl";
-import { Button, Popover, PopoverContent, PopoverTrigger, cn } from "mangue-ui";
+import { Button, cn } from "mangue-ui";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/responsive-popover";
+import { MobileSheetScrollArea } from "@/components/ui/mobile-sheet";
 import { type BillingPlanId } from "@/lib/billing-plans";
 import {
   roundRemainingPercent,
@@ -107,9 +109,12 @@ export function UsageIndicator({
         align="end"
         sideOffset={8}
         collisionPadding={sidebar ? 10 : 8}
+        mobileTitle={t("usageAria")}
         className="w-80 max-w-[calc(100vw-1.25rem)] p-0"
       >
-        <UsageBreakdownBody compact />
+        <MobileSheetScrollArea>
+          <UsageBreakdownBody compact />
+        </MobileSheetScrollArea>
         <UsageFooter onNavigate={() => handleOpenChange(false)} />
       </PopoverContent>
     </Popover>
@@ -157,7 +162,7 @@ function UsageFooter({ onNavigate }: { onNavigate?: () => void }) {
   }, [nextPlanId, redirecting, status?.subscription]);
 
   return (
-    <div className="space-y-1 p-2">
+    <div className="shrink-0 space-y-1 p-2">
       {canUpgrade && nextPlanId && (
         <Button
           type="button"

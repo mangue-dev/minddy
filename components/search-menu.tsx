@@ -1,29 +1,18 @@
 "use client";
 
-// The single shared shell for every searchable dropdown built on cmdk: the
-// field pickers (search-select.tsx, trigger-anchored) and the pointer-anchored
-// menus (command-anchor.tsx — field shortcuts, relation target picker). A cmdk
-// <Command> inside a Popover, anchored either to a trigger element or to a
-// viewport position. The search field (icon + plain input + separator) is the
-// same one the right-click context menu uses (see DropdownSearchRow), so all
-// searchable dropdowns share one look.
+import { CommandList } from "@/components/ui/command";
 
+// Shared searchable menu: anchored popover on desktop, modal bottom sheet on
+// mobile. Field and pointer-anchored pickers share filtering and option state.
+
+import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Search01Icon } from "@hugeicons/core-free-icons";
 import * as React from "react";
 import { useTranslations } from "next-intl";
 import { Command as CommandPrimitive } from "cmdk";
-import {
-  Command,
-  CommandEmpty,
-  CommandList,
-  CommandSeparator,
-  Popover,
-  PopoverAnchor,
-  PopoverContent,
-  PopoverTrigger,
-  cn,
-} from "mangue-ui";
+import { Command, CommandEmpty, CommandSeparator, cn } from "mangue-ui";
+import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "@/components/ui/responsive-popover";
 import { Kbd } from "@/components/ui/kbd";
 import {
   Tooltip,
@@ -40,7 +29,7 @@ export const searchInputClass =
  *  looks identical everywhere. Pass the actual input (cmdk or plain) as child. */
 export function DropdownSearchRow({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex items-center gap-2 px-2 py-1">
+    <div data-sheet-search className="flex items-center gap-2 px-2 py-1">
       <HugeiconsIcon icon={Search01Icon} className="size-4 shrink-0 opacity-50" />
       {children}
     </div>
@@ -132,7 +121,7 @@ export function SearchMenu({
       <Command shouldFilter={shouldFilter}>
         <DropdownSearchRow>
           <CommandPrimitive.Input
-            autoFocus
+            autoFocus={allowInputAutoFocus()}
             placeholder={searchPlaceholder ?? t("search")}
             className={searchInputClass}
             {...(searchValue !== undefined

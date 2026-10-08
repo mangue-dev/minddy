@@ -15,7 +15,7 @@
 // (`resolveKeyToken` reads `navigator`) and have the same constraint.
 // 2. **The paragraph is rendered anyway**, empty while waiting for the seed.
 // It therefore occupies its line from the first painting, and the trick that arrives does not
-//     pousse rien.
+// pushes no other content down.
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { BulbIcon } from "@hugeicons/core-free-icons";
@@ -40,7 +40,7 @@ export function HomeTip() {
   return (
     // Full row width, `mt-auto` glues it to the foot of the page; the container
     // itself is content-sized and centered.
-    <p className="mt-auto flex justify-center pt-8 text-xs text-muted-foreground">
+    <p data-home-tip className="mt-auto hidden justify-center pt-8 text-xs text-muted-foreground app-desktop:flex">
       {tip && (
         /* Its own container: content width bounded by the hint's max width,
            centered on the WHOLE row (mx-auto + w-fit) — the text keeps

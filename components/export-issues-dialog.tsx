@@ -7,12 +7,6 @@ import { useTranslations } from "next-intl";
 import {
   Button,
   Checkbox,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
   Select,
   SelectContent,
   SelectItem,
@@ -21,6 +15,7 @@ import {
   Spinner,
   toast,
 } from "mangue-ui";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { exportIssuesApi } from "@/lib/export-api";
 import { ALL_STATUSES, CLOSED_STATUSES, type IssueStatus } from "@/lib/issue-constants";
 import { StatusIndicator } from "@/components/issue-indicators";

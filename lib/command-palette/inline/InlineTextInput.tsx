@@ -1,5 +1,7 @@
 "use client";
 
+import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
+
 import { forwardRef, useEffect, useRef, useCallback } from "react";
 import styles from "../styles/InlineActionInput.module.css";
 
@@ -32,7 +34,7 @@ export const InlineTextInput = forwardRef<HTMLTextAreaElement, InlineTextInputPr
         ref.current = el;
       }
       // Handle autoFocus with preventScroll to avoid mobile scroll issues
-      if (el && autoFocus && !autoFocusHandledRef.current) {
+      if (el && autoFocus && allowInputAutoFocus() && !autoFocusHandledRef.current) {
         autoFocusHandledRef.current = true;
         el.focus({ preventScroll: true });
         // A pre-filled field arrives with a PROPOSAL (the current name of a

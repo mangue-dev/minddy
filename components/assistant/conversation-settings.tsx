@@ -1,14 +1,13 @@
 "use client";
 
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/responsive-popover";
+
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowDown01Icon, ArrowRight01Icon, Undo02Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   Button,
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
   Slider,
 } from "mangue-ui";
 import { ModelCombobox } from "@/components/agent/model-combobox";
@@ -141,10 +140,11 @@ export function ConversationSettings() {
           </Button>
         </PopoverTrigger>
         <PopoverContent
+          mobileTitle={t("sectionTitle")}
           align="start"
           side="top"
           sideOffset={8}
-          className="relative w-[min(22rem,calc(100vw-2rem))] rounded-xl p-3"
+          className="w-[min(22rem,calc(100vw-2rem))] rounded-xl p-3 app-desktop:relative"
         >
           <div className="grid grid-cols-[2.25rem_minmax(0,1fr)_2.25rem] items-center gap-2">
             <div aria-hidden />
@@ -182,7 +182,7 @@ export function ConversationSettings() {
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="absolute top-1.5 right-1.5 shrink-0"
+                  className="shrink-0 app-desktop:absolute app-desktop:top-1.5 app-desktop:right-1.5"
                   aria-label={t("modelSettingsReset")}
                   onClick={reset}
                 >

@@ -100,9 +100,9 @@ export function PrStateControl({ state, canChange, disabled, onChange, inMenu = 
   ));
   if (inMenu) {
     const label = <><AppIcon icon={STATE_ICONS[state]} className={cn(PR_STATE_STYLES[state], "bg-transparent dark:bg-transparent")} />{t(STATE_LABELS[state])}</>;
-    if (state === "merged" || !canChange) return <DropdownMenuItem disabled className="md:hidden">{label}</DropdownMenuItem>;
+    if (state === "merged" || !canChange) return <DropdownMenuItem disabled className="app-desktop:hidden">{label}</DropdownMenuItem>;
     return <DropdownMenuSub>
-      <DropdownMenuSubTrigger className="md:hidden" disabled={disabled} data-testid="pr-state-menu">{label}</DropdownMenuSubTrigger>
+      <DropdownMenuSubTrigger className="app-desktop:hidden" disabled={disabled} data-testid="pr-state-menu">{label}</DropdownMenuSubTrigger>
       <DropdownMenuSubContent>{options}</DropdownMenuSubContent>
     </DropdownMenuSub>;
   }

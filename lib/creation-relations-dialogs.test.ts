@@ -12,8 +12,9 @@ import type { Issue, Objective, PendingRelationInput, Project } from "./types";
 const fixture = vi.hoisted(() => ({
   issues: [] as Issue[], objectives: [] as Objective[],
   drafts: [] as (IssueDraft | ObjectiveDraft)[], save: vi.fn(), remove: vi.fn(),
-  smartFill: true, smartFillCreated: true, queryProjects: [] as (string | null)[],
+  mobile: false, smartFill: true, smartFillCreated: true, queryProjects: [] as (string | null)[],
 }));
+vi.mock("@/lib/use-mobile-layout", () => ({ useMobileLayout: () => fixture.mobile }));
 vi.mock("next-intl", () => ({ useTranslations: (namespace: keyof typeof en) =>
   (key: string) => (en[namespace] as Record<string, string>)[key] ?? key,
 }));
@@ -36,8 +37,11 @@ vi.mock("mangue-ui", () => {
     toast: { success: vi.fn(), error: vi.fn(), info: vi.fn() },
     Dialog: ({ open, onOpenChange, children }: { open: boolean; onOpenChange: (next: boolean) => void; children: React.ReactNode }) =>
       open ? React.createElement("div", null, React.createElement("button", { type: "button", onClick: () => onOpenChange(false) }, "Close creation"), children) : null,
-    // The mobile bottom sheet does not forward DialogContent refs.
+    // These stub contents deliberately leave keyboard ownership to the fallback.
     DialogContent: ({ children }: { children: React.ReactNode }) => React.createElement("div", { "data-dialog-content": true }, children),
+    Sheet: ({ open, onOpenChange, children }: { open: boolean; onOpenChange: (next: boolean) => void; children: React.ReactNode }) =>
+      open ? React.createElement("div", null, React.createElement("button", { type: "button", onClick: () => onOpenChange(false) }, "Close creation"), children) : null,
+    SheetContent: wrap, SheetTitle: wrap, SheetTrigger: wrap, SheetClose: wrap,
     DialogTitle: wrap, DropdownMenuLabel: wrap, CommandGroup: wrap,
     CommandItem: item, DropdownMenuItem: item,
     Spinner: () => null,
@@ -68,7 +72,7 @@ vi.mock("@/lib/use-drafts", () => ({ useDrafts: () => ({
 vi.mock("@/lib/use-issue-dictation", () => ({ useIssueDictation: () => ({ busy: false, clearHistory: vi.fn(), reset: vi.fn() }) }));
 vi.mock("@/lib/use-objective-dictation", () => ({ useObjectiveDictation: () => ({ busy: false, reset: vi.fn() }) }));
 vi.mock("@/components/auto-textarea", () => ({ AutoTextarea: "textarea" }));
-vi.mock("@/components/markdown-editor-lazy", () => ({ MarkdownEditor: () => null, useIdleMarkdownEditorPreload: vi.fn() }));
+vi.mock("@/components/markdown-editor-lazy", () => ({ MarkdownEditor: ({ className }: { className: string }) => React.createElement("div", { className }, React.createElement("div", { contentEditable: true, suppressContentEditableWarning: true, tabIndex: 0 }, "")), useIdleMarkdownEditorPreload: vi.fn() }));
 vi.mock("@/components/resources", () => ({ AddResourceButton: () => null, ResourcePills: () => null, DropOverlay: () => null, pasteFileHandler: () => undefined, useFileDrop: () => ({ handlers: {} }) }));
 vi.mock("@/components/issue-compact-fields", () => ({
   AssigneeCompact: () => null, CategoriesCompact: () => null, DueDateCompact: () => null,
@@ -83,7 +87,7 @@ vi.mock("@/components/search-select", () => ({ SearchSelect: () => null }));
 vi.mock("@/components/project-orb", () => ({ ProjectOrb: () => null }));
 vi.mock("@/components/numo-icon", () => ({ NumoIcon: () => null }));
 vi.mock("@/components/agent-beam", () => ({ AgentBeamOverlay: () => null }));
-vi.mock("@/components/ai-elements/dictate-button", () => ({ DictateButton: () => null }));
+vi.mock("@/components/ai-elements/dictate-button", () => ({ DictateButton: ({ showLabel }: { showLabel: boolean }) => React.createElement("button", { type: "button", "data-prominent-dictation": showLabel }, "Dictate") }));
 vi.mock("@/components/send-shortcut", () => ({ SendShortcutTooltip: ({ children }: { children: React.ReactNode }) => children }));
 vi.mock("@/components/draft-recovery-row", () => ({ DraftRecoveryRow: ({ drafts, onRecover }: { drafts: { id: string }[]; onRecover: (id: string) => void }) =>
   React.createElement("div", null, drafts.map((draft) => React.createElement("button", { key: draft.id, type: "button", onClick: () => onRecover(draft.id) }, "Recover draft"))),
@@ -107,8 +111,10 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.stubGlobal("React", React);
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} });
   fixture.issues = [issue, { ...issue, id: "closed", title: "Closed issue", status: "done" }, { ...issue, id: "foreign", project_id: "other", title: "Foreign issue" }];
   fixture.objectives = [objective, { ...objective, id: "closed-goal", name: "Closed objective", status: "done" }, { ...objective, id: "foreign-goal", name: "Foreign objective", project_id: "other" }];
+  fixture.mobile = false;
   fixture.drafts = []; fixture.smartFill = true; fixture.smartFillCreated = true; fixture.queryProjects = [];
   fixture.save.mockImplementation(async (draft) => { fixture.drafts = [draft]; });
   fixture.remove.mockImplementation(async (id) => { fixture.drafts = fixture.drafts.filter((draft) => draft.id !== id); return true; });
@@ -294,4 +300,21 @@ describe("creation relation controls", () => {
     await click(en.Relations.addRelationAria);
     expect(document.body.textContent).toContain(en.Relations.blocked_by);
   });
+});
+
+it.each(["issue", "objective"] as const)("keeps mobile %s dictation and submission available without submitting on Next", async (kind) => {
+  fixture.mobile = true;
+  const dialog = await mountDialog(kind);
+  const recorder = host.querySelectorAll('[data-prominent-dictation="true"]');
+  expect(recorder).toHaveLength(1);
+  expect(recorder[0].closest(".creation-form-body")).not.toBeNull();
+  const footer = host.querySelector(".creation-form-footer")!;
+  expect(footer.closest(".creation-form-body")).toBeNull();
+  await typeTitle("Mobile draft");
+  const title = host.querySelector("textarea")!;
+  await act(() => title.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true })));
+  expect(dialog.create).not.toHaveBeenCalled();
+  expect(document.activeElement).toBe(host.querySelector(".creation-description [contenteditable=true]"));
+  await act(() => footer.querySelector<HTMLButtonElement>('button[type="submit"]')!.click());
+  expect(dialog.create).toHaveBeenCalledOnce();
 });

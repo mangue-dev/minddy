@@ -15,6 +15,7 @@ import { BrowserIntlProvider } from "@/components/browser-intl-provider";
 import { CookieBanner } from "@/components/cookie-banner";
 import { DesktopChrome } from "@/components/desktop-chrome";
 import { PostHogInit } from "@/components/posthog-init";
+import { AppLayoutInitScript } from "@/components/app-layout-init-script";
 import { ThemeInitScript } from "@/components/theme-init-script";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { publicClientMessages } from "@/lib/public-client-messages";
@@ -202,6 +203,7 @@ export default async function RootLayout({
             (useServerInsertedHTML) : un <script> rendu par un composant fait
             complaining about React 19 every time the client re-renders the root layout — see the
             composant. */}
+        <AppLayoutInitScript />
         <ThemeInitScript defaultTheme={defaultTheme} accountTheme={accountTheme} />
       </head>
       <body

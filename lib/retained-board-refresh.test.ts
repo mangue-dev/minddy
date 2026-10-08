@@ -12,6 +12,7 @@ vi.mock("next/navigation", () => ({ usePathname: () => navigation.pathname, useS
 vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key }));
 vi.mock("@/lib/app-tabs-context", () => ({
   useAppTabs: () => ({ session, activeId: navigation.pathname, tabs: [{ id: navigation.boardPathname, href: navigation.boardPathname }, { id: "/settings", href: "/settings" }] }),
+  useOptionalAppTabs: () => ({ session, activeId: navigation.pathname, tabs: [{ id: navigation.boardPathname, href: navigation.boardPathname }, { id: "/settings", href: "/settings" }] }),
   AppTabNavigationScope: ({ children }: { children: ReactNode }) => children,
 }));
 vi.mock("@/lib/app-tab-route-context", () => ({ AppTabRouteProvider: ({ children }: { children: ReactNode }) => children }));

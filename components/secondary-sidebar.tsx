@@ -6,19 +6,23 @@ import {
   useMemo,
   useState,
   type MouseEvent,
+  type ComponentProps,
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
-import { cn, useMediaQuery } from "mangue-ui";
+import { usePathname } from "next/navigation";
+import { useMobileLayout } from "@/lib/use-mobile-layout";
+import { cn } from "mangue-ui";
 import { useSecondarySidebar } from "@/lib/secondary-sidebar-context";
 import { SidebarFilterField } from "@/components/sidebar-filter-field";
+import { isPlainNavigationClick } from "@/components/editor-node-link";
 import { normalizeAppTabLocation } from "@/lib/app-tab-location";
 import { IssueContextMenu, type ContextMenuAction } from "@/components/issue-context-menu";
 import { useNavigationContextActions } from "@/components/navigation-context-actions";
 
 /**
  * Width of the column the primary sidebar takes when it hosts this bar
- * (MIN-546). Shared by the mobile inline layout (`md:w-80`).
+ * (MIN-546). Shared by the desktop fallback column (`app-desktop:w-80`).
  */
 export const SECONDARY_WIDTH = 320;
 
@@ -38,12 +42,11 @@ const useIsoLayoutEffect =
  *
  * Two renderings, one component:
  *
- * - **≥ 768 px**: teleported INSIDE the primary sidebar (MIN-546) — the
+ * - **Desktop layout**: teleported INSIDE the primary sidebar (MIN-546) — the
  * filter/actions strip into the sidebar's top band, the item list right
  * below the back row. No resizing anywhere: the primary sidebar hosts it.
- * - **< 768 px**: rendered in place, exactly as before — column of the
- * page from `md`, whole page below, `hiddenOnMobile` assigning it
- * retail. The mobile does not move.
+ * - **Mobile layout**: hosted in the revealed sidebar when its route is open.
+ * Selection stays owned by the page; only the navigation moves into the menu.
  */
 export function SecondarySidebar({
   title,
@@ -80,8 +83,8 @@ export function SecondarySidebar({
   /** Actions of the title line (filters, creation button, etc.), pushed to the right. */
   actions?: ReactNode;
   /**
-   * Under `md`, the list and details take turns in full screen: goes here
-   * the “detail is open” state of the page. No effect above `md`.
+   * Hide the inline mobile fallback when navigation belongs to the menu.
+   * No effect on desktop or on the mobile menu portal.
    */
   hiddenOnMobile?: boolean;
   /**
@@ -92,8 +95,9 @@ export function SecondarySidebar({
   itemContextActions?: (target: Element) => ContextMenuAction[];
   children: ReactNode;
 }) {
-  const { headerSlot, slot, register, hosting } = useSecondarySidebar();
-  const isMobileLayout = useMediaQuery("(max-width: 767px)");
+  const { headerSlot, slot, register, hosting, mobileHost } = useSecondarySidebar();
+  const pathname = usePathname();
+  const isMobileLayout = useMobileLayout() === true;
   // Nothing in the server rendering: the space is reserved by the primary
   // sidebar's route-level panel anyway (routeHasSecondaryNav), and
   // teleporting before knowing where it goes would diverge the hydration.
@@ -128,22 +132,7 @@ export function SecondarySidebar({
    * The title line COMMANDS the column, it does not name it: the filter
    * of the list, what restricts it, what can be created there.
    */
-  const header = (
-    <div className="secondary-sidebar-header flex h-[var(--app-content-header-height)] shrink-0 items-center gap-2 border-b border-border px-4">
-      {filter ? (
-        <SidebarFilterField {...filter} />
-      ) : title ? (
-        <h1 className="min-w-0 flex-1 truncate font-display text-lg font-semibold tracking-tight">
-          {title}
-        </h1>
-      ) : (
-        <div className="flex-1" />
-      )}
-      {actions ? (
-        <div className="flex shrink-0 items-center gap-1">{actions}</div>
-      ) : null}
-    </div>
-  );
+  const header = <SecondarySidebarHeader title={title} filter={filter} actions={actions} />;
 
   const body = (
     <aside
@@ -168,6 +157,16 @@ export function SecondarySidebar({
       </div>
     </aside>
   );
+
+  if (isMobileLayout && mobileHost?.route === pathname) {
+    return <>
+      {createPortal(header, mobileHost.header)}
+      {createPortal(<div data-mobile-collection-navigation onClick={(event) => {
+        if (event.defaultPrevented || !(event.target instanceof Element)) return;
+        if (event.target.closest("a[href], [data-navigation-href], [data-sidebar-navigation-item]")) mobileHost.onNavigate();
+      }}>{children}</div>, mobileHost.body)}
+    </>;
+  }
 
   if (hoisted) {
     return (
@@ -199,7 +198,7 @@ export function SecondarySidebar({
       data-sidebar-navigation
       className={cn(
         "min-h-0 flex-col border-border",
-        "w-full shrink-0 md:flex md:w-80 md:border-r",
+        "w-full shrink-0 app-desktop:flex app-desktop:w-80 app-desktop:border-r",
         hiddenOnMobile ? "hidden" : "flex",
       )}
       onContextMenu={(event: MouseEvent<HTMLElement>) => {
@@ -227,4 +226,54 @@ export function SecondarySidebar({
       />
     </aside>
   );
+}
+
+/** The same filter/action band is used by route-owned and browsed mobile lists. */
+export function SecondarySidebarHeader({ title, filter, actions }: {
+  title?: string;
+  filter?: { value: string; onChange: (value: string) => void; placeholder: string; clearLabel: string };
+  actions?: ReactNode;
+}) {
+  return (
+    <div className="secondary-sidebar-header flex h-[var(--app-content-header-height)] shrink-0 items-center gap-2 border-b border-border px-4">
+      {filter ? (
+        <SidebarFilterField {...filter} />
+      ) : title ? (
+        <h1 className="min-w-0 flex-1 truncate font-display text-lg font-semibold tracking-tight">
+          {title}
+        </h1>
+      ) : (
+        <div className="flex-1" />
+      )}
+      {actions ? (
+        <div className="flex shrink-0 items-center gap-1">{actions}</div>
+      ) : null}
+    </div>
+  );
+}
+
+
+/** Browsing shares the actual collection UI without registering a second route sidebar. */
+export type SidebarBrowseTarget = {
+  headerHost?: HTMLElement | null;
+  onSelect: (href: string) => void;
+};
+
+export function CollectionSidebar({ browse, children, ...props }: ComponentProps<typeof SecondarySidebar> & {
+  browse?: SidebarBrowseTarget;
+}) {
+  if (!browse) return <SecondarySidebar {...props}>{children}</SecondarySidebar>;
+  return <>
+    {browse.headerHost && createPortal(<SecondarySidebarHeader title={props.title} filter={props.filter} actions={props.actions} />, browse.headerHost)}
+    <div data-sidebar-browse-collection onClickCapture={(event) => {
+      if (!isPlainNavigationClick(event) || !(event.target instanceof Element)) return;
+      const target = event.target.closest<HTMLElement>("[data-navigation-href], a[href]");
+      if (!target || !event.currentTarget.contains(target)) return;
+      const href = normalizeAppTabLocation(target.dataset.navigationHref ?? target.getAttribute("href"));
+      if (!href) return;
+      event.preventDefault();
+      event.stopPropagation();
+      browse.onSelect(href);
+    }}>{children}</div>
+  </>;
 }

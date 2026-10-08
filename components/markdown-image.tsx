@@ -2,7 +2,8 @@
 
 import { useState, type ComponentPropsWithoutRef } from "react";
 import { useTranslations } from "next-intl";
-import { cn, Dialog, DialogContent, DialogTitle } from "mangue-ui";
+import { cn } from "mangue-ui";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
 /** Expand forge images using the same authenticated source as their thumbnail. */
 export function MarkdownImage({

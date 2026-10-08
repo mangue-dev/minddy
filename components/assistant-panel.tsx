@@ -1,8 +1,13 @@
 "use client";
 
+import { MobileSheetContent } from "@/components/ui/mobile-sheet";
+
+import { focusMobileSheet } from "@/lib/mobile-sheet-focus";
+
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Sheet, SheetContent, SheetTitle } from "mangue-ui";
+import { Sheet, SheetTitle } from "mangue-ui";
+import { useMobileLayout } from "@/lib/use-mobile-layout";
 import type { OpenAssistantOptions } from "@/lib/assistant-panel-context";
 import {
   AssistantShell,
@@ -27,6 +32,7 @@ type DisplayMode = PanelDisplayMode;
  */
 export function AssistantPanel() {
   const t = useTranslations("Assistant");
+  const mobile = useMobileLayout() === true;
   const {
     isOpen,
     close,
@@ -159,13 +165,18 @@ export function AssistantPanel() {
 
   return (
     <Sheet open={isOpen} onOpenChange={(open) => !open && close()}>
-      <SheetContent
-        side="right"
-        showCloseButton={false}
+      <MobileSheetContent
+        side={mobile ? "bottom" : "right"}
+        showCloseButton={mobile}
+        onOpenAutoFocus={mobile ? focusMobileSheet : undefined}
+        onCloseAutoFocus={mobile ? (event) => {
+          event.preventDefault();
+          document.querySelector<HTMLElement>("[data-mobile-numo-launcher]")?.focus();
+        } : undefined}
         // Compact reads as a widget popover (no tint). Expanded reads as a
         // modal, so it keeps the SheetOverlay base scrim. The transition
         // fades the scrim in/out as the panel morphs between modes.
-        overlayClassName={panelOverlayClassName(displayMode)}
+        overlayClassName={panelOverlayClassName(mobile ? "expanded" : displayMode)}
         // Don't close when the user interacts with a nested popover or
         // alert dialog (e.g. the conversation history popover). Radix portals
         // those at the body level so they'd otherwise count as "outside".
@@ -200,12 +211,12 @@ export function AssistantPanel() {
             compact
             visible={isOpen && (!requestedConversationId || requestedConversationId === state.conversationId)}
             displayMode={displayMode}
-            onToggleDisplayMode={toggleDisplayMode}
+            onToggleDisplayMode={mobile ? undefined : toggleDisplayMode}
             onClose={close}
             pageContext={effectivePageContext}
           />
         </div>
-      </SheetContent>
+      </MobileSheetContent>
     </Sheet>
   );
 }

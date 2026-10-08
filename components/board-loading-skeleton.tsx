@@ -61,7 +61,7 @@ export function BoardLoadingSkeleton({
       >
         <div className="flex shrink-0 items-center gap-1">
           {VIEW_WIDTHS.map((width, index) => (
-            <Skeleton key={index} className={`h-7 ${width} rounded-full`} />
+            <Skeleton key={index} className={`h-7 ${width} rounded-full ${index > 0 ? "hidden app-desktop:block" : ""}`} />
           ))}
           <Skeleton className="size-8 rounded-md" />
         </div>
@@ -69,8 +69,8 @@ export function BoardLoadingSkeleton({
         <div className="ml-auto flex shrink-0 items-center gap-1.5">
           {specialView ? (
             <>
-              <Skeleton className="h-7 w-16 rounded-full" />
-              <Skeleton className="h-8 w-44 rounded-md" />
+              <Skeleton className="hidden h-7 w-16 rounded-full app-desktop:block" />
+              <Skeleton className="h-8 w-24 rounded-md app-desktop:w-44" />
               <Skeleton className="size-8 rounded-md" />
             </>
           ) : (

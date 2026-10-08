@@ -3,14 +3,9 @@
 import type { ComponentProps } from "react";
 import { useTranslations } from "next-intl";
 import {
-  SidePanel,
-  SidePanelBody,
-  SidePanelContent,
-  SidePanelDescription,
-  SidePanelHeader,
-  SidePanelTitle,
   Spinner,
 } from "mangue-ui";
+import { SidePanel, SidePanelBody, SidePanelContent, SidePanelDescription, SidePanelHeader, SidePanelTitle } from "@/components/ui/side-panel";
 import { PrDiff } from "@/components/pull-requests/pr-diff";
 import { ShaButton } from "@/components/pull-requests/pr-sha-button";
 import { prCommitEndpoint } from "@/lib/agent-api";

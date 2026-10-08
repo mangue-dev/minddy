@@ -1,5 +1,6 @@
 "use client";
 
+import { useMobileLayout } from "@/lib/use-mobile-layout";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowDown01Icon, ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { useCallback, useMemo, useState } from "react";
@@ -7,7 +8,6 @@ import { useTranslations } from "next-intl";
 import {
   Badge,
   cn,
-  useIsMobile,
 } from "mangue-ui";
 import { parsePatchFiles } from "@pierre/diffs";
 import { FileDiff } from "@pierre/diffs/react";
@@ -83,7 +83,7 @@ export function PrHunk({
 }) {
   const t = useTranslations("PullRequests");
   const resolvedTheme = useEffectiveColorScheme();
-  const isMobile = useIsMobile();
+  const isMobile = useMobileLayout() === true;
   const [localCollapsed, setLocalCollapsed] = useState(false);
   const collapsed = controlledCollapsed ?? localCollapsed;
   const toggleCollapsed = () => {

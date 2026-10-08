@@ -1,20 +1,14 @@
 "use client";
 
+import { CommandList } from "@/components/ui/command";
+
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
 import { ArrowUpDownIcon, GaugeIcon as CircleGauge, CheckIcon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import {
-  Button,
-  Command,
-  CommandItem,
-  CommandList,
-  cn,
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "mangue-ui";
+import { Button, Command, CommandItem, cn } from "mangue-ui";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/responsive-popover";
 
 import {
   DEFAULT_MAX_SPEND_PERCENT,

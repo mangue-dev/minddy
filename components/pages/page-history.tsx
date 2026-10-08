@@ -50,12 +50,6 @@ import { useFormatter, useTranslations } from "next-intl";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Button,
-  SidePanel,
-  SidePanelBody,
-  SidePanelClose,
-  SidePanelContent,
-  SidePanelFooter,
-  SidePanelTitle,
   Spinner,
   Tabs,
   TabsContent,
@@ -64,6 +58,7 @@ import {
   cn,
   toast,
 } from "mangue-ui";
+import { SidePanel, SidePanelBody, SidePanelClose, SidePanelContent, SidePanelFooter, SidePanelTitle } from "@/components/ui/side-panel";
 import type { JSONContent } from "@tiptap/react";
 
 import { keepOverlayOpenForPopper } from "@/lib/overlay-dismiss";
