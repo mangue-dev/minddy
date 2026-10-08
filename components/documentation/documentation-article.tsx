@@ -2,16 +2,19 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
-import { Button } from "mangue-ui";
+import { Button, cn } from "mangue-ui";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowLeft01Icon, ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { ReadOnlyCodeBlock } from "@/components/assistant/shared-code-renderer";
+import { CARD_TONES } from "@/components/marketing/card-tones";
 import type { DocumentationArticle } from "@/lib/documentation";
 import { documentationBlocks, documentationPath, localizeDocumentationLink } from "@/lib/documentation-core.mjs";
 import { extractCodeBlock } from "@/lib/markdown-code";
 import { DocumentationShell } from "./documentation-shell";
 import { DocumentationErrorReport } from "./report-error";
 import { DocumentationIcon } from "./documentation-icon";
+
+const articleNavigationClassName = "group flex min-w-0 flex-col gap-3 rounded-lg border border-current/10 p-4 transition-colors hover:border-current/25 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
 
 export async function DocumentationArticleView({ article, articles }: { article: DocumentationArticle; articles: DocumentationArticle[] }) {
   const t = await getTranslations({ locale: article.locale, namespace: "Documentation" });
@@ -62,13 +65,13 @@ export async function DocumentationArticleView({ article, articles }: { article:
       label={t("report")} />
     {(previous || next) && <nav aria-label={t("articleNavigation")} className="mt-8 grid grid-cols-1 gap-3 border-t border-border pt-6 sm:grid-cols-2">
       {previous && <Link href={documentationPath(previous.id, article.locale)} prefetch={false} rel="prev"
-        className="group flex min-w-0 flex-col gap-3 rounded-lg border border-border p-4 transition-colors hover:bg-muted/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
-        <span className="flex items-center gap-2 text-xs text-muted-foreground"><HugeiconsIcon icon={ArrowLeft01Icon} className="size-4 shrink-0" aria-hidden />{t("previousArticle")}</span>
+        className={cn(articleNavigationClassName, CARD_TONES.sky)}>
+        <span className="flex items-center gap-2 text-xs opacity-80"><HugeiconsIcon icon={ArrowLeft01Icon} className="size-4 shrink-0" aria-hidden />{t("previousArticle")}</span>
         <span className="flex items-start gap-2 text-sm font-medium"><DocumentationIcon articleId={previous.id} className="mt-0.5 size-4 shrink-0" /><span>{previous.title}</span></span>
       </Link>}
       {next && <Link href={documentationPath(next.id, article.locale)} prefetch={false} rel="next"
-        className="group flex min-w-0 flex-col items-end gap-3 rounded-lg border border-border p-4 text-right transition-colors hover:bg-muted/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:col-start-2">
-        <span className="flex items-center gap-2 text-xs text-muted-foreground">{t("nextArticle")}<HugeiconsIcon icon={ArrowRight01Icon} className="size-4 shrink-0" aria-hidden /></span>
+        className={cn(articleNavigationClassName, CARD_TONES.mint, "items-end text-right sm:col-start-2")}>
+        <span className="flex items-center gap-2 text-xs opacity-80">{t("nextArticle")}<HugeiconsIcon icon={ArrowRight01Icon} className="size-4 shrink-0" aria-hidden /></span>
         <span className="flex items-start gap-2 text-sm font-medium"><DocumentationIcon articleId={next.id} className="mt-0.5 size-4 shrink-0" /><span>{next.title}</span></span>
       </Link>}
     </nav>}
