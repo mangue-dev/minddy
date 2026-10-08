@@ -1,12 +1,13 @@
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
-import { Card, CardContent } from "mangue-ui";
+import { Card, CardContent, cn } from "mangue-ui";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import type { Locale } from "@/i18n/config";
 import type { DocumentationArticle } from "@/lib/documentation";
 import { documentationPath } from "@/lib/documentation-core.mjs";
 import { localizedHref } from "@/lib/locale-href";
+import { CARD_TONES } from "@/components/marketing/card-tones";
 import { DocumentationShell } from "./documentation-shell";
 import { DocumentationIcon } from "./documentation-icon";
 
@@ -16,13 +17,13 @@ export async function DocumentationWelcome({ articles, locale, query = "", previ
 }) {
   const t = await getTranslations({ locale, namespace: "Documentation" });
   const guides = [
-    { id: "use", title: t("use"), intro: t("welcomeUse"), articles: [
+    { id: "use", title: t("use"), intro: t("welcomeUse"), tones: [CARD_TONES.sky, CARD_TONES.sage, CARD_TONES.butter], articles: [
       "choose-an-instance", "first-project", "navigation",
     ] },
-    { id: "operate", title: t("operate"), intro: t("welcomeOperate"), articles: [
+    { id: "operate", title: t("operate"), intro: t("welcomeOperate"), tones: [CARD_TONES.lavender, CARD_TONES.mint, CARD_TONES.peach], articles: [
       "installation", "instance-configuration", "backups-and-restoration",
     ] },
-    { id: "integrate", title: t("integrate"), intro: t("welcomeIntegrate"), articles: [
+    { id: "integrate", title: t("integrate"), intro: t("welcomeIntegrate"), tones: [CARD_TONES.rose, CARD_TONES.sky, CARD_TONES.lavender], articles: [
       "glossary-and-data-model", "architecture-and-data-flows", "minddy-mcp",
     ] },
   ];
@@ -37,19 +38,18 @@ export async function DocumentationWelcome({ articles, locale, query = "", previ
       <h2 className="text-xl font-semibold tracking-tight">{guide.title}</h2>
       <p className="mt-3 text-sm leading-6 text-muted-foreground">{guide.intro}</p>
       <ul className="mt-6 grid grid-cols-1 gap-4 @min-[26rem]:grid-cols-2 @min-[42rem]:grid-cols-3">
-        {guide.articles.map(id => {
+        {guide.articles.map((id, index) => {
           const article = articles.find(article => article.id === id);
           return article && <li key={article.id} className="min-w-0">
             <Link href={documentationPath(article.id, locale)} prefetch={false} aria-labelledby={`guide-${article.id}`}
-              className="group block h-full rounded-lg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring">
-              <Card className="h-full gap-0 rounded-lg bg-muted/25 py-0 ring-border transition-colors duration-200 group-hover:bg-muted/50 group-hover:ring-foreground/20 group-focus-visible:ring-ring">
-                <div className="flex h-28 shrink-0 items-start justify-between border-b border-border/60 p-5">
-                  <DocumentationIcon articleId={article.id} className="size-5 text-foreground/80" />
-                  <HugeiconsIcon icon={ArrowRight01Icon} className="size-4 -translate-x-1 text-muted-foreground opacity-0 transition-[opacity,transform] duration-200 group-hover:translate-x-0 group-hover:opacity-100 group-focus-visible:translate-x-0 group-focus-visible:opacity-100 motion-reduce:transition-none" aria-hidden />
+              className="group block h-full rounded-lg focus-visible:outline-2 focus-visible:outline-ring">
+              <Card className={cn("h-full gap-0 rounded-lg py-0 ring-current/10 group-hover:ring-current/25 group-focus-visible:ring-ring", guide.tones[index])}>
+                <div className="flex h-28 shrink-0 items-start border-b border-current/10 p-5">
+                  <DocumentationIcon articleId={article.id} className="size-5 opacity-80" />
                 </div>
                 <CardContent className="space-y-2 p-5">
                   <h3 id={`guide-${article.id}`} className="text-sm font-medium leading-5">{article.title}</h3>
-                  <p className="text-[13px] leading-5 text-muted-foreground">{article.summary}</p>
+                  <p className="text-[13px] leading-5 opacity-80">{article.summary}</p>
                 </CardContent>
               </Card>
             </Link>

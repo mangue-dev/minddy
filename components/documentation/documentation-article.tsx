@@ -1,17 +1,26 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { getTranslations } from "next-intl/server";
+import Link from "next/link";
+import { Button } from "mangue-ui";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowLeft01Icon, ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { ReadOnlyCodeBlock } from "@/components/assistant/shared-code-renderer";
 import type { DocumentationArticle } from "@/lib/documentation";
 import { documentationBlocks, documentationPath, localizeDocumentationLink } from "@/lib/documentation-core.mjs";
 import { extractCodeBlock } from "@/lib/markdown-code";
 import { DocumentationShell } from "./documentation-shell";
 import { DocumentationErrorReport } from "./report-error";
+import { DocumentationIcon } from "./documentation-icon";
 
 export async function DocumentationArticleView({ article, articles }: { article: DocumentationArticle; articles: DocumentationArticle[] }) {
   const t = await getTranslations({ locale: article.locale, namespace: "Documentation" });
   const chunks = documentationBlocks(article.content);
   const related = articles.filter(item => article.related.includes(item.id));
+  const topicArticles = articles.filter(item => item.topic === article.topic);
+  const articleIndex = topicArticles.findIndex(item => item.id === article.id);
+  const previous = articleIndex > 0 ? topicArticles[articleIndex - 1] : undefined;
+  const next = articleIndex >= 0 ? topicArticles[articleIndex + 1] : undefined;
   return <DocumentationShell articles={articles} locale={article.locale} currentId={article.id}
     title={article.title} topic={article.topic} sections={article.sections}>
     <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">{article.title}</h1>
@@ -38,9 +47,30 @@ export async function DocumentationArticleView({ article, articles }: { article:
         </section>;
       })}
     </div>
-    {!!related.length && <section className="mt-12 border-t border-border pt-6"><h2 className="font-semibold">{t("related")}</h2><ul className="mt-3 space-y-2">{related.map(item => <li key={item.id}><a href={documentationPath(item.id, article.locale)} className="underline underline-offset-4">{item.title}</a></li>)}</ul></section>}
+    {!!related.length && <section className="mt-12 border-t border-border pt-6">
+      <h2 className="font-semibold">{t("related")}</h2>
+      <ul className="mt-3 flex flex-wrap gap-2">{related.map(item => <li key={item.id} className="max-w-full">
+        <Button asChild variant="outline" className="h-auto min-h-11 max-w-full justify-start whitespace-normal text-left">
+          <Link href={documentationPath(item.id, article.locale)} prefetch={false}>
+            <DocumentationIcon articleId={item.id} className="size-4 shrink-0" /><span className="min-w-0">{item.title}</span>
+          </Link>
+        </Button>
+      </li>)}</ul>
+    </section>}
     <DocumentationErrorReport subject={`${t("articleLabel")}: ${article.id} (${article.locale})`}
       body={`${t("articleLabel")}: ${article.id}\n${t("localeLabel")}: ${article.locale}\n${t("revisionLabel")}: ${article.revision}\n\n`}
       label={t("report")} />
+    {(previous || next) && <nav aria-label={t("articleNavigation")} className="mt-8 grid grid-cols-1 gap-3 border-t border-border pt-6 sm:grid-cols-2">
+      {previous && <Link href={documentationPath(previous.id, article.locale)} prefetch={false} rel="prev"
+        className="group flex min-w-0 flex-col gap-3 rounded-lg border border-border p-4 transition-colors hover:bg-muted/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
+        <span className="flex items-center gap-2 text-xs text-muted-foreground"><HugeiconsIcon icon={ArrowLeft01Icon} className="size-4 shrink-0" aria-hidden />{t("previousArticle")}</span>
+        <span className="flex items-start gap-2 text-sm font-medium"><DocumentationIcon articleId={previous.id} className="mt-0.5 size-4 shrink-0" /><span>{previous.title}</span></span>
+      </Link>}
+      {next && <Link href={documentationPath(next.id, article.locale)} prefetch={false} rel="next"
+        className="group flex min-w-0 flex-col items-end gap-3 rounded-lg border border-border p-4 text-right transition-colors hover:bg-muted/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:col-start-2">
+        <span className="flex items-center gap-2 text-xs text-muted-foreground">{t("nextArticle")}<HugeiconsIcon icon={ArrowRight01Icon} className="size-4 shrink-0" aria-hidden /></span>
+        <span className="flex items-start gap-2 text-sm font-medium"><DocumentationIcon articleId={next.id} className="mt-0.5 size-4 shrink-0" /><span>{next.title}</span></span>
+      </Link>}
+    </nav>}
   </DocumentationShell>;
 }
