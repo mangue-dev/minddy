@@ -9,7 +9,7 @@ import type { Locale } from "@/i18n/config";
 import type { DocumentationArticle, DocumentationSearchEntry } from "@/lib/documentation";
 import { documentationPath, searchDocumentation } from "@/lib/documentation-core.mjs";
 import { CommandPalette, usePaletteStore } from "@/lib/command-palette";
-import { useDocumentationTopics } from "@/lib/use-documentation-topics";
+import { documentationTopicKey, openDocumentationTopic, useDocumentationTopics } from "@/lib/use-documentation-topics";
 import { DocumentationIcon } from "./documentation-icon";
 import "@/components/command-palette.css";
 
@@ -26,9 +26,9 @@ export function DocumentationSidebar({ articles, locale, currentId, labels, onNa
   const topics = [...new Set(articles.map(article => article.topic))].sort((a, b) =>
     a === startTopic ? -1 : b === startTopic ? 1 : a.localeCompare(b, locale));
   // Article IDs keep topic preferences stable when the reader changes language.
-  const topicKeys = new Map(topics.map(topic => [topic, articles.filter(article => article.topic === topic).map(article => article.id).sort()[0]]));
+  const topicKeys = new Map(topics.map(topic => [topic, documentationTopicKey(articles, topic)]));
   const activeTopic = articles.find(article => article.id === currentId)?.topic;
-  const folds = useDocumentationTopics(activeTopic ? topicKeys.get(activeTopic) : undefined);
+  const folds = useDocumentationTopics(activeTopic ? topicKeys.get(activeTopic) : undefined, currentId);
   return <nav aria-label={labels.topics} className="space-y-1 px-4 py-6">
     <Link href={documentationPath(null, locale)} prefetch={false} onNavigate={onNavigate} aria-current={currentId === null ? "page" : undefined}
       className="mb-4 flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground aria-[current=page]:bg-muted aria-[current=page]:text-foreground focus-visible:outline-2 focus-visible:outline-ring"><DocumentationIcon articleId={null} className="size-4 shrink-0" /><span>{labels.welcome}</span></Link>
@@ -107,6 +107,9 @@ export function DocumentationSearch({ articles, locale, initialQuery = "", label
         const article = articles.find(article => article.id === item.id);
         const query = usePaletteStore.getState().query;
         const result = article && searchDocumentation([article], query)[0];
+        const topicKey = article?.id && documentationTopicKey(articles, article.topic);
+        // A section result can stay on the current article without remounting its sidebar.
+        if (topicKey) openDocumentationTopic(topicKey);
         setOpen(false);
         window.location.assign(result?.href ?? item.href!);
       }} />
