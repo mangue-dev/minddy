@@ -153,7 +153,11 @@ describe("commitAndPush", () => {
     expect(commands.some((c) => c.startsWith("git push"))).toBe(true);
   });
 
-  it("reports a controlled code when the push fails", async () => {
+  it.each([
+    ["! [rejected] non-fast-forward", "non_fast_forward"],
+    ["fatal: could not read Username for 'https://github.com': No such device or address", "authentication_failed"],
+    ["unknown error for https://user:secret@github.com/private/repo", "unknown"],
+  ])("reports a controlled %s push failure", async (stderr, reason) => {
     const { sandbox } = fakeSandbox({
       "git status --porcelain": { stdout: " M lib/foo.ts\n" },
       "git add -A": {},
@@ -162,9 +166,9 @@ describe("commitAndPush", () => {
       "git rev-parse HEAD": { stdout: `${WORK_SHA}\n` },
       "git rev-parse --verify": { stdout: `${BASE_SHA}\n` },
       "git ls-remote": { stdout: "" },
-      "git push": { exitCode: 1, stderr: "! [rejected] non-fast-forward" },
+      "git push": { exitCode: 1, stderr },
     });
 
-    await expect(commitAndPush(sandboxHost(sandbox, cloudLayout()), OPTS)).rejects.toThrow("repository_push_failed");
+    await expect(commitAndPush(sandboxHost(sandbox, cloudLayout()), OPTS)).rejects.toThrow(`repository_push_failed: ${reason}:`);
   });
 });

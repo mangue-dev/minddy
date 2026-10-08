@@ -149,8 +149,12 @@ describe("PR landing issue status synchronization", () => {
 });
 
 describe("PR landing authority", () => {
-  it("opens a PR after a prior push persisted the encrypted working branch", async () => {
+  it.each([
+    `minddy/agent/agent-${RUN_ID.slice(0, 8)}`,
+    "numo/numo-delegation-version-1-objective-audit-hebdomadaire-du-serveur-mcp-de-2f3336f1",
+  ])("opens a PR after a prior push persisted the encrypted working branch %s", async (branch) => {
     const { ctx, target, ensurePullRequest } = context();
+    ctx.workBranch = branch;
     h.run!.branch_name = await encodeAgentWorkBranch("project-1", RUN_ID, ctx.workBranch);
     await openPullRequestAfterPush(ctx, {
       pushed: { pushed: true, remoteUpdated: true, headSha: "abc" },

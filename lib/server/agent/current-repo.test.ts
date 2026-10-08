@@ -291,6 +291,27 @@ describe("préparer le dépôt courant", () => {
 });
 
 describe("le commit par index temporaire", () => {
+  it("reports missing Git credentials without exposing remote output", async () => {
+    const { host } = fakeHost([
+      [/rev-parse --verify/, { stdout: "c0ffee\n" }],
+      [/write-tree/, { stdout: "aaaa\n" }],
+      [/rev-parse '.*\^\{tree\}'/, { stdout: "aaaa\n" }],
+      [/git push/, {
+        exitCode: 1,
+        stderr: "fatal: could not read Username for 'https://user:secret@git.example.test/private/repo': No such device or address",
+      }],
+    ]);
+    await expect(commitTurnAndPush(host, {
+      runId: RUN_ID,
+      authUrl: "https://user:secret@git.example.test/private/repo",
+      workBranch: "work",
+      message: "Agent work",
+      committer: COMMITTER,
+      fallbackParent: "c0ffee",
+      scope: { paths: [], carried: [] },
+    })).rejects.toThrow("repository_push_failed: authentication_failed: Git credentials are missing or rejected");
+  });
+
   /** A repository where the writing tree DIFFERS from that of the parent — therefore a true commit. */
   const working = () =>
     fakeHost([

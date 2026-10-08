@@ -1,5 +1,6 @@
 import { gitIdentityFlags, sq, type RepoHost } from "./repo-host";
 import { commitMessageWithSignoff } from "./commit-message";
+import { gitPushError } from "./git-push-error";
 
 /**
  * WORKING IN SOMEONE ELSE'S DEPOT (MIN-358, decision D2).
@@ -537,7 +538,7 @@ export async function commitTurnAndPush(
     `git push ${sq(opts.authUrl)} ${sq(`${headSha}:refs/heads/${opts.workBranch}`)}`,
     { timeoutMs: 120_000 },
   );
-  if (push.exitCode !== 0) throw new Error("repository_push_failed");
+  if (push.exitCode !== 0) throw gitPushError(push);
 
   return { ...delivered, committed, remoteUpdated: remoteSha !== headSha, headSha, pushed: true };
 }
