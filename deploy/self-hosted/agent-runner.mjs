@@ -56,7 +56,7 @@ function parseJson(buffer) {
 }
 
 function sandboxContainerName(name) {
-  if (!/^agent-(?:v2-)?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(name)) {
+  if (!/^agent-(?:v2-)?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(?:-[0-9a-f]{12})?$/i.test(name)) {
     throw Object.assign(new Error("invalid sandbox name"), { status: 400 });
   }
   return `minddy-${name}`;

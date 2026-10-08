@@ -1643,7 +1643,7 @@
     "title": "Statistics",
     "titlePrefix": "Your statistics,",
     "yearStory": "Your last 12 months",
-    "heroTotalLabel": "issues and tasks completed in the last 12 months",
+    "heroTotalLabel": "{count, plural, one {issue or task completed in the last 12 months} other {issues and tasks completed in the last 12 months}}",
     "streakStory": "{count, plural, =0 {No streak yet} one {# day in a row} other {# days in a row}}",
     "workLandscape": "Where your work went",
     "workLandscapeIntro": "{count, plural, =0 {No completed issues in your active projects yet.} one {Here’s how # completed issue is distributed across your active projects.} other {Here’s how # completed issues are distributed across your active projects.}}",
@@ -2170,7 +2170,7 @@
     "breadcrumbMore": "{count, plural, one {# hidden level} other {# hidden levels}}",
     "lastEditedBy": "Edited by {name} · {time}",
     "activityTitle": "Activity",
-    "historyDescription": "Every earlier state of this page, kept for {days} days.",
+    "historyDescription": "Earlier versions of this page are kept for {days} days.",
     "historyEmpty": "Nothing earlier yet. Edits show up here as they happen.",
     "historyBy": "{name} · {time}",
     "historyRestore": "Restore",
@@ -2525,7 +2525,13 @@
     "confirmButton": "Delete permanently",
     "confirmPasswordLabel": "Your password",
     "confirmPasswordPlaceholder": "Enter your password",
-    "confirmRecentSignInHint": "Signed in with Google or GitHub? Sign out and back in first — this asks for a recent sign-in."
+    "confirmRecentSignInHint": "Signed in with Google or GitHub? Sign out and back in first — this asks for a recent sign-in.",
+    "importResultTitle": "Import complete",
+    "importResultDescription": "Review these counts before reloading your account.",
+    "importResultRemapped": "Records with new IDs",
+    "importResultSkipped": "Memberships not restored",
+    "importResultUnavailable": "The import completed, but no detailed result was returned.",
+    "importResultContinue": "Reload account"
   },
   "AccountSecurity": {
     "title": "Two-factor authentication",

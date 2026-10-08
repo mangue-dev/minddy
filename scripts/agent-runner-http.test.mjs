@@ -60,6 +60,23 @@ test("agent runner errors preserve status without exposing internal details", as
   assert.deepEqual(await invalid.json(), { error: "invalid request" });
 });
 
+test("agent runner accepts allocation identities and rejects malformed suffixes", async (t) => {
+  const { origin } = await startRunner(t);
+  const uuid = "11111111-1111-1111-1111-111111111111";
+  const headers = { authorization: "Bearer test-runner-secret" };
+  for (const name of [`agent-${uuid}`, `agent-v2-${uuid}`, `agent-v2-${uuid}-a1b2c3d4e5f6`]) {
+    const response = await fetch(`${origin}/v1/sandboxes/${name}`, { headers });
+    // Valid names reach the Docker boundary, which this fixture deliberately lacks.
+    assert.equal(response.status, 500, name);
+    assert.deepEqual(await response.json(), { error: "agent runner request failed" });
+  }
+  for (const suffix of ["a", "a1b2c3d4e5f67", "g1b2c3d4e5f6", "a1b2c3d4e5f6-extra"]) {
+    const response = await fetch(`${origin}/v1/sandboxes/agent-v2-${uuid}-${suffix}`, { headers });
+    assert.equal(response.status, 400, suffix);
+    assert.deepEqual(await response.json(), { error: "invalid request" });
+  }
+});
+
 for (const scenario of ["disconnect-before-headers", "disconnect-during-stream", "upstream-error"]) {
   test(`agent runner survives ${scenario} without a second HTTP response`, async (t) => {
     const root = await mkdtemp(path.join(tmpdir(), "minddy-runner-relay-"));

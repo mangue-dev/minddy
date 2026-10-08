@@ -1643,7 +1643,7 @@
     "title": "Estadísticas",
     "titlePrefix": "Tus estadísticas,",
     "yearStory": "Tus últimos 12 meses",
-    "heroTotalLabel": "incidencias y tareas completadas en los últimos 12 meses",
+    "heroTotalLabel": "{count, plural, one {incidencia o tarea completada en los últimos 12 meses} other {incidencias y tareas completadas en los últimos 12 meses}}",
     "streakStory": "{count, plural, =0 {Todavía no hay ninguna racha} one {# día consecutivo} other {# días consecutivos}}",
     "workLandscape": "Dónde se concentró tu trabajo",
     "workLandscapeIntro": "{count, plural, =0 {Todavía no hay incidencias completadas en tus proyectos activos.} one {Así se distribuye # incidencia completada entre tus proyectos activos.} other {Así se distribuyen # incidencias completadas entre tus proyectos activos.}}",
@@ -2170,7 +2170,7 @@
     "breadcrumbMore": "{count, plural, one {# nivel oculto} other {# niveles ocultos}}",
     "lastEditedBy": "Editado por {name} · {time}",
     "activityTitle": "Actividad",
-    "historyDescription": "Todos los estados anteriores de esta página, conservados durante {days} días.",
+    "historyDescription": "Las versiones anteriores de esta página se conservan durante {days} días.",
     "historyEmpty": "Todavía no hay versiones anteriores. Los cambios aparecerán aquí a medida que se realicen.",
     "historyBy": "{name} · {time}",
     "historyRestore": "Restaurar",
@@ -2525,7 +2525,13 @@
     "confirmButton": "Eliminar permanentemente",
     "confirmPasswordLabel": "Su contraseña",
     "confirmPasswordPlaceholder": "Introduce tu contraseña",
-    "confirmRecentSignInHint": "¿Ingresa con Google o GitHub? Inicia sesión y vuelve primero — esto pide una reciente sesión."
+    "confirmRecentSignInHint": "¿Ingresa con Google o GitHub? Inicia sesión y vuelve primero — esto pide una reciente sesión.",
+    "importResultTitle": "Importación completada",
+    "importResultDescription": "Revisa estos recuentos antes de recargar tu cuenta.",
+    "importResultRemapped": "Registros con nuevos identificadores",
+    "importResultSkipped": "Membresías no restauradas",
+    "importResultUnavailable": "La importación se completó, pero no se recibió un resultado detallado.",
+    "importResultContinue": "Recargar la cuenta"
   },
   "AccountSecurity": {
     "title": "Autenticación de dos factores",
@@ -3230,7 +3236,7 @@
     "in_review": "En examen",
     "done": "Hecho",
     "canceled": "Cancelado",
-    "duplicate": "Reproducción"
+    "duplicate": "Duplicado"
   },
   "Timeline": {
     "readPaused": "Actualizaciones en pausa. Vuelve a conectarte para actualizar la actividad.",
