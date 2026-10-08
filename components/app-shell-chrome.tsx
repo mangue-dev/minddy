@@ -1565,15 +1565,14 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="app-workspace relative flex h-dvh w-full min-w-0 flex-col overflow-hidden">
-      {appTabs && (
-        <AppTopBar
-          hidden={sidebarHidden}
-          inbox={inboxItem}
-          onSearch={() => handlePaletteOpenChange(true)}
-          onSearchWarm={warmPalette}
-          onNewTab={openDestinationPalette}
-        />
-      )}
+      <AppTopBar
+        ready={Boolean(appTabs)}
+        hidden={sidebarHidden}
+        inbox={inboxItem}
+        onSearch={() => handlePaletteOpenChange(true)}
+        onSearchWarm={warmPalette}
+        onNewTab={openDestinationPalette}
+      />
     <AppShell
       // `app-shell` targets the shell's <main>; its bottom reserve follows the
       // real mobile-nav height through --mobile-nav-clearance.
