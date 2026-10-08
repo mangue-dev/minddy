@@ -57,7 +57,7 @@
       "id": "responsibilities",
       "kind": "diagram",
       "src": "/documentation/pt-BR/responsibilities.svg",
-      "alt": "Responsabilidade de operação: Operado pelo Minddy, Operado por você.",
+      "alt": "Responsabilidade de operação: Operado pelo minddy, Operado por você.",
       "caption": "Os mesmos serviços do núcleo precisam de um operador nos dois modelos. Provedores opcionais continuam sendo serviços separados.",
       "revision": 2,
       "reviewed": true,
@@ -77,19 +77,19 @@
 
 ## Escolher um modelo de operação {#choose-an-instance}
 
-O Minddy Cloud e o Minddy auto-hospedado executam o mesmo núcleo público. Escolha o Cloud se quiser que o Minddy opere a aplicação, o banco de dados, o Storage e o agendador. Escolha a hospedagem própria se precisar controlar o local de hospedagem, os provedores ou o calendário de atualizações e puder operar esses serviços.
+O minddy Cloud e o minddy auto-hospedado executam o mesmo núcleo público. Escolha o Cloud se quiser que o minddy opere a aplicação, o banco de dados, o Storage e o agendador. Escolha a hospedagem própria se precisar controlar o local de hospedagem, os provedores ou o calendário de atualizações e puder operar esses serviços.
 
-Uma conta Cloud pertence ao Cloud. Em uma instância auto-hospedada, crie uma conta nessa instância; uma conta do Minddy Cloud não é necessária. Confira o endereço antes de entrar ou convidar alguém. Duas instâncias do Minddy não compartilham contas nem credenciais automaticamente.
+Uma conta Cloud pertence ao Cloud. Em uma instância auto-hospedada, crie uma conta nessa instância; uma conta do minddy Cloud não é necessária. Confira o endereço antes de entrar ou convidar alguém. Duas instâncias do minddy não compartilham contas nem credenciais automaticamente.
 
-![Responsabilidade de operação: Operado pelo Minddy, Operado por você.](/documentation/pt-BR/responsibilities.svg)
+![Responsabilidade de operação: Operado pelo minddy, Operado por você.](/documentation/pt-BR/responsibilities.svg)
 
 ## Responsabilidades e custos {#responsibilities}
 
 | Responsabilidade | Cloud | Hospedagem própria |
 | --- | --- | --- |
-| Infraestrutura, atualizações e incidentes | O Minddy opera o serviço. | Você mantém os servidores, TLS, monitoramento e atualizações de versões. |
-| Backups e recuperação | O Minddy opera o serviço Cloud. | Você preserva os dados do banco, os arquivos do Storage, a configuração e as chaves de criptografia, e testa restaurações. |
-| Contas de provedores | O Minddy mantém as contas dos serviços que opera. | Você escolhe e paga a infraestrutura e os provedores opcionais. |
+| Infraestrutura, atualizações e incidentes | O minddy opera o serviço. | Você mantém os servidores, TLS, monitoramento e atualizações de versões. |
+| Backups e recuperação | O minddy opera o serviço Cloud. | Você preserva os dados do banco, os arquivos do Storage, a configuração e as chaves de criptografia, e testa restaurações. |
+| Contas de provedores | O minddy mantém as contas dos serviços que opera. | Você escolhe e paga a infraestrutura e os provedores opcionais. |
 | Suporte | Aplicam-se os termos de suporte do Cloud. | As ferramentas de versão e a ajuda da comunidade, conforme disponibilidade, cobrem defeitos reproduzíveis do núcleo; não há SLA incluído para operar sua infraestrutura. |
 
 Por exemplo, uma equipe sem capacidade para operar bancos de dados pode usar o Cloud. Um operador com requisitos de residência dos dados pode escolher a hospedagem própria e revisar os destinos de cada provedor habilitado. Hospedar a aplicação não torna local um provedor externo de IA, e-mail ou Git.
@@ -98,7 +98,7 @@ Por exemplo, uma equipe sem capacidade para operar bancos de dados pode usar o C
 
 Uma instalação compatível precisa da aplicação e do Supabase com PostgreSQL, Auth, Storage e Realtime. Apenas PostgreSQL não é suficiente. Use uma versão com tag e sua matriz de compatibilidade. Variantes derivadas do Supabase sem versão fixada e adaptadores autogerenciados para GitHub Enterprise ou GitLab estão fora do contrato suportado.
 
-IA, e-mail, Git, notificações push e análise de uso dependem da configuração. A hospedagem própria não exige Stripe, PostHog, uma chave de IA gerenciada pelo Minddy nem uma conta Cloud. A configuração opcional ausente é informada, sem substituição silenciosa por um provedor. Chaves pessoais de IA e endpoints locais de IA são opções possíveis; disponibilidade e custos dependem da capacidade configurada.
+IA, e-mail, Git, notificações push e análise de uso dependem da configuração. A hospedagem própria não exige Stripe, PostHog, uma chave de IA gerenciada pelo minddy nem uma conta Cloud. A configuração opcional ausente é informada, sem substituição silenciosa por um provedor. Chaves pessoais de IA e endpoints locais de IA são opções possíveis; disponibilidade e custos dependem da capacidade configurada.
 
 Revise as permissões e os termos sobre dados antes de habilitar uma integração. As conexões Git podem usar o relay gerenciado para forjas quando você inicia explicitamente a integração; aplicativos próprios do provedor e a desativação do relay também estão disponíveis. A hospedagem própria não é uma categoria reduzida das funções do núcleo.
 

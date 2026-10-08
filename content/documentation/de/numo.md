@@ -150,7 +150,7 @@
       "caption": "Formular für einen eigenen MCP-Server mit erweiterten Einstellungen für Authentifizierung, Transport und Header. Es wurden keine Zugangsdaten eingegeben und kein Server kontaktiert.",
       "revision": 2,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         1440,
         1800
@@ -223,7 +223,7 @@ Gespräche können nicht die persönlichen MCP-Verbindungen anderer Mitglieder n
 
 ## Dauerhafte Numo-Turns und delegierte Arbeit verstehen {#numo-execution-model}
 
-Interaktive Nachrichten, Kontextaktionen und Routinen gelangen in Numo-Konversationen. Gesprächsmodell und Reasoning werden im Eingabefeld gewählt; delegierte Codearbeit nutzt die Standardwerte des Kontos für Codemodell und Reasoning. Direkte Minddy-Werkzeuge benötigen kein Repository. Codearbeit öffnet eine Serversandbox für das verknüpfte Repository nur bei Bedarf. Eine Routine erzeugt eine neue Konversation mit gespeicherter Anweisung und Eigentümer-/Projektkontext. Eine Desktopsitzung muss dafür nicht geöffnet bleiben.
+Interaktive Nachrichten, Kontextaktionen und Routinen gelangen in Numo-Konversationen. Gesprächsmodell und Reasoning werden im Eingabefeld gewählt; delegierte Codearbeit nutzt die Standardwerte des Kontos für Codemodell und Reasoning. Direkte minddy-Werkzeuge benötigen kein Repository. Codearbeit öffnet eine Serversandbox für das verknüpfte Repository nur bei Bedarf. Eine Routine erzeugt eine neue Konversation mit gespeicherter Anweisung und Eigentümer-/Projektkontext. Eine Desktopsitzung muss dafür nicht geöffnet bleiben.
 
 
 ![Diagramm: Absicht, Nachricht und UUID speichern. Turn beanspruchen, Werkzeuge und Ergebnisse sichern. Bei Bedarf aktuellen Codeworker abwarten. Ereignisse wiedergeben; unklare Writes klären.](/documentation/de/numo-execution-model-flow.svg)

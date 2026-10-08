@@ -190,7 +190,7 @@ test -s minddy.sbom.spdx.json
 
 ### Betrieb und Updates planen {#support}
 
-Installieren Sie veröffentlichte Versionen nacheinander. Migrationen gehen nur vorwärts. Ein inkompatibles Zurücksetzen stellt Datenbank, Storage, Konfiguration und Anwendung als zusammengehörigen Satz wieder her. Minddy pflegt Release-Werkzeuge und unterstützt nach Möglichkeit die Diagnose reproduzierbarer Fehler im Kern. DNS, TLS, Kapazität, Backups, Wiederherstellungsübungen und optionale Anbieter betreiben Sie. Veränderliche Imagetags und abgeleitete Supabase-Stacks übernehmen nicht den Supportvertrag der Release.
+Installieren Sie veröffentlichte Versionen nacheinander. Migrationen gehen nur vorwärts. Ein inkompatibles Zurücksetzen stellt Datenbank, Storage, Konfiguration und Anwendung als zusammengehörigen Satz wieder her. minddy pflegt Release-Werkzeuge und unterstützt nach Möglichkeit die Diagnose reproduzierbarer Fehler im Kern. DNS, TLS, Kapazität, Backups, Wiederherstellungsübungen und optionale Anbieter betreiben Sie. Veränderliche Imagetags und abgeleitete Supabase-Stacks übernehmen nicht den Supportvertrag der Release.
 
 ### Bekannte Runner-Grenzen der veröffentlichten Version {#known-runner-limits}
 
@@ -366,7 +366,7 @@ Die gepinnte Speicher-Hilfsdatei macht außerdem den Sandbox-Arbeitsbereich ausf
 
 ## Mit verwaltetem Supabase oder aus Quellcode installieren {#managed-or-source-installation}
 
-Managed Supabase beschreibt den Betrieb des Backends. Es kann mit dem offiziellen OCI-Anwendungsprofil oder einer aus Quellcode betriebenen Anwendung kombiniert werden. Unterscheiden Sie diese Bereitstellungen in Installations- und Abnahmeprotokollen. Das Backend benötigt PostgreSQL, Auth, Storage und Realtime. Das geführte OCI-Profil managed benötigt ein Projekt auf supabase.com, öffentliche URL, Anon- und Service-Role-Schlüssel sowie eine für Bootstrap-Werkzeuge erreichbare PostgreSQL-Verbindung. Verwenden Sie Ihr eigenes Projekt. Minddy-Cloud-Zugangsdaten sind keine Installationsparameter.
+Managed Supabase beschreibt den Betrieb des Backends. Es kann mit dem offiziellen OCI-Anwendungsprofil oder einer aus Quellcode betriebenen Anwendung kombiniert werden. Unterscheiden Sie diese Bereitstellungen in Installations- und Abnahmeprotokollen. Das Backend benötigt PostgreSQL, Auth, Storage und Realtime. Das geführte OCI-Profil managed benötigt ein Projekt auf supabase.com, öffentliche URL, Anon- und Service-Role-Schlüssel sowie eine für Bootstrap-Werkzeuge erreichbare PostgreSQL-Verbindung. Verwenden Sie Ihr eigenes Projekt. minddy-Cloud-Zugangsdaten sind keine Installationsparameter.
 
 
 ![Diagramm: Ihr verwaltetes Supabase-Projekt. PostgreSQL, Auth, Storage, Realtime. OCI-Profil ODER Anwendung aus Quelltag. Jobs und Sicherung passend zum Profil.](/documentation/de/managed-or-source-installation-flow.svg)

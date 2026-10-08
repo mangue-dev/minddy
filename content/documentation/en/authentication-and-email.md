@@ -75,7 +75,7 @@
 
 ## Set the correct Auth origin {#authentication-and-email}
 
-Auth email belongs to Supabase/GoTrue. Application notifications through Resend do not configure confirmation or password recovery. In the full profile, retain the Minddy overlay in every Compose command. Set SITE_URL, API_EXTERNAL_URL, SUPABASE_PUBLIC_URL and ADDITIONAL_REDIRECT_URLS to your selected origins. Configure SMTP_ADMIN_EMAIL, SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS and SMTP_SENDER_NAME with your own provider. Keep confirmation enabled and restart Auth in the installed Compose context.
+Auth email belongs to Supabase/GoTrue. Application notifications through Resend do not configure confirmation or password recovery. In the full profile, retain the minddy overlay in every Compose command. Set SITE_URL, API_EXTERNAL_URL, SUPABASE_PUBLIC_URL and ADDITIONAL_REDIRECT_URLS to your selected origins. Configure SMTP_ADMIN_EMAIL, SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS and SMTP_SENDER_NAME with your own provider. Keep confirmation enabled and restart Auth in the installed Compose context.
 
 
 Before using compose below, set the installed full-profile function from [the reference Compose context](/docs/backups-and-restoration#context).

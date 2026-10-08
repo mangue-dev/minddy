@@ -228,7 +228,7 @@ Your account belongs to the instance where you signed up. Manage sign-in, two-fa
 
 Open the login or signup screen on the instance you intend to use. Cloud and another self-hosted instance have separate accounts. Available sign-in methods and signup access depend on the instance's authentication configuration.
 
-For email signup, enter your address and continue to the identity step. Enter a nonempty full name; you can also choose an avatar. Continue to the password step, enter a password of at least eight characters with a lowercase letter (a–z), an uppercase letter (A–Z) and a digit, and repeat it in the confirmation field. Submit this last step to create the account. Leaving the earlier steps does not create an account. When email confirmation is required, open the message sent by that instance. Follow its link and activate the confirmation button on the confirmation page. Merely opening the link does not complete the confirmation: Minddy requires that deliberate action before consuming the email token.
+For email signup, enter your address and continue to the identity step. Enter a nonempty full name; you can also choose an avatar. Continue to the password step, enter a password of at least eight characters with a lowercase letter (a–z), an uppercase letter (A–Z) and a digit, and repeat it in the confirmation field. Submit this last step to create the account. Leaving the earlier steps does not create an account. When email confirmation is required, open the message sent by that instance. Follow its link and activate the confirmation button on the confirmation page. Merely opening the link does not complete the confirmation: minddy requires that deliberate action before consuming the email token.
 
 Return to the intended application and sign in. A newly authenticated account can create its own project or accept a project invitation. Knowing a project URL does not grant membership.
 
@@ -296,7 +296,7 @@ Choose the message-send shortcut in Keyboard. This preference governs comments a
 
 When analytics is configured, account settings show its consent switch and a cookie-policy link. Turning it off immediately changes measurement consent on this device and saves the choice to the account. Another device's existing local choice can still govern it. If no analytics service is configured, the section is absent.
 
-Consent is distinct from data needed to operate the account. Review the instance's privacy policy and the external providers you enabled. On self-hosted Minddy, the operator's configuration and policies determine service destinations; disabling analytics does not remove AI or Git integrations.
+Consent is distinct from data needed to operate the account. Review the instance's privacy policy and the external providers you enabled. On self-hosted minddy, the operator's configuration and policies determine service destinations; disabling analytics does not remove AI or Git integrations.
 
 ![Deletion preview listing owned projects, issues and members who lose access.](/documentation/en/privacy-and-account-deletion-workflow.png)
 

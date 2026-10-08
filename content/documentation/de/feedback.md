@@ -186,7 +186,7 @@ Die optionale Numo-Prüfung betrifft eingereichtes Feedback und hängt von Proje
 
 ## Feedback einreichen, abstimmen und verfolgen {#submit-and-follow-feedback}
 
-Öffnen Sie die öffentliche Board-URL. Öffentliche Beiträge können Sie ohne Minddy-Konto lesen. Zum Einreichen, Abstimmen oder Kommentieren identifizieren Sie sich über den E-Mail-Code des Boards oder den SSO-Link des Produkts. Die Zustellung des Codes hängt vom E-Mail-Dienst der Instanz ab. Ein Code gilt zehn Minuten und erlaubt fünf Versuche; warten Sie mindestens sechzig Sekunden, bevor Sie einen neuen anfordern. Geben Sie den Code niemals weiter.
+Öffnen Sie die öffentliche Board-URL. Öffentliche Beiträge können Sie ohne minddy-Konto lesen. Zum Einreichen, Abstimmen oder Kommentieren identifizieren Sie sich über den E-Mail-Code des Boards oder den SSO-Link des Produkts. Die Zustellung des Codes hängt vom E-Mail-Dienst der Instanz ab. Ein Code gilt zehn Minuten und erlaubt fünf Versuche; warten Sie mindestens sechzig Sekunden, bevor Sie einen neuen anfordern. Geben Sie den Code niemals weiter.
 
 Suchen Sie vor einer Einreichung nach vorhandenen Anfragen. Schreiben Sie einen konkreten Titel und beschreiben Sie den Bedarf und seinen Kontext. Titel erlauben 200 Zeichen, der Text 10.000. Die öffentliche Option ist standardmäßig ausgewählt; deaktivieren Sie sie, um die Anfrage privat an das Team zu senden. Prüfen Sie den Text vor dem Absenden auf Geheimnisse. Eine optionale Moderation kann die Anfrage zunächst zurückhalten, bevor sie öffentlich erscheint.
 

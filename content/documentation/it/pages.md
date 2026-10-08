@@ -255,7 +255,7 @@ Gli avatar di presenza identificano chi sta guardando la pagina. Non dimostrano 
 
 ### Recuperare un conflitto di salvataggio {#page-conflict}
 
-Minddy unisce le modifiche a blocchi diversi del primo livello del documento quando può conservare entrambi i cambiamenti. Non unisce carattere per carattere modifiche simultanee all’interno dello stesso blocco. Se entrambe le persone hanno modificato quel blocco, il documento conserva la versione remota e un avviso propone il tuo blocco precedente da esaminare.
+minddy unisce le modifiche a blocchi diversi del primo livello del documento quando può conservare entrambi i cambiamenti. Non unisce carattere per carattere modifiche simultanee all’interno dello stesso blocco. Se entrambe le persone hanno modificato quel blocco, il documento conserva la versione remota e un avviso propone il tuo blocco precedente da esaminare.
 
 Confronta il blocco identificato con il documento attuale. Scegli di ripristinare la tua versione solo se intendi sostituire quel blocco con essa. Se l’azione in conflitto era un’eliminazione, l’opzione per eliminarlo di nuovo applica esplicitamente quella cancellazione. Chiudere l’avviso mantiene il documento adottato e rimuove l’avvertimento; non ripristina la tua versione. Conserva il testo desiderato prima di chiudere e usa la cronologia per esaminare le versioni salvate quando serve un recupero più ampio. Queste scelte riguardano il blocco identificato, senza sostituire alla cieca tutta la pagina.
 

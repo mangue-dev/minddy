@@ -253,7 +253,7 @@ Les avatars de présence indiquent les personnes qui consultent la page. Ils ne 
 
 ### Résoudre un conflit d’enregistrement {#page-conflict}
 
-Minddy fusionne les modifications de blocs de premier niveau différents lorsqu’il peut conserver les deux changements. Il ne fusionne pas caractère par caractère les textes écrits simultanément dans un même bloc. Si les deux personnes ont modifié ce bloc, le document garde la version distante et une bannière propose votre ancien bloc pour examen.
+minddy fusionne les modifications de blocs de premier niveau différents lorsqu’il peut conserver les deux changements. Il ne fusionne pas caractère par caractère les textes écrits simultanément dans un même bloc. Si les deux personnes ont modifié ce bloc, le document garde la version distante et une bannière propose votre ancien bloc pour examen.
 
 Comparez le bloc désigné avec le document actuel. Choisissez Restaurer la mienne seulement si vous voulez le remplacer par votre version. Si votre action en conflit était une suppression, Le supprimer à nouveau applique explicitement cette suppression. Fermer conserve le document adopté et ferme l’avertissement ; cette action ne restaure pas votre version. Conservez le texte à garder avant de fermer et consultez l’historique si une récupération plus large est nécessaire. Ces choix ciblent le bloc identifié plutôt que de remplacer aveuglément toute la page.
 

@@ -193,13 +193,13 @@ Le modifiche allo schema eseguite da un agente usano la revisione attuale del da
 
 ## Importare un database con il contenuto delle sue voci {#import-a-database}
 
-Crea un database senza colonne facoltative né voci esistenti. Dal banner del nuovo database, scegli Importa un database esistente. Carica uno ZIP di Notion in formato Markdown & CSV con sottopagine, il CSV di un database oppure un archivio di database Minddy. Se l’archivio contiene più database, seleziona quello da importare.
+Crea un database senza colonne facoltative né voci esistenti. Dal banner del nuovo database, scegli Importa un database esistente. Carica uno ZIP di Notion in formato Markdown & CSV con sottopagine, il CSV di un database oppure un archivio di database minddy. Se l’archivio contiene più database, seleziona quello da importare.
 
 Prima di confermare, controlla i nomi e i tipi di colonna suggeriti e poi il numero di pagine. Se l’assistenza all’importazione è configurata, Numo può suggerire i tipi da un piccolo campione; puoi comunque impostare la corrispondenza manualmente. Le proprietà di origine non supportate rimangono come testo. I valori incompatibili bloccano l’importazione anziché essere cancellati senza avviso.
 
 ### Cosa viene mantenuto e cosa controllare {#database-import-result}
 
-L’importazione include i contenuti delle voci, i documenti annidati e i file locali presenti nell’archivio. Un archivio Minddy mantiene anche lo schema esatto e i colori delle opzioni e rimappa i collegamenti interni a pagine e file. Le persone possono essere associate ai membri del progetto di destinazione. Un’esportazione di Notion non contiene lo schema originale, i colori delle opzioni o le definizioni delle formule: queste informazioni mancanti non possono essere recuperate.
+L’importazione include i contenuti delle voci, i documenti annidati e i file locali presenti nell’archivio. Un archivio minddy mantiene anche lo schema esatto e i colori delle opzioni e rimappa i collegamenti interni a pagine e file. Le persone possono essere associate ai membri del progetto di destinazione. Un’esportazione di Notion non contiene lo schema originale, i colori delle opzioni o le definizioni delle formule: queste informazioni mancanti non possono essere recuperate.
 
 Gli archivi possono contenere al massimo 20 MB compressi, 50 MB estratti e 1.000 pagine. Ogni allegato mantiene il limite di 10 MB previsto per i file delle pagine. La scrittura nel database è transazionale. Riprovare lo stesso tentativo nella finestra ancora aperta mantiene il suo identificativo di richiesta, quindi un tentativo già completato viene restituito senza duplicare le righe. Caricare un altro file o aprire una nuova finestra può creare un tentativo diverso. Se il risultato della rete è incerto, esamina la destinazione prima di ricominciare; un database già popolato non soddisfa più il requisito di una destinazione vuota.
 

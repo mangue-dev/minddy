@@ -150,7 +150,7 @@
       "caption": "Formulaire d’un serveur MCP personnalisé avec les réglages avancés d’authentification, de transport et d’en-têtes. Aucun identifiant n’a été saisi et aucun serveur n’a été contacté.",
       "revision": 2,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         1440,
         1800
@@ -223,7 +223,7 @@ Une conversation ne peut pas emprunter les connexions MCP d’un autre membre. L
 
 ## Comprendre les tours durables Numo et le travail délégué {#numo-execution-model}
 
-Messages interactifs, actions contextuelles et routines entrent dans les conversations Numo. Modèle et raisonnement conversationnels se choisissent dans le composeur ; le travail sur le code délégué utilise les valeurs par défaut du modèle de code et du niveau de raisonnement du compte. Les outils Minddy directs peuvent agir sans dépôt. Le code ouvre une sandbox serveur pour le dépôt lié uniquement si nécessaire. Une routine crée une nouvelle conversation avec instruction enregistrée et contexte propriétaire/projet. Il n’est pas nécessaire de garder une session de l’application de bureau ouverte.
+Messages interactifs, actions contextuelles et routines entrent dans les conversations Numo. Modèle et raisonnement conversationnels se choisissent dans le composeur ; le travail sur le code délégué utilise les valeurs par défaut du modèle de code et du niveau de raisonnement du compte. Les outils minddy directs peuvent agir sans dépôt. Le code ouvre une sandbox serveur pour le dépôt lié uniquement si nécessaire. Une routine crée une nouvelle conversation avec instruction enregistrée et contexte propriétaire/projet. Il n’est pas nécessaire de garder une session de l’application de bureau ouverte.
 
 
 ![Schéma: Persister intention, message et UUID. Prendre le tour, enregistrer outils et résultats. Attendre le worker courant si nécessaire. Relire les événements ; réconcilier les écritures.](/documentation/fr/numo-execution-model-flow.svg)

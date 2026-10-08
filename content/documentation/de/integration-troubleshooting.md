@@ -3,7 +3,7 @@
   "id": "integration-troubleshooting",
   "locale": "de",
   "title": "Fehlerbehebung bei Verbindungen",
-  "summary": "Minddy MCP verbindet externe Assistenten mit Minddy; persönliche MCP-Verbindungen lassen Numo fremde Server aufrufen.",
+  "summary": "minddy MCP verbindet externe Assistenten mit minddy; persönliche MCP-Verbindungen lassen Numo fremde Server aufrufen.",
   "topic": "Technische Grundlagen",
   "type": "troubleshooting",
   "audiences": [
@@ -77,7 +77,7 @@
 
 ## OAuth-, MCP-, Webhook- oder Git-Verbindung wiederherstellen {#integration-troubleshooting}
 
-Minddy MCP verbindet externe Assistenten mit Minddy; persönliche MCP-Verbindungen lassen Numo fremde Server aufrufen. Kontotabs und Zugangsdaten unterscheiden sich. Prüfen Sie persönliche Verbindungen in Einstellungen und verwenden Sie Test/Neuverbindung. OAuth-Discovery, dynamische Registrierung, PKCE und Refresh sind möglich, aber Katalogeinträge umgehen weder Anbieterfreigabe, Entwicklervorschau noch registrierte Apps. Prüfen Sie aktuelle Voraussetzungen, bevor Sie einen Minddy-Fehler annehmen.
+minddy MCP verbindet externe Assistenten mit minddy; persönliche MCP-Verbindungen lassen Numo fremde Server aufrufen. Kontotabs und Zugangsdaten unterscheiden sich. Prüfen Sie persönliche Verbindungen in Einstellungen und verwenden Sie Test/Neuverbindung. OAuth-Discovery, dynamische Registrierung, PKCE und Refresh sind möglich, aber Katalogeinträge umgehen weder Anbieterfreigabe, Entwicklervorschau noch registrierte Apps. Prüfen Sie aktuelle Voraussetzungen, bevor Sie einen minddy-Fehler annehmen.
 
 
 ![Ladefehler der MCP-Verbindungen mit der Schaltfläche Erneut versuchen.](/documentation/de/integration-troubleshooting-error.png)

@@ -190,7 +190,7 @@ test -s minddy.sbom.spdx.json
 
 ### Préparer exploitation et mises à jour {#support}
 
-Installez les versions publiées une par une. Les migrations vont uniquement vers l’avant ; un retour incompatible restaure ensemble la base, Storage, la configuration et l’application correspondantes. Minddy maintient les outils de release et aide au diagnostic des défauts reproductibles du cœur, sans garantie de résultat. Vous gérez DNS, TLS, capacité, sauvegardes, exercices de restauration et fournisseurs optionnels. Un tag d’image mouvant ou une pile Supabase dérivée ne bénéficie pas du contrat de support de la release.
+Installez les versions publiées une par une. Les migrations vont uniquement vers l’avant ; un retour incompatible restaure ensemble la base, Storage, la configuration et l’application correspondantes. minddy maintient les outils de release et aide au diagnostic des défauts reproductibles du cœur, sans garantie de résultat. Vous gérez DNS, TLS, capacité, sauvegardes, exercices de restauration et fournisseurs optionnels. Un tag d’image mouvant ou une pile Supabase dérivée ne bénéficie pas du contrat de support de la release.
 
 ### Limites du runner dans la version publiée {#known-runner-limits}
 
@@ -366,7 +366,7 @@ La [correction du helper de stockage](#known-runner-limits) reste nécessaire po
 
 ## Installer avec Supabase géré ou depuis les sources {#managed-or-source-installation}
 
-Supabase géré décrit l’exploitation du backend. Il peut accompagner le profil applicatif OCI officiel ou un serveur construit depuis les sources. Distinguez ces déploiements dans les relevés d’installation et de validation. Le backend doit fournir PostgreSQL, Auth, Storage et Realtime. Pour le profil OCI managed guidé, fournissez un projet sur supabase.com, son URL publique, les clés anon et service-role et une connexion PostgreSQL accessible aux outils de bootstrap. Utilisez votre propre projet ; les identifiants Minddy Cloud ne sont pas des paramètres d’installation.
+Supabase géré décrit l’exploitation du backend. Il peut accompagner le profil applicatif OCI officiel ou un serveur construit depuis les sources. Distinguez ces déploiements dans les relevés d’installation et de validation. Le backend doit fournir PostgreSQL, Auth, Storage et Realtime. Pour le profil OCI managed guidé, fournissez un projet sur supabase.com, son URL publique, les clés anon et service-role et une connexion PostgreSQL accessible aux outils de bootstrap. Utilisez votre propre projet ; les identifiants minddy Cloud ne sont pas des paramètres d’installation.
 
 
 ![Schéma: Votre projet Supabase géré. PostgreSQL, Auth, Storage, Realtime. Profil OCI OU application depuis un tag. Jobs et sauvegarde propres au profil.](/documentation/fr/managed-or-source-installation-flow.svg)

@@ -120,13 +120,13 @@ MINDDY_PUBLIC_SITE_NAME y MINDDY_PUBLIC_CONTACT_EMAIL identifican la instancia. 
 
 ## Activar proveedores opcionales de forma explícita {#optional-providers}
 
-El núcleo no exige Stripe, PostHog, una cuenta Cloud ni una clave de IA gestionada por Minddy. Los servicios externos tienen costes, permisos y destinos de datos propios. Revise sus condiciones antes de activarlos. El diagnóstico informa de valores ausentes sin elegir un proveedor alternativo. Una instancia self-hosted puede usar claves de IA personales o endpoints locales accesibles. Mantenga MINDDY_MANAGED_AI y MINDDY_MANAGED_BILLING desactivados; configurar una clave OpenRouter por sí sola no selecciona Cloud.
+El núcleo no exige Stripe, PostHog, una cuenta Cloud ni una clave de IA gestionada por minddy. Los servicios externos tienen costes, permisos y destinos de datos propios. Revise sus condiciones antes de activarlos. El diagnóstico informa de valores ausentes sin elegir un proveedor alternativo. Una instancia self-hosted puede usar claves de IA personales o endpoints locales accesibles. Mantenga MINDDY_MANAGED_AI y MINDDY_MANAGED_BILLING desactivados; configurar una clave OpenRouter por sí sola no selecciona Cloud.
 
 ![Diagrama: Operador elige capacidad opcional. Credenciales completas y condiciones. Destino de datos externo explícito. Verificar conducta y controlar costes.](/documentation/es/optional-providers-flow.svg)
 
 ### Configurar proveedores completos {#configure}
 
-El email de la aplicación necesita EMAIL_PROVIDER=resend, RESEND_API_KEY, FEEDBACK_EMAIL_FROM e INVITATION_EMAIL_FROM. console no se admite en producción; el SMTP de Auth se configura por separado. Web Push necesita el par VAPID público/privado y VAPID_SUBJECT; las suscripciones existentes dependen de ese par. Analytics necesita la clave y el host de PostHog; el seguimiento de errores también exige MINDDY_PUBLIC_ERROR_TRACKING=1. El instalador ofrece application-email y web-push, pero usted debe proporcionar las credenciales externas. No use remitentes Minddy ni credenciales de sus versiones nativas en otra instancia.
+El email de la aplicación necesita EMAIL_PROVIDER=resend, RESEND_API_KEY, FEEDBACK_EMAIL_FROM e INVITATION_EMAIL_FROM. console no se admite en producción; el SMTP de Auth se configura por separado. Web Push necesita el par VAPID público/privado y VAPID_SUBJECT; las suscripciones existentes dependen de ese par. Analytics necesita la clave y el host de PostHog; el seguimiento de errores también exige MINDDY_PUBLIC_ERROR_TRACKING=1. El instalador ofrece application-email y web-push, pero usted debe proporcionar las credenciales externas. No use remitentes minddy ni credenciales de sus versiones nativas en otra instancia.
 
 ### Conectar Git y ejecución de código {#git-and-code}
 

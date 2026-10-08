@@ -3,7 +3,7 @@
   "id": "encryption-and-data-boundaries",
   "locale": "en",
   "title": "Encryption and data boundaries",
-  "summary": "When configured and migrated, Minddy encrypts workspace content and files before durable writes with authenticated server-side encryption.",
+  "summary": "When configured and migrated, minddy encrypts workspace content and files before durable writes with authenticated server-side encryption.",
   "topic": "Technical concepts",
   "type": "explanation",
   "audiences": [
@@ -79,7 +79,7 @@
 
 ## What at-rest encryption protects {#encryption-and-data-boundaries}
 
-When configured and migrated, Minddy encrypts workspace content and files before durable writes with authenticated server-side encryption. Project, user and system data keys are versioned and wrapped by a dedicated root outside PostgreSQL. A database-only extraction cannot read protected content without its keys. The application must decrypt for authorized access, search and unattended AI work. A compromised runtime or access to both configuration keys and data crosses that boundary; this is not end-to-end secrecy from the operator.
+When configured and migrated, minddy encrypts workspace content and files before durable writes with authenticated server-side encryption. Project, user and system data keys are versioned and wrapped by a dedicated root outside PostgreSQL. A database-only extraction cannot read protected content without its keys. The application must decrypt for authorized access, search and unattended AI work. A compromised runtime or access to both configuration keys and data crosses that boundary; this is not end-to-end secrecy from the operator.
 
 
 ![Diagram: Encrypted durable content and wrapped keys. Root key stays in protected server configuration. Authorized runtime can decrypt content. Exports and external providers need separate care.](/documentation/en/encryption-and-data-boundaries-flow.svg)

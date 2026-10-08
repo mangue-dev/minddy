@@ -189,7 +189,7 @@ test -s minddy.sbom.spdx.json
 
 ### Planificar operación y actualizaciones {#support}
 
-Instale una versión publicada cada vez. Las migraciones solo avanzan: para volver a una versión incompatible, restaure juntos la base de datos, Storage, la configuración y la aplicación correspondientes. Minddy mantiene las herramientas de publicación y ofrece ayuda, sin garantía, para diagnosticar defectos reproducibles del núcleo. Usted se encarga de DNS, TLS, capacidad del servidor, copias de seguridad, pruebas de restauración y proveedores opcionales. Una etiqueta de imagen que cambia o un entorno Supabase derivado no heredan el contrato de soporte de la versión.
+Instale una versión publicada cada vez. Las migraciones solo avanzan: para volver a una versión incompatible, restaure juntos la base de datos, Storage, la configuración y la aplicación correspondientes. minddy mantiene las herramientas de publicación y ofrece ayuda, sin garantía, para diagnosticar defectos reproducibles del núcleo. Usted se encarga de DNS, TLS, capacidad del servidor, copias de seguridad, pruebas de restauración y proveedores opcionales. Una etiqueta de imagen que cambia o un entorno Supabase derivado no heredan el contrato de soporte de la versión.
 
 ### Limitaciones conocidas del runner de la versión publicada {#known-runner-limits}
 
@@ -364,7 +364,7 @@ El helper de almacenamiento fijado también permite ejecutar archivos en el dire
 
 ## Instalar con Supabase gestionado o desde el código fuente {#managed-or-source-installation}
 
-Supabase gestionado describe quién opera el backend. Puede acompañar al perfil de aplicación OCI oficial o a un servidor compilado desde el código. Distinga ambos despliegues en los registros de instalación y aceptación. El backend debe proporcionar PostgreSQL, Auth, Storage y Realtime. Para el perfil OCI managed guiado necesita un proyecto en supabase.com, su URL pública, las claves anon y service-role y una conexión PostgreSQL accesible desde las herramientas de bootstrap. Utilice un proyecto propio; las credenciales de Minddy Cloud no son datos de instalación.
+Supabase gestionado describe quién opera el backend. Puede acompañar al perfil de aplicación OCI oficial o a un servidor compilado desde el código. Distinga ambos despliegues en los registros de instalación y aceptación. El backend debe proporcionar PostgreSQL, Auth, Storage y Realtime. Para el perfil OCI managed guiado necesita un proyecto en supabase.com, su URL pública, las claves anon y service-role y una conexión PostgreSQL accesible desde las herramientas de bootstrap. Utilice un proyecto propio; las credenciales de minddy Cloud no son datos de instalación.
 
 ![Diagrama: Su proyecto Supabase gestionado. PostgreSQL, Auth, Storage, Realtime. Perfil OCI O aplicación desde tag. Tareas y copia según el perfil.](/documentation/es/managed-or-source-installation-flow.svg)
 
@@ -382,7 +382,7 @@ pnpm self-host:install -- --non-interactive --mode managed \
 
 ### Completar el despliegue desde fuentes {#source}
 
-Para instalar desde el código, instale las dependencias fijadas de la etiqueta, proporcione el entorno de Minddy y Supabase, ejecute bootstrap, compile e inicie el servidor de producción detrás de un proxy inverso. Establezca los valores MINDDY_PUBLIC_* antes de iniciar. Debe proporcionar un planificador persistente con las llamadas autenticadas de [la configuración de red](/es/documentacion/instance-configuration#schedules): compilar no pone en marcha los trabajos. Verifique migraciones y Storage y pruebe Auth, creación de incidencias, bytes de los archivos y Realtime. Utilice el procedimiento lógico o del proveedor para las copias. Un servidor compilado desde el código no valida una instalación OCI.
+Para instalar desde el código, instale las dependencias fijadas de la etiqueta, proporcione el entorno de minddy y Supabase, ejecute bootstrap, compile e inicie el servidor de producción detrás de un proxy inverso. Establezca los valores MINDDY_PUBLIC_* antes de iniciar. Debe proporcionar un planificador persistente con las llamadas autenticadas de [la configuración de red](/es/documentacion/instance-configuration#schedules): compilar no pone en marcha los trabajos. Verifique migraciones y Storage y pruebe Auth, creación de incidencias, bytes de los archivos y Realtime. Utilice el procedimiento lógico o del proveedor para las copias. Un servidor compilado desde el código no valida una instalación OCI.
 
 ```bash
 pnpm install --frozen-lockfile

@@ -727,7 +727,7 @@
   {
     "workflow": "N09",
     "article": "minddy-mcp",
-    "outcome": "Connect an external assistant to authorized Minddy work",
+    "outcome": "Connect an external assistant to authorized minddy work",
     "audiences": [
       "integrator",
       "member"
@@ -1240,7 +1240,7 @@
   {
     "workflow": "T06",
     "article": "minddy-mcp",
-    "outcome": "Use Minddy MCP discovery issue plans pages and routines",
+    "outcome": "Use minddy MCP discovery issue plans pages and routines",
     "audiences": [
       "integrator"
     ],

@@ -3,7 +3,7 @@
   "id": "encryption-and-data-boundaries",
   "locale": "fr",
   "title": "Chiffrement et limites de protection des données",
-  "summary": "Après configuration et migration, Minddy chiffre contenu et fichiers avant leur stockage durable avec un chiffrement authentifié côté serveur.",
+  "summary": "Après configuration et migration, minddy chiffre contenu et fichiers avant leur stockage durable avec un chiffrement authentifié côté serveur.",
   "topic": "Concepts techniques",
   "type": "explanation",
   "audiences": [
@@ -79,7 +79,7 @@
 
 ## Comprendre le chiffrement et ses limites {#encryption-and-data-boundaries}
 
-Après configuration et migration, Minddy chiffre contenu et fichiers avant leur stockage durable avec un chiffrement authentifié côté serveur. Les clés projet, utilisateur et système sont versionnées et enveloppées par une racine dédiée hors PostgreSQL. Une extraction de base seule ne lit pas le contenu protégé sans clés. L’application déchiffre pour accès autorisé, recherche et travail IA autonome. Un runtime compromis ou l’accès simultané aux clés et aux données franchit cette frontière ; l’opérateur n’est pas exclu par un chiffrement de bout en bout.
+Après configuration et migration, minddy chiffre contenu et fichiers avant leur stockage durable avec un chiffrement authentifié côté serveur. Les clés projet, utilisateur et système sont versionnées et enveloppées par une racine dédiée hors PostgreSQL. Une extraction de base seule ne lit pas le contenu protégé sans clés. L’application déchiffre pour accès autorisé, recherche et travail IA autonome. Un runtime compromis ou l’accès simultané aux clés et aux données franchit cette frontière ; l’opérateur n’est pas exclu par un chiffrement de bout en bout.
 
 
 ![Schéma: Contenu durable chiffré et clés enveloppées. Racine conservée dans le serveur protégé. Le runtime autorisé peut déchiffrer. Exports et fournisseurs : protection distincte.](/documentation/fr/encryption-and-data-boundaries-flow.svg)

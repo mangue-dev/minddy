@@ -150,7 +150,7 @@
       "caption": "Formulario de servidor MCP personalizado con ajustes avanzados de autenticación, transporte y cabeceras. No se introdujeron credenciales ni se contactó con ningún servidor.",
       "revision": 2,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         1440,
         1800
@@ -223,7 +223,7 @@ Las conversaciones no usan conexiones MCP personales de otros miembros. Las ruti
 
 ## Comprender los turnos duraderos de Numo y el trabajo delegado {#numo-execution-model}
 
-Los mensajes interactivos, las acciones contextuales y las rutinas entran en conversaciones Numo. El modelo y el nivel de razonamiento de la conversación se eligen en el campo de composición; el trabajo delegado usa los valores predeterminados de modelo de código y razonamiento de la cuenta. Las herramientas directas de Minddy pueden actuar sin repositorio. El trabajo de código abre una sandbox en el servidor para el repositorio vinculado solo cuando hace falta. Una rutina crea una conversación para esa ejecución con las instrucciones guardadas y el contexto de propietario y proyecto. No es necesario mantener una sesión de escritorio abierta.
+Los mensajes interactivos, las acciones contextuales y las rutinas entran en conversaciones Numo. El modelo y el nivel de razonamiento de la conversación se eligen en el campo de composición; el trabajo delegado usa los valores predeterminados de modelo de código y razonamiento de la cuenta. Las herramientas directas de minddy pueden actuar sin repositorio. El trabajo de código abre una sandbox en el servidor para el repositorio vinculado solo cuando hace falta. Una rutina crea una conversación para esa ejecución con las instrucciones guardadas y el contexto de propietario y proyecto. No es necesario mantener una sesión de escritorio abierta.
 
 ![Diagrama: Persistir intención, mensaje y UUID. Reclamar turno, guardar herramientas y resultados. Esperar worker actual cuando necesario. Releer eventos y conciliar escrituras inciertas.](/documentation/es/numo-execution-model-flow.svg)
 

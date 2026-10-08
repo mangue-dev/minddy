@@ -135,7 +135,7 @@
 }
 ---
 
-Per installare Minddy sul tuo server, scegli una release verificata e un profilo con Supabase completo, gestito o un’applicazione compilata dai sorgenti. Questa guida distingue le procedure e i limiti della versione pubblicata dagli adattamenti tecnici espliciti. Prima di accogliere utenti, verifica autenticazione, file, lavoro sul codice se abilitato e ripristino.
+Per installare minddy sul tuo server, scegli una release verificata e un profilo con Supabase completo, gestito o un’applicazione compilata dai sorgenti. Questa guida distingue le procedure e i limiti della versione pubblicata dagli adattamenti tecnici espliciti. Prima di accogliere utenti, verifica autenticazione, file, lavoro sul codice se abilitato e ripristino.
 
 ## Scegliere una versione e un profilo supportati {#self-hosted-compatibility}
 
@@ -190,7 +190,7 @@ test -s minddy.sbom.spdx.json
 
 ### Pianificare gestione e aggiornamenti {#support}
 
-Installa una versione pubblicata alla volta. Le migrazioni procedono solo in avanti; un rollback incompatibile ripristina insieme database, Storage, configurazione e applicazione corrispondenti. Minddy mantiene gli strumenti di release e offre assistenza senza garanzia per difetti riproducibili del nucleo. Gestisci tu DNS, TLS, capacità, backup, prove di ripristino e fornitori opzionali. Tag mobili e stack Supabase derivati non ereditano il contratto di supporto.
+Installa una versione pubblicata alla volta. Le migrazioni procedono solo in avanti; un rollback incompatibile ripristina insieme database, Storage, configurazione e applicazione corrispondenti. minddy mantiene gli strumenti di release e offre assistenza senza garanzia per difetti riproducibili del nucleo. Gestisci tu DNS, TLS, capacità, backup, prove di ripristino e fornitori opzionali. Tag mobili e stack Supabase derivati non ereditano il contratto di supporto.
 
 ### Limiti noti del runner nella versione pubblicata {#known-runner-limits}
 
@@ -366,7 +366,7 @@ L’helper di storage fissato rende eseguibile anche l’area di lavoro della sa
 
 ## Installare con Supabase gestito o dai sorgenti {#managed-or-source-installation}
 
-Supabase gestito indica chi opera il backend. Può essere usato sia con l’immagine OCI ufficiale sia con un server compilato dai sorgenti. Distingui questi deployment nei registri di installazione e accettazione. Il backend deve fornire PostgreSQL, Auth, Storage e Realtime. Il percorso OCI managed guidato richiede un progetto su supabase.com, la sua URL pubblica, le chiavi anon e service-role e una connessione PostgreSQL raggiungibile dagli strumenti di bootstrap. Usa un progetto di tua proprietà, mai credenziali Minddy Cloud.
+Supabase gestito indica chi opera il backend. Può essere usato sia con l’immagine OCI ufficiale sia con un server compilato dai sorgenti. Distingui questi deployment nei registri di installazione e accettazione. Il backend deve fornire PostgreSQL, Auth, Storage e Realtime. Il percorso OCI managed guidato richiede un progetto su supabase.com, la sua URL pubblica, le chiavi anon e service-role e una connessione PostgreSQL raggiungibile dagli strumenti di bootstrap. Usa un progetto di tua proprietà, mai credenziali minddy Cloud.
 
 ![Schema: Il tuo progetto Supabase gestito. PostgreSQL, Auth, Storage, Realtime. Profilo OCI O applicazione dal tag. Job e backup specifici del profilo.](/documentation/it/managed-or-source-installation-flow.svg)
 
@@ -384,7 +384,7 @@ pnpm self-host:install -- --non-interactive --mode managed \
 
 ### Completare il deployment dai sorgenti {#source}
 
-Per installare dai sorgenti, installa le dipendenze bloccate del tag, fornisci l’ambiente Minddy e Supabase, esegui bootstrap e build e avvia il server di produzione dietro un proxy. Imposta MINDDY_PUBLIC_* prima dell’avvio. Devi fornire uno scheduler persistente con le chiamate autenticate descritte nell’articolo sulla rete: un build non esegue i job. Verifica migrazioni e Storage, poi Auth, ticket, byte degli allegati e Realtime. Per il backup usa la procedura logica o del provider. Un server dai sorgenti non valida l’installazione OCI.
+Per installare dai sorgenti, installa le dipendenze bloccate del tag, fornisci l’ambiente minddy e Supabase, esegui bootstrap e build e avvia il server di produzione dietro un proxy. Imposta MINDDY_PUBLIC_* prima dell’avvio. Devi fornire uno scheduler persistente con le chiamate autenticate descritte nell’articolo sulla rete: un build non esegue i job. Verifica migrazioni e Storage, poi Auth, ticket, byte degli allegati e Realtime. Per il backup usa la procedura logica o del provider. Un server dai sorgenti non valida l’installazione OCI.
 
 ```bash
 pnpm install --frozen-lockfile

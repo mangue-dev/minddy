@@ -253,7 +253,7 @@ Los avatares de presencia identifican a las personas que ven la página. No demu
 
 ### Recuperarte de un conflicto de guardado {#page-conflict}
 
-Minddy combina las ediciones de distintos bloques de primer nivel del documento cuando puede conservar ambos cambios. No fusiona carácter por carácter las ediciones simultáneas dentro del mismo bloque. Si ambas personas han cambiado ese bloque, el documento conserva la versión remota y un aviso ofrece tu bloque anterior para revisarlo.
+minddy combina las ediciones de distintos bloques de primer nivel del documento cuando puede conservar ambos cambios. No fusiona carácter por carácter las ediciones simultáneas dentro del mismo bloque. Si ambas personas han cambiado ese bloque, el documento conserva la versión remota y un aviso ofrece tu bloque anterior para revisarlo.
 
 Compara el bloque identificado con el documento actual. Elige restaurar tu versión solo si quieres reemplazar ese bloque por ella. Si tu acción en conflicto fue una eliminación, la opción de eliminarlo de nuevo aplica esa eliminación expresamente. Descartar el aviso conserva el documento adoptado y cierra la advertencia; no restaura tu versión. Conserva el texto que quieras recuperar antes de descartar el aviso y utiliza el historial para examinar versiones guardadas si necesitas una recuperación más amplia. Estas opciones afectan al bloque identificado, sin reemplazar a ciegas toda la página.
 

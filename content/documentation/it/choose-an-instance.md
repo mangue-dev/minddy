@@ -57,7 +57,7 @@
       "id": "responsibilities",
       "kind": "diagram",
       "src": "/documentation/it/responsibilities.svg",
-      "alt": "Responsabilità di gestione: Gestito da Minddy, Gestito da te.",
+      "alt": "Responsabilità di gestione: Gestito da minddy, Gestito da te.",
       "caption": "Gli stessi servizi del nucleo richiedono un operatore in entrambi i modelli. I fornitori opzionali restano servizi separati.",
       "revision": 2,
       "reviewed": true,
@@ -77,19 +77,19 @@
 
 ## Scegliere un modello di gestione {#choose-an-instance}
 
-Minddy Cloud e Minddy ospitato autonomamente eseguono lo stesso nucleo pubblico. Scegli Cloud se vuoi che Minddy gestisca applicazione, database, Storage e pianificazione. Scegli l’hosting autonomo se devi controllare la sede dell’infrastruttura, i fornitori o il calendario degli aggiornamenti e puoi gestire questi servizi.
+minddy Cloud e minddy ospitato autonomamente eseguono lo stesso nucleo pubblico. Scegli Cloud se vuoi che minddy gestisca applicazione, database, Storage e pianificazione. Scegli l’hosting autonomo se devi controllare la sede dell’infrastruttura, i fornitori o il calendario degli aggiornamenti e puoi gestire questi servizi.
 
-Un account Cloud appartiene a Cloud. Per un’istanza autonoma, crea un account su quell’istanza; non serve un account Minddy Cloud. Controlla l’indirizzo prima di accedere o invitare qualcuno. Due istanze Minddy non condividono automaticamente account o credenziali.
+Un account Cloud appartiene a Cloud. Per un’istanza autonoma, crea un account su quell’istanza; non serve un account minddy Cloud. Controlla l’indirizzo prima di accedere o invitare qualcuno. Due istanze minddy non condividono automaticamente account o credenziali.
 
-![Responsabilità di gestione: Gestito da Minddy, Gestito da te.](/documentation/it/responsibilities.svg)
+![Responsabilità di gestione: Gestito da minddy, Gestito da te.](/documentation/it/responsibilities.svg)
 
 ## Responsabilità e costi {#responsibilities}
 
 | Responsabilità | Cloud | Hosting autonomo |
 | --- | --- | --- |
-| Infrastruttura, aggiornamenti e incidenti | Minddy gestisce il servizio. | Mantieni host, TLS, monitoraggio e aggiornamenti delle versioni. |
-| Backup e ripristino | Minddy gestisce il servizio Cloud. | Conservi dati del database, file di Storage, configurazione e chiavi di cifratura, e provi i ripristini. |
-| Account dei fornitori | Minddy possiede gli account dei servizi che gestisce. | Scegli e paghi infrastruttura e fornitori opzionali. |
+| Infrastruttura, aggiornamenti e incidenti | minddy gestisce il servizio. | Mantieni host, TLS, monitoraggio e aggiornamenti delle versioni. |
+| Backup e ripristino | minddy gestisce il servizio Cloud. | Conservi dati del database, file di Storage, configurazione e chiavi di cifratura, e provi i ripristini. |
+| Account dei fornitori | minddy possiede gli account dei servizi che gestisce. | Scegli e paghi infrastruttura e fornitori opzionali. |
 | Assistenza | Si applicano le condizioni di assistenza Cloud. | Gli strumenti di release e l’aiuto della comunità, secondo disponibilità, coprono difetti riproducibili del nucleo; non è incluso un SLA per gestire la tua infrastruttura. |
 
 Per esempio, un gruppo senza capacità di gestione dei database può usare Cloud. Un operatore con requisiti sulla residenza dei dati può scegliere l’hosting autonomo e controllare le destinazioni di ogni fornitore attivato. Ospitare l’applicazione non rende locale un fornitore esterno di IA, posta elettronica o Git.
@@ -98,7 +98,7 @@ Per esempio, un gruppo senza capacità di gestione dei database può usare Cloud
 
 Un’installazione supportata richiede l’applicazione e Supabase con PostgreSQL, Auth, Storage e Realtime. PostgreSQL da solo non basta. Usa una release con tag e la relativa matrice di compatibilità. Le varianti derivate di Supabase senza versione fissata e gli adattatori autogestiti per GitHub Enterprise o GitLab non rientrano nel contratto supportato.
 
-IA, posta elettronica, Git, notifiche push e analisi d’uso dipendono dalla configurazione. L’hosting autonomo non richiede Stripe, PostHog, una chiave IA gestita da Minddy o un account Cloud. La configurazione opzionale mancante viene segnalata, senza sostituirla silenziosamente con un fornitore. Chiavi IA personali ed endpoint IA locali sono opzioni possibili; disponibilità e costi dipendono dalla capacità configurata.
+IA, posta elettronica, Git, notifiche push e analisi d’uso dipendono dalla configurazione. L’hosting autonomo non richiede Stripe, PostHog, una chiave IA gestita da minddy o un account Cloud. La configurazione opzionale mancante viene segnalata, senza sostituirla silenziosamente con un fornitore. Chiavi IA personali ed endpoint IA locali sono opzioni possibili; disponibilità e costi dipendono dalla capacità configurata.
 
 Controlla permessi e condizioni sui dati prima di attivare un’integrazione. Le connessioni Git possono usare il relay gestito per le forge quando avvii esplicitamente l’integrazione; sono disponibili anche applicazioni del fornitore di proprietà dell’operatore e la disattivazione del relay. L’hosting autonomo non è una versione ridotta delle funzioni del nucleo.
 

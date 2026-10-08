@@ -3,7 +3,7 @@
   "id": "applications",
   "locale": "es",
   "title": "Aplicaciones web, móviles y de escritorio",
-  "summary": "Usa Minddy en el navegador, instala la aplicación móvil o de escritorio y configura las notificaciones del dispositivo.",
+  "summary": "Usa minddy en el navegador, instala la aplicación móvil o de escritorio y configura las notificaciones del dispositivo.",
   "topic": "Cuenta y aplicaciones",
   "type": "guide",
   "audiences": [
@@ -95,8 +95,8 @@
       "id": "install-the-pwa-workflow",
       "kind": "screenshot",
       "src": "/documentation/es/install-the-pwa-workflow.png",
-      "alt": "Guía ilustrada de instalación en Safari de Minddy: Compartir, Añadir a pantalla de inicio y confirmar.",
-      "caption": "La guía pública ilustra los tres pasos de Safari y la opción Abrir como app web que debe permanecer activada. Son ilustraciones didácticas mostradas por Minddy, no capturas de una instalación de iOS realizada.",
+      "alt": "Guía ilustrada de instalación en Safari de minddy: Compartir, Añadir a pantalla de inicio y confirmar.",
+      "caption": "La guía pública ilustra los tres pasos de Safari y la opción Abrir como app web que debe permanecer activada. Son ilustraciones didácticas mostradas por minddy, no capturas de una instalación de iOS realizada.",
       "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
@@ -162,7 +162,7 @@
 }
 ---
 
-Minddy se puede usar en el navegador, como aplicación web instalada y como aplicación de escritorio. Los siguientes apartados explican los puntos de entrada, la instalación y las actualizaciones, además de los requisitos de las notificaciones en cada plataforma.
+minddy se puede usar en el navegador, como aplicación web instalada y como aplicación de escritorio. Los siguientes apartados explican los puntos de entrada, la instalación y las actualizaciones, además de los requisitos de las notificaciones en cada plataforma.
 
 ## Trabajar en navegador y móvil {#web-and-mobile}
 
@@ -180,23 +180,23 @@ El navegador y la aplicación web instalada necesitan conexión de red para cons
 
 ## Instalar la aplicación web en móvil o tableta {#install-the-pwa}
 
-Abra la instancia de Minddy que desea usar en Safari en un iPhone o iPad, o en Chrome u otro navegador compatible de Android. Si el enlace se abrió dentro de otra aplicación, ábralo primero en el navegador completo. Para una instancia self-hosted, utilice la dirección de su propio servidor.
+Abra la instancia de minddy que desea usar en Safari en un iPhone o iPad, o en Chrome u otro navegador compatible de Android. Si el enlace se abrió dentro de otra aplicación, ábralo primero en el navegador completo. Para una instancia self-hosted, utilice la dirección de su propio servidor.
 
 En iOS, abra Compartir y elija Añadir a pantalla de inicio. Mantenga Abrir como app web activado y pulse Añadir. Según la interfaz de Safari, puede tener que abrir Más antes de Compartir. Si falta la acción, revise Editar acciones.
 
-En Android, utilice la propuesta de instalación o elija Instalar aplicación o Añadir a pantalla de inicio en el menú del navegador y confirme Instalar. Los nombres varían según el navegador. Abra el nuevo icono e inicie sesión con la cuenta de esa instancia. Se trata de una PWA instalada por el navegador; Minddy no dispone de una aplicación nativa en el App Store de iOS ni en Google Play.
+En Android, utilice la propuesta de instalación o elija Instalar aplicación o Añadir a pantalla de inicio en el menú del navegador y confirme Instalar. Los nombres varían según el navegador. Abra el nuevo icono e inicie sesión con la cuenta de esa instancia. Se trata de una PWA instalada por el navegador; minddy no dispone de una aplicación nativa en el App Store de iOS ni en Google Play.
 
 ### Actualizaciones, acceso sin conexión y notificaciones {#operation}
 
-La instalación no crea una copia del proyecto para usarla sin conexión. El service worker de Minddy solo gestiona notificaciones push y no almacena las solicitudes de la aplicación en caché. Mantenga una conexión de red y recargue la página para obtener el contenido web actual. Las notificaciones también requieren un navegador compatible, su permiso y una configuración push en el servidor. En iOS, utilice la aplicación instalada cuando el proceso lo indique. Si no aparece la opción de instalación, abra un navegador completo compatible y compruebe si la instancia ya está instalada.
+La instalación no crea una copia del proyecto para usarla sin conexión. El service worker de minddy solo gestiona notificaciones push y no almacena las solicitudes de la aplicación en caché. Mantenga una conexión de red y recargue la página para obtener el contenido web actual. Las notificaciones también requieren un navegador compatible, su permiso y una configuración push en el servidor. En iOS, utilice la aplicación instalada cuando el proceso lo indique. Si no aparece la opción de instalación, abra un navegador completo compatible y compruebe si la instancia ya está instalada.
 
-![Guía ilustrada de instalación en Safari de Minddy: Compartir, Añadir a pantalla de inicio y confirmar.](/documentation/es/install-the-pwa-workflow.png)
+![Guía ilustrada de instalación en Safari de minddy: Compartir, Añadir a pantalla de inicio y confirmar.](/documentation/es/install-the-pwa-workflow.png)
 
 ## Instalar y gestionar la aplicación de escritorio {#desktop-app}
 
 Abra la página pública de descargas. En macOS, elija el paquete para Apple silicon o Intel. En Windows, instale la aplicación desde Microsoft Store. En Linux, elija una AppImage o un paquete deb/rpm firmado para x64 o ARM64. Siga la guía de la plataforma y las instrucciones de verificación del paquete. Windows no ofrece un instalador exe.
 
-En el selector de servidor, elija Minddy Cloud, el origen de un servidor self-hosted o el entorno local disponible. Compruebe el destino antes de iniciar sesión: cada cuenta pertenece a su instancia. OAuth utiliza el navegador del sistema y vuelve después a la aplicación de escritorio. Un entorno local no significa que el agente de código de Numo trabaje en su carpeta local.
+En el selector de servidor, elija minddy Cloud, el origen de un servidor self-hosted o el entorno local disponible. Compruebe el destino antes de iniciar sesión: cada cuenta pertenece a su instancia. OAuth utiliza el navegador del sistema y vuelve después a la aplicación de escritorio. Un entorno local no significa que el agente de código de Numo trabaje en su carpeta local.
 
 ### Pestañas, cierre y actualizaciones {#desktop-app-operation}
 
@@ -208,7 +208,7 @@ macOS y las AppImage portátiles ofrecen actualizaciones dentro de la aplicació
 
 ## Activar notificaciones de un dispositivo {#devices-and-notifications}
 
-Abra las notificaciones en la configuración de la cuenta desde el dispositivo que desea registrar. Actívelas y acepte la solicitud de permiso del navegador o del sistema operativo. Si se ha denegado el permiso, debe cambiarlo en la configuración del navegador o del sistema; accionar repetidamente el control de Minddy no evita ese rechazo. En iOS, instale y abra primero la aplicación web cuando la interfaz lo exija.
+Abra las notificaciones en la configuración de la cuenta desde el dispositivo que desea registrar. Actívelas y acepte la solicitud de permiso del navegador o del sistema operativo. Si se ha denegado el permiso, debe cambiarlo en la configuración del navegador o del sistema; accionar repetidamente el control de minddy no evita ese rechazo. En iOS, instale y abra primero la aplicación web cuando la interfaz lo exija.
 
 Compruebe que el dispositivo aparece en la lista y use su control de prueba. Consulte la información de la última entrega. Puede desactivar o eliminar registros individuales sin borrar la cuenta. Las preferencias de la bandeja de entrada determinan qué eventos generan notificaciones; la bandeja de entrada de la aplicación sigue disponible cuando el push no lo está.
 

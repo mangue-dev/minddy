@@ -73,7 +73,7 @@
 
 ## Aggiornare conservando la possibilità di recupero {#update-an-instance}
 
-Aggiorna una release pubblicata alla volta. Leggi note di release, migrazioni e matrice di compatibilità. Non combinare l’aggiornamento di Minddy con una nuova versione principale di PostgreSQL o cambiamenti delle immagini Supabase. Verifica sorgenti, asset e digest della destinazione e prepara una directory separata con dipendenze bloccate. Annuncia la finestra di manutenzione e il termine per annullare l’intervento. Conferma un backup esterno utilizzabile e una prova di ripristino recente. Mantieni l’applicazione e l’ambiente attuali pronti per il recupero.
+Aggiorna una release pubblicata alla volta. Leggi note di release, migrazioni e matrice di compatibilità. Non combinare l’aggiornamento di minddy con una nuova versione principale di PostgreSQL o cambiamenti delle immagini Supabase. Verifica sorgenti, asset e digest della destinazione e prepara una directory separata con dipendenze bloccate. Annuncia la finestra di manutenzione e il termine per annullare l’intervento. Conferma un backup esterno utilizzabile e una prova di ripristino recente. Mantieni l’applicazione e l’ambiente attuali pronti per il recupero.
 
 ![Schema: Fermare scritture e job. Sigillare backup completo precedente. Migrazioni destinazione, poi applicazione. Verificare recupero e riaprire.](/documentation/it/update-an-instance-flow.svg)
 
@@ -132,7 +132,7 @@ pnpm self-host:doctor -- --mode full --env-file "$MINDDY_ENV_FILE" \
 Per managed OCI, segui la stessa sequenza di ambiente e immagine usando backup e migrazioni del database e dello Storage gestiti dal provider, senza avviare servizi database locali. Dai sorgenti, compila il tag scelto, blocca le API, salva un backup logico o del provider, applica il bootstrap della destinazione e avvia il server dietro la manutenzione. Non sostituire OCI con un server dai sorgenti per verificarne il funzionamento. Usa il vecchio codice sul nuovo schema solo se la release ne garantisce esplicitamente la compatibilità.
 
 
-I comandi Compose locali della procedura dai sorgenti seguente riguardano solo un backend controllato dall’operatore. Con Supabase gestito sostituisci arresto, avvio e accesso alle migrazioni del backend con le operazioni supportate dal provider. Conserva l’ambiente Minddy protetto e il backup completo del provider, poi avvia l’applicazione di destinazione verificata.
+I comandi Compose locali della procedura dai sorgenti seguente riguardano solo un backend controllato dall’operatore. Con Supabase gestito sostituisci arresto, avvio e accesso alle migrazioni del backend con le operazioni supportate dal provider. Conserva l’ambiente minddy protetto e il backup completo del provider, poi avvia l’applicazione di destinazione verificata.
 
 
 Per la procedura dai sorgenti, imposta MINDDY_REPO sul repository versionato, SUPABASE_COMPOSE_DIR sul backend controllato descritto nel [contesto del backup logico](/it/documentazione/backups-and-restoration#outage), TO_TAG sul prossimo tag effettivamente pubblicato e verificato e TARGET_RELEASE_DIR sul suo checkout distinto già compilato. Fornisci in privato le variabili database e API pubblica corrispondenti. Dopo bootstrap e verifica, avvia la destinazione con pnpm start o con il supervisore esistente dietro la manutenzione; riapri solo dopo i controlli seguenti.

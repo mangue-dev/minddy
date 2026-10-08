@@ -3,7 +3,7 @@
   "id": "architecture-and-data-flows",
   "locale": "pt-BR",
   "title": "Arquitetura e fluxos de dados",
-  "summary": "Acompanhe solicitações e dados entre Minddy, Supabase, agendador, sandbox e provedores externos, distinguindo serviços persistentes e destinos dos dados.",
+  "summary": "Acompanhe solicitações e dados entre minddy, Supabase, agendador, sandbox e provedores externos, distinguindo serviços persistentes e destinos dos dados.",
   "topic": "Conceitos técnicos",
   "type": "explanation",
   "audiences": [
@@ -84,8 +84,8 @@ O Next.js fornece a interface e as APIs autorizadas. O Supabase fornece PostgreS
 
 ## Seguir uma solicitação {#requests}
 
-O navegador usa as origens públicas do Minddy e do Supabase. O Auth cria a sessão; o servidor verifica o usuário e o objeto antes de executar a operação. O Realtime propaga atualizações. No perfil full, o servidor usa o Kong na rede interna sem alterar as origens do navegador ou os links de conta. O agendador envia requisições HTTP autenticadas sem navegador. Quando o Numo precisa trabalhar com código, o runner confiável cria sandboxes restritas para o repositório conectado; elas não recebem segredos da instância nem o socket Docker.
+O navegador usa as origens públicas do minddy e do Supabase. O Auth cria a sessão; o servidor verifica o usuário e o objeto antes de executar a operação. O Realtime propaga atualizações. No perfil full, o servidor usa o Kong na rede interna sem alterar as origens do navegador ou os links de conta. O agendador envia requisições HTTP autenticadas sem navegador. Quando o Numo precisa trabalhar com código, o runner confiável cria sandboxes restritas para o repositório conectado; elas não recebem segredos da instância nem o socket Docker.
 
 ## Identificar destinos externos {#providers}
 
-IA, email, Git, MCP remoto, notificações push, analytics e armazenamento externo são destinos separados quando habilitados. Hospedar o Minddy no seu servidor não torna esses serviços locais. No perfil managed, o provedor escolhido opera o backend; full o coloca sob seu controle. O Minddy Cloud opera o serviço e seus provedores, enquanto na instalação própria você configura contas e escolhas. Confira permissões, custos e condições de tratamento de dados. Não deduza o provedor ou a edição Cloud apenas pelo hostname ou pela plataforma de implantação.
+IA, email, Git, MCP remoto, notificações push, analytics e armazenamento externo são destinos separados quando habilitados. Hospedar o minddy no seu servidor não torna esses serviços locais. No perfil managed, o provedor escolhido opera o backend; full o coloca sob seu controle. O minddy Cloud opera o serviço e seus provedores, enquanto na instalação própria você configura contas e escolhas. Confira permissões, custos e condições de tratamento de dados. Não deduza o provedor ou a edição Cloud apenas pelo hostname ou pela plataforma de implantação.

@@ -73,7 +73,7 @@
 
 ## Actualizar una instancia conservando la recuperación {#update-an-instance}
 
-Actualice una versión publicada cada vez. Revise las notas, las diferencias de migraciones y las entradas de compatibilidad. No combine una actualización de Minddy con una nueva versión principal de PostgreSQL o un cambio de imágenes Supabase. Verifique el código de destino, las sumas de los archivos y el digest OCI y prepare un directorio de versión independiente con dependencias fijadas. Anuncie la interrupción y el plazo para cancelar. Confirme una copia externa utilizable y una restauración reciente. Conserve la aplicación actual lista para reiniciar y su entorno protegido.
+Actualice una versión publicada cada vez. Revise las notas, las diferencias de migraciones y las entradas de compatibilidad. No combine una actualización de minddy con una nueva versión principal de PostgreSQL o un cambio de imágenes Supabase. Verifique el código de destino, las sumas de los archivos y el digest OCI y prepare un directorio de versión independiente con dependencias fijadas. Anuncie la interrupción y el plazo para cancelar. Confirme una copia externa utilizable y una restauración reciente. Conserve la aplicación actual lista para reiniciar y su entorno protegido.
 
 ![Diagrama: Parar escrituras y tareas. Sellar copia completa anterior. Migraciones destino, luego aplicación. Verificar recuperación y reabrir.](/documentation/es/update-an-instance-flow.svg)
 

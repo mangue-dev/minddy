@@ -3,7 +3,7 @@
   "id": "integration-troubleshooting",
   "locale": "es",
   "title": "Solución de problemas de conexión",
-  "summary": "Minddy MCP conecta un asistente externo con Minddy; las conexiones MCP personales permiten a Numo llamar a otro servidor.",
+  "summary": "minddy MCP conecta un asistente externo con minddy; las conexiones MCP personales permiten a Numo llamar a otro servidor.",
   "topic": "Conceptos técnicos",
   "type": "troubleshooting",
   "audiences": [
@@ -77,7 +77,7 @@
 
 ## Recuperar fallos OAuth, MCP, webhook o Git {#integration-troubleshooting}
 
-Minddy MCP conecta un asistente externo con Minddy; las conexiones MCP personales permiten a Numo llamar a otro servidor. Utilizan pestañas de cuenta y credenciales distintas. Para MCP personal, revise el estado en la configuración y utilice su acción de prueba o reconexión. Se admiten descubrimiento OAuth, registro dinámico, PKCE y renovación de tokens, pero una entrada de catálogo no evita la aprobación del proveedor, una versión preliminar para desarrolladores o los requisitos de una aplicación registrada. Compruebe los requisitos actuales antes de atribuir un defecto a Minddy.
+minddy MCP conecta un asistente externo con minddy; las conexiones MCP personales permiten a Numo llamar a otro servidor. Utilizan pestañas de cuenta y credenciales distintas. Para MCP personal, revise el estado en la configuración y utilice su acción de prueba o reconexión. Se admiten descubrimiento OAuth, registro dinámico, PKCE y renovación de tokens, pero una entrada de catálogo no evita la aprobación del proveedor, una versión preliminar para desarrolladores o los requisitos de una aplicación registrada. Compruebe los requisitos actuales antes de atribuir un defecto a minddy.
 
 
 

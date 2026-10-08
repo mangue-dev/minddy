@@ -75,7 +75,7 @@
 
 ## Configurer les emails de compte, MFA et la récupération {#authentication-and-email}
 
-Les emails Auth dépendent de Supabase/GoTrue. Les notifications applicatives Resend ne configurent ni confirmation ni récupération du mot de passe. En full, conservez l’overlay Minddy dans chaque commande Compose. Réglez SITE_URL, API_EXTERNAL_URL, SUPABASE_PUBLIC_URL et ADDITIONAL_REDIRECT_URLS sur vos origines. Renseignez SMTP_ADMIN_EMAIL, SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS et SMTP_SENDER_NAME avec votre fournisseur. Gardez la confirmation activée et redémarrez Auth dans le contexte Compose installé.
+Les emails Auth dépendent de Supabase/GoTrue. Les notifications applicatives Resend ne configurent ni confirmation ni récupération du mot de passe. En full, conservez l’overlay minddy dans chaque commande Compose. Réglez SITE_URL, API_EXTERNAL_URL, SUPABASE_PUBLIC_URL et ADDITIONAL_REDIRECT_URLS sur vos origines. Renseignez SMTP_ADMIN_EMAIL, SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS et SMTP_SENDER_NAME avec votre fournisseur. Gardez la confirmation activée et redémarrez Auth dans le contexte Compose installé.
 
 
 Avant d’utiliser compose ci-dessous, définissez la fonction du profil full installé depuis [le contexte Compose de référence](/fr/documentation/backups-and-restoration#context).

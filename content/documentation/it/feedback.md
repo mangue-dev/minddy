@@ -186,7 +186,7 @@ La revisione facoltativa di Numo riguarda il feedback inviato e dipende dalle im
 
 ## Inviare, votare e seguire feedback {#submit-and-follow-feedback}
 
-Apri l’URL pubblico della bacheca. Puoi leggere i feedback pubblici senza un account Minddy. Per inviare, votare o commentare, identificati con il codice email della bacheca o il link SSO del prodotto. La consegna del codice dipende dal servizio email dell’istanza. Un codice dura dieci minuti e consente cinque tentativi; attendi almeno sessanta secondi prima di richiederne un altro. Non condividere mai il codice.
+Apri l’URL pubblico della bacheca. Puoi leggere i feedback pubblici senza un account minddy. Per inviare, votare o commentare, identificati con il codice email della bacheca o il link SSO del prodotto. La consegna del codice dipende dal servizio email dell’istanza. Un codice dura dieci minuti e consente cinque tentativi; attendi almeno sessanta secondi prima di richiederne un altro. Non condividere mai il codice.
 
 Cerca richieste esistenti prima di pubblicare. Scrivi un titolo preciso e descrivi il bisogno e il contesto. Il titolo ammette 200 caratteri e il corpo 10.000. L’opzione pubblica è selezionata per impostazione predefinita; deselezionala per inviare la richiesta privatamente al team. Prima dell’invio, controlla che il testo non contenga segreti. La moderazione facoltativa può mantenere la richiesta in attesa prima che appaia pubblicamente.
 

@@ -120,13 +120,13 @@ MINDDY_PUBLIC_SITE_NAME e MINDDY_PUBLIC_CONTACT_EMAIL identificano l’istanza. 
 
 ## Abilitare esplicitamente i provider opzionali {#optional-providers}
 
-Il nucleo non richiede Stripe, PostHog, un account Cloud o una chiave IA Minddy. I servizi esterni aggiungono costi, permessi e destinazioni dei dati: leggi le loro condizioni prima di attivarli. La diagnostica segnala valori mancanti senza scegliere un fallback. Un’istanza self-hosted può usare chiavi personali o endpoint IA locali raggiungibili. Lascia MINDDY_MANAGED_AI e MINDDY_MANAGED_BILLING disattivati; una sola chiave OpenRouter non seleziona l’edizione Cloud.
+Il nucleo non richiede Stripe, PostHog, un account Cloud o una chiave IA minddy. I servizi esterni aggiungono costi, permessi e destinazioni dei dati: leggi le loro condizioni prima di attivarli. La diagnostica segnala valori mancanti senza scegliere un fallback. Un’istanza self-hosted può usare chiavi personali o endpoint IA locali raggiungibili. Lascia MINDDY_MANAGED_AI e MINDDY_MANAGED_BILLING disattivati; una sola chiave OpenRouter non seleziona l’edizione Cloud.
 
 ![Schema: Operatore sceglie capacità opzionale. Credenziali complete e condizioni. Destinazione dati esterna esplicita. Verificare comportamento e costi.](/documentation/it/optional-providers-flow.svg)
 
 ### Configurare i provider completi {#configure}
 
-L’email dell’applicazione richiede EMAIL_PROVIDER=resend, RESEND_API_KEY, FEEDBACK_EMAIL_FROM e INVITATION_EMAIL_FROM. console non è consentito in produzione; SMTP Auth si configura separatamente. Web Push richiede la coppia VAPID e VAPID_SUBJECT; gli abbonamenti dipendono da quella coppia. Analytics richiede chiave e host PostHog; il tracciamento degli errori richiede MINDDY_PUBLIC_ERROR_TRACKING=1. L’installer propone application-email e web-push, ma le credenziali esterne devono essere fornite dall’operatore. Non usare mittenti Minddy o credenziali delle release native su altre istanze.
+L’email dell’applicazione richiede EMAIL_PROVIDER=resend, RESEND_API_KEY, FEEDBACK_EMAIL_FROM e INVITATION_EMAIL_FROM. console non è consentito in produzione; SMTP Auth si configura separatamente. Web Push richiede la coppia VAPID e VAPID_SUBJECT; gli abbonamenti dipendono da quella coppia. Analytics richiede chiave e host PostHog; il tracciamento degli errori richiede MINDDY_PUBLIC_ERROR_TRACKING=1. L’installer propone application-email e web-push, ma le credenziali esterne devono essere fornite dall’operatore. Non usare mittenti minddy o credenziali delle release native su altre istanze.
 
 ### Collegare Git ed esecuzione del codice {#git-and-code}
 
@@ -137,7 +137,7 @@ L’immagine pubblicata dell’applicazione include Node.js e Git, ma rimuove in
 
 ## Esporre origini e gestire i job pianificati {#proxy-network-and-jobs}
 
-Un servizio pubblico richiede un proxy TLS e il redirect da HTTP a HTTPS. Le origini Minddy e Supabase, i redirect Auth, i callback OAuth e gli header devono concordare. Non esporre PostgreSQL, Studio, porte interne o runner. Nel profilo full il server usa http://kong:8000 internamente, mentre browser e link mantengono l’origine pubblica di Supabase. HTTP privato richiede localhost o una rete IPv4 privata affidabile, senza inoltro delle porte del router.
+Un servizio pubblico richiede un proxy TLS e il redirect da HTTP a HTTPS. Le origini minddy e Supabase, i redirect Auth, i callback OAuth e gli header devono concordare. Non esporre PostgreSQL, Studio, porte interne o runner. Nel profilo full il server usa http://kong:8000 internamente, mentre browser e link mantengono l’origine pubblica di Supabase. HTTP privato richiede localhost o una rete IPv4 privata affidabile, senza inoltro delle porte del router.
 
 ![Schema: Proxy HTTPS pubblico. Origini app e Supabase pubbliche. Runner, database e porte private. Job autenticati; fermi in manutenzione.](/documentation/it/proxy-network-and-jobs-flow.svg)
 

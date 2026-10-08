@@ -253,7 +253,7 @@ Anwesenheitsavatare zeigen Personen, die die Seite ansehen. Sie beweisen nicht, 
 
 ### Einen Speicherkonflikt lösen {#page-conflict}
 
-Minddy führt Änderungen an unterschiedlichen Blöcken auf der obersten Dokumentebene zusammen, wenn sich beide Änderungen erhalten lassen. Gleichzeitige Textänderungen innerhalb desselben Blocks werden nicht Zeichen für Zeichen zusammengeführt. Haben beide Personen diesen Block geändert, übernimmt das Dokument die entfernte Version und ein Hinweis bietet deinen bisherigen Block zur Prüfung an.
+minddy führt Änderungen an unterschiedlichen Blöcken auf der obersten Dokumentebene zusammen, wenn sich beide Änderungen erhalten lassen. Gleichzeitige Textänderungen innerhalb desselben Blocks werden nicht Zeichen für Zeichen zusammengeführt. Haben beide Personen diesen Block geändert, übernimmt das Dokument die entfernte Version und ein Hinweis bietet deinen bisherigen Block zur Prüfung an.
 
 Vergleiche den genannten Block mit dem aktuellen Dokument. Wähle die Aktion zum Wiederherstellen deiner Fassung nur dann, wenn du diesen Block wirklich durch deine Version ersetzen möchtest. War deine kollidierende Aktion eine Löschung, wendet die Aktion zum erneuten Löschen sie ausdrücklich an. Das Verwerfen des Hinweises behält das übernommene Dokument bei und schließt die Warnung; es stellt deine Fassung nicht wieder her. Sichere gewünschten Text vor dem Schließen und prüfe gespeicherte Versionen im Verlauf, wenn du mehr wiederherstellen musst. Diese Entscheidungen betreffen den bezeichneten Block, statt ungeprüft die ganze Seite zu ersetzen.
 

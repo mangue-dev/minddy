@@ -193,13 +193,13 @@ Les agents modifient le schéma avec la révision courante et un jeton de prévi
 
 ## Importer une base et le contenu de ses entrées {#import-a-database}
 
-Créez une base sans colonnes optionnelles ni entrées. Depuis sa bannière, choisissez l’import d’une base existante. Envoyez un ZIP Notion Markdown & CSV avec sous-pages, un CSV de base ou une archive Minddy. Si l’archive contient plusieurs bases, choisissez celle à importer.
+Créez une base sans colonnes optionnelles ni entrées. Depuis sa bannière, choisissez l’import d’une base existante. Envoyez un ZIP Notion Markdown & CSV avec sous-pages, un CSV de base ou une archive minddy. Si l’archive contient plusieurs bases, choisissez celle à importer.
 
 Vérifiez noms et types suggérés, puis le nombre de pages avant confirmation. Numo peut proposer les types à partir d’un petit échantillon si l’assistance est configurée ; la correspondance manuelle reste disponible. Une propriété source non prise en charge reste du texte. Les valeurs incompatibles bloquent l’import au lieu d’être effacées silencieusement.
 
 ### Contenu conservé et contrôles {#database-import-result}
 
-L’import comprend corps des entrées, documents imbriqués et fichiers locaux présents dans l’archive. Une archive Minddy conserve aussi schéma exact et couleurs et réassocie les liens internes de pages et fichiers. Les personnes peuvent être associées aux membres du projet cible. L’export Notion ne contient ni schéma original, ni couleurs d’options, ni définitions de formules ; l’import ne récupère pas une information absente.
+L’import comprend corps des entrées, documents imbriqués et fichiers locaux présents dans l’archive. Une archive minddy conserve aussi schéma exact et couleurs et réassocie les liens internes de pages et fichiers. Les personnes peuvent être associées aux membres du projet cible. L’export Notion ne contient ni schéma original, ni couleurs d’options, ni définitions de formules ; l’import ne récupère pas une information absente.
 
 Les limites sont 20 Mo compressés, 50 Mo décompressés et 1 000 pages. Chaque fichier garde la limite de 10 Mo. L’écriture en base est transactionnelle. Réessayer la même tentative dans le dialogue ouvert conserve son identifiant de requête : une tentative déjà terminée est retournée sans dupliquer les lignes. Charger un autre fichier ou rouvrir un dialogue peut créer une nouvelle tentative. Après un résultat réseau incertain, inspectez la destination avant de recommencer ; une base déjà remplie ne répond plus au prérequis de destination vide.
 

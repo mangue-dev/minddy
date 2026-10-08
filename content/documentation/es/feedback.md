@@ -186,7 +186,7 @@ La revisión opcional de Numo se aplica al feedback enviado y depende de la conf
 
 ## Enviar, votar y seguir feedback {#submit-and-follow-feedback}
 
-Abra la URL pública del tablero. Puede leer solicitudes públicas sin una cuenta Minddy. Para enviar, votar o comentar, identifíquese mediante el código por email del tablero o el enlace SSO del producto. La entrega del código depende del servicio de correo de la instancia. El código dura diez minutos y permite cinco intentos; espere al menos sesenta segundos antes de pedir otro. Nunca comparta el código.
+Abra la URL pública del tablero. Puede leer solicitudes públicas sin una cuenta minddy. Para enviar, votar o comentar, identifíquese mediante el código por email del tablero o el enlace SSO del producto. La entrega del código depende del servicio de correo de la instancia. El código dura diez minutos y permite cinco intentos; espere al menos sesenta segundos antes de pedir otro. Nunca comparta el código.
 
 Busque solicitudes existentes antes de publicar. Escriba un título concreto y describa la necesidad y su contexto. El título admite 200 caracteres y el cuerpo 10.000. La opción pública está seleccionada por defecto; desmárquela para enviar la solicitud de forma privada al equipo. Revise el texto para eliminar secretos antes del envío. La moderación opcional puede mantener la solicitud pendiente antes de que aparezca públicamente.
 

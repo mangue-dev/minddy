@@ -123,7 +123,7 @@ curl --fail-with-body --request POST "$MINDDY_ORIGIN/api/v1/issues" \
 
 ### Vérifier et dédupliquer les événements {#receive}
 
-Une intégration issues envoie issue.created, issue.status_changed et issue.updated. Le propriétaire choisit toute nouvelle destination dans les paramètres ; les agents peuvent régler événements/périmètre existants ou désactiver, sans créer de nouveau canal sortant. Le périmètre integration limite aux tickets de cette clé ; all couvre tout le projet. Vérifiez X-Minddy-Signature : sha256= suivi de HMAC-SHA256 sur les octets bruts reçus, avec comme clé le digest SHA-256 hexadécimal minuscule de la clé API. Comparez en temps constant avant de croire le contenu. Ne parsez/résérialisez pas avant le hash. X-Minddy-Delivery correspond à delivery_id ; dédupliquez par UUID.
+Une intégration issues envoie issue.created, issue.status_changed et issue.updated. Le propriétaire choisit toute nouvelle destination dans les paramètres ; les agents peuvent régler événements/périmètre existants ou désactiver, sans créer de nouveau canal sortant. Le périmètre integration limite aux tickets de cette clé ; all couvre tout le projet. Vérifiez X-minddy-Signature : sha256= suivi de HMAC-SHA256 sur les octets bruts reçus, avec comme clé le digest SHA-256 hexadécimal minuscule de la clé API. Comparez en temps constant avant de croire le contenu. Ne parsez/résérialisez pas avant le hash. X-minddy-Delivery correspond à delivery_id ; dédupliquez par UUID.
 
 ### Traiter les échecs et limites {#limits}
 

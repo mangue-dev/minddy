@@ -254,7 +254,7 @@ Avatares de presença identificam quem está vendo a página. Eles não provam q
 
 ### Recuperar um conflito de salvamento {#page-conflict}
 
-O Minddy combina edições de blocos diferentes no primeiro nível do documento quando consegue preservar as duas alterações. Ele não mescla caractere por caractere edições simultâneas dentro do mesmo bloco. Se as duas pessoas alteraram esse bloco, o documento mantém a versão remota e um aviso oferece seu bloco anterior para análise.
+O minddy combina edições de blocos diferentes no primeiro nível do documento quando consegue preservar as duas alterações. Ele não mescla caractere por caractere edições simultâneas dentro do mesmo bloco. Se as duas pessoas alteraram esse bloco, o documento mantém a versão remota e um aviso oferece seu bloco anterior para análise.
 
 Compare o bloco identificado com o documento atual. Escolha restaurar sua versão apenas quando realmente quiser substituir esse bloco por ela. Se sua ação em conflito foi uma exclusão, a opção de excluí-lo novamente aplica essa exclusão de forma explícita. Dispensar o aviso mantém o documento adotado e fecha o alerta; não restaura sua versão. Preserve o texto que deseja recuperar antes de dispensar e use o histórico para examinar versões salvas quando precisar de uma recuperação mais ampla. Essas escolhas afetam o bloco identificado, sem substituir toda a página às cegas.
 

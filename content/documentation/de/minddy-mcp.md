@@ -2,8 +2,8 @@
 {
   "id": "minddy-mcp",
   "locale": "de",
-  "title": "Minddy MCP",
-  "summary": "Verbinden Sie einen externen Assistenten mit Minddy, steuern Sie den Zugriff und lernen Sie verfügbare MCP-Tools und sichere Änderungsverfahren kennen.",
+  "title": "minddy MCP",
+  "summary": "Verbinden Sie einen externen Assistenten mit minddy, steuern Sie den Zugriff und lernen Sie verfügbare MCP-Tools und sichere Änderungsverfahren kennen.",
   "topic": "Numo und Integrationen",
   "type": "guide",
   "audiences": [
@@ -63,19 +63,19 @@
     "mcp-tool-reference"
   ],
   "tags": [
-    "Einen externen Assistenten mit Minddy MCP verbinden",
-    "Minddy MCP nutzen und aktuelle Werkzeuge entdecken"
+    "Einen externen Assistenten mit minddy MCP verbinden",
+    "minddy MCP nutzen und aktuelle Werkzeuge entdecken"
   ],
   "figures": [
     {
       "id": "external-minddy-mcp-workflow",
       "kind": "screenshot",
       "src": "/documentation/de/external-minddy-mcp-workflow.png",
-      "alt": "Minddy-MCP-Clientauswahl mit Claude, Codex und weiteren Assistenten.",
+      "alt": "minddy-MCP-Clientauswahl mit Claude, Codex und weiteren Assistenten.",
       "caption": "Wähle deinen Client, um dessen Installationsbefehl oder Konfiguration anzuzeigen.",
       "revision": 2,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         1440,
         1800
@@ -121,29 +121,29 @@
 }
 ---
 
-Minddy MCP gibt einem externen Assistenten Zugriff als Ihr Minddy-Konto, innerhalb Ihrer bestehenden Berechtigungen. Dieser Leitfaden erklärt Verbindung und Widerruf, das Ermitteln der aktuellen Werkzeugschemas sowie Änderungen an Plänen, Seiten und Routinen mit vorheriger Prüfung des aktuellen Zustands.
+minddy MCP gibt einem externen Assistenten Zugriff als Ihr minddy-Konto, innerhalb Ihrer bestehenden Berechtigungen. Dieser Leitfaden erklärt Verbindung und Widerruf, das Ermitteln der aktuellen Werkzeugschemas sowie Änderungen an Plänen, Seiten und Routinen mit vorheriger Prüfung des aktuellen Zustands.
 
-## Einen externen Assistenten mit Minddy MCP verbinden {#external-minddy-mcp}
+## Einen externen Assistenten mit minddy MCP verbinden {#external-minddy-mcp}
 
 Öffnen Sie die öffentliche MCP-Einrichtungsseite Ihrer Instanz und wählen Sie die Client-Anleitung. Nutzen Sie den dort angezeigten Endpunkt mit `/api/mcp`. Bei Self-Hosting verwenden Sie Ihre Instanzadresse statt Cloud. Der Client muss die beschriebene entfernte MCP-Verbindung und OAuth unterstützen.
 
-Melden Sie sich im Browser an und prüfen Sie die Freigabe. Die Verbindung handelt als Ihr Minddy-Konto und erhält keinen Zugriff auf gesperrte Projekte. Beginnen Sie mit dem Lesen eines bereits zugänglichen Tickets und prüfen Sie das zurückgegebene Projekt.
+Melden Sie sich im Browser an und prüfen Sie die Freigabe. Die Verbindung handelt als Ihr minddy-Konto und erhält keinen Zugriff auf gesperrte Projekte. Beginnen Sie mit dem Lesen eines bereits zugänglichen Tickets und prüfen Sie das zurückgegebene Projekt.
 
-![Minddy-MCP-Clientauswahl mit Claude, Codex und weiteren Assistenten.](/documentation/de/external-minddy-mcp-workflow.png)
+![minddy-MCP-Clientauswahl mit Claude, Codex und weiteren Assistenten.](/documentation/de/external-minddy-mcp-workflow.png)
 
 ### Umfang und Widerruf {#access}
 
 Externe Clients verwenden verfügbare Tools für Tickets, Pläne, Kommentare, Seiten, Feedback, Zyklen, Routinen und Notizbuch innerhalb ihrer Rechte. MCP ist in jedem Cloud-Tarif verfügbar; KI des Clients hängt weiterhin von dessen Einrichtung und Kosten ab.
 
-Der Bereich Minddy MCP in den Kontoeinstellungen zeigt externe Zugriffe und Widerrufsmöglichkeiten. Widerrufen Sie ungenutzte oder nicht mehr vertrauenswürdige Clients. MCP für Numo verbindet dagegen Numo mit anderen Diensten. Kopieren Sie keine Zugriffstoken in Tickets, öffentliche Beiträge oder Screenshots.
+Der Bereich minddy MCP in den Kontoeinstellungen zeigt externe Zugriffe und Widerrufsmöglichkeiten. Widerrufen Sie ungenutzte oder nicht mehr vertrauenswürdige Clients. MCP für Numo verbindet dagegen Numo mit anderen Diensten. Kopieren Sie keine Zugriffstoken in Tickets, öffentliche Beiträge oder Screenshots.
 
 ![Codex-Installationsdialog auf der lokalen Instanz.](/documentation/de/external-minddy-mcp-install-workflow.png)
 
 ![Liste verbundener Anwendungen ohne aktive Freigabe.](/documentation/de/external-minddy-mcp-accesses-workflow.png)
 
-## Minddy MCP nutzen und aktuelle Werkzeuge entdecken {#mcp-tool-reference}
+## minddy MCP nutzen und aktuelle Werkzeuge entdecken {#mcp-tool-reference}
 
-Minddy bietet /api/mcp mit Streamable HTTP, zustandslosen Werkzeugen und OAuth 2.1. Verbinden Sie Ihr Konto durch Browserzustimmung; alte statische mdyk_-Schlüssel gelten nicht. Starten Sie minddy_list_projects für zugängliche Projekt-UUIDs und lesen Sie Schemas des verbundenen Servers. /llms-full.txt wird daraus erzeugt und nennt genaue aktuelle Parameter. Erraten Sie Werkzeuge nicht anhand alter Kopien. Projektwerkzeuge prüfen Zugriff erneut und geben stabile Fehlercodes zurück.
+minddy bietet /api/mcp mit Streamable HTTP, zustandslosen Werkzeugen und OAuth 2.1. Verbinden Sie Ihr Konto durch Browserzustimmung; alte statische mdyk_-Schlüssel gelten nicht. Starten Sie minddy_list_projects für zugängliche Projekt-UUIDs und lesen Sie Schemas des verbundenen Servers. /llms-full.txt wird daraus erzeugt und nennt genaue aktuelle Parameter. Erraten Sie Werkzeuge nicht anhand alter Kopien. Projektwerkzeuge prüfen Zugriff erneut und geben stabile Fehlercodes zurück.
 
 ### Vor Planänderungen lesen {#issue-plans}
 

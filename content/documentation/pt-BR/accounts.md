@@ -228,7 +228,7 @@ Sua conta pertence à instância em que você se cadastra. Aqui você encontra a
 
 Abra a tela de entrada ou cadastro na instância que pretende usar. O Cloud e outra instância auto-hospedada têm contas separadas. Os métodos de entrada disponíveis e a possibilidade de cadastro dependem da configuração de autenticação da instância.
 
-Para se cadastrar por email, informe seu endereço e avance para a etapa de identidade. Informe seu nome completo; ele não pode estar vazio nem conter apenas espaços. Você também pode escolher um avatar. Avance para a etapa de senha, informe uma senha com pelo menos oito caracteres, uma letra minúscula (a–z), uma maiúscula (A–Z) e um dígito, e repita-a no campo de confirmação. Envie essa última etapa para criar a conta. Abandonar as etapas anteriores não cria uma conta. Quando a confirmação de email for necessária, abra a mensagem enviada pela instância. Siga o link e acione o botão de confirmação na página. Abrir o link não é suficiente: o Minddy exige essa ação deliberada antes de consumir o token de email.
+Para se cadastrar por email, informe seu endereço e avance para a etapa de identidade. Informe seu nome completo; ele não pode estar vazio nem conter apenas espaços. Você também pode escolher um avatar. Avance para a etapa de senha, informe uma senha com pelo menos oito caracteres, uma letra minúscula (a–z), uma maiúscula (A–Z) e um dígito, e repita-a no campo de confirmação. Envie essa última etapa para criar a conta. Abandonar as etapas anteriores não cria uma conta. Quando a confirmação de email for necessária, abra a mensagem enviada pela instância. Siga o link e acione o botão de confirmação na página. Abrir o link não é suficiente: o minddy exige essa ação deliberada antes de consumir o token de email.
 
 Volte à aplicação desejada e entre. Uma conta recém-autenticada pode criar seu próprio projeto ou aceitar um convite. Saber a URL de um projeto não concede participação nele.
 
@@ -298,7 +298,7 @@ Escolha o atalho de envio na seção de teclado. Ele vale para comentários e Nu
 
 Quando o serviço de análise está configurado, as configurações da conta mostram um controle de consentimento e um link para a política de cookies. Desativá-lo altera imediatamente o consentimento de medição neste dispositivo e salva a escolha na conta. A escolha local já existente em outro dispositivo pode continuar valendo naquele dispositivo. Se nenhum serviço de análise estiver configurado, a seção não aparece.
 
-Esse consentimento é separado dos dados necessários ao funcionamento da conta. Leia a política de privacidade da instância e confira os provedores externos que habilitou. No Minddy self-hosted, a configuração e as políticas do operador determinam os destinos dos serviços; desativar a análise não remove integrações de IA ou Git.
+Esse consentimento é separado dos dados necessários ao funcionamento da conta. Leia a política de privacidade da instância e confira os provedores externos que habilitou. No minddy self-hosted, a configuração e as políticas do operador determinam os destinos dos serviços; desativar a análise não remove integrações de IA ou Git.
 
 ![Prévia de exclusão com projetos próprios, tickets e membros que perderão acesso.](/documentation/pt-BR/privacy-and-account-deletion-workflow.png)
 

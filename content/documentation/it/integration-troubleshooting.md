@@ -3,7 +3,7 @@
   "id": "integration-troubleshooting",
   "locale": "it",
   "title": "Risoluzione dei problemi di connessione",
-  "summary": "Minddy MCP collega un assistente esterno a Minddy; il MCP personale permette a Numo di chiamare un server esterno.",
+  "summary": "minddy MCP collega un assistente esterno a minddy; il MCP personale permette a Numo di chiamare un server esterno.",
   "topic": "Concetti tecnici",
   "type": "troubleshooting",
   "audiences": [
@@ -77,7 +77,7 @@
 
 ## Recuperare errori OAuth, MCP, webhook o Git {#integration-troubleshooting}
 
-Minddy MCP collega un assistente esterno a Minddy; il MCP personale permette a Numo di chiamare un server esterno. Usano schede e credenziali distinte. Controlla lo stato nelle impostazioni, prova la connessione e riconnettila quando necessario. Sono disponibili discovery, registrazione dinamica, PKCE e refresh, ma una voce di catalogo non supera i requisiti di approvazione, anteprima o registrazione dell’app del provider. Controlla i prerequisiti attuali del provider prima di segnalare un difetto.
+minddy MCP collega un assistente esterno a minddy; il MCP personale permette a Numo di chiamare un server esterno. Usano schede e credenziali distinte. Controlla lo stato nelle impostazioni, prova la connessione e riconnettila quando necessario. Sono disponibili discovery, registrazione dinamica, PKCE e refresh, ma una voce di catalogo non supera i requisiti di approvazione, anteprima o registrazione dell’app del provider. Controlla i prerequisiti attuali del provider prima di segnalare un difetto.
 
 
 ![Errore di caricamento delle connessioni MCP con il pulsante Riprova.](/documentation/it/integration-troubleshooting-error.png)

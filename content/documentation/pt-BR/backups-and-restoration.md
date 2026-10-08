@@ -89,7 +89,7 @@ Este procedimento Linux se aplica apenas ao perfil full com Storage em filesyste
 
 ### Definir o contexto Compose instalado {#context}
 
-Substitua os caminhos e a versão do exemplo pelos da instância instalada. Defina MODE=full e inclua qualquer override de restauração em todos os comandos Compose. Usar apenas o Compose upstream omite o overlay e o ambiente do Minddy. Não execute o arquivo de ambiente como código shell e não o imprima. A sequência abaixo para todos os serviços antes de copiar os arquivos do PostgreSQL.
+Substitua os caminhos e a versão do exemplo pelos da instância instalada. Defina MODE=full e inclua qualquer override de restauração em todos os comandos Compose. Usar apenas o Compose upstream omite o overlay e o ambiente do minddy. Não execute o arquivo de ambiente como código shell e não o imprima. A sequência abaixo para todos os serviços antes de copiar os arquivos do PostgreSQL.
 
 ```bash
 set -euo pipefail
@@ -179,11 +179,11 @@ O comando de backup a frio também detecta um volume nomeado do Storage em siste
 
 ## Criar backups lógicos ou gerenciados pelo provedor {#logical-and-provider-backups}
 
-Para instalações a partir do código, bancos gerenciados e Storage personalizado, associe os comandos de banco, bytes e proxy à mesma instância. self-host:backup, self-host:update e self-host:restore são verificações preliminares de leitura: não executam essas operações. Um backup completo conserva PostgreSQL com auth, storage e histórico de migrações, bytes brutos dos arquivos, configuração, chaves e identidades exatas do Minddy e do Supabase no mesmo ponto, sem gravações concorrentes.
+Para instalações a partir do código, bancos gerenciados e Storage personalizado, associe os comandos de banco, bytes e proxy à mesma instância. self-host:backup, self-host:update e self-host:restore são verificações preliminares de leitura: não executam essas operações. Um backup completo conserva PostgreSQL com auth, storage e histórico de migrações, bytes brutos dos arquivos, configuração, chaves e identidades exatas do minddy e do Supabase no mesmo ponto, sem gravações concorrentes.
 
 ### Supabase gerenciado por um provedor {#provider}
 
-Para Supabase gerenciado, registre projeto, versão do banco, identificador do backup ou snapshot e ponto de recuperação. Feche Minddy, workers e gravações agendadas; depois use os controles de consistência ou manutenção suportados pelo provedor para gravações diretas de Auth, PostgREST e Storage. Se não estiverem disponíveis, registre a limitação: parar apenas a aplicação não basta. Use os exports SQL abaixo somente se o papel do banco e o provedor os suportarem, incluindo Auth, metadados Storage, histórico de migrações e políticas gerenciadas. Preserve os bytes brutos dos objetos separadamente por export suportado ou snapshot imutável do backend. Guarde ambiente protegido e chaves Minddy, além das definições Auth/SMTP, URL, proxy e jobs sob seu controle. Papéis da plataforma e chaves pgsodium podem pertencer ao provedor; não os apresente como arquivos locais. Os blocos abaixo com SUPABASE_COMPOSE_DIR, docker compose, supabase.env, pgsodium e tar filesystem servem apenas para backend controlado pelo operador. Valide a restauração completa em um projeto vazio separado antes de confiar na cópia. Nenhum backup ou restore de provedor foi executado para esta revisão.
+Para Supabase gerenciado, registre projeto, versão do banco, identificador do backup ou snapshot e ponto de recuperação. Feche minddy, workers e gravações agendadas; depois use os controles de consistência ou manutenção suportados pelo provedor para gravações diretas de Auth, PostgREST e Storage. Se não estiverem disponíveis, registre a limitação: parar apenas a aplicação não basta. Use os exports SQL abaixo somente se o papel do banco e o provedor os suportarem, incluindo Auth, metadados Storage, histórico de migrações e políticas gerenciadas. Preserve os bytes brutos dos objetos separadamente por export suportado ou snapshot imutável do backend. Guarde ambiente protegido e chaves minddy, além das definições Auth/SMTP, URL, proxy e jobs sob seu controle. Papéis da plataforma e chaves pgsodium podem pertencer ao provedor; não os apresente como arquivos locais. Os blocos abaixo com SUPABASE_COMPOSE_DIR, docker compose, supabase.env, pgsodium e tar filesystem servem apenas para backend controlado pelo operador. Valide a restauração completa em um projeto vazio separado antes de confiar na cópia. Nenhum backup ou restore de provedor foi executado para esta revisão.
 
 ### Bloquear escritas e exportar SQL {#outage}
 
@@ -242,7 +242,7 @@ psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -Atc "
 
 ### Preservar bytes e configuração {#bytes}
 
-Se você administra um Storage em filesystem, pare storage e imgproxy após exportar SQL e arquive o diretório preservando proprietários numéricos, ACLs e atributos estendidos. Em S3, crie um snapshot ou uma versão imutável dos bytes brutos. Não restaure por /storage/v1/s3, pois isso cria metadados que conflitam com os restaurados. O provedor controla papéis e arquivos da plataforma: use seu procedimento suportado e registre o alcance. Copie em privado configurações do Minddy e do Supabase, proxy, jobs, templates Auth, SMTP e eventual chave raiz pgsodium. Inclua MINDDY_DATA_ROOT_KEY e os demais segredos preservados. O SQL não contém os bytes dos anexos.
+Se você administra um Storage em filesystem, pare storage e imgproxy após exportar SQL e arquive o diretório preservando proprietários numéricos, ACLs e atributos estendidos. Em S3, crie um snapshot ou uma versão imutável dos bytes brutos. Não restaure por /storage/v1/s3, pois isso cria metadados que conflitam com os restaurados. O provedor controla papéis e arquivos da plataforma: use seu procedimento suportado e registre o alcance. Copie em privado configurações do minddy e do Supabase, proxy, jobs, templates Auth, SMTP e eventual chave raiz pgsodium. Inclua MINDDY_DATA_ROOT_KEY e os demais segredos preservados. O SQL não contém os bytes dos anexos.
 
 ```bash
 install -m 0600 "$MINDDY_ENV_FILE" "$BACKUP_DIR/config/minddy.env"
@@ -401,10 +401,10 @@ pnpm self-host:doctor -- --mode full --env-file "$MINDDY_ENV_FILE" \
 
 ### Restaurar um conjunto lógico {#logical}
 
-Para uma restauração lógica, prepare uma stack vazia com versões, configurações e chaves registradas. Antes de importar SQL, confira a identidade do banco e do backend Storage bruto de destino. Restaure papéis, esquema e dados em transação, depois histórico de migrações e políticas. Pare Storage e recupere arquivos ou snapshot S3 em um backend novo e vazio; não envie por API. Managed exige o processo suportado pelo provedor, e não a extração filesystem do exemplo. Use o commit salvo do Minddy e configure chaves e origens do destino isolado.
+Para uma restauração lógica, prepare uma stack vazia com versões, configurações e chaves registradas. Antes de importar SQL, confira a identidade do banco e do backend Storage bruto de destino. Restaure papéis, esquema e dados em transação, depois histórico de migrações e políticas. Pare Storage e recupere arquivos ou snapshot S3 em um backend novo e vazio; não envie por API. Managed exige o processo suportado pelo provedor, e não a extração filesystem do exemplo. Use o commit salvo do minddy e configure chaves e origens do destino isolado.
 
 
-Os comandos abaixo de extração lógica, run.sh e Storage filesystem servem apenas para backend controlado pelo operador. Com Supabase gerenciado, restaure banco e bytes brutos em um destino vazio do provedor usando seu processo suportado; depois configure e inicie Minddy pelo [procedimento de código](/pt-br/documentacao/installation#source). Não execute Compose local para um projeto supabase.com.
+Os comandos abaixo de extração lógica, run.sh e Storage filesystem servem apenas para backend controlado pelo operador. Com Supabase gerenciado, restaure banco e bytes brutos em um destino vazio do provedor usando seu processo suportado; depois configure e inicie minddy pelo [procedimento de código](/pt-br/documentacao/installation#source). Não execute Compose local para um projeto supabase.com.
 
 ```bash
 export RESTORE_DB_URL='postgresql://postgres:...@restore-db:5432/postgres'

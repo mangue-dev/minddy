@@ -3,7 +3,7 @@
   "id": "encryption-and-data-boundaries",
   "locale": "it",
   "title": "Crittografia e limiti di protezione dei dati",
-  "summary": "Dopo la configurazione e la migrazione previste, Minddy cifra contenuti e file prima delle scritture persistenti mediante cifratura autenticata lato server.",
+  "summary": "Dopo la configurazione e la migrazione previste, minddy cifra contenuti e file prima delle scritture persistenti mediante cifratura autenticata lato server.",
   "topic": "Concetti tecnici",
   "type": "explanation",
   "audiences": [
@@ -79,13 +79,13 @@
 
 ## Comprendere cifratura e dati ancora visibili {#encryption-and-data-boundaries}
 
-Dopo la configurazione e la migrazione previste, Minddy cifra contenuti e file prima delle scritture persistenti mediante cifratura autenticata lato server. Le chiavi di progetto, utente e sistema sono versionate e protette da una chiave radice conservata fuori da PostgreSQL. Una sola estrazione del database non permette di leggere i contenuti protetti senza le chiavi. L’applicazione li decifra per utenti autorizzati, ricerca e lavoro IA autorizzato, anche senza una sessione interattiva. Un runtime compromesso o l’accesso sia ai dati sia alle chiavi supera questo confine: l’operatore non è escluso da una protezione end-to-end.
+Dopo la configurazione e la migrazione previste, minddy cifra contenuti e file prima delle scritture persistenti mediante cifratura autenticata lato server. Le chiavi di progetto, utente e sistema sono versionate e protette da una chiave radice conservata fuori da PostgreSQL. Una sola estrazione del database non permette di leggere i contenuti protetti senza le chiavi. L’applicazione li decifra per utenti autorizzati, ricerca e lavoro IA autorizzato, anche senza una sessione interattiva. Un runtime compromesso o l’accesso sia ai dati sia alle chiavi supera questo confine: l’operatore non è escluso da una protezione end-to-end.
 
 ![Schema: Contenuto cifrato e chiavi avvolte. Radice nella configurazione server protetta. Runtime autorizzato può decifrare. Export e provider richiedono protezione separata.](/documentation/it/encryption-and-data-boundaries-flow.svg)
 
 ## Riconoscere dati leggibili ed esportati {#exceptions}
 
-Auth conserva l’indirizzo email di login. Gli identificatori, le chiavi di progetto e ticket, gli stati, le priorità, le date e i metadati consentiti rimangono interrogabili. I contenuti pubblicati sono intenzionalmente leggibili. Devi proteggere separatamente esportazioni, file scaricati, browser e dati inviati a provider esterni di IA, email, Git o MCP. Un flag non dimostra che i dati storici siano stati convertiti o rimossi da copie, log e provider. L’esame dei sorgenti non prova che la migrazione di cifratura sia stata eseguita su Minddy Cloud in produzione.
+Auth conserva l’indirizzo email di login. Gli identificatori, le chiavi di progetto e ticket, gli stati, le priorità, le date e i metadati consentiti rimangono interrogabili. I contenuti pubblicati sono intenzionalmente leggibili. Devi proteggere separatamente esportazioni, file scaricati, browser e dati inviati a provider esterni di IA, email, Git o MCP. Un flag non dimostra che i dati storici siano stati convertiti o rimossi da copie, log e provider. L’esame dei sorgenti non prova che la migrazione di cifratura sia stata eseguita su minddy Cloud in produzione.
 
 ## Preservare il recupero {#recovery}
 

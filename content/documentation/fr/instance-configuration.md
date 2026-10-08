@@ -120,14 +120,14 @@ MINDDY_PUBLIC_SITE_NAME et MINDDY_PUBLIC_CONTACT_EMAIL identifient votre instanc
 
 ## Activer volontairement les fournisseurs optionnels {#optional-providers}
 
-Le cœur n’exige ni Stripe, ni PostHog, ni compte Cloud, ni clé IA gérée par Minddy. Les services externes ajoutent coûts, permissions et destinations des données. Examinez leurs conditions avant activation. Les diagnostics signalent les valeurs manquantes au lieu de choisir un fournisseur de secours. Une instance self-hosted peut employer des clés IA personnelles ou des endpoints locaux accessibles. Laissez MINDDY_MANAGED_AI et MINDDY_MANAGED_BILLING désactivés ; une clé OpenRouter seule ne sélectionne pas Cloud.
+Le cœur n’exige ni Stripe, ni PostHog, ni compte Cloud, ni clé IA gérée par minddy. Les services externes ajoutent coûts, permissions et destinations des données. Examinez leurs conditions avant activation. Les diagnostics signalent les valeurs manquantes au lieu de choisir un fournisseur de secours. Une instance self-hosted peut employer des clés IA personnelles ou des endpoints locaux accessibles. Laissez MINDDY_MANAGED_AI et MINDDY_MANAGED_BILLING désactivés ; une clé OpenRouter seule ne sélectionne pas Cloud.
 
 
 ![Schéma: L’opérateur choisit une capacité optionnelle. Identifiants complets et conditions fournisseur. Destination externe explicitement choisie. Vérifier le comportement et suivre les coûts.](/documentation/fr/optional-providers-flow.svg)
 
 ### Renseigner les fournisseurs {#configure}
 
-L’email applicatif exige EMAIL_PROVIDER=resend, RESEND_API_KEY, FEEDBACK_EMAIL_FROM et INVITATION_EMAIL_FROM. console est refusé en production ; SMTP Auth reste séparé. Web Push exige les clés VAPID publique et privée et VAPID_SUBJECT ; les abonnements existants dépendent de cette paire. L’analytique exige une paire clé/hôte PostHog complète ; le suivi d’erreurs ajoute MINDDY_PUBLIC_ERROR_TRACKING=1. L’assistant d’installation propose application-email et web-push, à vous de fournir les identifiants externes. N’employez pas les identités d’expéditeur Minddy ni ses identifiants de release native sur une autre instance.
+L’email applicatif exige EMAIL_PROVIDER=resend, RESEND_API_KEY, FEEDBACK_EMAIL_FROM et INVITATION_EMAIL_FROM. console est refusé en production ; SMTP Auth reste séparé. Web Push exige les clés VAPID publique et privée et VAPID_SUBJECT ; les abonnements existants dépendent de cette paire. L’analytique exige une paire clé/hôte PostHog complète ; le suivi d’erreurs ajoute MINDDY_PUBLIC_ERROR_TRACKING=1. L’assistant d’installation propose application-email et web-push, à vous de fournir les identifiants externes. N’employez pas les identités d’expéditeur minddy ni ses identifiants de release native sur une autre instance.
 
 ### Connecter Git et l’exécution de code {#git-and-code}
 

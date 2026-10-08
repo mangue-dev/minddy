@@ -150,7 +150,7 @@
       "caption": "Custom MCP server form with advanced authentication, transport and header settings. No credentials were entered and no server was contacted.",
       "revision": 2,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         1440,
         1800
@@ -223,7 +223,7 @@ Conversations cannot borrow another member's personal MCP connections. Project r
 
 ## Understand durable Numo turns and delegated work {#numo-execution-model}
 
-Interactive messages, contextual actions and scheduled routines enter Numo conversations. Conversation model/reasoning choices belong to the composer; delegated repository work uses the account’s code model and reasoning defaults. Direct Minddy tools can act without a repository. Code work opens a server sandbox for the linked repository only when needed. A routine creates a new occurrence conversation using its saved instruction and owner/project context. No desktop session needs to remain online.
+Interactive messages, contextual actions and scheduled routines enter Numo conversations. Conversation model/reasoning choices belong to the composer; delegated repository work uses the account’s code model and reasoning defaults. Direct minddy tools can act without a repository. Code work opens a server sandbox for the linked repository only when needed. A routine creates a new occurrence conversation using its saved instruction and owner/project context. No desktop session needs to remain online.
 
 
 ![Diagram: Persist the intent, message and request UUID. Claim turn, checkpoint tools and their outcomes. Wait for current code worker when needed. Replay durable events; reconcile uncertain writes.](/documentation/en/numo-execution-model-flow.svg)

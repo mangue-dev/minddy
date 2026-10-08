@@ -253,7 +253,7 @@ Presence avatars identify people viewing the page. They do not prove that anothe
 
 ### Recover a save conflict {#page-conflict}
 
-Minddy merges edits to different top-level document blocks when it can preserve both changes. It does not merge simultaneous text edits inside the same block character by character. If both people changed that block, the document retains the remote version and a banner offers your previous block for review.
+minddy merges edits to different top-level document blocks when it can preserve both changes. It does not merge simultaneous text edits inside the same block character by character. If both people changed that block, the document retains the remote version and a banner offers your previous block for review.
 
 Compare the named block with the current document. Choose Restore mine only when replacing that block with your version is intended. If your conflicting action was a deletion, Delete it again applies that deletion explicitly. Dismiss keeps the adopted document and closes the warning; it does not restore your version. Preserve any wanted text before dismissing, and use history to inspect saved versions when a broader recovery is needed. These choices affect the identified block rather than blindly replacing the whole page.
 

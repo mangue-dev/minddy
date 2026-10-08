@@ -135,7 +135,7 @@
 }
 ---
 
-Para instalar o Minddy no seu servidor, escolha uma versão verificada e um perfil com Supabase completo, gerenciado ou uma aplicação compilada pelo código-fonte. Este guia distingue os procedimentos e limites da versão publicada das adaptações técnicas explícitas. Antes de receber usuários, verifique autenticação, arquivos, trabalho de código quando habilitado e restauração.
+Para instalar o minddy no seu servidor, escolha uma versão verificada e um perfil com Supabase completo, gerenciado ou uma aplicação compilada pelo código-fonte. Este guia distingue os procedimentos e limites da versão publicada das adaptações técnicas explícitas. Antes de receber usuários, verifique autenticação, arquivos, trabalho de código quando habilitado e restauração.
 
 ## Escolher uma versão e um perfil de instalação compatíveis {#self-hosted-compatibility}
 
@@ -190,7 +190,7 @@ test -s minddy.sbom.spdx.json
 
 ### Planejar operação e atualizações {#support}
 
-Instale uma versão publicada de cada vez. As migrações avançam apenas; um retorno incompatível restaura banco, Storage, configuração e aplicação como um conjunto correspondente. A Minddy mantém ferramentas de release e oferece ajuda sem garantia para falhas reproduzíveis do núcleo. Você opera DNS, TLS, capacidade, backups, ensaios de restauração e provedores opcionais. Uma tag móvel ou pilha Supabase derivada não herda o contrato de suporte.
+Instale uma versão publicada de cada vez. As migrações avançam apenas; um retorno incompatível restaura banco, Storage, configuração e aplicação como um conjunto correspondente. A minddy mantém ferramentas de release e oferece ajuda sem garantia para falhas reproduzíveis do núcleo. Você opera DNS, TLS, capacidade, backups, ensaios de restauração e provedores opcionais. Uma tag móvel ou pilha Supabase derivada não herda o contrato de suporte.
 
 ### Limites conhecidos do runner na versão publicada {#known-runner-limits}
 
@@ -366,7 +366,7 @@ O helper de armazenamento fixado também permite executar arquivos no diretório
 
 ## Instalar com Supabase gerenciado ou pelo código-fonte {#managed-or-source-installation}
 
-Supabase gerenciado indica quem opera o backend. Pode ser usado com a imagem OCI oficial ou com um servidor compilado a partir do código. Separe esses tipos de implantação nos registros de instalação e aceitação. O backend precisa fornecer PostgreSQL, Auth, Storage e Realtime. O caminho OCI managed guiado exige um projeto em supabase.com, sua URL pública, chaves anon e service-role e uma conexão PostgreSQL acessível pelas ferramentas de bootstrap. Use seu próprio projeto, nunca credenciais do Minddy Cloud.
+Supabase gerenciado indica quem opera o backend. Pode ser usado com a imagem OCI oficial ou com um servidor compilado a partir do código. Separe esses tipos de implantação nos registros de instalação e aceitação. O backend precisa fornecer PostgreSQL, Auth, Storage e Realtime. O caminho OCI managed guiado exige um projeto em supabase.com, sua URL pública, chaves anon e service-role e uma conexão PostgreSQL acessível pelas ferramentas de bootstrap. Use seu próprio projeto, nunca credenciais do minddy Cloud.
 
 ![Diagrama: Seu projeto Supabase gerenciado. PostgreSQL, Auth, Storage, Realtime. Perfil OCI OU aplicação de tag. Tarefas e backup conforme perfil.](/documentation/pt-BR/managed-or-source-installation-flow.svg)
 
@@ -384,7 +384,7 @@ pnpm self-host:install -- --non-interactive --mode managed \
 
 ### Concluir implantação pelo código-fonte {#source}
 
-Para instalar a partir do código, instale as dependências fixadas da tag, forneça o ambiente Minddy e Supabase, execute bootstrap e build e inicie o servidor de produção atrás de um proxy. Defina MINDDY_PUBLIC_* antes de iniciar. Você precisa fornecer um agendador persistente com as chamadas autenticadas descritas no artigo de rede: um build não executa jobs. Verifique migrações e Storage, depois Auth, issues, bytes dos anexos e Realtime. Use o procedimento lógico ou do provedor para backup. Um servidor de código não valida a instalação OCI.
+Para instalar a partir do código, instale as dependências fixadas da tag, forneça o ambiente minddy e Supabase, execute bootstrap e build e inicie o servidor de produção atrás de um proxy. Defina MINDDY_PUBLIC_* antes de iniciar. Você precisa fornecer um agendador persistente com as chamadas autenticadas descritas no artigo de rede: um build não executa jobs. Verifique migrações e Storage, depois Auth, issues, bytes dos anexos e Realtime. Use o procedimento lógico ou do provedor para backup. Um servidor de código não valida a instalação OCI.
 
 ```bash
 pnpm install --frozen-lockfile

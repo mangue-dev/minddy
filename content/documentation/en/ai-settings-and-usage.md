@@ -122,9 +122,9 @@ Account AI settings choose the providers, personal keys and defaults used by sup
 
 ## Configure personal AI keys and model defaults {#ai-keys-and-models}
 
-Open account AI settings, add a compatible provider and enter its key and any required base URL. Save and inspect the confirmation state. For AI calls with managed fallback available, an unconfirmed or unreachable key leaves usage on Minddy. This depends on configured managed AI; code workers have the provider-bound model rules below. Never paste the key into a conversation or screenshot.
+Open account AI settings, add a compatible provider and enter its key and any required base URL. Save and inspect the confirmation state. For AI calls with managed fallback available, an unconfirmed or unreachable key leaves usage on minddy. This depends on configured managed AI; code workers have the provider-bound model rules below. Never paste the key into a conversation or screenshot.
 
-Assign text, transcription and embedding model families to compatible keys or keep them on Minddy. For each key, choose its enabled surfaces: Numo conversation, code work, automations, voice and feedback. A surface or model family without a usable assignment stays on Minddy usage. Your provider bills calls made with its key. Server-sandbox compute still has a real cost and is recorded in usage. This recording is separate from applying an account limit: a worker using validated BYOK bypasses the plan quota and compute cap, while Minddy-funded work remains subject to its included allowance.
+Assign text, transcription and embedding model families to compatible keys or keep them on minddy. For each key, choose its enabled surfaces: Numo conversation, code work, automations, voice and feedback. A surface or model family without a usable assignment stays on minddy usage. Your provider bills calls made with its key. Server-sandbox compute still has a real cost and is recorded in usage. This recording is separate from applying an account limit: a worker using validated BYOK bypasses the plan quota and compute cap, while minddy-funded work remains subject to its included allowance.
 
 ![AI provider card with minddy Cloud selected.](/documentation/en/ai-keys-and-models-workflow.png)
 
@@ -145,9 +145,9 @@ Use the offered checkout or subscription-management action for your account. Rev
 
 ### What consumes budget {#consumption}
 
-Included AI usage covers reasoning, Minddy tool calls, automation, worker model calls and server-sandbox compute. The monthly included-AI limit applies to work funded by Minddy. A routine’s per-run cap is a separate limit that can pause its execution; completed work stays in the conversation. These limits do not authorize automatic overage charges. Inspect the limit card and reset date when available.
+Included AI usage covers reasoning, minddy tool calls, automation, worker model calls and server-sandbox compute. The monthly included-AI limit applies to work funded by minddy. A routine’s per-run cap is a separate limit that can pause its execution; completed work stays in the conversation. These limits do not authorize automatic overage charges. Inspect the limit card and reset date when available.
 
-Compatible personal keys bill model calls to their provider instead of included AI usage. A worker using a validated BYOK key bypasses the account’s plan quota and compute cap. Sandbox compute still has a real cost and is recorded in usage; recording that cost does not mean the monthly plan cap is applied to that BYOK run. Unassigned families or surfaces that use Minddy-funded calls remain subject to their Minddy allowance. Self-hosting has infrastructure and optional-provider costs determined by your installation; it does not become a Cloud subscription merely by running the same core.
+Compatible personal keys bill model calls to their provider instead of included AI usage. A worker using a validated BYOK key bypasses the account’s plan quota and compute cap. Sandbox compute still has a real cost and is recorded in usage; recording that cost does not mean the monthly plan cap is applied to that BYOK run. Unassigned families or surfaces that use minddy-funded calls remain subject to their minddy allowance. Self-hosting has infrastructure and optional-provider costs determined by your installation; it does not become a Cloud subscription merely by running the same core.
 
 ### Candidate capacity reference {#plan-capacities}
 

@@ -57,7 +57,7 @@
       "id": "responsibilities",
       "kind": "diagram",
       "src": "/documentation/fr/responsibilities.svg",
-      "alt": "Responsabilité d’exploitation: Exploité par Minddy, Exploité par vous.",
+      "alt": "Responsabilité d’exploitation: Exploité par minddy, Exploité par vous.",
       "caption": "Les mêmes services du cœur nécessitent un opérateur dans les deux modèles. Les fournisseurs optionnels restent des services distincts.",
       "revision": 2,
       "reviewed": true,
@@ -77,19 +77,19 @@
 
 ## Choisir un mode d’exploitation {#choose-an-instance}
 
-Minddy Cloud et Minddy auto-hébergé utilisent le même cœur public. Choisissez le Cloud si vous souhaitez que Minddy exploite l’application, la base de données, Storage et le planificateur. Choisissez l’auto-hébergement si vous devez maîtriser le lieu d’hébergement, les fournisseurs ou le calendrier des mises à jour et pouvez exploiter ces services.
+minddy Cloud et minddy auto-hébergé utilisent le même cœur public. Choisissez le Cloud si vous souhaitez que minddy exploite l’application, la base de données, Storage et le planificateur. Choisissez l’auto-hébergement si vous devez maîtriser le lieu d’hébergement, les fournisseurs ou le calendrier des mises à jour et pouvez exploiter ces services.
 
-Un compte Cloud appartient au Cloud. Sur une instance auto-hébergée, créez un compte sur cette instance ; aucun compte Minddy Cloud n’est nécessaire. Vérifiez l’adresse avant de vous connecter ou d’inviter quelqu’un. Deux instances utilisant Minddy ne partagent pas automatiquement leurs comptes ni leurs identifiants.
+Un compte Cloud appartient au Cloud. Sur une instance auto-hébergée, créez un compte sur cette instance ; aucun compte minddy Cloud n’est nécessaire. Vérifiez l’adresse avant de vous connecter ou d’inviter quelqu’un. Deux instances utilisant minddy ne partagent pas automatiquement leurs comptes ni leurs identifiants.
 
-![Responsabilité d’exploitation: Exploité par Minddy, Exploité par vous.](/documentation/fr/responsibilities.svg)
+![Responsabilité d’exploitation: Exploité par minddy, Exploité par vous.](/documentation/fr/responsibilities.svg)
 
 ## Responsabilités et coûts {#responsibilities}
 
 | Responsabilité | Cloud | Auto-hébergement |
 | --- | --- | --- |
-| Infrastructure, mises à jour et incidents | Minddy exploite le service. | Vous assurez la maintenance des hôtes, du TLS, de la supervision et des mises à jour. |
-| Sauvegardes et récupération | Minddy exploite le service Cloud. | Vous conservez les données de la base, les fichiers Storage, la configuration et les clés de chiffrement, puis testez les restaurations. |
-| Comptes fournisseurs | Minddy détient les comptes des services qu’il exploite. | Vous choisissez et payez l’infrastructure et les fournisseurs optionnels. |
+| Infrastructure, mises à jour et incidents | minddy exploite le service. | Vous assurez la maintenance des hôtes, du TLS, de la supervision et des mises à jour. |
+| Sauvegardes et récupération | minddy exploite le service Cloud. | Vous conservez les données de la base, les fichiers Storage, la configuration et les clés de chiffrement, puis testez les restaurations. |
+| Comptes fournisseurs | minddy détient les comptes des services qu’il exploite. | Vous choisissez et payez l’infrastructure et les fournisseurs optionnels. |
 | Assistance | Les conditions d’assistance Cloud s’appliquent. | Les outils de release et l’aide communautaire, sans garantie de résultat, couvrent les défauts reproductibles du cœur ; aucun SLA d’exploitation de votre infrastructure n’est inclus. |
 
 Une équipe sans capacité d’exploitation de bases de données peut par exemple utiliser le Cloud. Un opérateur soumis à des exigences de localisation des données peut choisir l’auto-hébergement et examiner les destinations de chaque fournisseur activé. Héberger l’application ne rend pas local un fournisseur externe d’IA, d’e-mail ou de Git.
@@ -98,7 +98,7 @@ Une équipe sans capacité d’exploitation de bases de données peut par exempl
 
 Une installation auto-hébergée prise en charge nécessite l’application et Supabase avec PostgreSQL, Auth, Storage et Realtime. PostgreSQL seul ne suffit pas. Utilisez une release étiquetée et sa matrice de compatibilité. Les variantes dérivées de Supabase sans version épinglée et les adaptateurs GitHub Enterprise ou GitLab auto-gérés sont hors du périmètre pris en charge.
 
-L’IA, les e-mails, Git, les notifications push et les statistiques d’usage dépendent de la configuration. L’auto-hébergement n’exige ni Stripe, ni PostHog, ni clé d’IA gérée par Minddy, ni compte Cloud. Une configuration optionnelle manquante est signalée ; aucun fournisseur ne la remplace silencieusement. Les clés d’IA personnelles et les points d’accès d’IA locaux sont des choix possibles ; leur disponibilité et leurs coûts dépendent de la capacité configurée.
+L’IA, les e-mails, Git, les notifications push et les statistiques d’usage dépendent de la configuration. L’auto-hébergement n’exige ni Stripe, ni PostHog, ni clé d’IA gérée par minddy, ni compte Cloud. Une configuration optionnelle manquante est signalée ; aucun fournisseur ne la remplace silencieusement. Les clés d’IA personnelles et les points d’accès d’IA locaux sont des choix possibles ; leur disponibilité et leurs coûts dépendent de la capacité configurée.
 
 Examinez les permissions et les conditions de traitement des données avant d’activer une intégration. Les connexions Git peuvent utiliser le relais de forge géré lorsque vous lancez explicitement l’intégration ; les applications fournisseurs détenues par l’opérateur et la désactivation du relais restent possibles. L’auto-hébergement ne constitue pas une offre réduite pour l’accès aux fonctions du cœur.
 

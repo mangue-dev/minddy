@@ -123,7 +123,7 @@ curl --fail-with-body --request POST "$MINDDY_ORIGIN/api/v1/issues" \
 
 ### Verify and deduplicate outbound events {#receive}
 
-An issues integration can send issue.created, issue.status_changed and issue.updated. The project owner must choose a new webhook destination in settings; agents may tune existing events/scope or disable it, but cannot create a new outbound channel. Scope integration includes only this key’s issues; all includes every project issue. Verify X-Minddy-Signature as sha256= plus HMAC-SHA256 of the raw received bytes using the lowercase SHA-256 hex digest of the API key as HMAC key. Compare in constant time before trusting the payload. Do not parse and reserialize before hashing. X-Minddy-Delivery matches delivery_id; deduplicate by that UUID.
+An issues integration can send issue.created, issue.status_changed and issue.updated. The project owner must choose a new webhook destination in settings; agents may tune existing events/scope or disable it, but cannot create a new outbound channel. Scope integration includes only this key’s issues; all includes every project issue. Verify X-minddy-Signature as sha256= plus HMAC-SHA256 of the raw received bytes using the lowercase SHA-256 hex digest of the API key as HMAC key. Compare in constant time before trusting the payload. Do not parse and reserialize before hashing. X-minddy-Delivery matches delivery_id; deduplicate by that UUID.
 
 ### Handle failed requests and delivery limits {#limits}
 

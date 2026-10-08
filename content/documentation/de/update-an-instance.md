@@ -73,7 +73,7 @@
 
 ## Eine Instanz mit gesichertem Rückweg aktualisieren {#update-an-instance}
 
-Aktualisieren Sie eine veröffentlichte Version nach der anderen. Lesen Sie Hinweise, Migrationsunterschiede und Kompatibilitätseinträge. Kombinieren Sie Minddy-Update nicht mit PostgreSQL-Hauptversion oder Supabase-Imagewechsel. Prüfen Sie Zielquellcode, Release-Prüfsummen und OCI-Digest und bereiten Sie ein separates Verzeichnis mit eingefrorenen Abhängigkeiten vor. Kündigen Sie Ausfall und Abbruchfrist an. Bestätigen Sie nutzbares externes Backup und kürzlich erfolgreiche Wiederherstellung. Erhalten Sie die aktuelle Anwendung und geschützte Umgebung startfähig.
+Aktualisieren Sie eine veröffentlichte Version nach der anderen. Lesen Sie Hinweise, Migrationsunterschiede und Kompatibilitätseinträge. Kombinieren Sie minddy-Update nicht mit PostgreSQL-Hauptversion oder Supabase-Imagewechsel. Prüfen Sie Zielquellcode, Release-Prüfsummen und OCI-Digest und bereiten Sie ein separates Verzeichnis mit eingefrorenen Abhängigkeiten vor. Kündigen Sie Ausfall und Abbruchfrist an. Bestätigen Sie nutzbares externes Backup und kürzlich erfolgreiche Wiederherstellung. Erhalten Sie die aktuelle Anwendung und geschützte Umgebung startfähig.
 
 
 ![Diagramm: Schreiben und Jobs stoppen. Vollständiges Vorupdate-Backup versiegeln. Zielmigrationen, danach Zielanwendung. Wiederherstellung prüfen und öffnen.](/documentation/de/update-an-instance-flow.svg)
@@ -133,7 +133,7 @@ pnpm self-host:doctor -- --mode full --env-file "$MINDDY_ENV_FILE" \
 Managed OCI folgt demselben Zielumgebungs- und Imageablauf mit anbietergesteuertem Datenbank-/Storage-Backup und Migrationszugriff statt lokalen Backenddiensten. Bei Quellcode bauen Sie den Zieltag, sperren öffentliche API-Schreibzugriffe, sichern logisch beziehungsweise beim Anbieter, bootstrappen mit Zielcode und starten Produktion hinter Wartung. Ersetzen Sie OCI zur Prüfung nicht durch einen Quellcodeprozess. Starten Sie alten Code nicht auf geändertem Schema ohne ausdrückliche Kompatibilitätsgarantie.
 
 
-Die lokalen Compose-Befehle im folgenden Quellverfahren gelten nur für ein vom Betreiber kontrolliertes Backend. Ersetzen Sie bei verwaltetem Supabase das Anhalten und Starten des Backends sowie den Migrationszugriff durch unterstützte Anbieteroperationen. Bewahren Sie die geschützte Minddy-Umgebung und ein vollständiges Anbieter-Backup auf und starten Sie anschließend die geprüfte Zielanwendung.
+Die lokalen Compose-Befehle im folgenden Quellverfahren gelten nur für ein vom Betreiber kontrolliertes Backend. Ersetzen Sie bei verwaltetem Supabase das Anhalten und Starten des Backends sowie den Migrationszugriff durch unterstützte Anbieteroperationen. Bewahren Sie die geschützte minddy-Umgebung und ein vollständiges Anbieter-Backup auf und starten Sie anschließend die geprüfte Zielanwendung.
 
 
 Setzen Sie für das Quellverfahren MINDDY_REPO auf das versionierte Quellrepository, SUPABASE_COMPOSE_DIR auf das betreiberkontrollierte Backend aus [dem logischen Backup-Kontext](/de/dokumentation/backups-and-restoration#outage), TO_TAG auf den tatsächlich nächsten veröffentlichten und geprüften Tag und TARGET_RELEASE_DIR auf dessen separat erstellten Checkout. Stellen Sie die passenden Datenbank- und öffentlichen API-Variablen privat bereit. Starten Sie das Ziel nach Bootstrap und Prüfung mit pnpm start oder Ihrem vorhandenen Prozessmanager hinter der Wartung. Öffnen Sie den Zugang erst nach den folgenden Prüfungen.

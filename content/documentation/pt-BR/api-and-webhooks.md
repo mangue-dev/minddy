@@ -123,7 +123,7 @@ curl --fail-with-body --request POST "$MINDDY_ORIGIN/api/v1/issues" \
 
 ### Verificar e deduplicar eventos {#receive}
 
-As integrações issues podem enviar issue.created, issue.status_changed e issue.updated. O proprietário precisa escolher qualquer destino novo de webhook. Agentes podem ajustar eventos e escopo de um destino existente ou desativá-lo, mas não podem abrir um canal novo de saída. O escopo integration inclui apenas issues criadas com aquela chave; all inclui o projeto inteiro. X-Minddy-Signature contém o prefixo sha256= e um HMAC-SHA256 calculado sobre os bytes originais. A chave HMAC é o digest SHA-256 da chave API, representado como uma string hexadecimal minúscula. Compare a assinatura em tempo constante antes de confiar no payload, sem analisá-lo e serializá-lo novamente. X-Minddy-Delivery corresponde a delivery_id: use esse UUID para eliminar duplicatas.
+As integrações issues podem enviar issue.created, issue.status_changed e issue.updated. O proprietário precisa escolher qualquer destino novo de webhook. Agentes podem ajustar eventos e escopo de um destino existente ou desativá-lo, mas não podem abrir um canal novo de saída. O escopo integration inclui apenas issues criadas com aquela chave; all inclui o projeto inteiro. X-minddy-Signature contém o prefixo sha256= e um HMAC-SHA256 calculado sobre os bytes originais. A chave HMAC é o digest SHA-256 da chave API, representado como uma string hexadecimal minúscula. Compare a assinatura em tempo constante antes de confiar no payload, sem analisá-lo e serializá-lo novamente. X-minddy-Delivery corresponde a delivery_id: use esse UUID para eliminar duplicatas.
 
 ### Tratar falhas e limites {#limits}
 

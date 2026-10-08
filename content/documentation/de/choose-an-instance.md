@@ -57,7 +57,7 @@
       "id": "responsibilities",
       "kind": "diagram",
       "src": "/documentation/de/responsibilities.svg",
-      "alt": "Betriebsverantwortung: Von Minddy betrieben, Von dir betrieben.",
+      "alt": "Betriebsverantwortung: Von minddy betrieben, Von dir betrieben.",
       "caption": "In beiden Modellen müssen dieselben Kerndienste betrieben werden. Optionale Anbieter bleiben separate Dienste.",
       "revision": 2,
       "reviewed": true,
@@ -77,19 +77,19 @@
 
 ## Ein Betriebsmodell wählen {#choose-an-instance}
 
-Minddy Cloud und selbst gehostetes Minddy nutzen denselben öffentlichen Kern. Wähle Cloud, wenn Minddy die Anwendung, Datenbank, Storage und den Scheduler betreiben soll. Wähle Selbsthosting, wenn du den Hostingstandort, Anbieter oder Updatezeitpunkt bestimmen musst und diese Dienste selbst betreiben kannst.
+minddy Cloud und selbst gehostetes minddy nutzen denselben öffentlichen Kern. Wähle Cloud, wenn minddy die Anwendung, Datenbank, Storage und den Scheduler betreiben soll. Wähle Selbsthosting, wenn du den Hostingstandort, Anbieter oder Updatezeitpunkt bestimmen musst und diese Dienste selbst betreiben kannst.
 
-Ein Cloud-Konto gehört zur Cloud. Erstelle für eine selbst gehostete Instanz ein Konto auf dieser Instanz; ein Minddy-Cloud-Konto ist dafür nicht erforderlich. Prüfe die Adresse vor der Anmeldung oder einer Einladung. Zwei Minddy-Instanzen teilen Konten und Zugangsdaten nicht automatisch.
+Ein Cloud-Konto gehört zur Cloud. Erstelle für eine selbst gehostete Instanz ein Konto auf dieser Instanz; ein minddy-Cloud-Konto ist dafür nicht erforderlich. Prüfe die Adresse vor der Anmeldung oder einer Einladung. Zwei minddy-Instanzen teilen Konten und Zugangsdaten nicht automatisch.
 
-![Betriebsverantwortung: Von Minddy betrieben, Von dir betrieben.](/documentation/de/responsibilities.svg)
+![Betriebsverantwortung: Von minddy betrieben, Von dir betrieben.](/documentation/de/responsibilities.svg)
 
 ## Verantwortung und Kosten {#responsibilities}
 
 | Verantwortung | Cloud | Selbsthosting |
 | --- | --- | --- |
-| Infrastruktur, Updates und Störungen | Minddy betreibt den Dienst. | Du wartest Hosts, TLS, Überwachung und Release-Updates. |
-| Sicherungen und Wiederherstellung | Minddy betreibt den Cloud-Dienst. | Du sicherst Datenbankdaten, Storage-Dateien, Konfiguration und Verschlüsselungsschlüssel und testest Wiederherstellungen. |
-| Anbieterkonten | Minddy besitzt die Konten für die von Minddy betriebenen Dienste. | Du wählst und bezahlst Infrastruktur und optionale Anbieter. |
+| Infrastruktur, Updates und Störungen | minddy betreibt den Dienst. | Du wartest Hosts, TLS, Überwachung und Release-Updates. |
+| Sicherungen und Wiederherstellung | minddy betreibt den Cloud-Dienst. | Du sicherst Datenbankdaten, Storage-Dateien, Konfiguration und Verschlüsselungsschlüssel und testest Wiederherstellungen. |
+| Anbieterkonten | minddy besitzt die Konten für die von minddy betriebenen Dienste. | Du wählst und bezahlst Infrastruktur und optionale Anbieter. |
 | Support | Es gelten die Cloud-Supportbedingungen. | Release-Werkzeuge und Community-Hilfe nach Möglichkeit unterstützen bei reproduzierbaren Fehlern im Kern; ein SLA für deinen Infrastrukturbetrieb ist nicht enthalten. |
 
 Ein Team ohne Kapazität für den Datenbankbetrieb kann beispielsweise Cloud nutzen. Ein Betreiber mit Vorgaben zum Speicherort kann Selbsthosting wählen und die Datenziele jedes aktivierten Anbieters prüfen. Selbsthosting der Anwendung macht einen externen KI-, E-Mail- oder Git-Anbieter nicht lokal.
@@ -98,7 +98,7 @@ Ein Team ohne Kapazität für den Datenbankbetrieb kann beispielsweise Cloud nut
 
 Eine unterstützte Installation benötigt die Anwendung sowie Supabase mit PostgreSQL, Auth, Storage und Realtime. PostgreSQL allein reicht nicht aus. Verwende ein Release-Tag und dessen Kompatibilitätsmatrix. Nicht fest versionierte Supabase-Abwandlungen sowie selbst verwaltete GitHub-Enterprise- oder GitLab-Adapter liegen außerhalb des unterstützten Vertrags.
 
-KI, E-Mail, Git, Push-Benachrichtigungen und Nutzungsanalyse hängen von der Konfiguration ab. Selbsthosting erfordert weder Stripe noch PostHog, einen von Minddy verwalteten KI-Schlüssel oder ein Cloud-Konto. Fehlende optionale Konfiguration wird gemeldet und nicht stillschweigend durch einen Anbieter ersetzt. Eigene KI-Schlüssel und lokale KI-Endpunkte sind mögliche Optionen; Verfügbarkeit und Kosten hängen von der eingerichteten Funktion ab.
+KI, E-Mail, Git, Push-Benachrichtigungen und Nutzungsanalyse hängen von der Konfiguration ab. Selbsthosting erfordert weder Stripe noch PostHog, einen von minddy verwalteten KI-Schlüssel oder ein Cloud-Konto. Fehlende optionale Konfiguration wird gemeldet und nicht stillschweigend durch einen Anbieter ersetzt. Eigene KI-Schlüssel und lokale KI-Endpunkte sind mögliche Optionen; Verfügbarkeit und Kosten hängen von der eingerichteten Funktion ab.
 
 Prüfe vor dem Aktivieren einer Integration die Berechtigungen und Datenbedingungen des Anbieters. Git-Verbindungen können den verwalteten Forge-Relay nutzen, wenn du die Integration ausdrücklich startest; eigene Anbieteranwendungen und das Abschalten des Relays sind ebenfalls möglich. Selbsthosting ist keine abgespeckte Stufe für Kernfunktionen.
 

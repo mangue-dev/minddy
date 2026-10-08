@@ -88,7 +88,7 @@ Use this Linux procedure only for the full reference profile with the pinned off
 
 ### Set the installed Compose context {#context}
 
-Replace the example release and paths with the instance actually installed. Set MODE=full. Preserve any existing restore override in every Compose command. Never run bare upstream docker compose because it omits the Minddy overlay and protected environment. Do not source or print the environment. The following backup stops every service before copying PostgreSQL files.
+Replace the example release and paths with the instance actually installed. Set MODE=full. Preserve any existing restore override in every Compose command. Never run bare upstream docker compose because it omits the minddy overlay and protected environment. Do not source or print the environment. The following backup stops every service before copying PostgreSQL files.
 
 ```bash
 set -euo pipefail
@@ -181,7 +181,7 @@ Use this procedure for source, managed database or custom Storage deployments. K
 
 ### Provider-managed Supabase {#provider}
 
-For Supabase managed by a provider, record the project, database version, backup or snapshot identifier and its recovery point. Close Minddy, workers and scheduled writes, then use the provider’s supported consistency or maintenance controls for direct Auth, PostgREST and Storage writes. If those controls are unavailable, record that limit; stopping the application alone is insufficient. Use the SQL exports below only when your database role and provider support them, including Auth, Storage metadata, migration history and managed policies. Preserve raw object bytes using the provider-supported export or immutable backend snapshot separately from SQL. Preserve Minddy’s protected environment and encryption keys, plus the Auth/SMTP, URL, proxy and job settings you control. Platform roles and pgsodium keys may be provider-owned: do not pretend they are local files. The following SUPABASE_COMPOSE_DIR, docker compose, supabase.env, pgsodium and filesystem tar blocks apply only to an operator-controlled Supabase backend. Validate the provider’s complete restore into a separate empty project before relying on the copy. No provider backup/restore was executed for this documentation revision.
+For Supabase managed by a provider, record the project, database version, backup or snapshot identifier and its recovery point. Close minddy, workers and scheduled writes, then use the provider’s supported consistency or maintenance controls for direct Auth, PostgREST and Storage writes. If those controls are unavailable, record that limit; stopping the application alone is insufficient. Use the SQL exports below only when your database role and provider support them, including Auth, Storage metadata, migration history and managed policies. Preserve raw object bytes using the provider-supported export or immutable backend snapshot separately from SQL. Preserve minddy’s protected environment and encryption keys, plus the Auth/SMTP, URL, proxy and job settings you control. Platform roles and pgsodium keys may be provider-owned: do not pretend they are local files. The following SUPABASE_COMPOSE_DIR, docker compose, supabase.env, pgsodium and filesystem tar blocks apply only to an operator-controlled Supabase backend. Validate the provider’s complete restore into a separate empty project before relying on the copy. No provider backup/restore was executed for this documentation revision.
 
 ### Block writes and export SQL {#outage}
 
@@ -403,7 +403,7 @@ pnpm self-host:doctor -- --mode full --env-file "$MINDDY_ENV_FILE" \
 For logical restoration, provision a blank stack with recorded PostgreSQL/Supabase versions and the matching configuration/keys. Confirm the target database and raw Storage destination before executing SQL. Restore roles, schema and data in one transaction, then migration history and managed policies. Stop target Storage and restore raw filesystem bytes or the S3 snapshot into a new empty backend. Do not upload through the Storage API. Managed providers require their supported restore workflow rather than filesystem commands. Check out the saved application commit and preserve its keys while changing isolated target origins.
 
 
-The following logical extraction, run.sh and filesystem Storage commands are only for an operator-controlled backend. For provider-managed Supabase, restore database and raw object bytes into an empty provider target using its supported process, then configure and start Minddy using the [source installation procedure](/docs/installation#source). Do not run local Compose commands for a supabase.com project.
+The following logical extraction, run.sh and filesystem Storage commands are only for an operator-controlled backend. For provider-managed Supabase, restore database and raw object bytes into an empty provider target using its supported process, then configure and start minddy using the [source installation procedure](/docs/installation#source). Do not run local Compose commands for a supabase.com project.
 
 ```bash
 export RESTORE_DB_URL='postgresql://postgres:...@restore-db:5432/postgres'

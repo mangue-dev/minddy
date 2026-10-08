@@ -3,7 +3,7 @@
   "id": "applications",
   "locale": "fr",
   "title": "Applications web, mobile et desktop",
-  "summary": "Utilisez Minddy dans un navigateur, installez l’application mobile ou desktop et configurez les notifications de vos appareils.",
+  "summary": "Utilisez minddy dans un navigateur, installez l’application mobile ou desktop et configurez les notifications de vos appareils.",
   "topic": "Compte et applications",
   "type": "guide",
   "audiences": [
@@ -95,8 +95,8 @@
       "id": "install-the-pwa-workflow",
       "kind": "screenshot",
       "src": "/documentation/fr/install-the-pwa-workflow.png",
-      "alt": "Guide Safari illustré de Minddy : Partager, Sur l’écran d’accueil puis confirmer.",
-      "caption": "Le guide public illustre les trois étapes Safari et le maintien de l’option Ouvrir comme app web. Il s’agit d’illustrations pédagogiques affichées par Minddy, pas de captures d’une installation iOS effectuée.",
+      "alt": "Guide Safari illustré de minddy : Partager, Sur l’écran d’accueil puis confirmer.",
+      "caption": "Le guide public illustre les trois étapes Safari et le maintien de l’option Ouvrir comme app web. Il s’agit d’illustrations pédagogiques affichées par minddy, pas de captures d’une installation iOS effectuée.",
       "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
@@ -180,23 +180,23 @@ Le navigateur et l’application web installée ont besoin d’une connexion ré
 
 ## Installer l’application web sur téléphone ou tablette {#install-the-pwa}
 
-Ouvrez l’instance Minddy voulue dans Safari sur iPhone ou iPad, ou dans Chrome ou un autre navigateur Android compatible. Si le lien s’est ouvert à l’intérieur d’une autre application, ouvrez-le d’abord dans le navigateur complet. Pour une instance self-hosted, utilisez l’adresse de votre propre serveur.
+Ouvrez l’instance minddy voulue dans Safari sur iPhone ou iPad, ou dans Chrome ou un autre navigateur Android compatible. Si le lien s’est ouvert à l’intérieur d’une autre application, ouvrez-le d’abord dans le navigateur complet. Pour une instance self-hosted, utilisez l’adresse de votre propre serveur.
 
 Sur iOS, ouvrez Partager, choisissez Sur l’écran d’accueil, gardez Ouvrir comme app web activé, puis touchez Ajouter. Selon la présentation de Safari, ouvrez Plus avant Partager. Si l’action manque, consultez Modifier les actions.
 
-Sur Android, utilisez la proposition d’installation ou choisissez Installer l’application ou Ajouter à l’écran d’accueil dans le menu du navigateur, puis confirmez Installer. Les libellés dépendent du navigateur. Ouvrez la nouvelle icône et connectez-vous avec le compte de cette instance. Il s’agit d’une PWA installée par le navigateur ; Minddy n’a pas d’application native dans l’App Store iOS ou Google Play.
+Sur Android, utilisez la proposition d’installation ou choisissez Installer l’application ou Ajouter à l’écran d’accueil dans le menu du navigateur, puis confirmez Installer. Les libellés dépendent du navigateur. Ouvrez la nouvelle icône et connectez-vous avec le compte de cette instance. Il s’agit d’une PWA installée par le navigateur ; minddy n’a pas d’application native dans l’App Store iOS ou Google Play.
 
 ### Mises à jour, accès hors ligne et notifications {#operation}
 
-L’installation ne crée pas de copie hors ligne du projet. Le service worker de Minddy gère uniquement les notifications push et ne met pas les requêtes de l’application en cache. Gardez une connexion réseau et rechargez la page pour obtenir le contenu web actuel. Les notifications nécessitent aussi un navigateur compatible, son autorisation et une configuration push côté serveur. Sur iOS, utilisez l’application installée lorsque le parcours le demande. Si l’option d’installation manque, ouvrez un navigateur complet compatible et vérifiez si l’instance est déjà installée.
+L’installation ne crée pas de copie hors ligne du projet. Le service worker de minddy gère uniquement les notifications push et ne met pas les requêtes de l’application en cache. Gardez une connexion réseau et rechargez la page pour obtenir le contenu web actuel. Les notifications nécessitent aussi un navigateur compatible, son autorisation et une configuration push côté serveur. Sur iOS, utilisez l’application installée lorsque le parcours le demande. Si l’option d’installation manque, ouvrez un navigateur complet compatible et vérifiez si l’instance est déjà installée.
 
-![Guide Safari illustré de Minddy : Partager, Sur l’écran d’accueil puis confirmer.](/documentation/fr/install-the-pwa-workflow.png)
+![Guide Safari illustré de minddy : Partager, Sur l’écran d’accueil puis confirmer.](/documentation/fr/install-the-pwa-workflow.png)
 
 ## Installer et gérer l’application desktop {#desktop-app}
 
 Ouvrez la page publique de téléchargement. Sur macOS, choisissez le paquet Apple silicon ou Intel. Sur Windows, installez l’application depuis Microsoft Store. Sur Linux, choisissez une AppImage ou un paquet deb/rpm signé correspondant à x64 ou ARM64. Suivez le guide de la plateforme et les instructions de vérification du paquet. Windows ne propose pas d’installeur exe.
 
-Dans le sélecteur de serveur, choisissez Minddy Cloud, l’origine d’un serveur self-hosted ou le runtime local disponible. Vérifiez la destination avant de vous connecter : chaque compte appartient à son instance. OAuth utilise le navigateur système puis revient à l’application desktop. La présence d’un runtime local ne signifie pas que le worker de code Numo travaille dans votre dossier local.
+Dans le sélecteur de serveur, choisissez minddy Cloud, l’origine d’un serveur self-hosted ou le runtime local disponible. Vérifiez la destination avant de vous connecter : chaque compte appartient à son instance. OAuth utilise le navigateur système puis revient à l’application desktop. La présence d’un runtime local ne signifie pas que le worker de code Numo travaille dans votre dossier local.
 
 ### Onglets, fermeture et mises à jour {#desktop-app-operation}
 
@@ -208,7 +208,7 @@ macOS et les AppImage portables proposent les mises à jour dans l’application
 
 ## Activer les notifications d’un appareil {#devices-and-notifications}
 
-Ouvrez les notifications dans les réglages du compte sur l’appareil à enregistrer. Activez-les et acceptez la demande d’autorisation du navigateur ou du système. Une autorisation refusée doit être modifiée dans les réglages du navigateur ou du système ; actionner plusieurs fois le contrôle de Minddy ne contourne pas ce refus. Sur iOS, installez et ouvrez d’abord l’application web lorsque l’interface le demande.
+Ouvrez les notifications dans les réglages du compte sur l’appareil à enregistrer. Activez-les et acceptez la demande d’autorisation du navigateur ou du système. Une autorisation refusée doit être modifiée dans les réglages du navigateur ou du système ; actionner plusieurs fois le contrôle de minddy ne contourne pas ce refus. Sur iOS, installez et ouvrez d’abord l’application web lorsque l’interface le demande.
 
 Vérifiez que l’appareil apparaît dans la liste et utilisez son contrôle de test. Consultez les informations sur la dernière livraison. Vous pouvez désactiver ou retirer des enregistrements individuels sans supprimer le compte. Les préférences de la boîte de réception déterminent quels événements vous notifient ; la boîte de réception intégrée reste disponible lorsque le push ne l’est pas.
 

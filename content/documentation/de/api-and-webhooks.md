@@ -123,7 +123,7 @@ curl --fail-with-body --request POST "$MINDDY_ORIGIN/api/v1/issues" \
 
 ### Ereignisse prüfen und deduplizieren {#receive}
 
-issues kann issue.created, issue.status_changed und issue.updated senden. Ein neues Webhookziel muss der Projekteigentümer wählen; Agenten dürfen bestehende Ereignisse/Umfang einstellen oder deaktivieren, keine neuen Ausgabekanäle anlegen. integration umfasst nur Tickets dieses Schlüssels, all jedes Projektticket. Prüfen Sie X-Minddy-Signature als sha256= plus HMAC-SHA256 der unveränderten Empfangsbytes mit dem kleingeschriebenen SHA-256-Hexdigest des API-Schlüssels als HMAC-Schlüssel. Vergleichen Sie zeitkonstant vor Vertrauen. Nicht vorher JSON parsen und neu serialisieren. X-Minddy-Delivery entspricht delivery_id; deduplizieren Sie nach UUID.
+issues kann issue.created, issue.status_changed und issue.updated senden. Ein neues Webhookziel muss der Projekteigentümer wählen; Agenten dürfen bestehende Ereignisse/Umfang einstellen oder deaktivieren, keine neuen Ausgabekanäle anlegen. integration umfasst nur Tickets dieses Schlüssels, all jedes Projektticket. Prüfen Sie X-minddy-Signature als sha256= plus HMAC-SHA256 der unveränderten Empfangsbytes mit dem kleingeschriebenen SHA-256-Hexdigest des API-Schlüssels als HMAC-Schlüssel. Vergleichen Sie zeitkonstant vor Vertrauen. Nicht vorher JSON parsen und neu serialisieren. X-minddy-Delivery entspricht delivery_id; deduplizieren Sie nach UUID.
 
 ### Fehler und Grenzen behandeln {#limits}
 

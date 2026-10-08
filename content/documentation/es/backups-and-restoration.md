@@ -88,7 +88,7 @@ Este procedimiento Linux se aplica solo al perfil full de referencia con Storage
 
 ### Definir el contexto Compose instalado {#context}
 
-Sustituya las rutas y la versión del ejemplo por las de la instancia instalada y defina MODE=full. Incluya cualquier override de restauración existente en todos los comandos Compose. Usar solo docker compose upstream omite el overlay Minddy y el entorno protegido. No ejecute el archivo de entorno como código shell ni lo imprima. La secuencia siguiente detiene todos los servicios antes de copiar los archivos de PostgreSQL.
+Sustituya las rutas y la versión del ejemplo por las de la instancia instalada y defina MODE=full. Incluya cualquier override de restauración existente en todos los comandos Compose. Usar solo docker compose upstream omite el overlay minddy y el entorno protegido. No ejecute el archivo de entorno como código shell ni lo imprima. La secuencia siguiente detiene todos los servicios antes de copiar los archivos de PostgreSQL.
 
 ```bash
 set -euo pipefail
@@ -177,13 +177,13 @@ El comando de copia en frío también detecta un volumen con nombre de Storage b
 
 ## Crear copias lógicas o gestionadas por el proveedor {#logical-and-provider-backups}
 
-Para instalaciones desde el código, bases de datos gestionadas o Storage personalizado, asocie los comandos de base de datos, bytes originales y proxy a la misma instancia instalada. self-host:backup, self-host:update y self-host:restore son comprobaciones preliminares de solo lectura: no realizan las operaciones. Una copia completa conserva PostgreSQL con auth, los metadatos Storage y el historial de migraciones, los bytes originales de los archivos, la configuración protegida, las claves y las identidades exactas de Minddy y Supabase en un punto coherente, sin escrituras concurrentes.
+Para instalaciones desde el código, bases de datos gestionadas o Storage personalizado, asocie los comandos de base de datos, bytes originales y proxy a la misma instancia instalada. self-host:backup, self-host:update y self-host:restore son comprobaciones preliminares de solo lectura: no realizan las operaciones. Una copia completa conserva PostgreSQL con auth, los metadatos Storage y el historial de migraciones, los bytes originales de los archivos, la configuración protegida, las claves y las identidades exactas de minddy y Supabase en un punto coherente, sin escrituras concurrentes.
 
 ### Supabase gestionado por un proveedor {#provider}
 
-Para Supabase gestionado por un proveedor, registre el proyecto, la versión de la base de datos, el identificador de la copia o snapshot y su punto de recuperación. Detenga Minddy, los workers y las escrituras programadas; después use los controles de coherencia o mantenimiento que el proveedor admite para las escrituras directas de Auth, PostgREST y Storage. Si no existen esos controles, documente la limitación: detener solo la aplicación no basta.
+Para Supabase gestionado por un proveedor, registre el proyecto, la versión de la base de datos, el identificador de la copia o snapshot y su punto de recuperación. Detenga minddy, los workers y las escrituras programadas; después use los controles de coherencia o mantenimiento que el proveedor admite para las escrituras directas de Auth, PostgREST y Storage. Si no existen esos controles, documente la limitación: detener solo la aplicación no basta.
 
-Utilice las exportaciones SQL siguientes únicamente si el rol de base de datos y el proveedor las admiten, incluyendo Auth, metadatos Storage, historial de migraciones y políticas gestionadas. Conserve los bytes originales por separado mediante una exportación admitida o un snapshot inmutable del backend. Guarde el entorno y las claves Minddy y la configuración Auth/SMTP, URL, proxy y trabajos bajo su control. Los roles de plataforma y las claves pgsodium pueden pertenecer al proveedor; no los presente como archivos locales.
+Utilice las exportaciones SQL siguientes únicamente si el rol de base de datos y el proveedor las admiten, incluyendo Auth, metadatos Storage, historial de migraciones y políticas gestionadas. Conserve los bytes originales por separado mediante una exportación admitida o un snapshot inmutable del backend. Guarde el entorno y las claves minddy y la configuración Auth/SMTP, URL, proxy y trabajos bajo su control. Los roles de plataforma y las claves pgsodium pueden pertenecer al proveedor; no los presente como archivos locales.
 
 Los bloques siguientes con SUPABASE_COMPOSE_DIR, docker compose, supabase.env, pgsodium y tar filesystem solo se aplican a un backend controlado por el operador. Valide la restauración completa en un proyecto vacío independiente antes de confiar en la copia. No se ha realizado una copia ni una restauración de proveedor para esta revisión documental.
 
@@ -244,7 +244,7 @@ psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -Atc "
 
 ### Conservar bytes y configuración {#bytes}
 
-Si controla un Storage filesystem, detenga storage e imgproxy tras exportar SQL y archive su directorio conservando propietarios numéricos, ACL y atributos extendidos. Para S3, cree un snapshot o una versión inmutable de los bytes originales. No restaure mediante /storage/v1/s3: crea metadatos en conflicto. El proveedor controla los roles y el acceso filesystem de la plataforma; utilice su procedimiento admitido y registre su alcance. Copie en privado la configuración de Minddy y Supabase, los proxies, los trabajos, las plantillas Auth, el SMTP y cualquier clave raíz pgsodium. Incluya MINDDY_DATA_ROOT_KEY y los demás secretos conservados. SQL por sí solo no contiene los bytes de los adjuntos.
+Si controla un Storage filesystem, detenga storage e imgproxy tras exportar SQL y archive su directorio conservando propietarios numéricos, ACL y atributos extendidos. Para S3, cree un snapshot o una versión inmutable de los bytes originales. No restaure mediante /storage/v1/s3: crea metadatos en conflicto. El proveedor controla los roles y el acceso filesystem de la plataforma; utilice su procedimiento admitido y registre su alcance. Copie en privado la configuración de minddy y Supabase, los proxies, los trabajos, las plantillas Auth, el SMTP y cualquier clave raíz pgsodium. Incluya MINDDY_DATA_ROOT_KEY y los demás secretos conservados. SQL por sí solo no contiene los bytes de los adjuntos.
 
 ```bash
 install -m 0600 "$MINDDY_ENV_FILE" "$BACKUP_DIR/config/minddy.env"
@@ -404,7 +404,7 @@ pnpm self-host:doctor -- --mode full --env-file "$MINDDY_ENV_FILE" \
 
 Para restaurar una copia lógica, prepare un entorno vacío con las versiones PostgreSQL/Supabase, la configuración y las claves guardadas. Verifique la identidad de la base de datos y del backend Storage de destino antes de ejecutar SQL. Restaure roles, esquema y datos en una transacción, y después el historial de migraciones y las políticas gestionadas. Detenga Storage y recupere los bytes filesystem o el snapshot S3 en un backend nuevo y vacío; no los suba por la API.
 
-Los comandos siguientes de extracción lógica, run.sh y Storage filesystem solo se aplican a un backend controlado por el operador. Para Supabase gestionado, restaure la base de datos y los bytes originales en un destino vacío mediante el procedimiento admitido por el proveedor. Después configure e inicie Minddy con [el procedimiento de instalación desde el código](/es/documentacion/installation#source). No ejecute Compose local para un proyecto supabase.com. Use el commit Minddy guardado y conserve sus claves al configurar las URL de origen del destino aislado.
+Los comandos siguientes de extracción lógica, run.sh y Storage filesystem solo se aplican a un backend controlado por el operador. Para Supabase gestionado, restaure la base de datos y los bytes originales en un destino vacío mediante el procedimiento admitido por el proveedor. Después configure e inicie minddy con [el procedimiento de instalación desde el código](/es/documentacion/installation#source). No ejecute Compose local para un proyecto supabase.com. Use el commit minddy guardado y conserve sus claves al configurar las URL de origen del destino aislado.
 
 Tras el último bloque de compilación y verificación, inicie pnpm start o el supervisor registrado de la instalación desde el código. Mantenga las entradas y los trabajos cerrados hasta completar las comprobaciones de recuperación.
 

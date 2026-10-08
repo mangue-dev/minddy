@@ -190,7 +190,7 @@ test -s minddy.sbom.spdx.json
 
 ### Plan operation and upgrades {#support}
 
-Install one published release at a time. Migrations are forward-only; incompatible rollback restores a matching database, Storage, configuration and application set. Minddy maintains release tooling and offers best-effort diagnosis of reproducible core defects. You operate DNS, TLS, host capacity, backups, restore drills and optional providers. A moving image tag or derivative Supabase stack does not inherit the release support contract.
+Install one published release at a time. Migrations are forward-only; incompatible rollback restores a matching database, Storage, configuration and application set. minddy maintains release tooling and offers best-effort diagnosis of reproducible core defects. You operate DNS, TLS, host capacity, backups, restore drills and optional providers. A moving image tag or derivative Supabase stack does not inherit the release support contract.
 
 ### Known runner limits in the published release {#known-runner-limits}
 
@@ -366,7 +366,7 @@ The [storage-helper correction](#known-runner-limits) is also required for the s
 
 ## Install with managed Supabase or from source {#managed-or-source-installation}
 
-Managed Supabase describes who operates the backend. It can accompany the official OCI application profile or a source application server. Keep these deployments distinct in installation and acceptance records. Your backend must expose PostgreSQL, Auth, Storage and Realtime. For the guided managed OCI profile, supply a project on supabase.com, its public URL, anon and service-role keys and a PostgreSQL connection reachable from bootstrap tooling. Use your own project; Minddy Cloud credentials are not installation inputs.
+Managed Supabase describes who operates the backend. It can accompany the official OCI application profile or a source application server. Keep these deployments distinct in installation and acceptance records. Your backend must expose PostgreSQL, Auth, Storage and Realtime. For the guided managed OCI profile, supply a project on supabase.com, its public URL, anon and service-role keys and a PostgreSQL connection reachable from bootstrap tooling. Use your own project; minddy Cloud credentials are not installation inputs.
 
 
 ![Diagram: Your managed Supabase project. PostgreSQL, Auth, Storage, Realtime. OCI profile OR tagged source application. Profile-specific jobs and backup procedure.](/documentation/en/managed-or-source-installation-flow.svg)

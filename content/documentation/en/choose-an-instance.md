@@ -57,7 +57,7 @@
       "id": "responsibilities",
       "kind": "diagram",
       "src": "/documentation/en/responsibilities.svg",
-      "alt": "Operating responsibility: Operated by Minddy, Operated by you.",
+      "alt": "Operating responsibility: Operated by minddy, Operated by you.",
       "caption": "The same core services need an operator in either model. Optional providers remain separate services.",
       "revision": 2,
       "reviewed": true,
@@ -77,19 +77,19 @@
 
 ## Choose an operating model {#choose-an-instance}
 
-Minddy Cloud and self-hosted Minddy run the same public core. Choose Cloud if you want Minddy to operate the application, database, Storage and scheduler. Choose self-hosting if you need to select the hosting location, providers or upgrade schedule and can operate those services yourself.
+minddy Cloud and self-hosted minddy run the same public core. Choose Cloud if you want minddy to operate the application, database, Storage and scheduler. Choose self-hosting if you need to select the hosting location, providers or upgrade schedule and can operate those services yourself.
 
-A Cloud account belongs to Cloud. On a self-hosted instance, create an account on that instance; a Minddy Cloud account is not a prerequisite. Check the address before signing in or inviting someone. Accounts and credentials do not become shared merely because two instances run Minddy.
+A Cloud account belongs to Cloud. On a self-hosted instance, create an account on that instance; a minddy Cloud account is not a prerequisite. Check the address before signing in or inviting someone. Accounts and credentials do not become shared merely because two instances run minddy.
 
-![Operating responsibility: Operated by Minddy, Operated by you.](/documentation/en/responsibilities.svg)
+![Operating responsibility: Operated by minddy, Operated by you.](/documentation/en/responsibilities.svg)
 
 ## Responsibilities and costs {#responsibilities}
 
 | Responsibility | Cloud | Self-hosted |
 | --- | --- | --- |
-| Infrastructure, updates and incidents | Minddy operates the service. | You maintain the hosts, TLS, monitoring and release upgrades. |
-| Backups and recovery | Minddy operates the Cloud service. | You preserve database data, Storage bytes, configuration and encryption keys, and rehearse restores. |
-| Provider accounts | Minddy owns the accounts for services it operates. | You choose and pay for infrastructure and optional providers. |
+| Infrastructure, updates and incidents | minddy operates the service. | You maintain the hosts, TLS, monitoring and release upgrades. |
+| Backups and recovery | minddy operates the Cloud service. | You preserve database data, Storage bytes, configuration and encryption keys, and rehearse restores. |
+| Provider accounts | minddy owns the accounts for services it operates. | You choose and pay for infrastructure and optional providers. |
 | Support | Cloud support terms apply. | Release tooling and best-effort community help cover reproducible core defects; infrastructure operation has no included SLA. |
 
 For example, a team without database operations capacity can use Cloud. An operator with data residency requirements can choose self-hosting and review each enabled provider's data destinations. Running the application yourself does not make an external AI, email or Git provider local.
@@ -98,7 +98,7 @@ For example, a team without database operations capacity can use Cloud. An opera
 
 A supported self-hosted installation needs the application and Supabase with PostgreSQL, Auth, Storage and Realtime. PostgreSQL alone is insufficient. Use a tagged release and its compatibility matrix. Unpinned derivative Supabase stacks and self-managed GitHub Enterprise or GitLab adapters are outside the supported contract.
 
-AI, email, Git, push notifications and analytics depend on configuration. Self-hosting does not require Stripe, PostHog, a Minddy-managed AI key or a Cloud account. Missing optional configuration is reported rather than replaced silently with a provider. Personal AI keys and local AI endpoints are possible choices; their availability and costs depend on the configured capability.
+AI, email, Git, push notifications and analytics depend on configuration. Self-hosting does not require Stripe, PostHog, a minddy-managed AI key or a Cloud account. Missing optional configuration is reported rather than replaced silently with a provider. Personal AI keys and local AI endpoints are possible choices; their availability and costs depend on the configured capability.
 
 Review provider permissions and data terms before enabling an integration. Git connections may use the managed forge relay when you explicitly start the integration; operator-owned provider applications and relay opt-out are also available. Core feature access is not a separate reduced self-hosted tier.
 

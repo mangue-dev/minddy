@@ -3,7 +3,7 @@
   "id": "integration-troubleshooting",
   "locale": "en",
   "title": "Connection troubleshooting",
-  "summary": "Minddy MCP connects an external assistant to Minddy; personal MCP connections let Numo call another server.",
+  "summary": "minddy MCP connects an external assistant to minddy; personal MCP connections let Numo call another server.",
   "topic": "Technical concepts",
   "type": "troubleshooting",
   "audiences": [
@@ -77,7 +77,7 @@
 
 ## Locate the failed connection {#integration-troubleshooting}
 
-Minddy MCP connects an external assistant to Minddy; personal MCP connections let Numo call another server. They have different account tabs and credentials. For personal MCP, inspect the connection status in account settings and use its test/reconnect action. OAuth discovery, dynamic registration, PKCE and refresh are supported, but a catalog entry does not bypass provider approval, developer preview or registered-app requirements. Confirm current provider requirements before assuming a Minddy defect.
+minddy MCP connects an external assistant to minddy; personal MCP connections let Numo call another server. They have different account tabs and credentials. For personal MCP, inspect the connection status in account settings and use its test/reconnect action. OAuth discovery, dynamic registration, PKCE and refresh are supported, but a catalog entry does not bypass provider approval, developer preview or registered-app requirements. Confirm current provider requirements before assuming a minddy defect.
 
 
 ![MCP connection loading error with the Try again button.](/documentation/en/integration-troubleshooting-error.png)

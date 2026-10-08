@@ -2,8 +2,8 @@
 {
   "id": "minddy-mcp",
   "locale": "es",
-  "title": "MCP de Minddy",
-  "summary": "Conecte un asistente externo a Minddy, controle su acceso y descubra las herramientas MCP disponibles y los procedimientos de actualización seguros.",
+  "title": "MCP de minddy",
+  "summary": "Conecte un asistente externo a minddy, controle su acceso y descubra las herramientas MCP disponibles y los procedimientos de actualización seguros.",
   "topic": "Numo e integraciones",
   "type": "guide",
   "audiences": [
@@ -63,19 +63,19 @@
     "mcp-tool-reference"
   ],
   "tags": [
-    "Conectar un asistente externo al MCP de Minddy",
-    "Usar Minddy MCP y descubrir herramientas actuales"
+    "Conectar un asistente externo al MCP de minddy",
+    "Usar minddy MCP y descubrir herramientas actuales"
   ],
   "figures": [
     {
       "id": "external-minddy-mcp-workflow",
       "kind": "screenshot",
       "src": "/documentation/es/external-minddy-mcp-workflow.png",
-      "alt": "Selector de clientes MCP de Minddy con Claude, Codex y otros asistentes.",
+      "alt": "Selector de clientes MCP de minddy con Claude, Codex y otros asistentes.",
       "caption": "Selecciona tu cliente para ver su comando o configuración de instalación.",
       "revision": 2,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         1440,
         1800
@@ -121,29 +121,29 @@
 }
 ---
 
-El MCP de Minddy da acceso a un asistente externo como su cuenta de Minddy, dentro de sus permisos existentes. Esta guía explica la conexión y su revocación, cómo descubrir los esquemas actuales de las herramientas y cómo cambiar planes, páginas y rutinas después de consultar su estado actual.
+El MCP de minddy da acceso a un asistente externo como su cuenta de minddy, dentro de sus permisos existentes. Esta guía explica la conexión y su revocación, cómo descubrir los esquemas actuales de las herramientas y cómo cambiar planes, páginas y rutinas después de consultar su estado actual.
 
-## Conectar un asistente externo al MCP de Minddy {#external-minddy-mcp}
+## Conectar un asistente externo al MCP de minddy {#external-minddy-mcp}
 
 Abra la página pública de configuración MCP de la instancia y elija las instrucciones de su cliente. Use el endpoint mostrado, terminado en `/api/mcp`. En self-hosted use su propia instancia, no Cloud. El cliente debe admitir MCP remoto y el flujo OAuth indicado.
 
-Inicie sesión en el navegador y revise la autorización antes de aceptarla. La conexión actúa como su cuenta de Minddy y no obtiene proyectos a los que no tiene acceso. Empiece leyendo una incidencia ya accesible y compruebe el proyecto devuelto.
+Inicie sesión en el navegador y revise la autorización antes de aceptarla. La conexión actúa como su cuenta de minddy y no obtiene proyectos a los que no tiene acceso. Empiece leyendo una incidencia ya accesible y compruebe el proyecto devuelto.
 
-![Selector de clientes MCP de Minddy con Claude, Codex y otros asistentes.](/documentation/es/external-minddy-mcp-workflow.png)
+![Selector de clientes MCP de minddy con Claude, Codex y otros asistentes.](/documentation/es/external-minddy-mcp-workflow.png)
 
 ### Alcance y revocación {#access}
 
 Los clientes externos usan herramientas disponibles para incidencias, planes, comentarios, páginas, feedback, ciclos, rutinas y cuaderno dentro de sus permisos. MCP está disponible en todos los planes Cloud; la IA del cliente sigue dependiendo de su configuración y costes.
 
-Minddy MCP en los ajustes de cuenta muestra accesos externos y controles de revocación. Revoque clientes que ya no use o considere fiables. MCP para Numo es distinto: conecta Numo a otros servicios. No pegue tokens de acceso en incidencias, solicitudes públicas de feedback, sus comentarios ni capturas.
+minddy MCP en los ajustes de cuenta muestra accesos externos y controles de revocación. Revoque clientes que ya no use o considere fiables. MCP para Numo es distinto: conecta Numo a otros servicios. No pegue tokens de acceso en incidencias, solicitudes públicas de feedback, sus comentarios ni capturas.
 
 ![Diálogo de instalación de Codex en la instancia local.](/documentation/es/external-minddy-mcp-install-workflow.png)
 
 ![Lista de aplicaciones conectadas sin ninguna autorización activa.](/documentation/es/external-minddy-mcp-accesses-workflow.png)
 
-## Usar Minddy MCP y descubrir herramientas actuales {#mcp-tool-reference}
+## Usar minddy MCP y descubrir herramientas actuales {#mcp-tool-reference}
 
-Minddy expone /api/mcp mediante Streamable HTTP, herramientas sin estado y OAuth 2.1. Conecte su propia cuenta mediante el consentimiento en el navegador; las antiguas claves estáticas mdyk_ no se aceptan. Empiece con minddy_list_projects para obtener los UUID de proyectos accesibles y lea los esquemas del servidor conectado. /llms-full.txt se genera a partir de esos registros y proporciona los parámetros actuales exactos. No deduzca herramientas de una lista antigua. Las herramientas de proyecto vuelven a comprobar el acceso y devuelven códigos de error estables.
+minddy expone /api/mcp mediante Streamable HTTP, herramientas sin estado y OAuth 2.1. Conecte su propia cuenta mediante el consentimiento en el navegador; las antiguas claves estáticas mdyk_ no se aceptan. Empiece con minddy_list_projects para obtener los UUID de proyectos accesibles y lea los esquemas del servidor conectado. /llms-full.txt se genera a partir de esos registros y proporciona los parámetros actuales exactos. No deduzca herramientas de una lista antigua. Las herramientas de proyecto vuelven a comprobar el acceso y devuelven códigos de error estables.
 
 ### Leer antes de cambiar planes {#issue-plans}
 

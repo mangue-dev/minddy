@@ -2,8 +2,8 @@
 {
   "id": "minddy-mcp",
   "locale": "en",
-  "title": "Minddy MCP",
-  "summary": "Connect an external assistant to Minddy, control its access and discover the available MCP tools and safe update patterns.",
+  "title": "minddy MCP",
+  "summary": "Connect an external assistant to minddy, control its access and discover the available MCP tools and safe update patterns.",
   "topic": "Numo and integrations",
   "type": "guide",
   "audiences": [
@@ -63,19 +63,19 @@
     "mcp-tool-reference"
   ],
   "tags": [
-    "Connect an external assistant to Minddy MCP",
-    "Use Minddy MCP safely and discover its current tools"
+    "Connect an external assistant to minddy MCP",
+    "Use minddy MCP safely and discover its current tools"
   ],
   "figures": [
     {
       "id": "external-minddy-mcp-workflow",
       "kind": "screenshot",
       "src": "/documentation/en/external-minddy-mcp-workflow.png",
-      "alt": "Minddy MCP client picker for Claude, Codex and other assistants.",
+      "alt": "minddy MCP client picker for Claude, Codex and other assistants.",
       "caption": "Select your client to display its installation command or configuration.",
       "revision": 2,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         1440,
         1800
@@ -121,29 +121,29 @@
 }
 ---
 
-Minddy MCP lets an external assistant use Minddy tools under your account’s access. Connect the assistant through the instance’s setup flow, review or revoke its access in account settings, and read the current tool schemas before changing issues, pages or routines.
+minddy MCP lets an external assistant use minddy tools under your account’s access. Connect the assistant through the instance’s setup flow, review or revoke its access in account settings, and read the current tool schemas before changing issues, pages or routines.
 
-## Connect an external assistant to Minddy MCP {#external-minddy-mcp}
+## Connect an external assistant to minddy MCP {#external-minddy-mcp}
 
 Open the instance's public MCP setup page and choose the instructions for your client. Use the endpoint displayed there, ending in `/api/mcp`. For self-hosting, use your instance origin, not the Cloud origin. The client must support the remote MCP connection and OAuth flow shown by the guide.
 
-Complete sign-in in the browser and inspect the authorization request before granting access. The connection acts as your Minddy account; it does not obtain access to projects you cannot use. Start with a read request for an issue you can already open, then check that the returned project is the intended one.
+Complete sign-in in the browser and inspect the authorization request before granting access. The connection acts as your minddy account; it does not obtain access to projects you cannot use. Start with a read request for an issue you can already open, then check that the returned project is the intended one.
 
-![Minddy MCP client picker for Claude, Codex and other assistants.](/documentation/en/external-minddy-mcp-workflow.png)
+![minddy MCP client picker for Claude, Codex and other assistants.](/documentation/en/external-minddy-mcp-workflow.png)
 
 ### Scope and revocation {#access}
 
-External clients can use available Minddy tools for issues, plans, comments, pages, feedback, cycles, routines and the task notebook within their authorized permissions. The MCP server is available on every Cloud plan; running the client's AI still depends on that client's configuration and costs.
+External clients can use available minddy tools for issues, plans, comments, pages, feedback, cycles, routines and the task notebook within their authorized permissions. The MCP server is available on every Cloud plan; running the client's AI still depends on that client's configuration and costs.
 
-Account settings' Minddy MCP section lists external client access and its revocation controls. Revoke a client when you no longer trust or use it. This is separate from MCP for Numo, which connects Numo to other services. Never paste access tokens into issues, public feedback or screenshots.
+Account settings' minddy MCP section lists external client access and its revocation controls. Revoke a client when you no longer trust or use it. This is separate from MCP for Numo, which connects Numo to other services. Never paste access tokens into issues, public feedback or screenshots.
 
 ![Codex installation dialog on the local instance.](/documentation/en/external-minddy-mcp-install-workflow.png)
 
 ![Connected applications list with no active grant.](/documentation/en/external-minddy-mcp-accesses-workflow.png)
 
-## Use Minddy MCP safely and discover its current tools {#mcp-tool-reference}
+## Use minddy MCP safely and discover its current tools {#mcp-tool-reference}
 
-Minddy exposes /api/mcp with Streamable HTTP, stateless tools and OAuth 2.1. Connect as your own account through browser consent; old static mdyk_ keys are not accepted. Start with minddy_list_projects to obtain accessible project UUIDs, then read the connected server tool schemas. /llms-full.txt is generated from those registrations and provides the exact current parameters. Do not guess tools from an old copied list. Project-scoped tools recheck access and return stable error codes.
+minddy exposes /api/mcp with Streamable HTTP, stateless tools and OAuth 2.1. Connect as your own account through browser consent; old static mdyk_ keys are not accepted. Start with minddy_list_projects to obtain accessible project UUIDs, then read the connected server tool schemas. /llms-full.txt is generated from those registrations and provides the exact current parameters. Do not guess tools from an old copied list. Project-scoped tools recheck access and return stable error codes.
 
 ### Read issues before changing their plans {#issue-plans}
 

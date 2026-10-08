@@ -126,7 +126,7 @@ curl --fail-with-body --request POST "$MINDDY_ORIGIN/api/v1/issues" \
 
 Una integración issues puede enviar issue.created, issue.status_changed e issue.updated. El propietario debe elegir cualquier nueva URL de destino webhook en la configuración. Los agentes pueden ajustar los eventos o el ámbito existentes o desactivarlo, pero no abrir un nuevo canal de salida. El ámbito integration incluye solo las incidencias de esa clave; all incluye todas las del proyecto.
 
-Verifique X-Minddy-Signature: el prefijo sha256= seguido de HMAC-SHA256 sobre los bytes originales recibidos. La clave HMAC es el digest SHA-256 de la clave API, representado como una cadena hexadecimal en minúsculas. Compare en tiempo constante antes de confiar en el contenido. No analice y vuelva a serializar JSON antes de calcular el hash. X-Minddy-Delivery corresponde a delivery_id; elimine duplicados mediante ese UUID.
+Verifique X-minddy-Signature: el prefijo sha256= seguido de HMAC-SHA256 sobre los bytes originales recibidos. La clave HMAC es el digest SHA-256 de la clave API, representado como una cadena hexadecimal en minúsculas. Compare en tiempo constante antes de confiar en el contenido. No analice y vuelva a serializar JSON antes de calcular el hash. X-minddy-Delivery corresponde a delivery_id; elimine duplicados mediante ese UUID.
 
 ### Tratar fallos y límites {#limits}
 

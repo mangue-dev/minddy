@@ -120,14 +120,14 @@ MINDDY_PUBLIC_SITE_NAME and MINDDY_PUBLIC_CONTACT_EMAIL identify your instance. 
 
 ## Enable optional providers deliberately {#optional-providers}
 
-The core needs no Stripe, PostHog, Cloud account or Minddy-managed AI key. External services add their own costs, permissions and data destinations. Review those terms before enabling them. Capability diagnostics report missing values rather than inventing a fallback provider. Self-hosting can use per-user AI keys or reachable local AI endpoints. Leave MINDDY_MANAGED_AI and MINDDY_MANAGED_BILLING off; configuring an OpenRouter key alone does not select Cloud.
+The core needs no Stripe, PostHog, Cloud account or minddy-managed AI key. External services add their own costs, permissions and data destinations. Review those terms before enabling them. Capability diagnostics report missing values rather than inventing a fallback provider. Self-hosting can use per-user AI keys or reachable local AI endpoints. Leave MINDDY_MANAGED_AI and MINDDY_MANAGED_BILLING off; configuring an OpenRouter key alone does not select Cloud.
 
 
 ![Diagram: Operator selects an optional capability. Complete credentials and provider conditions. Explicit outbound provider data path. Verify behavior and monitor usage costs.](/documentation/en/optional-providers-flow.svg)
 
 ### Configure complete provider sets {#configure}
 
-Application email needs EMAIL_PROVIDER=resend, RESEND_API_KEY, FEEDBACK_EMAIL_FROM and INVITATION_EMAIL_FROM. console is refused in production; Auth SMTP remains separate. Web Push needs its public/private VAPID pair and VAPID_SUBJECT, and existing subscriptions depend on that pair. Analytics needs a complete PostHog key/host pair; error tracking additionally needs MINDDY_PUBLIC_ERROR_TRACKING=1. The guided installer offers application-email and web-push and leaves external credentials for you to provide. Do not use Minddy sender identities or native release credentials on a third-party instance.
+Application email needs EMAIL_PROVIDER=resend, RESEND_API_KEY, FEEDBACK_EMAIL_FROM and INVITATION_EMAIL_FROM. console is refused in production; Auth SMTP remains separate. Web Push needs its public/private VAPID pair and VAPID_SUBJECT, and existing subscriptions depend on that pair. Analytics needs a complete PostHog key/host pair; error tracking additionally needs MINDDY_PUBLIC_ERROR_TRACKING=1. The guided installer offers application-email and web-push and leaves external credentials for you to provide. Do not use minddy sender identities or native release credentials on a third-party instance.
 
 ### Connect Git and code execution {#git-and-code}
 

@@ -3,7 +3,7 @@
   "id": "applications",
   "locale": "en",
   "title": "Web, mobile and desktop apps",
-  "summary": "Use Minddy in a browser, install the mobile or desktop app and configure device notifications.",
+  "summary": "Use minddy in a browser, install the mobile or desktop app and configure device notifications.",
   "topic": "Account and apps",
   "type": "guide",
   "audiences": [
@@ -95,8 +95,8 @@
       "id": "install-the-pwa-workflow",
       "kind": "screenshot",
       "src": "/documentation/en/install-the-pwa-workflow.png",
-      "alt": "Minddy’s illustrated Safari installation guide: Share, Add to Home Screen and confirm.",
-      "caption": "The public guide illustrates the three Safari steps and keeping Open as Web App enabled. These are instructional illustrations rendered by Minddy, not screenshots of a completed iOS installation.",
+      "alt": "minddy’s illustrated Safari installation guide: Share, Add to Home Screen and confirm.",
+      "caption": "The public guide illustrates the three Safari steps and keeping Open as Web App enabled. These are instructional illustrations rendered by minddy, not screenshots of a completed iOS installation.",
       "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
@@ -180,23 +180,23 @@ The installed web app and browser require network access for project data and wr
 
 ## Install the web app on a phone or tablet {#install-the-pwa}
 
-Open the intended Minddy instance in Safari on iPhone or iPad, or Chrome or a compatible Android browser. If a link opened inside another app, open it in the full browser first. Self-hosted users install their own server address.
+Open the intended minddy instance in Safari on iPhone or iPad, or Chrome or a compatible Android browser. If a link opened inside another app, open it in the full browser first. Self-hosted users install their own server address.
 
 On iOS, open Share, choose Add to Home Screen, keep Open as Web App enabled and tap Add. Depending on Safari layout, open More before Share; if the action is missing, inspect Edit Actions.
 
-On Android, use an offered installation prompt or the browser menu's Install app or Add to Home screen, then confirm Install. Labels vary by browser. Open the new icon and sign in with the account belonging to that instance. This is a browser-installed PWA; there is no Minddy native app in the iOS App Store or Google Play.
+On Android, use an offered installation prompt or the browser menu's Install app or Add to Home screen, then confirm Install. Labels vary by browser. Open the new icon and sign in with the account belonging to that instance. This is a browser-installed PWA; there is no minddy native app in the iOS App Store or Google Play.
 
 ### Updates, offline access and push {#operation}
 
-Installation does not create an offline project copy. Minddy's service worker handles push only and does not cache application requests. Use a network connection and reload to obtain current web content. Notifications additionally require browser support, permission and configured server push; on iOS the installed app is required when prompted. If an installation option is unavailable, use the supported full browser and check whether the instance is already installed.
+Installation does not create an offline project copy. minddy's service worker handles push only and does not cache application requests. Use a network connection and reload to obtain current web content. Notifications additionally require browser support, permission and configured server push; on iOS the installed app is required when prompted. If an installation option is unavailable, use the supported full browser and check whether the instance is already installed.
 
-![Minddy’s illustrated Safari installation guide: Share, Add to Home Screen and confirm.](/documentation/en/install-the-pwa-workflow.png)
+![minddy’s illustrated Safari installation guide: Share, Add to Home Screen and confirm.](/documentation/en/install-the-pwa-workflow.png)
 
 ## Install and manage the desktop app {#desktop-app}
 
 Use the public download page. Choose Apple silicon or Intel on macOS; install through Microsoft Store on Windows; choose an AppImage or signed deb/rpm matching x64 or ARM64 on Linux. Follow the platform guide and verification instructions for the package. Windows does not provide an exe installer.
 
-At the server picker, choose Minddy Cloud, a self-hosted server origin or the available local runtime. Check the destination before signing in: accounts belong to their instance. OAuth uses the system browser and returns to desktop. A local runtime is not a promise that Numo's code worker runs in a desktop checkout.
+At the server picker, choose minddy Cloud, a self-hosted server origin or the available local runtime. Check the destination before signing in: accounts belong to their instance. OAuth uses the system browser and returns to desktop. A local runtime is not a promise that Numo's code worker runs in a desktop checkout.
 
 ### Tabs, closing and updates {#desktop-app-operation}
 
@@ -208,7 +208,7 @@ macOS and portable AppImage builds offer updates in the app. Windows updates thr
 
 ## Enable notifications on a device {#devices-and-notifications}
 
-Open notifications in account settings on the device you want to register. Enable notifications and accept the browser or OS permission request. A denied permission must be changed in browser or system settings; repeatedly switching the Minddy control cannot override it. On iOS, install and open the web app first when the interface requires it.
+Open notifications in account settings on the device you want to register. Enable notifications and accept the browser or OS permission request. A denied permission must be changed in browser or system settings; repeatedly switching the minddy control cannot override it. On iOS, install and open the web app first when the interface requires it.
 
 Check that the device appears in the list and use its test control. Inspect the last-delivery information. You can disable or remove individual registrations without deleting the account. Inbox preferences control which events notify you; the in-app Inbox remains available when push is unavailable.
 

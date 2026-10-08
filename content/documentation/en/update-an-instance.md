@@ -73,7 +73,7 @@
 
 ## Prepare the next release {#update-an-instance}
 
-Upgrade one published release at a time. Inspect release notes, migration differences and compatibility rows. Do not combine a Minddy update with a PostgreSQL major or Supabase image change. Verify target source, asset checksums and OCI digest and prepare it in a separate release directory with frozen dependencies. Announce the outage and abort deadline. Confirm a usable off-host backup and recent restoration. Preserve the current restartable application and its protected environment.
+Upgrade one published release at a time. Inspect release notes, migration differences and compatibility rows. Do not combine a minddy update with a PostgreSQL major or Supabase image change. Verify target source, asset checksums and OCI digest and prepare it in a separate release directory with frozen dependencies. Announce the outage and abort deadline. Confirm a usable off-host backup and recent restoration. Preserve the current restartable application and its protected environment.
 
 
 ![Diagram: Stop writes and scheduled work. Seal a complete pre-update backup. Target migrations, then target application. Verify recovery and reopen access.](/documentation/en/update-an-instance-flow.svg)
@@ -133,7 +133,7 @@ pnpm self-host:doctor -- --mode full --env-file "$MINDDY_ENV_FILE" \
 Managed OCI uses the same protected target-environment and image sequence, with provider-controlled backup and database/Storage migration access rather than starting local backend services. Source delivery builds the target tag, blocks public API writes, performs a logical/provider backup, applies bootstrap using target code and starts the target production service behind maintenance. Do not substitute a source process to validate an OCI update. Do not start old code against changed schema unless the release explicitly guarantees compatibility.
 
 
-The local Compose commands in the following source procedure apply only when the operator controls that backend. With provider-managed Supabase, replace backend stop/start and migration access with the provider’s supported operations, retain the protected Minddy environment and complete provider data backup, then run the verified target application.
+The local Compose commands in the following source procedure apply only when the operator controls that backend. With provider-managed Supabase, replace backend stop/start and migration access with the provider’s supported operations, retain the protected minddy environment and complete provider data backup, then run the verified target application.
 
 
 For the source procedure, set MINDDY_REPO to the tagged source repository, SUPABASE_COMPOSE_DIR to the operator-controlled backend from the [logical backup context](/docs/backups-and-restoration#outage), TO_TAG to the actual next published and verified tag, and TARGET_RELEASE_DIR to its separately built checkout. Supply the matching database and public API variables privately. After bootstrap and verification, start the target with pnpm start or your existing process supervisor behind maintenance, then reopen only after the checks below.

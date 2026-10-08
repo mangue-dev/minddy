@@ -3,7 +3,7 @@
   "id": "architecture-and-data-flows",
   "locale": "it",
   "title": "Architettura e flussi di dati",
-  "summary": "Segui richieste e dati tra Minddy, Supabase, scheduler, sandbox e provider esterni, distinguendo servizi persistenti e destinazioni dei dati.",
+  "summary": "Segui richieste e dati tra minddy, Supabase, scheduler, sandbox e provider esterni, distinguendo servizi persistenti e destinazioni dei dati.",
   "topic": "Concetti tecnici",
   "type": "explanation",
   "audiences": [
@@ -84,8 +84,8 @@ Next.js fornisce l’interfaccia e le API autorizzate. Supabase fornisce Postgre
 
 ## Seguire una richiesta {#requests}
 
-Il browser usa le origini pubbliche di Minddy e Supabase. Auth crea la sessione; il server verifica l’attore e l’oggetto prima di eseguire un’operazione. Realtime propaga gli aggiornamenti. Nel profilo full il server usa Kong sulla rete interna senza cambiare le origini del browser o i link degli account. Lo scheduler invia richieste HTTP autenticate senza un browser. Quando Numo deve lavorare sul codice, il runner fidato crea sandbox ristrette per il repository collegato; le sandbox non ricevono i segreti dell’istanza né il socket Docker.
+Il browser usa le origini pubbliche di minddy e Supabase. Auth crea la sessione; il server verifica l’attore e l’oggetto prima di eseguire un’operazione. Realtime propaga gli aggiornamenti. Nel profilo full il server usa Kong sulla rete interna senza cambiare le origini del browser o i link degli account. Lo scheduler invia richieste HTTP autenticate senza un browser. Quando Numo deve lavorare sul codice, il runner fidato crea sandbox ristrette per il repository collegato; le sandbox non ricevono i segreti dell’istanza né il socket Docker.
 
 ## Identificare destinazioni esterne {#providers}
 
-IA, email, Git, MCP remoto, notifiche push, analytics e archiviazione esterna sono destinazioni distinte quando vengono abilitate. Ospitare Minddy sul tuo server non rende locali questi servizi. Nel profilo managed il backend è gestito dal provider scelto; full lo pone sotto il tuo controllo. Minddy Cloud gestisce il servizio e i suoi provider, mentre in self-hosted sei tu a configurare account e scelte. Verifica permessi, costi e condizioni di trattamento dei dati. Non dedurre il provider o l’edizione Cloud dal solo hostname o dalla piattaforma di distribuzione.
+IA, email, Git, MCP remoto, notifiche push, analytics e archiviazione esterna sono destinazioni distinte quando vengono abilitate. Ospitare minddy sul tuo server non rende locali questi servizi. Nel profilo managed il backend è gestito dal provider scelto; full lo pone sotto il tuo controllo. minddy Cloud gestisce il servizio e i suoi provider, mentre in self-hosted sei tu a configurare account e scelte. Verifica permessi, costi e condizioni di trattamento dei dati. Non dedurre il provider o l’edizione Cloud dal solo hostname o dalla piattaforma di distribuzione.

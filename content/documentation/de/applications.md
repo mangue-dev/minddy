@@ -3,7 +3,7 @@
   "id": "applications",
   "locale": "de",
   "title": "Web-, Mobil- und Desktop-Apps",
-  "summary": "Nutzen Sie Minddy im Browser, installieren Sie die Mobil- oder Desktop-App und richten Sie Gerätebenachrichtigungen ein.",
+  "summary": "Nutzen Sie minddy im Browser, installieren Sie die Mobil- oder Desktop-App und richten Sie Gerätebenachrichtigungen ein.",
   "topic": "Konto und Apps",
   "type": "guide",
   "audiences": [
@@ -95,8 +95,8 @@
       "id": "install-the-pwa-workflow",
       "kind": "screenshot",
       "src": "/documentation/de/install-the-pwa-workflow.png",
-      "alt": "Illustrierte Safari-Installationsanleitung von Minddy: Teilen, zum Home-Bildschirm hinzufügen und bestätigen.",
-      "caption": "Die öffentliche Anleitung illustriert die drei Safari-Schritte und die aktivierte Option Als Web-App öffnen. Die Abbildungen sind von Minddy dargestellte Anleitungen und keine Aufnahmen einer abgeschlossenen iOS-Installation.",
+      "alt": "Illustrierte Safari-Installationsanleitung von minddy: Teilen, zum Home-Bildschirm hinzufügen und bestätigen.",
+      "caption": "Die öffentliche Anleitung illustriert die drei Safari-Schritte und die aktivierte Option Als Web-App öffnen. Die Abbildungen sind von minddy dargestellte Anleitungen und keine Aufnahmen einer abgeschlossenen iOS-Installation.",
       "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
@@ -162,7 +162,7 @@
 }
 ---
 
-Minddy ist im Browser, als installierte Web-App und als Desktop-App zugänglich. Die folgenden Abschnitte erklären die Einstiegspunkte, Installations- und Updatewege sowie die Voraussetzungen für Gerätebenachrichtigungen auf den jeweiligen Plattformen.
+minddy ist im Browser, als installierte Web-App und als Desktop-App zugänglich. Die folgenden Abschnitte erklären die Einstiegspunkte, Installations- und Updatewege sowie die Voraussetzungen für Gerätebenachrichtigungen auf den jeweiligen Plattformen.
 
 ## Im Browser und auf kleinen Bildschirmen arbeiten {#web-and-mobile}
 
@@ -180,23 +180,23 @@ Browser und installierte Web-App benötigen eine Netzwerkverbindung für Projekt
 
 ## Die Web-App auf Telefon oder Tablet installieren {#install-the-pwa}
 
-Öffnen Sie die gewünschte Minddy-Instanz in Safari auf dem iPhone oder iPad oder in Chrome beziehungsweise einem kompatiblen Android-Browser. Wurde der Link innerhalb einer anderen App geöffnet, öffnen Sie ihn zuerst im vollständigen Browser. Für eine selbst gehostete Instanz verwenden Sie die Adresse Ihres eigenen Servers.
+Öffnen Sie die gewünschte minddy-Instanz in Safari auf dem iPhone oder iPad oder in Chrome beziehungsweise einem kompatiblen Android-Browser. Wurde der Link innerhalb einer anderen App geöffnet, öffnen Sie ihn zuerst im vollständigen Browser. Für eine selbst gehostete Instanz verwenden Sie die Adresse Ihres eigenen Servers.
 
 Wählen Sie unter iOS Teilen und anschließend Zu Home-Bildschirm hinzufügen. Lassen Sie Als Web-App öffnen aktiviert und tippen Sie auf Hinzufügen. Je nach Safari-Oberfläche müssen Sie vor Teilen zunächst Mehr öffnen. Fehlt die Aktion, prüfen Sie Aktionen bearbeiten.
 
-Nutzen Sie unter Android die angebotene Installationsaufforderung oder wählen Sie im Browsermenü App installieren beziehungsweise Zum Startbildschirm hinzufügen. Bestätigen Sie anschließend die Installation. Die Beschriftungen hängen vom Browser ab. Öffnen Sie das neue Symbol und melden Sie sich mit dem Konto dieser Instanz an. Es handelt sich um eine im Browser installierte PWA; im iOS App Store oder bei Google Play gibt es keine native Minddy-App.
+Nutzen Sie unter Android die angebotene Installationsaufforderung oder wählen Sie im Browsermenü App installieren beziehungsweise Zum Startbildschirm hinzufügen. Bestätigen Sie anschließend die Installation. Die Beschriftungen hängen vom Browser ab. Öffnen Sie das neue Symbol und melden Sie sich mit dem Konto dieser Instanz an. Es handelt sich um eine im Browser installierte PWA; im iOS App Store oder bei Google Play gibt es keine native minddy-App.
 
 ### Updates, Offlinezugriff und Push {#operation}
 
-Durch die Installation entsteht keine Offlinekopie des Projekts. Der Service Worker von Minddy verarbeitet nur Push-Benachrichtigungen und speichert keine Anwendungsanfragen im Cache. Verwenden Sie eine Netzwerkverbindung und laden Sie die Seite neu, um aktuelle Webinhalte abzurufen. Benachrichtigungen benötigen außerdem einen unterstützten Browser, dessen Berechtigung und eine serverseitige Push-Konfiguration. Unter iOS verwenden Sie die installierte App, wenn der Ablauf dies verlangt. Fehlt die Installationsoption, öffnen Sie einen unterstützten vollständigen Browser und prüfen Sie, ob die Instanz bereits installiert ist.
+Durch die Installation entsteht keine Offlinekopie des Projekts. Der Service Worker von minddy verarbeitet nur Push-Benachrichtigungen und speichert keine Anwendungsanfragen im Cache. Verwenden Sie eine Netzwerkverbindung und laden Sie die Seite neu, um aktuelle Webinhalte abzurufen. Benachrichtigungen benötigen außerdem einen unterstützten Browser, dessen Berechtigung und eine serverseitige Push-Konfiguration. Unter iOS verwenden Sie die installierte App, wenn der Ablauf dies verlangt. Fehlt die Installationsoption, öffnen Sie einen unterstützten vollständigen Browser und prüfen Sie, ob die Instanz bereits installiert ist.
 
-![Illustrierte Safari-Installationsanleitung von Minddy: Teilen, zum Home-Bildschirm hinzufügen und bestätigen.](/documentation/de/install-the-pwa-workflow.png)
+![Illustrierte Safari-Installationsanleitung von minddy: Teilen, zum Home-Bildschirm hinzufügen und bestätigen.](/documentation/de/install-the-pwa-workflow.png)
 
 ## Desktop-App installieren und verwalten {#desktop-app}
 
 Öffnen Sie die öffentliche Downloadseite. Wählen Sie unter macOS das Paket für Apple silicon oder Intel. Installieren Sie die Anwendung unter Windows über den Microsoft Store. Wählen Sie unter Linux ein AppImage oder ein signiertes deb/rpm-Paket für x64 oder ARM64. Befolgen Sie die Plattformanleitung und die Hinweise zur Paketprüfung. Für Windows gibt es keinen exe-Installer.
 
-Wählen Sie in der Serverauswahl Minddy Cloud, die Origin eines selbst gehosteten Servers oder die verfügbare lokale Laufzeit. Prüfen Sie das Ziel vor der Anmeldung: Jedes Konto gehört zu seiner Instanz. OAuth verwendet den Systembrowser und kehrt anschließend zur Desktop-App zurück. Eine lokale Laufzeit bedeutet nicht, dass Numos Code-Worker in Ihrem lokalen Checkout arbeitet.
+Wählen Sie in der Serverauswahl minddy Cloud, die Origin eines selbst gehosteten Servers oder die verfügbare lokale Laufzeit. Prüfen Sie das Ziel vor der Anmeldung: Jedes Konto gehört zu seiner Instanz. OAuth verwendet den Systembrowser und kehrt anschließend zur Desktop-App zurück. Eine lokale Laufzeit bedeutet nicht, dass Numos Code-Worker in Ihrem lokalen Checkout arbeitet.
 
 ### Tabs, Schließen und Updates {#desktop-app-operation}
 
@@ -208,7 +208,7 @@ Unter macOS und mit portablen AppImages sind Updates in der Anwendung verfügbar
 
 ## Gerätebenachrichtigungen aktivieren {#devices-and-notifications}
 
-Öffnen Sie die Benachrichtigungen in den Kontoeinstellungen auf dem Gerät, das Sie registrieren möchten. Aktivieren Sie sie und erlauben Sie die Anfrage des Browsers oder Betriebssystems. Eine verweigerte Erlaubnis müssen Sie in den Browser- oder Systemeinstellungen ändern; wiederholtes Betätigen des Minddy-Schalters kann sie nicht umgehen. Installieren und öffnen Sie unter iOS zuerst die Web-App, wenn die Oberfläche dies verlangt.
+Öffnen Sie die Benachrichtigungen in den Kontoeinstellungen auf dem Gerät, das Sie registrieren möchten. Aktivieren Sie sie und erlauben Sie die Anfrage des Browsers oder Betriebssystems. Eine verweigerte Erlaubnis müssen Sie in den Browser- oder Systemeinstellungen ändern; wiederholtes Betätigen des minddy-Schalters kann sie nicht umgehen. Installieren und öffnen Sie unter iOS zuerst die Web-App, wenn die Oberfläche dies verlangt.
 
 Prüfen Sie, ob das Gerät in der Liste erscheint, und verwenden Sie seinen Testbefehl. Lesen Sie die Angaben zur letzten Zustellung. Sie können einzelne Registrierungen deaktivieren oder entfernen, ohne das Konto zu löschen. Die Einstellungen des Posteingangs bestimmen, welche Ereignisse Sie benachrichtigen. Der Posteingang in der Anwendung bleibt verfügbar, wenn Push nicht verfügbar ist.
 

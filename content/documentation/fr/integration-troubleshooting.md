@@ -3,7 +3,7 @@
   "id": "integration-troubleshooting",
   "locale": "fr",
   "title": "Dépannage des connexions",
-  "summary": "MCP Minddy connecte un assistant externe à Minddy ; les connexions MCP personnelles permettent à Numo d’appeler d’autres serveurs.",
+  "summary": "MCP minddy connecte un assistant externe à minddy ; les connexions MCP personnelles permettent à Numo d’appeler d’autres serveurs.",
   "topic": "Concepts techniques",
   "type": "troubleshooting",
   "audiences": [
@@ -77,7 +77,7 @@
 
 ## Récupérer une connexion OAuth, MCP, webhook ou Git {#integration-troubleshooting}
 
-MCP Minddy connecte un assistant externe à Minddy ; les connexions MCP personnelles permettent à Numo d’appeler d’autres serveurs. Onglets du compte et identifiants sont distincts. Pour MCP personnel, examinez l’état dans les paramètres et utilisez test/reconnexion. Découverte OAuth, inscription dynamique, PKCE et refresh sont disponibles, mais une entrée de catalogue ne contourne ni approbation, ni aperçu développeur, ni application enregistrée. Vérifiez les prérequis actuels du fournisseur avant de conclure à un défaut Minddy.
+MCP minddy connecte un assistant externe à minddy ; les connexions MCP personnelles permettent à Numo d’appeler d’autres serveurs. Onglets du compte et identifiants sont distincts. Pour MCP personnel, examinez l’état dans les paramètres et utilisez test/reconnexion. Découverte OAuth, inscription dynamique, PKCE et refresh sont disponibles, mais une entrée de catalogue ne contourne ni approbation, ni aperçu développeur, ni application enregistrée. Vérifiez les prérequis actuels du fournisseur avant de conclure à un défaut minddy.
 
 
 ![Erreur de chargement des connexions MCP avec le bouton Réessayer.](/documentation/fr/integration-troubleshooting-error.png)
