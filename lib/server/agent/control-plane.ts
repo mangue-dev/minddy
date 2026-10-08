@@ -892,7 +892,15 @@ export async function handleControlPlaneRequest(opts: {
       };
     }
     const sandboxName = opts.sandboxName ?? run.sandbox_id ?? `agent-${run.id}`;
-    await refreshAgentSandboxForgeAccess(sandboxName, target);
+    try {
+      await refreshAgentSandboxForgeAccess(sandboxName, target, {
+        projectId: run.project_id,
+        sealedPolicy: typeof body.forgeRefreshPolicy === "string" ? body.forgeRefreshPolicy : undefined,
+      });
+    } catch {
+      console.error("[agent-vm] forge_access_refresh_failed");
+      return { status: 503, body: { error: "repository access refresh failed" } };
+    }
     return ok({ refreshed: true });
   }
 

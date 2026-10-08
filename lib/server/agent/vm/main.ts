@@ -135,7 +135,7 @@ async function main(): Promise<void> {
       return "";
     }
   };
-  let raw: { appOrigin?: string; controlToken?: string } = {
+  let raw: { appOrigin?: string; controlToken?: string; forgeRefreshPolicy?: string } = {
     appOrigin: process.argv[3]?.trim() || undefined,
     controlToken: process.argv[4]?.trim() || undefined,
   };
@@ -145,6 +145,7 @@ async function main(): Promise<void> {
     // this is where the renewal will be connected (MIN-294), without touching the
     // customer. Today he still delivers what the job required.
     () => raw.controlToken ?? null,
+    () => raw.forgeRefreshPolicy,
   );
   const startedAt = Date.now();
 
@@ -162,12 +163,13 @@ async function main(): Promise<void> {
     cp = createControlPlaneClient(
       raw.appOrigin ?? "",
       () => raw.controlToken ?? null,
+      () => raw.forgeRefreshPolicy,
     );
     const parsed = JSON.parse(source) as unknown;
     if (typeof parsed !== "object" || parsed === null) {
       throw new Error("job must be a JSON object");
     }
-    raw = parsed as { appOrigin?: string; controlToken?: string };
+    raw = parsed as typeof raw;
     job = parseVmJob(raw);
     report = await runOpencodeTurnHere(
       job,

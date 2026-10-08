@@ -53,6 +53,24 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllEnvs());
 
 describe("issue source content", () => {
+  it.each([
+    { code: "57014", message: "statement timeout: private SQL", status: 500, kind: "timeout", safeCode: "57014" },
+    { code: "PGRST003", message: "private pool details", status: 504, kind: "database", safeCode: "PGRST003" },
+    { code: "", message: "TimeoutError: private URL", status: 0, kind: "timeout", safeCode: "unknown" },
+    { code: "private credential", message: "TypeError: fetch failed private URL", status: 0, kind: "transport", safeCode: "unknown" },
+  ])("keeps protected $safeCode diagnostics content-free", async ({ code, message, status, kind, safeCode }) => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    const error = { code, message, details: "private SQL parameters", hint: "private content" };
+    const query = { select: () => query, then: (resolve: (value: unknown) => unknown) =>
+      Promise.resolve({ data: null, error, status, count: null }).then(resolve) };
+    try {
+      const result = await issueStore({ from: () => query } as unknown as SupabaseClient).select("title");
+      expect(result.data).toBeNull();
+      expect(result.error?.message).toBe("Unable to access issue content");
+      expect(log).toHaveBeenCalledExactlyOnceWith("[issue-store] protected read failed", { code: safeCode, status, kind });
+      expect(JSON.stringify(log.mock.calls)).not.toContain("private");
+    } finally { log.mockRestore(); }
+  });
   it("protects every source field and authenticates the project and issue identity", async () => {
     const stored = await encodeIssue(source);
     for (const field of ["title", "description", "plan", "remote_url", "automation_override"]) {

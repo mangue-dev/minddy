@@ -89,6 +89,7 @@ import {
   AGENT_LLM_PLACEHOLDER_KEY,
 } from "./network-policy";
 import { startVmLoop } from "./vm-launch";
+import { sealAgentSandboxForgeRefreshPolicy } from "./sandbox";
 import {
   isCurrentRepoJob,
   VM_PROTOCOL_VERSION,
@@ -921,6 +922,15 @@ export async function executeAgentRun(
       }
       return vmTarget.remoteUrl;
     };
+    const networkPolicy = buildAgentNetworkPolicy({
+      baseUrl, llmKey: vmKey, appOrigin: agentControlOrigin(),
+      ...(vmTarget ? {
+        forge: {
+          provider: vmTarget.provider, repoFullName: vmTarget.repoFullName,
+          token: vmTarget.token, origin: new URL(vmTarget.remoteUrl).origin,
+        },
+      } : {}),
+    });
     const sandboxResult = await allocateReservedSandbox(allocation, {
           name: allocation.sandbox_name,
           preferences: resolveAgentExecutionBackend(process.env) === "vercel"
@@ -928,21 +938,7 @@ export async function executeAgentRun(
             : undefined,
           // Both LLM and forge credentials stay in the trusted network layer. The VM
           // receives placeholder/request data and a credential-free Git remote only.
-          networkPolicy: buildAgentNetworkPolicy({
-            baseUrl,
-            llmKey: vmKey,
-            appOrigin: agentControlOrigin(),
-            ...(vmTarget
-              ? {
-                  forge: {
-                    provider: vmTarget.provider,
-                    repoFullName: vmTarget.repoFullName,
-                    token: vmTarget.token,
-                    origin: new URL(vmTarget.remoteUrl).origin,
-                  },
-                }
-              : {}),
-          }),
+          networkPolicy,
           onCreate: async (fresh) => {
             sandboxRepoUrl = await configureSandboxRepo(fresh);
             if (prRun && !run.branch_name) {
@@ -1567,6 +1563,9 @@ export async function executeAgentRun(
       ledgerRunId: run.run_id ?? run.id,
       projectId: run.project_id,
       appOrigin: agentControlOrigin(),
+      ...(!selfHostedSandbox && sandbox ? {
+        forgeRefreshPolicy: await sealAgentSandboxForgeRefreshPolicy(run.project_id, sandbox, networkPolicy),
+      } : {}),
       ...(selfHostedSandbox
         ? {
             controlToken: serverControlToken!,

@@ -30,6 +30,12 @@ const job = (over: Record<string, unknown> = {}) => ({
 });
 
 describe("parseVmJob", () => {
+  it("accepts optional opaque refresh context and rejects malformed values without echoing them", () => {
+    expect(parseVmJob(job({ forgeRefreshPolicy: "opaque-ciphertext" })).forgeRefreshPolicy).toBe("opaque-ciphertext");
+    for (const value of ["", { private: "submitted content" }, "x".repeat(65_537)]) {
+      expect(() => parseVmJob(job({ forgeRefreshPolicy: value }))).toThrow("vm job: invalid forge refresh context");
+    }
+  });
   it("laisse passer un job de la bonne version", () => {
     expect(parseVmJob(job()).runId).toBe("r-1");
   });

@@ -182,6 +182,7 @@ export function createControlPlaneClient(
    * route then responds 403, which is exactly what should happen.
    */
   getToken?: () => string | null | undefined,
+  getForgeRefreshPolicy?: () => string | undefined,
 ): ControlPlaneClient {
   const url = (surface: string) => agentVmUrl(appOrigin, surface);
 
@@ -401,7 +402,9 @@ export function createControlPlaneClient(
 
     repoAuthUrl: async () => {
       try {
-        const body = (await request("POST", "/repo-auth")) as { authUrl?: unknown };
+        const policy = getForgeRefreshPolicy?.();
+        const body = (await request("POST", "/repo-auth",
+          policy ? { forgeRefreshPolicy: policy } : undefined)) as { authUrl?: unknown };
         return typeof body.authUrl === "string" && body.authUrl ? body.authUrl : null;
       } catch {
         // The job already has a safe remote. A failed infrastructure refresh is

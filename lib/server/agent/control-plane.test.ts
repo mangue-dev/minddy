@@ -1139,6 +1139,17 @@ describe("the run anchor does not narrow the `/tool/` surface", () => {
  * `/repo-auth` refreshes trusted infrastructure and returns no credential.
  */
 describe("forge authentication refresh", () => {
+  it("returns a controlled failure without leaking infrastructure credentials", async () => {
+    const { refreshAgentSandboxForgeAccess } = await import("./sandbox");
+    vi.mocked(refreshAgentSandboxForgeAccess).mockRejectedValueOnce(new Error("private provider token"));
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const result = await call("POST", "/repo-auth", { forgeRefreshPolicy: "opaque-ciphertext" });
+      expect(result).toEqual({ status: 503, body: { error: "repository access refresh failed" } });
+      expect(log).toHaveBeenCalledExactlyOnceWith("[agent-vm] forge_access_refresh_failed");
+      expect(JSON.stringify([result, log.mock.calls])).not.toContain("private provider token");
+    } finally { log.mockRestore(); }
+  });
   it("prepares repository-scoped CLI authentication without returning the token", async () => {
     const result = await call("POST", "/github-cli");
     expect(result.status).toBe(200);

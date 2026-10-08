@@ -169,6 +169,8 @@ export interface VmJob {
   /** Origin of the control plane — the deployment that launched this run, never the
    * prod by default (see `agentControlOrigin`). */
   appOrigin: string;
+  /** Opaque, allocation-bound ciphertext used only by the trusted Git refresh. */
+  forgeRefreshPolicy?: string;
   /**
    * THE DIRECT EXECUTION TOKEN (MIN-355) — present when the round runs on a
    * user's machine or in a self-hosted server sandbox. In microVM, there is
@@ -415,6 +417,12 @@ export function parseVmJob(raw: unknown): VmJob {
     if (typeof job.llmRelayUrl !== "string" || !job.llmRelayUrl.trim()) {
       throw new Error("vm job: server execution requires an LLM relay URL");
     }
+  }
+  if (job.forgeRefreshPolicy !== undefined && (
+    typeof job.forgeRefreshPolicy !== "string" || !job.forgeRefreshPolicy ||
+    job.forgeRefreshPolicy.length > 65_536
+  )) {
+    throw new Error("vm job: invalid forge refresh context");
   }
   if (job.pullRequestDelivery !== undefined && (
     !job.pullRequestDelivery ||
