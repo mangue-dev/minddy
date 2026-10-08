@@ -6,6 +6,7 @@ import { getServiceClient } from "@/lib/supabase-service";
 import { isContentEncryptionEnabled } from "./encryption/content-config";
 import { getEncryptedStore } from "./encryption/registry";
 import { EncryptedRowCodec, type StoredRow } from "./encryption/row-codec";
+import { databaseFailure } from "./database-failure";
 
 type Row = Record<string, unknown>;
 type Query = ReturnType<ReturnType<SupabaseClient["from"]>["select"]>;
@@ -190,9 +191,13 @@ class IssueQuery implements PromiseLike<Result<ProjectedRow[]>> {
     }));
   }
   async execute(terminal?: "single" | "maybeSingle"): Promise<Result<ProjectedRow[]>> {
-    const { data, error, count } = terminal ? await this.query()[terminal]() : await this.query();
-    if (error) return { data: null, error: fields(this.selection).some((field) => protectedFields.has(field))
-      ? { code: error.code, message: "Unable to access issue content" } : error, count };
+    const { data, error, count, status } = terminal ? await this.query()[terminal]() : await this.query();
+    if (error) {
+      const protectedRead = fields(this.selection).some((field) => protectedFields.has(field));
+      if (protectedRead) console.error("[issue-store] protected read failed", databaseFailure(error, status));
+      return { data: null, error: protectedRead
+        ? { code: error.code, message: "Unable to access issue content" } : error, count };
+    }
     const rows = data === null ? null : Array.isArray(data) ? data : [data];
     return { data: rows ? await Promise.all(rows.map((row) => this.project(row as Row))) : null,
       error: null, count };

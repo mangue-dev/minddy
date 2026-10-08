@@ -1,4 +1,5 @@
 import { MaintenanceRunner } from "@/lib/server/encryption/maintenance-runner";
+import { maintenanceDiagnostics } from "@/lib/server/encryption/maintenance-diagnostics";
 import { backfillCommentsBatch } from "@/lib/server/encryption/comment-backfill";
 import { backfillObjectivesBatch } from "@/lib/server/encryption/objective-backfill";
 import { backfillCategoriesBatch } from "@/lib/server/encryption/category-backfill";
@@ -371,8 +372,7 @@ export async function GET(request: NextRequest) {
         (statistics.value.failed > 0 || statistics.value.interrupted)) ||
       [activity, pageVersions, comments, pageComments, objectives, categories, projectDrafts, feedbackPosts, issues, agentJournal, agentEvents, agentLaunch, agentTitle, agentCheckpoint, agentDelegation, agentStandaloneMessages, agentQueueMessages, agentContexts, issueSidecar, githubCommentUrls, agentVerdicts, agentDeployments, agentBaseBranches, orphanRuntimeBaseBranches, agentBranchArtifacts, agentWorkBranches, orphanRuntimeWorkBranches, agentDelegationResults, numoWorkerEvents, numoWorkerCheckpoints, agentRunSummaries, agentTurnSummaries, agentArtifactUrls, agentRunPrUrls, pullRequestUrls, pullRequestContent, prCommentEdits, forgeRelayDeliveries, forgeRelayAudit, attachmentObjects, attachmentMetadata, pageFileMetadata, feedbackUsers, feedbackOtp, shareTokens, numoSurfaces, feedbackSso, forgeMention, numoActivity, providerResources, appConfig, feedbackMerge, agentChainCodes, numoTurnIntents, numoAutomation, numoConversationTitles, numoUserMessages, numoFinalContent, numoErrors, numoToolContent, forgeRepositoryNames, forgeDefaultBranches, projectIcons, viewContent, savedViewBookmarks, agentRoutines, projectContent, pageContent, userAiKeys, relayInstances, projectWebhookSecrets, relayProvisioning, relayUserDeliveries, forgeOAuthConnections, forgeOAuthIdentities, mcpConnections, mcpAttempts, agentBranchPrefixes, appTabs, aiDecisionEvaluations, stripeWebhookPayloads, billingIdentity, oauthClients, oauthCodes, apiKeys, integrations, push].some((outcome) => outcome.status === "fulfilled" && outcome.value !== null &&
         (outcome.value.failed > 0 || outcome.value.interrupted));
-    if (failed) console.error("[encryption-maintenance] incomplete batch");
-    return NextResponse.json({
+    const result = {
       ...(invitation.status === "fulfilled" ? invitation.value : { invitation_failed: true }),
       rotation,
       ...(forgeAttachments ? { forge_attachments: forgeAttachments } : {}),
@@ -588,7 +588,9 @@ export async function GET(request: NextRequest) {
       } : {}),
       ...(contentEnabled ? { scratchpads: scratchpad.status === "fulfilled" ? scratchpad.value : { failed: true } } : {}),
       ...(contentEnabled ? { statistics: statistics.status === "fulfilled" ? statistics.value : { failed: true } } : {}),
-    }, { status: failed ? 503 : 200 });
+    };
+    if (failed) console.error("[encryption-maintenance] incomplete batch", maintenanceDiagnostics(result, signal));
+    return NextResponse.json(result, { status: failed ? 503 : 200 });
   } catch {
     console.error("[encryption-maintenance] batch failed");
     return NextResponse.json({ error: "backfill_failed" }, { status: 500 });

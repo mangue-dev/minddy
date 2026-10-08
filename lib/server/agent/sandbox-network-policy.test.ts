@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { NetworkPolicy } from "@vercel/sandbox";
+import { EncryptedStore } from "@/lib/server/encryption/store";
+import type { AgentSandbox } from "./sandbox";
 
 const h = vi.hoisted(() => ({
   created: false,
@@ -10,6 +12,7 @@ const h = vi.hoisted(() => ({
   get: vi.fn(),
   delete: vi.fn(),
   update: vi.fn(),
+  store: null as EncryptedStore | null,
 }));
 
 vi.mock("@vercel/sandbox", () => ({
@@ -18,8 +21,11 @@ vi.mock("@vercel/sandbox", () => ({
     get: h.get,
   },
 }));
+vi.mock("@/lib/server/encryption/registry", () => ({ getEncryptedStore: () => h.store }));
 
-const { deleteSandboxByName, getOrCreateAgentSandbox } = await import("./sandbox");
+const { deleteSandboxByName, getOrCreateAgentSandbox, refreshAgentSandboxForgeAccess,
+  sealAgentSandboxForgeRefreshPolicy } = await import("./sandbox");
+const { buildAgentNetworkPolicy } = await import("./network-policy");
 
 const policy: NetworkPolicy = {
   allow: { "*": [] },
@@ -27,8 +33,13 @@ const policy: NetworkPolicy = {
 };
 
 beforeEach(() => {
+  h.store = new EncryptedStore({
+    current: async () => ({ version: 1, bytes: Buffer.alloc(32, 7) }),
+    byVersion: async (_scope, version) => ({ version, bytes: Buffer.alloc(32, 7) }),
+  });
   vi.stubEnv("AGENT_EXECUTION_BACKEND", "vercel");
   vi.stubEnv("VERCEL", "1");
+  vi.stubEnv("MINDDY_DATA_ROOT_KEY", "ab".repeat(32));
   h.created = false;
   h.resumed = false;
   h.allocation = null;
@@ -69,6 +80,19 @@ afterEach(() => {
 });
 
 describe("persistent Sandbox network policy refresh", () => {
+  it.each([undefined, "malformed-root-key"])(
+    "rejects an unusable root key before allocating a Vercel sandbox (%s)",
+    async (rootKey) => {
+      vi.stubEnv("MINDDY_CONTENT_ENCRYPTION_ENABLED", "false");
+      vi.stubEnv("MINDDY_DATA_ROOT_KEY", rootKey);
+      const onCreate = vi.fn(async () => {});
+      await expect(getOrCreateAgentSandbox({ name: "agent-no-root-key", onCreate }))
+        .rejects.toThrow("MINDDY_DATA_ROOT_KEY (64 hexadecimal characters)");
+      expect(h.getOrCreate).not.toHaveBeenCalled();
+      expect(onCreate).not.toHaveBeenCalled();
+    },
+  );
+
   it("erases old snapshots when an account is deleted", async () => {
     await deleteSandboxByName("agent-11111111-2222-4333-8444-555555555555");
     expect(h.get).toHaveBeenCalledWith(expect.objectContaining({
@@ -157,6 +181,78 @@ describe("persistent Sandbox network policy refresh", () => {
   });
 });
 
+
+describe("forge credential refresh with SDK policy redaction", () => {
+  const target = {
+    provider: "github" as const, repoFullName: "acme/private", token: "fresh-forge-secret",
+    authUrl: "https://github.com/acme/private.git", remoteUrl: "https://github.com/acme/private.git",
+  };
+  const desired = buildAgentNetworkPolicy({
+    baseUrl: "https://provider.test/v1", llmKey: "bounded-run-model-secret",
+    appOrigin: "https://preview.minddy.test",
+    forge: { ...target, token: "old-forge-secret" },
+  });
+
+  async function fixture(status = "running", sessionId = "session-1") {
+    const { Sandbox: SDK } = await vi.importActual<typeof import("@vercel/sandbox")>("@vercel/sandbox");
+    const session = {
+      id: sessionId, status, networkPolicy: {
+        mode: "custom", allowedDomains: ["*", "provider.test", "github.com", "preview.minddy.test"],
+        injectionRules: [{ domain: "provider.test", headerNames: ["authorization"],
+          match: { method: ["POST"], path: { exact: "/v1/chat/completions" } } }],
+      },
+    };
+    const update = vi.fn(async (_input: { sessionId: string; networkPolicy: NetworkPolicy }) => ({ json: { session } }));
+    // Exercise the installed SDK's distinct default/session accessors and its
+    // real redaction conversion, with an in-memory transport and synthetic keys.
+    const sandbox = Reflect.construct(SDK, [{
+      client: { updateNetworkPolicy: update }, routes: [], session,
+      sandbox: { name: "agent-allocation-1" }, projectId: "vercel-project",
+    }]) as InstanceType<typeof SDK>;
+    h.get.mockResolvedValue(sandbox);
+    const sealedPolicy = await sealAgentSandboxForgeRefreshPolicy("project-1", sandbox as unknown as AgentSandbox, desired);
+    return { sandbox, update, sealedPolicy };
+  }
+
+  it("replaces the Git token and preserves the actual model key instead of redacted readback", async () => {
+    const { sandbox, update, sealedPolicy } = await fixture();
+    expect(sandbox.networkPolicy).toBeUndefined();
+    expect(JSON.stringify(sandbox.currentSession().networkPolicy)).toContain("<redacted>");
+    expect(sealedPolicy).not.toContain("bounded-run-model-secret");
+    expect(sealedPolicy).not.toContain("old-forge-secret");
+    await refreshAgentSandboxForgeAccess(sandbox.name, target, { projectId: "project-1", sealedPolicy });
+    const installed = update.mock.calls[0][0];
+    expect(installed.sessionId).toBe("session-1");
+    const serialized = JSON.stringify(installed.networkPolicy);
+    expect(serialized).toContain("bounded-run-model-secret");
+    expect(serialized).toContain("https://preview.minddy.test");
+    expect(serialized).toContain(Buffer.from("x-access-token:fresh-forge-secret").toString("base64"));
+    expect(serialized).not.toContain(Buffer.from("x-access-token:old-forge-secret").toString("base64"));
+    expect(serialized).not.toContain("<redacted>");
+    expect(installed.networkPolicy).toMatchObject({ subnets: desired && typeof desired !== "string" ? desired.subnets : {} });
+    expect(h.get).toHaveBeenCalledWith(expect.objectContaining({ resume: false }));
+  });
+
+  it.each(["project", "session", "tampering", "missing"])("refuses %s context before changing credentials", async (kind) => {
+    const { sandbox, update, sealedPolicy } = await fixture();
+    const context = { projectId: kind === "project" ? "project-2" : "project-1",
+      sealedPolicy: kind === "missing" ? undefined : kind === "tampering" ? sealedPolicy + "x" : sealedPolicy };
+    if (kind === "session") await fixture("running", "session-2");
+    await expect(refreshAgentSandboxForgeAccess(sandbox.name, target, context)).rejects.toThrow();
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it("never resumes a stopped session and propagates a failed live update", async () => {
+    const stopped = await fixture("stopped");
+    await expect(refreshAgentSandboxForgeAccess(stopped.sandbox.name, target,
+      { projectId: "project-1", sealedPolicy: stopped.sealedPolicy })).rejects.toThrow("not running");
+    expect(stopped.update).not.toHaveBeenCalled();
+    const live = await fixture();
+    live.update.mockRejectedValueOnce(new Error("provider unavailable"));
+    await expect(refreshAgentSandboxForgeAccess(live.sandbox.name, target,
+      { projectId: "project-1", sealedPolicy: live.sealedPolicy })).rejects.toThrow("provider unavailable");
+  });
+});
 
 describe("sandbox allocation preferences", () => {
   it.each([

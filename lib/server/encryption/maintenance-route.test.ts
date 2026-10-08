@@ -193,6 +193,9 @@ describe("application-wide encryption maintenance", () => {
       expect(response.status).toBe(503);
       expect(callbacks.get("backfillIssuesBatch")).toHaveBeenCalled();
       expect(await response.json()).toMatchObject({ invitation_failed: true });
+      expect(log).toHaveBeenCalledWith("[encryption-maintenance] incomplete batch", {
+        aborted: false, failed_domains: ["invitations"], interrupted_domains: [],
+      });
       expect(JSON.stringify(log.mock.calls)).not.toContain("Private provider content");
     } finally { log.mockRestore(); }
   });
@@ -219,6 +222,9 @@ describe("application-wide encryption maintenance", () => {
       const response = await pending;
       expect(response.status).toBe(503);
       expect(await response.json()).toMatchObject({ issues: { failed: true } });
+      expect(log).toHaveBeenCalledWith("[encryption-maintenance] incomplete batch", expect.objectContaining({
+        aborted: true, failed_domains: expect.arrayContaining(["issues"]),
+      }));
       release.forEach((finish) => finish());
       await new Promise<void>((resolve) => setImmediate(resolve));
       expect(started).toHaveLength(3);
@@ -228,7 +234,12 @@ describe("application-wide encryption maintenance", () => {
     enable();
     callbacks.get("backfillStatEventsBatch")!.mockResolvedValue({ ...emptyBatch, interrupted: true });
     const log = vi.spyOn(console, "error").mockImplementation(() => {});
-    try { expect((await GET(request())).status).toBe(503); }
+    try {
+      expect((await GET(request())).status).toBe(503);
+      expect(log).toHaveBeenCalledWith("[encryption-maintenance] incomplete batch", {
+        aborted: false, failed_domains: [], interrupted_domains: ["statistics"],
+      });
+    }
     finally { log.mockRestore(); }
   });
 });

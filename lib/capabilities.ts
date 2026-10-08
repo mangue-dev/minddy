@@ -177,6 +177,10 @@ export function resolveCapabilities(env: CapabilityEnvironment): Record<Capabili
         "VERCEL_PROJECT_ID",
         "MINDDY_PUBLIC_APP_URL",
       ]);
+  // Match RootKeyCrypto's contract before allocating a sandbox or sealing its policy.
+  if (!/^[a-fA-F0-9]{64}$/.test(env.MINDDY_DATA_ROOT_KEY ?? "")) {
+    sandboxKeys.push("MINDDY_DATA_ROOT_KEY (64 hexadecimal characters)");
+  }
   const vercelSandbox =
     sandboxBackend !== "vercel"
       ? status({
@@ -198,7 +202,7 @@ export function resolveCapabilities(env: CapabilityEnvironment): Record<Capabili
             requirement: "replaceable",
             state: "incomplete",
             missing: sandboxKeys,
-            diagnostic: `Vercel Sandbox selected but credentials are missing: ${sandboxKeys.join(", ")}.`,
+            diagnostic: `Vercel Sandbox configuration is incomplete. Set: ${sandboxKeys.join(", ")}.`,
           });
   const selfHostedRunnerMissing = missing(env, ["AGENT_RUNNER_URL", "AGENT_RUNNER_SECRET"]);
   const agentExecution = sandboxBackend === "self-hosted"

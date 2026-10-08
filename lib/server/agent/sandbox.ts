@@ -17,6 +17,7 @@ import {
 import type { HarnessLayout } from "./harness-layout";
 import { resolveAgentExecutionBackend } from "@/lib/capabilities";
 import { rotateAgentForgeCredential } from "./network-policy";
+import { openSandboxNetworkPolicy, sealSandboxNetworkPolicy } from "./sandbox-network-policy-content";
 import { AGENT_SANDBOX_RUNTIME_ENV } from "./sandbox-resources";
 
 /**
@@ -284,8 +285,14 @@ export async function getAgentSandboxByName(name: string): Promise<AgentSandbox 
   }
 }
 
-/** Rotate forge authentication in trusted infrastructure without returning the
- * credential to the sandbox process that requested the refresh. */
+/** Seal launch credentials for an allocation-bound, opaque VM refresh context. */
+export async function sealAgentSandboxForgeRefreshPolicy(
+  projectId: string, sandbox: AgentSandbox, policy: NetworkPolicy,
+): Promise<string> {
+  const session = (sandbox as unknown as VercelSandbox).currentSession();
+  return sealSandboxNetworkPolicy(projectId, sandbox.name, session.sessionId, policy);
+}
+
 export async function refreshAgentSandboxForgeAccess(
   name: string,
   target: {
@@ -295,6 +302,7 @@ export async function refreshAgentSandboxForgeAccess(
     repoFullName: string;
     token: string;
   },
+  context: { projectId: string; sealedPolicy?: string },
 ): Promise<void> {
   const sandbox = await getAgentSandboxByName(name);
   if (!sandbox) throw new Error("agent sandbox is unavailable");
@@ -302,13 +310,20 @@ export async function refreshAgentSandboxForgeAccess(
     await sandbox.refreshGitRelay(target.authUrl);
     return;
   }
-  const policy = rotateAgentForgeCredential(sandbox.networkPolicy, {
+  const session = (sandbox as unknown as VercelSandbox).currentSession();
+  if (session.status !== "running") throw new Error("agent sandbox session is not running");
+  if (!context.sealedPolicy) throw new Error("agent sandbox policy refresh context is unavailable");
+  const original = await openSandboxNetworkPolicy(
+    context.projectId, name, session.sessionId, context.sealedPolicy,
+  );
+  const policy = rotateAgentForgeCredential(original, {
     provider: target.provider,
     repoFullName: target.repoFullName,
     token: target.token,
     origin: new URL(target.remoteUrl).origin,
   });
-  await (sandbox as unknown as VercelSandbox).update({ networkPolicy: policy });
+  // Update this session directly so an expired session cannot be resumed here.
+  await session.update({ networkPolicy: policy });
 }
 
 function requireSandboxCapability(): boolean {

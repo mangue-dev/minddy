@@ -171,6 +171,50 @@ describe("resolveCapabilities", () => {
     expect(capabilities.vercelSandbox.missing).toContain("MINDDY_PUBLIC_APP_URL");
   });
 
+  describe.each([
+    { deployment: "on Vercel", credentials: { VERCEL: "1" } },
+    { deployment: "outside Vercel", credentials: {
+      VERCEL_TOKEN: "token",
+      VERCEL_TEAM_ID: "team",
+      VERCEL_PROJECT_ID: "project",
+      MINDDY_PUBLIC_APP_URL: "https://minddy.example.test",
+    } },
+  ])("Vercel agent encryption prerequisites $deployment", ({ credentials }) => {
+    it.each([undefined, "", "a".repeat(63), "g".repeat(64), ` ${"a".repeat(64)}`])(
+      "rejects a missing or malformed root key even with content encryption disabled (%j)",
+      (rootKey) => {
+        const capabilities = resolveCapabilities({
+          ...core,
+          ...credentials,
+          AGENT_EXECUTION_BACKEND: "vercel",
+          MINDDY_CONTENT_ENCRYPTION_ENABLED: "false",
+          MINDDY_DATA_ROOT_KEY: rootKey,
+        });
+        for (const id of ["vercelSandbox", "agentExecution"] as const) {
+          expect(capabilities[id]).toMatchObject({
+            state: "incomplete",
+            configured: false,
+            missing: ["MINDDY_DATA_ROOT_KEY (64 hexadecimal characters)"],
+          });
+          expect(capabilities[id].diagnostic).toContain("Set: MINDDY_DATA_ROOT_KEY");
+        }
+      },
+    );
+
+    it.each(["ab".repeat(32), "AB".repeat(32)])("accepts a valid root key (%s)", (rootKey) => {
+      const capabilities = resolveCapabilities({
+        ...core,
+        ...credentials,
+        AGENT_EXECUTION_BACKEND: "vercel",
+        MINDDY_CONTENT_ENCRYPTION_ENABLED: "false",
+        MINDDY_DATA_ROOT_KEY: rootKey,
+      });
+      for (const id of ["vercelSandbox", "agentExecution"] as const) {
+        expect(capabilities[id]).toMatchObject({ state: "ready", configured: true, missing: [] });
+      }
+    });
+  });
+
   it("does not declare Web Push ready with an unusable VAPID subject", () => {
     const capabilities = resolveCapabilities({
       ...core,

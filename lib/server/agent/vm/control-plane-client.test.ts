@@ -44,6 +44,17 @@ afterEach(() => {
 });
 
 describe("le client du plan de contrôle, sur une machine", () => {
+  it("forwards only the opaque forge policy to the refresh surface", async () => {
+    const cp = createControlPlaneClient(ORIGIN, undefined, () => "opaque-policy-ciphertext");
+    await expect(cp.repoAuthUrl()).resolves.toBeNull();
+    const fetcher = vi.mocked(fetch);
+    expect(fetcher.mock.calls.at(-1)?.[1]).toMatchObject({
+      body: JSON.stringify({ forgeRefreshPolicy: "opaque-policy-ciphertext" }),
+    });
+    await cp.emit("status", { text: "working" });
+    expect(fetcher.mock.calls.at(-1)?.[1]?.body).not.toContain("opaque-policy-ciphertext");
+    expect(calls.every((call) => !call.headers.authorization)).toBe(true);
+  });
   it("logs a controlled code when a provider response echoes private submitted content", async () => {
     const logged = vi.spyOn(console, "error").mockImplementation(() => {});
     const cp = createControlPlaneClient(ORIGIN, () => "token");
