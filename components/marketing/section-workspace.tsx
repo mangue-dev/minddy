@@ -41,7 +41,7 @@ export async function SectionWorkspace() {
     {
       id: "speed", icon: Command, title: t("feature_palette_title"), description: t("feature_palette_body"),
       screenshot: "featurePalette", tone: CARD_TONES.butter, span: "",
-      points: [{ title: t("feature_palette_title"), body: t("feature_palette_body") }],
+      points: (["search", "actions", "shortcuts"] as const).map(key => ({ title: t(`palette_${key}_title`), body: t(`palette_${key}_body`) })),
     },
     {
       id: "scratchpad", icon: NotebookPen, title: t("scratchpadTitle"), description: t("scratchpadSubtitle"),
@@ -58,7 +58,7 @@ export async function SectionWorkspace() {
           {cards.map(card => (
             <FeatureDisclosure key={card.id} id={card.id} title={card.title}
               className={`min-h-[460px] ${card.tone} ${card.span}`}
-              details={card.id !== "speed" && <dl className="space-y-5">{card.points.map(point => (
+              details={<dl className="space-y-5">{card.points.map(point => (
                 <div key={point.body}>
                   {point.title && <dt className="font-medium">{point.title}</dt>}
                   <dd className="mt-1 opacity-85">{point.body}</dd>
