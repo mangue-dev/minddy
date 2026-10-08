@@ -344,12 +344,19 @@ export function environmentValues(options, generated = generatedValues(options.c
   };
 }
 
-function command(command, args, { dryRun = false, env } = {}) {
+export function command(command, args, { dryRun = false, env, run = spawnSync } = {}) {
   const visible = args.map((argument) => /postgres(?:ql)?:\/\//i.test(argument) ? "<database-url>" : argument);
   console.log(`→ ${command} ${visible.join(" ")}`);
   if (dryRun) return;
-  const result = spawnSync(command, args, { cwd: ROOT_DIR, encoding: "utf8", env: { ...process.env, ...env } });
+  const result = run(command, args, {
+    cwd: ROOT_DIR,
+    encoding: "utf8",
+    env: { ...process.env, ...env },
+    maxBuffer: 16 * 1024 * 1024,
+  });
   if (result.error?.code === "ENOENT") fail(`command is missing: ${command}. Install it and rerun.`);
+  if (result.error?.code === "ENOBUFS") fail("command output exceeded the installation buffer. Pull images with docker compose pull --quiet in the installed profile context, then resume with --skip-pull.");
+  if (result.error) fail(`command failed: ${result.error.message}`);
   if (result.status !== 0) fail((result.stderr || result.stdout || `${command} exited ${result.status}`).trim());
 }
 
@@ -544,7 +551,7 @@ export async function main(argv = process.argv.slice(2)) {
   if (!options.start) return console.log("✓ Configuration created. Start the stack later with pnpm self-host:doctor after it is running.");
   const files = composeFiles(options);
   const compose = ["compose", "--env-file", options.envFile, ...files.flatMap((file) => ["-f", file])];
-  if (options.pull !== false) command("docker", [...compose, "pull"], { dryRun: options.dryRun });
+  if (options.pull !== false) command("docker", [...compose, "pull", "--quiet"], { dryRun: options.dryRun });
   recordCheckpoint(options.envFile, options.pull === false ? "images-local" : "images-pulled", options);
   if (options.mode === "full") {
     prepareFunctionsBundle(options);

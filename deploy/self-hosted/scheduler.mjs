@@ -1,6 +1,7 @@
 const JOBS = [
   ["0 * * * *", "/api/cron/feedback-analysis"],
   ["*/2 * * * *", "/api/cron/agent-drain"],
+  ["* * * * *", "/api/cron/numo-turns"],
   // Forge-relay delivery worker: retry backoff starts at 1 minute, so the
   // worker must tick every minute to honor the at-least-once schedule.
   ["* * * * *", "/api/cron/forge-relay-deliveries"],

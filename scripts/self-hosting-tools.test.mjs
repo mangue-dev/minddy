@@ -6,6 +6,7 @@ import test from "node:test";
 
 import {
   checkpointPath,
+  command,
   combineFullEnvironmentTemplates,
   createEnvironmentFile,
   createSupabaseJwt,
@@ -23,6 +24,16 @@ import {
 } from "./self-hosting-install.mjs";
 import { compatibilityFinding, configFindings, disabledCapabilities, forgeAccessFinding, parseArgs as parseDoctorArgs, redact, schedulerFinding } from "./self-hosting-doctor.mjs";
 import { maintenanceMessage, parseArgs as parseMaintenanceArgs } from "./self-hosting-maintenance.mjs";
+
+test("installation commands tolerate output larger than the default subprocess buffer", () => {
+  assert.doesNotThrow(() => command(process.execPath, ["-e", "process.stdout.write('x'.repeat(2 * 1024 * 1024))"]));
+});
+
+test("installation output exhaustion gives a resumable image pull remedy", () => {
+  assert.throws(() => command("docker", ["compose", "pull"], {
+    run() { return { error: Object.assign(new Error("output too large"), { code: "ENOBUFS" }), status: null }; },
+  }), /pull --quiet.*--skip-pull/);
+});
 
 test("maintenance checks reject a running scheduler without weakening normal diagnostics", () => {
   const options = parseDoctorArgs(["--maintenance", "--skip-network"]);

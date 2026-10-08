@@ -6,6 +6,14 @@ import { dirname, join } from "node:path";
 import test from "node:test";
 import { prepareFunctionsBundle } from "./prepare-self-hosted-functions.mjs";
 
+test("the offline dependency pin matches the installed frozen application dependency", () => {
+  const pin = JSON.parse(readFileSync(new URL("../deploy/self-hosted/functions-bundle.json", import.meta.url)));
+  const dependency = JSON.parse(readFileSync(new URL("../node_modules/jose/package.json", import.meta.url)));
+  const application = JSON.parse(readFileSync(new URL("../package.json", import.meta.url)));
+  assert.equal(pin.joseVersion, application.dependencies.jose);
+  assert.equal(pin.joseVersion, dependency.version);
+});
+
 function fixture(t) {
   const root = mkdtempSync(join(tmpdir(), "minddy-functions-"));
   t.after(() => rmSync(root, { recursive: true, force: true }));
