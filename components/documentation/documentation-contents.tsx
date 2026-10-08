@@ -40,7 +40,7 @@ function ContentsList({ sections, activeId, label, onNavigate }: {
         {sections.map(section => <li key={section.id}>
           <a href={`#${section.id}`} aria-current={section.id === activeId ? "location" : undefined}
             onClick={event => onNavigate(event, section.id)}
-            className={`block py-1 text-muted-foreground transition-colors hover:text-foreground aria-[current=location]:text-foreground focus-visible:outline-2 focus-visible:outline-ring ${section.level === 3 ? "pl-6" : "pl-3"}`}>
+            className={`flex min-h-12 items-center py-3 text-muted-foreground transition-colors hover:text-foreground aria-[current=location]:text-foreground focus-visible:outline-2 focus-visible:outline-ring xl:min-h-0 xl:py-1 ${section.level === 3 ? "pl-6" : "pl-3"}`}>
             {section.title}
           </a>
         </li>)}
