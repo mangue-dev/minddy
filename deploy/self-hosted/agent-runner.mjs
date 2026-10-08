@@ -335,6 +335,8 @@ async function relayLlmCompletion(name, request, response) {
 async function relayGit(name, action, request, response, url) {
   const relay = gitRelays.get(name);
   if (!relay || !authorizedGitRelay(request.headers.authorization, relay.controlToken)) {
+    // Git waits for the HTTP challenge before sending URL credentials.
+    response.setHeader("www-authenticate", 'Basic realm="Minddy Git relay"');
     return json(response, 401, { error: "unauthorized" });
   }
   const target = gitRelayTarget(relay, action, url.search, request.method);

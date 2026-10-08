@@ -74,6 +74,15 @@ test("agent runner errors preserve status without exposing internal details", as
   assert.deepEqual(await invalid.json(), { error: "invalid request" });
 });
 
+test("Git clients receive a Basic challenge without runner or forge credentials", async (t) => {
+  const { origin } = await startRunner(t);
+  const name = "agent-v2-11111111-1111-1111-1111-111111111111-a1b2c3d4e5f6";
+  const response = await fetch(`${origin}/v1/sandboxes/${name}/git/demo/repo.git/info/refs?service=git-upload-pack`);
+  assert.equal(response.status, 401);
+  assert.equal(response.headers.get("www-authenticate"), 'Basic realm="Minddy Git relay"');
+  assert.deepEqual(await response.json(), { error: "unauthorized" });
+});
+
 test("sandbox initialization uses its unprivileged owner and removes a failed allocation", async (t) => {
   const root = await mkdtemp(path.join(tmpdir(), "minddy-runner-init-"));
   t.after(() => rm(root, { recursive: true, force: true }));
