@@ -7,11 +7,14 @@ tasks, and require equivalent articles and necessary illustrations in all six
 languages. The existing knowledge articles are useful source material, but do
 not constitute that manual.
 
-**Review status:** awaiting issue-owner review of this study, the
+**Review status:** the issue owner accepted this study, the
 [coverage matrix](min-664-coverage.md), and the
-[source inventory](min-664-source-inventory.md). The publication approach below
-is proposed. Exhaustive authoring starts after that review, as MIN-664 requires.
-No product implementation or documentation publication is included in this lot.
+[source inventory](min-664-source-inventory.md) in the 2026-10-08 conversation.
+Repository Markdown in the existing Next.js application is the selected
+publication approach. The owner also required useful, well-balanced articles
+with natural prose; the [editorial guide](../documentation-editorial-guide.md)
+defines the authoring and review contract for all six languages. No product
+implementation or documentation publication is included in this lot.
 
 ## Version and evidence boundaries
 
@@ -215,10 +218,10 @@ release compatibility and a shared Numo source. Compare tools on those needs.
 | A separate documentation engine | May provide navigation, search and versioning conventions out of the box. | Requires a demonstrated six-locale/capture parity path, design integration, route/indexing integration and a Numo ingestion contract. Adds deployment and dependency ownership. Evaluate a small representative prototype before choosing. |
 | Hosted knowledge service or CMS | Could simplify browser authoring and review. | Introduces another source/deployment boundary, export/version requirements and public/internal access policies. No demonstrated need outweighs the repository source-of-truth requirement yet. |
 
-**Recommended for review:** use repository Markdown and the existing Next.js
-marketing shell. This recommendation follows the inventory; no new dependency
-or renderer has been selected or implemented. If maintainers choose another
-option, preserve the content, publication and validation contracts below.
+**Selected after review:** use repository Markdown and the existing Next.js
+marketing shell. The issue owner accepted this approach on 2026-10-08. No new
+dependency or renderer has been selected or implemented; choose those during
+implementation against the content and validation contracts below.
 
 ### Proposed content contract
 
@@ -274,6 +277,8 @@ their review.
 2. The reviewer confirms prerequisites, exact entry point, permissions,
    observable result, limits, failure recovery, current illustrations and
    source-revision parity. Record the real review date, not every build date.
+   Apply the [editorial guide](../documentation-editorial-guide.md), including
+   factual checks, proportionate detail, natural prose and language review.
 3. CI checks unique IDs/paths, required metadata, publication status, relative
    links and anchors, related IDs, workflow coverage, all six variants,
    translation revisions and required figure variants. External links get a
@@ -316,18 +321,18 @@ The matrix remains the scope ledger until every retained workflow has complete
 localized content, verified necessary figures and acceptance evidence. MIN-664
 stays in progress during this first lot.
 
-## Decisions required at the first review
+## Review outcome: 2026-10-08
 
-- Confirm or amend the audience entrances, retained workflow IDs and explicit
-  exclusions in the coverage matrix.
-- Select the publication/content approach and public URL policy after reviewing
-  the inventory. Confirm whether procedures target v0.11.0 or the next release,
-  and establish the current Cloud compatibility baseline.
-- Confirm article/locale reviewers and recruit the required representative
-  readers; agree where sanitized acceptance records will be kept.
-- Confirm the shared official corpus migration for Numo/FAQ and the distinction
-  between required Numo reuse and optional new public AI Q&A.
+The issue owner accepted the preliminary scope in conversation. This approves
+the audience entrances, retained matrix workflows and exclusions, repository
+Markdown publication in the existing application, and the shared official
+corpus for Numo with optional new anonymous AI Q&A. The owner explicitly added
+editorial quality: useful verified information, readable and proportionate
+articles, and avoidance of mechanical prose. The editorial guide makes this a
+publication requirement for every locale.
 
-The first review does not approve publishing incomplete articles or relaxing the
-six-language requirement. It establishes the scope and maintenance choices that
-the following implementation lots will verify.
+Before publishing procedures, establish the applicable shipped release and
+Cloud baseline. Assign qualified article/locale reviewers and representative
+readers, and retain sanitized acceptance records with the article revisions.
+Those verification activities remain open; no procedural or reader approval
+is inferred from approval of the scope.

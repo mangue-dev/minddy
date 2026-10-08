@@ -1,8 +1,9 @@
 # Public documentation workflow coverage
 
-This is the scope ledger for MIN-664, awaiting the review described in the
-[study](min-664-public-documentation-study.md). A row names an observable reader
-task or a specific reference need. It is not satisfied by a topic landing page.
+This is the scope ledger for MIN-664, accepted by the issue owner on 2026-10-08
+as recorded in the [study](min-664-public-documentation-study.md). A row names
+an observable reader task or a specific reference need. It is not satisfied by
+a topic landing page.
 Article IDs are proposed stable IDs; several rows can share an article only if
 each outcome remains findable and has a complete, directly linked section.
 
@@ -11,6 +12,12 @@ translations, illustration approval and reader acceptance pending. Source
 existence does not establish publication or procedural verification. The
 [source inventory](min-664-source-inventory.md) gives the release boundary and
 source dispositions.
+
+Every retained row also requires the
+[editorial publication checklist](../documentation-editorial-guide.md): useful
+verified content, proportionate detail, natural prose, and complete meaning
+reviewed in each language. An article's existence or length does not satisfy a
+row; its reader outcome and necessary information must pass review.
 
 ## How to read the matrix
 
