@@ -2,12 +2,13 @@ import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { Card, CardContent } from "mangue-ui";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ApiIcon, ArrowRight01Icon, CheckmarkCircle01Icon, CloudServerIcon, Compass01Icon, DatabaseIcon, Rocket01Icon, ServerStack01Icon, Share01Icon, WorkflowSquare01Icon } from "@hugeicons/core-free-icons";
+import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import type { Locale } from "@/i18n/config";
 import type { DocumentationArticle } from "@/lib/documentation";
 import { documentationPath } from "@/lib/documentation-core.mjs";
 import { localizedHref } from "@/lib/locale-href";
 import { DocumentationShell } from "./documentation-shell";
+import { DocumentationIcon } from "./documentation-icon";
 
 /** The documentation entry is a reading guide inside the article layout. */
 export async function DocumentationWelcome({ articles, locale, query = "", preview = false }: {
@@ -16,13 +17,13 @@ export async function DocumentationWelcome({ articles, locale, query = "", previ
   const t = await getTranslations({ locale, namespace: "Documentation" });
   const guides = [
     { id: "use", title: t("use"), intro: t("welcomeUse"), articles: [
-      { id: "choose-an-instance", icon: CloudServerIcon }, { id: "first-project", icon: Rocket01Icon }, { id: "navigation", icon: Compass01Icon },
+      "choose-an-instance", "first-project", "navigation",
     ] },
     { id: "operate", title: t("operate"), intro: t("welcomeOperate"), articles: [
-      { id: "installation", icon: CheckmarkCircle01Icon }, { id: "instance-configuration", icon: ServerStack01Icon }, { id: "backups-and-restoration", icon: DatabaseIcon },
+      "installation", "instance-configuration", "backups-and-restoration",
     ] },
     { id: "integrate", title: t("integrate"), intro: t("welcomeIntegrate"), articles: [
-      { id: "glossary-and-data-model", icon: WorkflowSquare01Icon }, { id: "architecture-and-data-flows", icon: Share01Icon }, { id: "minddy-mcp", icon: ApiIcon },
+      "glossary-and-data-model", "architecture-and-data-flows", "minddy-mcp",
     ] },
   ];
   const sections = guides.map(({ id, title }) => ({ id, title, level: 2 }));
@@ -36,14 +37,14 @@ export async function DocumentationWelcome({ articles, locale, query = "", previ
       <h2 className="text-xl font-semibold tracking-tight">{guide.title}</h2>
       <p className="mt-3 text-sm leading-6 text-muted-foreground">{guide.intro}</p>
       <ul className="mt-6 grid grid-cols-1 gap-4 @min-[26rem]:grid-cols-2 @min-[42rem]:grid-cols-3">
-        {guide.articles.map(({ id, icon }) => {
+        {guide.articles.map(id => {
           const article = articles.find(article => article.id === id);
           return article && <li key={article.id} className="min-w-0">
             <Link href={documentationPath(article.id, locale)} prefetch={false} aria-labelledby={`guide-${article.id}`}
               className="group block h-full rounded-lg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring">
               <Card className="h-full gap-0 rounded-lg bg-muted/25 py-0 ring-border transition-colors duration-200 group-hover:bg-muted/50 group-hover:ring-foreground/20 group-focus-visible:ring-ring">
                 <div className="flex h-28 shrink-0 items-start justify-between border-b border-border/60 p-5">
-                  <HugeiconsIcon icon={icon} className="size-5 text-foreground/80" aria-hidden />
+                  <DocumentationIcon articleId={article.id} className="size-5 text-foreground/80" />
                   <HugeiconsIcon icon={ArrowRight01Icon} className="size-4 -translate-x-1 text-muted-foreground opacity-0 transition-[opacity,transform] duration-200 group-hover:translate-x-0 group-hover:opacity-100 group-focus-visible:translate-x-0 group-focus-visible:opacity-100 motion-reduce:transition-none" aria-hidden />
                 </div>
                 <CardContent className="space-y-2 p-5">

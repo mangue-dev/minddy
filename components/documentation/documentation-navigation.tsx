@@ -3,13 +3,14 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowRight01Icon, BookOpen01Icon, Cancel01Icon, Menu01Icon, Search01Icon } from "@hugeicons/core-free-icons";
+import { ArrowRight01Icon, Cancel01Icon, Menu01Icon, Search01Icon } from "@hugeicons/core-free-icons";
 import { Button, Collapsible, CollapsibleContent, CollapsibleTrigger, Sheet, SheetClose, SheetContent, SheetTitle, SheetTrigger, Tooltip, TooltipContent, TooltipTrigger } from "mangue-ui";
 import type { Locale } from "@/i18n/config";
 import type { DocumentationArticle, DocumentationSearchEntry } from "@/lib/documentation";
 import { documentationPath, searchDocumentation } from "@/lib/documentation-core.mjs";
 import { CommandPalette, usePaletteStore } from "@/lib/command-palette";
 import { useDocumentationTopics } from "@/lib/use-documentation-topics";
+import { DocumentationIcon } from "./documentation-icon";
 import "@/components/command-palette.css";
 
 export type DocumentationNavigationEntry = Pick<DocumentationArticle, "id" | "title" | "topic">;
@@ -30,17 +31,17 @@ export function DocumentationSidebar({ articles, locale, currentId, labels, onNa
   const folds = useDocumentationTopics(activeTopic ? topicKeys.get(activeTopic) : undefined);
   return <nav aria-label={labels.topics} className="space-y-1 px-4 py-6">
     <Link href={documentationPath(null, locale)} prefetch={false} onNavigate={onNavigate} aria-current={currentId === null ? "page" : undefined}
-      className="mb-4 block rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground aria-[current=page]:bg-muted aria-[current=page]:text-foreground focus-visible:outline-2 focus-visible:outline-ring">{labels.welcome}</Link>
+      className="mb-4 flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground aria-[current=page]:bg-muted aria-[current=page]:text-foreground focus-visible:outline-2 focus-visible:outline-ring"><DocumentationIcon articleId={null} className="size-4 shrink-0" /><span>{labels.welcome}</span></Link>
     {topics.map(topic => <Collapsible key={topic} open={folds.isOpen(topicKeys.get(topic)!)} onOpenChange={open => folds.setOpen(topicKeys.get(topic)!, open)}>
       <CollapsibleTrigger className="group flex min-h-10 w-full items-center gap-2 rounded-md px-3 py-2 text-left text-[13px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring">
         <HugeiconsIcon icon={ArrowRight01Icon} className="size-3.5 shrink-0 transition-transform duration-200 group-data-[state=open]:rotate-90 motion-reduce:transition-none" aria-hidden />
         <span className={articles.some(article => article.topic === topic && article.id === currentId) ? "text-foreground" : undefined}>{topic}</span>
       </CollapsibleTrigger>
       <CollapsibleContent className="motion-reduce:animate-none">
-        <ul className="ml-4 space-y-0.5 border-l border-border py-1 pl-2">
+        <ul className="ml-4 space-y-0.5 py-1 pl-2">
           {articles.filter(article => article.topic === topic).map(article => <li key={article.id}>
             <Link href={documentationPath(article.id, locale)} prefetch={false} onNavigate={onNavigate} aria-current={article.id === currentId ? "page" : undefined}
-              className="block rounded-md px-3 py-2 text-[13px] leading-5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground aria-[current=page]:bg-muted aria-[current=page]:font-medium aria-[current=page]:text-foreground focus-visible:outline-2 focus-visible:outline-ring">{article.title}</Link>
+              className="flex items-start gap-2 rounded-md px-3 py-2 text-[13px] leading-5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground aria-[current=page]:bg-muted aria-[current=page]:font-medium aria-[current=page]:text-foreground focus-visible:outline-2 focus-visible:outline-ring"><DocumentationIcon articleId={article.id} className="mt-0.5 size-4 shrink-0" /><span>{article.title}</span></Link>
           </li>)}
         </ul>
       </CollapsibleContent>
@@ -89,7 +90,7 @@ export function DocumentationSearch({ articles, locale, initialQuery = "", label
     keywords: article.tags,
     contextLabel: article.topic,
     filterCategory: "articles",
-    icon: <HugeiconsIcon icon={BookOpen01Icon} className="size-4" aria-hidden />,
+    icon: <DocumentationIcon articleId={article.id} className="size-4" />,
     href: documentationPath(article.id, locale),
   })), [articles, locale]);
   return <>
