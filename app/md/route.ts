@@ -148,7 +148,9 @@ async function renderLanding(locale: Locale, canonical: string): Promise<string>
     [t("navMenu_feedback_title"), t("feedbackSubtitle"), (["post", "moderate", "decide", "status"] as const).map(
       (k) => [t(`feedback_${k}_title`), t(`feedback_${k}_body`)],
     )],
-    [t("feature_palette_title"), t("feature_palette_body"), []],
+    [t("feature_palette_title"), t("feature_palette_body"), (["search", "actions", "shortcuts"] as const).map(
+      (k) => [t(`palette_${k}_title`), t(`palette_${k}_body`)],
+    )],
     [t("scratchpadTitle"), t("scratchpadSubtitle"), (["write", "prompt", "agent", "promote", "mcp"] as const).map(
       (k) => ["", t(`scratchpadPoint_${k}`)],
     )],
