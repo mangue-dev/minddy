@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { act, createElement, StrictMode } from "react";
-import { createRoot } from "react-dom/client";
+import { createRoot, hydrateRoot } from "react-dom/client";
+import { renderToString } from "react-dom/server";
 import { expect, it, vi } from "vitest";
 import { AppTopBar } from "@/components/app-top-bar";
 
@@ -18,7 +19,7 @@ it("tracks bar presence through StrictMode and restores the previous document ma
   const root = createRoot(container);
   const documentRoot = document.documentElement;
   const render = () => createElement(StrictMode, null, createElement(AppTopBar, {
-    hidden: false, inbox: {} as never, onSearch() {}, onSearchWarm() {}, onNewTab() {},
+    ready: true, hidden: false, inbox: {} as never, onSearch() {}, onSearchWarm() {}, onNewTab() {},
   }));
   try {
     expect(documentRoot.hasAttribute("data-app-top-bar")).toBe(false);
@@ -35,5 +36,44 @@ it("tracks bar presence through StrictMode and restores the previous document ma
     await act(async () => root.unmount());
     container.remove();
     documentRoot.removeAttribute("data-app-top-bar");
+  }
+});
+
+it("reserves the server-rendered bar through hydration and delayed tab readiness", async () => {
+  const render = (ready: boolean) => createElement(StrictMode, null, createElement(AppTopBar, {
+    ready, hidden: false, inbox: {} as never, onSearch() {}, onSearchWarm() {}, onNewTab() {},
+  }));
+  const container = document.createElement("div");
+  container.innerHTML = renderToString(render(false));
+  document.body.append(container);
+  const bar = container.querySelector(".app-top-bar");
+  const errors: unknown[] = [];
+  let root: ReturnType<typeof hydrateRoot> | undefined;
+  try {
+    expect(bar).not.toBeNull();
+    expect(bar?.classList.contains("h-11")).toBe(true);
+    expect(bar?.classList.contains("shrink-0")).toBe(true);
+    expect(bar?.classList.contains("hidden")).toBe(true);
+    expect(bar?.classList.contains("app-desktop:flex")).toBe(true);
+    expect(bar?.childElementCount).toBe(0);
+    expect(document.documentElement.hasAttribute("data-app-top-bar")).toBe(false);
+    await act(async () => {
+      root = hydrateRoot(container, render(false), { onRecoverableError: (error) => errors.push(error) });
+    });
+    expect(container.querySelector(".app-top-bar")).toBe(bar);
+    expect(bar?.childElementCount).toBe(0);
+    await act(async () => root!.render(render(true)));
+    expect(container.querySelector(".app-top-bar")).toBe(bar);
+    expect(bar?.querySelector(".app-titlebar-safe-area")).not.toBeNull();
+    expect(document.documentElement.hasAttribute("data-app-top-bar")).toBe(true);
+    await act(async () => root!.render(render(false)));
+    expect(container.querySelector(".app-top-bar")).toBe(bar);
+    expect(bar?.childElementCount).toBe(0);
+    expect(document.documentElement.hasAttribute("data-app-top-bar")).toBe(false);
+    expect(errors).toEqual([]);
+  } finally {
+    await act(async () => root?.unmount());
+    container.remove();
+    document.documentElement.removeAttribute("data-app-top-bar");
   }
 });
