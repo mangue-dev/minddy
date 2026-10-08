@@ -7,7 +7,15 @@ import { createServer as createHttpServer } from "node:http";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { base64FileChunks } from "../deploy/self-hosted/agent-runner-storage.mjs";
+import { agentSandboxStorage, base64FileChunks } from "../deploy/self-hosted/agent-runner-storage.mjs";
+
+test("the volatile worker store permits its runtime binary and retains mount restrictions", () => {
+  const options = agentSandboxStorage().Tmpfs["/vercel"].split(",");
+  for (const flag of ["exec", "nosuid", "nodev", "uid=10001", "gid=10001", "mode=0700"]) {
+    assert.ok(options.includes(flag), flag);
+  }
+  assert.ok(!options.includes("noexec"));
+});
 
 test("large binary files retain their bytes within Linux exec environment bounds", () => {
   const original = Buffer.alloc(1_200_000);
@@ -122,6 +130,10 @@ test("sandbox initialization uses its unprivileged owner and removes a failed al
   const initialization = requests.find(request => request.path.endsWith("/exec"));
   assert.equal(initialization.body.User, "10001:10001");
   assert.doesNotMatch(initialization.body.Cmd.join(" "), /chown/);
+  const allocation = requests.find(request => request.path.startsWith("/v1.44/containers/create"));
+  assert.equal(allocation.body.HostConfig.ReadonlyRootfs, true);
+  assert.deepEqual(allocation.body.HostConfig.CapDrop, ["ALL"]);
+  assert.deepEqual(allocation.body.HostConfig.SecurityOpt, ["no-new-privileges"]);
   assert.ok(requests.some(request => request.method === "DELETE" && request.path.includes("/containers/")));
   assert.deepEqual(await result.json(), { error: "agent runner request failed" });
 });

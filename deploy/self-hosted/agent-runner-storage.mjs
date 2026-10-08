@@ -7,7 +7,8 @@ export function agentSandboxStorage() {
   return {
     LogConfig: { Type: "none" },
     Tmpfs: {
-      "/vercel": `rw,nosuid,nodev,size=${bytes},uid=10001,gid=10001,mode=0700`,
+      // Docker otherwise defaults tmpfs to noexec; OpenCode lives here.
+      "/vercel": `rw,exec,nosuid,nodev,size=${bytes},uid=10001,gid=10001,mode=0700`,
       "/tmp": "rw,nosuid,nodev,size=1073741824",
     },
   };
