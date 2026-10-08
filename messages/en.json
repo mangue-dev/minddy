@@ -5647,7 +5647,16 @@
     "installerDone": "the installer finishes and leaves every container running.",
     "emailDone": "a test account receives its confirmation email.",
     "verifyLocalDone": "all three checks pass.",
-    "verifyTeamDone": "the doctor reports no failing check."
+    "verifyTeamDone": "the doctor reports no failing check.",
+    "encryptionReleaseTitle": "Encryption for this release",
+    "encryptionReleaseBody": "These commands clone MINDDY_RELEASE_TAG and do not configure workspace encryption. The --encryption options documented for the 0.11.1 candidate are not accepted by the published v0.11.0 scripts. To encrypt content, follow the version-specific guide and verify matching tooling and runtime configuration before adding users.",
+    "encryptionReleaseKeyNote": "Keep MINDDY_DATA_ROOT_KEY across updates and store a protected recovery copy. Its presence alone does not prove that workspace content is encrypted. Check the application’s effective configuration and the matching schema before relying on content encryption. Credential encryption is a separate mechanism.",
+    "encryptionReleaseGuide": "Read the version-specific encryption guide",
+    "releaseProcedureBody": "The published MINDDY_RELEASE_TAG has verified installation and runtime limitations. Follow the procedure for your profile, including its version-specific preparation and startup steps. Advancing through this assistant does not verify that services have started or that an instance is ready.",
+    "releaseProcedureGuide": "Follow the procedure for this profile",
+    "fullPreparationTitle": "Prepare the full-profile configuration",
+    "fullPreparationBody": "This command creates the protected configuration with --skip-start; it does not start the stack or apply the database bootstrap. Before continuing to email, diagnostics or sign-up, follow the server guide’s pinned tooling workaround and adapted full-profile startup. Preserve the generated secrets and the verified image digest.",
+    "fullPreparedDone": "The protected configuration exists and its release and image have been checked. Complete the linked preparation and startup procedure before verifying the running instance."
   },
   "Mcp": {
     "metaTitle": "Open-source MCP issue tracker for coding agents",

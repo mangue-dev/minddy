@@ -37,7 +37,7 @@ beforeEach(() => {
   root = createRoot(host);
   act(() => root.render(createElement(SelfHostingInstallWizard, {
     copy,
-    links: { guide: "https://example.test/install", download: "https://example.test/download", release: "https://example.test/release", operations: "https://example.test/operations" },
+    links: { guide: "https://example.test/install", download: "https://example.test/download", release: "https://example.test/release", operations: "https://example.test/operations", encryption: "https://example.test/docs/workspace-encryption", localInstallation: "https://example.test/docs/install-locally", serverInstallation: "https://example.test/docs/install-a-server" },
     guidePath: "/self-hosting",
     emailTemplates: { confirmSignup: { subject: "Confirm", body: "Confirm" }, resetPassword: { subject: "Reset", body: "Reset" } },
     repositoryUrl: "https://github.com/mangue-dev/minddy", releaseTag: "v0.11.0", pnpmVersion: "10.28.0",
@@ -79,13 +79,14 @@ function reach(title: string) {
   expect(host.querySelector("h1")?.textContent).toBe(title);
 }
 
-function choose(path: "local" | "team", enabled: boolean, method: "agent" | "manual", full = false) {
+function choose(path: "local" | "team", method: "agent" | "manual", full = false) {
   reach(copy.routeTitle);
   clickCard(path === "local" ? copy.localTitle : copy.teamTitle);
-  reach(copy.encryptionChoiceTitle);
-  const enabledCard = [...host.querySelectorAll("h3")].find((item) => item.textContent === copy.encryptionEnabled)!.closest("button")!;
-  expect(enabledCard.getAttribute("aria-pressed")).toBe("true");
-  if (!enabled) clickCard(copy.encryptionDisabled);
+  reach(copy.encryptionReleaseTitle);
+  expect(host.textContent).toContain("v0.11.0");
+  expect(host.textContent).toContain(copy.encryptionReleaseKeyNote);
+  expect(host.querySelector(`a[href="https://example.test/docs/workspace-encryption"]`)).toBeTruthy();
+  expect(host.textContent).not.toContain(copy.encryptionEnabled);
   reach(copy.migrateTitle);
   clickCard(copy.migrateNo);
   if (path === "team" && full) {
@@ -100,27 +101,38 @@ function copiedText() {
   return [...host.querySelectorAll("[data-copy]")].map((item) => item.getAttribute("data-copy")).join("\n");
 }
 
-describe("self-hosting encryption choice", () => {
+describe("published self-hosting installation capabilities", () => {
   for (const path of ["local", "team", "full"] as const) {
-    for (const enabled of [true, false]) {
-      it(`${path} manual commands honor ${enabled ? "enabled" : "disabled"} encryption`, () => {
-        choose(path === "full" ? "team" : path, enabled, "manual", path === "full");
-        reach(path === "local" ? copy.manualLocalTitle : copy.installerTitle);
-        const command = copiedText();
-        expect(command).toContain(`--encryption ${enabled ? "enabled" : "disabled"}`);
-        expect(command).toContain(path === "local" ? "bootstrap:supabase" : "self-host:install");
-        if (path === "full") expect(command).toContain("--mode full");
-      });
-      it(`${path} assistant prompts honor ${enabled ? "enabled" : "disabled"} encryption`, () => {
-        choose(path === "full" ? "team" : path, enabled, "agent", path === "full");
-        reach(copy.agentTitle);
-        const prompt = copiedText();
-        expect(prompt).toContain(`--encryption ${enabled ? "enabled" : "disabled"}`);
-        expect(prompt).toContain(`MINDDY_CONTENT_ENCRYPTION_ENABLED=${enabled}`);
-        expect(prompt).toContain("MINDDY_DATA_ROOT_KEY");
-        if (path === "full") expect(prompt).toContain("--mode full");
-        expect(prompt).not.toContain("MINDDY_ENCRYPTION_SETUP");
-      });
-    }
+    it(`${path} manual commands omit the unsupported encryption flag`, () => {
+      choose(path === "full" ? "team" : path, "manual", path === "full");
+      reach(path === "local" ? copy.manualLocalTitle : path === "full" ? copy.fullPreparationTitle : copy.installerTitle);
+      const command = copiedText();
+      expect(command).not.toContain("--encryption");
+      expect(command).not.toContain("MINDDY_CONTENT_ENCRYPTION_ENABLED=");
+      expect(command).toContain(path === "local" ? "bootstrap:supabase" : "self-host:install");
+      if (path === "local") expect(command).toContain("git clone --branch v0.11.0");
+      if (path === "full") {
+        expect(command).toContain("--mode full --skip-start");
+        expect(host.querySelector(`a[href="https://example.test/docs/install-a-server#adapted-start"]`)).toBeTruthy();
+        expect(host.textContent).toContain(copy.fullPreparedDone);
+      }
+    });
+    it(`${path} assistant prompt distinguishes published installation from candidate encryption tooling`, () => {
+      choose(path === "full" ? "team" : path, "agent", path === "full");
+      reach(copy.agentTitle);
+      const prompt = copiedText();
+      expect(prompt).not.toMatch(/--encryption (enabled|disabled)/);
+      expect(prompt).not.toContain("MINDDY_CONTENT_ENCRYPTION_ENABLED=");
+      expect(prompt).toContain("Exact release: v0.11.0");
+      expect(prompt).toContain("0.11.1 candidate");
+      expect(prompt).toContain("MINDDY_DATA_ROOT_KEY");
+      expect(prompt).toContain("https://example.test/docs/workspace-encryption");
+      if (path === "full") {
+        expect(prompt).toContain("--mode full --skip-start");
+        expect(prompt).toContain(copy.fullPreparationBody);
+        expect(prompt).toContain("https://example.test/docs/install-a-server#adapted-start");
+      }
+      expect(prompt).not.toContain("MINDDY_ENCRYPTION_SETUP");
+    });
   }
 });

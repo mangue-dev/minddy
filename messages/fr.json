@@ -5647,7 +5647,16 @@
     "installerDone": "l'installateur se termine et laisse tous les conteneurs tourner.",
     "emailDone": "un compte de test reçoit bien son e-mail de confirmation.",
     "verifyLocalDone": "les trois vérifications passent.",
-    "verifyTeamDone": "le doctor ne rapporte aucun échec."
+    "verifyTeamDone": "le doctor ne rapporte aucun échec.",
+    "encryptionReleaseTitle": "Le chiffrement dans cette version",
+    "encryptionReleaseBody": "Ces commandes clonent MINDDY_RELEASE_TAG sans configurer le chiffrement du contenu. Les scripts de la release publique v0.11.0 ne reconnaissent pas les options --encryption documentées pour le candidat 0.11.1. Pour chiffrer le contenu, suivez le guide de la version concernée et vérifiez que les outils et la configuration du serveur correspondent avant d’ajouter des utilisateurs.",
+    "encryptionReleaseKeyNote": "Conservez MINDDY_DATA_ROOT_KEY lors des mises à jour et gardez une copie de récupération protégée. Sa présence ne prouve pas que le contenu est chiffré. Vérifiez la configuration effective de l’application et le schéma correspondant avant de vous fier au chiffrement du contenu. Le chiffrement des identifiants repose sur un mécanisme distinct.",
+    "encryptionReleaseGuide": "Lire le guide de chiffrement de la version concernée",
+    "releaseProcedureBody": "La release publique MINDDY_RELEASE_TAG présente des limites d’installation et d’exécution vérifiées. Suivez la procédure de votre profil, y compris les étapes de préparation et de démarrage propres à cette version. Avancer dans cet assistant ne vérifie pas que les services ont démarré ni que l’instance est prête.",
+    "releaseProcedureGuide": "Suivre la procédure de ce profil",
+    "fullPreparationTitle": "Préparer la configuration du profil complet",
+    "fullPreparationBody": "Cette commande crée la configuration protégée avec --skip-start : elle ne démarre pas les services et n’exécute pas l’initialisation de la base. Avant de passer aux e-mails, au diagnostic ou à l’inscription, suivez dans le guide serveur l’adaptation des outils épinglés et le démarrage adapté du profil complet. Conservez les secrets générés et le digest vérifié de l’image.",
+    "fullPreparedDone": "La configuration protégée existe et sa release ainsi que son image ont été contrôlées. Terminez la procédure de préparation et de démarrage liée avant de vérifier l’instance en fonctionnement."
   },
   "Mcp": {
     "metaTitle": "Tracker MCP open source pour les agents de code",

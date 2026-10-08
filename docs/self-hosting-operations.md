@@ -22,8 +22,14 @@ compose() {
   if [ "$MODE" = full ]; then
     files+=(-f "$SUPABASE_DIR/docker/docker-compose.yml")
   fi
-  docker compose --env-file "$MINDDY_ENV_FILE" "${files[@]}" \
-    -f "$CURRENT_RELEASE_DIR/deploy/self-hosted/compose.$MODE.yml" "$@"
+  files+=(-f "$CURRENT_RELEASE_DIR/deploy/self-hosted/compose.$MODE.yml")
+  if [ -n "${RESTORE_OVERRIDE:-}" ]; then
+    files+=(-f "$RESTORE_OVERRIDE")
+  fi
+  if [ -n "${RUNNER_FIX_OVERRIDE:-}" ]; then
+    files+=(-f "$RUNNER_FIX_OVERRIDE")
+  fi
+  docker compose --env-file "$MINDDY_ENV_FILE" "${files[@]}" "$@"
 }
 compose ps
 ```
@@ -100,6 +106,13 @@ docker run --rm --network none --user 0:0 --entrypoint tar \
 tar -C "$CURRENT_RELEASE_DIR" -czf "$BACKUP_DIR/deployment.tar.gz" deploy/self-hosted
 if [ -n "${RESTORE_OVERRIDE:-}" ]; then
   install -m 0600 "$RESTORE_OVERRIDE" "$BACKUP_DIR/source-volume-override.yml"
+fi
+if [ -n "${RUNNER_FIX_OVERRIDE:-}" ]; then
+  test -n "${RUNNER_FIX_DIR:-}"
+  install -m 0600 "$RUNNER_FIX_OVERRIDE" "$BACKUP_DIR/runner-fix-override.yml"
+  tar -C "$RUNNER_FIX_DIR" -czf "$BACKUP_DIR/runner-fix-files.tar.gz" \
+    agent-runner.mjs agent-runner-storage.mjs SHA256SUMS Dockerfile.agent-sandbox sandbox-image.txt functions-bundle.json functions-bundle.tagged.json
+  docker image save "$(cat "$RUNNER_FIX_DIR/sandbox-image.txt")" | gzip > "$BACKUP_DIR/runner-sandbox-image.tar.gz"
 fi
 sudo chown "$(id -u):$(id -g)" "$BACKUP_DIR/supabase-docker.tar.gz"
 (
@@ -246,6 +259,19 @@ fi
 sudo tar --numeric-owner --acls --xattrs -xzf "$BACKUP_DIR/supabase-docker.tar.gz" \
   -C "$SUPABASE_DIR"
 install -m 0600 "$BACKUP_DIR/instance.env" "$MINDDY_ENV_FILE"
+if [ -f "$BACKUP_DIR/runner-fix-files.tar.gz" ]; then
+  : "${RUNNER_FIX_DIR:?Set the saved absolute runner tooling directory}"
+  : "${RUNNER_FIX_OVERRIDE:?Set the saved absolute runner override path}"
+  test "$RUNNER_FIX_OVERRIDE" = "$RUNNER_FIX_DIR/compose.runner-fix.yml"
+  test ! -e "$RUNNER_FIX_DIR"
+  sudo install -d -m 0755 -o "$(id -u)" -g "$(id -g)" "$RUNNER_FIX_DIR"
+  tar -xzf "$BACKUP_DIR/runner-fix-files.tar.gz" -C "$RUNNER_FIX_DIR"
+  (cd "$RUNNER_FIX_DIR"; sha256sum --check SHA256SUMS)
+  gzip -dc "$BACKUP_DIR/runner-sandbox-image.tar.gz" | docker image load
+  export RUNNER_SANDBOX_IMAGE="$(cat "$RUNNER_FIX_DIR/sandbox-image.txt")"
+  docker image inspect "$RUNNER_SANDBOX_IMAGE" >/dev/null
+  install -m 0600 "$BACKUP_DIR/runner-fix-override.yml" "$RUNNER_FIX_OVERRIDE"
+fi
 # Edit deployment paths, public origins, SITE_URL, SUPABASE_PUBLIC_URL,
 # API_EXTERNAL_URL, host/site addresses, and ADDITIONAL_REDIRECT_URLS.
 # Review the HTTP bind addresses when moving between localhost and a private LAN.
@@ -262,10 +288,15 @@ volumes:
     name: minddy-restored-caddy-config
 EOF
 compose() {
-  docker compose --env-file "$MINDDY_ENV_FILE" \
-    -f "$SUPABASE_DIR/docker/docker-compose.yml" \
-    -f "$CURRENT_RELEASE_DIR/deploy/self-hosted/compose.full.yml" \
-    -f "$RESTORE_OVERRIDE" "$@"
+  local files=(
+    -f "$SUPABASE_DIR/docker/docker-compose.yml"
+    -f "$CURRENT_RELEASE_DIR/deploy/self-hosted/compose.full.yml"
+    -f "$RESTORE_OVERRIDE"
+  )
+  if [ -n "${RUNNER_FIX_OVERRIDE:-}" ]; then
+    files+=(-f "$RUNNER_FIX_OVERRIDE")
+  fi
+  docker compose --env-file "$MINDDY_ENV_FILE" "${files[@]}" "$@"
 }
 BACKUP_HELPER_IMAGE="$(cat "$BACKUP_DIR/postgres-image-id.txt")"
 docker image inspect "$BACKUP_HELPER_IMAGE" >/dev/null
@@ -311,3 +342,7 @@ roles and server filesystem, so use their supported restore workflow.
 
 See the [logical backup and restore procedure](self-hosting-logical-operations.md)
 for SQL schema/data exports, managed policies and provider Storage requirements.
+
+## Persist pinned runner tooling
+
+If the instance uses the pinned runner workaround, preserve RUNNER_FIX_OVERRIDE and RUNNER_FIX_DIR alongside any restore override. The additional files are part of the matching recovery set. Restore their absolute paths, or deliberately update both mounts to the restored location, before starting the runner. See the public [pinned engineering procedure](https://www.minddy.app/docs/install-a-server#runner-workaround). Historical installer/update commands do not consume this shell override. Reapply the explicit runner-only Compose recreation after those commands and before accepting code work.

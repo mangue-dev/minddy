@@ -30,6 +30,9 @@ interface GuideLinks {
   release: string;
   operations: string;
   compatibility?: string;
+  encryption: string;
+  localInstallation: string;
+  serverInstallation: string;
 }
 
 interface EmailTemplate {
@@ -435,7 +438,6 @@ export function SelfHostingInstallWizard({
   const [serverIp, setServerIp] = useState("");
   const [domain, setDomain] = useState("");
   const [email, setEmail] = useState("");
-  const [encryptionEnabled, setEncryptionEnabled] = useState(true);
   const [optionalFeatures, setOptionalFeatures] = useState<OptionalFeature[]>([]);
   const [stepIndex, setStepIndex] = useState(0);
   const [progressOpen, setProgressOpen] = useState(false);
@@ -455,20 +457,24 @@ export function SelfHostingInstallWizard({
   const serverSetupValid = addressValid && emailValid;
   const localOrigin = "http://localhost:6463";
 
-  const encryptionMode = encryptionEnabled ? "enabled" : "disabled";
-  const encryptionFlag = `--encryption ${encryptionMode}`;
-  const localEncryptionSetup = `pnpm bootstrap:supabase -- --minimal --app-url ${localOrigin} ${encryptionFlag}`;
-  const encryptionPrompt = `${copy.encryptionSetup}\nMINDDY_CONTENT_ENCRYPTION_ENABLED=${encryptionEnabled}\n${copy.encryptionKeyNote}`;
+  const encryptionReleaseNote = replaceTokens(copy.encryptionReleaseBody, { MINDDY_RELEASE_TAG: releaseTag });
+  const encryptionKeyNote = copy.encryptionReleaseKeyNote;
+  const localBootstrap = `pnpm bootstrap:supabase -- --minimal --app-url ${localOrigin}`;
+  const installationGuide = path === "local" ? links.localInstallation : links.serverInstallation;
+  const releaseProcedureNote = replaceTokens(copy.releaseProcedureBody, { MINDDY_RELEASE_TAG: releaseTag });
+  const fullPreparationNote = `${copy.fullPreparationBody}\n${copy.releaseProcedureGuide}: ${links.serverInstallation}#adapted-start`;
+  const releasePrompt = `${releaseProcedureNote}\n${copy.releaseProcedureGuide}: ${installationGuide}`;
+  const encryptionPrompt = `${encryptionReleaseNote}\n${encryptionKeyNote}\n${copy.encryptionReleaseGuide}: ${links.encryption}\n${releasePrompt}`;
 
-  const localInstall = `git clone --branch ${releaseTag} --depth 1 ${repositoryUrl}.git minddy\ncd minddy\ncorepack enable\ncorepack prepare pnpm@${pnpmVersion} --activate\npnpm install --frozen-lockfile\n${localEncryptionSetup}`;
+  const localInstall = `git clone --branch ${releaseTag} --depth 1 ${repositoryUrl}.git minddy\ncd minddy\ncorepack enable\ncorepack prepare pnpm@${pnpmVersion} --activate\npnpm install --frozen-lockfile\n${localBootstrap}`;
   const serverClone = `git clone --branch ${releaseTag} --depth 1 ${repositoryUrl}.git minddy\ncd minddy`;
   const verificationUrl = `${repositoryUrl}/blob/${releaseTag}/docs/container-image.md#verify-a-published-image`;
   const serverDependencies = `test "$(pnpm --version)" = ${pnpmVersion}\npnpm install --frozen-lockfile`;
   const fetchSupabase = "node scripts/fetch-official-supabase.mjs --destination /srv/minddy/supabase";
-  const featureFlags = ` \\\n  ${encryptionFlag}` + optionalFeatures.map((feature) => ` \\\n  --enable ${feature}`).join("");
+  const featureFlags = optionalFeatures.map((feature) => ` \\\n  --enable ${feature}`).join("");
   const installServer = supabaseMode === "managed"
     ? `pnpm self-host:install -- --image "$IMAGE" --mode managed \\\n  --app-url ${serverOrigin} \\\n  --admin-email ${adminEmail}${featureFlags}`
-    : `${serverAccess === "public" ? `pnpm self-host:install -- --image "$IMAGE" --mode full \\\n  --app-url ${serverOrigin} \\\n  --admin-email ${adminEmail} \\\n  --supabase-host supabase.${host} \\\n  --supabase-dir /srv/minddy/supabase` : `pnpm self-host:install -- --image "$IMAGE" --mode full \\\n  --app-url ${serverOrigin} \\\n  --admin-email ${adminEmail} \\\n  --supabase-dir /srv/minddy/supabase`}${featureFlags}`;
+    : `${serverAccess === "public" ? `pnpm self-host:install -- --image "$IMAGE" --mode full --skip-start \\\n  --app-url ${serverOrigin} \\\n  --admin-email ${adminEmail} \\\n  --supabase-host supabase.${host} \\\n  --supabase-dir /srv/minddy/supabase` : `pnpm self-host:install -- --image "$IMAGE" --mode full --skip-start \\\n  --app-url ${serverOrigin} \\\n  --admin-email ${adminEmail} \\\n  --supabase-dir /srv/minddy/supabase`}${featureFlags}`;
   const doctor = supabaseMode === "managed"
     ? "pnpm self-host:doctor -- --mode managed"
     : "pnpm self-host:doctor -- --mode full --supabase-compose /srv/minddy/supabase/docker/docker-compose.yml";
@@ -497,7 +503,7 @@ export function SelfHostingInstallWizard({
     MINDDY_RELEASE_TAG: releaseTag,
     MINDDY_PNPM_VERSION: pnpmVersion,
     MINDDY_LOCAL_ORIGIN: localOrigin,
-    MINDDY_ENCRYPTION_SETUP: `${encryptionPrompt}\n${localEncryptionSetup}`,
+    MINDDY_ENCRYPTION_SETUP: `${encryptionPrompt}\n${localBootstrap}`,
     MINDDY_DOWNLOAD_URL: links.download,
   });
 
@@ -514,7 +520,7 @@ export function SelfHostingInstallWizard({
     MINDDY_DOWNLOAD_URL: links.download,
     MINDDY_SUPABASE_PREPARATION: supabaseMode === "managed" ? copy.teamPromptManagedPreparation.replaceAll("MINDDY_APP_ORIGIN", serverOrigin) : copy.teamPromptFullPreparation,
     MINDDY_VERIFY_RELEASE: `${copy.releaseVerificationBody}\n${verificationUrl}\n${serverDependencies}`,
-    MINDDY_INSTALL_COMMAND: installServer,
+    MINDDY_INSTALL_COMMAND: supabaseMode === "full" ? `${installServer}\n\n${fullPreparationNote}` : installServer,
     MINDDY_DOCTOR_COMMAND: doctor,
   }) + `\n\n${encryptionPrompt}` + emailSetupPrompt + selectedFeaturePrompt + `\n\n${copy.serverRoutinesPrompt}` + transferPrompt;
   const toggleFeature = (feature: OptionalFeature) => {
@@ -567,16 +573,15 @@ export function SelfHostingInstallWizard({
     },
     {
       id: "encryption-choice",
-      title: copy.encryptionChoiceTitle,
-      body: copy.encryptionChoiceBody,
+      title: copy.encryptionReleaseTitle,
+      body: encryptionReleaseNote,
       canContinue: true,
       content: (
         <div className={PANEL}>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <OptionCard selected={encryptionEnabled} onSelect={() => setEncryptionEnabled(true)} icon={ShieldCheck} title={copy.encryptionEnabled} body={copy.encryptionEnabledBody} badge={copy.recommended} />
-            <OptionCard tone={CARD_TONES.sky} selected={!encryptionEnabled} onSelect={() => setEncryptionEnabled(false)} icon={DatabaseIcon} title={copy.encryptionDisabled} body={copy.encryptionDisabledBody} />
-          </div>
-          <p className="mt-4 text-sm leading-relaxed text-muted-foreground">{copy.encryptionKeyNote}</p>
+          <p className="text-sm leading-relaxed text-muted-foreground">{encryptionKeyNote}</p>
+          <div className="mt-4"><ResourceLink href={links.encryption}>{copy.encryptionReleaseGuide}</ResourceLink></div>
+          <p className="mt-5 text-sm leading-relaxed text-muted-foreground">{releaseProcedureNote}</p>
+          <div className="mt-4"><ResourceLink href={installationGuide}>{copy.releaseProcedureGuide}</ResourceLink></div>
         </div>
       ),
     },
@@ -746,7 +751,7 @@ export function SelfHostingInstallWizard({
           <div className={HIGHLIGHT_PANEL}>
             <CommandBlock command={localInstall} copy={copy} />
             <p className="mt-4 flex items-start gap-2 text-sm leading-relaxed text-muted-foreground"><AppIcon icon={ShieldCheck} className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />{copy.minimalNote}</p>
-            <p className="mt-4 text-sm leading-relaxed text-muted-foreground">{copy.encryptionKeyNote}</p>
+            <p className="mt-4 text-sm leading-relaxed text-muted-foreground">{encryptionKeyNote}</p>
             <CompletionNote copy={copy} criterion={copy.manualLocalDone} />
           </div>
         ),
@@ -788,12 +793,12 @@ export function SelfHostingInstallWizard({
       }] : []),
       {
         id: "team-installer",
-        title: copy.installerTitle,
-        body: copy.installerBody,
+        title: supabaseMode === "full" ? copy.fullPreparationTitle : copy.installerTitle,
+        body: supabaseMode === "full" ? copy.fullPreparationBody : copy.installerBody,
         canContinue: true,
-        continueLabel: copy.confirmInstaller,
+        continueLabel: supabaseMode === "full" ? copy.continueLabel : copy.confirmInstaller,
         content: (
-          <div className={HIGHLIGHT_PANEL}><CommandBlock command={installServer} copy={copy} /><p className="mt-4 flex items-start gap-2 text-sm leading-relaxed text-muted-foreground"><AppIcon icon={ShieldCheck} className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />{copy.installerSafe}</p><p className="mt-4 text-sm leading-relaxed text-muted-foreground">{copy.encryptionKeyNote}</p>{selectedFeatures.length > 0 && <div className="mt-4 rounded-xl border border-border bg-background p-4"><p className="text-sm font-medium">{copy.selectedServicesPrompt}</p><Checklist items={selectedFeatures.map(({ title, setup }) => `${title}: ${setup}`)} /></div>}<CompletionNote copy={copy} criterion={copy.installerDone} /></div>
+          <div className={HIGHLIGHT_PANEL}>{supabaseMode === "full" && <div className="mb-4"><ResourceLink href={`${links.serverInstallation}#adapted-start`}>{copy.releaseProcedureGuide}</ResourceLink></div>}<CommandBlock command={installServer} copy={copy} /><p className="mt-4 flex items-start gap-2 text-sm leading-relaxed text-muted-foreground"><AppIcon icon={ShieldCheck} className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />{copy.installerSafe}</p><p className="mt-4 text-sm leading-relaxed text-muted-foreground">{encryptionKeyNote}</p>{selectedFeatures.length > 0 && <div className="mt-4 rounded-xl border border-border bg-background p-4"><p className="text-sm font-medium">{copy.selectedServicesPrompt}</p><Checklist items={selectedFeatures.map(({ title, setup }) => `${title}: ${setup}`)} /></div>}<CompletionNote copy={copy} criterion={supabaseMode === "full" ? copy.fullPreparedDone : copy.installerDone} /></div>
         ),
       },
     ] : []),

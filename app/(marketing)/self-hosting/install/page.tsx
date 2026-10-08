@@ -46,6 +46,9 @@ export default async function SelfHostingInstallPage({
         initialPath={initialPath}
         links={{
           compatibility: documentationPath("self-hosted-compatibility", locale),
+          encryption: documentationPath("workspace-encryption", locale),
+          localInstallation: documentationPath("install-locally", locale),
+          serverInstallation: documentationPath("install-a-server", locale),
           guide: `${SITE_URL}${localizedHref("/self-hosting/install", locale)}`,
           download: `${SITE_URL}${localizedHref("/download", locale)}`,
           release: `${MINDDY_REPOSITORY_URL}/releases/tag/${releaseTag}`,
