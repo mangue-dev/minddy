@@ -225,7 +225,7 @@ async function listPullRequests(
     .from("pull_requests")
     .select(
       "id, number, title, state, url, author_login, head_branch, base_branch, opened_at, merged_at, updated_at, " +
-        "issue:issues(id, number, project:projects(key))",
+        "issue:issues!pull_requests_issue_id_fkey(id, number, project:projects(key))",
     )
     .eq("provider", target.provider)
     .eq("repo_full_name", await repositoryStorageName(target.provider,

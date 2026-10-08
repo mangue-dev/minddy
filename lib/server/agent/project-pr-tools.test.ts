@@ -39,6 +39,7 @@ const world = {
   issueRows: [] as Array<{ id: string; project_id: string; title: string }>,
   /** What the query actually asked for — the test reads that, not an intent. */
   query: {} as {
+    select?: string;
     eq?: Record<string, unknown>;
     in?: { column: string; values: unknown[] };
     ilike?: [string, unknown];
@@ -70,7 +71,10 @@ vi.mock("@/lib/supabase-service", () => {
           error: null }).then(resolve);
       return q;
     }
-    q.select = chain;
+    q.select = (columns: string) => {
+      world.query.select = columns;
+      return q;
+    };
     q.order = chain;
     q.eq = (column: string, value: unknown) => {
       world.query.eq = { ...world.query.eq, [column]: value };
@@ -224,6 +228,20 @@ beforeEach(() => {
 });
 
 describe("list_pull_requests", () => {
+  it("selects the primary issue relation without dropping unlinked pull requests", async () => {
+    world.rows = [makeRow(), makeRow({ number: 43, issue: null })];
+    world.issueRows = [{ id: "issue-7", project_id: "project-1", title: "The ticket" }];
+    const res = await call("list_pull_requests");
+    expect(res.success).toBe(true);
+    expect(world.query.select).toContain("issue:issues!pull_requests_issue_id_fkey(");
+    expect(world.query.select).not.toContain("!inner");
+    expect((res.result as { pull_requests: Array<{ number: number; issue: unknown }> }).pull_requests)
+      .toEqual([
+        expect.objectContaining({ number: 42, issue: { identifier: "MIN-7", title: "The ticket" } }),
+        expect.objectContaining({ number: 43, issue: null }),
+      ]);
+  });
+
   it("passe ses filtres à la requête et compose l'identifiant du ticket", async () => {
     const res = await call("list_pull_requests", {
       state: ["open", "merged"],

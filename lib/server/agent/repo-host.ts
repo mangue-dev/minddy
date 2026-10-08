@@ -18,6 +18,7 @@ import { resolveWithin, resolveReadable, assertNotGit } from "./repo-path";
 import type { HarnessLayout } from "./harness-layout";
 import { commitMessageWithSignoff } from "./commit-message";
 import { PR_BASE_TAG } from "./pr-refs";
+import { gitPushError } from "./git-push-error";
 
 export { PR_BASE_TAG } from "./pr-refs";
 
@@ -455,7 +456,7 @@ export async function commitAndPush(
     { timeoutMs: 120_000 },
   );
   if (push.exitCode !== 0)
-    throw new Error("repository_push_failed");
+    throw gitPushError(push);
 
   return {
     committed: dirty,
