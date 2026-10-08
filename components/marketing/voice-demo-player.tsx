@@ -2,7 +2,7 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowDown01Icon, ArrowRight01Icon, LoaderCircleIcon, Mic01Icon, SquareIcon } from "@hugeicons/core-free-icons";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { cn } from "mangue-ui/lib/utils";
 import { PriorityIndicator } from "@/components/issue-indicators";
@@ -119,6 +119,7 @@ export function VoiceDemoPlayer({ labels, embedded = false }: { labels: VoiceDem
   const t = useTranslations("Landing");
   const locale = useLocale();
   const { track } = useAnalytics();
+  const instructionId = useId();
 
   const [status, setStatus] = useState<Status>("idle");
   const [stream, setStream] = useState<MediaStream | null>(null);
@@ -409,24 +410,32 @@ export function VoiceDemoPlayer({ labels, embedded = false }: { labels: VoiceDem
 
   return (
     <figure className={cn(embedded ? "text-foreground" : "rounded-xl border border-border bg-card p-6 shadow-sm sm:p-8")}>
+      {embedded && <figcaption className="mb-4 flex flex-wrap items-baseline gap-x-3 gap-y-1 text-xs">
+        <span className="font-medium">{t("voiceDemoInteractive")}</span>
+        <span className="text-muted-foreground">{t("voiceDemoPreviewOnly")}</span>
+      </figcaption>}
       {/* `[&>*]:min-w-0`: without it, a grid column takes the width of
           its longest content (the example sentences, in `nowrap`) and the
           page overflows horizontally on mobile. */}
       <div className={cn("grid gap-6 md:gap-8 [&>*]:min-w-0", embedded ? "md:grid-cols-2" : "md:grid-cols-[1fr_auto_1fr]")}>
         {/* ── What you say ───────────────────── ────────────────────── */}
         {embedded ? (
-          <div className="relative flex h-[240px] flex-col items-center justify-center md:h-[320px]">
+          <div className="flex min-h-[240px] flex-col items-center justify-center gap-3 text-center md:min-h-[320px]">
             <button type="button" onClick={status === "recording" ? stopRecording : startRecording}
               disabled={status === "processing"}
-              aria-label={status === "recording" ? t("voiceDemoStop") : t("voiceDemoStart")}
-              className="flex size-24 items-center justify-center rounded-full transition-colors hover:bg-white/30 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-current disabled:opacity-50 dark:hover:bg-white/5">
-              {status === "processing" ? <HugeiconsIcon icon={LoaderCircleIcon} className="size-12 animate-spin motion-reduce:animate-none" strokeWidth={1.25} aria-hidden /> :
-                status === "recording" ? <HugeiconsIcon icon={SquareIcon} className="size-9" strokeWidth={1.25} aria-hidden /> :
-                <HugeiconsIcon icon={Mic01Icon} className="size-14" strokeWidth={1.25} aria-hidden />}
+              aria-describedby={instructionId}
+              className="flex max-w-full flex-col items-center justify-center gap-2 rounded-2xl border border-current/15 bg-white/20 px-6 py-4 transition-colors hover:bg-white/40 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-current disabled:opacity-50 dark:bg-black/10 dark:hover:bg-black/20">
+              {status === "processing" ? <HugeiconsIcon icon={LoaderCircleIcon} className="size-10 animate-spin motion-reduce:animate-none" strokeWidth={1.25} aria-hidden /> :
+                status === "recording" ? <HugeiconsIcon icon={SquareIcon} className="size-10" strokeWidth={1.25} aria-hidden /> :
+                <HugeiconsIcon icon={Mic01Icon} className="size-10" strokeWidth={1.25} aria-hidden />}
+              <span className="text-sm font-medium">{status === "recording" ? t("voiceDemoStop") : status === "processing" ? t("voiceDemoProcessing") : t("voiceDemoTryMic")}</span>
             </button>
-            <div className="absolute inset-x-0 top-[calc(50%+3.5rem)] text-center text-sm" role="status">
-              {error || (status === "recording" ? `${t("voiceDemoStop")} · ${formatTime(elapsedMs)}` : status === "processing" ? t("voiceDemoProcessing") : "")}
-            </div>
+            <p id={instructionId} className="max-w-xs text-xs leading-relaxed text-muted-foreground">{t("voiceDemoInstruction", { stop: t("voiceDemoStop") })}</p>
+            <div className="text-sm" role="status">{error || (status === "recording" ? `${t("voiceDemoListening")} · ${formatTime(elapsedMs)}` : status === "processing" ? t("voiceDemoProcessing") : "")}</div>
+            <button type="button" onClick={() => void playSample("stripe")} disabled={busy}
+              className="min-h-11 rounded-sm px-2 text-xs underline underline-offset-4 hover:no-underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-current disabled:opacity-50">
+              {t("voiceDemoSamples")}
+            </button>
             <p className="sr-only" aria-live="polite">{transcript}</p>
           </div>
         ) : (
