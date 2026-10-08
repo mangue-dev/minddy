@@ -117,8 +117,8 @@ export function DocumentationContents({ sections, label }: { sections: Section[]
         <span className="truncate">{sections.find(section => section.id === activeId)?.title ?? sections[0].title}</span>
         <HugeiconsIcon icon={ArrowRight01Icon} className="size-4 shrink-0 transition-transform duration-200 group-data-[state=open]:rotate-90 motion-reduce:transition-none" aria-hidden />
       </CollapsibleTrigger>
-      <CollapsibleContent className="motion-reduce:animate-none"><div className="max-h-[calc(100dvh-12rem)] overflow-y-auto overscroll-contain pb-4">{contents}</div></CollapsibleContent>
+      <CollapsibleContent className="motion-reduce:animate-none"><div className="max-h-[calc(100dvh-12rem)] overflow-y-auto pb-4">{contents}</div></CollapsibleContent>
     </Collapsible>
-    <aside className="fixed bottom-0 right-0 top-16 hidden w-64 overflow-y-auto overscroll-contain px-6 py-12 xl:block">{contents}</aside>
+    <aside className="fixed bottom-0 right-0 top-16 hidden w-64 overflow-y-auto px-6 py-12 xl:block">{contents}</aside>
   </>;
 }
