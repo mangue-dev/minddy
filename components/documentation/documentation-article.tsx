@@ -61,7 +61,9 @@ export async function DocumentationArticleView({ article, articles }: { article:
           })}
         </div>
         {!!related.length && <section className="mt-12 border-t border-border pt-6"><h2 className="font-semibold">{t("related")}</h2><ul className="mt-3 space-y-2">{related.map(item => <li key={item.id}><a href={documentationPath(item.id, article.locale)} className="underline underline-offset-4">{item.title}</a></li>)}</ul></section>}
-        <DocumentationErrorReport articleId={article.id} locale={article.locale} revision={article.revision} label={t("report")} />
+        <DocumentationErrorReport subject={`${t("articleLabel")}: ${article.id} (${article.locale})`}
+          body={`${t("articleLabel")}: ${article.id}\n${t("localeLabel")}: ${article.locale}\n${t("revisionLabel")}: ${article.revision}\n\n`}
+          label={t("report")} />
       </article>
       <aside className="hidden xl:block"><nav aria-label={t("contents")} className="sticky top-24 max-h-[calc(100dvh-8rem)] overflow-auto"><p className="mb-3 font-medium">{t("contents")}</p>{contents}</nav></aside>
     </div>

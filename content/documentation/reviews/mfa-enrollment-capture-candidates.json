@@ -1,0 +1,151 @@
+{
+  "reviewer": "agent:/root/automation_account_documentation",
+  "date": "2026-10-08",
+  "profile": "Guarded demo account, real TOTP enrollment and cancellation, secret fields masked at screenshot time; no account security activation",
+  "publicationApproved": false,
+  "captures": [
+    {
+      "article": "account-security-enrollment",
+      "locale": "fr",
+      "url": "http://localhost:3000/settings?tab=security",
+      "output": "public/documentation/fr/account-security-enrollment-workflow.png",
+      "lang": "fr",
+      "text": "Double authentification\n\nScannez ceci avec votre application d'authentification\n\n1Password, Bitwarden, Google Authenticator, Raycast; n'importe laquelle fait l'affaire.\n\nImpossible de scanner ? Saisissez cette clé à la main : [redacted TOTP secret]\n\nPuis tapez le code affiché\n–\nActiver\nAnnuler",
+      "viewport": [
+        1440,
+        1200
+      ],
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "secretRedaction": [
+        "TOTP QR code",
+        "manual enrollment secret"
+      ],
+      "action": "Create an unverified demo TOTP factor to photograph the real enrollment controls, then cancel through the UI. Never verify a code or generate recovery codes.",
+      "cleanup": "UI returned to enable enrollment; temporary factor cancellation completed",
+      "reviewed": true,
+      "sha256": "15baa5f8f200efae4434583a1fde6a520ff547a1fd1bcd8e9f6251d35334c743",
+      "visualReviewer": "agent:/root/automation_account_documentation"
+    },
+    {
+      "article": "account-security-enrollment",
+      "locale": "de",
+      "url": "http://localhost:3000/settings?tab=security",
+      "output": "public/documentation/de/account-security-enrollment-workflow.png",
+      "lang": "de",
+      "text": "Zwei-Faktor-Authentifizierung\n\nScannen Sie dies mit Ihrer Authentifizierungs-App\n\n1Passwort, Bitwarden, Google Authenticator, Raycast; Jeder von ihnen reicht aus.\n\nScannen nicht möglich? Geben Sie diesen Schlüssel manuell ein: [redacted TOTP secret]\n\nGeben Sie dann den angezeigten Code ein\n–\nAktivieren\nAbbrechen",
+      "viewport": [
+        1440,
+        1200
+      ],
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "secretRedaction": [
+        "TOTP QR code",
+        "manual enrollment secret"
+      ],
+      "action": "Create an unverified demo TOTP factor to photograph the real enrollment controls, then cancel through the UI. Never verify a code or generate recovery codes.",
+      "cleanup": "UI returned to enable enrollment; temporary factor cancellation completed",
+      "reviewed": true,
+      "sha256": "390e8d01e4854e078e7911376762316eb5c3b6088d5b18cfd8b37801c6431b29",
+      "visualReviewer": "agent:/root/automation_account_documentation"
+    },
+    {
+      "article": "account-security-enrollment",
+      "locale": "es",
+      "url": "http://localhost:3000/settings?tab=security",
+      "output": "public/documentation/es/account-security-enrollment-workflow.png",
+      "lang": "es",
+      "text": "Autenticación de dos factores\n\nEscánelo con tu aplicación de autenticación\n\n1Password, Bitwarden, Google Authenticator, Raycast; cualquiera de ellos lo hará.\n\nIntroduce esta clave manualmente: [redacted TOTP secret]\n\nLuego escriba el código que muestra\n–\nEnciende\nCancelar",
+      "viewport": [
+        1440,
+        1200
+      ],
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "secretRedaction": [
+        "TOTP QR code",
+        "manual enrollment secret"
+      ],
+      "action": "Create an unverified demo TOTP factor to photograph the real enrollment controls, then cancel through the UI. Never verify a code or generate recovery codes.",
+      "cleanup": "UI returned to enable enrollment; temporary factor cancellation completed",
+      "reviewed": true,
+      "sha256": "74c7337105c093ef299a6203729179908d9f7a905e0b7e73769a0d63f8a65454",
+      "visualReviewer": "agent:/root/automation_account_documentation"
+    },
+    {
+      "article": "account-security-enrollment",
+      "locale": "it",
+      "url": "http://localhost:3000/settings?tab=security",
+      "output": "public/documentation/it/account-security-enrollment-workflow.png",
+      "lang": "it",
+      "text": "Autenticazione a due fattori\n\nScansiona questo con la tua applicazione autenticatore\n\n1Password, Bitwarden, Google Authenticator, Raycast; ognuno di loro lo farà.\n\nNon riesci a scansionare? Inserisci manualmente questa chiave: [redacted TOTP secret]\n\nDigitare poi il codice che mostra\n–\nAccendete\nAnnulla",
+      "viewport": [
+        1440,
+        1200
+      ],
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "secretRedaction": [
+        "TOTP QR code",
+        "manual enrollment secret"
+      ],
+      "action": "Create an unverified demo TOTP factor to photograph the real enrollment controls, then cancel through the UI. Never verify a code or generate recovery codes.",
+      "cleanup": "UI returned to enable enrollment; temporary factor cancellation completed",
+      "reviewed": true,
+      "sha256": "1af79cf526ce1e5c7eabeae6f479b9c57a13667562ab820f91e75f0c17c978bf",
+      "visualReviewer": "agent:/root/automation_account_documentation"
+    },
+    {
+      "article": "account-security-enrollment",
+      "locale": "pt-BR",
+      "url": "http://localhost:3000/settings?tab=security",
+      "output": "public/documentation/pt-BR/account-security-enrollment-workflow.png",
+      "lang": "pt-BR",
+      "text": "Autenticação de dois fatores\n\nVerifique isso com seu aplicativo autenticador\n\n1Password, Bitwarden, Google Authenticator, Raycast; qualquer um deles serve.\n\nNão consegue escanear? Insira esta chave manualmente: [redacted TOTP secret]\n\nEm seguida, digite o código que ela mostra\n–\nAtive\nCancelar",
+      "viewport": [
+        1440,
+        1200
+      ],
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "secretRedaction": [
+        "TOTP QR code",
+        "manual enrollment secret"
+      ],
+      "action": "Create an unverified demo TOTP factor to photograph the real enrollment controls, then cancel through the UI. Never verify a code or generate recovery codes.",
+      "cleanup": "UI returned to enable enrollment; temporary factor cancellation completed",
+      "reviewed": true,
+      "sha256": "ee56a43671e38bfb35ab282acb46128902b7791192476791f563f16a644d8a54",
+      "visualReviewer": "agent:/root/automation_account_documentation"
+    },
+    {
+      "article": "account-security-enrollment",
+      "locale": "en",
+      "url": "http://localhost:3000/settings?tab=security",
+      "output": "public/documentation/en/account-security-enrollment-workflow.png",
+      "lang": "en",
+      "text": "Two-factor authentication\n\nScan this with your authenticator app\n\n1Password, Bitwarden, Google Authenticator, Raycast; any of them will do.\n\nCan't scan? Enter this key by hand: [redacted TOTP secret]\n\nThen type the code it shows\n–\nTurn on\nCancel",
+      "viewport": [
+        1440,
+        1200
+      ],
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "secretRedaction": [
+        "TOTP QR code",
+        "manual enrollment secret"
+      ],
+      "action": "Create an unverified demo TOTP factor to photograph the real enrollment controls, then cancel through the UI. Never verify a code or generate recovery codes.",
+      "cleanup": "UI returned to enable enrollment; temporary factor cancellation completed",
+      "reviewed": true,
+      "sha256": "d10a951aa516e84ed497d294b3892107e31be4b36a27de210bcc665b444f150f",
+      "visualReviewer": "agent:/root/automation_account_documentation"
+    }
+  ],
+  "visualReview": {
+    "date": "2026-10-08",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "method": "Inspected each final locale image, actual controls, locale, masked secrets and demonstration data. These images do not establish workflow execution or publication approval."
+  }
+}

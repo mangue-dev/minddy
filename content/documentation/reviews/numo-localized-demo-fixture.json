@@ -1,0 +1,82 @@
+{
+  "scope": {
+    "project": "6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "account": "captures-demo@minddy.app",
+    "source": "captures/world/seed/006-numo.mjs"
+  },
+  "method": "Read-response display adaptation only. Exact seeded prose is translated; identifiers, roles, times, tool names, tool arguments and result counts remain unchanged. No model was run and no business data was written. This is a demonstration conversation, not execution evidence.",
+  "reviewer": "Codex agent automation_account_documentation",
+  "date": "2026-10-08",
+  "original": [
+    "Sweep the unassigned backlog",
+    "Nobody owns anything in the Aurora backlog. Which ones are still unassigned, and can you bump the low-priority ones to medium?",
+    "Let me pull the unassigned ones first.",
+    "Three are unassigned. AUR-10 is already medium, so I'll leave it. Bumping the other two.",
+    "Done — AUR-11 and AUR-7 are medium now. Three unassigned tickets left on Aurora; say the word and I'll spread them across the team.",
+    "Slack notifications for mentions",
+    "Public roadmap page",
+    "Export a project as CSV"
+  ],
+  "translations": {
+    "en": [
+      "Sweep the unassigned backlog",
+      "Nobody owns anything in the Aurora backlog. Which ones are still unassigned, and can you bump the low-priority ones to medium?",
+      "Let me pull the unassigned ones first.",
+      "Three are unassigned. AUR-10 is already medium, so I'll leave it. Bumping the other two.",
+      "Done — AUR-11 and AUR-7 are medium now. Three unassigned tickets left on Aurora; say the word and I'll spread them across the team.",
+      "Slack notifications for mentions",
+      "Public roadmap page",
+      "Export a project as CSV"
+    ],
+    "fr": [
+      "Passer en revue le backlog non assigné",
+      "Personne n'est assigné dans le backlog Aurora. Quels tickets sont encore non assignés, et peux-tu passer ceux de priorité faible à moyenne ?",
+      "Je vais d'abord récupérer les tickets non assignés.",
+      "Trois tickets ne sont pas assignés. AUR-10 est déjà de priorité moyenne, je le laisse donc tel quel. Je passe les deux autres à moyenne.",
+      "C'est fait : AUR-11 et AUR-7 sont maintenant de priorité moyenne. Trois tickets restent non assignés dans Aurora ; dis-moi si tu veux que je les répartisse dans l'équipe.",
+      "Notifications Slack pour les mentions",
+      "Page de feuille de route publique",
+      "Exporter un projet en CSV"
+    ],
+    "de": [
+      "Nicht zugewiesenen Backlog durchsehen",
+      "Im Aurora-Backlog ist niemand zugewiesen. Welche Tickets sind noch nicht zugewiesen? Kannst du die mit niedriger Priorität auf mittel setzen?",
+      "Ich suche zuerst die nicht zugewiesenen Tickets.",
+      "Drei Tickets sind nicht zugewiesen. AUR-10 hat bereits mittlere Priorität und bleibt unverändert. Die anderen beiden setze ich auf mittel.",
+      "Erledigt: AUR-11 und AUR-7 haben jetzt mittlere Priorität. Bei Aurora sind noch drei Tickets nicht zugewiesen. Sag Bescheid, wenn ich sie im Team verteilen soll.",
+      "Slack-Benachrichtigungen bei Erwähnungen",
+      "Öffentliche Roadmap-Seite",
+      "Ein Projekt als CSV exportieren"
+    ],
+    "es": [
+      "Revisar el backlog sin asignar",
+      "Nadie está asignado a los tickets del backlog de Aurora. ¿Cuáles siguen sin asignar? ¿Puedes subir de baja a media la prioridad de los que la tienen baja?",
+      "Primero voy a buscar los tickets sin asignar.",
+      "Hay tres sin asignar. AUR-10 ya tiene prioridad media, así que lo dejo como está. Voy a subir la prioridad de los otros dos.",
+      "Listo: AUR-11 y AUR-7 tienen ahora prioridad media. Quedan tres tickets sin asignar en Aurora; dime si quieres que los reparta entre el equipo.",
+      "Notificaciones de Slack para menciones",
+      "Página pública de la hoja de ruta",
+      "Exportar un proyecto como CSV"
+    ],
+    "it": [
+      "Esaminare il backlog non assegnato",
+      "Nessuno è assegnato ai ticket nel backlog di Aurora. Quali sono ancora senza assegnatario? Puoi portare a media la priorità di quelli con priorità bassa?",
+      "Prima cerco i ticket senza assegnatario.",
+      "Tre ticket non sono assegnati. AUR-10 ha già priorità media, quindi lo lascio così. Porto a media la priorità degli altri due.",
+      "Fatto: AUR-11 e AUR-7 hanno ora priorità media. Restano tre ticket senza assegnatario in Aurora; dimmi se vuoi che li distribuisca tra i membri del team.",
+      "Notifiche Slack per le menzioni",
+      "Pagina pubblica della roadmap",
+      "Esportare un progetto in CSV"
+    ],
+    "pt-BR": [
+      "Revisar o backlog sem responsável",
+      "Ninguém está atribuído aos tickets do backlog de Aurora. Quais ainda estão sem responsável? Você pode mudar de baixa para média a prioridade dos que têm prioridade baixa?",
+      "Vou buscar primeiro os tickets sem responsável.",
+      "Três tickets estão sem responsável. AUR-10 já tem prioridade média, então vou deixá-lo como está. Vou mudar a prioridade dos outros dois para média.",
+      "Pronto: AUR-11 e AUR-7 agora têm prioridade média. Restam três tickets sem responsável em Aurora; diga se quiser que eu os distribua pela equipe.",
+      "Notificações do Slack para menções",
+      "Página pública do roadmap",
+      "Exportar um projeto em CSV"
+    ]
+  }
+}

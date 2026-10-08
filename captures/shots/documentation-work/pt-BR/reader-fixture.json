@@ -1,0 +1,14 @@
+{
+  "locale": "pt-BR",
+  "method": "Exact demo prose translations in GET responses only; identifiers, states, dates and observed outcomes are unchanged.",
+  "mapping": {
+    "Projet de démonstration documentation": "Projeto de demonstração da documentação",
+    "Check the website contact link": "Verificar o link de contato do site",
+    "Check keyboard navigation": "Verificar a navegação pelo teclado",
+    "Check the mobile navigation": "Verificar a navegação no celular",
+    "Make the website usable without a mouse": "Permitir usar o site sem mouse",
+    "Open the contact link from the website footer. It should open the email composer with the published contact address. Record the browser and result before closing this demonstration task.": "Abra o link de contato no rodapé do site. Ele deve abrir o aplicativo de e-mail com o endereço de contato publicado. Anote o navegador e o resultado antes de concluir esta tarefa de demonstração.",
+    "Demonstration check: this browser preserves the saved manual plan after reload. The member can read it; a non-owner invitation request is rejected with HTTP 403. This comment records the observed application checks, not an email composer test.": "Verificação de demonstração: este navegador mantém o plano manual salvo após recarregar. O membro consegue lê-lo; uma solicitação de convite de alguém que não é proprietário é recusada com HTTP 403. Este comentário registra as verificações observadas no aplicativo, não um teste do aplicativo de e-mail.",
+    "Use Tab to reach the navigation links, search field and issue controls. Check that focus is visible.": "Use Tab para acessar os links de navegação, o campo de busca e os controles do ticket. Verifique se o foco está visível."
+  }
+}

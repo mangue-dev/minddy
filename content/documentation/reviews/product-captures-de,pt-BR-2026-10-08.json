@@ -1,0 +1,122 @@
+[
+  {
+    "locale": "de",
+    "screen": "page-editor",
+    "src": "/documentation/de/page-editor.png",
+    "sourceCommit": "7fee59e8d7b86d892d9232a9beb07dd2ad800c38",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "workingTreeChanges": true,
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages/cd3ee91e-ad73-423c-bb99-9f81722f8912",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      1130,
+      978
+    ],
+    "language": "de",
+    "submitted": false,
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages/cd3ee91e-ad73-423c-bb99-9f81722f8912",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "route": "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages/cd3ee91e-ad73-423c-bb99-9f81722f8912/watch"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "route": "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages/cd3ee91e-ad73-423c-bb99-9f81722f8912/watch"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      }
+    ],
+    "navigationWrites": [
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      }
+    ],
+    "reviewed": false,
+    "limitation": "Visible controls only. No completed save, share, restore, import or release outcome is claimed."
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "page-editor",
+    "src": "/documentation/pt-BR/page-editor.png",
+    "sourceCommit": "7fee59e8d7b86d892d9232a9beb07dd2ad800c38",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "workingTreeChanges": true,
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages/cd3ee91e-ad73-423c-bb99-9f81722f8912",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      1130,
+      900
+    ],
+    "language": "pt-BR",
+    "submitted": false,
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages/cd3ee91e-ad73-423c-bb99-9f81722f8912",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "route": "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages/cd3ee91e-ad73-423c-bb99-9f81722f8912/watch"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "route": "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages/cd3ee91e-ad73-423c-bb99-9f81722f8912/watch"
+      }
+    ],
+    "navigationWrites": [
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      }
+    ],
+    "reviewed": false,
+    "limitation": "Visible controls only. No completed save, share, restore, import or release outcome is claimed."
+  }
+]

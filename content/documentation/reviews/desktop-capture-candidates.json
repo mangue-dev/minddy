@@ -1,0 +1,186 @@
+{
+  "date": "2026-10-08",
+  "reviewer": "agent:/root/automation_account_documentation",
+  "publicationApproved": false,
+  "captures": [
+    {
+      "article": "desktop-app",
+      "locale": "en",
+      "url": "http://localhost:3000/settings?tab=preferences",
+      "output": "public/documentation/en/desktop-app-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "lang": "en",
+      "text": "Desktop app\nConnected server\n\nhttp://localhost:3000\n\nChange…\nApp version\n\nminddy 0.11.1\n\nCheck for updates…\nDiagnostic report\n\nThe report can contain local paths. A confirmation appears before copying.\n\nCopy report…",
+      "bounds": {
+        "x": 410,
+        "y": 552.5,
+        "width": 768,
+        "height": 238.25
+      },
+      "viewport": [
+        1280,
+        860
+      ],
+      "bridge": {
+        "version": "0.11.1",
+        "platform": "darwin"
+      },
+      "profile": "Real macOS Electron development shell built from candidate with isolated temporary userData. Guarded demo account cookies, local Next.js origin. No packaged-release acceptance and no Windows/Linux claim.",
+      "actions": "Read actual desktop preferences; no server change, channel switch, update install or push activation.",
+      "reviewed": true,
+      "sha256": "5813e07e430e77fbffb093b42d3fc6fefd67cb1ca53eef1e4b8e9604faba38f6",
+      "visualReviewer": "agent:/root/automation_account_documentation"
+    },
+    {
+      "article": "desktop-app",
+      "locale": "fr",
+      "url": "http://localhost:3000/settings?tab=preferences",
+      "output": "public/documentation/fr/desktop-app-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "lang": "fr",
+      "text": "Application de bureau\nServeur connecté\n\nhttp://localhost:3000\n\nChanger…\nVersion de l'application\n\nminddy 0.11.1\n\nRechercher des mises à jour…\nRapport de diagnostic\n\nLe rapport peut contenir des chemins locaux. Une confirmation apparaît avant la copie.\n\nCopier le rapport…",
+      "bounds": {
+        "x": 410,
+        "y": 552.5,
+        "width": 768,
+        "height": 238.25
+      },
+      "viewport": [
+        1280,
+        860
+      ],
+      "bridge": {
+        "version": "0.11.1",
+        "platform": "darwin"
+      },
+      "profile": "Real macOS Electron development shell built from candidate with isolated temporary userData. Guarded demo account cookies, local Next.js origin. No packaged-release acceptance and no Windows/Linux claim.",
+      "actions": "Read actual desktop preferences; no server change, channel switch, update install or push activation.",
+      "reviewed": true,
+      "sha256": "9aafc8eade0796af3aa8ebb254eca0ff43981904c584ee8fd23f8c45a634c527",
+      "visualReviewer": "agent:/root/automation_account_documentation"
+    },
+    {
+      "article": "desktop-app",
+      "locale": "de",
+      "url": "http://localhost:3000/settings?tab=preferences",
+      "output": "public/documentation/de/desktop-app-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "lang": "de",
+      "text": "Desktop-App\nVerbundener Server\n\nhttp://localhost:3000\n\nÄndern…\nApp-Version\n\nminddy 0.11.1\n\nNach Updates suchen…\nDiagnosebericht\n\nDer Bericht kann lokale Ordnerpfade und Benutzernamen enthalten. Vor dem Kopieren erscheint eine systemeigene Bestätigung; überprüfen Sie den Bericht, bevor Sie ihn teilen.\n\nBericht kopieren…",
+      "bounds": {
+        "x": 410,
+        "y": 552.5,
+        "width": 768,
+        "height": 238.25
+      },
+      "viewport": [
+        1280,
+        860
+      ],
+      "bridge": {
+        "version": "0.11.1",
+        "platform": "darwin"
+      },
+      "profile": "Real macOS Electron development shell built from candidate with isolated temporary userData. Guarded demo account cookies, local Next.js origin. No packaged-release acceptance and no Windows/Linux claim.",
+      "actions": "Read actual desktop preferences; no server change, channel switch, update install or push activation.",
+      "reviewed": true,
+      "sha256": "30e5de8a7a6cd0080c27e512966bc402705d7b29e4c990e72d5935bb41bd4f22",
+      "visualReviewer": "agent:/root/automation_account_documentation"
+    },
+    {
+      "article": "desktop-app",
+      "locale": "es",
+      "url": "http://localhost:3000/settings?tab=preferences",
+      "output": "public/documentation/es/desktop-app-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "lang": "es",
+      "text": "Aplicación de escritorio\nServidor conectado\n\nhttp://localhost:3000\n\nCambio...\nVersión de aplicación\n\nminddy 0.11.1\n\nComprueba las actualizaciones...\nInforme de diagnóstico\n\nEl informe puede contener rutas de carpetas locales y nombres de usuario. Antes de copiarlo aparecerá una confirmación del sistema; revísalo antes de compartirlo.\n\nCopiar el informe...",
+      "bounds": {
+        "x": 410,
+        "y": 552.5,
+        "width": 768,
+        "height": 238.25
+      },
+      "viewport": [
+        1280,
+        860
+      ],
+      "bridge": {
+        "version": "0.11.1",
+        "platform": "darwin"
+      },
+      "profile": "Real macOS Electron development shell built from candidate with isolated temporary userData. Guarded demo account cookies, local Next.js origin. No packaged-release acceptance and no Windows/Linux claim.",
+      "actions": "Read actual desktop preferences; no server change, channel switch, update install or push activation.",
+      "reviewed": true,
+      "sha256": "c86790ecc3205352d09daf97408c4781c0cf0e025f9d56038ba3487f06918ed3",
+      "visualReviewer": "agent:/root/automation_account_documentation"
+    },
+    {
+      "article": "desktop-app",
+      "locale": "it",
+      "url": "http://localhost:3000/settings?tab=preferences",
+      "output": "public/documentation/it/desktop-app-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "lang": "it",
+      "text": "App desktop\nServer connesso\n\nhttp://localhost:3000\n\nCambia...\nVersione app\n\nminddy 0.11.1\n\nControlla gli aggiornamenti...\nRelazione diagnostica\n\nIl report può contenere percorsi di cartella locali e nomi utente. Una conferma nativa appare prima di essere copiata; rivedere prima di condividere.\n\nCopia il rapporto...",
+      "bounds": {
+        "x": 410,
+        "y": 552.5,
+        "width": 768,
+        "height": 238.25
+      },
+      "viewport": [
+        1280,
+        860
+      ],
+      "bridge": {
+        "version": "0.11.1",
+        "platform": "darwin"
+      },
+      "profile": "Real macOS Electron development shell built from candidate with isolated temporary userData. Guarded demo account cookies, local Next.js origin. No packaged-release acceptance and no Windows/Linux claim.",
+      "actions": "Read actual desktop preferences; no server change, channel switch, update install or push activation.",
+      "reviewed": true,
+      "sha256": "3febde51e8e87a5e1c5662c4934cd86ebdb86fe24f87f0a410a0b9ff243527a3",
+      "visualReviewer": "agent:/root/automation_account_documentation"
+    },
+    {
+      "article": "desktop-app",
+      "locale": "pt-BR",
+      "url": "http://localhost:3000/settings?tab=preferences",
+      "output": "public/documentation/pt-BR/desktop-app-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "lang": "pt-BR",
+      "text": "Aplicativo de desktop\nServidor conectado\n\nhttp://localhost:3000\n\nAlterar…\nVersão do aplicativo\n\nminddy 0.11.1\n\nVerifique se há atualizações…\nRelatório de diagnóstico\n\nO relatório pode conter caminhos de pastas locais e nomes de usuários. Uma confirmação nativa aparece antes de ser copiada; revise-o antes de compartilhar.\n\nCopiar relatório…",
+      "bounds": {
+        "x": 410,
+        "y": 552.5,
+        "width": 768,
+        "height": 238.25
+      },
+      "viewport": [
+        1280,
+        860
+      ],
+      "bridge": {
+        "version": "0.11.1",
+        "platform": "darwin"
+      },
+      "profile": "Real macOS Electron development shell built from candidate with isolated temporary userData. Guarded demo account cookies, local Next.js origin. No packaged-release acceptance and no Windows/Linux claim.",
+      "actions": "Read actual desktop preferences; no server change, channel switch, update install or push activation.",
+      "reviewed": true,
+      "sha256": "14c0330bfc7daef6d49f73e249f0d5ab8eaa17f04d89797ac7dc61afd1515039",
+      "visualReviewer": "agent:/root/automation_account_documentation"
+    }
+  ],
+  "visualReview": {
+    "date": "2026-10-08",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "method": "Inspected each final locale image, actual controls, locale, masked secrets and demonstration data. These images do not establish workflow execution or publication approval."
+  }
+}

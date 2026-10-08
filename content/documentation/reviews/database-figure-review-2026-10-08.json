@@ -1,0 +1,269 @@
+{
+  "reviewer": "Codex agent review_documentation_locales, not human",
+  "figures": [
+    {
+      "article": "create-a-database",
+      "locale": "en",
+      "figureId": "create-a-database-steps",
+      "src": "/documentation/en/database-property-types.png",
+      "sha256": "82d6684f87a36ef5fbaed01930f52b194f7fc8c24d50da943d406781ddb8bcd9",
+      "sourceRecord": "content/documentation/reviews/database-controls-2026-10-08.json",
+      "visualReview": "Codex agent review_documentation_locales individually inspected all six variants and meaningful localized demo values",
+      "date": "2026-10-08",
+      "limitation": "Controls and server/local previews; runtime committed outcomes are recorded separately."
+    },
+    {
+      "article": "create-a-database",
+      "locale": "fr",
+      "figureId": "create-a-database-steps",
+      "src": "/documentation/fr/database-property-types.png",
+      "sha256": "19a72a6d6e958036de30a8ec1d38a5d25ecbc2564e8796f11c140458a6c33084",
+      "sourceRecord": "content/documentation/reviews/database-controls-2026-10-08.json",
+      "visualReview": "Codex agent review_documentation_locales individually inspected all six variants and meaningful localized demo values",
+      "date": "2026-10-08",
+      "limitation": "Controls and server/local previews; runtime committed outcomes are recorded separately."
+    },
+    {
+      "article": "create-a-database",
+      "locale": "de",
+      "figureId": "create-a-database-steps",
+      "src": "/documentation/de/database-property-types.png",
+      "sha256": "c623e1912ccb5cafe1ecaa255506f540efb225ac28b0012ff8f95329fe16cb62",
+      "sourceRecord": "content/documentation/reviews/database-controls-2026-10-08.json",
+      "visualReview": "Codex agent review_documentation_locales individually inspected all six variants and meaningful localized demo values",
+      "date": "2026-10-08",
+      "limitation": "Controls and server/local previews; runtime committed outcomes are recorded separately."
+    },
+    {
+      "article": "create-a-database",
+      "locale": "es",
+      "figureId": "create-a-database-steps",
+      "src": "/documentation/es/database-property-types.png",
+      "sha256": "22d1957d92e29455b3d36f537bdb95eaf920f142cc611ffaa3019dc1d869abc7",
+      "sourceRecord": "content/documentation/reviews/database-controls-2026-10-08.json",
+      "visualReview": "Codex agent review_documentation_locales individually inspected all six variants and meaningful localized demo values",
+      "date": "2026-10-08",
+      "limitation": "Controls and server/local previews; runtime committed outcomes are recorded separately."
+    },
+    {
+      "article": "create-a-database",
+      "locale": "it",
+      "figureId": "create-a-database-steps",
+      "src": "/documentation/it/database-property-types.png",
+      "sha256": "95198934dc0035f1a19839c785bfda1405302614f10d15da2822f727542ea115",
+      "sourceRecord": "content/documentation/reviews/database-controls-2026-10-08.json",
+      "visualReview": "Codex agent review_documentation_locales individually inspected all six variants and meaningful localized demo values",
+      "date": "2026-10-08",
+      "limitation": "Controls and server/local previews; runtime committed outcomes are recorded separately."
+    },
+    {
+      "article": "create-a-database",
+      "locale": "pt-BR",
+      "figureId": "create-a-database-steps",
+      "src": "/documentation/pt-BR/database-property-types.png",
+      "sha256": "64d1d3966670a3c712b05cfc8fa93910590df396957c763ae3a3658ce4731bd8",
+      "sourceRecord": "content/documentation/reviews/database-controls-2026-10-08.json",
+      "visualReview": "Codex agent review_documentation_locales individually inspected all six variants and meaningful localized demo values",
+      "date": "2026-10-08",
+      "limitation": "Controls and server/local previews; runtime committed outcomes are recorded separately."
+    },
+    {
+      "article": "database-cells-and-entries",
+      "locale": "en",
+      "figureId": "database-cells-and-entries-steps",
+      "src": "/documentation/en/database-entry.png",
+      "sha256": "0d326a067acc56f341ce89013a012399c5e1b288ef1c73ec5042ed40161bafba",
+      "sourceRecord": "content/documentation/reviews/database-controls-2026-10-08.json",
+      "visualReview": "Codex agent review_documentation_locales individually inspected all six variants and meaningful localized demo values",
+      "date": "2026-10-08",
+      "limitation": "Controls and server/local previews; runtime committed outcomes are recorded separately."
+    },
+    {
+      "article": "database-cells-and-entries",
+      "locale": "fr",
+      "figureId": "database-cells-and-entries-steps",
+      "src": "/documentation/fr/database-entry.png",
+      "sha256": "37b5d4701ec05a4c8600304bcbeacb24a288683eb2b6eb38110c25104d19972b",
+      "sourceRecord": "content/documentation/reviews/database-controls-2026-10-08.json",
+      "visualReview": "Codex agent review_documentation_locales individually inspected all six variants and meaningful localized demo values",
+      "date": "2026-10-08",
+      "limitation": "Controls and server/local previews; runtime committed outcomes are recorded separately."
+    },
+    {
+      "article": "database-cells-and-entries",
+      "locale": "de",
+      "figureId": "database-cells-and-entries-steps",
+      "src": "/documentation/de/database-entry.png",
+      "sha256": "76df5a147c6b5b6a28b9d6844e6cdeb07e8a369d2becc27a8e43f5f19a2c2fc5",
+      "sourceRecord": "content/documentation/reviews/database-controls-2026-10-08.json",
+      "visualReview": "Codex agent review_documentation_locales individually inspected all six variants and meaningful localized demo values",
+      "date": "2026-10-08",
+      "limitation": "Controls and server/local previews; runtime committed outcomes are recorded separately."
+    },
+    {
+      "article": "database-cells-and-entries",
+      "locale": "es",
+      "figureId": "database-cells-and-entries-steps",
+      "src": "/documentation/es/database-entry.png",
+      "sha256": "5e79bd81b05ee025d14761d28d1d81e3e9cdd10af79b8daf02ced3794cbe3d6b",
+      "sourceRecord": "content/documentation/reviews/database-controls-2026-10-08.json",
+      "visualReview": "Codex agent review_documentation_locales individually inspected all six variants and meaningful localized demo values",
+      "date": "2026-10-08",
+      "limitation": "Controls and server/local previews; runtime committed outcomes are recorded separately."
+    },
+    {
+      "article": "database-cells-and-entries",
+      "locale": "it",
+      "figureId": "database-cells-and-entries-steps",
+      "src": "/documentation/it/database-entry.png",
+      "sha256": "7799cebdbeedff9af3a2a60eeae86ea275bcc9d08ab6b3f6a64f0122ff700898",
+      "sourceRecord": "content/documentation/reviews/database-controls-2026-10-08.json",
+      "visualReview": "Codex agent review_documentation_locales individually inspected all six variants and meaningful localized demo values",
+      "date": "2026-10-08",
+      "limitation": "Controls and server/local previews; runtime committed outcomes are recorded separately."
+    },
+    {
+      "article": "database-cells-and-entries",
+      "locale": "pt-BR",
+      "figureId": "database-cells-and-entries-steps",
+      "src": "/documentation/pt-BR/database-entry.png",
+      "sha256": "e24f90b2114fffbb46cb8be44e27bff7c2450a42daaf27b0999ca76a4852ce8d",
+      "sourceRecord": "content/documentation/reviews/database-controls-2026-10-08.json",
+      "visualReview": "Codex agent review_documentation_locales individually inspected all six variants and meaningful localized demo values",
+      "date": "2026-10-08",
+      "limitation": "Controls and server/local previews; runtime committed outcomes are recorded separately."
+    },
+    {
+      "article": "change-a-database-schema",
+      "locale": "en",
+      "figureId": "change-a-database-schema-steps",
+      "src": "/documentation/en/database-conversion-warning.png",
+      "sha256": "c9d1ee430555c56982f3f29ea2125b5b9b1bf3ab97fd3d0af93e37430cbf05dd",
+      "sourceRecord": "content/documentation/reviews/database-controls-2026-10-08.json",
+      "visualReview": "Codex agent review_documentation_locales individually inspected all six variants and meaningful localized demo values",
+      "date": "2026-10-08",
+      "limitation": "Controls and server/local previews; runtime committed outcomes are recorded separately."
+    },
+    {
+      "article": "change-a-database-schema",
+      "locale": "fr",
+      "figureId": "change-a-database-schema-steps",
+      "src": "/documentation/fr/database-conversion-warning.png",
+      "sha256": "4e13e75cef4d6fee35115131cc834f8b2192019773becb8514c8c692828da350",
+      "sourceRecord": "content/documentation/reviews/database-controls-2026-10-08.json",
+      "visualReview": "Codex agent review_documentation_locales individually inspected all six variants and meaningful localized demo values",
+      "date": "2026-10-08",
+      "limitation": "Controls and server/local previews; runtime committed outcomes are recorded separately."
+    },
+    {
+      "article": "change-a-database-schema",
+      "locale": "de",
+      "figureId": "change-a-database-schema-steps",
+      "src": "/documentation/de/database-conversion-warning.png",
+      "sha256": "88f7939dc97d7d37d69ec01f7cb06e2e9e6d6994d653bbdd849dd3a47b0812e5",
+      "sourceRecord": "content/documentation/reviews/database-controls-2026-10-08.json",
+      "visualReview": "Codex agent review_documentation_locales individually inspected all six variants and meaningful localized demo values",
+      "date": "2026-10-08",
+      "limitation": "Controls and server/local previews; runtime committed outcomes are recorded separately."
+    },
+    {
+      "article": "change-a-database-schema",
+      "locale": "es",
+      "figureId": "change-a-database-schema-steps",
+      "src": "/documentation/es/database-conversion-warning.png",
+      "sha256": "a91465b2baef480bfa5523ac0b34ec9a584197df01a6cb10f2d4fb58a030fd5d",
+      "sourceRecord": "content/documentation/reviews/database-controls-2026-10-08.json",
+      "visualReview": "Codex agent review_documentation_locales individually inspected all six variants and meaningful localized demo values",
+      "date": "2026-10-08",
+      "limitation": "Controls and server/local previews; runtime committed outcomes are recorded separately."
+    },
+    {
+      "article": "change-a-database-schema",
+      "locale": "it",
+      "figureId": "change-a-database-schema-steps",
+      "src": "/documentation/it/database-conversion-warning.png",
+      "sha256": "1ca805a25eaf87a2768f1280a1b14077e15e17a9b6799b3568a96be16d9fbc69",
+      "sourceRecord": "content/documentation/reviews/database-controls-2026-10-08.json",
+      "visualReview": "Codex agent review_documentation_locales individually inspected all six variants and meaningful localized demo values",
+      "date": "2026-10-08",
+      "limitation": "Controls and server/local previews; runtime committed outcomes are recorded separately."
+    },
+    {
+      "article": "change-a-database-schema",
+      "locale": "pt-BR",
+      "figureId": "change-a-database-schema-steps",
+      "src": "/documentation/pt-BR/database-conversion-warning.png",
+      "sha256": "25c590cb3f007268e9f9346a7e5f88e9bd40274c578f2d984e7add282fc49e2d",
+      "sourceRecord": "content/documentation/reviews/database-controls-2026-10-08.json",
+      "visualReview": "Codex agent review_documentation_locales individually inspected all six variants and meaningful localized demo values",
+      "date": "2026-10-08",
+      "limitation": "Controls and server/local previews; runtime committed outcomes are recorded separately."
+    },
+    {
+      "article": "import-a-database",
+      "locale": "en",
+      "figureId": "import-a-database-steps",
+      "src": "/documentation/en/database-import-review.png",
+      "sha256": "18aa51f1852b99401b6dcb576a6ef8ef0e867e4dd3854f484f902f7dcecdf263",
+      "sourceRecord": "content/documentation/reviews/database-controls-2026-10-08.json",
+      "visualReview": "Codex agent review_documentation_locales individually inspected all six variants and meaningful localized demo values",
+      "date": "2026-10-08",
+      "limitation": "Controls and server/local previews; runtime committed outcomes are recorded separately."
+    },
+    {
+      "article": "import-a-database",
+      "locale": "fr",
+      "figureId": "import-a-database-steps",
+      "src": "/documentation/fr/database-import-review.png",
+      "sha256": "3f5c1a50550690738565cc34eccadad4f45127a0deedd79b2e3f4c9a614d5e87",
+      "sourceRecord": "content/documentation/reviews/database-controls-2026-10-08.json",
+      "visualReview": "Codex agent review_documentation_locales individually inspected all six variants and meaningful localized demo values",
+      "date": "2026-10-08",
+      "limitation": "Controls and server/local previews; runtime committed outcomes are recorded separately."
+    },
+    {
+      "article": "import-a-database",
+      "locale": "de",
+      "figureId": "import-a-database-steps",
+      "src": "/documentation/de/database-import-review.png",
+      "sha256": "c85784377dadd51860f633a495d15fac06254ed7dffd8b1f25a4d3dace00275a",
+      "sourceRecord": "content/documentation/reviews/database-controls-2026-10-08.json",
+      "visualReview": "Codex agent review_documentation_locales individually inspected all six variants and meaningful localized demo values",
+      "date": "2026-10-08",
+      "limitation": "Controls and server/local previews; runtime committed outcomes are recorded separately."
+    },
+    {
+      "article": "import-a-database",
+      "locale": "es",
+      "figureId": "import-a-database-steps",
+      "src": "/documentation/es/database-import-review.png",
+      "sha256": "20c59dff4a921aaac05ecdfbac0d85a4eb0d2a7cc2c442d4955c168e8f1c75a6",
+      "sourceRecord": "content/documentation/reviews/database-controls-2026-10-08.json",
+      "visualReview": "Codex agent review_documentation_locales individually inspected all six variants and meaningful localized demo values",
+      "date": "2026-10-08",
+      "limitation": "Controls and server/local previews; runtime committed outcomes are recorded separately."
+    },
+    {
+      "article": "import-a-database",
+      "locale": "it",
+      "figureId": "import-a-database-steps",
+      "src": "/documentation/it/database-import-review.png",
+      "sha256": "60d6a0fcb74b15a8aac861b03cc43be63c5fda6eb6baa8246302e77f149d5257",
+      "sourceRecord": "content/documentation/reviews/database-controls-2026-10-08.json",
+      "visualReview": "Codex agent review_documentation_locales individually inspected all six variants and meaningful localized demo values",
+      "date": "2026-10-08",
+      "limitation": "Controls and server/local previews; runtime committed outcomes are recorded separately."
+    },
+    {
+      "article": "import-a-database",
+      "locale": "pt-BR",
+      "figureId": "import-a-database-steps",
+      "src": "/documentation/pt-BR/database-import-review.png",
+      "sha256": "5c769570108ffa97d23f3df1e398df388d05b6296cb44ed91e0d3f3fa16cbbb0",
+      "sourceRecord": "content/documentation/reviews/database-controls-2026-10-08.json",
+      "visualReview": "Codex agent review_documentation_locales individually inspected all six variants and meaningful localized demo values",
+      "date": "2026-10-08",
+      "limitation": "Controls and server/local previews; runtime committed outcomes are recorded separately."
+    }
+  ]
+}

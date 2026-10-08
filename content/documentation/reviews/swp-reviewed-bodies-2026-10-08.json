@@ -1,0 +1,1339 @@
+{
+  "reviewer": "Codex agent review_documentation_locales",
+  "date": "2026-10-08",
+  "notHuman": true,
+  "articles": [
+    {
+      "workflow": "S02",
+      "article": "account-access",
+      "locale": "de",
+      "sourceRevision": 1,
+      "bodySha256": "5a3a739420b1380d165fe856ca08f3b3232fdb2af900b369923777eb529c64d2",
+      "sourceBodySha256": "b4cbbe652238dcf95f43b57bbf7af6a229105c206a6c0c10de26028cdd7194bc",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "S03",
+      "article": "account-recovery",
+      "locale": "de",
+      "sourceRevision": 1,
+      "bodySha256": "054a45876860d42560ab54adbe7c068eefe4f9028a3ebd75c0cb1949406a3aaf",
+      "sourceBodySha256": "9a7b7b86ba35a8aafed86ccc3eb07b34c5a6c47d5d977c4e09f0d886b06a30ae",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W04",
+      "article": "bulk-issue-actions",
+      "locale": "de",
+      "sourceRevision": 1,
+      "bodySha256": "98ccb0b399b980033ee5a718ee2fc1312d3f8b3cf2fb3e3b43b405730090d29c",
+      "sourceBodySha256": "aa81983dc8e1e72864b0cb7f1b00d180c96dde321f4e260b7e56dac8c3a8a40e",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "P10",
+      "article": "change-a-database-schema",
+      "locale": "de",
+      "sourceRevision": 1,
+      "bodySha256": "650b4c8cde477885dd29eafd377845b0e59bc3ed4fe07aa16d2fba9508e997de",
+      "sourceBodySha256": "ea894a7140fd757a825562c71426e9c61fde500aeb7f0e43dfd72789f50a6f0b",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "S07",
+      "article": "choose-an-instance",
+      "locale": "de",
+      "sourceRevision": 1,
+      "bodySha256": "8265be1d24e314fbf38fc34c05ba3f70c1df1816b7fdbd5ad094aa93e3d32ef9",
+      "sourceBodySha256": "3534eaa638eb628b11f3630aae20eed0bdd03e9c98457025fde2553894d72c3a",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "P08",
+      "article": "create-a-database",
+      "locale": "de",
+      "sourceRevision": 1,
+      "bodySha256": "c9f6a78c3a0dca416823b01823c4ce5d9063fe9a7e735b44cc9e1dcccad32933",
+      "sourceBodySha256": "9609ceec7ea3e6bb01f4f922161ba1c8dd87cffe4ac976aab063da5b4f4fa212",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W01",
+      "article": "create-an-issue",
+      "locale": "de",
+      "sourceRevision": 1,
+      "bodySha256": "6e6fe93cc674c0b44b3888dfaef114fe703df7e4565c4e1b2f0808589751f4ec",
+      "sourceBodySha256": "d1c4fd9a84fa7abe210535d3a19edf08a8985124f3d05d3b51d295b558b0f434",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "P01",
+      "article": "create-and-organize-pages",
+      "locale": "de",
+      "sourceRevision": 1,
+      "bodySha256": "a36d21cc18ffdd0da18c4f802dab89987483f752952ebeb794a695ee716e2683",
+      "sourceBodySha256": "d3efd77b4850eb85655fe84c4a4b122b8b54a020820ac645b25b08126c8d526f",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "P09",
+      "article": "database-cells-and-entries",
+      "locale": "de",
+      "sourceRevision": 1,
+      "bodySha256": "d0774f4186432f2864f3ec91e94d00d0c136a3f04197b61dd0f03cd7734925f5",
+      "sourceBodySha256": "4629a87b9136e8bd7c4b950f0be4e75c91147c12d71a8d31240ad475fad3d8ed",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "S01",
+      "article": "first-project",
+      "locale": "de",
+      "sourceRevision": 1,
+      "bodySha256": "a6e1bb820659ca74c88895ee1f312e6d949bab5a8d1fca49436aa9a086331795",
+      "sourceBodySha256": "c0111e0930d9d2da7f0f00b13fe96be9b5da5ba00fbcb6373413e896b1ca7a74",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W07",
+      "article": "implementation-plans",
+      "locale": "de",
+      "sourceRevision": 1,
+      "bodySha256": "e8f40d21b85cabadfb0e4a833891369853def0f8d3a59cb82636cc5de138c13a",
+      "sourceBodySha256": "e16ca9013a825c87a8bd37b4262357818f5189edeb70d1539c42d97776b44e28",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "P11",
+      "article": "import-a-database",
+      "locale": "de",
+      "sourceRevision": 1,
+      "bodySha256": "aaff9a72914bb19cd268a0135ce2dd62c1edd00105e175792a03e36f544787b8",
+      "sourceBodySha256": "ccdbdd6d4e3b54830a72cb2b6af417da04a6f058514660d7f9928fb3b8f3edc8",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "P07",
+      "article": "import-export-and-print-pages",
+      "locale": "de",
+      "sourceRevision": 1,
+      "bodySha256": "01e8f4831b8ef3f3ac8f9d723506c7cb13fdd91e1843d07e4238c6668d1a1b47",
+      "sourceBodySha256": "0664135c21204b434d56ce8535fb9a75ee29e53aab0e9804290be589e81565a5",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W05",
+      "article": "issue-dependencies",
+      "locale": "de",
+      "sourceRevision": 1,
+      "bodySha256": "0b4c79daf505c4a335080409404e10c60d8190d2ccfdfb75c27c3fee69468629",
+      "sourceBodySha256": "cd533368077a6e56d5530cc26b1065bde1e784cc1d3da2339946ceeb0faea82a",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W08",
+      "article": "issue-discussion-and-resources",
+      "locale": "de",
+      "sourceRevision": 1,
+      "bodySha256": "6d9baa7358f1a4487fffdb8de7952b677d1bb5aa261b8df35155a22d5d5d21b9",
+      "sourceBodySha256": "d2009e49443e570d97c4a0dfb894fdb791c885dc8a9530c155c2fa98fc241fad",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W02",
+      "article": "issue-statuses",
+      "locale": "de",
+      "sourceRevision": 1,
+      "bodySha256": "56b3ed92329e68e789b869538cb118d9dce4a7f1f4a3e4b0c8b24b4e6f342697",
+      "sourceBodySha256": "9518418aac8b4e67bc86f92b149dcc5f71bccd753eea1fa7413c25bd83197f2a",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "S04",
+      "article": "navigation",
+      "locale": "de",
+      "sourceRevision": 1,
+      "bodySha256": "747ec349c4bb3882b9c007ab3cd234c1394721bb04886490828512895549f9a6",
+      "sourceBodySha256": "42fe8e78dfcfc1b0c21ebd9f178197fca7ae38558a69c70e33be2a9d0dc9883f",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W16",
+      "article": "notifications-and-inbox",
+      "locale": "de",
+      "sourceRevision": 1,
+      "bodySha256": "6b645567b9152701b9e1b0203b1d1694f24cd6c9a2cc585e381f1f94ca8fcd40",
+      "sourceBodySha256": "8d1d64f755ae500d50d0335cdf26c49d7a3bc051c79ed926b800214dde797d42",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W11",
+      "article": "objective-dependencies-and-momentum",
+      "locale": "de",
+      "sourceRevision": 1,
+      "bodySha256": "4987e28a0278379085d2d1e7e510f98cda3914b53f0f44cfe62f11c060f7a205",
+      "sourceBodySha256": "ba0fb5a9ba00dab3ffbb584c1e63903c3cbfcbbf12f219a593852440c73b460e",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W10",
+      "article": "objectives",
+      "locale": "de",
+      "sourceRevision": 1,
+      "bodySha256": "ad6e0f2216e156ad042465e95348dbe52ccb9686eb8dfbc2f48f6e3b19bcf480",
+      "sourceBodySha256": "9772a06fbd1feae0042e4871d9453bbfbe70a0d0e924e4c4eb58bacf7978b701",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "P03",
+      "article": "page-comments-and-collaboration",
+      "locale": "de",
+      "sourceRevision": 1,
+      "bodySha256": "abba799bf377b66c8fcf849be21b42b92bb3545edbcb5c7cce08a28458389bb5",
+      "sourceBodySha256": "6f37ed85c58f6085968ae774a9e0dfcb73b278ea322ff285bda3cc81070ad245",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "P02",
+      "article": "page-editor",
+      "locale": "de",
+      "sourceRevision": 1,
+      "bodySha256": "4169ba7d532c6bb1940909fec48287415fe692b120817461739019cf5e42956c",
+      "sourceBodySha256": "36514cdd7d538ffd838aeeb523681f0627e924ccb0c5e7e5de0fd91ee73a69e7",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "P04",
+      "article": "page-files",
+      "locale": "de",
+      "sourceRevision": 1,
+      "bodySha256": "d4f45b0305e3b280d986d6952b6c0b30e95f8c7aadf7f6d5ab402891ecdd8e66",
+      "sourceBodySha256": "dfd47fe40fbca5997351de04f8e062fa99234377154dfb90dae92cfb115d2653",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "P05",
+      "article": "page-history",
+      "locale": "de",
+      "sourceRevision": 1,
+      "bodySha256": "5818cafa736fa027c6c44252c6ba8c617f2f9db04dc46a107f3a4d08a3de0678",
+      "sourceBodySha256": "ef6dbe6f92ca8898ae9cc033161861af00a384eeb80260030d18097aac760601",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W12",
+      "article": "personal-cycle",
+      "locale": "de",
+      "sourceRevision": 1,
+      "bodySha256": "44a110e98e7c85cb076565daa88de027416ae395f09df247433387423f1076fb",
+      "sourceBodySha256": "55e8bfb1ebbd516b853c1d8303b26d640fcb74b38ffe42b02f7502930e7859b5",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W18",
+      "article": "personal-statistics",
+      "locale": "de",
+      "sourceRevision": 1,
+      "bodySha256": "fd3449a66f4824d6a81f85891171b42fbf49766045ea68d3bf6fb2a318df22aa",
+      "sourceBodySha256": "20e1bc425ae5ee35c6dd32a157f04c6a7d80470ee4609c54ef63744616141bdf",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "S06",
+      "article": "project-members",
+      "locale": "de",
+      "sourceRevision": 1,
+      "bodySha256": "c795c7cf6d372d271137ac8428e913e409f14d3d82726ab5f7e4ddb452b674ce",
+      "sourceBodySha256": "4a5feae08b9e88e2ef106ae656c98bc7e1ffca156b92f241e2fadf902ce4c1e6",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "S05",
+      "article": "project-settings",
+      "locale": "de",
+      "sourceRevision": 1,
+      "bodySha256": "95814d384b9d7bbfdf7d89abc6bc14ec984a61a5074768b7fba14a4893fd3d3f",
+      "sourceBodySha256": "feddd6e4bb3265b10db5b611a0198714454091f4d1286f37652b841b9872e73b",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "P06",
+      "article": "publish-a-page",
+      "locale": "de",
+      "sourceRevision": 1,
+      "bodySha256": "0eb4a122b7cef27e30b43dd1955bcc907f8a28159da6c60e77e895edc24fcb1b",
+      "sourceBodySha256": "bcd98beb381b21b38204af019f14547f26af7b683920539d12b4cd8b119c17d0",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W09",
+      "article": "recurring-issues",
+      "locale": "de",
+      "sourceRevision": 1,
+      "bodySha256": "6de5d07298ac4cdf862ea95f64425e884890721e2e5390d8811f879ca6fb8d94",
+      "sourceBodySha256": "23bbc0fc9df5711d57c6e261a52c731eed0342e9bdb913fa30d6b47eeea348ea",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W15",
+      "article": "search-and-shortcuts",
+      "locale": "de",
+      "sourceRevision": 1,
+      "bodySha256": "2748558c02616594f1b5e7ba856b8322f6c730993994893b100b1ca4c3636c4c",
+      "sourceBodySha256": "2337ce07a5b5ae44a8b42e95837973dbc86729cd91f0c8d5c797c1c69a8f9fa6",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W14",
+      "article": "share-a-view",
+      "locale": "de",
+      "sourceRevision": 1,
+      "bodySha256": "9d587eafb83f29231dcb244e142496f9f73663d779139e7a5304afcbbb8fa9da",
+      "sourceBodySha256": "101ba1e0c4b3937c743fe5a13159953a0688cdf59fdfadd81deb01e6a96bd6d6",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W06",
+      "article": "sub-issues",
+      "locale": "de",
+      "sourceRevision": 1,
+      "bodySha256": "e70a904ab0aafe257f9a625e0c5ef33bd424a527f5e60321f489797f217f4d16",
+      "sourceBodySha256": "0dce70076938871caeeeb3c9d49bb6ac844de7dba980b67fe5ee14ab18f6200f",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W17",
+      "article": "task-notebook",
+      "locale": "de",
+      "sourceRevision": 1,
+      "bodySha256": "a594a5e2f93205425f6ac1a281a4ee5686d5463c59e93dccf54c9024e9edba8c",
+      "sourceBodySha256": "3ca8f9582617601856ad420b99b7d703e8ff6af370f9ea19d8eee455e4c3ee70",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W19",
+      "article": "trash-and-recovery",
+      "locale": "de",
+      "sourceRevision": 1,
+      "bodySha256": "fac3dfacb5967ebe5a47c1d35f5a85c8c2db9fbad6bd5826e7e255af9735fe5a",
+      "sourceBodySha256": "7059ea00d92cbfe00ffd927b12ce1056be6f81aa1f95cb04013e6a987f7e4340",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W03",
+      "article": "triage-incoming-work",
+      "locale": "de",
+      "sourceRevision": 1,
+      "bodySha256": "6d0fd28d0c33afc7410d83fec64da9dbcc4243df489a853089ed76e213625808",
+      "sourceBodySha256": "4a7f5a47897cf6bdf3ba76afcc4ba205f67bf5ec16a0f59dce1d7ce1e498f2fb",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W13",
+      "article": "views-and-filters",
+      "locale": "de",
+      "sourceRevision": 1,
+      "bodySha256": "d5f12c1fc23d3be185dd4a74221db1eaa46ee0c46d5a6f4eb0d573c03e7cdba6",
+      "sourceBodySha256": "247b181e6484a41f719d5a66877642d7890c71098e5d6da47b8c806a8aa869c8",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "S02",
+      "article": "account-access",
+      "locale": "es",
+      "sourceRevision": 1,
+      "bodySha256": "400b396e39dd8fd7d6daceb4476467be0a90aaf4756ee6c92f2a5ef7cdd776da",
+      "sourceBodySha256": "b4cbbe652238dcf95f43b57bbf7af6a229105c206a6c0c10de26028cdd7194bc",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "S03",
+      "article": "account-recovery",
+      "locale": "es",
+      "sourceRevision": 1,
+      "bodySha256": "042345db36cb2575923be83f97bad0815789603cd72761485cfd218cf5cd503d",
+      "sourceBodySha256": "9a7b7b86ba35a8aafed86ccc3eb07b34c5a6c47d5d977c4e09f0d886b06a30ae",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W04",
+      "article": "bulk-issue-actions",
+      "locale": "es",
+      "sourceRevision": 1,
+      "bodySha256": "30acf4763e0cccbd077d124517738dc06a478eff3b87a78d58069c49dd1d375e",
+      "sourceBodySha256": "aa81983dc8e1e72864b0cb7f1b00d180c96dde321f4e260b7e56dac8c3a8a40e",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "P10",
+      "article": "change-a-database-schema",
+      "locale": "es",
+      "sourceRevision": 1,
+      "bodySha256": "1cb770da36c0cd4c46031c288d5bdf831c614a634339d8a3583cdbed805cf826",
+      "sourceBodySha256": "ea894a7140fd757a825562c71426e9c61fde500aeb7f0e43dfd72789f50a6f0b",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "S07",
+      "article": "choose-an-instance",
+      "locale": "es",
+      "sourceRevision": 1,
+      "bodySha256": "11d9e446afc86d9e45f9c1d24eb2c15438b715eee9b2b12ccd20d26294feb302",
+      "sourceBodySha256": "3534eaa638eb628b11f3630aae20eed0bdd03e9c98457025fde2553894d72c3a",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "P08",
+      "article": "create-a-database",
+      "locale": "es",
+      "sourceRevision": 1,
+      "bodySha256": "630115bfa9e85ec3de85ce295ce050aa6551dbe862654bcce76541b9d3ac376d",
+      "sourceBodySha256": "9609ceec7ea3e6bb01f4f922161ba1c8dd87cffe4ac976aab063da5b4f4fa212",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W01",
+      "article": "create-an-issue",
+      "locale": "es",
+      "sourceRevision": 1,
+      "bodySha256": "09cc969b30e76167fa0e447355b71cb96f349d71fa0ebaa45b3f262da818915e",
+      "sourceBodySha256": "d1c4fd9a84fa7abe210535d3a19edf08a8985124f3d05d3b51d295b558b0f434",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "P01",
+      "article": "create-and-organize-pages",
+      "locale": "es",
+      "sourceRevision": 1,
+      "bodySha256": "867c8ab7a463b1414dffd37d4ee0f50e5fbdaeedb00c3ee017ce5325f0671bd6",
+      "sourceBodySha256": "d3efd77b4850eb85655fe84c4a4b122b8b54a020820ac645b25b08126c8d526f",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "P09",
+      "article": "database-cells-and-entries",
+      "locale": "es",
+      "sourceRevision": 1,
+      "bodySha256": "65a724c80b6ec1a2517e2d06910e6b5a77574d832d3887326bfd5c4c7bd0590b",
+      "sourceBodySha256": "4629a87b9136e8bd7c4b950f0be4e75c91147c12d71a8d31240ad475fad3d8ed",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "S01",
+      "article": "first-project",
+      "locale": "es",
+      "sourceRevision": 1,
+      "bodySha256": "7bde77fed20e5a2f98e4d37c0ad2e962e8f7f5560b420c1ce6023451f94420c1",
+      "sourceBodySha256": "c0111e0930d9d2da7f0f00b13fe96be9b5da5ba00fbcb6373413e896b1ca7a74",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W07",
+      "article": "implementation-plans",
+      "locale": "es",
+      "sourceRevision": 1,
+      "bodySha256": "c94e0fc21775b7dcc6a7266564761471c45f270d18e845bd2e7272fd9e10a68f",
+      "sourceBodySha256": "e16ca9013a825c87a8bd37b4262357818f5189edeb70d1539c42d97776b44e28",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "P11",
+      "article": "import-a-database",
+      "locale": "es",
+      "sourceRevision": 1,
+      "bodySha256": "0489a71b41760f2770a783451f4c735dd2a88a2d5320db872b9afb438a01a24f",
+      "sourceBodySha256": "ccdbdd6d4e3b54830a72cb2b6af417da04a6f058514660d7f9928fb3b8f3edc8",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "P07",
+      "article": "import-export-and-print-pages",
+      "locale": "es",
+      "sourceRevision": 1,
+      "bodySha256": "9780d45b34620707421742ea25870bbe09db2c9e4ae2a58c108427261bc17858",
+      "sourceBodySha256": "0664135c21204b434d56ce8535fb9a75ee29e53aab0e9804290be589e81565a5",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W05",
+      "article": "issue-dependencies",
+      "locale": "es",
+      "sourceRevision": 1,
+      "bodySha256": "c3e76512490694e7d1b53b76688c601efce51a162189a5e0f4ec673f61ce76be",
+      "sourceBodySha256": "cd533368077a6e56d5530cc26b1065bde1e784cc1d3da2339946ceeb0faea82a",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W08",
+      "article": "issue-discussion-and-resources",
+      "locale": "es",
+      "sourceRevision": 1,
+      "bodySha256": "5ffc34f891a21bd2daf067db1737293b0cf5d1196cc949ddec860dae8bbe571a",
+      "sourceBodySha256": "d2009e49443e570d97c4a0dfb894fdb791c885dc8a9530c155c2fa98fc241fad",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W02",
+      "article": "issue-statuses",
+      "locale": "es",
+      "sourceRevision": 1,
+      "bodySha256": "577caf159c9dd60c3c9f7efdca6b198b4cf8f0a038f712233db510681ef2c9a8",
+      "sourceBodySha256": "9518418aac8b4e67bc86f92b149dcc5f71bccd753eea1fa7413c25bd83197f2a",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "S04",
+      "article": "navigation",
+      "locale": "es",
+      "sourceRevision": 1,
+      "bodySha256": "5637035d89d1a0a0d9a92f1209fbd6f0a2e99f67c8bc35930f938ad9905eca72",
+      "sourceBodySha256": "42fe8e78dfcfc1b0c21ebd9f178197fca7ae38558a69c70e33be2a9d0dc9883f",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W16",
+      "article": "notifications-and-inbox",
+      "locale": "es",
+      "sourceRevision": 1,
+      "bodySha256": "e4ece6ca6690453d9de06b6db9d219366114d113e8aea3e4ee1d0a79deffe7fd",
+      "sourceBodySha256": "8d1d64f755ae500d50d0335cdf26c49d7a3bc051c79ed926b800214dde797d42",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W11",
+      "article": "objective-dependencies-and-momentum",
+      "locale": "es",
+      "sourceRevision": 1,
+      "bodySha256": "e31a00201e8f748c5ed3906f4565593e94d75e867cf942136bf214fb229127f0",
+      "sourceBodySha256": "ba0fb5a9ba00dab3ffbb584c1e63903c3cbfcbbf12f219a593852440c73b460e",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W10",
+      "article": "objectives",
+      "locale": "es",
+      "sourceRevision": 1,
+      "bodySha256": "ee9834dd100e09a17436baa23bef2f3e707bd7bda59ea30d03c6bae9e5bbd8b6",
+      "sourceBodySha256": "9772a06fbd1feae0042e4871d9453bbfbe70a0d0e924e4c4eb58bacf7978b701",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "P03",
+      "article": "page-comments-and-collaboration",
+      "locale": "es",
+      "sourceRevision": 1,
+      "bodySha256": "7ae77e04207af050914215f740843b139eb4c7f9e8177c98e7f8239d88e9bed8",
+      "sourceBodySha256": "6f37ed85c58f6085968ae774a9e0dfcb73b278ea322ff285bda3cc81070ad245",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "P02",
+      "article": "page-editor",
+      "locale": "es",
+      "sourceRevision": 1,
+      "bodySha256": "4eb6289c5c1fabee07da0f2394fb9649b1cec77d9e1ebca78d08f22b5abd3545",
+      "sourceBodySha256": "36514cdd7d538ffd838aeeb523681f0627e924ccb0c5e7e5de0fd91ee73a69e7",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "P04",
+      "article": "page-files",
+      "locale": "es",
+      "sourceRevision": 1,
+      "bodySha256": "604954b306cd3fa151b9487b3a3d09ac5aee496f1568f607ebba74e451545e1f",
+      "sourceBodySha256": "dfd47fe40fbca5997351de04f8e062fa99234377154dfb90dae92cfb115d2653",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "P05",
+      "article": "page-history",
+      "locale": "es",
+      "sourceRevision": 1,
+      "bodySha256": "b53d166645b22e00a64b993eb8f4ff9661dbe99e64a3db2f7971f68cf3448a27",
+      "sourceBodySha256": "ef6dbe6f92ca8898ae9cc033161861af00a384eeb80260030d18097aac760601",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W12",
+      "article": "personal-cycle",
+      "locale": "es",
+      "sourceRevision": 1,
+      "bodySha256": "1eb11676b69d98d904a40383da6eef31a18de657454075d89793802bf66a02b6",
+      "sourceBodySha256": "55e8bfb1ebbd516b853c1d8303b26d640fcb74b38ffe42b02f7502930e7859b5",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W18",
+      "article": "personal-statistics",
+      "locale": "es",
+      "sourceRevision": 1,
+      "bodySha256": "098a5e9fae572314177bce3d782581388e9abbf71b6b036d040c591f86361cd0",
+      "sourceBodySha256": "20e1bc425ae5ee35c6dd32a157f04c6a7d80470ee4609c54ef63744616141bdf",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "S06",
+      "article": "project-members",
+      "locale": "es",
+      "sourceRevision": 1,
+      "bodySha256": "71a37de039c5cafa58bc6bb9e39f7c4fae078ddd03ec86ad46555dbc6ac5e444",
+      "sourceBodySha256": "4a5feae08b9e88e2ef106ae656c98bc7e1ffca156b92f241e2fadf902ce4c1e6",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "S05",
+      "article": "project-settings",
+      "locale": "es",
+      "sourceRevision": 1,
+      "bodySha256": "482ddcc284495d09cac5b0f61e29b9dcd8c45603eb57c40d9bb678670172ffe1",
+      "sourceBodySha256": "feddd6e4bb3265b10db5b611a0198714454091f4d1286f37652b841b9872e73b",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "P06",
+      "article": "publish-a-page",
+      "locale": "es",
+      "sourceRevision": 1,
+      "bodySha256": "bcbe3bbf105fa1bd50c955a92a59329e658df66c02c3644ddee59ca4d9a234b7",
+      "sourceBodySha256": "bcd98beb381b21b38204af019f14547f26af7b683920539d12b4cd8b119c17d0",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W09",
+      "article": "recurring-issues",
+      "locale": "es",
+      "sourceRevision": 1,
+      "bodySha256": "0dee8ab681fdbb94a364db037d8e9693f479312e34f20f9e7102b77d2589c328",
+      "sourceBodySha256": "23bbc0fc9df5711d57c6e261a52c731eed0342e9bdb913fa30d6b47eeea348ea",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W15",
+      "article": "search-and-shortcuts",
+      "locale": "es",
+      "sourceRevision": 1,
+      "bodySha256": "9a674e1f14e40322eafca31fb324e15477546c2fa3a7300003121aa53cf8c2cd",
+      "sourceBodySha256": "2337ce07a5b5ae44a8b42e95837973dbc86729cd91f0c8d5c797c1c69a8f9fa6",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W14",
+      "article": "share-a-view",
+      "locale": "es",
+      "sourceRevision": 1,
+      "bodySha256": "956c6806ae464d2aa71e976d1b6d1590a957e7807ee0d0035ede7f373fc2d971",
+      "sourceBodySha256": "101ba1e0c4b3937c743fe5a13159953a0688cdf59fdfadd81deb01e6a96bd6d6",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W06",
+      "article": "sub-issues",
+      "locale": "es",
+      "sourceRevision": 1,
+      "bodySha256": "06c6f5b8206b3db7d9d2144aad4a725a79e94320066daf4641027d862c90e569",
+      "sourceBodySha256": "0dce70076938871caeeeb3c9d49bb6ac844de7dba980b67fe5ee14ab18f6200f",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W17",
+      "article": "task-notebook",
+      "locale": "es",
+      "sourceRevision": 1,
+      "bodySha256": "f70f70a912fcf60862acef67f8b1ff8c20eaf5c035e58f27faec4b0d300da4d0",
+      "sourceBodySha256": "3ca8f9582617601856ad420b99b7d703e8ff6af370f9ea19d8eee455e4c3ee70",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W19",
+      "article": "trash-and-recovery",
+      "locale": "es",
+      "sourceRevision": 1,
+      "bodySha256": "0b5fe20eeae91285a84dc38d15af91e22f754e1d929d8f1e1c284a125748faa5",
+      "sourceBodySha256": "7059ea00d92cbfe00ffd927b12ce1056be6f81aa1f95cb04013e6a987f7e4340",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W03",
+      "article": "triage-incoming-work",
+      "locale": "es",
+      "sourceRevision": 1,
+      "bodySha256": "470c7e2dcef34b8783666edf482ea8f610966032586b8fc4e7527d78503b4cd3",
+      "sourceBodySha256": "4a7f5a47897cf6bdf3ba76afcc4ba205f67bf5ec16a0f59dce1d7ce1e498f2fb",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W13",
+      "article": "views-and-filters",
+      "locale": "es",
+      "sourceRevision": 1,
+      "bodySha256": "3fb249d382f130dc309db952dfe75f9e9e7edd4fe2ac791b741ff8503ac61c18",
+      "sourceBodySha256": "247b181e6484a41f719d5a66877642d7890c71098e5d6da47b8c806a8aa869c8",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "S02",
+      "article": "account-access",
+      "locale": "it",
+      "sourceRevision": 1,
+      "bodySha256": "7daad99e4137de84b520682327262e657ef4c3358b935fed077784e7788956ab",
+      "sourceBodySha256": "b4cbbe652238dcf95f43b57bbf7af6a229105c206a6c0c10de26028cdd7194bc",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "S03",
+      "article": "account-recovery",
+      "locale": "it",
+      "sourceRevision": 1,
+      "bodySha256": "45c3d23894da992bfbbb113e8c5fbad49453185e90ac48208e3ce53a821473a6",
+      "sourceBodySha256": "9a7b7b86ba35a8aafed86ccc3eb07b34c5a6c47d5d977c4e09f0d886b06a30ae",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W04",
+      "article": "bulk-issue-actions",
+      "locale": "it",
+      "sourceRevision": 1,
+      "bodySha256": "c7f12bc1e78a62c24eff8d55532f08d5573a4022a42751c8fa2c60b9948d3c8a",
+      "sourceBodySha256": "aa81983dc8e1e72864b0cb7f1b00d180c96dde321f4e260b7e56dac8c3a8a40e",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "P10",
+      "article": "change-a-database-schema",
+      "locale": "it",
+      "sourceRevision": 1,
+      "bodySha256": "26c4ae3d75c63df46faddc8e4b0f12a904c293aeee4213b147f33883723039c5",
+      "sourceBodySha256": "ea894a7140fd757a825562c71426e9c61fde500aeb7f0e43dfd72789f50a6f0b",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "S07",
+      "article": "choose-an-instance",
+      "locale": "it",
+      "sourceRevision": 1,
+      "bodySha256": "ec34f9ead1e5811c88db99cd9d8f8d6df6e4fc8075447f6a8be72c0530b70290",
+      "sourceBodySha256": "3534eaa638eb628b11f3630aae20eed0bdd03e9c98457025fde2553894d72c3a",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "P08",
+      "article": "create-a-database",
+      "locale": "it",
+      "sourceRevision": 1,
+      "bodySha256": "7dfc3e7fcf375421fd9d50304b03bf440555bc45f32a401882a368055aa12a57",
+      "sourceBodySha256": "9609ceec7ea3e6bb01f4f922161ba1c8dd87cffe4ac976aab063da5b4f4fa212",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W01",
+      "article": "create-an-issue",
+      "locale": "it",
+      "sourceRevision": 1,
+      "bodySha256": "55c00b833b3d102bec844b56a0a399da58af9cb73bb764b36930f15298549633",
+      "sourceBodySha256": "d1c4fd9a84fa7abe210535d3a19edf08a8985124f3d05d3b51d295b558b0f434",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "P01",
+      "article": "create-and-organize-pages",
+      "locale": "it",
+      "sourceRevision": 1,
+      "bodySha256": "39d3173a5a6eedcc0ebcd09d20cfd8dc95e74c185ce06412ff45b93fe5cdfd79",
+      "sourceBodySha256": "d3efd77b4850eb85655fe84c4a4b122b8b54a020820ac645b25b08126c8d526f",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "P09",
+      "article": "database-cells-and-entries",
+      "locale": "it",
+      "sourceRevision": 1,
+      "bodySha256": "4a6cd1f7b6a1a65ade440503b774ccd5e4d66a768334ee4068b5b36978b8ea46",
+      "sourceBodySha256": "4629a87b9136e8bd7c4b950f0be4e75c91147c12d71a8d31240ad475fad3d8ed",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "S01",
+      "article": "first-project",
+      "locale": "it",
+      "sourceRevision": 1,
+      "bodySha256": "418658a95053ef1771164da3ecb62caabe73142b34dd5ddb92691d1fc83ec23b",
+      "sourceBodySha256": "c0111e0930d9d2da7f0f00b13fe96be9b5da5ba00fbcb6373413e896b1ca7a74",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W07",
+      "article": "implementation-plans",
+      "locale": "it",
+      "sourceRevision": 1,
+      "bodySha256": "f75b90f2a7340a60885d835e30a9e556088f531bc4a3d6f6946fe7e23cc81deb",
+      "sourceBodySha256": "e16ca9013a825c87a8bd37b4262357818f5189edeb70d1539c42d97776b44e28",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "P11",
+      "article": "import-a-database",
+      "locale": "it",
+      "sourceRevision": 1,
+      "bodySha256": "345e279347a928bed1f84034fd188c7379517c1401e77df1cc03c42e4e0a0f40",
+      "sourceBodySha256": "ccdbdd6d4e3b54830a72cb2b6af417da04a6f058514660d7f9928fb3b8f3edc8",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "P07",
+      "article": "import-export-and-print-pages",
+      "locale": "it",
+      "sourceRevision": 1,
+      "bodySha256": "a55f286fe02b1d51ede961479bd3efb97d147082217ba29e30a203a5449e935e",
+      "sourceBodySha256": "0664135c21204b434d56ce8535fb9a75ee29e53aab0e9804290be589e81565a5",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W05",
+      "article": "issue-dependencies",
+      "locale": "it",
+      "sourceRevision": 1,
+      "bodySha256": "3d2f5245402638c9b6f71e47fb8b1d170b8ca0bac7755ef394c12f56a1c43b59",
+      "sourceBodySha256": "cd533368077a6e56d5530cc26b1065bde1e784cc1d3da2339946ceeb0faea82a",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W08",
+      "article": "issue-discussion-and-resources",
+      "locale": "it",
+      "sourceRevision": 1,
+      "bodySha256": "99cda2e1da0e30db690fb02064c296e26444fe072618648835fcf081a4eb0701",
+      "sourceBodySha256": "d2009e49443e570d97c4a0dfb894fdb791c885dc8a9530c155c2fa98fc241fad",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W02",
+      "article": "issue-statuses",
+      "locale": "it",
+      "sourceRevision": 1,
+      "bodySha256": "ccc04fab873f6d9b8637fa219ad8dd26b8113b2533b019455e6b0c224cc92f5b",
+      "sourceBodySha256": "9518418aac8b4e67bc86f92b149dcc5f71bccd753eea1fa7413c25bd83197f2a",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "S04",
+      "article": "navigation",
+      "locale": "it",
+      "sourceRevision": 1,
+      "bodySha256": "80c623474cc7218e561868e143c7512f415eb5ff9dfb5991cd9f302ec4f0a938",
+      "sourceBodySha256": "42fe8e78dfcfc1b0c21ebd9f178197fca7ae38558a69c70e33be2a9d0dc9883f",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W16",
+      "article": "notifications-and-inbox",
+      "locale": "it",
+      "sourceRevision": 1,
+      "bodySha256": "350b248cb8b77ed88d698bba9abd896ca02b5cf3937941e97a99c318129c886d",
+      "sourceBodySha256": "8d1d64f755ae500d50d0335cdf26c49d7a3bc051c79ed926b800214dde797d42",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W11",
+      "article": "objective-dependencies-and-momentum",
+      "locale": "it",
+      "sourceRevision": 1,
+      "bodySha256": "01cfe2d86ef8bee292eab995d8882b20b0d112029b9f061be82c4c43e3f06072",
+      "sourceBodySha256": "ba0fb5a9ba00dab3ffbb584c1e63903c3cbfcbbf12f219a593852440c73b460e",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W10",
+      "article": "objectives",
+      "locale": "it",
+      "sourceRevision": 1,
+      "bodySha256": "fe095aa6c62efad754d85422d835c79a0a55cc4fa13d37c81487984f1ad0d66f",
+      "sourceBodySha256": "9772a06fbd1feae0042e4871d9453bbfbe70a0d0e924e4c4eb58bacf7978b701",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "P03",
+      "article": "page-comments-and-collaboration",
+      "locale": "it",
+      "sourceRevision": 1,
+      "bodySha256": "250f211d91bf293a0b5a9839a9247b25b0226dc86cf229a658d74af3a3b4be95",
+      "sourceBodySha256": "6f37ed85c58f6085968ae774a9e0dfcb73b278ea322ff285bda3cc81070ad245",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "P02",
+      "article": "page-editor",
+      "locale": "it",
+      "sourceRevision": 1,
+      "bodySha256": "28c3b7284d35cb2c32a042812c911e72b9bd0de6845f69769563bffc2da7abb0",
+      "sourceBodySha256": "36514cdd7d538ffd838aeeb523681f0627e924ccb0c5e7e5de0fd91ee73a69e7",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "P04",
+      "article": "page-files",
+      "locale": "it",
+      "sourceRevision": 1,
+      "bodySha256": "a753c247e1dc223c0f14b934784c8125fbe086ec759dcd1eaa4c0d658f9d49fe",
+      "sourceBodySha256": "dfd47fe40fbca5997351de04f8e062fa99234377154dfb90dae92cfb115d2653",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "P05",
+      "article": "page-history",
+      "locale": "it",
+      "sourceRevision": 1,
+      "bodySha256": "95e735ff4b19168df2f5ced284e15670ff7514c57560c527b5491c6a7fc8f501",
+      "sourceBodySha256": "ef6dbe6f92ca8898ae9cc033161861af00a384eeb80260030d18097aac760601",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W12",
+      "article": "personal-cycle",
+      "locale": "it",
+      "sourceRevision": 1,
+      "bodySha256": "aa278eeaa15ee0005aa74ad6d47b20b62766d072b904474bf64bd938152d16ef",
+      "sourceBodySha256": "55e8bfb1ebbd516b853c1d8303b26d640fcb74b38ffe42b02f7502930e7859b5",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W18",
+      "article": "personal-statistics",
+      "locale": "it",
+      "sourceRevision": 1,
+      "bodySha256": "4d2df416010ad27c0599a233a329a04fe1d5ee6729a9c15c5eb40893a7124cb7",
+      "sourceBodySha256": "20e1bc425ae5ee35c6dd32a157f04c6a7d80470ee4609c54ef63744616141bdf",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "S06",
+      "article": "project-members",
+      "locale": "it",
+      "sourceRevision": 1,
+      "bodySha256": "5cb9806debe013a5ea0c365f9270ac2db807d8bf04bce2a58bbc909e5132dcfc",
+      "sourceBodySha256": "4a5feae08b9e88e2ef106ae656c98bc7e1ffca156b92f241e2fadf902ce4c1e6",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "S05",
+      "article": "project-settings",
+      "locale": "it",
+      "sourceRevision": 1,
+      "bodySha256": "9f90d2852a5ad34235db4034feb5c78efadd6eaf7faf39d994f94f0fed3d8cb2",
+      "sourceBodySha256": "feddd6e4bb3265b10db5b611a0198714454091f4d1286f37652b841b9872e73b",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "P06",
+      "article": "publish-a-page",
+      "locale": "it",
+      "sourceRevision": 1,
+      "bodySha256": "f0862b748d2987899e4a7a6c6296d7cab9eb30e1e27530a93b1eaf8b2f791fda",
+      "sourceBodySha256": "bcd98beb381b21b38204af019f14547f26af7b683920539d12b4cd8b119c17d0",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W09",
+      "article": "recurring-issues",
+      "locale": "it",
+      "sourceRevision": 1,
+      "bodySha256": "e3f49aa3e7cbac4e951c56c81b8610cef457e594f571430b5fdb0494affdb582",
+      "sourceBodySha256": "23bbc0fc9df5711d57c6e261a52c731eed0342e9bdb913fa30d6b47eeea348ea",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W15",
+      "article": "search-and-shortcuts",
+      "locale": "it",
+      "sourceRevision": 1,
+      "bodySha256": "2450e1f5aaf5333210ff49fec7c44d0a85167a774142cd11dbd289afa2f39609",
+      "sourceBodySha256": "2337ce07a5b5ae44a8b42e95837973dbc86729cd91f0c8d5c797c1c69a8f9fa6",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W14",
+      "article": "share-a-view",
+      "locale": "it",
+      "sourceRevision": 1,
+      "bodySha256": "6f9a7d6c50699e1eb59091fb81e2a9b5392d4c4e4e51eb5557cbc2099f117b14",
+      "sourceBodySha256": "101ba1e0c4b3937c743fe5a13159953a0688cdf59fdfadd81deb01e6a96bd6d6",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W06",
+      "article": "sub-issues",
+      "locale": "it",
+      "sourceRevision": 1,
+      "bodySha256": "03d1a3c654006be1b275cfac11034c797c0970cdad80ae6d839b211108f1e0d8",
+      "sourceBodySha256": "0dce70076938871caeeeb3c9d49bb6ac844de7dba980b67fe5ee14ab18f6200f",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W17",
+      "article": "task-notebook",
+      "locale": "it",
+      "sourceRevision": 1,
+      "bodySha256": "a7394db8bfddfbd2dbdfa852f17b2d6a636c718f48926f642ccfd0349a6dee34",
+      "sourceBodySha256": "3ca8f9582617601856ad420b99b7d703e8ff6af370f9ea19d8eee455e4c3ee70",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W19",
+      "article": "trash-and-recovery",
+      "locale": "it",
+      "sourceRevision": 1,
+      "bodySha256": "8c92e8cb5e6bb42d052f1d8b62bca03c98eedaaa745de39f1458bffb68e55d05",
+      "sourceBodySha256": "7059ea00d92cbfe00ffd927b12ce1056be6f81aa1f95cb04013e6a987f7e4340",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W03",
+      "article": "triage-incoming-work",
+      "locale": "it",
+      "sourceRevision": 1,
+      "bodySha256": "fc4f6da0bdd55dd57a98b6d5b3d9bfa91f6784f3fdb899d4ca1e4f5bec347902",
+      "sourceBodySha256": "4a7f5a47897cf6bdf3ba76afcc4ba205f67bf5ec16a0f59dce1d7ce1e498f2fb",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W13",
+      "article": "views-and-filters",
+      "locale": "it",
+      "sourceRevision": 1,
+      "bodySha256": "ced1f9f9bb1805e2ad4c3def1cea9631155d98351d177677f10f77e00ed07bb2",
+      "sourceBodySha256": "247b181e6484a41f719d5a66877642d7890c71098e5d6da47b8c806a8aa869c8",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "S02",
+      "article": "account-access",
+      "locale": "pt-BR",
+      "sourceRevision": 1,
+      "bodySha256": "02a578924158c8962dff4ad24f055f936439f8bb9785a379d311e72a05950b99",
+      "sourceBodySha256": "b4cbbe652238dcf95f43b57bbf7af6a229105c206a6c0c10de26028cdd7194bc",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "S03",
+      "article": "account-recovery",
+      "locale": "pt-BR",
+      "sourceRevision": 1,
+      "bodySha256": "2cdc4e6ba2eb43899513a7d62f7e47258c8a589d9d04891f83e188122b6fb9c7",
+      "sourceBodySha256": "9a7b7b86ba35a8aafed86ccc3eb07b34c5a6c47d5d977c4e09f0d886b06a30ae",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W04",
+      "article": "bulk-issue-actions",
+      "locale": "pt-BR",
+      "sourceRevision": 1,
+      "bodySha256": "1e7af94bd66ddaafcda443af665a3ad2e2c7833f1602742bde5e926e0815f285",
+      "sourceBodySha256": "aa81983dc8e1e72864b0cb7f1b00d180c96dde321f4e260b7e56dac8c3a8a40e",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "P10",
+      "article": "change-a-database-schema",
+      "locale": "pt-BR",
+      "sourceRevision": 1,
+      "bodySha256": "93b780ebfe4839580f5cc291dc1b009d63bade1570bf4114f53c591b5058c5ef",
+      "sourceBodySha256": "ea894a7140fd757a825562c71426e9c61fde500aeb7f0e43dfd72789f50a6f0b",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "S07",
+      "article": "choose-an-instance",
+      "locale": "pt-BR",
+      "sourceRevision": 1,
+      "bodySha256": "f2422870f7099abe2e079cc08f67565d6d121b271b0ff4fc5f6dacb2ddd9031b",
+      "sourceBodySha256": "3534eaa638eb628b11f3630aae20eed0bdd03e9c98457025fde2553894d72c3a",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "P08",
+      "article": "create-a-database",
+      "locale": "pt-BR",
+      "sourceRevision": 1,
+      "bodySha256": "7f71b56962838790d3ed0d0eccab7e3f0b4c33be542d524de7dd3cd3fa85b3d3",
+      "sourceBodySha256": "9609ceec7ea3e6bb01f4f922161ba1c8dd87cffe4ac976aab063da5b4f4fa212",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W01",
+      "article": "create-an-issue",
+      "locale": "pt-BR",
+      "sourceRevision": 1,
+      "bodySha256": "81b658da8d20e3d1e5a78228b6d2301863ce43f06636d7416784711deb2c1bc5",
+      "sourceBodySha256": "d1c4fd9a84fa7abe210535d3a19edf08a8985124f3d05d3b51d295b558b0f434",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "P01",
+      "article": "create-and-organize-pages",
+      "locale": "pt-BR",
+      "sourceRevision": 1,
+      "bodySha256": "d0a9b0e63eca6140ac60656756dbe5a6dcb4a9cf64110219497a4cca3e75c1a3",
+      "sourceBodySha256": "d3efd77b4850eb85655fe84c4a4b122b8b54a020820ac645b25b08126c8d526f",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "P09",
+      "article": "database-cells-and-entries",
+      "locale": "pt-BR",
+      "sourceRevision": 1,
+      "bodySha256": "be8d8ad812c649b318ca24145654f642d5340d38cc0623b636696913534fcfcd",
+      "sourceBodySha256": "4629a87b9136e8bd7c4b950f0be4e75c91147c12d71a8d31240ad475fad3d8ed",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "S01",
+      "article": "first-project",
+      "locale": "pt-BR",
+      "sourceRevision": 1,
+      "bodySha256": "05f07ecbd22e31d4fe5b9a5e0d14cc415daebd1f3d99eeb3582ab93f7c6c0444",
+      "sourceBodySha256": "c0111e0930d9d2da7f0f00b13fe96be9b5da5ba00fbcb6373413e896b1ca7a74",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W07",
+      "article": "implementation-plans",
+      "locale": "pt-BR",
+      "sourceRevision": 1,
+      "bodySha256": "26d964b8e86112aadadaaec07476252fb98b33422b4dbd0cd7c9c87c17ed28f5",
+      "sourceBodySha256": "e16ca9013a825c87a8bd37b4262357818f5189edeb70d1539c42d97776b44e28",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "P11",
+      "article": "import-a-database",
+      "locale": "pt-BR",
+      "sourceRevision": 1,
+      "bodySha256": "59dc2cbd715c35d608e073e27ba55e826f41e92031d4e001ce7b826064df3487",
+      "sourceBodySha256": "ccdbdd6d4e3b54830a72cb2b6af417da04a6f058514660d7f9928fb3b8f3edc8",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "P07",
+      "article": "import-export-and-print-pages",
+      "locale": "pt-BR",
+      "sourceRevision": 1,
+      "bodySha256": "2a1e1e5b5053a0dd3aea5c07f1382a98139993a8a2d83426b554723899a43689",
+      "sourceBodySha256": "0664135c21204b434d56ce8535fb9a75ee29e53aab0e9804290be589e81565a5",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W05",
+      "article": "issue-dependencies",
+      "locale": "pt-BR",
+      "sourceRevision": 1,
+      "bodySha256": "18afdd88a098a069a39674b96d92c5cb781f8734c6cf6a00ec9abc233f12e613",
+      "sourceBodySha256": "cd533368077a6e56d5530cc26b1065bde1e784cc1d3da2339946ceeb0faea82a",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W08",
+      "article": "issue-discussion-and-resources",
+      "locale": "pt-BR",
+      "sourceRevision": 1,
+      "bodySha256": "239713e022c091b92d8681daed55c56cc21596b25145401a7cc513bae737fe0a",
+      "sourceBodySha256": "d2009e49443e570d97c4a0dfb894fdb791c885dc8a9530c155c2fa98fc241fad",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W02",
+      "article": "issue-statuses",
+      "locale": "pt-BR",
+      "sourceRevision": 1,
+      "bodySha256": "def559b95438a5cb8fce6e21914cc5c4a474661e171146303650d65fb664df76",
+      "sourceBodySha256": "9518418aac8b4e67bc86f92b149dcc5f71bccd753eea1fa7413c25bd83197f2a",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "S04",
+      "article": "navigation",
+      "locale": "pt-BR",
+      "sourceRevision": 1,
+      "bodySha256": "5c5152535304c1787b9fc2fdfd13931ceba218ddd34135f6156f4e25236dbd98",
+      "sourceBodySha256": "42fe8e78dfcfc1b0c21ebd9f178197fca7ae38558a69c70e33be2a9d0dc9883f",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W16",
+      "article": "notifications-and-inbox",
+      "locale": "pt-BR",
+      "sourceRevision": 1,
+      "bodySha256": "4ed5788d4014121410857cfcaeb0724079217a98645a875a871d8fb9dd73eb5b",
+      "sourceBodySha256": "8d1d64f755ae500d50d0335cdf26c49d7a3bc051c79ed926b800214dde797d42",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W11",
+      "article": "objective-dependencies-and-momentum",
+      "locale": "pt-BR",
+      "sourceRevision": 1,
+      "bodySha256": "0d12a499117e305dc25df3121dfb08f44aac1c2fdc5a13e1271bd2d59622795c",
+      "sourceBodySha256": "ba0fb5a9ba00dab3ffbb584c1e63903c3cbfcbbf12f219a593852440c73b460e",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W10",
+      "article": "objectives",
+      "locale": "pt-BR",
+      "sourceRevision": 1,
+      "bodySha256": "226b3e21bf777a780d4bef36fc2bf9739263b04983531b92bbf2b0a4608d6e7c",
+      "sourceBodySha256": "9772a06fbd1feae0042e4871d9453bbfbe70a0d0e924e4c4eb58bacf7978b701",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "P03",
+      "article": "page-comments-and-collaboration",
+      "locale": "pt-BR",
+      "sourceRevision": 1,
+      "bodySha256": "1e4545d874080f25c40c231ec83272956d0eb4232661746d3ec777a859c110cb",
+      "sourceBodySha256": "6f37ed85c58f6085968ae774a9e0dfcb73b278ea322ff285bda3cc81070ad245",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "P02",
+      "article": "page-editor",
+      "locale": "pt-BR",
+      "sourceRevision": 1,
+      "bodySha256": "ba33a6ce74cba0603c6ab32e3a8567b62525b721d869dea2eec7ab1335dd8be8",
+      "sourceBodySha256": "36514cdd7d538ffd838aeeb523681f0627e924ccb0c5e7e5de0fd91ee73a69e7",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "P04",
+      "article": "page-files",
+      "locale": "pt-BR",
+      "sourceRevision": 1,
+      "bodySha256": "e8f450dd211f55dd69a04388b23ac0a4040171f6f1c9ee0f023534ab29573e5b",
+      "sourceBodySha256": "dfd47fe40fbca5997351de04f8e062fa99234377154dfb90dae92cfb115d2653",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "P05",
+      "article": "page-history",
+      "locale": "pt-BR",
+      "sourceRevision": 1,
+      "bodySha256": "4aaf8323b80921a318e2ae54a9f5ffa27ea28a9c32d4564f08cbc3f261f74463",
+      "sourceBodySha256": "ef6dbe6f92ca8898ae9cc033161861af00a384eeb80260030d18097aac760601",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W12",
+      "article": "personal-cycle",
+      "locale": "pt-BR",
+      "sourceRevision": 1,
+      "bodySha256": "bd03f42befca5df5a907d752839c5ecd5a119ae3134f3cda13351924387df03a",
+      "sourceBodySha256": "55e8bfb1ebbd516b853c1d8303b26d640fcb74b38ffe42b02f7502930e7859b5",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W18",
+      "article": "personal-statistics",
+      "locale": "pt-BR",
+      "sourceRevision": 1,
+      "bodySha256": "8e875db8a68f800f5a99ec928e4802693eccc364a85a1f59e18768aa6f137e1d",
+      "sourceBodySha256": "20e1bc425ae5ee35c6dd32a157f04c6a7d80470ee4609c54ef63744616141bdf",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "S06",
+      "article": "project-members",
+      "locale": "pt-BR",
+      "sourceRevision": 1,
+      "bodySha256": "7d65f75fac7adc4b9248cc3cc3b6de14bd0cc0256682a1106eb9e83aeb73a409",
+      "sourceBodySha256": "4a5feae08b9e88e2ef106ae656c98bc7e1ffca156b92f241e2fadf902ce4c1e6",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "S05",
+      "article": "project-settings",
+      "locale": "pt-BR",
+      "sourceRevision": 1,
+      "bodySha256": "c03a256cccd4db4238c2211180ec34388cf7bf2b37e278fd833fb7a346b13892",
+      "sourceBodySha256": "feddd6e4bb3265b10db5b611a0198714454091f4d1286f37652b841b9872e73b",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "P06",
+      "article": "publish-a-page",
+      "locale": "pt-BR",
+      "sourceRevision": 1,
+      "bodySha256": "c8e548fe1ed58d48bb23d8d554afd4054714dcd6df07eaa2e894e834ba44bf94",
+      "sourceBodySha256": "bcd98beb381b21b38204af019f14547f26af7b683920539d12b4cd8b119c17d0",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W09",
+      "article": "recurring-issues",
+      "locale": "pt-BR",
+      "sourceRevision": 1,
+      "bodySha256": "aeb779ef49289ce8547e1da945c999982757826c7cce8d154c44d4190998ae98",
+      "sourceBodySha256": "23bbc0fc9df5711d57c6e261a52c731eed0342e9bdb913fa30d6b47eeea348ea",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W15",
+      "article": "search-and-shortcuts",
+      "locale": "pt-BR",
+      "sourceRevision": 1,
+      "bodySha256": "d3e12574aeb8013e59b0c3b2c77719f7f79ccf2c63e76c4632de1a6e7e9eadbc",
+      "sourceBodySha256": "2337ce07a5b5ae44a8b42e95837973dbc86729cd91f0c8d5c797c1c69a8f9fa6",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W14",
+      "article": "share-a-view",
+      "locale": "pt-BR",
+      "sourceRevision": 1,
+      "bodySha256": "b4303438f35164e15f4898d405d94d8cc497b73c6a2b6fe80f5bbc5142ca48a1",
+      "sourceBodySha256": "101ba1e0c4b3937c743fe5a13159953a0688cdf59fdfadd81deb01e6a96bd6d6",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W06",
+      "article": "sub-issues",
+      "locale": "pt-BR",
+      "sourceRevision": 1,
+      "bodySha256": "3f3618a677fcd30fec132030be1522c2e10b6d2eb63eb025d4157809b77c5f85",
+      "sourceBodySha256": "0dce70076938871caeeeb3c9d49bb6ac844de7dba980b67fe5ee14ab18f6200f",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W17",
+      "article": "task-notebook",
+      "locale": "pt-BR",
+      "sourceRevision": 1,
+      "bodySha256": "f333cfd2262f134ba7fd74df3d31367ffb1f271b1a4afd284fa82ddcba4c09be",
+      "sourceBodySha256": "3ca8f9582617601856ad420b99b7d703e8ff6af370f9ea19d8eee455e4c3ee70",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W19",
+      "article": "trash-and-recovery",
+      "locale": "pt-BR",
+      "sourceRevision": 1,
+      "bodySha256": "3f763b9f3b1d35558278c3aa11f90789fc1c471ce2383e81f62b74b4f2aee312",
+      "sourceBodySha256": "7059ea00d92cbfe00ffd927b12ce1056be6f81aa1f95cb04013e6a987f7e4340",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W03",
+      "article": "triage-incoming-work",
+      "locale": "pt-BR",
+      "sourceRevision": 1,
+      "bodySha256": "efd68aa6fc8cfe2eab72a610addcb3555bdbc345e7372c8a35f2022e3d7b5cdf",
+      "sourceBodySha256": "4a7f5a47897cf6bdf3ba76afcc4ba205f67bf5ec16a0f59dce1d7ce1e498f2fb",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    },
+    {
+      "workflow": "W13",
+      "article": "views-and-filters",
+      "locale": "pt-BR",
+      "sourceRevision": 1,
+      "bodySha256": "9e9102bf711e86f4e31215fa32ed15ad14ae335f41ea15f56d28156538fa1a42",
+      "sourceBodySha256": "247b181e6484a41f719d5a66877642d7890c71098e5d6da47b8c806a8aa869c8",
+      "scope": "Complete source/translation meaning, permissions, conditions and limits; checkout source review and peer-verified English corrections. No human or end-to-end execution claim."
+    }
+  ]
+}

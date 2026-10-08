@@ -1,0 +1,40 @@
+{
+  "author": "agent:/root/operator_documentation",
+  "date": "2026-10-08",
+  "workerImage": "sha256:c323824e2f17acc5fe8bc17eea0a827f9bfc342b61b69137fdd827ea7c6c2e05",
+  "source": "deploy/self-hosted/Dockerfile.agent-sandbox",
+  "sourceSHA256": "e13e758193b83e158a5499dbd38d923ac7bcd0d97cc8485e5d7963e77c17ecf9",
+  "requests": [
+    {
+      "method": "POST",
+      "action": "/v1/sandboxes/<disposable-sandbox>",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "action": "/v1/sandboxes/<disposable-sandbox>/commands",
+      "status": 200
+    },
+    {
+      "method": "DELETE",
+      "action": "/v1/sandboxes/<disposable-sandbox>",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "action": "/v1/sandboxes/<disposable-sandbox>",
+      "status": 200
+    }
+  ],
+  "exitCode": 0,
+  "toolVersionsAndContext": [
+    "v24.19.0",
+    "11.17.0",
+    "git version 2.39.5",
+    "10001",
+    "/vercel/sandbox",
+    "npm-registry-http:200"
+  ],
+  "sandboxDeleted": true,
+  "qualification": "Actual fresh sandbox and toolchain only. No OpenCode bootstrap, AI code execution, repository write, test or PR success is inferred from this probe."
+}

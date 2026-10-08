@@ -1,0 +1,22 @@
+{
+  "date": "2026-10-08",
+  "actor": "agent:/root/automation_account_documentation",
+  "account": "captures-demo@minddy.app",
+  "action": "Verify exact capture demo account and remove only capture-friendly-name unverified factors if any. First interrupted cancellation cleanup removed one; final verification after six successful cycles found none.",
+  "removedCount": 0,
+  "verifiedFactorsModified": false,
+  "secretsRecorded": false,
+  "remainingMatchingFactors": 0,
+  "history": [
+    {
+      "phase": "First interrupted UI cancellation",
+      "removedMatchingUnverifiedFactors": 1,
+      "remainingMatchingFactors": 0
+    },
+    {
+      "phase": "Final verification after six successful UI cancellation-and-refresh cycles",
+      "removedMatchingUnverifiedFactors": 0,
+      "remainingMatchingFactors": 0
+    }
+  ]
+}

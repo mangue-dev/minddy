@@ -1,0 +1,64 @@
+{
+  "findings": [
+    {
+      "name": "Configuration",
+      "state": "pass",
+      "detail": "required self-hosted configuration is present (values redacted)."
+    },
+    {
+      "name": "Version compatibility",
+      "state": "pass",
+      "detail": "release 0.11.0 uses an immutable image digest; verify its release-manifest.json before deployment."
+    },
+    {
+      "name": "Auth email",
+      "state": "warn",
+      "detail": "the upstream SMTP placeholder requires an explicitly configured local inbox; configure provider SMTP for real accounts. Application email settings do not configure Auth."
+    },
+    {
+      "name": "Container health",
+      "state": "pass",
+      "detail": "16 services are running."
+    },
+    {
+      "name": "Database, Storage, and migrations",
+      "state": "pass",
+      "detail": "PostgreSQL, migration invariants, and Storage buckets verified."
+    },
+    {
+      "name": "Scheduler",
+      "state": "pass",
+      "detail": "routine scheduler container is running."
+    },
+    {
+      "name": "Agent runner",
+      "state": "pass",
+      "detail": "server sandbox runner container is running."
+    },
+    {
+      "name": "Disk space",
+      "state": "pass",
+      "detail": "28.9 GiB available on the deployment filesystem."
+    },
+    {
+      "name": "Forge access",
+      "state": "pass",
+      "detail": "disabled: forge relay opt-out (--no-forge-relay) and no operator-owned app."
+    },
+    {
+      "name": "Optional capabilities",
+      "state": "pass",
+      "detail": "MINDDY_MANAGED_AI, MINDDY_MANAGED_BILLING, MINDDY_MANAGED_FORGE, MINDDY_FORGE_RELAY_URL, STRIPE_SECRET_KEY, POSTHOG_API_KEY, RESEND_API_KEY, GITHUB_CLIENT_ID, GITLAB_CLIENT_ID disabled or unconfigured."
+    },
+    {
+      "name": "Network address",
+      "state": "warn",
+      "detail": "public DNS/TLS check skipped for localhost."
+    },
+    {
+      "name": "Application health",
+      "state": "pass",
+      "detail": "Health endpoint returned 200."
+    }
+  ]
+}

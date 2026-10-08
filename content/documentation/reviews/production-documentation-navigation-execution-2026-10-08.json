@@ -1,0 +1,115 @@
+{
+  "date": "2026-10-08",
+  "executor": "agent:/root using anonymous local production browser",
+  "humanAcceptance": false,
+  "checks": [
+    {
+      "locale": "en",
+      "mode": "desktop",
+      "audienceFilter": true,
+      "localizedSearchRetainsAudience": true,
+      "contentsDirectLink": true,
+      "relatedArticle": true,
+      "topicNavigation": true
+    },
+    {
+      "locale": "en",
+      "mode": "mobile",
+      "audienceFilter": true,
+      "localizedSearchRetainsAudience": true,
+      "contentsDirectLink": true,
+      "relatedArticle": true,
+      "topicNavigation": true
+    },
+    {
+      "locale": "fr",
+      "mode": "desktop",
+      "audienceFilter": true,
+      "localizedSearchRetainsAudience": true,
+      "contentsDirectLink": true,
+      "relatedArticle": true,
+      "topicNavigation": true
+    },
+    {
+      "locale": "fr",
+      "mode": "mobile",
+      "audienceFilter": true,
+      "localizedSearchRetainsAudience": true,
+      "contentsDirectLink": true,
+      "relatedArticle": true,
+      "topicNavigation": true
+    },
+    {
+      "locale": "de",
+      "mode": "desktop",
+      "audienceFilter": true,
+      "localizedSearchRetainsAudience": true,
+      "contentsDirectLink": true,
+      "relatedArticle": true,
+      "topicNavigation": true
+    },
+    {
+      "locale": "de",
+      "mode": "mobile",
+      "audienceFilter": true,
+      "localizedSearchRetainsAudience": true,
+      "contentsDirectLink": true,
+      "relatedArticle": true,
+      "topicNavigation": true
+    },
+    {
+      "locale": "es",
+      "mode": "desktop",
+      "audienceFilter": true,
+      "localizedSearchRetainsAudience": true,
+      "contentsDirectLink": true,
+      "relatedArticle": true,
+      "topicNavigation": true
+    },
+    {
+      "locale": "es",
+      "mode": "mobile",
+      "audienceFilter": true,
+      "localizedSearchRetainsAudience": true,
+      "contentsDirectLink": true,
+      "relatedArticle": true,
+      "topicNavigation": true
+    },
+    {
+      "locale": "it",
+      "mode": "desktop",
+      "audienceFilter": true,
+      "localizedSearchRetainsAudience": true,
+      "contentsDirectLink": true,
+      "relatedArticle": true,
+      "topicNavigation": true
+    },
+    {
+      "locale": "it",
+      "mode": "mobile",
+      "audienceFilter": true,
+      "localizedSearchRetainsAudience": true,
+      "contentsDirectLink": true,
+      "relatedArticle": true,
+      "topicNavigation": true
+    },
+    {
+      "locale": "pt-BR",
+      "mode": "desktop",
+      "audienceFilter": true,
+      "localizedSearchRetainsAudience": true,
+      "contentsDirectLink": true,
+      "relatedArticle": true,
+      "topicNavigation": true
+    },
+    {
+      "locale": "pt-BR",
+      "mode": "mobile",
+      "audienceFilter": true,
+      "localizedSearchRetainsAudience": true,
+      "contentsDirectLink": true,
+      "relatedArticle": true,
+      "topicNavigation": true
+    }
+  ]
+}

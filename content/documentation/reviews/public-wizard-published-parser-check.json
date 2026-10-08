@@ -1,0 +1,110 @@
+{
+  "date": "2026-10-08",
+  "reviewer": "agent:/root/automation_account_documentation",
+  "tag": "v0.11.0",
+  "method": "Imported the archived published-tag argument parsers and called parseArgs only; no main, installation, Docker, database or network operation.",
+  "accepted": [
+    {
+      "profile": "local",
+      "arguments": [
+        "--minimal",
+        "--app-url",
+        "http://localhost:6463"
+      ],
+      "accepted": true,
+      "start": true,
+      "optionalFeatures": []
+    },
+    {
+      "profile": "managed",
+      "arguments": [
+        "--image",
+        "ghcr.io/mangue-dev/minddy@sha256:0000000000000000000000000000000000000000000000000000000000000000",
+        "--mode",
+        "managed",
+        "--app-url",
+        "http://192.168.1.50",
+        "--admin-email",
+        "ops@example.com"
+      ],
+      "accepted": true,
+      "start": true,
+      "optionalFeatures": []
+    },
+    {
+      "profile": "full",
+      "arguments": [
+        "--image",
+        "ghcr.io/mangue-dev/minddy@sha256:0000000000000000000000000000000000000000000000000000000000000000",
+        "--mode",
+        "full",
+        "--skip-start",
+        "--app-url",
+        "http://192.168.1.50",
+        "--admin-email",
+        "ops@example.com",
+        "--supabase-dir",
+        "/srv/minddy/supabase"
+      ],
+      "accepted": true,
+      "start": false,
+      "optionalFeatures": []
+    },
+    {
+      "profile": "optional-features",
+      "arguments": [
+        "--mode",
+        "managed",
+        "--enable",
+        "application-email",
+        "--enable",
+        "web-push"
+      ],
+      "accepted": true,
+      "start": true,
+      "optionalFeatures": [
+        "application-email",
+        "web-push"
+      ]
+    }
+  ],
+  "rejected": [
+    {
+      "tool": "install",
+      "arguments": [
+        "--encryption",
+        "enabled"
+      ],
+      "rejected": true,
+      "message": "Self-hosted installation failed: unknown option: --encryption. See --help."
+    },
+    {
+      "tool": "bootstrap",
+      "arguments": [
+        "--encryption",
+        "enabled"
+      ],
+      "rejected": true,
+      "message": "Supabase bootstrap failed: unknown option: --encryption. See --help."
+    }
+  ],
+  "sourceFiles": [
+    {
+      "path": "scripts/self-hosting-install.mjs",
+      "tag": "v0.11.0",
+      "sha256": "e641865d0971fb03eac1090291ee56edad1b8edfece465c21ca22f99cfda4a08"
+    },
+    {
+      "path": "scripts/bootstrap-supabase.mjs",
+      "tag": "v0.11.0",
+      "sha256": "989e4a6de368328d9cb6d098b11aa0db6c619e1ee6fe8c2025dff2a101114408"
+    },
+    {
+      "path": "deploy/self-hosted/compose.full.yml",
+      "tag": "v0.11.0",
+      "sha256": "4bdc38266932076a528cf873e4d27108eda3642ffdeba1528feced40512171ce"
+    }
+  ],
+  "composeBoundary": "Published full profile minddy.env_file loads the selected protected environment file. Absence of an explicit environment entry is not evidence that a saved CONTENT_ENCRYPTION flag would not reach the container. Runtime encryption was not exercised here.",
+  "qualification": "The all-zero digest is a shape-only parser fixture, never an image verification or a pull/start target. Accepted arguments prove parser compatibility, not a successful complete release installation."
+}

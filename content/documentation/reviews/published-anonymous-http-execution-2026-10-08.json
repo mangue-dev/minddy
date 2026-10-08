@@ -1,0 +1,5420 @@
+{
+  "date": "2026-10-08",
+  "executor": "agent:/root with anonymous HTTP against a local production build",
+  "humanAcceptance": false,
+  "base": "http://localhost:3002",
+  "previewEnabled": false,
+  "articleCount": 540,
+  "sitemap": {
+    "status": 200,
+    "allArticles": true,
+    "privatePathsAbsent": true,
+    "sha256": "45634638c50026a3ef1f2495696dabb0ae93c693af9417a83376a44da0fe4adc"
+  },
+  "unavailableArticles": {
+    "unknown": 404,
+    "internal": 404
+  },
+  "records": [
+    {
+      "article": "account-access",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "4fadbbab919c84943236bda6b483230d0e6050fc770f91e2da9371d6d128b04d"
+    },
+    {
+      "article": "account-recovery",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "53754f5ae412b67d25e5d65b2dd9a94b8ce9da51d5bf30a8c476284fb8fc6777"
+    },
+    {
+      "article": "account-security",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "34d4ef34cb3b6fab4fadb23b35b99b6eb5c0ab3ba6328b006562f1cf6dd8756f"
+    },
+    {
+      "article": "ai-keys-and-models",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "00af7cbba4112b9f084083341f12da77034712352b6843b452767978ecf3c971"
+    },
+    {
+      "article": "architecture-and-data-flows",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "d33504aeaf8733b62ace21c696ffd89ac35879371d86aae65f55153a9697ce52"
+    },
+    {
+      "article": "authentication-and-email",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "a106f7a7ff31624399788384d9e05bfd37c84f3fe9ef2d1cf9cfa6dd66961108"
+    },
+    {
+      "article": "automation-settings",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "14a89d0ffecba678af3ecadf736018884f99bb7cf4c49b27a3994e8b290bd232"
+    },
+    {
+      "article": "back-up-the-reference-instance",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 4,
+      "htmlSha256": "002476d4f7c4076a77f212be1f68b9b56626691bc221e96a548b9d36ddc6af28"
+    },
+    {
+      "article": "bulk-issue-actions",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "6afd22cdf2784c8e7352fa598e12048f01089a465190608d086a0d8a95332c59"
+    },
+    {
+      "article": "change-a-database-schema",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "81de39f70314020179020da3277cca7823dc726d92ae90d5d641bad6918c5fb0"
+    },
+    {
+      "article": "choose-an-instance",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 4,
+      "htmlSha256": "8e88be989dd0007d21beab0d964ae2f486089ef8a6e89eb7b72efa2df05a79da"
+    },
+    {
+      "article": "create-a-database",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "fcc0f7ea8b19d0137e12e7dc6b1da2f905d217011cf8d51cec4ac41d823688d0"
+    },
+    {
+      "article": "create-an-issue",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "0d35772c81f1e27c0d73712d981ecd8d3d514f7998ea30d24a524978688c0526"
+    },
+    {
+      "article": "create-and-organize-pages",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "a49ee96ebec5c2b41fe4c41da139f3f8047192cc732a1044fd93ad3b7928ec1f"
+    },
+    {
+      "article": "database-cells-and-entries",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "f279a0f1680bda1fbee10ef538e955e807ed407aa617371d87c3f00397459290"
+    },
+    {
+      "article": "delegate-code-work",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "a6e6f31c06662dd35ac1f446c59c5c0cbaf3e65950a0024cb8ad3ae931b06507"
+    },
+    {
+      "article": "desktop-app",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "9a3607d779a05ce6def98aa7ee8e1945a5f318e60f42681c1b38c0edff841988"
+    },
+    {
+      "article": "devices-and-notifications",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "401314e7b24bf3c8f0e2f8baf9d21a51d7092f811c61e00d2e5fbb9888314ea6"
+    },
+    {
+      "article": "encryption-and-data-boundaries",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "de8abcbe50253568891a383c0eca36475b834f8d2c2db638e028d89c20f71b96"
+    },
+    {
+      "article": "external-minddy-mcp",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "ea6d27b749d520b07e2bbdaf7f986da0aed1254e72e5341b386301e73372d625"
+    },
+    {
+      "article": "feedback-ingestion-and-sso",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "ff8b07e3df4134847410c8e666f1ac7dcc5f3b8e6a1d7bd05494c431fecb1f05"
+    },
+    {
+      "article": "feedback-pages-and-views",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "bd3ae26d6a1bc3eecb09f2072dd089dcef997fc0932f72ad9e21be060c77a16a"
+    },
+    {
+      "article": "feedback-to-issue",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "1980c185ffc81dcd618afd085ae7b49b8db93bbd48ffb0fb182028fba777af6c"
+    },
+    {
+      "article": "first-project",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "cabab74b5e4262726ba0673049256a6dc339bf40c5575668dc0c445556b4cf09"
+    },
+    {
+      "article": "forge-issue-sync",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "9b1b62fd5959b79f99482c5a0f1a6049bbe67593a229818940e11a1e6148411d"
+    },
+    {
+      "article": "git-accounts-and-repositories",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "e14d1236ca430f724e80bc9f5ffaae9398bb3fd48677e9a2679947ed7761423f"
+    },
+    {
+      "article": "glossary-and-data-model",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "6bc8c0f4788ba07e2c40c25c4b1bd35665a58db79b5146980540e1b0429b38a9"
+    },
+    {
+      "article": "implementation-plans",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "1ef38e843f63093d7a8ba4c02c64cad52e6192f021887a9a2d87432e271ce2ea"
+    },
+    {
+      "article": "import-a-database",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "a5b2a9a759f6d4deee422c1ea47e6dbf3c9d645936e36c913d4d3d61193329d5"
+    },
+    {
+      "article": "import-export-and-print-pages",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "c6513ef46f63750e2d6854bc5a5a642f3dffa8a61905aa55c0ce9d9b651ffaf4"
+    },
+    {
+      "article": "import-issues",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "f313d1e25626f39716323a2f70c1666e2bf5a65a99824cea04edd577f57396cf"
+    },
+    {
+      "article": "install-a-server",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 6,
+      "htmlSha256": "9e0bae8697cfed918022544f1bd96e7491fa201e58a85965ae2f88faa8dab499"
+    },
+    {
+      "article": "install-locally",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "c663415386ce9d1afd16bca7a68a845971ec8adaddd44239cc0850666fb3274d"
+    },
+    {
+      "article": "install-the-pwa",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "6092e826d4b1103edaa0943b54a3eff8b5e08d5750ea82988a0841684e47f909"
+    },
+    {
+      "article": "instance-administration",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "c9c7882bb86af88012d75f0c54d8575d7fd44026c53c900e649a13247b9bb6d9"
+    },
+    {
+      "article": "instance-configuration",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "24dea35d264357f8c5970032d161e7360ab02c9b5e84455b41760f1eb5379790"
+    },
+    {
+      "article": "integration-api-and-webhooks",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 4,
+      "htmlSha256": "317ab11610dc57cd04c43ca2b3b5fb5eeb61811b8b8d258bcfd9f193ff6aea93"
+    },
+    {
+      "article": "integration-troubleshooting",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 4,
+      "htmlSha256": "03c0f0f799889f27f0d848c80fffd5369f67981a24e34618e1b81aed8c98102f"
+    },
+    {
+      "article": "issue-dependencies",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "efeb8daca55c429f60b15ee4ed19cf373ff19ba0f9601d9a0978b290da5f473d"
+    },
+    {
+      "article": "issue-discussion-and-resources",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "10ee8e42a53ae71b785baad6ae53c9e46f671400f8c57fe1a872ae3d5f2e380e"
+    },
+    {
+      "article": "issue-statuses",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "a9d5aef4b3b67704d660eca042d045099dcf60b32ca2939198af1da3f30ec9ff"
+    },
+    {
+      "article": "logical-and-provider-backups",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 5,
+      "htmlSha256": "097115a760e2d0368941edd89e05d43af9054f98d5bbe75253ae7148088c302a"
+    },
+    {
+      "article": "managed-or-source-installation",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "871a497afa5af4c11f1fb96beb1ea695791cf9bd928b7719f537a8cc73677d13"
+    },
+    {
+      "article": "mcp-tool-reference",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 4,
+      "htmlSha256": "d23c599219eedb32925bc0c3d91575a67a0e8d2d2dabbb70a39636c67b5cc6d7"
+    },
+    {
+      "article": "moderate-feedback",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "929035c1fcd27ec8b64959cc50c1b4548d894eefff67a3f2f1fa07ac816edd0b"
+    },
+    {
+      "article": "navigation",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "aec99722d62d2d00aa13750c27148979297c2a235670e68e721b3090f5c62588"
+    },
+    {
+      "article": "notifications-and-inbox",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "03908faec58dc7635dfdcd3ab0d761797605b68c3428585195663a07ca0dea90"
+    },
+    {
+      "article": "numo-execution-model",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "899039c804c6907be705b76789f6996d830425c78162eec27ece98f217168d2f"
+    },
+    {
+      "article": "numo-mcp-connections",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "db040b92a3594d677027f4644529fb31506abb19615e8d7f15ce353eddaa67f7"
+    },
+    {
+      "article": "numo-permissions-and-approvals",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "b0ef840086054937d9d5d47544dc68e29d04a7168daa1f009010a2f2ecc6b95b"
+    },
+    {
+      "article": "objective-dependencies-and-momentum",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "30e063622aad5b447e90600ac27b6fda1ceaaf9e819180ffb90b405874eb89b3"
+    },
+    {
+      "article": "objectives",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "c72403384b301596cec7c25f18a5713a9adcd00ebadb911072aa1eb3542eac4b"
+    },
+    {
+      "article": "optional-providers",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "3bff0b7e591eb313534e3fb908ba7cf69694aff693bb640ec3c705797e293d0a"
+    },
+    {
+      "article": "page-comments-and-collaboration",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "1e5a02c908f62c1c6b245a092f08c1ec61cd4f0ff5e14c19cebb54d4724f853f"
+    },
+    {
+      "article": "page-editor",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "ee503ebc0db1eec7451414cc3de98d9b7e294b3ba39069e45b1feb15a4e4d013"
+    },
+    {
+      "article": "page-files",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "750b90652c146c3973236a9912c574b1f43c1e34ea3cd05b8d46107c70bb5f15"
+    },
+    {
+      "article": "page-history",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "ecc98ab77d07dd8b6bb340687d651793e4b163dd164bbe5bdfb391af4d0c3953"
+    },
+    {
+      "article": "permissions-and-public-links",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "075fd9a32c3cc591d35b7a6d7db9079383709b554ffae382f9e79a7bf5e3a587"
+    },
+    {
+      "article": "personal-cycle",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "8941047c87d9736c19327b715a50fc03bcf0075cb1dcb31018e50072d2d6fe7f"
+    },
+    {
+      "article": "personal-statistics",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "72dc3683c7162bb7c86e7e61360553e5a38beb540efada1f5d3e67449e84df11"
+    },
+    {
+      "article": "plans-and-ai-usage",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "3b41dedf34382e4f6accc62317afaf0242b47e7829fc677cf130b4aaa38b62e8"
+    },
+    {
+      "article": "privacy-and-account-deletion",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "3b06cff7ce9b2a0b728828b81aead464376640a42e5a8595a457c6d536ce1d2a"
+    },
+    {
+      "article": "profile-and-preferences",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "8cd04e4f09700571a35aeb9cc1429e0aa5f9bd87ae0150b9281d1d51b46effba"
+    },
+    {
+      "article": "project-members",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "2a0d013c54fa50eee05715d8798a8be1954b625634991d6342b7250d4baf837e"
+    },
+    {
+      "article": "project-settings",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "8a60f257f1826b048d575dd04cdc693ebff911cde9207cb06f0d35f46231fbd2"
+    },
+    {
+      "article": "proxy-network-and-jobs",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "eb75c07cbbc8c3eb20d44779f2d0192f0c81fc6a2ec8e4299066e40a8ae45383"
+    },
+    {
+      "article": "publish-a-feedback-board",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "ff4497ca43fb6288c6262869b0ae04ab07bd8abea4095f2279894237a3760468"
+    },
+    {
+      "article": "publish-a-page",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "a64dcc2579d64b0e8ab72a444954d27e4381fbbe01401d7eb75380e683ba1316"
+    },
+    {
+      "article": "recover-numo-work",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "638837eb5183716538a925522f4754ad996ee87523da5a2984c89862286a212b"
+    },
+    {
+      "article": "recurring-issues",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "a3b600877fd8cbe03ef01502f7eeb1f3c58a06a9f92ff89b2317931dad2b7909"
+    },
+    {
+      "article": "repository-skills",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "cfe3416b2d6e8bdbcdb3d4a7c8b695db6e9d83dc6dab7a2630547b712c9245ae"
+    },
+    {
+      "article": "restore-and-roll-back",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 4,
+      "htmlSha256": "eb97a53cb88bfbd1953b34bf03f32956270aeb72e9014c1186a1d9aa837312b6"
+    },
+    {
+      "article": "review-pull-requests",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "5a25f3798d43ddf533b7cedd9083e8e70aa0521c65d77b3ce37c40c0a5da67d1"
+    },
+    {
+      "article": "scheduled-routines",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "c3ec2fdc5466a4f37bf1a820133350a85de8b590d565858ffe476aaa5be0e3a2"
+    },
+    {
+      "article": "search-and-shortcuts",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "c5aba62ab85223a77e3f8c668c4893510776ab30034259121232a0d4c1236b95"
+    },
+    {
+      "article": "self-hosted-compatibility",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 4,
+      "htmlSha256": "ba15623351d5d664b310c40ed6a14415aab30baab5fb09cf2dc13fb3393ff133"
+    },
+    {
+      "article": "self-hosted-diagnostics",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "28b53793924cd262aa537c023f76ab580fa345fa7366572bcc143479030f0972"
+    },
+    {
+      "article": "share-a-view",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "8f70c729fb76fea4efbaf02f5c592e1cbe0141299305ed1e9c401cf1cf27584d"
+    },
+    {
+      "article": "storage-and-attachments",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 4,
+      "htmlSha256": "341a0611433f56bbe81dd4b40a3d76124e91ad673bcbd0eeba595a91764031f0"
+    },
+    {
+      "article": "sub-issues",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "4028e695067e10f7e850eeb70eb2bae1021eb9ab489f1dad447d86c378fe71e1"
+    },
+    {
+      "article": "submit-and-follow-feedback",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "353624a3dc187b7d9b29d5eae08c57329dddfc439e5e3a756818227ff18c1d1d"
+    },
+    {
+      "article": "task-notebook",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "d7566b889daacf7d47d2e9bd0d63728891bd3a72a9b28fc5d27d36df777a2487"
+    },
+    {
+      "article": "transfer-between-instances",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "11e7d6ac8e5ee5a43cffe3617ce85c1ade8038de9a7c177a32b42285c715fe4c"
+    },
+    {
+      "article": "trash-and-recovery",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "e7d85ba750cdfb7e0242426ae8bec3d7f04909fd3f0e0ee42acae833f50f5af7"
+    },
+    {
+      "article": "triage-incoming-work",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "847892efa9961f1ba51ce52e58bdb64d98c5708eb141488c9e6ee1da1489ed27"
+    },
+    {
+      "article": "update-an-instance",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 4,
+      "htmlSha256": "75d0f701c2c0f208a42f27475910ac8e311a0e389e0a0b209975976beaf6a22b"
+    },
+    {
+      "article": "views-and-filters",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "8c0ded9b1168db4292750378e7ec59975cbc997012387860928ad871ccdb0d69"
+    },
+    {
+      "article": "web-and-mobile",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "678dccd359befcdc353ccb7798a70e09b9ecc590f9246f690e64bb810fc45902"
+    },
+    {
+      "article": "work-with-numo",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "9f2dfd4785851d969d1fe96c1b2c6f832ca147c7aa0d3716f8640e2b61e50f2e"
+    },
+    {
+      "article": "workspace-encryption",
+      "locale": "de",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "97d5d91459f9f0d0176b027ba215269d15a796c4772d7a8f387e851de3aa7149"
+    },
+    {
+      "article": "account-access",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "41cf096c0dc9fbe0d62900373ce05bbfd962fb26c380730980423e08fa3d813c"
+    },
+    {
+      "article": "account-recovery",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "8ec6eddc3357624765c0610248fd29cd57faf2d3232c1d67d0ef3f986ffdb17e"
+    },
+    {
+      "article": "account-security",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "ed73d0e3697dd01c6e32bbc8d841e04f31b8e954c2e90718450bcdb2759f6f46"
+    },
+    {
+      "article": "ai-keys-and-models",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "82e7c3d694c1f1638d481f6b9c4d38161584f204d2e974b9b839bcf2ffc15097"
+    },
+    {
+      "article": "architecture-and-data-flows",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "378acbcb218cd5aa3f230a544e2f52fffa97b00e27c966f16ae4050ec1913c25"
+    },
+    {
+      "article": "authentication-and-email",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "3b75f62be7eb06dfb375d1e3e82306e762ad3f25da82c9fc1c3b8dd432477316"
+    },
+    {
+      "article": "automation-settings",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "161f8618819164a8a5e130405bfd2ace2987048d48fdc46917cae51558376b53"
+    },
+    {
+      "article": "back-up-the-reference-instance",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 4,
+      "htmlSha256": "836cf5ee8f98541c4d5c785ec0012c49ce655be049b67274fcf2ea0caf316376"
+    },
+    {
+      "article": "bulk-issue-actions",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "113f1fda3db55ec0f45954dad94f511a8ab56030cb32b438575da4c50b0c4eeb"
+    },
+    {
+      "article": "change-a-database-schema",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "710a21ac205d6a97c1617be4b2683316d54a49ecc02f14fad45dd6a3c230d2a0"
+    },
+    {
+      "article": "choose-an-instance",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 4,
+      "htmlSha256": "f68f007e847eb6640c9911124409c432450fd751fe3429b1aaae73c0037c52cd"
+    },
+    {
+      "article": "create-a-database",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "213ae9bd83514b380e789223bfef68617cf0cea88984bf250fc64cc1fca10894"
+    },
+    {
+      "article": "create-an-issue",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "86c03f17ab1c4cbd2c2e242574c852cb4b57ffb0a3533b12f02175ba36cdb72b"
+    },
+    {
+      "article": "create-and-organize-pages",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "9eaaaef836748ba3ccc2e4e79f17b6b4a6662531b707e5d83019f12ee1945517"
+    },
+    {
+      "article": "database-cells-and-entries",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "81116106182fea73e412eeff5f091418326b9c384b7d4b4567d80869340efd09"
+    },
+    {
+      "article": "delegate-code-work",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "f9261929d70500c3580cfeda205d7a6f8027409f2c1d134964d9c6839271c42e"
+    },
+    {
+      "article": "desktop-app",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "c7017405092c4cc4cd865c004ac72d69b8f751138802b03ad807d73c2cae905c"
+    },
+    {
+      "article": "devices-and-notifications",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "59e2b3379bf0a527e93354d41da7af659bde6dc2b78ebd64b9996129a43a9c89"
+    },
+    {
+      "article": "encryption-and-data-boundaries",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "e32525c1fb876d03d15790aa870db613cdbd81e17ecfa645b6cb05b04fd23883"
+    },
+    {
+      "article": "external-minddy-mcp",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "b4414afd1dd3d67cdef8e957872d00745e16f4dc151d8bf35d2d239d78646fef"
+    },
+    {
+      "article": "feedback-ingestion-and-sso",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "0ef6e73cd463855a1f3f9ee9e0ff159844d57f42579f872edc521d7dd301bb3c"
+    },
+    {
+      "article": "feedback-pages-and-views",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "781125a073e62f8d1ec3e4f601f383efbf6cb53d29094116e5d266e58a1dfff7"
+    },
+    {
+      "article": "feedback-to-issue",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "6ffcae338152336e9e27c4dc36469886e4c43a1e912c38b836365062e7369af4"
+    },
+    {
+      "article": "first-project",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "1172cc4e6cc7bed76de0eeaf58a72219b261ae0afe7541083a7856822bc2ba1b"
+    },
+    {
+      "article": "forge-issue-sync",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "bd6c58a0125d5c8f4b64a4786f76cfb55f4ee4bdadb82cd190b018c243ca16f8"
+    },
+    {
+      "article": "git-accounts-and-repositories",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "803df66be4d198378ae3bc74a6dc7fc852d32c996adb676d3a9ac68214fc2a7a"
+    },
+    {
+      "article": "glossary-and-data-model",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "767d7802e27b69ab3871ee266b9475480374f751f5e90e776a057d466ddfa568"
+    },
+    {
+      "article": "implementation-plans",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "76dd9b14964d8bfd869cdf0246673eabe82845bd8a8e817aaa5430db74a28556"
+    },
+    {
+      "article": "import-a-database",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "255cca4b3be97db9431aae355c28a3804fb2ed28cfe53142b30706a947cefd8e"
+    },
+    {
+      "article": "import-export-and-print-pages",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "02ecce1266ad5a49e4cd614f03a06b2e04db0c3e9d9151eba870c65683814331"
+    },
+    {
+      "article": "import-issues",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "8fc9adbb41a1ce7a47702624c5be2e56edb3d259996843b3c732d38b800c1e13"
+    },
+    {
+      "article": "install-a-server",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 6,
+      "htmlSha256": "ace33f67462e9a9d7e017db7cd67b019318c07da6387858fdecdb55b6dd2b495"
+    },
+    {
+      "article": "install-locally",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "c155e1f4cc45ff7b8ce9d3265de9f4eb6ff35542a10f876c876c4c0d2f2ff8a3"
+    },
+    {
+      "article": "install-the-pwa",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "c642545a7006380e8a9c10f475b07521ab04465a124bfc7969d08e36234faae9"
+    },
+    {
+      "article": "instance-administration",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "1de25ad9eeb89c75be2d620ef2a5363aea1ba35f6abe9ce7bbb27a5f4390fd2c"
+    },
+    {
+      "article": "instance-configuration",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "7e390520bc9d705d4cfed5465b7a65249ddfb5248cc6f981ba6f3e6c39674858"
+    },
+    {
+      "article": "integration-api-and-webhooks",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 4,
+      "htmlSha256": "48db740bfe374adc242154d8c1955c3455e7c59e8800c8c982cf1699f888437d"
+    },
+    {
+      "article": "integration-troubleshooting",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 4,
+      "htmlSha256": "b1174b60c9a7cf77fdaca520ccd495ee74e6a5780280232c14971b82639de7ec"
+    },
+    {
+      "article": "issue-dependencies",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "c2f6a52af7f0ad276674bfb6b097eff382753d1e2c31351e66bd1803c203c5d4"
+    },
+    {
+      "article": "issue-discussion-and-resources",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "5c22a1defc28b20a69367b8a761e07dd4aca63000ffe6ec6e45419f904f110b1"
+    },
+    {
+      "article": "issue-statuses",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "e8c91d2a8a374d21ba30abbfc78045a83ebb814de1090d1a8e3a2bf59e424402"
+    },
+    {
+      "article": "logical-and-provider-backups",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 5,
+      "htmlSha256": "eedb044689aa076e6f493c5201f12c16fcc1122eb55703eebebd99cafc2438e0"
+    },
+    {
+      "article": "managed-or-source-installation",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "5fffc13151425cb4dac0df102257375584e60ee731159d5274c8a6e767ef0833"
+    },
+    {
+      "article": "mcp-tool-reference",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 4,
+      "htmlSha256": "3b4dbb392a9115fbabbbf177e8c1dafcf684720b433026be720e0ac8b417db4c"
+    },
+    {
+      "article": "moderate-feedback",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "979bb8af0bf28611a5f3385e1c27082cdad4f6c76a89595fc160b8798a95a03f"
+    },
+    {
+      "article": "navigation",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "0b427fab5db970216403e568b2f758950910524bbbfe9f7fd4cf7257e05f10b6"
+    },
+    {
+      "article": "notifications-and-inbox",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "78456cf1a4617fa619b4926fb89d89c8ba4ca61a528c377a2de5349f43a47b46"
+    },
+    {
+      "article": "numo-execution-model",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "cb6cf847fd8ba7a7c9a09d3d9e68543638aa9b3db6a6f92ecaba44ab33898f10"
+    },
+    {
+      "article": "numo-mcp-connections",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "589276887bc2964c26ae382e16c9a56c59362b4f4115f7c75f278bd15a2259db"
+    },
+    {
+      "article": "numo-permissions-and-approvals",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "a106431476c89bb8cc2f61f2e0759bc31ce61cd583e97608780112bb410fdd23"
+    },
+    {
+      "article": "objective-dependencies-and-momentum",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "c4ae9039dd231f90b6246b0d4cfa5ab58bfeeacd7ed13c02c3d159b205c3cfb6"
+    },
+    {
+      "article": "objectives",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "47b05851f195f23f98c8a60868a3139fe3aa8d2f058c4ef52547c4968cec2863"
+    },
+    {
+      "article": "optional-providers",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "4a4c667c1fb136ea09bad4f2cbf3820ded69841bd596d6607fd776ee5a90487a"
+    },
+    {
+      "article": "page-comments-and-collaboration",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "15aab84c0544e4df170eb9d410cbae1312c82384f285ca3506c41eb18ce862f3"
+    },
+    {
+      "article": "page-editor",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "6ac0e062ae243a06617dc8c774b415f9aa87d651b816af2a38b2e0af6380da2c"
+    },
+    {
+      "article": "page-files",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "6d6c3659d54f4555ab601e8de3c28a4aac71ba6ea3dd2b4405a068069c79ae2a"
+    },
+    {
+      "article": "page-history",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "85f0bc002cf6d8a44e257ee0d4c8a9568880b473520a7a20a4da8b667ffc55e4"
+    },
+    {
+      "article": "permissions-and-public-links",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "73152f79572be97e9d8f67a3a92ee518e0643aef7c97f0418e2d71b8da039146"
+    },
+    {
+      "article": "personal-cycle",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "364d526598ec98c413fb00450dd28214c7d7bc81f2f2fd91625cdad044e0292a"
+    },
+    {
+      "article": "personal-statistics",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "1b826359c8ef7a0542d2294fe7735467d851c1194f0badb0e350d9d11d457632"
+    },
+    {
+      "article": "plans-and-ai-usage",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "05de65a3c1e245945950c19552d4c62b58fb5808c880fd7f7119a7fb32c1d2f2"
+    },
+    {
+      "article": "privacy-and-account-deletion",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "3c574b85687828359773b49c7ec98d7084d5fd8dd5a9f9e7740af4b0e18182d3"
+    },
+    {
+      "article": "profile-and-preferences",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "7391504f97def6dada14e7e73aadfb413016d8b6f78bc0eea3a663fafb116945"
+    },
+    {
+      "article": "project-members",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "9b9284e8ae6a860454b8ba2daf17ed04dccc9d5e3ca228d3fdbe590b47b877ad"
+    },
+    {
+      "article": "project-settings",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "830b62d99e08586a0cc1dac080efeecf7ad15f607accc4a9c79d0251b44898aa"
+    },
+    {
+      "article": "proxy-network-and-jobs",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "65cda39149f383b81e4545f795ec6fc0e9fc417c9af703c78469e5da9ed3b98f"
+    },
+    {
+      "article": "publish-a-feedback-board",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "33cf323100e361dcffda5ed11ae402d2db2fc1027842c85ff43438dcd18620ba"
+    },
+    {
+      "article": "publish-a-page",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "23a56612ec77ef0bbbf78de6037208c0e502dc4d9209084360bd2a07facd0cc2"
+    },
+    {
+      "article": "recover-numo-work",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "66838bc64e4eb9ad975b8ff2182471ee2c4449d646be39d9f9e782c3115e118d"
+    },
+    {
+      "article": "recurring-issues",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "4a8668d952b650d2f3d1e78bc3ff486c9763e3cb8ebee0697893855e37330290"
+    },
+    {
+      "article": "repository-skills",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "92481ea4b26dd859d7804b59167e438b22b3b6c2949e38e144d9241cfe852ed3"
+    },
+    {
+      "article": "restore-and-roll-back",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 4,
+      "htmlSha256": "dab2bb6aba43e94ea9aa2b1a6a70beaae2a02282c2d2de1367687dd6d1f415bb"
+    },
+    {
+      "article": "review-pull-requests",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "ddbb4a6d52a822db22ce13188d516713b39b84cdcc168f72a7d5099cb1450b42"
+    },
+    {
+      "article": "scheduled-routines",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "58bb03a954313d3daff54bb17b510cd2718647c9dbe8742330fde9973ad96bef"
+    },
+    {
+      "article": "search-and-shortcuts",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "d83c0a02ab69a68e927b72c231449def9b5b640b7a7bc1a46ddfad150346b3e7"
+    },
+    {
+      "article": "self-hosted-compatibility",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 4,
+      "htmlSha256": "59b1101218ed44e60b967aa9c472b82d632d131557b6e41af0afd01a16af6acd"
+    },
+    {
+      "article": "self-hosted-diagnostics",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "9f59961dfc32f434117d52490f73acae629087c591b1ff0e106df13883294523"
+    },
+    {
+      "article": "share-a-view",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "2beda93666c0963d963e7d81bb1ef1d75d0d4ef936f5176cceb4382e9c53fd48"
+    },
+    {
+      "article": "storage-and-attachments",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 4,
+      "htmlSha256": "e144ea20a42d76ae64bae03c8be27109e9b25fecbcef38c04c8c711f1e79809e"
+    },
+    {
+      "article": "sub-issues",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "e649c0bdfa72a222d64c1455266cbccdfa97b1199658eacb368766245ab94214"
+    },
+    {
+      "article": "submit-and-follow-feedback",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "48222e27602e19dadc0604176021814bcc46ab2b488e9d80ecb2c5b4f0cef0a6"
+    },
+    {
+      "article": "task-notebook",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "afb80ddba36aa984a6d60f4b646ef904898c88a0b9579fd97106b71dafe3969c"
+    },
+    {
+      "article": "transfer-between-instances",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "7f3e20ec5d03dcdb223055ac5c45e07c39c0311e15d6e97825b41cdaf79b643d"
+    },
+    {
+      "article": "trash-and-recovery",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "bc09c824db4fa9d76174942cfb1fe5943eee7242ca66de40756a18805e7ac198"
+    },
+    {
+      "article": "triage-incoming-work",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "e14b3d848e7f1a9ad888f39885bbae0b6c766593cb40844b4808be2769962cfc"
+    },
+    {
+      "article": "update-an-instance",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 4,
+      "htmlSha256": "0937b3c84d8eafd22449e806338287d61ff9f64fc626a2a05db28ccccb8f2dc8"
+    },
+    {
+      "article": "views-and-filters",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "628a10f5d886520ce589ce80c1c77add48147bec21a8c911e9d64cf6f09f73f7"
+    },
+    {
+      "article": "web-and-mobile",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "a567e7532379d75bc8a1bb201e9856f1c2bc848bf2be9fe2c22b9693d2897493"
+    },
+    {
+      "article": "work-with-numo",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "1a65f959d137312153aeaf441410a26cc797a1a70f089691300fe3c8e4fadc6e"
+    },
+    {
+      "article": "workspace-encryption",
+      "locale": "en",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "d4b51e8036825864de36f4b7d0b456773f924ba5b7d18704399dee63f281db5e"
+    },
+    {
+      "article": "account-access",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "cfd0a20a41404d676334f249f36e4c81ab21ce2e8e02966ce9a3386d95910fc9"
+    },
+    {
+      "article": "account-recovery",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "1109da67b785e1a4fe41457377d10e54e9e1ebc0c60ee88ac2751e06d66f6762"
+    },
+    {
+      "article": "account-security",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "cb593d3498ed73cbccec758f638339774795958dd0b02cbff050d1dfde8ba802"
+    },
+    {
+      "article": "ai-keys-and-models",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "1a9a2dd882e7040eaeee77a8ac00224ac7b9918ce4d53a5382895feebe577cb6"
+    },
+    {
+      "article": "architecture-and-data-flows",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "e58886962c0cc5d1ba107453d12c3423d50966483b85fe0f43869b7e31a4bf15"
+    },
+    {
+      "article": "authentication-and-email",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "5cd41f8507e9e711e997a09e3ba3633bd99882394d98fcdce0c80a4235b32712"
+    },
+    {
+      "article": "automation-settings",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "8d911e98edefa8d95ff9d113129b64591ac02df43fc498f7478410d88d99420f"
+    },
+    {
+      "article": "back-up-the-reference-instance",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 4,
+      "htmlSha256": "6d398161172c20fe1a92ec95eaca88c44a63120aae88fc19df82435ec461d180"
+    },
+    {
+      "article": "bulk-issue-actions",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "73f4bb8326fc49deec7f1feda9ee2c8d55f316e760cc2d94c0d23d9803771949"
+    },
+    {
+      "article": "change-a-database-schema",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "888be71701d8d18ee4f3760243e49eba18afd9acb2184016f6b62e17408bc18e"
+    },
+    {
+      "article": "choose-an-instance",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 4,
+      "htmlSha256": "d32184d01e7def4d608c9a6dc7aa124c6f8175947981f04dfd486b23b6ee7e47"
+    },
+    {
+      "article": "create-a-database",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "edebbfa980efd899f04a04bc2ab665eeb09a4008157d256ff69e1040d148ffad"
+    },
+    {
+      "article": "create-an-issue",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "57686bf1f69aa0f1b5b4a3b8966d280683f43da529208abf1ada915ded9e62f0"
+    },
+    {
+      "article": "create-and-organize-pages",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "ef2cb16f6238ae77d712c808237d2463dbeca91e709e9cae98658cb36f48f290"
+    },
+    {
+      "article": "database-cells-and-entries",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "ad0f6bb163a2a48fdd02d26955930ffe9d189e6324b390fc36716ceaa4be231a"
+    },
+    {
+      "article": "delegate-code-work",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "0cbec87229f2afeac2b14960152f7b16dfdc30be6455b337a58990dff94ee4e2"
+    },
+    {
+      "article": "desktop-app",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "94ba2c9e6e976ba44645f3ed851e64ac0030103c6a1de2cb17f7fcb13d4b273e"
+    },
+    {
+      "article": "devices-and-notifications",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "ba3d3c359d56e85de052bbe662fd0acd5f0fb5acc4a6731d0d5615c90bdb0bf7"
+    },
+    {
+      "article": "encryption-and-data-boundaries",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "6163c9e0c0b76c976d0ec6f9701d2a0fe0734175d5716a622189ad7f1a58ee61"
+    },
+    {
+      "article": "external-minddy-mcp",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "8febcb76994ee169de6603612009295d88f13ed53145eedbaa2ac7a383e17b4b"
+    },
+    {
+      "article": "feedback-ingestion-and-sso",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "77723f0d0ac85e2a66f07bf6bcc193edf21f91db8fef8a2ac2883e7a05283ab9"
+    },
+    {
+      "article": "feedback-pages-and-views",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "5add33b809a39ba8fc8fed251b1156fbc381030f99dd6c4f5a7c44ff60e17f0a"
+    },
+    {
+      "article": "feedback-to-issue",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "3075b49bab10011e92bd4d19fd196a1c46ac9d552dfb547c145a7b517f6b1837"
+    },
+    {
+      "article": "first-project",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "603794c9e730750f17df546b4d03ab7699a43e9af6814ceaade4b070712e62e1"
+    },
+    {
+      "article": "forge-issue-sync",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "ceedd8e9dde7d3744a259a384a0c8f7b62fb372ed122247f4fd0dad8f76ba3de"
+    },
+    {
+      "article": "git-accounts-and-repositories",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "c4b3a8b972194350f005aa6e622e015ba6927b470defe786f6d27a80f4318351"
+    },
+    {
+      "article": "glossary-and-data-model",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "58131d63b5beaded02aac77f41982e5e51476151d2acf38a393ff4d1d967c6f9"
+    },
+    {
+      "article": "implementation-plans",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "5b951e2e9a24e6593a61ca9ac80f696e7f3e1c432e1552161498f8de6d1bb6c7"
+    },
+    {
+      "article": "import-a-database",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "a57e0e37177ddb70f989b8d849a38a77a7979ea519df9be49d8b63235b34f340"
+    },
+    {
+      "article": "import-export-and-print-pages",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "81505fa083e9a93cc2fe612684f3be2e86f007ed9162e8bf4a90a2206f98892b"
+    },
+    {
+      "article": "import-issues",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "4b22b9e273c3701abc9ac403551dbf7111a5b0e455364f56a568138cabd3e0a5"
+    },
+    {
+      "article": "install-a-server",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 6,
+      "htmlSha256": "dc2030bd98cff630cc306032596c5b67bf40210f29426bccb257825e45818611"
+    },
+    {
+      "article": "install-locally",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "4217513580e4262d2c9ad4836611f0a42091f53fbfc3e216ea725dcaf93675a6"
+    },
+    {
+      "article": "install-the-pwa",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "5c93f96ebbbf259766b0a946affc66f07dc6ed30729df45dc0da0266de25cef8"
+    },
+    {
+      "article": "instance-administration",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "8af896ca70aecd664b54e9bd003008baadd06a70dd97a82141fdd2d7c3594810"
+    },
+    {
+      "article": "instance-configuration",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "dceb4315f87ddf4d08d3d989a13609100038c670998a00b28af11c03989e2886"
+    },
+    {
+      "article": "integration-api-and-webhooks",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 4,
+      "htmlSha256": "ca9f5e4eeed7f215e4f3583436ed61fc8ce63d540c1171b282c511668bf277a2"
+    },
+    {
+      "article": "integration-troubleshooting",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 4,
+      "htmlSha256": "a4ebd754352c7e59a03563a32d9e8b910e49cb096aff816b6732d256e2eec925"
+    },
+    {
+      "article": "issue-dependencies",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "07674c48875569fcb4a4a0a3fb0e5a34cdc78871fd32217ad676883f991d2eb3"
+    },
+    {
+      "article": "issue-discussion-and-resources",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "b6609d8c8343511968a67bb6ee8382455f79610ef52f89292c8e9f49a09953ba"
+    },
+    {
+      "article": "issue-statuses",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "e81cd29c0b0fd963d34541cfc7b9eba3d87f227db2107cab83e914ac1354c9e1"
+    },
+    {
+      "article": "logical-and-provider-backups",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 5,
+      "htmlSha256": "18666f8aa00c8def74e05f00ffeaf381e08f3d2f565802e28eeead6d40b47719"
+    },
+    {
+      "article": "managed-or-source-installation",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "90d3ef3377b46ca70f2aa2377542b15a08deb29d90d6dcf7b2e934991d41b9f7"
+    },
+    {
+      "article": "mcp-tool-reference",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 4,
+      "htmlSha256": "9a0c91134d28003adb90dc8311df9a87af9794d74a5eb02ba088c772d19f2d4b"
+    },
+    {
+      "article": "moderate-feedback",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "b59be7442318a09e6c0f848bd5b82051b8ad7de024dc165f58ad70f4f43e2b7f"
+    },
+    {
+      "article": "navigation",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "430a8999382bb330635b6d65ecfb4fbd16dec0c956d1b508b8f07a96507ab151"
+    },
+    {
+      "article": "notifications-and-inbox",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "b67e388d38c4ba075df3febbf8ed72ba6061aa40901a42f8bec66e0e28355dc6"
+    },
+    {
+      "article": "numo-execution-model",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "772bc010f2f3ee1cbf3ae85f721069ae66331f4f74bf0a8638c435e94fd3eb52"
+    },
+    {
+      "article": "numo-mcp-connections",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "aa5b35c83b63860cfd89a4497b6a5024e517baf55e4e60190dc5d3b2b89c310b"
+    },
+    {
+      "article": "numo-permissions-and-approvals",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "391f725a3eca18650c7fc51794fceaa3c1709148be651c89e864ebae5e81785b"
+    },
+    {
+      "article": "objective-dependencies-and-momentum",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "6cdc5a4a5bf2f7e8bbac09c8bd96437a748ae96bc858103dbbac5e33fb695a86"
+    },
+    {
+      "article": "objectives",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "c1cd9ee9635b3d6af94326f84322d2834817c3acea3f727cda5e00cb869db239"
+    },
+    {
+      "article": "optional-providers",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "975d65c4f00b399d810bf19e6ee05dacab82de8683e854132009fd0488c3985c"
+    },
+    {
+      "article": "page-comments-and-collaboration",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "0cbc6ec6b7a7142d693fcdce43448decb3bc10c1cf541b8524574bc8a703b4b3"
+    },
+    {
+      "article": "page-editor",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "2841c5b122732bec0df14420f4fcb3238dc3e7507e37c37c22ff0f2563a86bd4"
+    },
+    {
+      "article": "page-files",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "71caaa053b8be35a3e0d9cb6545585a2aaecfa1e3499d361d1c7180194419771"
+    },
+    {
+      "article": "page-history",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "5632eb255c37396636eb5c8460e388ab8be60e1edd76b4dcd5bb8e9d9c0bc116"
+    },
+    {
+      "article": "permissions-and-public-links",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "82f89fbced069bb2d67b674f04d2127896da45687b46dc167ecfcbbf5b3697f1"
+    },
+    {
+      "article": "personal-cycle",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "23aea5f0e3cab4782bbbaa6b4a32e8c2ea2523486418bb9594cc7375a1438a6a"
+    },
+    {
+      "article": "personal-statistics",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "4dba6f55730d92e7879522d034c1274d50816edb334c41d2ab4a834120f9331b"
+    },
+    {
+      "article": "plans-and-ai-usage",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "7cc743f874c6a654fbd9385e368a89a5de32c32e6328180e0a397675a32a11da"
+    },
+    {
+      "article": "privacy-and-account-deletion",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "f3b881f810e38994ede316b55a15adf257fc5cb2f6bd9461889a8f5d97ea16e5"
+    },
+    {
+      "article": "profile-and-preferences",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "783e0e14e69de2a147bf90eb66516870eb4941eadda2a093264e4d1f62486bba"
+    },
+    {
+      "article": "project-members",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "f6642f3c96be1ac5240dc1c55963c74d78db85dc6c61290c158beba73a9576c7"
+    },
+    {
+      "article": "project-settings",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "cb612ce875c27e406a21ca23402bad48c5d3085a6f54860268723f7f0be1024a"
+    },
+    {
+      "article": "proxy-network-and-jobs",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "5a8bd60684359f1fd5a8138075b6f475425ad1a9b32ae1c208f6905f8220cd8c"
+    },
+    {
+      "article": "publish-a-feedback-board",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "8ee541a48074a33a47c1928222603ce07ff22168b7968926acd76db55346ccb4"
+    },
+    {
+      "article": "publish-a-page",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "6bb90bb5d2791573cb00d2be98540fad28382897ebcee86464f9c8628688a693"
+    },
+    {
+      "article": "recover-numo-work",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "e2a8a0fc6911fec190b5cf416ba2af77dff6a4d1e67a9b546d1aa27d2d558863"
+    },
+    {
+      "article": "recurring-issues",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "7699daf0ed9177bfc352b0b37d2a256454ba23d574d8e7c2c2439d52b1f434c5"
+    },
+    {
+      "article": "repository-skills",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "95c72713886222a8b873ae3898c4370e25fd25b2d1f82ccbf03956156864ae0a"
+    },
+    {
+      "article": "restore-and-roll-back",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 4,
+      "htmlSha256": "1e72c7253cdad497c3a72449d551ce215f548cb83ec067ea16f2ed3cd97084bd"
+    },
+    {
+      "article": "review-pull-requests",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "04a2e534f8711d23df25720090c983d638df5d487e52199374e6830f443d8022"
+    },
+    {
+      "article": "scheduled-routines",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "1425c2ba4aa43a2e29a6a5fd47c592a83fc8fce5ed43f6ec4a9875dc6e46cbcd"
+    },
+    {
+      "article": "search-and-shortcuts",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "92e160389efb8397a33942a29b7ed7b3572c23fdaa3d3822d777a7da9b5b0a3a"
+    },
+    {
+      "article": "self-hosted-compatibility",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 4,
+      "htmlSha256": "6311c11e0585212c150ea3cf03b72099be0eb1666bd085bde35bd31c832e7f0c"
+    },
+    {
+      "article": "self-hosted-diagnostics",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "a0ad84062c1b9997947b3e2caabc6146a3ff4613358b4f78b12fac0981a87fa7"
+    },
+    {
+      "article": "share-a-view",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "f2b93a75731eb9d714484864d936b1569118c290b91b6f0fee8b84cfb2a1f69f"
+    },
+    {
+      "article": "storage-and-attachments",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 4,
+      "htmlSha256": "3a741fb91b6bb09fe43a8797c9ddb5c24f1eb9ff2dee26002df46ddcf4aefbc3"
+    },
+    {
+      "article": "sub-issues",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "e66f6c32993f7c334526d1824e207f64f88bdd0de3860afae08fd84ee55c771a"
+    },
+    {
+      "article": "submit-and-follow-feedback",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "80dc3f9e64148b0308b8c0f858ba0514f84c3e8bec2ea1cd1ae0cc5da246cd06"
+    },
+    {
+      "article": "task-notebook",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "2649f9d35e3441fcb7ffa038458f7e4b6c72d4e064279a5174a1c72682720388"
+    },
+    {
+      "article": "transfer-between-instances",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "a910f2d1b1c271fcfc60f3574652dd37f7509a6195f15dfc850419c5ba866443"
+    },
+    {
+      "article": "trash-and-recovery",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "e7c46d008c925d4d961374aee5ec818ef52c7bca47ae9ecd14a315428f5a46ca"
+    },
+    {
+      "article": "triage-incoming-work",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "1fb09e5d11dae22d41b7ae963a43b9961a20909ef50e9f4ab9d0e272be5a60f6"
+    },
+    {
+      "article": "update-an-instance",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 4,
+      "htmlSha256": "95a14e8d20be2d987d4f3516d61e67ef435f9f5c5bb449ed79ab016560a4a486"
+    },
+    {
+      "article": "views-and-filters",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "58bbbca2a685c4d9aabca08e3f5f39730afef2190361cc609c94a523c35cb9f6"
+    },
+    {
+      "article": "web-and-mobile",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "fd9d3ec52240c1ca1626af574012a3258e3876a4d8a920cbb6a52ead4ed5eaa6"
+    },
+    {
+      "article": "work-with-numo",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "1a414239822b4c38e499f4f85f6aea7a41f7e5366e3942b27b03ebc07ebc2f0d"
+    },
+    {
+      "article": "workspace-encryption",
+      "locale": "es",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "89406a4fb33f755fa0ce23bd7e7a1bfea1e0f18d6b962bed72ce3c634771026e"
+    },
+    {
+      "article": "account-access",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "ca72ad627841cf233ed2a58c44ef67cefded597d9b06b57a51ed2191913b2b8f"
+    },
+    {
+      "article": "account-recovery",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "39375fa394b593efa7e099b905a5316121ebf3f6fd1ebac0832d4872e427fe53"
+    },
+    {
+      "article": "account-security",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "e9b56a7b73556ca32091b4ccb471d41ee4c019415b317880d742331d627f3aa4"
+    },
+    {
+      "article": "ai-keys-and-models",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "6574dd177fa0a0744b425bd809b996393e6175a86c17285088b859fafdb962e8"
+    },
+    {
+      "article": "architecture-and-data-flows",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "fb6748545f8b0ee39d0e6ee4cd3c27ede4a7ec087c74fec9ea0b80144da2b6ec"
+    },
+    {
+      "article": "authentication-and-email",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "e1d9015dd373e40c1e03d26635855bcb4b5e6b08d5ec7d2fdcf834e3f7662763"
+    },
+    {
+      "article": "automation-settings",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "7b4980311f995b7e04a4cbcc9569b9b3fbde5e62e19b1ab3acb7981899710574"
+    },
+    {
+      "article": "back-up-the-reference-instance",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 4,
+      "htmlSha256": "4b96959c7429e88edc3fe8ec765acf168fd9228d8ffd16b626779bfd6673fd96"
+    },
+    {
+      "article": "bulk-issue-actions",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "e0bbe8f71050198d6fa4f709eed5413d86e207158ac6f0b12c439c81ed032ecc"
+    },
+    {
+      "article": "change-a-database-schema",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "2cccf417ee20ce27e68598858bf294421e592926f079bceb6207fd496650f396"
+    },
+    {
+      "article": "choose-an-instance",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 4,
+      "htmlSha256": "f466f7036fe7f98b651da774c12ce02a17b34ce5225082ff2422f62097bb9266"
+    },
+    {
+      "article": "create-a-database",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "27df20eb927e253b6a28033f50446af93b2944591ccb0c3bd370b296f61fe007"
+    },
+    {
+      "article": "create-an-issue",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "572c00c0df96f9e74042dac6a19bcfeb9831b62f3f7e8d9864d72fe8d7d9be1c"
+    },
+    {
+      "article": "create-and-organize-pages",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "b28a7a11e1062d3db0a442e12eb1b7d3738364ff66b4d0dfe671b4b2bf8bea17"
+    },
+    {
+      "article": "database-cells-and-entries",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "99f17ab8b040f2cb2252bae384046b94740019bba64552ab14e078ab7eecec61"
+    },
+    {
+      "article": "delegate-code-work",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "c48d82971c6812f2af209a14d347775488698f822a6de233dacad9a855f29069"
+    },
+    {
+      "article": "desktop-app",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "494aa39db6a927beb57ec9dae511c4856ec36adcf62d771a4c019836eda626f1"
+    },
+    {
+      "article": "devices-and-notifications",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "3f5919196584e4824d89afb823b02b9001b3571797c18c15fea40427ba18f6aa"
+    },
+    {
+      "article": "encryption-and-data-boundaries",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "980b6c1f309c738d0fb133e47a1b8c1757ff6392c077e8b4c244406d8c65ecb7"
+    },
+    {
+      "article": "external-minddy-mcp",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "4557febbd4279c95a08040c2009843e256f26d125f92de96de08972b8448cd8e"
+    },
+    {
+      "article": "feedback-ingestion-and-sso",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "b30cd1142d4b600059d0d28d0341c0f344adcdccd96081c131e776bfb98d265d"
+    },
+    {
+      "article": "feedback-pages-and-views",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "c7e1e3af4eb7ce3208a2ad7d5b4d21255053711ea9f750c861cdf5032a9111bd"
+    },
+    {
+      "article": "feedback-to-issue",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "feb0c988d492503cc155a4bf7a087f95695c601767e0a5714e009a59f572fbe3"
+    },
+    {
+      "article": "first-project",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "8b77f323d6a5d70036795a349afcd4eda41bf890945a0d5400befd63f4e8e0b1"
+    },
+    {
+      "article": "forge-issue-sync",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "cd381dc3004e6f252e85f5f7034beead024d0e4bccec9bc197f33bd3bb5d0435"
+    },
+    {
+      "article": "git-accounts-and-repositories",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "5d066f47a204772a10e699d9c197de8891aab5b4878ffa1665d53ab2ad185881"
+    },
+    {
+      "article": "glossary-and-data-model",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "45285adeb2c435a917a39dd2f8e26b448acd06d3a2e77114870cf402b68997c7"
+    },
+    {
+      "article": "implementation-plans",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "b3b7e211fbfd20226136976c79d8f67d9fe67926feae6bef0a4fdf9de83989cf"
+    },
+    {
+      "article": "import-a-database",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "89de0de45343e55c59b34edecf8c135d610d4d9a4e7b0c3ca7a379d13665cf2b"
+    },
+    {
+      "article": "import-export-and-print-pages",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "fb6a0e1f8ad7a81e5b0b66ce4a6cfa86f4ba9fb1ec8040812d7c18e13b8e63ec"
+    },
+    {
+      "article": "import-issues",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "3184a7c0a6e9fda1624125f688e3d1a975617ba4f80345c4d684d9452dda7794"
+    },
+    {
+      "article": "install-a-server",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 6,
+      "htmlSha256": "a0fbb6d87157730c65769adec871870e4b5f729e24985139006500e042f0217e"
+    },
+    {
+      "article": "install-locally",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "caf42ea72bb34bc82456a135422dd12bc2e2afa2c89b08db6db272ce6ba20127"
+    },
+    {
+      "article": "install-the-pwa",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "019833eab0de29af2db927f41c91096caca80fbdab714b5f1b306525149df7f8"
+    },
+    {
+      "article": "instance-administration",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "296e018dbd30218ab55632b51a17789d747115d0cf1f04934db1fe7108dd3c33"
+    },
+    {
+      "article": "instance-configuration",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "800fbfd15ccbeaf0731024b8bef091a84eb67d97a4b49efbfbf0d6ffc9deb280"
+    },
+    {
+      "article": "integration-api-and-webhooks",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 4,
+      "htmlSha256": "cc60bc5f83a8cf71bcf65d9765e19e4f70a5e3949f578784d65726fd66cf2f06"
+    },
+    {
+      "article": "integration-troubleshooting",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 4,
+      "htmlSha256": "bcfa6fe907778088e5849c984a87a230a507ff70a1072aec79181ce59bc9429f"
+    },
+    {
+      "article": "issue-dependencies",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "c4b13b06d5a4d725a48770ac81c089ae5f4ef47a2ec6c600f3b714e00468f547"
+    },
+    {
+      "article": "issue-discussion-and-resources",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "0040e52a44430b22b64f15d1119bd8f4211fd7863708268173c20519d1eeb6fa"
+    },
+    {
+      "article": "issue-statuses",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "bf92e243d6f071f9231a0e7842b72e272b67d7416612f63962ad334f66444680"
+    },
+    {
+      "article": "logical-and-provider-backups",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 5,
+      "htmlSha256": "89a17471d69eeafaabca3c095df12836944da29524552d9e3826645ef14aa0a8"
+    },
+    {
+      "article": "managed-or-source-installation",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "ab993f6b6c5db43b8fc810919b7edcea304e1bbd9f8254ba6bfdd0226d90b2b0"
+    },
+    {
+      "article": "mcp-tool-reference",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 4,
+      "htmlSha256": "fb7cdfc0d47c15f49146dd20f9addbcfff14318a6882f2c393485c54b12cb632"
+    },
+    {
+      "article": "moderate-feedback",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "a7fb222ee5c2bfb1e0c3b82c2e0b3ef225d9b80926ace284d2351a9d217dadde"
+    },
+    {
+      "article": "navigation",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "c586da6ef71207240582403ebf8c37518913e356c3650d6f22c250b7d036049b"
+    },
+    {
+      "article": "notifications-and-inbox",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "97bb4944241577b7a3c30eec35b3b7b5326a8cac8e1803d3b315d5660e58314d"
+    },
+    {
+      "article": "numo-execution-model",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "1e01eeac86cc69e16627c42f69e237636b9f30679c92f9182b12c12d3908b9e3"
+    },
+    {
+      "article": "numo-mcp-connections",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "c8e96f2580f291eec6dfdaaafac849463f071a85ebf0a4dff1981da07d6a9058"
+    },
+    {
+      "article": "numo-permissions-and-approvals",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "40c7f83b0cb8928142610175be3eef22837a3d5247bd15784711213db38dd1f3"
+    },
+    {
+      "article": "objective-dependencies-and-momentum",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "daba9d9383cbd2b0daf49868960201c43ebb06e6edbabb806412590a0c680441"
+    },
+    {
+      "article": "objectives",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "489111790839ba2611f1d7d9d5f7fd3a3bed61009634dd4315ac69f86a3c1a5c"
+    },
+    {
+      "article": "optional-providers",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "5831bdcbf713f452b07cbfccfef3d7b99a8a4487965c6302f64b14953919cf26"
+    },
+    {
+      "article": "page-comments-and-collaboration",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "84055a76a22169c08bd3050e21664dee2bd8076390e3a08094b67f43a3abc095"
+    },
+    {
+      "article": "page-editor",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "d7af917d730aa0dd049e9f613235377fe79b24b561a500069e3ccb13aa5897df"
+    },
+    {
+      "article": "page-files",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "dbf4806b2807971a95ecf60b2590fa93a731f78001019c46d00bf621610aed02"
+    },
+    {
+      "article": "page-history",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "d8c34509c443d7c392e120edef0954418ab2f6a48c7bc15008b04e9c6dce50e9"
+    },
+    {
+      "article": "permissions-and-public-links",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "ce243a8dbf0fae06e84376cae811cb0dc91f2dbd185d0cfdbf544118d385c577"
+    },
+    {
+      "article": "personal-cycle",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "b494fc2d796013d531bd01123431460029b0257954ff822494920f303bde5c3b"
+    },
+    {
+      "article": "personal-statistics",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "46dddfd62bbc34c437af98df422791b35357dd1ad10319283f3117832a3de192"
+    },
+    {
+      "article": "plans-and-ai-usage",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "3d48d4bc308e0e04e1d65c7279345c641a000d39d34576e6b741968d96af773e"
+    },
+    {
+      "article": "privacy-and-account-deletion",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "1cc3e997afd3f051a5ab3b3bf948263fa5d29ea2524c1b48649314fa70879307"
+    },
+    {
+      "article": "profile-and-preferences",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "be4c6e87b167572583e9ce03685b449a22a11233150d526a6b490e8d21d48d38"
+    },
+    {
+      "article": "project-members",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "c276100544a30682ae53d3df8f3812b79c41f313007045445bd4d048055c4cfb"
+    },
+    {
+      "article": "project-settings",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "d5a3e2e9d5d2b9b5d49442b339b4b6d612a808b18ef739ac3803f434b0a60b44"
+    },
+    {
+      "article": "proxy-network-and-jobs",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "909c727f1b57f5570024c9f7ce84e8fee288298a59849737a3283cbe7af5c318"
+    },
+    {
+      "article": "publish-a-feedback-board",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "55149b8609326b959c6a923c2f960c830efedb810e5fb7c8d4a9e1d95b49be20"
+    },
+    {
+      "article": "publish-a-page",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "aa60b693b4d92dd9bfff52d764d1158b379338f4dccb4d639bc7a1b5819de964"
+    },
+    {
+      "article": "recover-numo-work",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "169af050cd404de5d396f405904ff5196ff891c9e5f5606bb9d6f39d62fd8500"
+    },
+    {
+      "article": "recurring-issues",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "a055fc9d7e937c3bca59194629cca90c753d8f273ea49d6c2981a460130c54df"
+    },
+    {
+      "article": "repository-skills",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "6067c6180e3c38a57d40290b1f6577bf58431879d8fe535f579f2655c67a39b8"
+    },
+    {
+      "article": "restore-and-roll-back",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 4,
+      "htmlSha256": "2472a9e9681ff7d440a514b7c0714a36f89fcc054e13e62ebf4436caf3a69f10"
+    },
+    {
+      "article": "review-pull-requests",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "03f29fcd3cb459530340134b4d97f2311d2bafe1ebfe633edc8e1f3e93e01270"
+    },
+    {
+      "article": "scheduled-routines",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "61774a2883749cad3dd09c711bda702d040beb64da4c37ae49f61a850922d831"
+    },
+    {
+      "article": "search-and-shortcuts",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "cd9cdf80caa58121c0f03187e49ea0e806d92e4df0030693af7a54de17937f8e"
+    },
+    {
+      "article": "self-hosted-compatibility",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 4,
+      "htmlSha256": "433437c7c96aa3f1158fa904c8986af158bbec60d3d621b0f4d21bfaaf334a4d"
+    },
+    {
+      "article": "self-hosted-diagnostics",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "07d4a520deb79ee0c8fe8fe8b98df5fb08163d86c5ff817e7f9f6552b2eaeb95"
+    },
+    {
+      "article": "share-a-view",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "c75d2b5855354490c364b79261b0075ef62b339d944e3c9e599ae26837536778"
+    },
+    {
+      "article": "storage-and-attachments",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 4,
+      "htmlSha256": "fe89c9fa4a3fee7f4313ada9f96dc9ac26e72a0b186eac8f18902577df864be1"
+    },
+    {
+      "article": "sub-issues",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "2e49146af7bbdf285a53510f641d286d2b229045177209161e74de3fd6f96324"
+    },
+    {
+      "article": "submit-and-follow-feedback",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "5dd681464c5dfd8d53a0c96c4f42d3319a8e0bde6fb3638d4d747f8c46d43a34"
+    },
+    {
+      "article": "task-notebook",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "ce520f24be8bb56f7a2de1f701e2e275004ac023b86baa9a5d1b2f105841b353"
+    },
+    {
+      "article": "transfer-between-instances",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "0d6b675e5ccf6aac1281bc0b14418f50842a24d12f8f9c90a1f9126fdc624bc3"
+    },
+    {
+      "article": "trash-and-recovery",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "68915013f36f656231ce2ed18081ef9915d4928c23240765397539bea2e4310f"
+    },
+    {
+      "article": "triage-incoming-work",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "682b502b85acf36220f15703bae0493dfc1a7a94ad320a93888db4ec091b1688"
+    },
+    {
+      "article": "update-an-instance",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 4,
+      "htmlSha256": "ebf8a807df5cd1410d763b944735663b57518773bf4963fb33f9095e95f278ee"
+    },
+    {
+      "article": "views-and-filters",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "8e5e72356153eff46267090630963d2825adc63a5d5cb83f9d0a75f905491695"
+    },
+    {
+      "article": "web-and-mobile",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "79ca647ec4afd7db49b839e0a3959cd09be811cd1b78faa8cbaa378a69be4bf2"
+    },
+    {
+      "article": "work-with-numo",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "3e91864d825c51f192b77e7e19e75e029280c1ffcdd790eb9804c18450709777"
+    },
+    {
+      "article": "workspace-encryption",
+      "locale": "fr",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "146ac499a4186942f17730352ce4d0c41ce6af31952357ebae068adcbad39371"
+    },
+    {
+      "article": "account-access",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "666f7a626834ad63c14dd618a1fd9a06789a97af0135b22ffa11b78791bc310e"
+    },
+    {
+      "article": "account-recovery",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "11af2707f06a4aa6c29ac533970e40a78670ca237a2785061457376d302230de"
+    },
+    {
+      "article": "account-security",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "5b10681b1030a872d60f5a00f05a164fbd8fa63c136b0881489c2a57748d8801"
+    },
+    {
+      "article": "ai-keys-and-models",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "bde177e8f10ba9958d5639979049e12895c8d28ff7f1e6eb8cd02158391b0f8e"
+    },
+    {
+      "article": "architecture-and-data-flows",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "512eef68f9909a58f3075949b47d0416ae26d887e937793517a1da28709128a5"
+    },
+    {
+      "article": "authentication-and-email",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "28bb5ec6544b398fb3f9610f0fecca48974f3437d3725ea17bc9d291e01c556b"
+    },
+    {
+      "article": "automation-settings",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "61fd6ae2efd36d2c2493ba6feda1e464a5c031ebc151bce2d03e2d34c4da2da1"
+    },
+    {
+      "article": "back-up-the-reference-instance",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 4,
+      "htmlSha256": "69f308742006cedf99e34d6eb1b8e14f1f79415209464d979e21f703ab5e1c28"
+    },
+    {
+      "article": "bulk-issue-actions",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "6afc64ecd1d2cde8cc3a43b3769f418391384e967a6cc35d03b27d79d907cf55"
+    },
+    {
+      "article": "change-a-database-schema",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "24692a2e511a7efd26ffd72dcc7c03c0573610cf11e8003ce6c828b3c88235c5"
+    },
+    {
+      "article": "choose-an-instance",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 4,
+      "htmlSha256": "bf98d6d828612ae0cd662368f6886d9eb2cd5f2b444e7cb8e6d67e25dfdbc8c7"
+    },
+    {
+      "article": "create-a-database",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "58233c9395db3b96585a7ee6f8aad72f2cf9f59dcbcd2390fccf1fc5d2403081"
+    },
+    {
+      "article": "create-an-issue",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "32e8132c27e67f06bc25966a614e93dbb188174adbdce7ee5f3ea597d5177f00"
+    },
+    {
+      "article": "create-and-organize-pages",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "e58677301d9b5365f2f1389e53e63caa2e53809d9a5d7ea795c5199d7671c457"
+    },
+    {
+      "article": "database-cells-and-entries",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "1741a980fcd3f54e977183c39905205be71e72253ce5835fc8abca54ed44206f"
+    },
+    {
+      "article": "delegate-code-work",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "0acdc00986ad682e493e73d4cc9a91fde5c403d71092e522f9b986ae42a0598a"
+    },
+    {
+      "article": "desktop-app",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "6f55c732020a7b0981777a53bdec73cf604d776e706b4569722beb55bf9d6144"
+    },
+    {
+      "article": "devices-and-notifications",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "f7243f725d9c7e3e100df412436992d7068e0062122d2e8bcb92c7b16d5e9d63"
+    },
+    {
+      "article": "encryption-and-data-boundaries",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "6cca8dfd3c2aa95a21f22b97da1fbce128a3fceff0afeafa33242b2164f7806a"
+    },
+    {
+      "article": "external-minddy-mcp",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "e740bf26e2a5b4a568485da6eda0ddb96a64afeaf100323cc4c80d6797efb489"
+    },
+    {
+      "article": "feedback-ingestion-and-sso",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "1b583c2bb036cc152ac91f241c56baf76ddebd6dba224adb31607423044bedb1"
+    },
+    {
+      "article": "feedback-pages-and-views",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "8fc66d44ee85036330f1deac86b1804e59c6a3e28cee47990b96d4bde3f56afd"
+    },
+    {
+      "article": "feedback-to-issue",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "0dfad93d1a0c7bbf779795c22d8dc7a0484acef42148fdaca9c5e8d22a74e96a"
+    },
+    {
+      "article": "first-project",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "964bdf0adc44c3c37ab81714427e8a1d38798e02825cb4585641c054614e52d3"
+    },
+    {
+      "article": "forge-issue-sync",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "1785cdb43a46dba058add611ea6d8d384793c63ce06f0b510e2136d36a980e15"
+    },
+    {
+      "article": "git-accounts-and-repositories",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "05dca17fcca8d7918a9c42253bbb00c13c482c8c7cbdbc021992e7d2d00c6ece"
+    },
+    {
+      "article": "glossary-and-data-model",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "b3ff19bdb2f882b56a33cb5ae74ac1177b0f471258364f2b3328cba3f8d3391a"
+    },
+    {
+      "article": "implementation-plans",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "74300d2ff6eda8b4454a4a67b72ef460cda25616a2cb7661eefb53bde476b868"
+    },
+    {
+      "article": "import-a-database",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "f965f7c328b007303540beba93986cdd91c5d17dc6c590c4e7bf6f4e7f148349"
+    },
+    {
+      "article": "import-export-and-print-pages",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "46fb5c32afd17f8b513ba13bf8af4a5078238583833decba439795d2d9aabcb8"
+    },
+    {
+      "article": "import-issues",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "6437cb5e5828ed3d38b70d674a07f8660d52883c21a8a3672a72abf8df96a035"
+    },
+    {
+      "article": "install-a-server",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 6,
+      "htmlSha256": "28d9bc1015fd2840c194f29fb29cb33a03a398bd42713570c947e9380ad12539"
+    },
+    {
+      "article": "install-locally",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "eee08dc215251d0f45127b0ee68afc54e96e27d1bc571485885e9e7bf1f182e5"
+    },
+    {
+      "article": "install-the-pwa",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "b208ec281164bbd9a116fd50f6b0dd897bdeff275ecfe562a131edb73cdae1be"
+    },
+    {
+      "article": "instance-administration",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "96904a313e881530d8398ab0770907280f0b4bcffaa7a3d333fad29d8cc5c15d"
+    },
+    {
+      "article": "instance-configuration",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "08b92a72b833cdd67f06b5a12697e8f83f54a24a4d77df5311b913476deb5e99"
+    },
+    {
+      "article": "integration-api-and-webhooks",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 4,
+      "htmlSha256": "bcc2e348ea032440dcefb753fde40c3cfb5e439fe57d996708318d28436d3f72"
+    },
+    {
+      "article": "integration-troubleshooting",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 4,
+      "htmlSha256": "ad67fc3ebddb7acdc7565d965068f4c31c752b5e45e0626544d7062710c32cfb"
+    },
+    {
+      "article": "issue-dependencies",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "078fb87e48d7e1641d272744e3d82f18d501e255498f12076b3c9e023cf29b0b"
+    },
+    {
+      "article": "issue-discussion-and-resources",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "eff9268c8bbcb1fd8b0e2d66c53146acfe8bc5fcd525a362c64aa9eb01bd4b5b"
+    },
+    {
+      "article": "issue-statuses",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "117edb54c4c8742ad18065afc259fcccb3ff60129de66dbe04184d378baa8744"
+    },
+    {
+      "article": "logical-and-provider-backups",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 5,
+      "htmlSha256": "e78d0a78e00aaced3511a5f0d8bdab35ffc111221d819dcd0f2e515c1018396b"
+    },
+    {
+      "article": "managed-or-source-installation",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "78f42e1783f72f5dd52b5946b07f2def281a7471ff89dded95e62a1b12b5b669"
+    },
+    {
+      "article": "mcp-tool-reference",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 4,
+      "htmlSha256": "4a67c4fc62fbd49efaab2e5170b0db4b2f6127abccacc8207b156af4690799d6"
+    },
+    {
+      "article": "moderate-feedback",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "8db3fce43a08e4beea6aceac21b060ea7dd57b9861129714426e2b87707137bd"
+    },
+    {
+      "article": "navigation",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "a508bc7b1b93d57c85c75a5510f9acf79052c39411ede606b36792567f00f437"
+    },
+    {
+      "article": "notifications-and-inbox",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "e774c5a99fdc4aade6c57c845004f8cbef316efb6701276d0d4b3ce521b75def"
+    },
+    {
+      "article": "numo-execution-model",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "c0812179b2409b19a973ddeeaa7df671cc5032acb73309f32795d3c5b2e6e05b"
+    },
+    {
+      "article": "numo-mcp-connections",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "ab75923707ec26ea9ce905ff2fd5e5b3c41083a10f7db3fa8bb3146f607b6619"
+    },
+    {
+      "article": "numo-permissions-and-approvals",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "3b383ed70bf97611bcf163e115fe74389c518e079403989fbb94ff6da9d5244f"
+    },
+    {
+      "article": "objective-dependencies-and-momentum",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "9bea3beda675571de3cf3b245999667238ee240ec673b1666958ec428cd8ff88"
+    },
+    {
+      "article": "objectives",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "76d34da5d3d9121d827a4f7e9826629a37e746c078c11b89721141fb46b046b2"
+    },
+    {
+      "article": "optional-providers",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "36f233e1f2b90c53a56fe4a44d969bd5cab3e264c9b8b84d347e1a54391e2fd0"
+    },
+    {
+      "article": "page-comments-and-collaboration",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "59b293d990036314680318196e16ab98cdcf4a854606f8d6fcbb9cd7959c4960"
+    },
+    {
+      "article": "page-editor",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "ec83e491f358c59644ab55d3ca0e3daa199e7aa15e6809a0f8265089e13f5d0a"
+    },
+    {
+      "article": "page-files",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "72c599f172882da690baf0f0833524d4e59c6ef6fd35b343552ae41369904749"
+    },
+    {
+      "article": "page-history",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "750dbe5dbcbd04e5e4a8b4907f928fce959d9aa29d49b53b2275fbacb10a681b"
+    },
+    {
+      "article": "permissions-and-public-links",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "7525067a6d9b30b0607e36f3b529bb03079149a22024c1cb5342806f00c4d09a"
+    },
+    {
+      "article": "personal-cycle",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "fa5c4b20e382dcfbbe07a86ac8ac9095760be472e0d8c345338f1a6ff515a5ed"
+    },
+    {
+      "article": "personal-statistics",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "0430fa8bf6eb99a35e925208ad0379356ef8ecd697e4379ce276c249aa4dc623"
+    },
+    {
+      "article": "plans-and-ai-usage",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "7b5490e82ffd6aac0c2cc968d5ab8d216933b032ad16d1fa940a4ffa3208cc4c"
+    },
+    {
+      "article": "privacy-and-account-deletion",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "7dffc8938120e4e00080b1b69291cbbca5783652a129a52b7862d6eb7e2663c6"
+    },
+    {
+      "article": "profile-and-preferences",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "ffd35db69cad370bb45ce737c601d5aea8e8e5f0a0f888950c64446ef80f6e05"
+    },
+    {
+      "article": "project-members",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "473ed84cad5f1aec2821752520a9f07f80778f2767bb1cb6d4f1ca3d62c11034"
+    },
+    {
+      "article": "project-settings",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "62177eb50a65bdec433f70ec30d3d09a8061f82deb1470ca708f2d8bea01ce72"
+    },
+    {
+      "article": "proxy-network-and-jobs",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "03994b5ba2bdf7163579be1838db935a74937964fae527202b5a755165307a11"
+    },
+    {
+      "article": "publish-a-feedback-board",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "4d6e1fe167bac3c6893cf499678d676909e46527dee2b500453ff6298b7eddb8"
+    },
+    {
+      "article": "publish-a-page",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "aa3801bb6284c268bc5678051c7c796f869efb5671a601f8a8912a3ad8259b60"
+    },
+    {
+      "article": "recover-numo-work",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "1428067d60d1fc7db3ac335b9c345accf44dd316848dc48ceb701826f4a8d537"
+    },
+    {
+      "article": "recurring-issues",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "10783e29899cc615edfe689536b0b8310c677789c58640ead2d22037acdadf80"
+    },
+    {
+      "article": "repository-skills",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "b36f739f84df6a533f1759bd39e648e2074730272486bdfc8a88b5a2073c9aff"
+    },
+    {
+      "article": "restore-and-roll-back",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 4,
+      "htmlSha256": "46c918aa6e8d2692f554b019ec6d1bd5b068954abaf626b08ca7b0cf8174c1e3"
+    },
+    {
+      "article": "review-pull-requests",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "9c05570c0ad0970c84187fc6ce98072c75360f9739d6acbe80f7a095ac7f5a05"
+    },
+    {
+      "article": "scheduled-routines",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "6dd67597e7123e86a6cbdf4033efbe2ae666f5062867d6137ae0a4f8fe4965f6"
+    },
+    {
+      "article": "search-and-shortcuts",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "de524de650fa5f1501d4da6500e2e652c69f5d0e5b4527697c8bc9fe63f23047"
+    },
+    {
+      "article": "self-hosted-compatibility",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 4,
+      "htmlSha256": "f02500fb37f2e534ad0d3079e7891bb859f215475473fdeb4f10b925e7d6ccfc"
+    },
+    {
+      "article": "self-hosted-diagnostics",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "fbb287d90d2073dda869a098f5b6c6abdb3292fef5dda07789cf2e56ecf91dcc"
+    },
+    {
+      "article": "share-a-view",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "412f68693fd7c49da7bb0316347f9f2a5297fdd756e19decfaba4149ab69c7ee"
+    },
+    {
+      "article": "storage-and-attachments",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 4,
+      "htmlSha256": "89e2f1caaad0d8f3a52af8ab05e9f449630882baf2a39bd4df89424368899d27"
+    },
+    {
+      "article": "sub-issues",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "ed92b4b2eae73ec35ffc27db9083be0616833ab1faa9b6b062c4482bb5c30963"
+    },
+    {
+      "article": "submit-and-follow-feedback",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "0ebe92bf4de8d6e795ec57e17808c2e2e4e9691c2461482870d26c90106b896d"
+    },
+    {
+      "article": "task-notebook",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "aa63e4bc88aef0b6adcd527d9d307cce87ada705fac8afbadcc73c743c404a98"
+    },
+    {
+      "article": "transfer-between-instances",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "2ea274c632b920f425850c70f20f5a572542d14d98d54d6d666aa116bfc818ed"
+    },
+    {
+      "article": "trash-and-recovery",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "3338fc307e2527a1d2c4c93f2342a1266577540c3375cf6f2ef8c0816b7ba262"
+    },
+    {
+      "article": "triage-incoming-work",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "c9509130422077d89a9c4d347972427c6b296dc6a72c4be90999fdacc2f75fc1"
+    },
+    {
+      "article": "update-an-instance",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 4,
+      "htmlSha256": "71f03a8c8a43158b94d5a413968ee2c63128464a0dc986d5d7c090413c85c827"
+    },
+    {
+      "article": "views-and-filters",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "f1a2b4c1bdc15b0c1d4f4bfe4a678239e996f7c54bc6811798a0ce1a968c2856"
+    },
+    {
+      "article": "web-and-mobile",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "e19b5ae6a10767cf399b243c3019e40f15f9687c2c25d0085be3f0dbd308f9d7"
+    },
+    {
+      "article": "work-with-numo",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "e16901e51a6f0a686ad932a4c3c8a8e2335a52dca77d2f1e4c9799045ca3b26b"
+    },
+    {
+      "article": "workspace-encryption",
+      "locale": "it",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "fb58b18dbb15c18ae4b0c20f3a4abb400f59bc9f60a592ecc1cbbda6ab9e6975"
+    },
+    {
+      "article": "account-access",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "6f029efc50ff670f9ef751c09caaeb833eb8f0ddeeb4f7b4c0a9852dcc1f9a50"
+    },
+    {
+      "article": "account-recovery",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "2085b95bfe8171302b7111aa67f4d696429f28addb0dab9be9262663ca1218fb"
+    },
+    {
+      "article": "account-security",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "b6ee2b8cd2a881fe5df95d91d17fb458ff5d5c0b9153380e3fec37172124f0e4"
+    },
+    {
+      "article": "ai-keys-and-models",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "a63734cba32ef7754beb219e8b3e04ee08751ae275839ab06bc01c262616998b"
+    },
+    {
+      "article": "architecture-and-data-flows",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "f869d84e6f0950757c604a7591557f6295e8b8becfbec1b61ac2ca4f4ee4ad7e"
+    },
+    {
+      "article": "authentication-and-email",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "8370fafb914537e67c4a8b099e23fa834cd411aff53c9178f67b79f6b4643843"
+    },
+    {
+      "article": "automation-settings",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "95341c0f872b7ed29dfb8579b05530b2c05024dd858bfa39f581cda9767cfac7"
+    },
+    {
+      "article": "back-up-the-reference-instance",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 4,
+      "htmlSha256": "c228f0fb1e7a86d41b8627dd3c7c69ca45052451c1615cce3591a9aaeffab739"
+    },
+    {
+      "article": "bulk-issue-actions",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "c682780120e9cd7ee0a089eb40eea6e296a3e6db61df0f9ddb907855284a3f15"
+    },
+    {
+      "article": "change-a-database-schema",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "bdda792bea7218aeab61c020fe2ceac5ccd9b43cc7e7d6e5cb14f2d6c51e6d19"
+    },
+    {
+      "article": "choose-an-instance",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 4,
+      "htmlSha256": "2b7958c7d4dabe67032d08d2000ea18b01d6eb8fa9c29c3f38eba7358124af16"
+    },
+    {
+      "article": "create-a-database",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "b91b89dca2c59a42d75d9caa4bccf17c0872a7eed6891d69bbc26020edabc8ed"
+    },
+    {
+      "article": "create-an-issue",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "0d2ed0578bd297cda7fe7d07c2f3a86582d145fdb74e09d3e3c59d71b20b74b9"
+    },
+    {
+      "article": "create-and-organize-pages",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "7aa617c92d5fa34c3f128bdc95a8a11a8305e74dafbeea18d0efe4a5c55f9965"
+    },
+    {
+      "article": "database-cells-and-entries",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "537e329f5cdd7e771dd142eeeb8a32ea2607d5aa433930cf487114ac7b3a0dcc"
+    },
+    {
+      "article": "delegate-code-work",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "3d856536fbca15bfa3d0b67fc17f348ee62ab615ec22c9331541d5a84a974948"
+    },
+    {
+      "article": "desktop-app",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "88d8e1adaa8c5a520cff5926fd4b73d6f0881937710a658bc53feb77fc4c48fe"
+    },
+    {
+      "article": "devices-and-notifications",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "48e2389e43a63a0e0fbae90de987fe962f23f5dc5566d90b122cdc3ff6ab8db9"
+    },
+    {
+      "article": "encryption-and-data-boundaries",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "fe3bef97c997f4a3a1ba8f3536f0c8237512b0ddde44e9110d7c79aec2e8b494"
+    },
+    {
+      "article": "external-minddy-mcp",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "182bda3b0def36639d2a553b374b6ea26068906abbaa552a650b7ce076675b4d"
+    },
+    {
+      "article": "feedback-ingestion-and-sso",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "11b49a4aed0ba11a9cd7896e8de63af2b21fa277220e68216eda50bed6b3fead"
+    },
+    {
+      "article": "feedback-pages-and-views",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "111ca7d504c1037f0ce691a4dabb959a22948f41e154b6d17410e9a4805218b9"
+    },
+    {
+      "article": "feedback-to-issue",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "70bccc4dca5c940ec309ada1c61d3665e0835619fef62ca857f3eb297dd3f19a"
+    },
+    {
+      "article": "first-project",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "3ac80154d5df7b3395ed4ec283ac3dc80d7a07f7c2e18dc7b02646d1c36604b7"
+    },
+    {
+      "article": "forge-issue-sync",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "1c4f0226d27d111caaefd8320fc0ef9745debbc532c956d3a171a983b9b8a244"
+    },
+    {
+      "article": "git-accounts-and-repositories",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "8f20bbbf9f738a6b50649f470080bbcff1407d2a7ce2759f236121465624e2fc"
+    },
+    {
+      "article": "glossary-and-data-model",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "18d5d54776ea7ccf2454ddbba1d65fa2cf6997614fcaac9a0c72e6e47fa0a2a1"
+    },
+    {
+      "article": "implementation-plans",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "02626ef30909264d909aedd201e13a2ea4fd5b752c3435efc06518e3a97f12c4"
+    },
+    {
+      "article": "import-a-database",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "2349cbf0368267c8ba0aa86f513f183e2c61f110cbe0e4e00198e7d17ee91a95"
+    },
+    {
+      "article": "import-export-and-print-pages",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "f56733f2588087f446a483618d61e5e6348127b5860f18f1d5ddac4ca8269f8e"
+    },
+    {
+      "article": "import-issues",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "97701ee12581447f75e174e57624731b3feb1c2c021fd623e57ef548d3a89089"
+    },
+    {
+      "article": "install-a-server",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 6,
+      "htmlSha256": "554eb80365e1dad39b952ed323cf034d22207406b83401b9420a0aa9b1def83b"
+    },
+    {
+      "article": "install-locally",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "ea0e5a2c50df27dbdb30105c3bc3566ad4ef12e9669639f51899566a8b287e71"
+    },
+    {
+      "article": "install-the-pwa",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "f01cd75bdaf6af9383e32095b270ba0e0d8d43dbdc5ac351e611de96ce1f2b5a"
+    },
+    {
+      "article": "instance-administration",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "6ddd4c5384d9f220814645a51dbbf43b92869baa0a8db5e279a2c782b6c560e3"
+    },
+    {
+      "article": "instance-configuration",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "f835fa209994f22bd9e5f6f74ad051aee71eec0beafd176da2fecbea2b53ff5b"
+    },
+    {
+      "article": "integration-api-and-webhooks",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 4,
+      "htmlSha256": "15e73ce27c18f6938d7f576b3c5c0d2bda35a2d696a86221772ba1e7dcfa21cf"
+    },
+    {
+      "article": "integration-troubleshooting",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 4,
+      "htmlSha256": "714b0257893946c3ee814207b36d9f1246877fc9ff879dbf01c6add92b9e3b48"
+    },
+    {
+      "article": "issue-dependencies",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "6c51d545062728c698b6cc715d27b0977a828ed5b6e121f4ead3edc42bc6ac85"
+    },
+    {
+      "article": "issue-discussion-and-resources",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "95e564c22c7f91c89ac37212e5ba904644cfcb2100074d910cccb07892199129"
+    },
+    {
+      "article": "issue-statuses",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "8aaa89c96fe2db2275e26b03bbce4f65505c86ee1d81fda760767adf75f189ee"
+    },
+    {
+      "article": "logical-and-provider-backups",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 5,
+      "htmlSha256": "09b3aaf3bdb1440975c809709b256866c9f110c243d1b2a17bb992842d35c353"
+    },
+    {
+      "article": "managed-or-source-installation",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "3186d27d948ae106431136e12fa4653649555636eaeef3cb6ef03a65a834e59b"
+    },
+    {
+      "article": "mcp-tool-reference",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 4,
+      "htmlSha256": "940ec412b4c3cf74ce5927e60ed48781fc556ac57e6ecbc113e77be086a9e94f"
+    },
+    {
+      "article": "moderate-feedback",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "1c437b515feac1d53e894263eae7d6b5f62168913fb1e340603697a3cf2fd1c8"
+    },
+    {
+      "article": "navigation",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "016a31014915d1b323d6109a6ac3f71d9fe0bde6996dd36ebac7aa4d8f49d004"
+    },
+    {
+      "article": "notifications-and-inbox",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "4c46ad8c0a7ca2327389e5243e4a94d67a2c2fa573832489f9260c23918db481"
+    },
+    {
+      "article": "numo-execution-model",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "d86776c47733c1d121bc30a4b39ec1fa81d81b0ec4cbf17418e8a48e4bc95ee1"
+    },
+    {
+      "article": "numo-mcp-connections",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "4cb2ba4f61c3b201a9713127d2a0ce19b94710f80b630af4f58f8b2a45c532ca"
+    },
+    {
+      "article": "numo-permissions-and-approvals",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "b0806f76993ad2ec6aa594b1957e0e6e8427e201def7ce91f931915b4102720e"
+    },
+    {
+      "article": "objective-dependencies-and-momentum",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "0470dcc05143561ea3f9afaa4b2e2389efc957fee770584c312187cfe983bac3"
+    },
+    {
+      "article": "objectives",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "a8c3730c8d9c656bd3fa70893527fc9adcbe980f23d9d9d220a98373c100c15b"
+    },
+    {
+      "article": "optional-providers",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "9cbb269d4f48efb4bf71996c4e9a46225268f6c0b23268085e60100f580cb5a2"
+    },
+    {
+      "article": "page-comments-and-collaboration",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "40ece40690e2d02c5501a6cd42e319d7d19081989781006496b8fe81c63541e5"
+    },
+    {
+      "article": "page-editor",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "26e3f55c4a6a1767daac258178268adbf5a8b4b985dcf4ddb8a46210f1ce6b70"
+    },
+    {
+      "article": "page-files",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "be23cf2e61e3088ffe8e6cbeed3961daeb995f030621780bef9930fb6cc53cc0"
+    },
+    {
+      "article": "page-history",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "5c14aa21ffc1bce64ec3f5019598ea086d4ea7a08f5539ac9a587b0944b84114"
+    },
+    {
+      "article": "permissions-and-public-links",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "5c7aa7adbee2f545b3f7e170a5ebf5826d7a27bd940bd5dbf4f2ea419835b86e"
+    },
+    {
+      "article": "personal-cycle",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "90b6397802e7f08951a3a94f48bcd23c107643614b744c93c4256f9e5c05d8c6"
+    },
+    {
+      "article": "personal-statistics",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "8c91a937a877f4a6e9b75d52f74aedda63f3b552bdbefa411ae22f3957dfb456"
+    },
+    {
+      "article": "plans-and-ai-usage",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "8f75a8de58d8cd585c6181c07c714b6a1577a07b54eba1c8052ad83d4b103a28"
+    },
+    {
+      "article": "privacy-and-account-deletion",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "53a2628cbb8d30dc20e39673cd73f56d6407f1bb7cab3496506bea83a10aec0c"
+    },
+    {
+      "article": "profile-and-preferences",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "09180e2c41740dbf1c9eeeedcf8351f540a329535c3af03a8cd5d224b8252c4d"
+    },
+    {
+      "article": "project-members",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "98344995be235d111bde31e780a188cac79f34d9267d92d43441c4c54bb87e6e"
+    },
+    {
+      "article": "project-settings",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "ac477fd43d544dc272fa271b727fdfd942a74dcd6e0a20850f6e3e3f92e9634e"
+    },
+    {
+      "article": "proxy-network-and-jobs",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "f64b427b410cf89463751edcfd796f5ff9159a8ec856830ddc7f91523264e46a"
+    },
+    {
+      "article": "publish-a-feedback-board",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "14474aaf5305bf59641a9f2afe6c45e3a09a4cf9d211d516d132089974d278a4"
+    },
+    {
+      "article": "publish-a-page",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "b15434899f7f7a388b94fdb36b32d819ff190d476c0472c84d274f19d00457d0"
+    },
+    {
+      "article": "recover-numo-work",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "7c133233873187d39abaf500054999844df24bcb1b570e320fb1b651fde1bc9b"
+    },
+    {
+      "article": "recurring-issues",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "7968ffb574f95e615c5900d2ed16927e238ae5138eede9ad00ca5ad770de6582"
+    },
+    {
+      "article": "repository-skills",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "88a778503535d2a0be971ba58f0b1132f74711466585178a1d03558740b50be4"
+    },
+    {
+      "article": "restore-and-roll-back",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 4,
+      "htmlSha256": "eb7ee01299455a84b8bfcdb9a546778cb423e3b291c3659d7c11968bc4fcecf4"
+    },
+    {
+      "article": "review-pull-requests",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "2f5c1cf82904726b46220bd64345837634cf5f2f4ad8bb48241af2e72a8ce8b8"
+    },
+    {
+      "article": "scheduled-routines",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "b1b9015c60fb4d3eeb67193c6f1115dbaefadbe9e38d3c19c76e8612371281cd"
+    },
+    {
+      "article": "search-and-shortcuts",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "ff4879907d1d8d8501f4a6e97549e4d68ad7e5825725f64c98ec65a778f1c2c0"
+    },
+    {
+      "article": "self-hosted-compatibility",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 4,
+      "htmlSha256": "38098272567551d662ebd5f740eaa079e0d979272c5bfd3c511254436d158d09"
+    },
+    {
+      "article": "self-hosted-diagnostics",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "6acb364259e2a3f1e32bf0cf37a7140d6cac24b2c0ddbd79c62ba1bbeb2e2a27"
+    },
+    {
+      "article": "share-a-view",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "946d0bdb70a03d413ba46ca39a5a76a1a9ca462a12c68fd3337ff48ca4c04283"
+    },
+    {
+      "article": "storage-and-attachments",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 4,
+      "htmlSha256": "27d862da936062b657848ab6093970ae10aa001a9e01a108359c1dd5a9fb98a2"
+    },
+    {
+      "article": "sub-issues",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "38e054fc7b913174e815f3ff99212361574b0644d50da4d28e74f8c517de7a96"
+    },
+    {
+      "article": "submit-and-follow-feedback",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "f86878d775425756216b6541322f45076f0fc7f457c9e02c0516a8e3bebf0b8e"
+    },
+    {
+      "article": "task-notebook",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "c8a35b4a497b10d472f6f3f02fa427000ed717e1fd4f464260c1704065294be4"
+    },
+    {
+      "article": "transfer-between-instances",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "53b722ed4bba01faf75ac284047b1eef79640271419361e0ffbfad43fefff53a"
+    },
+    {
+      "article": "trash-and-recovery",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "d94007b75dc25ba2fd0e7c1e7c3e6285a53816b5a7c3764ff5b4c0f93cbfd536"
+    },
+    {
+      "article": "triage-incoming-work",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "cbbd999690de79e57d9dcbc3021a09ca799f4ae17b2617971fffb30fd38c9d48"
+    },
+    {
+      "article": "update-an-instance",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 4,
+      "htmlSha256": "eb649b9b730d8f193ce235f8977ee74e3ce72b8f0335ce21ce79a340f315e0e9"
+    },
+    {
+      "article": "views-and-filters",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "245e3d461715bbbc77be4a67c7d22c4495dc6b08138b750103f0011517120b83"
+    },
+    {
+      "article": "web-and-mobile",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "5afa3829c21aa515ac11b97b1eb7acce3ac6a6ca95d9c9abdb4d3c28abfd1b80"
+    },
+    {
+      "article": "work-with-numo",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 2,
+      "htmlSha256": "a4ce36189baa8d8dcae647765cb52337f830816f10ab7bd9abf4677f3138df3b"
+    },
+    {
+      "article": "workspace-encryption",
+      "locale": "pt-BR",
+      "status": 200,
+      "canonical": true,
+      "indexed": true,
+      "alternateLanguages": 7,
+      "sections": 3,
+      "htmlSha256": "2d2762875b9b14da315e0dbb57f740c3a65588a5dd21ce1058e21e28995d676e"
+    }
+  ]
+}

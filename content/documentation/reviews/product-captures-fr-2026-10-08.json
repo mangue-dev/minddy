@@ -1,0 +1,441 @@
+[
+  {
+    "locale": "fr",
+    "screen": "project-general",
+    "src": "/documentation/fr/project-general.png",
+    "sourceCommit": "7ccf25f8542fc6453a033ee1f709e67de67a839d",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/settings",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      1130,
+      515
+    ],
+    "language": "fr",
+    "submitted": false,
+    "displayAdaptation": [],
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      }
+    ],
+    "navigationWrites": [
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      }
+    ],
+    "reviewed": false,
+    "limitation": "Visible controls only. No completed save, share, restore, import or release outcome is claimed."
+  },
+  {
+    "locale": "fr",
+    "screen": "project-members",
+    "src": "/documentation/fr/project-members.png",
+    "sourceCommit": "7ccf25f8542fc6453a033ee1f709e67de67a839d",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/settings?tab=members",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      1130,
+      455
+    ],
+    "language": "fr",
+    "submitted": false,
+    "displayAdaptation": [],
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      }
+    ],
+    "navigationWrites": [
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs"
+      },
+      {
+        "method": "PATCH",
+        "route": "/api/me/app-tabs/335fa893-14ae-426a-8b95-a153e491adcd"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      }
+    ],
+    "reviewed": false,
+    "limitation": "Visible controls only. No completed save, share, restore, import or release outcome is claimed."
+  },
+  {
+    "locale": "fr",
+    "screen": "project-recurrences",
+    "src": "/documentation/fr/project-recurrences.png",
+    "sourceCommit": "7ccf25f8542fc6453a033ee1f709e67de67a839d",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/settings?tab=recurrences",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      1130,
+      332
+    ],
+    "language": "fr",
+    "submitted": false,
+    "displayAdaptation": [],
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      }
+    ],
+    "navigationWrites": [
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs"
+      },
+      {
+        "method": "PATCH",
+        "route": "/api/me/app-tabs/1ded8b64-13e5-4514-b9b5-e1a31ff31974"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      }
+    ],
+    "reviewed": false,
+    "limitation": "Visible controls only. No completed save, share, restore, import or release outcome is claimed."
+  },
+  {
+    "locale": "fr",
+    "screen": "page-editor",
+    "src": "/documentation/fr/page-editor.png",
+    "sourceCommit": "7ccf25f8542fc6453a033ee1f709e67de67a839d",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages/cd3ee91e-ad73-423c-bb99-9f81722f8912",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      1130,
+      874
+    ],
+    "language": "fr",
+    "submitted": false,
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages/cd3ee91e-ad73-423c-bb99-9f81722f8912",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "route": "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages/cd3ee91e-ad73-423c-bb99-9f81722f8912/watch"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      }
+    ],
+    "navigationWrites": [
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs"
+      },
+      {
+        "method": "PATCH",
+        "route": "/api/me/app-tabs/e56abf96-cf03-4de4-8666-17594fa722c7"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      }
+    ],
+    "reviewed": false,
+    "limitation": "Visible controls only. No completed save, share, restore, import or release outcome is claimed."
+  },
+  {
+    "locale": "fr",
+    "screen": "page-export",
+    "src": "/documentation/fr/page-export.png",
+    "sourceCommit": "7ccf25f8542fc6453a033ee1f709e67de67a839d",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages/cd3ee91e-ad73-423c-bb99-9f81722f8912",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      187,
+      104
+    ],
+    "language": "fr",
+    "submitted": false,
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages/cd3ee91e-ad73-423c-bb99-9f81722f8912",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "route": "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages/cd3ee91e-ad73-423c-bb99-9f81722f8912/watch"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      }
+    ],
+    "navigationWrites": [
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      }
+    ],
+    "reviewed": false,
+    "limitation": "Visible controls only. No completed save, share, restore, import or release outcome is claimed."
+  },
+  {
+    "locale": "fr",
+    "screen": "page-comments",
+    "src": "/documentation/fr/page-comments.png",
+    "sourceCommit": "7ccf25f8542fc6453a033ee1f709e67de67a839d",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages/cd3ee91e-ad73-423c-bb99-9f81722f8912",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      584,
+      1057
+    ],
+    "language": "fr",
+    "submitted": false,
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages/cd3ee91e-ad73-423c-bb99-9f81722f8912",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "route": "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages/cd3ee91e-ad73-423c-bb99-9f81722f8912/watch"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      }
+    ],
+    "navigationWrites": [
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      }
+    ],
+    "reviewed": false,
+    "limitation": "Visible controls only. No completed save, share, restore, import or release outcome is claimed."
+  },
+  {
+    "locale": "fr",
+    "screen": "page-history",
+    "src": "/documentation/fr/page-history.png",
+    "sourceCommit": "7ccf25f8542fc6453a033ee1f709e67de67a839d",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages/cd3ee91e-ad73-423c-bb99-9f81722f8912",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      584,
+      237
+    ],
+    "language": "fr",
+    "submitted": false,
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages/cd3ee91e-ad73-423c-bb99-9f81722f8912",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "route": "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages/cd3ee91e-ad73-423c-bb99-9f81722f8912/watch"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      }
+    ],
+    "navigationWrites": [
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      }
+    ],
+    "reviewed": false,
+    "limitation": "Visible controls only. No completed save, share, restore, import or release outcome is claimed."
+  },
+  {
+    "locale": "fr",
+    "screen": "new-issue",
+    "src": "/documentation/fr/new-issue.png",
+    "sourceCommit": "7ccf25f8542fc6453a033ee1f709e67de67a839d",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      696,
+      290
+    ],
+    "language": "fr",
+    "submitted": false,
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      }
+    ],
+    "navigationWrites": [
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs"
+      },
+      {
+        "method": "PATCH",
+        "route": "/api/me/app-tabs/13e9ff3f-11e8-4d55-957a-509db934b098"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      }
+    ],
+    "reviewed": false,
+    "limitation": "Visible controls only. No completed save, share, restore, import or release outcome is claimed."
+  },
+  {
+    "locale": "fr",
+    "screen": "keyboard-shortcuts",
+    "src": "/documentation/fr/keyboard-shortcuts.png",
+    "sourceCommit": "7ccf25f8542fc6453a033ee1f709e67de67a839d",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      536,
+      886
+    ],
+    "language": "fr",
+    "submitted": false,
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      }
+    ],
+    "navigationWrites": [
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs"
+      },
+      {
+        "method": "PATCH",
+        "route": "/api/me/app-tabs/42da710e-2c36-412f-8b38-c7bdc395404c"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      }
+    ],
+    "reviewed": false,
+    "limitation": "Visible controls only. No completed save, share, restore, import or release outcome is claimed."
+  }
+]

@@ -1,0 +1,765 @@
+{
+  "author": "agent:/root/operator_documentation",
+  "date": "2026-10-08",
+  "profile": "Actual candidate UI with guarded demo read access; existing seed 008 completed demonstration worker",
+  "executionValidated": false,
+  "publicationApproved": false,
+  "captures": [
+    {
+      "article": "delegate-code-work",
+      "locale": "en",
+      "output": "public/documentation/en/delegate-code-work-workflow.png",
+      "viewport": [
+        1200,
+        690
+      ],
+      "theme": "light",
+      "capturedAt": "2026-10-08",
+      "exchanges": [
+        {
+          "path": "/api/assistant/conversations",
+          "replacements": 2,
+          "originalSHA256": "46c4dfadeb02c35c42845d8c1450ac74c1e3db3afec8a2b7ee7bb8de126dae25",
+          "localizedSHA256": "46c4dfadeb02c35c42845d8c1450ac74c1e3db3afec8a2b7ee7bb8de126dae25"
+        },
+        {
+          "path": "/api/assistant/conversations",
+          "replacements": 2,
+          "originalSHA256": "46c4dfadeb02c35c42845d8c1450ac74c1e3db3afec8a2b7ee7bb8de126dae25",
+          "localizedSHA256": "46c4dfadeb02c35c42845d8c1450ac74c1e3db3afec8a2b7ee7bb8de126dae25"
+        },
+        {
+          "path": "/api/numo/conversations/91dc61a7-4449-48c7-a65b-abfed8f72710",
+          "replacements": 4,
+          "originalSHA256": "739039300b1ad075a797dae853f7ddfcd19661e0c678a0441fd33e0775a815d0",
+          "localizedSHA256": "739039300b1ad075a797dae853f7ddfcd19661e0c678a0441fd33e0775a815d0"
+        },
+        {
+          "path": "/api/numo/conversations/91dc61a7-4449-48c7-a65b-abfed8f72710",
+          "replacements": 4,
+          "originalSHA256": "634aabcc547c328b0d3395dee36c9de2cef6bb60b435379ebb494f01692cac60",
+          "localizedSHA256": "634aabcc547c328b0d3395dee36c9de2cef6bb60b435379ebb494f01692cac60"
+        },
+        {
+          "path": "/api/agent-runs/33da3c17-5810-469b-bc88-40d4aa6b1fbd/events",
+          "replacements": 4,
+          "originalSHA256": "6b4130e71c52eca2386eb218c62cffeb4a5c29ffaa1e2ee81b133b87cc1ad867",
+          "localizedSHA256": "6b4130e71c52eca2386eb218c62cffeb4a5c29ffaa1e2ee81b133b87cc1ad867"
+        },
+        {
+          "path": "/api/agent-runs/33da3c17-5810-469b-bc88-40d4aa6b1fbd/events",
+          "replacements": 4,
+          "originalSHA256": "6b4130e71c52eca2386eb218c62cffeb4a5c29ffaa1e2ee81b133b87cc1ad867",
+          "localizedSHA256": "6b4130e71c52eca2386eb218c62cffeb4a5c29ffaa1e2ee81b133b87cc1ad867"
+        },
+        {
+          "path": "/api/agent-runs/33da3c17-5810-469b-bc88-40d4aa6b1fbd",
+          "replacements": 2,
+          "originalSHA256": "3da361f7a0d395cc6008be6df6b48dfa5605b99a41412ba6b09d3f6f2c6f1659",
+          "localizedSHA256": "3da361f7a0d395cc6008be6df6b48dfa5605b99a41412ba6b09d3f6f2c6f1659"
+        },
+        {
+          "path": "/api/agent-runs/33da3c17-5810-469b-bc88-40d4aa6b1fbd/events",
+          "replacements": 4,
+          "originalSHA256": "6b4130e71c52eca2386eb218c62cffeb4a5c29ffaa1e2ee81b133b87cc1ad867",
+          "localizedSHA256": "6b4130e71c52eca2386eb218c62cffeb4a5c29ffaa1e2ee81b133b87cc1ad867"
+        }
+      ],
+      "conversationId": "33da3c17-5810-469b-bc88-40d4aa6b1fbd",
+      "reviewed": false,
+      "qualification": "Existing seeded completed/awaiting-input demonstration worker; no new code execution, repository push or PR claimed. Only exact narrative strings localized in successful GET responses; IDs, actions, source paths, code, commands, timestamps and outcome preserved."
+    },
+    {
+      "article": "recover-numo-work",
+      "locale": "en",
+      "output": "public/documentation/en/recover-numo-work-workflow.png",
+      "viewport": [
+        1200,
+        690
+      ],
+      "theme": "light",
+      "capturedAt": "2026-10-08",
+      "exchanges": [
+        {
+          "path": "/api/assistant/conversations",
+          "replacements": 2,
+          "originalSHA256": "46c4dfadeb02c35c42845d8c1450ac74c1e3db3afec8a2b7ee7bb8de126dae25",
+          "localizedSHA256": "46c4dfadeb02c35c42845d8c1450ac74c1e3db3afec8a2b7ee7bb8de126dae25"
+        },
+        {
+          "path": "/api/assistant/conversations",
+          "replacements": 2,
+          "originalSHA256": "46c4dfadeb02c35c42845d8c1450ac74c1e3db3afec8a2b7ee7bb8de126dae25",
+          "localizedSHA256": "46c4dfadeb02c35c42845d8c1450ac74c1e3db3afec8a2b7ee7bb8de126dae25"
+        },
+        {
+          "path": "/api/numo/conversations/91dc61a7-4449-48c7-a65b-abfed8f72710",
+          "replacements": 4,
+          "originalSHA256": "739039300b1ad075a797dae853f7ddfcd19661e0c678a0441fd33e0775a815d0",
+          "localizedSHA256": "739039300b1ad075a797dae853f7ddfcd19661e0c678a0441fd33e0775a815d0"
+        },
+        {
+          "path": "/api/numo/conversations/91dc61a7-4449-48c7-a65b-abfed8f72710",
+          "replacements": 4,
+          "originalSHA256": "634aabcc547c328b0d3395dee36c9de2cef6bb60b435379ebb494f01692cac60",
+          "localizedSHA256": "634aabcc547c328b0d3395dee36c9de2cef6bb60b435379ebb494f01692cac60"
+        },
+        {
+          "path": "/api/agent-runs/33da3c17-5810-469b-bc88-40d4aa6b1fbd/events",
+          "replacements": 4,
+          "originalSHA256": "6b4130e71c52eca2386eb218c62cffeb4a5c29ffaa1e2ee81b133b87cc1ad867",
+          "localizedSHA256": "6b4130e71c52eca2386eb218c62cffeb4a5c29ffaa1e2ee81b133b87cc1ad867"
+        },
+        {
+          "path": "/api/agent-runs/33da3c17-5810-469b-bc88-40d4aa6b1fbd/events",
+          "replacements": 4,
+          "originalSHA256": "6b4130e71c52eca2386eb218c62cffeb4a5c29ffaa1e2ee81b133b87cc1ad867",
+          "localizedSHA256": "6b4130e71c52eca2386eb218c62cffeb4a5c29ffaa1e2ee81b133b87cc1ad867"
+        },
+        {
+          "path": "/api/agent-runs/33da3c17-5810-469b-bc88-40d4aa6b1fbd",
+          "replacements": 2,
+          "originalSHA256": "3da361f7a0d395cc6008be6df6b48dfa5605b99a41412ba6b09d3f6f2c6f1659",
+          "localizedSHA256": "3da361f7a0d395cc6008be6df6b48dfa5605b99a41412ba6b09d3f6f2c6f1659"
+        },
+        {
+          "path": "/api/agent-runs/33da3c17-5810-469b-bc88-40d4aa6b1fbd/events",
+          "replacements": 4,
+          "originalSHA256": "6b4130e71c52eca2386eb218c62cffeb4a5c29ffaa1e2ee81b133b87cc1ad867",
+          "localizedSHA256": "6b4130e71c52eca2386eb218c62cffeb4a5c29ffaa1e2ee81b133b87cc1ad867"
+        }
+      ],
+      "conversationId": "33da3c17-5810-469b-bc88-40d4aa6b1fbd",
+      "reviewed": false,
+      "qualification": "Existing seeded completed/awaiting-input demonstration worker; no new code execution, repository push or PR claimed. Only exact narrative strings localized in successful GET responses; IDs, actions, source paths, code, commands, timestamps and outcome preserved."
+    },
+    {
+      "article": "delegate-code-work",
+      "locale": "fr",
+      "output": "public/documentation/fr/delegate-code-work-workflow.png",
+      "viewport": [
+        1200,
+        690
+      ],
+      "theme": "light",
+      "capturedAt": "2026-10-08",
+      "exchanges": [
+        {
+          "path": "/api/assistant/conversations",
+          "replacements": 2,
+          "originalSHA256": "d7d2a9f760d22506d99c8a347d0af249714960209d541cd482c071abf8b2aee4",
+          "localizedSHA256": "6b9dd3f1e875016c8e20335a9bb16c6fb79b86dbd95bad729c26ea5a8948202a"
+        },
+        {
+          "path": "/api/assistant/conversations",
+          "replacements": 2,
+          "originalSHA256": "d7d2a9f760d22506d99c8a347d0af249714960209d541cd482c071abf8b2aee4",
+          "localizedSHA256": "6b9dd3f1e875016c8e20335a9bb16c6fb79b86dbd95bad729c26ea5a8948202a"
+        },
+        {
+          "path": "/api/numo/conversations/91dc61a7-4449-48c7-a65b-abfed8f72710",
+          "replacements": 4,
+          "originalSHA256": "2786680292cca8c851298e3b0c2b3c8827d3057b3f1b01762661b28562ef377e",
+          "localizedSHA256": "bac1d58d08449509d1618e9eeeb09e1ca301e7a7031db3d7435bbb40803c23b8"
+        },
+        {
+          "path": "/api/numo/conversations/91dc61a7-4449-48c7-a65b-abfed8f72710",
+          "replacements": 4,
+          "originalSHA256": "2786680292cca8c851298e3b0c2b3c8827d3057b3f1b01762661b28562ef377e",
+          "localizedSHA256": "bac1d58d08449509d1618e9eeeb09e1ca301e7a7031db3d7435bbb40803c23b8"
+        },
+        {
+          "path": "/api/agent-runs/33da3c17-5810-469b-bc88-40d4aa6b1fbd/events",
+          "replacements": 4,
+          "originalSHA256": "6b4130e71c52eca2386eb218c62cffeb4a5c29ffaa1e2ee81b133b87cc1ad867",
+          "localizedSHA256": "bd8c21bd8ceffc82db2c59b0b68a11338fa217dbfe7bc6373ff31d9ff34a15aa"
+        },
+        {
+          "path": "/api/agent-runs/33da3c17-5810-469b-bc88-40d4aa6b1fbd/events",
+          "replacements": 4,
+          "originalSHA256": "6b4130e71c52eca2386eb218c62cffeb4a5c29ffaa1e2ee81b133b87cc1ad867",
+          "localizedSHA256": "bd8c21bd8ceffc82db2c59b0b68a11338fa217dbfe7bc6373ff31d9ff34a15aa"
+        },
+        {
+          "path": "/api/agent-runs/33da3c17-5810-469b-bc88-40d4aa6b1fbd",
+          "replacements": 2,
+          "originalSHA256": "3da361f7a0d395cc6008be6df6b48dfa5605b99a41412ba6b09d3f6f2c6f1659",
+          "localizedSHA256": "bc56e6ed84dc693bb6ebc041e18f8581f486632226296658ecbc398229a25b8c"
+        },
+        {
+          "path": "/api/agent-runs/33da3c17-5810-469b-bc88-40d4aa6b1fbd/events",
+          "replacements": 4,
+          "originalSHA256": "6b4130e71c52eca2386eb218c62cffeb4a5c29ffaa1e2ee81b133b87cc1ad867",
+          "localizedSHA256": "bd8c21bd8ceffc82db2c59b0b68a11338fa217dbfe7bc6373ff31d9ff34a15aa"
+        }
+      ],
+      "conversationId": "33da3c17-5810-469b-bc88-40d4aa6b1fbd",
+      "reviewed": false,
+      "qualification": "Existing seeded completed/awaiting-input demonstration worker; no new code execution, repository push or PR claimed. Only exact narrative strings localized in successful GET responses; IDs, actions, source paths, code, commands, timestamps and outcome preserved."
+    },
+    {
+      "article": "recover-numo-work",
+      "locale": "fr",
+      "output": "public/documentation/fr/recover-numo-work-workflow.png",
+      "viewport": [
+        1200,
+        690
+      ],
+      "theme": "light",
+      "capturedAt": "2026-10-08",
+      "exchanges": [
+        {
+          "path": "/api/assistant/conversations",
+          "replacements": 2,
+          "originalSHA256": "d7d2a9f760d22506d99c8a347d0af249714960209d541cd482c071abf8b2aee4",
+          "localizedSHA256": "6b9dd3f1e875016c8e20335a9bb16c6fb79b86dbd95bad729c26ea5a8948202a"
+        },
+        {
+          "path": "/api/assistant/conversations",
+          "replacements": 2,
+          "originalSHA256": "d7d2a9f760d22506d99c8a347d0af249714960209d541cd482c071abf8b2aee4",
+          "localizedSHA256": "6b9dd3f1e875016c8e20335a9bb16c6fb79b86dbd95bad729c26ea5a8948202a"
+        },
+        {
+          "path": "/api/numo/conversations/91dc61a7-4449-48c7-a65b-abfed8f72710",
+          "replacements": 4,
+          "originalSHA256": "2786680292cca8c851298e3b0c2b3c8827d3057b3f1b01762661b28562ef377e",
+          "localizedSHA256": "bac1d58d08449509d1618e9eeeb09e1ca301e7a7031db3d7435bbb40803c23b8"
+        },
+        {
+          "path": "/api/numo/conversations/91dc61a7-4449-48c7-a65b-abfed8f72710",
+          "replacements": 4,
+          "originalSHA256": "2786680292cca8c851298e3b0c2b3c8827d3057b3f1b01762661b28562ef377e",
+          "localizedSHA256": "bac1d58d08449509d1618e9eeeb09e1ca301e7a7031db3d7435bbb40803c23b8"
+        },
+        {
+          "path": "/api/agent-runs/33da3c17-5810-469b-bc88-40d4aa6b1fbd/events",
+          "replacements": 4,
+          "originalSHA256": "6b4130e71c52eca2386eb218c62cffeb4a5c29ffaa1e2ee81b133b87cc1ad867",
+          "localizedSHA256": "bd8c21bd8ceffc82db2c59b0b68a11338fa217dbfe7bc6373ff31d9ff34a15aa"
+        },
+        {
+          "path": "/api/agent-runs/33da3c17-5810-469b-bc88-40d4aa6b1fbd/events",
+          "replacements": 4,
+          "originalSHA256": "6b4130e71c52eca2386eb218c62cffeb4a5c29ffaa1e2ee81b133b87cc1ad867",
+          "localizedSHA256": "bd8c21bd8ceffc82db2c59b0b68a11338fa217dbfe7bc6373ff31d9ff34a15aa"
+        },
+        {
+          "path": "/api/agent-runs/33da3c17-5810-469b-bc88-40d4aa6b1fbd",
+          "replacements": 2,
+          "originalSHA256": "3da361f7a0d395cc6008be6df6b48dfa5605b99a41412ba6b09d3f6f2c6f1659",
+          "localizedSHA256": "bc56e6ed84dc693bb6ebc041e18f8581f486632226296658ecbc398229a25b8c"
+        },
+        {
+          "path": "/api/agent-runs/33da3c17-5810-469b-bc88-40d4aa6b1fbd/events",
+          "replacements": 4,
+          "originalSHA256": "6b4130e71c52eca2386eb218c62cffeb4a5c29ffaa1e2ee81b133b87cc1ad867",
+          "localizedSHA256": "bd8c21bd8ceffc82db2c59b0b68a11338fa217dbfe7bc6373ff31d9ff34a15aa"
+        }
+      ],
+      "conversationId": "33da3c17-5810-469b-bc88-40d4aa6b1fbd",
+      "reviewed": false,
+      "qualification": "Existing seeded completed/awaiting-input demonstration worker; no new code execution, repository push or PR claimed. Only exact narrative strings localized in successful GET responses; IDs, actions, source paths, code, commands, timestamps and outcome preserved."
+    },
+    {
+      "article": "delegate-code-work",
+      "locale": "de",
+      "output": "public/documentation/de/delegate-code-work-workflow.png",
+      "viewport": [
+        1200,
+        690
+      ],
+      "theme": "light",
+      "capturedAt": "2026-10-08",
+      "exchanges": [
+        {
+          "path": "/api/assistant/conversations",
+          "replacements": 2,
+          "originalSHA256": "42303ce5eb2347b5ceb165c59c23de58793310770979782543dd1cb06a02dd82",
+          "localizedSHA256": "78203e29188931cac5c8923fee6de793ee4cd186d6526795008fd4248d47ac51"
+        },
+        {
+          "path": "/api/assistant/conversations",
+          "replacements": 2,
+          "originalSHA256": "42303ce5eb2347b5ceb165c59c23de58793310770979782543dd1cb06a02dd82",
+          "localizedSHA256": "78203e29188931cac5c8923fee6de793ee4cd186d6526795008fd4248d47ac51"
+        },
+        {
+          "path": "/api/numo/conversations/91dc61a7-4449-48c7-a65b-abfed8f72710",
+          "replacements": 4,
+          "originalSHA256": "895801bf76f83dca4ad7554ac318d47711886e0c66dc2bf9b3c5b002ee0a3061",
+          "localizedSHA256": "47363c5f51aa1daa4b28e6d28e17cf66ce5490b5e44f2634b0f912cddeb3a1e2"
+        },
+        {
+          "path": "/api/numo/conversations/91dc61a7-4449-48c7-a65b-abfed8f72710",
+          "replacements": 4,
+          "originalSHA256": "0db9d4fae7eb5c1921a91194fa7a22cf95207fb9dad1a8479ad42d12567ac3be",
+          "localizedSHA256": "659df5e2f1a279a2308b64c70433531c4bf3713783f5f5737f85041344ac150a"
+        },
+        {
+          "path": "/api/agent-runs/33da3c17-5810-469b-bc88-40d4aa6b1fbd/events",
+          "replacements": 4,
+          "originalSHA256": "6b4130e71c52eca2386eb218c62cffeb4a5c29ffaa1e2ee81b133b87cc1ad867",
+          "localizedSHA256": "7f9eed334dd38e2444afeca208fdef61e863f85a2406c5ee5d2b6293ba99acb9"
+        },
+        {
+          "path": "/api/agent-runs/33da3c17-5810-469b-bc88-40d4aa6b1fbd/events",
+          "replacements": 4,
+          "originalSHA256": "6b4130e71c52eca2386eb218c62cffeb4a5c29ffaa1e2ee81b133b87cc1ad867",
+          "localizedSHA256": "7f9eed334dd38e2444afeca208fdef61e863f85a2406c5ee5d2b6293ba99acb9"
+        },
+        {
+          "path": "/api/agent-runs/33da3c17-5810-469b-bc88-40d4aa6b1fbd",
+          "replacements": 2,
+          "originalSHA256": "3da361f7a0d395cc6008be6df6b48dfa5605b99a41412ba6b09d3f6f2c6f1659",
+          "localizedSHA256": "355f778a0628171f09919c6695eba7563bde6e33c571ceb40527085fafa2b898"
+        }
+      ],
+      "conversationId": "33da3c17-5810-469b-bc88-40d4aa6b1fbd",
+      "reviewed": false,
+      "qualification": "Existing seeded completed/awaiting-input demonstration worker; no new code execution, repository push or PR claimed. Only exact narrative strings localized in successful GET responses; IDs, actions, source paths, code, commands, timestamps and outcome preserved."
+    },
+    {
+      "article": "recover-numo-work",
+      "locale": "de",
+      "output": "public/documentation/de/recover-numo-work-workflow.png",
+      "viewport": [
+        1200,
+        690
+      ],
+      "theme": "light",
+      "capturedAt": "2026-10-08",
+      "exchanges": [
+        {
+          "path": "/api/assistant/conversations",
+          "replacements": 2,
+          "originalSHA256": "42303ce5eb2347b5ceb165c59c23de58793310770979782543dd1cb06a02dd82",
+          "localizedSHA256": "78203e29188931cac5c8923fee6de793ee4cd186d6526795008fd4248d47ac51"
+        },
+        {
+          "path": "/api/assistant/conversations",
+          "replacements": 2,
+          "originalSHA256": "42303ce5eb2347b5ceb165c59c23de58793310770979782543dd1cb06a02dd82",
+          "localizedSHA256": "78203e29188931cac5c8923fee6de793ee4cd186d6526795008fd4248d47ac51"
+        },
+        {
+          "path": "/api/numo/conversations/91dc61a7-4449-48c7-a65b-abfed8f72710",
+          "replacements": 4,
+          "originalSHA256": "895801bf76f83dca4ad7554ac318d47711886e0c66dc2bf9b3c5b002ee0a3061",
+          "localizedSHA256": "47363c5f51aa1daa4b28e6d28e17cf66ce5490b5e44f2634b0f912cddeb3a1e2"
+        },
+        {
+          "path": "/api/numo/conversations/91dc61a7-4449-48c7-a65b-abfed8f72710",
+          "replacements": 4,
+          "originalSHA256": "0db9d4fae7eb5c1921a91194fa7a22cf95207fb9dad1a8479ad42d12567ac3be",
+          "localizedSHA256": "659df5e2f1a279a2308b64c70433531c4bf3713783f5f5737f85041344ac150a"
+        },
+        {
+          "path": "/api/agent-runs/33da3c17-5810-469b-bc88-40d4aa6b1fbd/events",
+          "replacements": 4,
+          "originalSHA256": "6b4130e71c52eca2386eb218c62cffeb4a5c29ffaa1e2ee81b133b87cc1ad867",
+          "localizedSHA256": "7f9eed334dd38e2444afeca208fdef61e863f85a2406c5ee5d2b6293ba99acb9"
+        },
+        {
+          "path": "/api/agent-runs/33da3c17-5810-469b-bc88-40d4aa6b1fbd/events",
+          "replacements": 4,
+          "originalSHA256": "6b4130e71c52eca2386eb218c62cffeb4a5c29ffaa1e2ee81b133b87cc1ad867",
+          "localizedSHA256": "7f9eed334dd38e2444afeca208fdef61e863f85a2406c5ee5d2b6293ba99acb9"
+        },
+        {
+          "path": "/api/agent-runs/33da3c17-5810-469b-bc88-40d4aa6b1fbd",
+          "replacements": 2,
+          "originalSHA256": "3da361f7a0d395cc6008be6df6b48dfa5605b99a41412ba6b09d3f6f2c6f1659",
+          "localizedSHA256": "355f778a0628171f09919c6695eba7563bde6e33c571ceb40527085fafa2b898"
+        }
+      ],
+      "conversationId": "33da3c17-5810-469b-bc88-40d4aa6b1fbd",
+      "reviewed": false,
+      "qualification": "Existing seeded completed/awaiting-input demonstration worker; no new code execution, repository push or PR claimed. Only exact narrative strings localized in successful GET responses; IDs, actions, source paths, code, commands, timestamps and outcome preserved."
+    },
+    {
+      "article": "delegate-code-work",
+      "locale": "es",
+      "output": "public/documentation/es/delegate-code-work-workflow.png",
+      "viewport": [
+        1200,
+        690
+      ],
+      "theme": "light",
+      "capturedAt": "2026-10-08",
+      "exchanges": [
+        {
+          "path": "/api/assistant/conversations",
+          "replacements": 2,
+          "originalSHA256": "c186b0484cae6afd32b7a473439856372c1f803956dcb32f4ce0c4c9025e7923",
+          "localizedSHA256": "14beb7e4a6ddd722cc7966cebc57038713e4519e70d5a10a43e9972ef9ee5611"
+        },
+        {
+          "path": "/api/assistant/conversations",
+          "replacements": 2,
+          "originalSHA256": "c186b0484cae6afd32b7a473439856372c1f803956dcb32f4ce0c4c9025e7923",
+          "localizedSHA256": "14beb7e4a6ddd722cc7966cebc57038713e4519e70d5a10a43e9972ef9ee5611"
+        },
+        {
+          "path": "/api/numo/conversations/91dc61a7-4449-48c7-a65b-abfed8f72710",
+          "replacements": 4,
+          "originalSHA256": "5267b851f9dc3aa12abb84cef2de5194d4f97778ac2440861817ff4d2da91182",
+          "localizedSHA256": "10c45a17b06e14c0259bdfff82538dafd92da9a0e999b132eef45876bc7ec5d6"
+        },
+        {
+          "path": "/api/numo/conversations/91dc61a7-4449-48c7-a65b-abfed8f72710",
+          "replacements": 4,
+          "originalSHA256": "bab6fd68d381e555574fa6837f057c65cea343384fe2ab18265c0cc7db274503",
+          "localizedSHA256": "b7966de82436458fb8dccb5e70759b682b59bee592949b4a391412349b877512"
+        },
+        {
+          "path": "/api/agent-runs/33da3c17-5810-469b-bc88-40d4aa6b1fbd/events",
+          "replacements": 4,
+          "originalSHA256": "6b4130e71c52eca2386eb218c62cffeb4a5c29ffaa1e2ee81b133b87cc1ad867",
+          "localizedSHA256": "547b5f72ae9e7215f6018c96d7c21fabbe8409e534b5aa9b5e6b96d64511c0b7"
+        },
+        {
+          "path": "/api/agent-runs/33da3c17-5810-469b-bc88-40d4aa6b1fbd/events",
+          "replacements": 4,
+          "originalSHA256": "6b4130e71c52eca2386eb218c62cffeb4a5c29ffaa1e2ee81b133b87cc1ad867",
+          "localizedSHA256": "547b5f72ae9e7215f6018c96d7c21fabbe8409e534b5aa9b5e6b96d64511c0b7"
+        },
+        {
+          "path": "/api/agent-runs/33da3c17-5810-469b-bc88-40d4aa6b1fbd",
+          "replacements": 2,
+          "originalSHA256": "3da361f7a0d395cc6008be6df6b48dfa5605b99a41412ba6b09d3f6f2c6f1659",
+          "localizedSHA256": "845e8b45742f0dbad1b03b71f9acdb1dd8b5e2f5263225406caed7e22aa3eb0f"
+        },
+        {
+          "path": "/api/agent-runs/33da3c17-5810-469b-bc88-40d4aa6b1fbd/events",
+          "replacements": 4,
+          "originalSHA256": "6b4130e71c52eca2386eb218c62cffeb4a5c29ffaa1e2ee81b133b87cc1ad867",
+          "localizedSHA256": "547b5f72ae9e7215f6018c96d7c21fabbe8409e534b5aa9b5e6b96d64511c0b7"
+        }
+      ],
+      "conversationId": "33da3c17-5810-469b-bc88-40d4aa6b1fbd",
+      "reviewed": false,
+      "qualification": "Existing seeded completed/awaiting-input demonstration worker; no new code execution, repository push or PR claimed. Only exact narrative strings localized in successful GET responses; IDs, actions, source paths, code, commands, timestamps and outcome preserved."
+    },
+    {
+      "article": "recover-numo-work",
+      "locale": "es",
+      "output": "public/documentation/es/recover-numo-work-workflow.png",
+      "viewport": [
+        1200,
+        690
+      ],
+      "theme": "light",
+      "capturedAt": "2026-10-08",
+      "exchanges": [
+        {
+          "path": "/api/assistant/conversations",
+          "replacements": 2,
+          "originalSHA256": "c186b0484cae6afd32b7a473439856372c1f803956dcb32f4ce0c4c9025e7923",
+          "localizedSHA256": "14beb7e4a6ddd722cc7966cebc57038713e4519e70d5a10a43e9972ef9ee5611"
+        },
+        {
+          "path": "/api/assistant/conversations",
+          "replacements": 2,
+          "originalSHA256": "c186b0484cae6afd32b7a473439856372c1f803956dcb32f4ce0c4c9025e7923",
+          "localizedSHA256": "14beb7e4a6ddd722cc7966cebc57038713e4519e70d5a10a43e9972ef9ee5611"
+        },
+        {
+          "path": "/api/numo/conversations/91dc61a7-4449-48c7-a65b-abfed8f72710",
+          "replacements": 4,
+          "originalSHA256": "5267b851f9dc3aa12abb84cef2de5194d4f97778ac2440861817ff4d2da91182",
+          "localizedSHA256": "10c45a17b06e14c0259bdfff82538dafd92da9a0e999b132eef45876bc7ec5d6"
+        },
+        {
+          "path": "/api/numo/conversations/91dc61a7-4449-48c7-a65b-abfed8f72710",
+          "replacements": 4,
+          "originalSHA256": "bab6fd68d381e555574fa6837f057c65cea343384fe2ab18265c0cc7db274503",
+          "localizedSHA256": "b7966de82436458fb8dccb5e70759b682b59bee592949b4a391412349b877512"
+        },
+        {
+          "path": "/api/agent-runs/33da3c17-5810-469b-bc88-40d4aa6b1fbd/events",
+          "replacements": 4,
+          "originalSHA256": "6b4130e71c52eca2386eb218c62cffeb4a5c29ffaa1e2ee81b133b87cc1ad867",
+          "localizedSHA256": "547b5f72ae9e7215f6018c96d7c21fabbe8409e534b5aa9b5e6b96d64511c0b7"
+        },
+        {
+          "path": "/api/agent-runs/33da3c17-5810-469b-bc88-40d4aa6b1fbd/events",
+          "replacements": 4,
+          "originalSHA256": "6b4130e71c52eca2386eb218c62cffeb4a5c29ffaa1e2ee81b133b87cc1ad867",
+          "localizedSHA256": "547b5f72ae9e7215f6018c96d7c21fabbe8409e534b5aa9b5e6b96d64511c0b7"
+        },
+        {
+          "path": "/api/agent-runs/33da3c17-5810-469b-bc88-40d4aa6b1fbd",
+          "replacements": 2,
+          "originalSHA256": "3da361f7a0d395cc6008be6df6b48dfa5605b99a41412ba6b09d3f6f2c6f1659",
+          "localizedSHA256": "845e8b45742f0dbad1b03b71f9acdb1dd8b5e2f5263225406caed7e22aa3eb0f"
+        },
+        {
+          "path": "/api/agent-runs/33da3c17-5810-469b-bc88-40d4aa6b1fbd/events",
+          "replacements": 4,
+          "originalSHA256": "6b4130e71c52eca2386eb218c62cffeb4a5c29ffaa1e2ee81b133b87cc1ad867",
+          "localizedSHA256": "547b5f72ae9e7215f6018c96d7c21fabbe8409e534b5aa9b5e6b96d64511c0b7"
+        }
+      ],
+      "conversationId": "33da3c17-5810-469b-bc88-40d4aa6b1fbd",
+      "reviewed": false,
+      "qualification": "Existing seeded completed/awaiting-input demonstration worker; no new code execution, repository push or PR claimed. Only exact narrative strings localized in successful GET responses; IDs, actions, source paths, code, commands, timestamps and outcome preserved."
+    },
+    {
+      "article": "delegate-code-work",
+      "locale": "it",
+      "output": "public/documentation/it/delegate-code-work-workflow.png",
+      "viewport": [
+        1200,
+        690
+      ],
+      "theme": "light",
+      "capturedAt": "2026-10-08",
+      "exchanges": [
+        {
+          "path": "/api/assistant/conversations",
+          "replacements": 2,
+          "originalSHA256": "0c69510f8adeabbf2c02b31c8eef62ff40ddc49434547e5f03676496fda2cf02",
+          "localizedSHA256": "1728b63bdbb26519e668bbe011a725aa0ae3e1afc6233ea6d1eca3e959d5fcd3"
+        },
+        {
+          "path": "/api/assistant/conversations",
+          "replacements": 2,
+          "originalSHA256": "0c69510f8adeabbf2c02b31c8eef62ff40ddc49434547e5f03676496fda2cf02",
+          "localizedSHA256": "1728b63bdbb26519e668bbe011a725aa0ae3e1afc6233ea6d1eca3e959d5fcd3"
+        },
+        {
+          "path": "/api/numo/conversations/91dc61a7-4449-48c7-a65b-abfed8f72710",
+          "replacements": 4,
+          "originalSHA256": "cfbcac86a5d9f140da9982dd0b971f42216dc2b8ad0bb7e9dcb72bf2c5e2cc11",
+          "localizedSHA256": "c9e46aabb77c413356b4e51b14e56643c6e13c354acda3e1034fa55aa3aa7f99"
+        },
+        {
+          "path": "/api/numo/conversations/91dc61a7-4449-48c7-a65b-abfed8f72710",
+          "replacements": 4,
+          "originalSHA256": "2cffbcc75923c0375bdd7e43db01a97a4f382f9337b049794cfe7da26fb38b85",
+          "localizedSHA256": "7016fa5a4437bfd1706ff5aa8515d604bc8315a42b6f216f6ff3c26909dcbcc7"
+        },
+        {
+          "path": "/api/agent-runs/33da3c17-5810-469b-bc88-40d4aa6b1fbd/events",
+          "replacements": 4,
+          "originalSHA256": "6b4130e71c52eca2386eb218c62cffeb4a5c29ffaa1e2ee81b133b87cc1ad867",
+          "localizedSHA256": "d031dfa44e3b1a5af149af2db7969560b78f6b0b2d567cb102518cec8c9d5432"
+        },
+        {
+          "path": "/api/agent-runs/33da3c17-5810-469b-bc88-40d4aa6b1fbd/events",
+          "replacements": 4,
+          "originalSHA256": "6b4130e71c52eca2386eb218c62cffeb4a5c29ffaa1e2ee81b133b87cc1ad867",
+          "localizedSHA256": "d031dfa44e3b1a5af149af2db7969560b78f6b0b2d567cb102518cec8c9d5432"
+        },
+        {
+          "path": "/api/agent-runs/33da3c17-5810-469b-bc88-40d4aa6b1fbd",
+          "replacements": 2,
+          "originalSHA256": "3da361f7a0d395cc6008be6df6b48dfa5605b99a41412ba6b09d3f6f2c6f1659",
+          "localizedSHA256": "1b1ae42db8c4136db39a3af2e4c9ff03d93143c88b604812c025af3d03e3df51"
+        },
+        {
+          "path": "/api/agent-runs/33da3c17-5810-469b-bc88-40d4aa6b1fbd/events",
+          "replacements": 4,
+          "originalSHA256": "6b4130e71c52eca2386eb218c62cffeb4a5c29ffaa1e2ee81b133b87cc1ad867",
+          "localizedSHA256": "d031dfa44e3b1a5af149af2db7969560b78f6b0b2d567cb102518cec8c9d5432"
+        }
+      ],
+      "conversationId": "33da3c17-5810-469b-bc88-40d4aa6b1fbd",
+      "reviewed": false,
+      "qualification": "Existing seeded completed/awaiting-input demonstration worker; no new code execution, repository push or PR claimed. Only exact narrative strings localized in successful GET responses; IDs, actions, source paths, code, commands, timestamps and outcome preserved."
+    },
+    {
+      "article": "recover-numo-work",
+      "locale": "it",
+      "output": "public/documentation/it/recover-numo-work-workflow.png",
+      "viewport": [
+        1200,
+        690
+      ],
+      "theme": "light",
+      "capturedAt": "2026-10-08",
+      "exchanges": [
+        {
+          "path": "/api/assistant/conversations",
+          "replacements": 2,
+          "originalSHA256": "0c69510f8adeabbf2c02b31c8eef62ff40ddc49434547e5f03676496fda2cf02",
+          "localizedSHA256": "1728b63bdbb26519e668bbe011a725aa0ae3e1afc6233ea6d1eca3e959d5fcd3"
+        },
+        {
+          "path": "/api/assistant/conversations",
+          "replacements": 2,
+          "originalSHA256": "0c69510f8adeabbf2c02b31c8eef62ff40ddc49434547e5f03676496fda2cf02",
+          "localizedSHA256": "1728b63bdbb26519e668bbe011a725aa0ae3e1afc6233ea6d1eca3e959d5fcd3"
+        },
+        {
+          "path": "/api/numo/conversations/91dc61a7-4449-48c7-a65b-abfed8f72710",
+          "replacements": 4,
+          "originalSHA256": "cfbcac86a5d9f140da9982dd0b971f42216dc2b8ad0bb7e9dcb72bf2c5e2cc11",
+          "localizedSHA256": "c9e46aabb77c413356b4e51b14e56643c6e13c354acda3e1034fa55aa3aa7f99"
+        },
+        {
+          "path": "/api/numo/conversations/91dc61a7-4449-48c7-a65b-abfed8f72710",
+          "replacements": 4,
+          "originalSHA256": "2cffbcc75923c0375bdd7e43db01a97a4f382f9337b049794cfe7da26fb38b85",
+          "localizedSHA256": "7016fa5a4437bfd1706ff5aa8515d604bc8315a42b6f216f6ff3c26909dcbcc7"
+        },
+        {
+          "path": "/api/agent-runs/33da3c17-5810-469b-bc88-40d4aa6b1fbd/events",
+          "replacements": 4,
+          "originalSHA256": "6b4130e71c52eca2386eb218c62cffeb4a5c29ffaa1e2ee81b133b87cc1ad867",
+          "localizedSHA256": "d031dfa44e3b1a5af149af2db7969560b78f6b0b2d567cb102518cec8c9d5432"
+        },
+        {
+          "path": "/api/agent-runs/33da3c17-5810-469b-bc88-40d4aa6b1fbd/events",
+          "replacements": 4,
+          "originalSHA256": "6b4130e71c52eca2386eb218c62cffeb4a5c29ffaa1e2ee81b133b87cc1ad867",
+          "localizedSHA256": "d031dfa44e3b1a5af149af2db7969560b78f6b0b2d567cb102518cec8c9d5432"
+        },
+        {
+          "path": "/api/agent-runs/33da3c17-5810-469b-bc88-40d4aa6b1fbd",
+          "replacements": 2,
+          "originalSHA256": "3da361f7a0d395cc6008be6df6b48dfa5605b99a41412ba6b09d3f6f2c6f1659",
+          "localizedSHA256": "1b1ae42db8c4136db39a3af2e4c9ff03d93143c88b604812c025af3d03e3df51"
+        },
+        {
+          "path": "/api/agent-runs/33da3c17-5810-469b-bc88-40d4aa6b1fbd/events",
+          "replacements": 4,
+          "originalSHA256": "6b4130e71c52eca2386eb218c62cffeb4a5c29ffaa1e2ee81b133b87cc1ad867",
+          "localizedSHA256": "d031dfa44e3b1a5af149af2db7969560b78f6b0b2d567cb102518cec8c9d5432"
+        }
+      ],
+      "conversationId": "33da3c17-5810-469b-bc88-40d4aa6b1fbd",
+      "reviewed": false,
+      "qualification": "Existing seeded completed/awaiting-input demonstration worker; no new code execution, repository push or PR claimed. Only exact narrative strings localized in successful GET responses; IDs, actions, source paths, code, commands, timestamps and outcome preserved."
+    },
+    {
+      "article": "delegate-code-work",
+      "locale": "pt-BR",
+      "output": "public/documentation/pt-BR/delegate-code-work-workflow.png",
+      "viewport": [
+        1200,
+        690
+      ],
+      "theme": "light",
+      "capturedAt": "2026-10-08",
+      "exchanges": [
+        {
+          "path": "/api/assistant/conversations",
+          "replacements": 2,
+          "originalSHA256": "1498257305c679a9c32038ca98c74b2de2d23bcf9aed4e55f6874991605bccb7",
+          "localizedSHA256": "fba3183a4a37f6188b67fd0db1c51a9598514577e08d6e9a0ae7ee0bcf0e770d"
+        },
+        {
+          "path": "/api/assistant/conversations",
+          "replacements": 2,
+          "originalSHA256": "1498257305c679a9c32038ca98c74b2de2d23bcf9aed4e55f6874991605bccb7",
+          "localizedSHA256": "fba3183a4a37f6188b67fd0db1c51a9598514577e08d6e9a0ae7ee0bcf0e770d"
+        },
+        {
+          "path": "/api/numo/conversations/91dc61a7-4449-48c7-a65b-abfed8f72710",
+          "replacements": 4,
+          "originalSHA256": "ad1a71ed1adb132001e2ad5356b4eed7f297024ebe41e571e5c3c3ccf07d6f49",
+          "localizedSHA256": "5be6b56ea20b3d2091a2cfe580a8ebbc87c1af968ae1923b8fb6af29bb659b5e"
+        },
+        {
+          "path": "/api/numo/conversations/91dc61a7-4449-48c7-a65b-abfed8f72710",
+          "replacements": 4,
+          "originalSHA256": "0c25da526f50f142670a0d38c9283ab1520013fadcfde6b91853da2fde8fcd6d",
+          "localizedSHA256": "1db27bb0e4d78964aa2e8cd2ccd8c8312bdd1283761b63aca8c1b284232077b2"
+        },
+        {
+          "path": "/api/agent-runs/33da3c17-5810-469b-bc88-40d4aa6b1fbd/events",
+          "replacements": 4,
+          "originalSHA256": "6b4130e71c52eca2386eb218c62cffeb4a5c29ffaa1e2ee81b133b87cc1ad867",
+          "localizedSHA256": "2879eebaa091f32133450310306c474280f2c49c5f0841f1c9c527a0c3a9f8f6"
+        },
+        {
+          "path": "/api/agent-runs/33da3c17-5810-469b-bc88-40d4aa6b1fbd/events",
+          "replacements": 4,
+          "originalSHA256": "6b4130e71c52eca2386eb218c62cffeb4a5c29ffaa1e2ee81b133b87cc1ad867",
+          "localizedSHA256": "2879eebaa091f32133450310306c474280f2c49c5f0841f1c9c527a0c3a9f8f6"
+        },
+        {
+          "path": "/api/agent-runs/33da3c17-5810-469b-bc88-40d4aa6b1fbd",
+          "replacements": 2,
+          "originalSHA256": "3da361f7a0d395cc6008be6df6b48dfa5605b99a41412ba6b09d3f6f2c6f1659",
+          "localizedSHA256": "0bc43c01629b968b768d384d5bf4066c9209f32659fe0e0b392c20dbab003823"
+        },
+        {
+          "path": "/api/agent-runs/33da3c17-5810-469b-bc88-40d4aa6b1fbd/events",
+          "replacements": 4,
+          "originalSHA256": "6b4130e71c52eca2386eb218c62cffeb4a5c29ffaa1e2ee81b133b87cc1ad867",
+          "localizedSHA256": "2879eebaa091f32133450310306c474280f2c49c5f0841f1c9c527a0c3a9f8f6"
+        }
+      ],
+      "conversationId": "33da3c17-5810-469b-bc88-40d4aa6b1fbd",
+      "reviewed": false,
+      "qualification": "Existing seeded completed/awaiting-input demonstration worker; no new code execution, repository push or PR claimed. Only exact narrative strings localized in successful GET responses; IDs, actions, source paths, code, commands, timestamps and outcome preserved."
+    },
+    {
+      "article": "recover-numo-work",
+      "locale": "pt-BR",
+      "output": "public/documentation/pt-BR/recover-numo-work-workflow.png",
+      "viewport": [
+        1200,
+        690
+      ],
+      "theme": "light",
+      "capturedAt": "2026-10-08",
+      "exchanges": [
+        {
+          "path": "/api/assistant/conversations",
+          "replacements": 2,
+          "originalSHA256": "1498257305c679a9c32038ca98c74b2de2d23bcf9aed4e55f6874991605bccb7",
+          "localizedSHA256": "fba3183a4a37f6188b67fd0db1c51a9598514577e08d6e9a0ae7ee0bcf0e770d"
+        },
+        {
+          "path": "/api/assistant/conversations",
+          "replacements": 2,
+          "originalSHA256": "1498257305c679a9c32038ca98c74b2de2d23bcf9aed4e55f6874991605bccb7",
+          "localizedSHA256": "fba3183a4a37f6188b67fd0db1c51a9598514577e08d6e9a0ae7ee0bcf0e770d"
+        },
+        {
+          "path": "/api/numo/conversations/91dc61a7-4449-48c7-a65b-abfed8f72710",
+          "replacements": 4,
+          "originalSHA256": "ad1a71ed1adb132001e2ad5356b4eed7f297024ebe41e571e5c3c3ccf07d6f49",
+          "localizedSHA256": "5be6b56ea20b3d2091a2cfe580a8ebbc87c1af968ae1923b8fb6af29bb659b5e"
+        },
+        {
+          "path": "/api/numo/conversations/91dc61a7-4449-48c7-a65b-abfed8f72710",
+          "replacements": 4,
+          "originalSHA256": "0c25da526f50f142670a0d38c9283ab1520013fadcfde6b91853da2fde8fcd6d",
+          "localizedSHA256": "1db27bb0e4d78964aa2e8cd2ccd8c8312bdd1283761b63aca8c1b284232077b2"
+        },
+        {
+          "path": "/api/agent-runs/33da3c17-5810-469b-bc88-40d4aa6b1fbd/events",
+          "replacements": 4,
+          "originalSHA256": "6b4130e71c52eca2386eb218c62cffeb4a5c29ffaa1e2ee81b133b87cc1ad867",
+          "localizedSHA256": "2879eebaa091f32133450310306c474280f2c49c5f0841f1c9c527a0c3a9f8f6"
+        },
+        {
+          "path": "/api/agent-runs/33da3c17-5810-469b-bc88-40d4aa6b1fbd/events",
+          "replacements": 4,
+          "originalSHA256": "6b4130e71c52eca2386eb218c62cffeb4a5c29ffaa1e2ee81b133b87cc1ad867",
+          "localizedSHA256": "2879eebaa091f32133450310306c474280f2c49c5f0841f1c9c527a0c3a9f8f6"
+        },
+        {
+          "path": "/api/agent-runs/33da3c17-5810-469b-bc88-40d4aa6b1fbd",
+          "replacements": 2,
+          "originalSHA256": "3da361f7a0d395cc6008be6df6b48dfa5605b99a41412ba6b09d3f6f2c6f1659",
+          "localizedSHA256": "0bc43c01629b968b768d384d5bf4066c9209f32659fe0e0b392c20dbab003823"
+        },
+        {
+          "path": "/api/agent-runs/33da3c17-5810-469b-bc88-40d4aa6b1fbd/events",
+          "replacements": 4,
+          "originalSHA256": "6b4130e71c52eca2386eb218c62cffeb4a5c29ffaa1e2ee81b133b87cc1ad867",
+          "localizedSHA256": "2879eebaa091f32133450310306c474280f2c49c5f0841f1c9c527a0c3a9f8f6"
+        }
+      ],
+      "conversationId": "33da3c17-5810-469b-bc88-40d4aa6b1fbd",
+      "reviewed": false,
+      "qualification": "Existing seeded completed/awaiting-input demonstration worker; no new code execution, repository push or PR claimed. Only exact narrative strings localized in successful GET responses; IDs, actions, source paths, code, commands, timestamps and outcome preserved."
+    }
+  ]
+}

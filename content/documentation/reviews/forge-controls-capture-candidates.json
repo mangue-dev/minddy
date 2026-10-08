@@ -1,0 +1,105 @@
+{
+  "author": "agent:/root/operator_documentation",
+  "date": "2026-10-08",
+  "profile": "Local candidate UI and disposable private GitHub repository linked by actual API; no production project.",
+  "publicationApproved": false,
+  "executionValidated": false,
+  "captures": [
+    {
+      "locale": "en",
+      "article": "forge-issue-sync",
+      "output": "public/documentation/en/forge-issue-sync-workflow.png",
+      "sha256": "8d90c760118efa9d716d9910d35538beb4b3e405b8cbceb2d98a34fc7ea26320",
+      "capturedAt": "2026-10-08",
+      "viewport": [
+        1400,
+        1000
+      ],
+      "theme": "light",
+      "reviewed": true,
+      "text": "Git\nmangue-dev/minddy-min-664-reader-fixture\nGitHub \u00b7 mangue-dev \u00b7 main\nUnlink\nSync GitHub issues\n\nIssues from the repository become issues here, and the two stay in step.\n\nClean up branches\n\nBranches the agent pushed here. Only merged pull requests are checked upfront.\n\nClean up branches",
+      "qualification": "Actual private disposable GitHub repository connection and issue-sync control. Issue sync remains disabled; no issue publication/import is claimed by this screenshot.",
+      "authorPixelReview": "All six actual Git settings crops inspected; linked private demo repository, visible disabled synchronization switch, no credentials."
+    },
+    {
+      "locale": "fr",
+      "article": "forge-issue-sync",
+      "output": "public/documentation/fr/forge-issue-sync-workflow.png",
+      "sha256": "89d0f4d31916e1be9c07ced15dd0e5cada61c2c1a524f98b91c1998e4853cda1",
+      "capturedAt": "2026-10-08",
+      "viewport": [
+        1400,
+        1000
+      ],
+      "theme": "light",
+      "reviewed": true,
+      "text": "Git\nmangue-dev/minddy-min-664-reader-fixture\nGitHub \u00b7 mangue-dev \u00b7 main\nD\u00e9lier\nSynchroniser les issues GitHub\n\nLes issues du d\u00e9p\u00f4t deviennent des tickets, et les deux restent align\u00e9s.\n\nNettoyer les branches\n\nBranches pouss\u00e9es ici par l'agent. Seules les PR fusionn\u00e9es sont coch\u00e9es d'avance.\n\nNettoyer les branches",
+      "qualification": "Actual private disposable GitHub repository connection and issue-sync control. Issue sync remains disabled; no issue publication/import is claimed by this screenshot.",
+      "authorPixelReview": "All six actual Git settings crops inspected; linked private demo repository, visible disabled synchronization switch, no credentials."
+    },
+    {
+      "locale": "de",
+      "article": "forge-issue-sync",
+      "output": "public/documentation/de/forge-issue-sync-workflow.png",
+      "sha256": "4471c146df73ec79f35f423fb25a0dee4235ebe0ebbd0509e85187f13b0eca34",
+      "capturedAt": "2026-10-08",
+      "viewport": [
+        1400,
+        1000
+      ],
+      "theme": "light",
+      "reviewed": true,
+      "text": "Git\nmangue-dev/minddy-min-664-reader-fixture\nGitHub \u00b7 mangue-dev \u00b7 main\nVerkn\u00fcpfung aufheben\nSynchronisieren GitHub Probleme\n\nProbleme aus dem Repository werden hier zu Problemen, und die beiden bleiben im Gleichschritt.\n\nZweige bereinigen\n\nJeder Zweig, den der Agent in dieses Repository verschoben hat. Nur diejenigen, deren Pull-Anfrage zusammengef\u00fchrt wird, werden im Voraus \u00fcberpr\u00fcft. Jeder andere Zweig im Repository bleibt in Ruhe.\n\nZweige bereinigen",
+      "qualification": "Actual private disposable GitHub repository connection and issue-sync control. Issue sync remains disabled; no issue publication/import is claimed by this screenshot.",
+      "authorPixelReview": "All six actual Git settings crops inspected; linked private demo repository, visible disabled synchronization switch, no credentials."
+    },
+    {
+      "locale": "es",
+      "article": "forge-issue-sync",
+      "output": "public/documentation/es/forge-issue-sync-workflow.png",
+      "sha256": "5186c91b2c3479d8acdebd8aa375064ba8231c0036a1e8920236b026dc33849f",
+      "capturedAt": "2026-10-08",
+      "viewport": [
+        1400,
+        1000
+      ],
+      "theme": "light",
+      "reviewed": true,
+      "text": "Git\nmangue-dev/minddy-min-664-reader-fixture\nGitHub \u00b7 mangue-dev \u00b7 main\nDesenlace\nSincronizaci\u00f3n GitHub Incidencias\n\nLas incidencias del repositorio se convierten en incidencias aqu\u00ed y ambas se mantienen sincronizadas.\n\nLimpiar las ramas\n\nEstas son todas las ramas que el agente ha enviado a este repositorio. Solo aparecen seleccionadas de antemano aquellas cuya pull request ya se ha fusionado. Las dem\u00e1s ramas del repositorio no se modifican.\n\nLimpiar las ramas",
+      "qualification": "Actual private disposable GitHub repository connection and issue-sync control. Issue sync remains disabled; no issue publication/import is claimed by this screenshot.",
+      "authorPixelReview": "All six actual Git settings crops inspected; linked private demo repository, visible disabled synchronization switch, no credentials."
+    },
+    {
+      "locale": "it",
+      "article": "forge-issue-sync",
+      "output": "public/documentation/it/forge-issue-sync-workflow.png",
+      "sha256": "5b5e8e834d1f32b93a254368e47131f2ca9a332da250d2fa34b1898bee3e9d0a",
+      "capturedAt": "2026-10-08",
+      "viewport": [
+        1400,
+        1000
+      ],
+      "theme": "light",
+      "reviewed": true,
+      "text": "Git\nmangue-dev/minddy-min-664-reader-fixture\nGitHub \u00b7 mangue-dev \u00b7 main\nAnnulla il collegamento\nSincronizzazione GitHub ticket\n\nLe issue del repository diventano ticket qui e restano sincronizzate.\n\nPulire i rami\n\nOgni branch che l'agente ha inviato a questo repository. Sono preselezionati solo quelli con una pull request unita. Tutti gli altri branch del repository restano invariati.\n\nPulire i rami",
+      "qualification": "Actual private disposable GitHub repository connection and issue-sync control. Issue sync remains disabled; no issue publication/import is claimed by this screenshot.",
+      "authorPixelReview": "All six actual Git settings crops inspected; linked private demo repository, visible disabled synchronization switch, no credentials."
+    },
+    {
+      "locale": "pt-BR",
+      "article": "forge-issue-sync",
+      "output": "public/documentation/pt-BR/forge-issue-sync-workflow.png",
+      "sha256": "c082c75d7c23423bddd9a9f7834256d55f26296967b17de691c0611c7f999dda",
+      "capturedAt": "2026-10-08",
+      "viewport": [
+        1400,
+        1000
+      ],
+      "theme": "light",
+      "reviewed": true,
+      "text": "Git\nmangue-dev/minddy-min-664-reader-fixture\nGitHub \u00b7 mangue-dev \u00b7 main\nDesvincular\nSincroniza\u00e7\u00e3o de problemas do GitHub\n\nOs problemas do reposit\u00f3rio tornam-se problemas aqui, e os dois permanecem em sintonia.\n\nLimpar branches\n\nCada branch que o agente enviou para este reposit\u00f3rio. Somente as branches cujo pull request foi mesclado v\u00eam pr\u00e9-selecionadas. Todas as outras branches do reposit\u00f3rio permanecem intactas.\n\nLimpar branches",
+      "qualification": "Actual private disposable GitHub repository connection and issue-sync control. Issue sync remains disabled; no issue publication/import is claimed by this screenshot.",
+      "authorPixelReview": "All six actual Git settings crops inspected; linked private demo repository, visible disabled synchronization switch, no credentials."
+    }
+  ]
+}

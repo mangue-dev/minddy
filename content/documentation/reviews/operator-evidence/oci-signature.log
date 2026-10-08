@@ -1,0 +1,8 @@
+
+[{"critical":{"identity":{"docker-reference":"ghcr.io/mangue-dev/minddy@sha256:07325c9894ae1d0cb587d870b65abccaf7b9a73f93dba585d8dae6487744615d"},"image":{"docker-manifest-digest":"sha256:07325c9894ae1d0cb587d870b65abccaf7b9a73f93dba585d8dae6487744615d"},"type":"https://slsa.dev/provenance/v1"},"optional":{}}]
+
+Verification for ghcr.io/mangue-dev/minddy@sha256:07325c9894ae1d0cb587d870b65abccaf7b9a73f93dba585d8dae6487744615d --
+The following checks were performed on each of these signatures:
+  - The cosign claims were validated
+  - Existence of the claims in the transparency log was verified offline
+  - The code-signing certificate was verified using trusted certificate authority certificates

@@ -1,0 +1,270 @@
+{
+  "author": "agent:/root/automation_account_documentation",
+  "date": "2026-10-08",
+  "records": [
+    {
+      "article": "first-project",
+      "locale": "en",
+      "revision": 2,
+      "sourceRevision": 2,
+      "statusPreserved": "draft",
+      "addition": "If the Smart-fill button is shown and enabled, switch it off for this manual example before creating the issue. It controls filling this issue and is independent of the project’s automation and Smart Assign switches.",
+      "exactUiLabel": "Smart-fill",
+      "bodySha256": "04f4156d368ed29452c988ed95f00bb494c63d781e46cdeee4c305e3a14b7c5e",
+      "sources": [
+        "components/create-issue-dialog.tsx:226",
+        "components/create-issue-dialog.tsx:848",
+        "components/issue-compact-fields.tsx:402",
+        "lib/smart-fill.ts:29"
+      ],
+      "actualUiEvidence": "Reader member on localhost3001: Smart-fill initially aria-pressed=true despite automations_enabled=false, smart_assign_enabled=false; manually toggled aria-pressed=false before submission",
+      "figureQualification": "Existing first-project saved-state screenshot and new-issue manual-property screenshot remain relevant; figure revision updated at current article revision",
+      "independentReview": "pending actual peer reading; no approval inferred"
+    },
+    {
+      "article": "create-an-issue",
+      "locale": "en",
+      "revision": 2,
+      "sourceRevision": 2,
+      "statusPreserved": "draft",
+      "addition": "For manual creation, switch Smart-fill off if its button is shown and enabled. This reveals the priority, effort, category and objective controls for you to set. The switch applies to this issue; reopening the creation form restores its account preference. It is independent of the project’s automation and Smart Assign switches.",
+      "exactUiLabel": "Smart-fill",
+      "bodySha256": "b4f37ef765133cdcb4a76f1140ee57323f23342f773a4b63b23d83e336eb4235",
+      "sources": [
+        "components/create-issue-dialog.tsx:226",
+        "components/create-issue-dialog.tsx:848",
+        "components/issue-compact-fields.tsx:402",
+        "lib/smart-fill.ts:29"
+      ],
+      "actualUiEvidence": "Reader member on localhost3001: Smart-fill initially aria-pressed=true despite automations_enabled=false, smart_assign_enabled=false; manually toggled aria-pressed=false before submission",
+      "figureQualification": "Existing first-project saved-state screenshot and new-issue manual-property screenshot remain relevant; figure revision updated at current article revision",
+      "independentReview": "pending actual peer reading; no approval inferred",
+      "figureRevalidation": {
+        "date": "2026-10-08",
+        "method": "Actual final locale PNG inspected individually at original detail: Smart-fill off, manual priority/effort/category/objective controls visible, localized title and description retained",
+        "sha256": "cbaacc5bbfac19f8e1cba0187b96c92466b36aa7f3ede6d75fd00356addeaebd",
+        "reviewer": "agent:/root/automation_account_documentation"
+      }
+    },
+    {
+      "article": "first-project",
+      "locale": "fr",
+      "revision": 2,
+      "sourceRevision": 2,
+      "statusPreserved": "draft",
+      "addition": "Si le bouton Smart-fill est affiché et activé, désactivez-le pour cet exemple manuel avant de créer le ticket. Il contrôle le remplissage de ce ticket et reste indépendant des réglages d’automatisation et de Smart Assign du projet.",
+      "exactUiLabel": "Smart-fill",
+      "bodySha256": "f8d216a3eb55a893dd0e4ccf810f145562ccecd1d64a8b89ee2fb3e4cc33d46e",
+      "sources": [
+        "components/create-issue-dialog.tsx:226",
+        "components/create-issue-dialog.tsx:848",
+        "components/issue-compact-fields.tsx:402",
+        "lib/smart-fill.ts:29"
+      ],
+      "actualUiEvidence": "Reader member on localhost3001: Smart-fill initially aria-pressed=true despite automations_enabled=false, smart_assign_enabled=false; manually toggled aria-pressed=false before submission",
+      "figureQualification": "Existing first-project saved-state screenshot and new-issue manual-property screenshot remain relevant; figure revision updated at current article revision",
+      "independentReview": "pending actual peer reading; no approval inferred"
+    },
+    {
+      "article": "create-an-issue",
+      "locale": "fr",
+      "revision": 2,
+      "sourceRevision": 2,
+      "statusPreserved": "draft",
+      "addition": "Pour une création manuelle, désactivez Smart-fill si son bouton est affiché et activé. Les contrôles de priorité, d’effort, de catégories et d’objectif deviennent alors disponibles. Ce choix concerne ce ticket ; la réouverture du formulaire rétablit la préférence du compte. Il reste indépendant des réglages d’automatisation et de Smart Assign du projet.",
+      "exactUiLabel": "Smart-fill",
+      "bodySha256": "94cfb74e6f1f2c24a2e76de10ff3fa768fec2a79c52af06622c82e9072753c39",
+      "sources": [
+        "components/create-issue-dialog.tsx:226",
+        "components/create-issue-dialog.tsx:848",
+        "components/issue-compact-fields.tsx:402",
+        "lib/smart-fill.ts:29"
+      ],
+      "actualUiEvidence": "Reader member on localhost3001: Smart-fill initially aria-pressed=true despite automations_enabled=false, smart_assign_enabled=false; manually toggled aria-pressed=false before submission",
+      "figureQualification": "Existing first-project saved-state screenshot and new-issue manual-property screenshot remain relevant; figure revision updated at current article revision",
+      "independentReview": "pending actual peer reading; no approval inferred",
+      "figureRevalidation": {
+        "date": "2026-10-08",
+        "method": "Actual final locale PNG inspected individually at original detail: Smart-fill off, manual priority/effort/category/objective controls visible, localized title and description retained",
+        "sha256": "c3f2a1659367181911f8c2da0cf1f5ac27871fc1492e3f539d1bcab9958c15a2",
+        "reviewer": "agent:/root/automation_account_documentation"
+      }
+    },
+    {
+      "article": "first-project",
+      "locale": "de",
+      "revision": 2,
+      "sourceRevision": 2,
+      "statusPreserved": "draft",
+      "addition": "Wenn die Schaltfläche Smart-Fill angezeigt wird und aktiviert ist, schalten Sie sie für dieses manuelle Beispiel vor der Erstellung aus. Sie steuert das Ausfüllen dieses Tickets und ist von den Automatisierungs- und Smart-Assign-Schaltern des Projekts unabhängig.",
+      "exactUiLabel": "Smart-Fill",
+      "bodySha256": "41055af9a246ee86c128052707c1a3875f282188776ffcea343b94e18f2bd495",
+      "sources": [
+        "components/create-issue-dialog.tsx:226",
+        "components/create-issue-dialog.tsx:848",
+        "components/issue-compact-fields.tsx:402",
+        "lib/smart-fill.ts:29"
+      ],
+      "actualUiEvidence": "Reader member on localhost3001: Smart-fill initially aria-pressed=true despite automations_enabled=false, smart_assign_enabled=false; manually toggled aria-pressed=false before submission",
+      "figureQualification": "Existing first-project saved-state screenshot and new-issue manual-property screenshot remain relevant; figure revision updated at current article revision",
+      "independentReview": "pending actual peer reading; no approval inferred"
+    },
+    {
+      "article": "create-an-issue",
+      "locale": "de",
+      "revision": 3,
+      "sourceRevision": 2,
+      "statusPreserved": "draft",
+      "addition": "Schalten Sie für eine manuelle Erstellung Smart-Fill aus, wenn die Schaltfläche angezeigt wird und aktiviert ist. Dadurch können Sie Priorität, Aufwand, Kategorien und Ziel selbst festlegen. Die Auswahl gilt für dieses Ticket; beim erneuten Öffnen des Erstellungsformulars wird die Kontoeinstellung wiederhergestellt. Sie ist von den Automatisierungs- und Smart-Assign-Schaltern des Projekts unabhängig.",
+      "exactUiLabel": "Smart-Fill",
+      "bodySha256": "fc6be115663ddb609d6f3cb8f667f73c29eea585a6135411ba2441a3d69932f8",
+      "sources": [
+        "components/create-issue-dialog.tsx:226",
+        "components/create-issue-dialog.tsx:848",
+        "components/issue-compact-fields.tsx:402",
+        "lib/smart-fill.ts:29"
+      ],
+      "actualUiEvidence": "Reader member on localhost3001: Smart-fill initially aria-pressed=true despite automations_enabled=false, smart_assign_enabled=false; manually toggled aria-pressed=false before submission",
+      "figureQualification": "Existing first-project saved-state screenshot and new-issue manual-property screenshot remain relevant; figure revision updated at current article revision",
+      "independentReview": "pending actual peer reading; no approval inferred",
+      "figureRevalidation": {
+        "date": "2026-10-08",
+        "method": "Actual final locale PNG inspected individually at original detail: Smart-fill off, manual priority/effort/category/objective controls visible, localized title and description retained",
+        "sha256": "bf8440384884b24082468321c34eccf050f5e381a4701603d89c5cfc35e4dec2",
+        "reviewer": "agent:/root/automation_account_documentation"
+      }
+    },
+    {
+      "article": "first-project",
+      "locale": "es",
+      "revision": 2,
+      "sourceRevision": 2,
+      "statusPreserved": "draft",
+      "addition": "Si el botón Rellenado inteligente aparece y está activado, desactívelo para este ejemplo manual antes de crear la incidencia. Controla el rellenado de esta incidencia y es independiente de los interruptores de automatización y Smart Assign del proyecto.",
+      "exactUiLabel": "Rellenado inteligente",
+      "bodySha256": "f566e564e0a667d68563a82a8947b4afa9f472609bf03a867fceb90cfef855dd",
+      "sources": [
+        "components/create-issue-dialog.tsx:226",
+        "components/create-issue-dialog.tsx:848",
+        "components/issue-compact-fields.tsx:402",
+        "lib/smart-fill.ts:29"
+      ],
+      "actualUiEvidence": "Reader member on localhost3001: Smart-fill initially aria-pressed=true despite automations_enabled=false, smart_assign_enabled=false; manually toggled aria-pressed=false before submission",
+      "figureQualification": "Existing first-project saved-state screenshot and new-issue manual-property screenshot remain relevant; figure revision updated at current article revision",
+      "independentReview": "pending actual peer reading; no approval inferred"
+    },
+    {
+      "article": "create-an-issue",
+      "locale": "es",
+      "revision": 3,
+      "sourceRevision": 2,
+      "statusPreserved": "draft",
+      "addition": "Para crear la incidencia manualmente, desactive Rellenado inteligente si el botón aparece y está activado. Esto muestra los controles de prioridad, esfuerzo, categorías y objetivo para que los establezca. La elección se aplica a esta incidencia; al volver a abrir el formulario de creación se restablece la preferencia de la cuenta. Es independiente de los interruptores de automatización y Smart Assign del proyecto.",
+      "exactUiLabel": "Rellenado inteligente",
+      "bodySha256": "0a07aef86e6076a31e728ced26f81fa977e2717bc7b1917cb72920388d047cfa",
+      "sources": [
+        "components/create-issue-dialog.tsx:226",
+        "components/create-issue-dialog.tsx:848",
+        "components/issue-compact-fields.tsx:402",
+        "lib/smart-fill.ts:29"
+      ],
+      "actualUiEvidence": "Reader member on localhost3001: Smart-fill initially aria-pressed=true despite automations_enabled=false, smart_assign_enabled=false; manually toggled aria-pressed=false before submission",
+      "figureQualification": "Existing first-project saved-state screenshot and new-issue manual-property screenshot remain relevant; figure revision updated at current article revision",
+      "independentReview": "pending actual peer reading; no approval inferred",
+      "figureRevalidation": {
+        "date": "2026-10-08",
+        "method": "Actual final locale PNG inspected individually at original detail: Smart-fill off, manual priority/effort/category/objective controls visible, localized title and description retained",
+        "sha256": "f99c8c106851a19d186a5413140ca8a50878557fe99ce4c81e7bde84c69b1f4a",
+        "reviewer": "agent:/root/automation_account_documentation"
+      }
+    },
+    {
+      "article": "first-project",
+      "locale": "it",
+      "revision": 2,
+      "sourceRevision": 2,
+      "statusPreserved": "draft",
+      "addition": "Se il pulsante Riempimento intelligente è visibile e attivo, disattivalo per questo esempio manuale prima di creare il ticket. Controlla la compilazione di questo ticket ed è indipendente dagli interruttori di automazione e Smart Assign del progetto.",
+      "exactUiLabel": "Riempimento intelligente",
+      "bodySha256": "473b2d123ab10af6645afcdc990fa826a68c8cb1070c84ad6348934aacfaaec6",
+      "sources": [
+        "components/create-issue-dialog.tsx:226",
+        "components/create-issue-dialog.tsx:848",
+        "components/issue-compact-fields.tsx:402",
+        "lib/smart-fill.ts:29"
+      ],
+      "actualUiEvidence": "Reader member on localhost3001: Smart-fill initially aria-pressed=true despite automations_enabled=false, smart_assign_enabled=false; manually toggled aria-pressed=false before submission",
+      "figureQualification": "Existing first-project saved-state screenshot and new-issue manual-property screenshot remain relevant; figure revision updated at current article revision",
+      "independentReview": "pending actual peer reading; no approval inferred"
+    },
+    {
+      "article": "create-an-issue",
+      "locale": "it",
+      "revision": 2,
+      "sourceRevision": 2,
+      "statusPreserved": "draft",
+      "addition": "Per creare il ticket manualmente, disattiva Riempimento intelligente se il pulsante è visibile e attivo. Vengono così mostrati i controlli di priorità, impegno, categorie e obiettivo, che puoi impostare tu. La scelta vale per questo ticket; riaprendo il modulo di creazione viene ripristinata la preferenza dell’account. È indipendente dagli interruttori di automazione e Smart Assign del progetto.",
+      "exactUiLabel": "Riempimento intelligente",
+      "bodySha256": "1a7ff82b69bf059a88cf27b0a2be0c173337b9f8592ecdb52d0f8ef19840e5ef",
+      "sources": [
+        "components/create-issue-dialog.tsx:226",
+        "components/create-issue-dialog.tsx:848",
+        "components/issue-compact-fields.tsx:402",
+        "lib/smart-fill.ts:29"
+      ],
+      "actualUiEvidence": "Reader member on localhost3001: Smart-fill initially aria-pressed=true despite automations_enabled=false, smart_assign_enabled=false; manually toggled aria-pressed=false before submission",
+      "figureQualification": "Existing first-project saved-state screenshot and new-issue manual-property screenshot remain relevant; figure revision updated at current article revision",
+      "independentReview": "pending actual peer reading; no approval inferred",
+      "figureRevalidation": {
+        "date": "2026-10-08",
+        "method": "Actual final locale PNG inspected individually at original detail: Smart-fill off, manual priority/effort/category/objective controls visible, localized title and description retained",
+        "sha256": "7f8d5918b05eef2936563f678faf1fcb3ed9cc532802361c8bff3dcbaf9d61f7",
+        "reviewer": "agent:/root/automation_account_documentation"
+      }
+    },
+    {
+      "article": "first-project",
+      "locale": "pt-BR",
+      "revision": 4,
+      "sourceRevision": 2,
+      "statusPreserved": "draft",
+      "addition": "Se o botão Preenchimento inteligente estiver visível e ativado, desative-o para este exemplo manual antes de criar a tarefa. Ele controla o preenchimento dessa tarefa e é independente dos controles de automação e Smart Assign do projeto.",
+      "exactUiLabel": "Preenchimento inteligente",
+      "bodySha256": "619c8c84abbb91a20a7bb1e1e36d878736942368da130502de4ade97a303758c",
+      "sources": [
+        "components/create-issue-dialog.tsx:226",
+        "components/create-issue-dialog.tsx:848",
+        "components/issue-compact-fields.tsx:402",
+        "lib/smart-fill.ts:29"
+      ],
+      "actualUiEvidence": "Reader member on localhost3001: Smart-fill initially aria-pressed=true despite automations_enabled=false, smart_assign_enabled=false; manually toggled aria-pressed=false before submission",
+      "figureQualification": "Existing first-project saved-state screenshot and new-issue manual-property screenshot remain relevant; figure revision updated at current article revision",
+      "independentReview": "pending actual peer reading; no approval inferred"
+    },
+    {
+      "article": "create-an-issue",
+      "locale": "pt-BR",
+      "revision": 2,
+      "sourceRevision": 2,
+      "statusPreserved": "draft",
+      "addition": "Para criar a tarefa manualmente, desative Preenchimento inteligente se o botão estiver visível e ativado. Isso mostra os controles de prioridade, esforço, categorias e objetivo para que você os defina. A escolha vale para essa tarefa; ao reabrir o formulário de criação, a preferência da conta é restaurada. Ela é independente dos controles de automação e Smart Assign do projeto.",
+      "exactUiLabel": "Preenchimento inteligente",
+      "bodySha256": "5b289d1f47a83f8840ea6e1df2c5bb7e2ed0d642982a5e6daadfc091c29bbc8b",
+      "sources": [
+        "components/create-issue-dialog.tsx:226",
+        "components/create-issue-dialog.tsx:848",
+        "components/issue-compact-fields.tsx:402",
+        "lib/smart-fill.ts:29"
+      ],
+      "actualUiEvidence": "Reader member on localhost3001: Smart-fill initially aria-pressed=true despite automations_enabled=false, smart_assign_enabled=false; manually toggled aria-pressed=false before submission",
+      "figureQualification": "Existing first-project saved-state screenshot and new-issue manual-property screenshot remain relevant; figure revision updated at current article revision",
+      "independentReview": "pending actual peer reading; no approval inferred",
+      "figureRevalidation": {
+        "date": "2026-10-08",
+        "method": "Actual final locale PNG inspected individually at original detail: Smart-fill off, manual priority/effort/category/objective controls visible, localized title and description retained",
+        "sha256": "09835cb829a9388cbabaa022043bd347a0ac8e9134bc2b51ae9d640c5cadfddf",
+        "reviewer": "agent:/root/automation_account_documentation"
+      }
+    }
+  ]
+}

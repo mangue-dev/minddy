@@ -1,0 +1,767 @@
+{
+  "date": "2026-10-08",
+  "executor": "agent:/root",
+  "reason": "Staged whitespace check detected extra blank lines at EOF and one trailing space in a capture script. Only final article whitespace and that script space were removed. Parsed article content, metadata, revisions, figures and meaning are unchanged. Prior raw-body review hashes remain historical and map to current hashes below; no new language review is invented.",
+  "changes": [
+    {
+      "path": "content/documentation/en/account-access.md",
+      "revision": 1,
+      "previousRawBodySHA256": "b4cbbe652238dcf95f43b57bbf7af6a229105c206a6c0c10de26028cdd7194bc",
+      "currentRawBodySHA256": "2832edb85227b16fccac692fae9a96731b062e339deb0516b75fee82710a9bd7",
+      "parsedContentSHA256": "b0c6ae7cc5f004f30677cd0240a00f2d877edb97f98fc235d4d01f22b2947050",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/en/objective-dependencies-and-momentum.md",
+      "revision": 2,
+      "previousRawBodySHA256": "4b84ac358fcee96c85e2f980a7e16b804677d9a9cae8d04ef3509e22648cba80",
+      "currentRawBodySHA256": "e14497e72964eb436ffc85bd0c3830b2f9e58cb4e0bbf54fb8596b02c32861d9",
+      "parsedContentSHA256": "0ff3421a03d5fcedc40b077873caccfb5f0b75250a53e2bfc3ca35620f6de8ed",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/fr/account-access.md",
+      "revision": 2,
+      "previousRawBodySHA256": "0b67674e34d7aaa4b46bd4cccd8624bc5aaa898013b584dfb352b6d48d7a3e35",
+      "currentRawBodySHA256": "6c36eefff33b71496206798d922c669b43023975cdde659bbbf7819684d57afe",
+      "parsedContentSHA256": "a343e44135ddb3e4c6be8c2077b14f74f71e3ba1062b0299a6c5b42c322949c6",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/fr/account-security.md",
+      "revision": 2,
+      "previousRawBodySHA256": "0e6105cc37e7df597f0455c659f8882dd15e829390bb283117b6a55b96ab356f",
+      "currentRawBodySHA256": "e4ad58c734bc42f5159e10db3de94f9de99e85edb2345dcaf39aff3332544349",
+      "parsedContentSHA256": "0b252dff119ec607e1deb38396d09914d8e35237f454c1987bac563f769c4c9d",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/fr/ai-keys-and-models.md",
+      "revision": 4,
+      "previousRawBodySHA256": "04d2ae66b63d96e4032cb04d8df25a380719f31fd4bae3ccc2aa9f68684f75b3",
+      "currentRawBodySHA256": "9d13a099faf6e42f6689aa640244d55900d7113906dc83a8420b2544aeaa21c9",
+      "parsedContentSHA256": "a7d5c95eea524ff8e1c60fbb8f3d2a639a4be71b8f4fd0d73c856d53d9d45b4e",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/fr/automation-settings.md",
+      "revision": 3,
+      "previousRawBodySHA256": "7f15d16ac25b81adb6825db05aae59f2505dc3af573516d25857d753113d4abc",
+      "currentRawBodySHA256": "4ca50dbd8ca97a16914fed5a95a4bc186c3de9bb3775b29c56b979f461a7c3c8",
+      "parsedContentSHA256": "5380c93b55892bfad3a87a2d734312fae199dbcdbf216a3e91921942380fd56b",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/fr/feedback-ingestion-and-sso.md",
+      "revision": 2,
+      "previousRawBodySHA256": "cb600fa7e21e4a34722897cf1f329c60349c7f77b13c8a1c600d024ee9e1be33",
+      "currentRawBodySHA256": "91199e0640ad68d6f148c4a1bcddb3fd8a3a71a1e4e39842e593d9ff57fc3204",
+      "parsedContentSHA256": "2b1dc10a8d8207dfc66c50651feead58fd6687a6623b6291b60d14708fc694e7",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/fr/feedback-pages-and-views.md",
+      "revision": 2,
+      "previousRawBodySHA256": "4409b829a84e3295b5e0732b46affc4a8d7b47aa195c612d579d2a2bea93ae8b",
+      "currentRawBodySHA256": "705a31875ba5b4cd13e4654cc16b3d01beb431c79be74a01287c3fc13b66f0d7",
+      "parsedContentSHA256": "25c1f621b2c7a90822ba0e3760d36a4420a986a0b2f7076235a131759e793f25",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/fr/feedback-to-issue.md",
+      "revision": 2,
+      "previousRawBodySHA256": "0bfdac34c7e9f481b1e3c9863800a12efc54d7c586f65a604c053366180b7f5d",
+      "currentRawBodySHA256": "df2884d0a278b93a3bad820be778c19ad0a3511d62c2e50446825bf5b4506f9a",
+      "parsedContentSHA256": "96b1c07fe537e142c626a669dd0d3aa6eea122ec0f36b6aa640a8c657acd923b",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/fr/import-issues.md",
+      "revision": 2,
+      "previousRawBodySHA256": "86b3f6f728daf4865f4720347978063ab0e70c46d7144040d65e35a17b5d1233",
+      "currentRawBodySHA256": "b4f12731e9b895c97b12e00ad3804cbb7de3ccfa853a1a745aa3c3856da4ecc0",
+      "parsedContentSHA256": "6e248de5a38c51964a618dcc10207012e6d6aeea4db524de6a556885e90e4954",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/fr/moderate-feedback.md",
+      "revision": 2,
+      "previousRawBodySHA256": "371758c16bcc7134478cd21f4e087a749f9cc7837367426163f381952cda6d4f",
+      "currentRawBodySHA256": "3fe61ace952d6c13fc270537d7a22fd6c68c39d4c58e3d5c477a42852163e3eb",
+      "parsedContentSHA256": "961082a829a9bf1c38e117b5cb6a3ecfe5048cf8b8b74394b107b2a6113a1c6b",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/fr/objective-dependencies-and-momentum.md",
+      "revision": 2,
+      "previousRawBodySHA256": "213fad7b43f8dc8fc7e24793acd339ea435bd7bbb884640d7d1faae54aa56238",
+      "currentRawBodySHA256": "176fed324c1a4a63cb10b15c30bf66cd04ecbd67d875c2b6f0f4c9bd4846ed1b",
+      "parsedContentSHA256": "2a958653bddd644b1c43a64b35871982be4be744f3e8e0e28cf694f4f6eedea6",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/fr/plans-and-ai-usage.md",
+      "revision": 3,
+      "previousRawBodySHA256": "48c95b0634cc46bd15edbfb76484bb1fd6336cbf534a49aba314339bfa2211c8",
+      "currentRawBodySHA256": "16b334a982496311c339f453111ce7d7d453588c3952a6a1a46c2ba0ac0aab08",
+      "parsedContentSHA256": "6494233dc21e96f5397ed2ca85a50f7f58b390ba584c111d80a33135749b8533",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/fr/privacy-and-account-deletion.md",
+      "revision": 2,
+      "previousRawBodySHA256": "3dbecd4c4c7bd5d6d805f65a782380835d207113b128988f12af060bc6ed791a",
+      "currentRawBodySHA256": "8d2fc04bfb504fd03697a9a8944e02db5bcb988dcd4b66aa4ed54854c88e8c0e",
+      "parsedContentSHA256": "13f900894157ab21c3aed18465744f7c55b822bee583613d947d9a119963d624",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/fr/publish-a-feedback-board.md",
+      "revision": 2,
+      "previousRawBodySHA256": "3d4cf8e6d2cf1d3bd5bdbe2a05b18a16380817ca14017f6e58112e90fbe04442",
+      "currentRawBodySHA256": "82755f2296e9d1e636fbd955156358237b218faa663f4c5fbd23df45c80b279d",
+      "parsedContentSHA256": "dcb75660dff5f47e572ac4f55ef75a48d6b62e0f40edf0406ceaef42b9b73533",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/fr/submit-and-follow-feedback.md",
+      "revision": 2,
+      "previousRawBodySHA256": "e90460fbf03018465fd7d7ea5e02b50331433a049f2a6f7fdd8346d2107c4334",
+      "currentRawBodySHA256": "7354e96a18cad9cf7d3f79964118fd54c365937d9132d52b37bda622e2c9abd9",
+      "parsedContentSHA256": "a10de90d1adb37bff4122303a7a4505b4f0e57c354083a89dee48fd65234b567",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/de/account-access.md",
+      "revision": 4,
+      "previousRawBodySHA256": "5a3a739420b1380d165fe856ca08f3b3232fdb2af900b369923777eb529c64d2",
+      "currentRawBodySHA256": "52cae8b5735af98096a5319a554143fe7ff8b87e10d7465ab7b834c8b0ee342a",
+      "parsedContentSHA256": "1f7bc1312791373518a2081f341a00fb65dba186bdc3d10f00b8dd795a2a71b6",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/de/account-security.md",
+      "revision": 2,
+      "previousRawBodySHA256": "126c299faf09681c6c227d23b86c6acc22ccb2734863beb0c04c1fe6f1b338bb",
+      "currentRawBodySHA256": "9735f54b5f6b4e285969792104406703d3da0eeaf5044b0633c6a1a7024c7866",
+      "parsedContentSHA256": "3e394c61ca6c96034a8a6d9bb183eefe8ad48ffcb8db931247ab8dd5b00e5830",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/de/ai-keys-and-models.md",
+      "revision": 4,
+      "previousRawBodySHA256": "cf9ccf00a472ef3bff510f43585d0e6df27d6cf0ef12e64d47b8aada528e6bfa",
+      "currentRawBodySHA256": "a45c827a4dbbc028e84c6164c9d7c711e90dad7966526914393dfdb0344db1ad",
+      "parsedContentSHA256": "f221182db8df4bb18d8dcc9f0c1ca3fb4ac2de833321bfc495c4d8ca161f2556",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/de/automation-settings.md",
+      "revision": 3,
+      "previousRawBodySHA256": "ade27ebcf4199aab6f856d951ba74caf2896c8ba064a3e4335a05d69b2988259",
+      "currentRawBodySHA256": "ec204cae2d20bcb69eb18baf08c8b96a1e9972ca4be60aaf51d5b7e5ad405847",
+      "parsedContentSHA256": "fb55207928301390caf3d962ee9fa7f0817172c63369e92f6a7cae8af3927982",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/de/feedback-ingestion-and-sso.md",
+      "revision": 2,
+      "previousRawBodySHA256": "c3199a9e566cef6c795de42ddb2fcc28ae16c466b8642e921d5ea0cdd226a784",
+      "currentRawBodySHA256": "04bb49d419d116accfc2263d99aae3b17f2cebffedf98444ef555dbffa73ce4a",
+      "parsedContentSHA256": "eff71bbfe3ccd08e1ad0cca94d9ea2691052fd070220f7bf8e59799e12a64c2e",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/de/feedback-pages-and-views.md",
+      "revision": 2,
+      "previousRawBodySHA256": "651ddca3a5d2e7940152415d77432eb67b6957e5f36f1c925126813f03265129",
+      "currentRawBodySHA256": "8ad193c1c6ae1d05b73c9d7994d37767562752b25a9d91b171c7060c423fef33",
+      "parsedContentSHA256": "ba8fade9e8bc1bf88ce4c5f833ae946b7c5d7e439a3eeb0ee8083c6a8a35e48d",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/de/feedback-to-issue.md",
+      "revision": 2,
+      "previousRawBodySHA256": "08f2add8baf69b64feaaf4fa759910063f0183703ac1f5dd62b369f0fd0adec7",
+      "currentRawBodySHA256": "c35b3a913adf45994d537e75fa9eb3720a48006efe3818936aad3870940a7b0c",
+      "parsedContentSHA256": "0cf88a47704c678ec9b4f98cff43896f45b23c0c31773d9c3e248ee6ea2df4c0",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/de/import-issues.md",
+      "revision": 2,
+      "previousRawBodySHA256": "55bbacd635841711c2e44173b819b0588432bde92fca29f0b77dd55eb7ff2b46",
+      "currentRawBodySHA256": "c99b46fda891812ce08f7ca23ed67903368e125632d63acf388b230abfcf0861",
+      "parsedContentSHA256": "03ad88df8014b33227466a0769f97476aed8cdcc9189d16892d88a1ce982fff9",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/de/moderate-feedback.md",
+      "revision": 2,
+      "previousRawBodySHA256": "fb6a82cad9053babf3143fddb8c48b4ad4ead8ab8fa7d3c6af4e7191e4e69ad3",
+      "currentRawBodySHA256": "5fbbfc009336db57eaa9a807a5022e252432a8883531c28ab8557030d610baef",
+      "parsedContentSHA256": "ebf540fde28b58cb0ff4156bf52541b9d9232ff2f2371850116cdd93ac255f66",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/de/objective-dependencies-and-momentum.md",
+      "revision": 4,
+      "previousRawBodySHA256": "788c97d049bce59f79859343dee0b2ee5e9be39d4bbf5d03a9e01e6c334e5af9",
+      "currentRawBodySHA256": "e62608e7ee0c747cafa3e0c5fc5ed07ca812be32079c5ec0917c6829c9684901",
+      "parsedContentSHA256": "8e70f7dcf9e17d976b22192e61757b00cf2079fff224367711e2af7a33440c2e",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/de/plans-and-ai-usage.md",
+      "revision": 3,
+      "previousRawBodySHA256": "d15b14329fd1e81907a4cb06b6149c74988a65c11ed978e2d81548fd27655b5c",
+      "currentRawBodySHA256": "5ac7873728bdc40bbe8e237acda5ebabe6188c5fe4629951cb46492881196f5a",
+      "parsedContentSHA256": "17011b7a78ea7b299979827269e307c995bce7e2b7466eb6ba3beed3ce8219b3",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/de/privacy-and-account-deletion.md",
+      "revision": 2,
+      "previousRawBodySHA256": "ee4404130dd8783c9cdff8aa626816230355b0fce4b79850f6f4387e56e9cae0",
+      "currentRawBodySHA256": "11100e763ee7e71519e47dbfce853465c3a981b1b1497a8ec861fa5c9dab519a",
+      "parsedContentSHA256": "3c0802413b4d117213665a13302077c1b7caee2f44fa138869237ea4ba8ebc3c",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/de/publish-a-feedback-board.md",
+      "revision": 2,
+      "previousRawBodySHA256": "68018595645d622e4872b82169b94db8955d2bf75a2239419b3a22a8fccbc57f",
+      "currentRawBodySHA256": "d86e5ac4fa5c453717e8a8ec58340a33916420073aa3e1c6f495ef03af6b0662",
+      "parsedContentSHA256": "ce86d1f2057b41db52aca2b0727508dd41ad879c3b9611f4646a2cb210148f7d",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/de/submit-and-follow-feedback.md",
+      "revision": 2,
+      "previousRawBodySHA256": "d157a87e098b6264545bccd2dd2b3785e8a769c854dc1f68fee3f0a2c06e8c0b",
+      "currentRawBodySHA256": "fca8a0776bbcf73afe3fe90ddd23631fb7c40612c44fa71feee51fa56fef361a",
+      "parsedContentSHA256": "6491a3edb970bb0c1f6bd1b170fd335444619841b89126ffeaae14ad7e85433b",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/es/account-access.md",
+      "revision": 5,
+      "previousRawBodySHA256": "400b396e39dd8fd7d6daceb4476467be0a90aaf4756ee6c92f2a5ef7cdd776da",
+      "currentRawBodySHA256": "6943d6723f0fae15da354bd8f2c62b765bfb8e35f84640996fda56763ccb62ac",
+      "parsedContentSHA256": "93f0ae61ff4d33b32ee93851df0b4c1aab42bf0da8a745eae8c63a2c98f1811f",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/es/account-security.md",
+      "revision": 2,
+      "previousRawBodySHA256": "b366492037263df7e34a44e1b24688fa7c3202fd07ac2d3554acac02c312d1d0",
+      "currentRawBodySHA256": "3febf5d1b18246cec3e9eec64cfd993c3bae205456e93d51fdda0a730e4a8913",
+      "parsedContentSHA256": "be0a02b8940fad2814f4b99e3a196c8a9a41624f4c41f150cf0d5d2a7e348e95",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/es/feedback-ingestion-and-sso.md",
+      "revision": 2,
+      "previousRawBodySHA256": "2f81fa6df427ec2f48d8702dac4df2f6e46006ec8a29a059acaf3a9b9d2689b3",
+      "currentRawBodySHA256": "dc147c269cf5ddfe0b5059cd1c278fdb158b582f6690eaf50d55a107b82c82cf",
+      "parsedContentSHA256": "1895863c1d997f76c7c574dd31552a7246a70e8a861a604b56c8d1e356a11b7a",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/es/feedback-pages-and-views.md",
+      "revision": 2,
+      "previousRawBodySHA256": "13184a42e9e91267eb6acf968c319a7a9f81cda7a4b15c50ea5e7ec04bc1238f",
+      "currentRawBodySHA256": "c974e334025dd149f719758b30a3e9ad7c2bf93784a3654ae4beda3b5f0a0663",
+      "parsedContentSHA256": "6e6b362fc519ccdb2ddfeeb4d507ed8d358f5edef48e90a2fc481b9d63627ead",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/es/feedback-to-issue.md",
+      "revision": 2,
+      "previousRawBodySHA256": "21a43709e40abdf285f24256e2de2a98cbf08de3cceaabbf156bab650240758c",
+      "currentRawBodySHA256": "775163957039e829a496ab71c4a65f9145e1615d1551f65ca54ea59bbafd45f9",
+      "parsedContentSHA256": "814eb31ae9f1271f1f3cfe17da7e9b1640592b92384934faef15f7c8ae7c8949",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/es/import-issues.md",
+      "revision": 2,
+      "previousRawBodySHA256": "ef69c3b921a649320a52bb6ef436512248e562587fc82f62decb2e39ea6503ba",
+      "currentRawBodySHA256": "317d7a90796d24a342da31f050de6d5000d34333387e94a3b07eaf00d14de362",
+      "parsedContentSHA256": "f4a65aa25e580dcf3392788a6fc049f0ec4affa5db033ee20a21e65cc63eaf34",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/es/moderate-feedback.md",
+      "revision": 2,
+      "previousRawBodySHA256": "0a2966c4902a208a64c46a0795e1ae0d2c1e653907802e96c029bb1736c79af1",
+      "currentRawBodySHA256": "b14f1a86fbc5704b9f19fb24a447fc97a498615c86f4b7e45bdce2e4ce536ee6",
+      "parsedContentSHA256": "dcedcfd65619759b07e425c31321a851dd43b484c251ce58f8e078a4ab4cb643",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/es/objective-dependencies-and-momentum.md",
+      "revision": 4,
+      "previousRawBodySHA256": "65e74c3fb9ff4155039beec0775f2e6a5d2931f22fe76f9cb378b1c2ed174c4b",
+      "currentRawBodySHA256": "3d037a54780c99b749413c4811a0c72ac649d17b2116bce0f52c6a85fbb0c861",
+      "parsedContentSHA256": "71c1b4bd7e260f336bc45479a4f652096a98a17c0a24b249cdcc52f753962557",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/es/publish-a-feedback-board.md",
+      "revision": 2,
+      "previousRawBodySHA256": "4cb10500abcf15dcb3abdcdf798677e8e16c03da4bae4da23c6cd663ee0d4b88",
+      "currentRawBodySHA256": "b658a2acd0c2b0150983bce52a52a64b45a17c34c5180e72c3ccdc70e44fe1bd",
+      "parsedContentSHA256": "f9f64288da22fe0e6e7b2f6d41493f096386292115c26cdeb148d8b0b5e5d797",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/es/submit-and-follow-feedback.md",
+      "revision": 2,
+      "previousRawBodySHA256": "6668c8a63066cc3961058a7c8b7f6be16ce1e569767cf85d560c4abe3bf31c9e",
+      "currentRawBodySHA256": "1fa7dff4da39b5df001437fb0f3a4c3fb4f176cca537c6d07390678840253808",
+      "parsedContentSHA256": "18a438cadf77bd9a27b72f737960c2b48ce03dc19722bc1c613dabbd262c3734",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/it/account-access.md",
+      "revision": 2,
+      "previousRawBodySHA256": "7daad99e4137de84b520682327262e657ef4c3358b935fed077784e7788956ab",
+      "currentRawBodySHA256": "98ba9ac850445d026e8c8d39b35ba81a959c10754773ef162b2890a1e81cb342",
+      "parsedContentSHA256": "25fc7e624e12a3a1697bf0753dafc85adf41b72dcd77f2a1c45d55c5fae193ef",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/it/account-security.md",
+      "revision": 2,
+      "previousRawBodySHA256": "9f0d08982ae3f728ba0764010881f7dd3ec394616071e74d2c876c52e28545e5",
+      "currentRawBodySHA256": "60efac275614036239583a329f77f659af6dd623f863eef5b8a295d6945e1144",
+      "parsedContentSHA256": "6e2302a9b7d389060b9c55e81404a6e6d5f39f281164e74271eaf42e65dada79",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/it/ai-keys-and-models.md",
+      "revision": 4,
+      "previousRawBodySHA256": "2cd83d058b4e88008b25ef91423d4c941454b5fd981512bbf38c741d3b298000",
+      "currentRawBodySHA256": "5dc078cd5ba2f30671dcdadfb255aefcb2673b63b95c1d27328beadd5dc5ee40",
+      "parsedContentSHA256": "a9ff2d46fea4abd440e195547436b9b6b204d20ae9c95daa0816c93f5df1042f",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/it/architecture-and-data-flows.md",
+      "revision": 1,
+      "previousRawBodySHA256": "59e7d2f42b6e7f2c5df0ab8979ef3b0af151fa18006ed874df40f184b314c19c",
+      "currentRawBodySHA256": "abeb6aca35216e1c10c42da215f8053be65a754d4a03eed023feec1d652f4950",
+      "parsedContentSHA256": "402b882d768569efffe15f59532832a09c272d96ed4c0adaee1232973b8ee953",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/it/authentication-and-email.md",
+      "revision": 1,
+      "previousRawBodySHA256": "c088a3378096a2b254522d3cb97edf46f5da6dc92be49e50f004a3c36a28bcdd",
+      "currentRawBodySHA256": "439f2e8833e4aa47c06c37f7deee27a4458407031acdee10332614012b76e632",
+      "parsedContentSHA256": "11f36ddc85b9e7362bbb5341fb21522fbd144376f3b349f5b50854c2de9f44db",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/it/automation-settings.md",
+      "revision": 3,
+      "previousRawBodySHA256": "c4997aefba8925ff2903c8e3be593e68ba456390b4b0d3eb501fd930b7fb08eb",
+      "currentRawBodySHA256": "14d4cb3794a375a4ab2f19494826a0aadfd932b485a965bcc7e4218e7474737b",
+      "parsedContentSHA256": "15e9ea2e17bace1c5bd8a54a47aa475715b99b8dbb173b120dbf7ae9176ebfc8",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/it/encryption-and-data-boundaries.md",
+      "revision": 1,
+      "previousRawBodySHA256": "569c3ab3b1316f0b39453b9348a88e8a391caec889f88819bf3596d384484e1a",
+      "currentRawBodySHA256": "23a4bbc66c16a2a8aa73a6e2bfa1ba586f0bede198c50bda454a0df859f9c4bd",
+      "parsedContentSHA256": "0d480641910ae7b741744897754ac61bf88c3d78b3d324b56592821bd9b0836d",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/it/feedback-ingestion-and-sso.md",
+      "revision": 2,
+      "previousRawBodySHA256": "46986c9b524e28fec80681b153804b7cc6c3866dcb9f4640bfa91a27799eaffe",
+      "currentRawBodySHA256": "50a44461a0232450f1efeabac732f347f66713aff238d123e2bf0c98cf5e92b9",
+      "parsedContentSHA256": "a1a37d436ec7117be369870dd15f7721b1c499cc739ef7c6c588405afd4b2411",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/it/feedback-pages-and-views.md",
+      "revision": 2,
+      "previousRawBodySHA256": "d882e48cdf869348896c5004db6bfeed8d88d82c24e309c891d8dde425616bcb",
+      "currentRawBodySHA256": "7178ead1b45f6bc98fe930ac07e89ff99831bacb65d58cbaa0e81184ada9a168",
+      "parsedContentSHA256": "0a2ffff64e7582cb393ef036e16a1f269731bd247ee3bda8ef2f88b8fe12b3b6",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/it/feedback-to-issue.md",
+      "revision": 2,
+      "previousRawBodySHA256": "85cd913f03d48ce391c082414ac21ba84b69e5b308f2d9f6978db1dd7143b10b",
+      "currentRawBodySHA256": "5d1e8d5e0b3fdf725a6233e78567e6c0897f760649f09214dbe73d85af82d58c",
+      "parsedContentSHA256": "d484051b3d072cf16323bf435823cece05a19b54bd185cb6802130acb82ce00d",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/it/glossary-and-data-model.md",
+      "revision": 1,
+      "previousRawBodySHA256": "c2553b2e24f99ee15975ae1a5de899ac9e148aa1a6aec97d5dee66ffe26682fe",
+      "currentRawBodySHA256": "97f5d93355cac1ebafab10fb7a667e9ce1ee1675a20bd474c1fba749e8c87a9a",
+      "parsedContentSHA256": "e4120638e3fd6a8ea08033c3d57378d7015b73c17ea99757424a16be837c41a9",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/it/import-issues.md",
+      "revision": 2,
+      "previousRawBodySHA256": "48431441455e24eed7003509fdee1b5fa126db4a59e2a3094e4cbd8e04dd32b0",
+      "currentRawBodySHA256": "6e19747fe944297b4a8abe699af96db1867ac73c9b311a6ba2c365a2739eb3b2",
+      "parsedContentSHA256": "cca725096d29aa1e27dead67d93a59737dfd3010729276acce83970ba46a109b",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/it/instance-administration.md",
+      "revision": 1,
+      "previousRawBodySHA256": "3512ca3f8623aa1ddaae15707f721fda2f4b84009811e8484c48eac009909ed2",
+      "currentRawBodySHA256": "71908aeefe7ae7732f6e9971150b44c27f46baea3f8f196f4cf4a5cac3266cdd",
+      "parsedContentSHA256": "3501ca75f30d5ad569528040aff6357a2a0b5ec8ba8f8d05e8a25e8b78eeb74d",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/it/integration-api-and-webhooks.md",
+      "revision": 1,
+      "previousRawBodySHA256": "ca8e5b4a26c64ee6b616583defaa692b10b52f2e27175b35812522e74d38440a",
+      "currentRawBodySHA256": "fe3590324f2280161440aa68718163d724cda4a04657a3fa5150b6464fd5b4dc",
+      "parsedContentSHA256": "f10021263ad15e58ee1ed179100d91c6e643343ee1e53bf78513548b1ee1defe",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/it/integration-troubleshooting.md",
+      "revision": 1,
+      "previousRawBodySHA256": "a0c84e6f1967a5e33b7b63a74f393983aacb3b670235a6702953f909b4e915f8",
+      "currentRawBodySHA256": "b9af78e948a83acb220523776dec037dcb85c91f6dffb6bfd733ce28f0746e01",
+      "parsedContentSHA256": "88ccf488c5985bec29c10a1b298969f837e66408aa0a01e6cb1944acd5494fb2",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/it/logical-and-provider-backups.md",
+      "revision": 1,
+      "previousRawBodySHA256": "d52ffde3d8fe17dc0268684d1268ac11694f72646ea7ce5f7ed3cf35962d07f5",
+      "currentRawBodySHA256": "c10caeff1451608b0355a00de56fb81a4d33e9f75aafbe7b66c48db4e40c240e",
+      "parsedContentSHA256": "c427189ab35b9144f8c0e6a4058c1f9b503b7c791119810f7a6cbaaaed10daaa",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/it/moderate-feedback.md",
+      "revision": 2,
+      "previousRawBodySHA256": "8cdeeab4a56a21fc659e8052ec8908f6deeecbd482a492a777a5d039c90d2509",
+      "currentRawBodySHA256": "0926da163e15740eef7ef9bcc0a7aaaa899f6bf6fa199c2da66b8b62f764b428",
+      "parsedContentSHA256": "b1d4c5d6893c1bf8d688186af472b43492727eb058a4f239fd49294eb9a60865",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/it/numo-execution-model.md",
+      "revision": 1,
+      "previousRawBodySHA256": "628d7e3ab38cba1f8c6f424365e0b2ab55aac652e9805f0a04f57d022ca41978",
+      "currentRawBodySHA256": "b588ed87b443ac6882ea9e91c894cc059910003913e45985725f5dd917390bcc",
+      "parsedContentSHA256": "1cc737fa62f565203c58a5b45ee077bf794727dd9f37887708ef1429647c7551",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/it/objective-dependencies-and-momentum.md",
+      "revision": 2,
+      "previousRawBodySHA256": "31532ba8267ca5d529d3dc35ed7b54351916766e18e3700a9d66c3abc98e0347",
+      "currentRawBodySHA256": "5b81ecc20e967ca71ca6b8b60704d9f21edb31b4f9616e0593aa219d3f472d5b",
+      "parsedContentSHA256": "b7c43ed958ed7e236c48f97fd3a13ab909b0683f88a3567496dfcab7b2791234",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/it/permissions-and-public-links.md",
+      "revision": 1,
+      "previousRawBodySHA256": "0ce2b1725b1f4bc91c29df8c631227555eec42a4df21d410c87c8a2818c0dfbb",
+      "currentRawBodySHA256": "fd834d0a77b468ae1377f43fc28f3a292e7189e9b0c67019834652d761bff6e1",
+      "parsedContentSHA256": "0f4045a123d05ff2e751030d6db1a07a34e25043a566f3cd0daf96f517c6437d",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/it/plans-and-ai-usage.md",
+      "revision": 3,
+      "previousRawBodySHA256": "130d23faf4ce999a2cd1e400843a28053fd4044c458a65841ac6c75c8f5a7280",
+      "currentRawBodySHA256": "9f42196ead2abff8762786e6da28000e04d41d3efa2872e1713e47f3ac30f296",
+      "parsedContentSHA256": "1e092a94955525f0da333d47fc7e3eb8e26e8800181d555fe89c561a61b74bf7",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/it/privacy-and-account-deletion.md",
+      "revision": 2,
+      "previousRawBodySHA256": "08954562632c10ca296feaf3ce355ed288d27e456a5635e635b9ae9775c6848f",
+      "currentRawBodySHA256": "78af758097f949857152bc83af123ec44b738f857689f71403b99f91407b842e",
+      "parsedContentSHA256": "7f22e2a685f0d052bea4ad715e4d3e225940f3acb476d77e658d54179b1ac39f",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/it/proxy-network-and-jobs.md",
+      "revision": 1,
+      "previousRawBodySHA256": "3a88fe469e5a32c2e89eae85ed672f0919f6ad547eaab6a7973e445bec887e77",
+      "currentRawBodySHA256": "f340ab174e2031f93b05c6bb4465d2e1e62628e018e91ad68047bc2c1af17a3f",
+      "parsedContentSHA256": "2717aaea727595ca2ea3b919806e628c69bd60b77a959b0d20c90f8899b62133",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/it/publish-a-feedback-board.md",
+      "revision": 2,
+      "previousRawBodySHA256": "df6da5ead5991d2dac08219cc425ff9983bcb176d36226c440675e711b4f0d0d",
+      "currentRawBodySHA256": "2f2939327e39fab8fac84fafeaf3deaea34986eea0b90743dfd734c22349865c",
+      "parsedContentSHA256": "ac3f0b7ab42e288dca276abb79f388726cefb19ca9e032abc9aa4a949abf9a36",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/it/restore-and-roll-back.md",
+      "revision": 1,
+      "previousRawBodySHA256": "f73630c678774f48f181c6c3287b2ef06cfd28c01f730e44f6eca12614ca79c7",
+      "currentRawBodySHA256": "b96d2b5e2e69f7a22a492abebb26c6936d4ddd83abc13929d16556d9a8731c1f",
+      "parsedContentSHA256": "8c686679b3ceb37da13c3cf23caecc5b2d51cb9cbafd2815227a4e2ddd390387",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/it/submit-and-follow-feedback.md",
+      "revision": 2,
+      "previousRawBodySHA256": "46130f16e9888b195942cafa7acfb85d9dae7cdf476d7d3c631071bf40862a3f",
+      "currentRawBodySHA256": "4468542431677c77658c60a021b9b452888120eecc0f4b7b17df9fc35c9d558a",
+      "parsedContentSHA256": "f30855b5eb3db47db4855d0e7e4404c6c26d8e9b8334a08114678d808cda47af",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/it/update-an-instance.md",
+      "revision": 1,
+      "previousRawBodySHA256": "3064c24b8a6b80ddb43580c23fa53534419eb6a75d605cb532e548319e971388",
+      "currentRawBodySHA256": "3c987ec240b1ddb5408f259e4a70f3461bb9e45c519ecf1a348d753a87ffe6c2",
+      "parsedContentSHA256": "5cc22054ed6668e118f36a94587de38c68f0f5d1cde9fe9cfbbefec093ed83d3",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/it/workspace-encryption.md",
+      "revision": 2,
+      "previousRawBodySHA256": "084a49fda46a20ffee45eae1fab520173c25e9a4e457b4b519e22e08a02c999c",
+      "currentRawBodySHA256": "044561459ac97b335df42e2e9b0f3b5f784379471ed826524f38e07c21e477d8",
+      "parsedContentSHA256": "1a747d5b232ab14b7e8ccc94ca554c0e959e23202e4a81c98c1aae4fc1ab1c5f",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/pt-BR/account-access.md",
+      "revision": 2,
+      "previousRawBodySHA256": "02a578924158c8962dff4ad24f055f936439f8bb9785a379d311e72a05950b99",
+      "currentRawBodySHA256": "7b8a2f7378e4cfb85d72ed0b250be220708f343cf77ff4f47fb56fdabb2ccd79",
+      "parsedContentSHA256": "937f1a181e2e116b9c57fa1590bc01708e84a2a22dc5e4e6bbd19fdfd0200e4d",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/pt-BR/account-security.md",
+      "revision": 2,
+      "previousRawBodySHA256": "40953ddb791d19bc61af4fa054142f3b054c315fd57ff64b8ab2ab4abc6e80f6",
+      "currentRawBodySHA256": "ee8762a6811bd6c2e4c60573c6e5ab2b5abd0b85a9399478704f5d81537e6415",
+      "parsedContentSHA256": "69f23ea7bfb8f80e82d015698e2cb0823f83d7171bd99bab21e6be3cb2aaceca",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/pt-BR/ai-keys-and-models.md",
+      "revision": 4,
+      "previousRawBodySHA256": "740c31031acaa831c8d7113b98b2502ab7cadbc8bc1434bdd9693291568fbe57",
+      "currentRawBodySHA256": "e4cd6610208d767284f0b2c260e49f71e0386880b16c805df0546ac653d12154",
+      "parsedContentSHA256": "ee001ebc1b38b255e96e87914e52d417ebdde52ccb27ec2cecfaedf91f48d93b",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/pt-BR/architecture-and-data-flows.md",
+      "revision": 1,
+      "previousRawBodySHA256": "5e29c16971cf735da6de249b88245a484ac18ffe009918ba3cdb40328e81067d",
+      "currentRawBodySHA256": "8acac2657e1e4754cadf4ff2302c89b299e4ec41723d45173ad7f9042f1177e0",
+      "parsedContentSHA256": "167418efde5aab6a81824765b7fba7df9eb24f1bb585207914a041bdd2b258d4",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/pt-BR/authentication-and-email.md",
+      "revision": 1,
+      "previousRawBodySHA256": "0b11e55c5c4e4203b91c137c9875627e5f0c4f3bf21bce954ed54fddfdbb55d5",
+      "currentRawBodySHA256": "5bb75e2ceb04545366433b8a2e21940e3296b2ff39252923c37cd7c703d296d2",
+      "parsedContentSHA256": "e1de97a587e7ef8e99de031698f653293f60dcd4ab1750ee0c1e13fca5d5883d",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/pt-BR/automation-settings.md",
+      "revision": 3,
+      "previousRawBodySHA256": "b5a3c47004aec26a94537bd414c159f5da47c2673ff17eb52fc12372acdc39a4",
+      "currentRawBodySHA256": "9bb45530b43e8e93ecb647ac7b487116e7b95175bcbe1157015a51e90002431b",
+      "parsedContentSHA256": "1337b1dbaacc91a66e09b7aaface6b79337c7cd7976c0e4714e12870db733dd9",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/pt-BR/encryption-and-data-boundaries.md",
+      "revision": 1,
+      "previousRawBodySHA256": "b5dbb455c46f71971b71a4207fe3fc39edf7945c5d14421231f2e77a43d7f3b1",
+      "currentRawBodySHA256": "fab4c1fddb00192924a1065334e1a00dd4dcec0df6a53fdc362e4afffa588004",
+      "parsedContentSHA256": "ca9c69f23a41c577b10d4a95a5b883d3b23246fff66407100b589ca902c0ccaa",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/pt-BR/feedback-pages-and-views.md",
+      "revision": 2,
+      "previousRawBodySHA256": "b2d458ac4a206274d130aca4bd26f1626b36a94f15aed43bc8c21002d756b3fa",
+      "currentRawBodySHA256": "8c4ec98e79211f5be83835f24e3a633b461fc29adb37b001b1bd4f4958ace78c",
+      "parsedContentSHA256": "fc7806f330bdad5e0ab74fc2b6f6b5a678dac18f47e46ead9483503b1029623a",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/pt-BR/feedback-to-issue.md",
+      "revision": 2,
+      "previousRawBodySHA256": "00aa63b7f86e3a22134a9227e822698eaaa9a243b6f72e0197c304880b4f28fc",
+      "currentRawBodySHA256": "e6412763a9b3003762fa70835fd45adf1c702556f9eaefa5f8fb66d70e3caec9",
+      "parsedContentSHA256": "cb3dbee7a2c74d8651f8e7c062f03e425c94e8fc87b69a97ee55815b73d2b72d",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/pt-BR/glossary-and-data-model.md",
+      "revision": 1,
+      "previousRawBodySHA256": "24c14204436848ee8d2815b0b7945f2734a22c32076ad62c0ae24cd17d08bf9b",
+      "currentRawBodySHA256": "7104cefe06477784baf9ce90392c26383bf4aa447e06e8f4fec07330c7bbdee4",
+      "parsedContentSHA256": "79ca01e153b84d01bd09b4bf55cc17598f78509c5a7b2a90e948f39cd3c25a85",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/pt-BR/import-issues.md",
+      "revision": 2,
+      "previousRawBodySHA256": "98a1254c9ec60200584494e68fb2d59255fd157d28631024443a901b19b828ab",
+      "currentRawBodySHA256": "92f4a9f0cdce3609be7395ba74a040d3fd32fa3cdad44ea26f1851800d1f9495",
+      "parsedContentSHA256": "7568730fc7ecfa93e8d63bc5b707142f1e38ced2bd88e64bb1d64bb130a5dfed",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/pt-BR/instance-administration.md",
+      "revision": 1,
+      "previousRawBodySHA256": "f5b8b60930db20840302d8268e3c78fb0ab9e567876a0c9d4c5081db26958f6f",
+      "currentRawBodySHA256": "f8c3f20bdb9e61c9334b3a4b5c1762eba7cad39e2d363efef81d8671611cc468",
+      "parsedContentSHA256": "a5b3849fac0ba20c74d1ca9e4bd9178da36425a5fdc13223317332ac12dafb65",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/pt-BR/integration-api-and-webhooks.md",
+      "revision": 1,
+      "previousRawBodySHA256": "07d3cbf49af7a65b0e4d919838f37442508bd7cd808188fca5a0ff84c70b2097",
+      "currentRawBodySHA256": "995f4b92a315c6348f54efd93ce1eeb057f3b4f0e20fc381d3d0a0dc225e24e0",
+      "parsedContentSHA256": "cdd381a14dca5be7cbdec8c9e6211c6f1593120ba61b751b18508cf5caf97dc7",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/pt-BR/integration-troubleshooting.md",
+      "revision": 1,
+      "previousRawBodySHA256": "3a5ff30bff73bb506d18c21c15f8fd7fdb3c083a9f51856c04fbb8a49f9ad653",
+      "currentRawBodySHA256": "a69563d4586d7a519480c4defd104c31f4989f2c42322ea0285b171cb79872ab",
+      "parsedContentSHA256": "89f5a5c896bfeacb78856be3a60f7c348c6464de406fa1cc4e966076efd00212",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/pt-BR/logical-and-provider-backups.md",
+      "revision": 1,
+      "previousRawBodySHA256": "645cb192751d0c719ab47b90ee54d80cd1ee849a361c412666b03ff8920c0626",
+      "currentRawBodySHA256": "d39078a9e6227daf3946301be2d2efc9826971b08c05334490df2aa7a14f68c2",
+      "parsedContentSHA256": "31c1d7293722ded9911e2faf506d923466a14ccb2116af0f34d6dfe3b845cac2",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/pt-BR/moderate-feedback.md",
+      "revision": 2,
+      "previousRawBodySHA256": "b7475fdbdc2358dc6904f46621bfffa968ec32ad1d5b26a3c422da295a284bc1",
+      "currentRawBodySHA256": "2342c622ab57196dff78bf1e2b809d13560772118e63743ddfea027a145443c4",
+      "parsedContentSHA256": "9a7423b8d1d76c8c81b3439fdb44664a6a192975b80ab95ec841ecc1bccb13e0",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/pt-BR/numo-execution-model.md",
+      "revision": 1,
+      "previousRawBodySHA256": "95148e5a4cf63fa928e3ecf7b777391746904e7b8f21153a7e7ad714da96721f",
+      "currentRawBodySHA256": "7ccaf4243c19828f360cec564861ec1134e2eb31bf1e55e73800164fef7cbf00",
+      "parsedContentSHA256": "41287083a54bc4216fbb5526e55f27a79554dc3bef6ae1713f0feba9d674f8e1",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/pt-BR/objective-dependencies-and-momentum.md",
+      "revision": 2,
+      "previousRawBodySHA256": "31423876aa4b4ab3b681b9449f6e19f82b916d4cec9fe8892cb7182f8bf1b37c",
+      "currentRawBodySHA256": "b399e27eed0e29f1a18d1abb388f2c638b31fceca94b841b25b639dea0aced66",
+      "parsedContentSHA256": "5b012bf33bbfe93b79223a2fa61ebacfec52ad5c0e25476442fc754173c8c58c",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/pt-BR/permissions-and-public-links.md",
+      "revision": 1,
+      "previousRawBodySHA256": "386761d289ff4bc1a4b0635418928a6d12b32d019e24975d906248383c990a6c",
+      "currentRawBodySHA256": "8fd39b37e003742899c8af7b238c1d541cacf576d02110ed1c3973928602ae0d",
+      "parsedContentSHA256": "e28da0cf28f3dba1ea47044b59dcda54e5c77881c9a9fe105e5464567d8c1554",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/pt-BR/plans-and-ai-usage.md",
+      "revision": 3,
+      "previousRawBodySHA256": "ce53ea5915422021a9447142dae6f5f80b69a61c4c023d76941b87daa6457d24",
+      "currentRawBodySHA256": "10a15aac31e05df043b64b0828f80114892437b5d9cd0f31acb3786192068f57",
+      "parsedContentSHA256": "fd9e7a16eea1f23b1ecba2c2c1731ff14d636aab369ecab0733b3e28dacc4cca",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/pt-BR/privacy-and-account-deletion.md",
+      "revision": 2,
+      "previousRawBodySHA256": "4960c6747981841fc6cdb3f4e2ab78c113cc98de73b15ff417221af61086d354",
+      "currentRawBodySHA256": "996b9306d3d20791d4895ce637bdd354d34027dd8349fef53d097d41c9937502",
+      "parsedContentSHA256": "6c2734cf1a5d8bbaf9771da5a1c834a64f25aba331d53c88aad52fbd19c6da22",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/pt-BR/proxy-network-and-jobs.md",
+      "revision": 1,
+      "previousRawBodySHA256": "71cae47c61418392032b6293f1ee348f26274bfff78d35060820d36ff69ae0dc",
+      "currentRawBodySHA256": "6cee3b0ec961996290316686988be333ab20b778a680e7532501ff7f965c6df5",
+      "parsedContentSHA256": "b3aeec8af61a42a0339e6b68b4aa6c427588cfcf1301295f85de8b77a9368ad5",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/pt-BR/publish-a-feedback-board.md",
+      "revision": 2,
+      "previousRawBodySHA256": "5d08b5060ec6dbccc00c99f855a43ab5e9d3c2003d37e11c0f3f206a8ab1bb69",
+      "currentRawBodySHA256": "cff4bfcd317f8bd2ed4b8e535ecac1a39832b02914a9b9377c6ee6badb172cd6",
+      "parsedContentSHA256": "46569e717a5c90801025525367fc6f7b6913a84296a52f42a6c2b023809f54d3",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/pt-BR/restore-and-roll-back.md",
+      "revision": 1,
+      "previousRawBodySHA256": "52931b8873a4c3e258f64f4dd4708ff2124f3ef00107dd023fdbba67002ad5d2",
+      "currentRawBodySHA256": "9fa556a7f4d88b865169a78c417cd1782c1628b25bbc2d3d889755002448bfc7",
+      "parsedContentSHA256": "a9f68671265fd5f39490c63ed5c7791d84fb56b2ce1d69f61034147a1ef25ed9",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/pt-BR/submit-and-follow-feedback.md",
+      "revision": 2,
+      "previousRawBodySHA256": "526c94dbcf999613a1951a37a416254f5291994a99ec1858051a37255b34f7ed",
+      "currentRawBodySHA256": "f3f0c03b8d86acfc8d23a21ab71911890b6e1e20fc701ebfe56b8e96c0a587d6",
+      "parsedContentSHA256": "b30258212a6714f2d8e26ca93eb8a4bc8bd7cbd13c10117463ee8edce0b7aa43",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/pt-BR/update-an-instance.md",
+      "revision": 1,
+      "previousRawBodySHA256": "ed8585c6475a82672be241d42d3793a7ef267b49cb8242835dbb3d2a9ae30ad9",
+      "currentRawBodySHA256": "4042228d577fdeac909b5c2af151420139a25961f076c3d4210483bde41423fb",
+      "parsedContentSHA256": "b45efa9806b91d86c1aef6d4557002588fad87cdb11e41dfec2a30efdcf2c09d",
+      "parsedContentUnchanged": true
+    },
+    {
+      "path": "content/documentation/pt-BR/workspace-encryption.md",
+      "revision": 2,
+      "previousRawBodySHA256": "f46471c2cfe3ef5cd3f1a72109a187ac71ebb2211a8f248859c7318d5f0165e4",
+      "currentRawBodySHA256": "0ae32929c8b6be7d97c09df9d7d8e778d7b90e705bdbff804f9a9afb4d6ab442",
+      "parsedContentSHA256": "a88d1632d6f26732650c201c7644cf858aebfaddc7725cf3a63527a0c43bd747",
+      "parsedContentUnchanged": true
+    }
+  ]
+}

@@ -1,0 +1,192 @@
+{
+  "author": "agent:/root/operator_documentation",
+  "date": "2026-10-08",
+  "rootCommand": {
+    "newAbsentRootWrittenPrivately": true,
+    "existingValidRootRetained": true,
+    "invalidRootRefusedWithoutMutation": true,
+    "fileMode": "0600"
+  },
+  "syntax": [
+    {
+      "locale": "en",
+      "article": "install-a-server",
+      "BashBlocksValid": true,
+      "bodySHA256": "f4560382ee03a2572196aefa77fca8dff535c750d84b132832c274513e3984a2"
+    },
+    {
+      "locale": "en",
+      "article": "storage-and-attachments",
+      "BashBlocksValid": true,
+      "bodySHA256": "e68860ff3ddd91f022e410bc3e551d9a2bb9884eb171f8056f55ef883b376ce7"
+    },
+    {
+      "locale": "en",
+      "article": "back-up-the-reference-instance",
+      "BashBlocksValid": true,
+      "bodySHA256": "e1055805f178b70b4ccd7849482642ac3484a9ce53e40e340845893bc443556e"
+    },
+    {
+      "locale": "en",
+      "article": "update-an-instance",
+      "BashBlocksValid": true,
+      "bodySHA256": "bf7f5a57826d03c87b76a0a6dc7915c33fe71afbc67e2cc3406a7f50bb5a4ae8"
+    },
+    {
+      "locale": "en",
+      "article": "restore-and-roll-back",
+      "BashBlocksValid": true,
+      "bodySHA256": "98536379b344e2a860ec26f12dd8657ee9b38b2f39b726de68f684331f0c738d"
+    },
+    {
+      "locale": "fr",
+      "article": "install-a-server",
+      "BashBlocksValid": true,
+      "bodySHA256": "aa2ccf4399abd3e5d7539b8eff4fd1b103010204a8baf86e86124b6c2c3cf962"
+    },
+    {
+      "locale": "fr",
+      "article": "storage-and-attachments",
+      "BashBlocksValid": true,
+      "bodySHA256": "f6bb58c8a52110ecba69119e993f84fbbee30c7ac3a7387e1d7369f6e6b3e343"
+    },
+    {
+      "locale": "fr",
+      "article": "back-up-the-reference-instance",
+      "BashBlocksValid": true,
+      "bodySHA256": "2e2ce30961c135174abd6eb4ab715fd9ea93c91fd020ea93a4776db5c202e22d"
+    },
+    {
+      "locale": "fr",
+      "article": "update-an-instance",
+      "BashBlocksValid": true,
+      "bodySHA256": "846c26a2098dffc357217dfad6912df880ed725c117acf8a472a097caa094b9c"
+    },
+    {
+      "locale": "fr",
+      "article": "restore-and-roll-back",
+      "BashBlocksValid": true,
+      "bodySHA256": "36ac45f918bd471c65d7dbb1c5fdde30ab1af0ad5534e0c3952739d0f37ca2c3"
+    },
+    {
+      "locale": "de",
+      "article": "install-a-server",
+      "BashBlocksValid": true,
+      "bodySHA256": "8cf9bcde63730bb786eb819f3698816962c09dd4d7bee48033ddca7332ea33da"
+    },
+    {
+      "locale": "de",
+      "article": "storage-and-attachments",
+      "BashBlocksValid": true,
+      "bodySHA256": "1819be2b59600be524a6a4bbdd0c39adda8946c409eec1974260498ac59455ba"
+    },
+    {
+      "locale": "de",
+      "article": "back-up-the-reference-instance",
+      "BashBlocksValid": true,
+      "bodySHA256": "faf8fa321122cabd0f57b237e1e2892810f4d12a0de619a232c1f9e7e7f44237"
+    },
+    {
+      "locale": "de",
+      "article": "update-an-instance",
+      "BashBlocksValid": true,
+      "bodySHA256": "5adb4881cd854f2b85bf0e710a1af74aa1f014957fff3309b350672b126f4fe7"
+    },
+    {
+      "locale": "de",
+      "article": "restore-and-roll-back",
+      "BashBlocksValid": true,
+      "bodySHA256": "577504be7aae919ca48792d81bce743f250cd5b9d404b9b11d438481351a250d"
+    },
+    {
+      "locale": "es",
+      "article": "install-a-server",
+      "BashBlocksValid": true,
+      "bodySHA256": "8cd64928d12a1c185274bc2f65e0c7b747c8cefc32048b6ead2fc450b930c13b"
+    },
+    {
+      "locale": "es",
+      "article": "storage-and-attachments",
+      "BashBlocksValid": true,
+      "bodySHA256": "b61ac19114f162096d5401ebeac68221ad251f5a41d7f374d90642dade4acf3a"
+    },
+    {
+      "locale": "es",
+      "article": "back-up-the-reference-instance",
+      "BashBlocksValid": true,
+      "bodySHA256": "c728bdd6e9c246211bb148d1a72c02d95701d56003f8974aeedb40baf2244554"
+    },
+    {
+      "locale": "es",
+      "article": "update-an-instance",
+      "BashBlocksValid": true,
+      "bodySHA256": "290d8c49f938d06b2ef28707193abc0be17b55791ba4c8d62e232c9f83dc8cf4"
+    },
+    {
+      "locale": "es",
+      "article": "restore-and-roll-back",
+      "BashBlocksValid": true,
+      "bodySHA256": "501196b859ccf480195d3a00eecd87912fd4108ab57b9e214b07a4c608c11227"
+    },
+    {
+      "locale": "it",
+      "article": "install-a-server",
+      "BashBlocksValid": true,
+      "bodySHA256": "cc173590f5b1106d6198e8c950a0d90845961dfe3990d83803a9a22d876fc799"
+    },
+    {
+      "locale": "it",
+      "article": "storage-and-attachments",
+      "BashBlocksValid": true,
+      "bodySHA256": "caff278f8ff05f499a8875c6104644239756c1df268fa43ac9c3d589404338e7"
+    },
+    {
+      "locale": "it",
+      "article": "back-up-the-reference-instance",
+      "BashBlocksValid": true,
+      "bodySHA256": "64cb49c085d70f5f7b1d1d9e43a18194d99e74e7662177b95b0925820e3bc01a"
+    },
+    {
+      "locale": "it",
+      "article": "update-an-instance",
+      "BashBlocksValid": true,
+      "bodySHA256": "3064c24b8a6b80ddb43580c23fa53534419eb6a75d605cb532e548319e971388"
+    },
+    {
+      "locale": "it",
+      "article": "restore-and-roll-back",
+      "BashBlocksValid": true,
+      "bodySHA256": "361b0829802871f5c97b632539ec26854c66ac28277bdf2e682d3e7abd36daa2"
+    },
+    {
+      "locale": "pt-BR",
+      "article": "install-a-server",
+      "BashBlocksValid": true,
+      "bodySHA256": "6043392a2c06ebccfec607bf7b07fe4752e2980145e847ef418c687f3fdb0c66"
+    },
+    {
+      "locale": "pt-BR",
+      "article": "storage-and-attachments",
+      "BashBlocksValid": true,
+      "bodySHA256": "041bb6158d07e8ea5f878aef85ac002f0f7df274d5ac2de5841288273ab3ade5"
+    },
+    {
+      "locale": "pt-BR",
+      "article": "back-up-the-reference-instance",
+      "BashBlocksValid": true,
+      "bodySHA256": "0edac5cf97409e082058f1115844073f9fd06f246bba6b461ed9e81eed87c111"
+    },
+    {
+      "locale": "pt-BR",
+      "article": "update-an-instance",
+      "BashBlocksValid": true,
+      "bodySHA256": "ed8585c6475a82672be241d42d3793a7ef267b49cb8242835dbb3d2a9ae30ad9"
+    },
+    {
+      "locale": "pt-BR",
+      "article": "restore-and-roll-back",
+      "BashBlocksValid": true,
+      "bodySHA256": "e3a172be61ca448777844b59835e3db8b504edc97f43f6e1e7a81128d205566c"
+    }
+  ]
+}

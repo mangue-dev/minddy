@@ -1,0 +1,140 @@
+{
+  "author": "agent:/root/operator_documentation",
+  "date": "2026-10-08",
+  "release": "v0.11.0",
+  "sourceCommit": "62c02313363be7c09116c592d70019c51420d70a",
+  "profile": "full OCI, Linux aarch64 Docker Desktop, loopback, new filesystem Storage named volume",
+  "publishedApplicationImage": "ghcr.io/mangue-dev/minddy@sha256:07325c9894ae1d0cb587d870b65abccaf7b9a73f93dba585d8dae6487744615d",
+  "adaptedToolingCommit": "89ab340cb10ec729948fc6e596fb7ab0326fc470",
+  "stages": [
+    {
+      "stage": "clean-fetch-pinned-upstream",
+      "exitCode": 0,
+      "privateDiagnosticSHA256": "90a45c1b686855d7aa958fb9646cb3b1bf7133893e200286e686d9f6778c1078"
+    },
+    {
+      "stage": "clean-installer-configuration-skip-start",
+      "exitCode": 0,
+      "privateDiagnosticSHA256": "1900f13fe0b98a2c4dd888a060e57633cecd7baa4395bade416233230c3559a3"
+    },
+    {
+      "stage": "clean-context-valid",
+      "exitCode": 0,
+      "privateDiagnosticSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "stage": "clean-preserve-reader-QA-containers-down",
+      "exitCode": 0,
+      "privateDiagnosticSHA256": "e629ea32e1aceda90b9613a55273f8c3bddb7afb30d597172fc4f2529af4b79a"
+    },
+    {
+      "stage": "clean-quiet-pull",
+      "exitCode": 0,
+      "privateDiagnosticSHA256": "d9a3bf22f524570ff8e57dec9834ec3f3540438c58fb99a5def9c792384b0a35"
+    },
+    {
+      "stage": "clean-public-pinned-offline-compiler",
+      "exitCode": 0,
+      "privateDiagnosticSHA256": "b2b9462c92773c9a0a700974cacfcd5eddbef271ae4008cc435f7dacf166e309"
+    },
+    {
+      "stage": "clean-adapted-full-start-before-bootstrap",
+      "exitCode": 0,
+      "privateDiagnosticSHA256": "5853627e769e35bd27a29601443cf62c166066ba403a0a09c6ca4178a169c7cb"
+    },
+    {
+      "stage": "clean-adapted-bootstrap-scheduler",
+      "exitCode": 0,
+      "privateDiagnosticSHA256": "cbdb4f7bf818e4900a9241d7fb0ab893b5a664c7bacfe75d7ac2fdd10075a8b7"
+    },
+    {
+      "stage": "clean-ordinary-doctor",
+      "exitCode": 0,
+      "privateDiagnosticSHA256": "823c6e875f3589b832e7aa0c68339776d6e66d48096898c86ccb35ce5c2ea593"
+    },
+    {
+      "stage": "clean-maintenance-stop",
+      "exitCode": 0,
+      "privateDiagnosticSHA256": "0adc7d50f0b6df03a5f9655046989f9f54e797bb71d2eac4a53f8a0f4d603d8d"
+    },
+    {
+      "stage": "clean-maintenance-doctor",
+      "exitCode": 1,
+      "privateDiagnosticSHA256": "3ce8c6c5c527dab37599511eafad6bcd91e9bf1d0c93e9c0727b35ef464619b8"
+    },
+    {
+      "stage": "clean-correct-maintenance-app-runner",
+      "exitCode": 0,
+      "privateDiagnosticSHA256": "b065a0940fe21defa04693c26e44e1524d9cfc3fcb9e5373671e43d69ead51b0"
+    },
+    {
+      "stage": "clean-correct-maintenance-doctor",
+      "exitCode": 0,
+      "privateDiagnosticSHA256": "dd7d8698af9bfb73f50946ce44bd6ccf236355f62b25365857e815a2f7825c79"
+    },
+    {
+      "stage": "clean-maintenance-reopen",
+      "exitCode": 0,
+      "privateDiagnosticSHA256": "06b627c7acda76c98258962cfe69e96d253fa5c38cfaac75ec652c89c771c4d4"
+    },
+    {
+      "stage": "clean-Auth-TOTP-issue-Storage-acceptance",
+      "exitCode": 0,
+      "privateDiagnosticSHA256": "a829d7aec031a2da76dc1a9f9f9aa6ff8679f07734a8e00089404a737807ac2b"
+    },
+    {
+      "stage": "clean-containers-down-preserve-data",
+      "exitCode": 0,
+      "privateDiagnosticSHA256": "1eaad675997db408578eabadea54fb04a03e71919129c03f0d8394c7ccd37b0c"
+    },
+    {
+      "stage": "final-original-reader-QA-backend-reopen",
+      "exitCode": 0,
+      "privateDiagnosticSHA256": "5a51a4f52fc8c839bf29cc01446c9e2ab29ce52e79638bff78ddb13043522406"
+    }
+  ],
+  "cleanFullStartPassed": true,
+  "publicationApproval": false,
+  "blankDatabaseConfirmed": true,
+  "newKeyAndStorageVolumesConfirmed": true,
+  "all16ServicesHealthy": true,
+  "compilerPinSHA256": "7fae1ec49c6a75fcd34d3fae7513e140eead1c2146753f2a4200f30eeb2bf202",
+  "functionJoserVersion": "6.2.12",
+  "helperPinsVerifiedFromPublicCommit": true,
+  "overridePersistedForEveryCompose": true,
+  "quietPullExecuted": true,
+  "ordinaryAndMaintenanceDoctorPassed": true,
+  "SMTPDeliveryTested": false,
+  "publicTLSTested": false,
+  "rawPublishedTagInstallationPassed": false,
+  "adaptations": [
+    "Generated tagged configuration deliberately retains --skip-start; template MINDDY_RELEASE corrected to0.11.0",
+    "Pinned runner/storage/compiler tooling89ab replaces the known tagged defects; tagged original files preserved",
+    "Dedicated immutable Node/npm/git worker image and persistent readonly helper override",
+    "Linux named filesystem Storage volume on Docker Desktop avoids host bind xattrs limitation"
+  ],
+  "rootKeyDoesNotCertifyContentEncryption": true,
+  "migrationCount": 227,
+  "bootstrapEntryPointQualification": "Original tagged bootstrap main imported and invoked with the same exported private URL helpers and scheduler arguments; protected host wrapper replaces CLI real-path ambiguity on macOS. This is semantic execution of that bootstrap, not a claim that every public Bash wrapper ran literally on a native Linux host.",
+  "functionCompilerEntryPoint": "Original tagged prepareFunctionsBundle imported with the public pinned6.2.12 manifest and frozen dependencies",
+  "separateFromUpgradeEvidence": "operator-upgrade-execution.json",
+  "actualFixtureEvidence": "operator-clean-fixture.json",
+  "maintenanceFailure": {
+    "initialExitCode": 1,
+    "finding": "Agent runner unavailable because test harness stopped app and runner",
+    "correction": "Keep app and runner healthy; stop only Caddy/scheduler as prescribed",
+    "correctedExitCode": 0
+  },
+  "originalQARestored": {
+    "migrations": 242,
+    "HTTPHealth": 200
+  },
+  "limitations": [
+    "Fresh profile uses placeholder SMTP; no real delivery claimed",
+    "No public TLS certificate or external SSO configured",
+    "No paid Numo task run in the fresh installation; dedicated-worker bootstrap and full Numo product task were verified separately on QA profile",
+    "Docker Desktop aarch64 named Storage volume; no native Linux/Windows lifecycle claimed"
+  ],
+  "publishedTagAndAssetsUnchanged": true,
+  "targetToolingWorkingCopyExplicitlyAdapted": true
+}

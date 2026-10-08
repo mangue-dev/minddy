@@ -1,0 +1,19 @@
+{
+  "date": "2026-10-08",
+  "publisher": "agent:/root",
+  "ownerAuthorizedAgentReview": true,
+  "humanAcceptance": false,
+  "articleCount": 540,
+  "workflows": 90,
+  "locales": [
+    "en",
+    "fr",
+    "de",
+    "es",
+    "it",
+    "pt-BR"
+  ],
+  "reviewEvidence": "operator-lifecycle-final-independent-review-2026-10-08.json",
+  "publicationChange": "Only draft→published metadata after complete factual/language/figure and operational review; article bodies unchanged.",
+  "productionDeployment": false
+}

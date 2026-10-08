@@ -1,0 +1,85 @@
+{
+  "date": "2026-10-08",
+  "executor": "Codex operator_documentation agent",
+  "humanReviewPerformed": false,
+  "profile": {
+    "distribution": "v0.11.0",
+    "sourceCommit": "62c02313363be7c09116c592d70019c51420d70a",
+    "applicationImage": "ghcr.io/mangue-dev/minddy@sha256:07325c9894ae1d0cb587d870b65abccaf7b9a73f93dba585d8dae6487744615d",
+    "supabaseCommit": "549db119c44c25167461812041ba198bde2b31a4",
+    "topology": "complete-official-supabase with documented engineering adaptations",
+    "host": "macOS with Linux aarch64 Docker Desktop daemon",
+    "dockerEngine": "28.4.0",
+    "dockerCompose": "2.39.2-desktop.1",
+    "dockerMemoryBytes": 8217751552,
+    "network": "loopback only, no public DNS or TLS acceptance"
+  },
+  "adaptations": [
+    "Generated protected environment with --skip-start and immutable image; explicitly corrected stale template MINDDY_RELEASE from 0.10.30 to 0.11.0. Installer has no --release flag.",
+    "Initial verbose pull exceeded the installer output buffer. Exact Compose pull --quiet succeeded; installer resumed with --skip-pull.",
+    "Frozen release dependency installed jose 6.2.12 but offline bundle requires 6.2.3. Scratch compilation used the 6.2.3 package already present in the frozen lock; source/tag files remained unchanged.",
+    "Signed OCI runner lacked agent-runner-storage.mjs. Engineering Compose override mounted the matching tagged source helper read-only.",
+    "macOS host does not provide the Linux GNU tar interface. Linux helper archived the inspected stopped database and Storage bindings with numeric ownership, ACLs and xattrs; saved database image archived db-config.",
+    "Docker Desktop source data existed inside the Linux VM for new /var bindings. The backup explicitly mounted those inspected bindings rather than copying an empty macOS directory.",
+    "Initial macOS file-sharing Storage restore returned HTTP 500 ENOTSUP for extended attributes. A verified-new Linux Docker volume was restored from the same archive with xattrs, then mounted by the persistent target override.",
+    "GnuPG initial deep temporary homedir exceeded Unix socket length; a fresh short private homedir completed the encryption test."
+  ],
+  "actualResults": {
+    "containerAssetSHA256": true,
+    "sigstoreSignature": true,
+    "pinnedSupabaseFetch": true,
+    "frozenDependenciesInstalled": true,
+    "guidedConfiguration0600": true,
+    "unmodifiedGuidedInstallationAccepted": false,
+    "engineeringFullStart": true,
+    "bootstrapMigrationsVerified": 227,
+    "maintenanceDoctor": true,
+    "ordinaryDoctor": true,
+    "doctorWarnings": [
+      "Auth SMTP placeholder",
+      "DNS/TLS skipped for localhost"
+    ],
+    "programmaticPasswordLogin": true,
+    "programmaticTOTPEnrollmentAndChallenge": true,
+    "storageUploadAndDownload": true,
+    "allServicesStoppedForColdBackup": true,
+    "sealedBackupChecksumsVerified": true,
+    "blankRestoreTargetVerified": true,
+    "sourceDataAndVolumesPreserved": true,
+    "newDbConfigVolume": "min664-restored-db-config",
+    "databaseImageCheckedBeforeStart": true,
+    "offlineFunctionBundleRecompiled": true,
+    "restoredSQLMarkerIdentical": true,
+    "restoredUserIdentityIdentical": true,
+    "restoredPasswordLogin": true,
+    "restoredTOTPFactorAndChallenge": true,
+    "restoredStorageSHA256": "d832d41b374a941b12ab10d6e594fea6d43bf7726d0ff63105517c058e94d745",
+    "restoredApplicationHealthHTTP": 200,
+    "sourceRegressionTests": {
+      "command": "node --test scripts/self-hosting-tools.test.mjs scripts/container-release.test.mjs scripts/prepare-self-hosted-functions.test.mjs",
+      "passed": 29
+    },
+    "outerBackupEncryptionAndDecryptionChecksum": true,
+    "outerEncryptionTool": "GnuPG AES256 with a fresh private passphrase file; exact decrypted SHA256 checked, artifacts and keys outside repository"
+  },
+  "notExecuted": [
+    "Unchanged released installation end to end",
+    "Native Linux server lifecycle without Docker Desktop adaptations",
+    "Adjacent-release application upgrade and incompatible rollback",
+    "Provider-managed Supabase backup and blank-provider restore",
+    "Public DNS/TLS deployment",
+    "Auth SMTP delivery, confirmation link and password recovery email",
+    "Application UI project/issue/attachment and Realtime journeys",
+    "Independent off-host encrypted backup recovery",
+    "External integration and OAuth callbacks",
+    "Human review"
+  ],
+  "sourceCorrections": [
+    "Dockerfile copies runner storage helper",
+    "functions-bundle.json matches frozen direct jose 6.2.12",
+    "installer uses quiet pulls and explicit 16 MiB buffer with actionable ENOBUFS diagnostics",
+    "operational guide Compose context retains RESTORE_OVERRIDE"
+  ],
+  "publicationApproval": false,
+  "cleanup": "Restored disposable backend intentionally remains active for the parent agent\u2019s UI validation. Private environment, Auth/TOTP material and backup archives remain outside the repository. Fixed upstream container names require sequential operations or separate Docker daemons. Do not stop this backend without coordinating with the UI validation owner."
+}

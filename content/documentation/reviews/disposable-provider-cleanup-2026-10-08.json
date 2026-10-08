@@ -1,0 +1,14 @@
+{
+  "date": "2026-10-08",
+  "executor": "agent:/root",
+  "scope": "Only the disposable MIN-664 local account/provider key",
+  "capUsd": 0.25,
+  "usageUsd": 0.2363476,
+  "accountDeleteStatus": 200,
+  "accountCredentialAbsent": true,
+  "providerDeleteStatus": 200,
+  "providerLookupAfterDeleteStatus": 404,
+  "providerRevoked": true,
+  "productionCredentialsTouched": false,
+  "privateFixturePrMerged": false
+}

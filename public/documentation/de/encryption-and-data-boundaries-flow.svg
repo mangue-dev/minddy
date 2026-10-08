@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="640" viewBox="0 0 720 640" role="img" aria-labelledby="title desc">
+<title id="title">Verschlüsselung und verbleibende Datenzugriffe verstehen</title>
+<desc id="desc">Diagramm: Verschlüsselte Inhalte und umschlossene Schlüssel. Wurzelschlüssel in geschützter Serverkonfiguration. Autorisierte Laufzeit kann entschlüsseln. Exporte und externe Anbieter getrennt schützen.</desc>
+<rect width="720" height="640" rx="20" fill="#fafaf9"/>
+<rect x="24" y="24" width="672" height="128" rx="16" fill="#ffffff" stroke="#a8a29e" stroke-width="2"/>
+<circle cx="60" cy="88" r="20" fill="#0f766e"/>
+<circle cx="60" cy="88" r="5" fill="#ffffff"/>
+<text x="98" y="81" font-family="Arial, sans-serif" font-size="29" fill="#1c1917">Verschlüsselte Inhalte und</text>
+<text x="98" y="115" font-family="Arial, sans-serif" font-size="29" fill="#1c1917">umschlossene Schlüssel</text>
+<rect x="24" y="178" width="672" height="128" rx="16" fill="#ffffff" stroke="#a8a29e" stroke-width="2"/>
+<circle cx="60" cy="242" r="20" fill="#0f766e"/>
+<circle cx="60" cy="242" r="5" fill="#ffffff"/>
+<text x="98" y="235" font-family="Arial, sans-serif" font-size="29" fill="#1c1917">Wurzelschlüssel in geschützter</text>
+<text x="98" y="269" font-family="Arial, sans-serif" font-size="29" fill="#1c1917">Serverkonfiguration</text>
+<rect x="24" y="332" width="672" height="128" rx="16" fill="#ffffff" stroke="#a8a29e" stroke-width="2"/>
+<circle cx="60" cy="396" r="20" fill="#0f766e"/>
+<circle cx="60" cy="396" r="5" fill="#ffffff"/>
+<text x="98" y="389" font-family="Arial, sans-serif" font-size="29" fill="#1c1917">Autorisierte Laufzeit kann</text>
+<text x="98" y="423" font-family="Arial, sans-serif" font-size="29" fill="#1c1917">entschlüsseln</text>
+<rect x="24" y="486" width="672" height="128" rx="16" fill="#ffffff" stroke="#a8a29e" stroke-width="2"/>
+<circle cx="60" cy="550" r="20" fill="#0f766e"/>
+<circle cx="60" cy="550" r="5" fill="#ffffff"/>
+<text x="98" y="543" font-family="Arial, sans-serif" font-size="29" fill="#1c1917">Exporte und externe Anbieter getrennt</text>
+<text x="98" y="577" font-family="Arial, sans-serif" font-size="29" fill="#1c1917">schützen</text>
+</svg>

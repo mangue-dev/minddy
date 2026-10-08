@@ -1,0 +1,49 @@
+{
+  "date": "2026-10-08",
+  "author": "agent:/root/operator_documentation",
+  "sourceCommit": "89ab340cb10ec729948fc6e596fb7ab0326fc470",
+  "imageVariant": "Published v0.11.0 image with explicit engineering source-file mounts; not a corrected published image",
+  "downloads": [
+    {
+      "file": "agent-runner.mjs",
+      "sha256": "31631296f9559a0367237bc02fc6387f300eee39bb14681a973d83988ccb7b17",
+      "publicRawDownloadVerified": true
+    },
+    {
+      "file": "agent-runner-storage.mjs",
+      "sha256": "501e6c92605ca2b4ec32d13599dfd645f285b08c5092860686b5838691f09b5b",
+      "publicRawDownloadVerified": true
+    }
+  ],
+  "checks": {
+    "archiveCreated": true,
+    "blankDirectoryRestoreSucceeded": true,
+    "restoredFileHashesMatch": {
+      "agent-runner.mjs": true,
+      "agent-runner-storage.mjs": true
+    },
+    "resolvedFullComposeValid": true,
+    "matchingRunnerMountsReadOnly": true,
+    "dedicatedWorkerImageSavedAndLoaded": true,
+    "restoredWorkerImageIDMatches": true
+  },
+  "limits": [
+    "This check archives and restores public tooling files and the dedicated worker image only, not application/database state.",
+    "No service was restarted by this check; the live candidate runner was already recreated separately with these canonical bytes.",
+    "The saved override retains source absolute paths. A different target must adjust both verified mount paths before startup.",
+    "No OS-native installation, production deployment or new release compatibility is claimed."
+  ],
+  "articleSections": [
+    "H03/runner-workaround",
+    "H11/context",
+    "H11/backup",
+    "H14/physical"
+  ],
+  "dedicatedWorker": {
+    "imageID": "sha256:c323824e2f17acc5fe8bc17eea0a827f9bfc342b61b69137fdd827ea7c6c2e05",
+    "recipe": "deploy/self-hosted/Dockerfile.agent-sandbox",
+    "recipeSHA256": "e13e758193b83e158a5499dbd38d923ac7bcd0d97cc8485e5d7963e77c17ecf9",
+    "savedAndLoadedSameDockerDaemon": true,
+    "separateDaemonRestoreObserved": false
+  }
+}

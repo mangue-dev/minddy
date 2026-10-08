@@ -1,0 +1,398 @@
+[
+  {
+    "locale": "fr",
+    "screen": "login",
+    "src": "/documentation/fr/auth-login.png",
+    "sourceCommit": "7ccf25f8542fc6453a033ee1f709e67de67a839d",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "viewport": [
+      380,
+      540
+    ],
+    "browserViewport": [
+      1280,
+      900
+    ],
+    "theme": "light",
+    "submitted": false,
+    "language": "fr",
+    "reviewed": true,
+    "reviewer": "Codex primary agent: visual inspection of all six locale controls, 2026-10-08",
+    "sha256": "172d5eca58c1d1f7e41191d1958af250ce9d5229cee98c457fb31a20a4734767"
+  },
+  {
+    "locale": "fr",
+    "screen": "signup",
+    "src": "/documentation/fr/auth-signup.png",
+    "sourceCommit": "7ccf25f8542fc6453a033ee1f709e67de67a839d",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "viewport": [
+      380,
+      474
+    ],
+    "browserViewport": [
+      1280,
+      900
+    ],
+    "theme": "light",
+    "submitted": false,
+    "language": "fr",
+    "reviewed": true,
+    "reviewer": "Codex primary agent: visual inspection of all six locale controls, 2026-10-08",
+    "sha256": "9c259997cc9f9ca62dc2b33da7ccb340c51ba8a46c7b5c709e786ae988ea10bf"
+  },
+  {
+    "locale": "fr",
+    "screen": "recovery",
+    "src": "/documentation/fr/auth-recovery.png",
+    "sourceCommit": "7ccf25f8542fc6453a033ee1f709e67de67a839d",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "viewport": [
+      380,
+      278
+    ],
+    "browserViewport": [
+      1280,
+      900
+    ],
+    "theme": "light",
+    "submitted": false,
+    "language": "fr",
+    "reviewed": true,
+    "reviewer": "Codex primary agent: visual inspection of all six locale controls, 2026-10-08",
+    "sha256": "44ae84ee4a40c6033b187576fea491bef48d64fa2a6feb38a927ec35b7c11811"
+  },
+  {
+    "locale": "en",
+    "screen": "login",
+    "src": "/documentation/en/auth-login.png",
+    "sourceCommit": "7ccf25f8542fc6453a033ee1f709e67de67a839d",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "viewport": [
+      380,
+      540
+    ],
+    "browserViewport": [
+      1280,
+      900
+    ],
+    "theme": "light",
+    "submitted": false,
+    "language": "en",
+    "reviewed": true,
+    "reviewer": "Codex primary agent: visual inspection of all six locale controls, 2026-10-08",
+    "sha256": "c7da3a7d9fb4dc86f4615b0cc7237f8c70f727349da1898770bc4cef36dc2a3d"
+  },
+  {
+    "locale": "en",
+    "screen": "signup",
+    "src": "/documentation/en/auth-signup.png",
+    "sourceCommit": "7ccf25f8542fc6453a033ee1f709e67de67a839d",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "viewport": [
+      380,
+      454
+    ],
+    "browserViewport": [
+      1280,
+      900
+    ],
+    "theme": "light",
+    "submitted": false,
+    "language": "en",
+    "reviewed": true,
+    "reviewer": "Codex primary agent: visual inspection of all six locale controls, 2026-10-08",
+    "sha256": "f1ad5b1cdf908499d0d2706631a40525f2a1b44604bcc9b308fda8f71668882a"
+  },
+  {
+    "locale": "en",
+    "screen": "recovery",
+    "src": "/documentation/en/auth-recovery.png",
+    "sourceCommit": "7ccf25f8542fc6453a033ee1f709e67de67a839d",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "viewport": [
+      380,
+      278
+    ],
+    "browserViewport": [
+      1280,
+      900
+    ],
+    "theme": "light",
+    "submitted": false,
+    "language": "en",
+    "reviewed": true,
+    "reviewer": "Codex primary agent: visual inspection of all six locale controls, 2026-10-08",
+    "sha256": "0cceb870f34672415f67da9e5fef38de251f17e267012ac7ff894c4e58570fb5"
+  },
+  {
+    "locale": "de",
+    "screen": "login",
+    "src": "/documentation/de/auth-login.png",
+    "sourceCommit": "7ccf25f8542fc6453a033ee1f709e67de67a839d",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "viewport": [
+      380,
+      540
+    ],
+    "browserViewport": [
+      1280,
+      900
+    ],
+    "theme": "light",
+    "submitted": false,
+    "language": "de",
+    "reviewed": true,
+    "reviewer": "Codex primary agent: visual inspection of all six locale controls, 2026-10-08",
+    "sha256": "0a105597f9e5a203fbdaa1f6ef0559e37d4242608db03d26001162b3f703438e"
+  },
+  {
+    "locale": "de",
+    "screen": "signup",
+    "src": "/documentation/de/auth-signup.png",
+    "sourceCommit": "7ccf25f8542fc6453a033ee1f709e67de67a839d",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "viewport": [
+      380,
+      474
+    ],
+    "browserViewport": [
+      1280,
+      900
+    ],
+    "theme": "light",
+    "submitted": false,
+    "language": "de",
+    "reviewed": true,
+    "reviewer": "Codex primary agent: visual inspection of all six locale controls, 2026-10-08",
+    "sha256": "475abb6caebfa0d03ba4c87afb2e9c408e9a2b5c40ec01a84f16ff46ee8ec4a1"
+  },
+  {
+    "locale": "de",
+    "screen": "recovery",
+    "src": "/documentation/de/auth-recovery.png",
+    "sourceCommit": "7ccf25f8542fc6453a033ee1f709e67de67a839d",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "viewport": [
+      380,
+      278
+    ],
+    "browserViewport": [
+      1280,
+      900
+    ],
+    "theme": "light",
+    "submitted": false,
+    "language": "de",
+    "reviewed": true,
+    "reviewer": "Codex primary agent: visual inspection of all six locale controls, 2026-10-08",
+    "sha256": "e20409f418f72ab82d0017ee1aff150a4c997728ae9366b84db3bdd032bde031"
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "login",
+    "src": "/documentation/pt-BR/auth-login.png",
+    "sourceCommit": "7ccf25f8542fc6453a033ee1f709e67de67a839d",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "viewport": [
+      380,
+      540
+    ],
+    "browserViewport": [
+      1280,
+      900
+    ],
+    "theme": "light",
+    "submitted": false,
+    "language": "pt-BR",
+    "reviewed": true,
+    "reviewer": "Codex primary agent: visual inspection of all six locale controls, 2026-10-08",
+    "sha256": "e19201d08a79bc7ed5f31f9701d34f05c777eae73ff1c0468a3bffa3af683de8"
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "signup",
+    "src": "/documentation/pt-BR/auth-signup.png",
+    "sourceCommit": "7ccf25f8542fc6453a033ee1f709e67de67a839d",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "viewport": [
+      380,
+      454
+    ],
+    "browserViewport": [
+      1280,
+      900
+    ],
+    "theme": "light",
+    "submitted": false,
+    "language": "pt-BR",
+    "reviewed": true,
+    "reviewer": "Codex primary agent: visual inspection of all six locale controls, 2026-10-08",
+    "sha256": "12488b995f37333c3fe02370d4422af18cc7fc91e31fbc1cfa54d53b584bcd67"
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "recovery",
+    "src": "/documentation/pt-BR/auth-recovery.png",
+    "sourceCommit": "7ccf25f8542fc6453a033ee1f709e67de67a839d",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "viewport": [
+      380,
+      278
+    ],
+    "browserViewport": [
+      1280,
+      900
+    ],
+    "theme": "light",
+    "submitted": false,
+    "language": "pt-BR",
+    "reviewed": true,
+    "reviewer": "Codex primary agent: visual inspection of all six locale controls, 2026-10-08",
+    "sha256": "024a137a27b997adb37f91f5aeed7488ea1c554e9d600785ba6db921b02959de"
+  },
+  {
+    "locale": "it",
+    "screen": "login",
+    "src": "/documentation/it/auth-login.png",
+    "sourceCommit": "7ccf25f8542fc6453a033ee1f709e67de67a839d",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "viewport": [
+      380,
+      540
+    ],
+    "browserViewport": [
+      1280,
+      900
+    ],
+    "theme": "light",
+    "submitted": false,
+    "language": "it",
+    "reviewed": true,
+    "reviewer": "Codex primary agent: visual inspection of all six locale controls, 2026-10-08",
+    "sha256": "edbbd58650eded7e4ff38c2861ee6cee1df0b8bd3ba323b3faffbc5f0247800d"
+  },
+  {
+    "locale": "it",
+    "screen": "signup",
+    "src": "/documentation/it/auth-signup.png",
+    "sourceCommit": "7ccf25f8542fc6453a033ee1f709e67de67a839d",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "viewport": [
+      380,
+      454
+    ],
+    "browserViewport": [
+      1280,
+      900
+    ],
+    "theme": "light",
+    "submitted": false,
+    "language": "it",
+    "reviewed": true,
+    "reviewer": "Codex primary agent: visual inspection of all six locale controls, 2026-10-08",
+    "sha256": "8995adffc7ab6050e8e3d94e2bf48e86ca1dd584967043802e3eb453ec0cc44b"
+  },
+  {
+    "locale": "it",
+    "screen": "recovery",
+    "src": "/documentation/it/auth-recovery.png",
+    "sourceCommit": "7ccf25f8542fc6453a033ee1f709e67de67a839d",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "viewport": [
+      380,
+      278
+    ],
+    "browserViewport": [
+      1280,
+      900
+    ],
+    "theme": "light",
+    "submitted": false,
+    "language": "it",
+    "reviewed": true,
+    "reviewer": "Codex primary agent: visual inspection of all six locale controls, 2026-10-08",
+    "sha256": "9e16ea2f939a717c1dcc4579959ab8ee49898879546335db635b69f0624deb2e"
+  },
+  {
+    "locale": "es",
+    "screen": "login",
+    "src": "/documentation/es/auth-login.png",
+    "sourceCommit": "7ccf25f8542fc6453a033ee1f709e67de67a839d",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "viewport": [
+      380,
+      540
+    ],
+    "browserViewport": [
+      1280,
+      900
+    ],
+    "theme": "light",
+    "submitted": false,
+    "language": "es",
+    "reviewed": true,
+    "reviewer": "Codex primary agent: visual inspection of all six locale controls, 2026-10-08",
+    "sha256": "7d51289b7b93c3c3095f5bb61f3665b9c590c2638d81bc805621d98a7ce7d0ce"
+  },
+  {
+    "locale": "es",
+    "screen": "signup",
+    "src": "/documentation/es/auth-signup.png",
+    "sourceCommit": "7ccf25f8542fc6453a033ee1f709e67de67a839d",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "viewport": [
+      380,
+      474
+    ],
+    "browserViewport": [
+      1280,
+      900
+    ],
+    "theme": "light",
+    "submitted": false,
+    "language": "es",
+    "reviewed": true,
+    "reviewer": "Codex primary agent: visual inspection of all six locale controls, 2026-10-08",
+    "sha256": "8a6b8293fc57faa5c840389d3b05f5d43f3c9f898b6dec6b3d369353842f88f4"
+  },
+  {
+    "locale": "es",
+    "screen": "recovery",
+    "src": "/documentation/es/auth-recovery.png",
+    "sourceCommit": "7ccf25f8542fc6453a033ee1f709e67de67a839d",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "viewport": [
+      380,
+      278
+    ],
+    "browserViewport": [
+      1280,
+      900
+    ],
+    "theme": "light",
+    "submitted": false,
+    "language": "es",
+    "reviewed": true,
+    "reviewer": "Codex primary agent: visual inspection of all six locale controls, 2026-10-08",
+    "sha256": "c203f30a8b4037d12acba53ff333475f3a10dd38e1f3ab034fc6a486eb45879a"
+  }
+]

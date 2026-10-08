@@ -1,0 +1,1129 @@
+{
+  "reviewer": "agent:/root/automation_account_documentation",
+  "date": "2026-10-08",
+  "profile": "guarded capture demo account; real candidate UI; read-only controls and blank dialogs",
+  "publicationApproved": false,
+  "captures": [
+    {
+      "article": "ai-keys-and-models-defaults",
+      "locale": "en",
+      "url": "http://localhost:3000/settings?tab=agent&section=account-agent",
+      "output": "public/documentation/en/ai-keys-and-models-defaults-workflow.png",
+      "lang": "en",
+      "text": "AI\nDefault code model\n\nChoose a model for the active provider before starting another code worker.\n\nChoose a model\nDefault code reasoning\n\nHow long every new code worker thinks before it acts. Running workers keep their frozen level.\n\nStandard",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 315,
+        "width": 768,
+        "height": 168.5
+      },
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "reviewed": true,
+      "sha256": "4dd47393f0b336afe4a542d84bc167804a09e07382a65a716d8dcc13af92dd35",
+      "visualReviewer": "agent:/root/automation_account_documentation"
+    },
+    {
+      "article": "automation-settings-projects",
+      "locale": "en",
+      "url": "http://localhost:3000/settings?tab=automations&section=account-automations-projects",
+      "output": "public/documentation/en/automation-settings-projects-workflow.png",
+      "lang": "en",
+      "text": "Run on\nBeacon\nAurora",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 303.75,
+        "width": 768,
+        "height": 127
+      },
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "reviewed": true,
+      "sha256": "3afb2420bb725e1f0827339d9baf51bab071d0743d09224ae7724fa23d6304c0",
+      "visualReviewer": "agent:/root/automation_account_documentation"
+    },
+    {
+      "article": "transfer-between-instances-export",
+      "locale": "en",
+      "url": "http://localhost:3000/settings?tab=data&section=account-data-export",
+      "output": "public/documentation/en/transfer-between-instances-export-workflow.png",
+      "lang": "en",
+      "text": "Export my data\nDownload my data\n\nAccount, projects, issues, comments, cycles and conversations. No keys or tokens are included.\n\nDownload my data",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 406.5,
+        "width": 768,
+        "height": 98.75
+      },
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "reviewed": true,
+      "sha256": "a6a3aa79dde7abe0233e79bd78c5da7ce2f1d9bd6326f8c297d673c0eda70f24",
+      "visualReviewer": "agent:/root/automation_account_documentation"
+    },
+    {
+      "article": "git-accounts-and-repositories-project",
+      "locale": "en",
+      "url": "http://localhost:3000/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/settings?tab=git&section=project-git",
+      "output": "public/documentation/en/git-accounts-and-repositories-project-workflow.png",
+      "lang": "en",
+      "text": "Git\n\nNo repository linked yet.\n\nConnect GitHub\nConnect GitLab",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 119,
+        "width": 768,
+        "height": 266.796875
+      },
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "reviewed": true,
+      "sha256": "1a84932dbe781623678e77fb76c506ec3f68a29465870a5bd8a07ece8bca2332",
+      "visualReviewer": "agent:/root/automation_account_documentation"
+    },
+    {
+      "article": "import-issues",
+      "locale": "en",
+      "url": "http://localhost:3000/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/settings?tab=import&section=project-import",
+      "output": "public/documentation/en/import-issues-workflow.png",
+      "lang": "en",
+      "text": "Import\nLinear\nJira\nNotion\nGitHub\nTrello\nminddy\nIn Linear, open the view holding your issues.\n⌘K → “Export issues as CSV”.\nDrop the file below.\nLinear documentation\n\nDrop a CSV file here, or click to browse\n\nAny CSV works: Numo matches the columns, the people and the labels for you. 5 MB maximum.\n\nDownload the CSV template",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 119,
+        "width": 768,
+        "height": 428
+      },
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "reviewed": false,
+      "sha256": "bc43ba27d8ff7854b24f3f1d0a505db5409170f8817fc5c20cf0c17a19e1b90a"
+    },
+    {
+      "article": "external-minddy-mcp-install",
+      "locale": "en",
+      "url": "http://localhost:3000/settings?tab=mcp",
+      "output": "public/documentation/en/external-minddy-mcp-install-workflow.png",
+      "lang": "en",
+      "text": "Connect Codex\n\nNo key to paste: Codex will open your browser to sign you in on first use.\n\ncodex mcp add minddy --url http://localhost:3000/api/mcp && codex mcp login minddy\nCopy install command\n\nPaste this command in your terminal, then authorize access in your browser.\n\nIt's connected\nClose",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 464,
+        "y": 742,
+        "width": 512,
+        "height": 316
+      },
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "reviewed": true,
+      "sha256": "1b49abedd0401aa739154f8d1d6683ec5ee8fbb03485c40bf1744863e49b0443",
+      "action": "Open Codex installation instructions; no client command or authorization executed",
+      "visualReviewer": "agent:/root/automation_account_documentation"
+    },
+    {
+      "article": "plans-and-ai-usage",
+      "locale": "en",
+      "url": "http://localhost:3000/billing",
+      "output": "public/documentation/en/plans-and-ai-usage-workflow.png",
+      "lang": "en",
+      "text": "Billing and usage\n\nYour account’s AI budget and subscription.\n\nYour AI budget\nPro\n99%\nremaining\n0.3% consumed\n100% included\n\nPeriod: Oct 1 – Nov 1\n\nNext reset\nNovember 1\nYour AI budget resets every month.\nBudget over time\nCumulative consumption · % of included budget\nCumulative\nDaily\n0%\n50%\n100%\nOct 1\nOct 16\nNov 1\n100% included\nOct 8\n\n0.3% consumed so far\n\nDays are grouped in UTC.\n\nWhat uses your budget?\nPercent of the included budget, by usage type.\nNumo code work\n0%\nRoutines\n0%\nNumo\n0.3%\nVoice dictation\n0%\nFeedback\n0%\nAutomations\n0%\nUsage history\nActions from the current period and their share of the budget.\nAll types\nChat with Numo\nOct 1, 11:20 PM\n<0.1%\nChat with Numo\nOct 1, 11:18 PM\n<0.1%\nChat with Numo\nOct 1, 11:11 PM\n<0.1%\nChat with Numo\nOct 1, 11:08 PM\n<0.1%\nChat with Numo\nOct 1, 11:06 PM\n<0.1%\nChat with Numo\nOct 1, 11:05 PM\n<0.1%\nChat with Numo\nOct 1, 10:45 PM\n<0.1%\nChat with Numo\nOct 1, 10:30 PM\n<0.1%\nChat with Numo\nOct 1, 10:28 PM\n<0.1%",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 321,
+        "y": 45,
+        "width": 1106,
+        "height": 1718
+      },
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "reviewed": true,
+      "sha256": "5c5349ded7286724a4243162d08d06500bc3da877d0e04e64ec2c28b49abad23",
+      "action": "Read billing and usage; no checkout, portal or paid operation executed",
+      "visualReviewer": "agent:/root/automation_account_documentation"
+    },
+    {
+      "article": "ai-keys-and-models-defaults",
+      "locale": "fr",
+      "url": "http://localhost:3000/settings?tab=agent&section=account-agent",
+      "output": "public/documentation/fr/ai-keys-and-models-defaults-workflow.png",
+      "lang": "fr",
+      "text": "IA\nModèle de code par défaut\n\nChoisissez un modèle pour le provider actif avant de démarrer un nouvel agent de code.\n\nChoisir un modèle\nRaisonnement par défaut pour le code\n\nLe temps de réflexion de chaque nouvel agent de code. Les agents en cours conservent leur niveau figé.\n\nStandard",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 315,
+        "width": 768,
+        "height": 168.5
+      },
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "reviewed": true,
+      "sha256": "50af412ea7ba5792a260ce769f2f15bc53623381e1b84c7d576f398eab801ab0",
+      "visualReviewer": "agent:/root/automation_account_documentation"
+    },
+    {
+      "article": "automation-settings-projects",
+      "locale": "fr",
+      "url": "http://localhost:3000/settings?tab=automations&section=account-automations-projects",
+      "output": "public/documentation/fr/automation-settings-projects-workflow.png",
+      "lang": "fr",
+      "text": "Actif sur\nBeacon\nAurora",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 323.25,
+        "width": 768,
+        "height": 127
+      },
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "reviewed": true,
+      "sha256": "6cefbe64029dca7900f8674d63d5953241003c52caef59df5f4068fccaf175cc",
+      "visualReviewer": "agent:/root/automation_account_documentation"
+    },
+    {
+      "article": "transfer-between-instances-export",
+      "locale": "fr",
+      "url": "http://localhost:3000/settings?tab=data&section=account-data-export",
+      "output": "public/documentation/fr/transfer-between-instances-export-workflow.png",
+      "lang": "fr",
+      "text": "Exporter mes données\nTélécharger mes données\n\nCompte, projets, tickets, commentaires, cycles et conversations. Aucune clé ni jeton n'y figure.\n\nTélécharger mes données",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 406.5,
+        "width": 768,
+        "height": 98.75
+      },
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "reviewed": true,
+      "sha256": "ab1b251527c17ba382a9f40a64014c2083a28e7e1332091eaa4e30d986e304dc",
+      "visualReviewer": "agent:/root/automation_account_documentation"
+    },
+    {
+      "article": "git-accounts-and-repositories-project",
+      "locale": "fr",
+      "url": "http://localhost:3000/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/settings?tab=git&section=project-git",
+      "output": "public/documentation/fr/git-accounts-and-repositories-project-workflow.png",
+      "lang": "fr",
+      "text": "Git\n\nAucun dépôt lié pour l'instant.\n\nConnecter GitHub\nConnecter GitLab",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 119,
+        "width": 768,
+        "height": 266.796875
+      },
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "reviewed": true,
+      "sha256": "da18dc488375b7bd7c1e7c8b9f92777fa1dfbb3c185592c3922c9156942356c6",
+      "visualReviewer": "agent:/root/automation_account_documentation"
+    },
+    {
+      "article": "import-issues",
+      "locale": "fr",
+      "url": "http://localhost:3000/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/settings?tab=import&section=project-import",
+      "output": "public/documentation/fr/import-issues-workflow.png",
+      "lang": "fr",
+      "text": "Import\nLinear\nJira\nNotion\nGitHub\nTrello\nminddy\nDans Linear, ouvrez la vue qui contient vos tickets.\n⌘K → « Export issues as CSV ».\nDéposez le fichier ci-dessous.\nDocumentation Linear\n\nDéposez un fichier CSV ici, ou cliquez pour parcourir\n\nN'importe quel CSV fait l'affaire : Numo rapproche les colonnes, les personnes et les étiquettes. 5 Mo maximum.\n\nTélécharger le modèle CSV",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 119,
+        "width": 768,
+        "height": 428
+      },
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "reviewed": false,
+      "sha256": "2242d1c7795e116dad8752d86a06235085648f175521d83ecb78f44a573325a8"
+    },
+    {
+      "article": "external-minddy-mcp-install",
+      "locale": "fr",
+      "url": "http://localhost:3000/settings?tab=mcp",
+      "output": "public/documentation/fr/external-minddy-mcp-install-workflow.png",
+      "lang": "fr",
+      "text": "Connecter Codex\n\nAucune clé à coller : Codex ouvrira votre navigateur pour vous authentifier à la première utilisation.\n\ncodex mcp add minddy --url http://localhost:3000/api/mcp && codex mcp login minddy\nCopier la commande d'installation\n\nCollez cette commande dans votre terminal, puis autorisez l'accès dans le navigateur.\n\nC'est connecté\nClose",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 464,
+        "y": 734,
+        "width": 512,
+        "height": 332
+      },
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "reviewed": true,
+      "sha256": "138dceb5030b69abecb3af1a37378c2dfb42f33340db0a650bfd5ff4e5f7566f",
+      "action": "Open Codex installation instructions; no client command or authorization executed",
+      "visualReviewer": "agent:/root/automation_account_documentation"
+    },
+    {
+      "article": "plans-and-ai-usage",
+      "locale": "fr",
+      "url": "http://localhost:3000/billing",
+      "output": "public/documentation/fr/plans-and-ai-usage-workflow.png",
+      "lang": "fr",
+      "text": "Facturation et usage\n\nLe budget IA et l’abonnement de votre compte.\n\nVotre budget IA\nPro\n99%\nrestants\n0,3 % consommés\n100 % inclus\n\nPériode : 1 oct. – 1 nov.\n\nProchain renouvellement\n1 novembre\nVotre budget IA se renouvelle chaque mois.\nÉvolution du budget\nConsommation cumulée · % du budget inclus\nCumulé\nPar jour\n0%\n50%\n100%\n1 oct.\n16 oct.\n1 nov.\n100 % inclus\n8 oct.\n\n0,3 % consommés à cette date\n\nLes jours sont regroupés en UTC.\n\nQu’est-ce qui consomme ?\nPart du budget inclus, par type d’usage.\nTravail de code de Numo\n0%\nRoutines\n0%\nNumo\n0,3 %\nDictée vocale\n0%\nRetours\n0%\nAutomatisations\n0%\nHistorique d'usage\nLes actions de la période en cours et leur part du budget.\nTous les types\nConversation avec Numo\n1 oct., 23:20\n<0,1 %\nConversation avec Numo\n1 oct., 23:18\n<0,1 %\nConversation avec Numo\n1 oct., 23:11\n<0,1 %\nConversation avec Numo\n1 oct., 23:08\n<0,1 %\nConversation avec Numo\n1 oct., 23:06\n<0,1 %\nConversation avec Numo\n1 oct., 23:05\n<0,1 %\nConversation avec Numo\n1 oct., 22:45\n<0,1 %\nConversation avec Numo\n1 oct., 22:30\n<0,1 %\nConversation avec Numo\n1 oct., 22:28\n<0,1 %",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 321,
+        "y": 45,
+        "width": 1106,
+        "height": 1718
+      },
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "reviewed": true,
+      "sha256": "8dc692888e039a1287d093e6c3b836e4a37ec547f658c95b920ecc66549abdf5",
+      "action": "Read billing and usage; no checkout, portal or paid operation executed",
+      "visualReviewer": "agent:/root/automation_account_documentation"
+    },
+    {
+      "article": "ai-keys-and-models-defaults",
+      "locale": "de",
+      "url": "http://localhost:3000/settings?tab=agent&section=account-agent",
+      "output": "public/documentation/de/ai-keys-and-models-defaults-workflow.png",
+      "lang": "de",
+      "text": "KI\nStandardmodell für Codearbeit\n\nWählen Sie ein Modell für den aktiven Anbieter aus, bevor Sie einen weiteren Code-Agent starten.\n\nModell auswählen\nStandard-Denkniveau für Codearbeit\n\nWie lange jeder neue Code-Agent denkt, bevor er handelt. Laufende Agenten behalten ihre festgelegte Stufe.\n\nStandard",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 315,
+        "width": 768,
+        "height": 168.5
+      },
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "reviewed": true,
+      "sha256": "3d0bcc9424837c8c7c6246bf2984d684c41d12df6061ff5ad263fe89f330b2e7",
+      "visualReviewer": "agent:/root/automation_account_documentation"
+    },
+    {
+      "article": "automation-settings-projects",
+      "locale": "de",
+      "url": "http://localhost:3000/settings?tab=automations&section=account-automations-projects",
+      "output": "public/documentation/de/automation-settings-projects-workflow.png",
+      "lang": "de",
+      "text": "Ausführen\nBeacon\nAurora",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 303.75,
+        "width": 768,
+        "height": 127
+      },
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "reviewed": true,
+      "sha256": "f98d60751b686b3627c98897ff0ef29ce05baf5d3490f925374e8de265d45fc9",
+      "visualReviewer": "agent:/root/automation_account_documentation"
+    },
+    {
+      "article": "transfer-between-instances-export",
+      "locale": "de",
+      "url": "http://localhost:3000/settings?tab=data&section=account-data-export",
+      "output": "public/documentation/de/transfer-between-instances-export-workflow.png",
+      "lang": "de",
+      "text": "Meine Daten exportieren\nMeine Daten herunterladen\n\nKonto, Projekte, Probleme, Kommentare, Zyklen und Gespräche. Es sind keine Schlüssel oder Token enthalten.\n\nMeine Daten herunterladen",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 406.5,
+        "width": 768,
+        "height": 98.75
+      },
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "reviewed": true,
+      "sha256": "417c94dcc049bf9ebb1262c10b91be9d32b1c6cd76712e7fb5ac729af3d62bdf",
+      "visualReviewer": "agent:/root/automation_account_documentation"
+    },
+    {
+      "article": "git-accounts-and-repositories-project",
+      "locale": "de",
+      "url": "http://localhost:3000/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/settings?tab=git&section=project-git",
+      "output": "public/documentation/de/git-accounts-and-repositories-project-workflow.png",
+      "lang": "de",
+      "text": "Git\n\nNoch kein Repository verknüpft.\n\nVerbinden GitHub\nVerbinden GitLab",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 119,
+        "width": 768,
+        "height": 266.796875
+      },
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "reviewed": true,
+      "sha256": "7e8919b17eac25181f6fc14d8a73f44dbf3550f3cd93c0f5056c6314cd2cdbdc",
+      "visualReviewer": "agent:/root/automation_account_documentation"
+    },
+    {
+      "article": "import-issues",
+      "locale": "de",
+      "url": "http://localhost:3000/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/settings?tab=import&section=project-import",
+      "output": "public/documentation/de/import-issues-workflow.png",
+      "lang": "de",
+      "text": "Importieren\nLinear\nJira\nNotion\nGitHub\nTrello\nminddy\nÖffnen Sie in Linear die Ansicht mit Ihren Problemen.\n⌘K → „Probleme als CSV exportieren“.\nLegen Sie die Datei unten ab.\nLinear Dokumentation\n\nLegen Sie eine CSV-Datei hier ab oder klicken Sie zum Durchsuchen\n\nJedes CSV funktioniert: Numo gleicht die Spalten, die Personen und die Beschriftungen für Sie ab. Maximal 5 MB.\n\nLaden Sie die CSV-Vorlage herunter",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 119,
+        "width": 768,
+        "height": 428
+      },
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "reviewed": false,
+      "sha256": "05fda83b70a0a7fc58abd198df19ec7e61cbfb2f03804a0a1b9f7b9de97047fc"
+    },
+    {
+      "article": "external-minddy-mcp-install",
+      "locale": "de",
+      "url": "http://localhost:3000/settings?tab=mcp",
+      "output": "public/documentation/de/external-minddy-mcp-install-workflow.png",
+      "lang": "de",
+      "text": "Codex verbinden\n\nKein Schlüssel zum Einfügen: Codex öffnet Ihren Browser, um Sie bei der ersten Verwendung anzumelden.\n\ncodex mcp add minddy --url http://localhost:3000/api/mcp && codex mcp login minddy\nInstallationsbefehl kopieren\n\nFügen Sie diesen Befehl in Ihr Terminal ein und autorisieren Sie dann den Zugriff in Ihrem Browser.\n\nEs ist verbunden\nClose",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 464,
+        "y": 734,
+        "width": 512,
+        "height": 332
+      },
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "reviewed": true,
+      "sha256": "f29709dbd3ab39c937ecf20dc51ef3bdd0d04f481c2224d1509d4147b174bb8a",
+      "action": "Open Codex installation instructions; no client command or authorization executed",
+      "visualReviewer": "agent:/root/automation_account_documentation"
+    },
+    {
+      "article": "plans-and-ai-usage",
+      "locale": "de",
+      "url": "http://localhost:3000/billing",
+      "output": "public/documentation/de/plans-and-ai-usage-workflow.png",
+      "lang": "de",
+      "text": "Abrechnung und Nutzung\n\nKI-Budget und Abonnement deines Kontos.\n\nDein KI-Budget\nPro\n99%\nverbleibend\n0,3 % verbraucht\n100 % enthalten\n\nZeitraum: 1. Okt. – 1. Nov.\n\nNächste Erneuerung\n1. November\nDein KI-Budget wird jeden Monat erneuert.\nBudget im Zeitverlauf\nKumulierter Verbrauch · % des enthaltenen Budgets\nKumuliert\nTäglich\n0%\n50%\n100%\n1. Okt.\n16. Okt.\n1. Nov.\n100 % enthalten\n8. Okt.\n\n0,3 % bis zu diesem Tag verbraucht\n\nTage werden nach UTC zusammengefasst.\n\nWas verbraucht dein Budget?\nAnteil am enthaltenen Budget nach Nutzungsart.\nNumos Codearbeit\n0%\nRoutinen\n0%\nNumo\n0,3 %\nSprachdiktat\n0%\nFeedback\n0%\nAutomatisierungen\n0%\nNutzungsverlauf\nAktionen aus der aktuellen Periode und deren Anteil am Budget.\nAlle Typen\nChatten Sie mit Numo\n1. Okt., 23:20\n<0,1 %\nChatten Sie mit Numo\n1. Okt., 23:18\n<0,1 %\nChatten Sie mit Numo\n1. Okt., 23:11\n<0,1 %\nChatten Sie mit Numo\n1. Okt., 23:08\n<0,1 %\nChatten Sie mit Numo\n1. Okt., 23:06\n<0,1 %\nChatten Sie mit Numo\n1. Okt., 23:05\n<0,1 %\nChatten Sie mit Numo\n1. Okt., 22:45\n<0,1 %\nChatten Sie mit Numo\n1. Okt., 22:30\n<0,1 %\nChatten Sie mit Numo\n1. Okt., 22:28\n<0,1 %",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 321,
+        "y": 45,
+        "width": 1106,
+        "height": 1718
+      },
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "reviewed": true,
+      "sha256": "f9520acb04e32fb72af7d3c872439b89dd29cf29ac0117f73b6be906a95579fc",
+      "action": "Read billing and usage; no checkout, portal or paid operation executed",
+      "visualReviewer": "agent:/root/automation_account_documentation"
+    },
+    {
+      "article": "ai-keys-and-models-defaults",
+      "locale": "es",
+      "url": "http://localhost:3000/settings?tab=agent&section=account-agent",
+      "output": "public/documentation/es/ai-keys-and-models-defaults-workflow.png",
+      "lang": "es",
+      "text": "IA\nModelo de código predeterminado\n\nElige un modelo para el proveedor activo antes de iniciar otro agente de código.\n\nElegir un modelo\nRazonamiento de código predeterminado\n\nCuánto razona cada nuevo agente de código antes de actuar. Los agentes en curso conservan su nivel fijado.\n\nMedio",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 315,
+        "width": 768,
+        "height": 168.5
+      },
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "reviewed": true,
+      "sha256": "632a554b5b04ca554abb108a2881053178b6e6d5190c56f5fd46187fdc7b0ac5",
+      "visualReviewer": "agent:/root/automation_account_documentation"
+    },
+    {
+      "article": "automation-settings-projects",
+      "locale": "es",
+      "url": "http://localhost:3000/settings?tab=automations&section=account-automations-projects",
+      "output": "public/documentation/es/automation-settings-projects-workflow.png",
+      "lang": "es",
+      "text": "Ejecutar en\nBeacon\nAurora",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 323.25,
+        "width": 768,
+        "height": 127
+      },
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "reviewed": true,
+      "sha256": "050790ac3e58b96e6de9b38f6d6a3751850f967dbe405c02c8958531f6ca52d5",
+      "visualReviewer": "agent:/root/automation_account_documentation"
+    },
+    {
+      "article": "transfer-between-instances-export",
+      "locale": "es",
+      "url": "http://localhost:3000/settings?tab=data&section=account-data-export",
+      "output": "public/documentation/es/transfer-between-instances-export-workflow.png",
+      "lang": "es",
+      "text": "Exportar mis datos\nDescarga mis datos\n\nCuenta, proyectos, incidencias, comentarios, ciclos y conversaciones. No se incluyen claves ni fichas.\n\nDescarga mis datos",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 406.5,
+        "width": 768,
+        "height": 98.75
+      },
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "reviewed": true,
+      "sha256": "da899d9dac2a6628fb52caec8c20c78f879e1fb392cf8ae2d0dbf717cc1a4402",
+      "visualReviewer": "agent:/root/automation_account_documentation"
+    },
+    {
+      "article": "git-accounts-and-repositories-project",
+      "locale": "es",
+      "url": "http://localhost:3000/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/settings?tab=git&section=project-git",
+      "output": "public/documentation/es/git-accounts-and-repositories-project-workflow.png",
+      "lang": "es",
+      "text": "Git\n\nTodavía no hay repositorio conectado.\n\nConectar GitHub\nConectar GitLab",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 119,
+        "width": 768,
+        "height": 266.796875
+      },
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "reviewed": true,
+      "sha256": "c04ff6ea8ed4749d3432de1e026f5b95bf8b27d7cd70b0c839413ede48add482",
+      "visualReviewer": "agent:/root/automation_account_documentation"
+    },
+    {
+      "article": "import-issues",
+      "locale": "es",
+      "url": "http://localhost:3000/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/settings?tab=import&section=project-import",
+      "output": "public/documentation/es/import-issues-workflow.png",
+      "lang": "es",
+      "text": "Importación\nLinear\nJira\nNotion\nGitHub\nTrello\nminddy\nEn Linear, abre la vista que contiene tus incidencias.\n⌘K → «Export issues as CSV».\nSuelta el archivo abajo.\nDocumentación de Linear\n\nSuelta aquí un archivo CSV o haz clic para buscarlo\n\nPuedes usar cualquier CSV: Numo relaciona por ti las columnas, las personas y las etiquetas. Máximo 5 MB.\n\nDescargar la plantilla CSV",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 119,
+        "width": 768,
+        "height": 428
+      },
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "reviewed": false,
+      "sha256": "b7739c309252f214c63ff21a6c5f5c708390044b59fa924f6800e0d22d03b982"
+    },
+    {
+      "article": "external-minddy-mcp-install",
+      "locale": "es",
+      "url": "http://localhost:3000/settings?tab=mcp",
+      "output": "public/documentation/es/external-minddy-mcp-install-workflow.png",
+      "lang": "es",
+      "text": "Conectar Codex\n\nNo hay clave para pegar: Codex abrirá su navegador para iniciar sesión en el primer uso.\n\ncodex mcp add minddy --url http://localhost:3000/api/mcp && codex mcp login minddy\nCopia el comando de instalación\n\nPega este comando en tu terminal, y luego autoriza el acceso en tu navegador.\n\nEstá conectado.\nClose",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 464,
+        "y": 734,
+        "width": 512,
+        "height": 332
+      },
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "reviewed": true,
+      "sha256": "63163a48bcff4c26b1094d5df2e81482d379ac187871339ae64f98161be157ad",
+      "action": "Open Codex installation instructions; no client command or authorization executed",
+      "visualReviewer": "agent:/root/automation_account_documentation"
+    },
+    {
+      "article": "plans-and-ai-usage",
+      "locale": "es",
+      "url": "http://localhost:3000/billing",
+      "output": "public/documentation/es/plans-and-ai-usage-workflow.png",
+      "lang": "es",
+      "text": "Facturación y uso\n\nEl presupuesto de IA y la suscripción de tu cuenta.\n\nTu presupuesto de IA\nPro\n99%\nrestante\n0,3 % consumido\n100 % incluido\n\nPeriodo: 1 oct – 1 nov\n\nPróxima renovación\n1 de noviembre\nTu presupuesto de IA se renueva cada mes.\nEvolución del presupuesto\nConsumo acumulado · % del presupuesto incluido\nAcumulado\nPor día\n0%\n50%\n100%\n1 oct\n16 oct\n1 nov\n100 % incluido\n8 oct\n\n0,3 % consumido hasta esta fecha\n\nLos días se agrupan en UTC.\n\n¿Qué consume tu presupuesto?\nPorcentaje del presupuesto incluido por tipo de uso.\nTrabajo de código de Numo\n0%\nRutinas\n0%\nNumo\n0,3 %\nDictado por voz\n0%\nSugerencias\n0%\nAutomatizaciones\n0%\nHistorial de uso\nAcciones del periodo actual y porcentaje del presupuesto que representan.\nTodos los tipos\nChat con Numo\n1 oct, 23:20\n<0,1 %\nChat con Numo\n1 oct, 23:18\n<0,1 %\nChat con Numo\n1 oct, 23:11\n<0,1 %\nChat con Numo\n1 oct, 23:08\n<0,1 %\nChat con Numo\n1 oct, 23:06\n<0,1 %\nChat con Numo\n1 oct, 23:05\n<0,1 %\nChat con Numo\n1 oct, 22:45\n<0,1 %\nChat con Numo\n1 oct, 22:30\n<0,1 %\nChat con Numo\n1 oct, 22:28\n<0,1 %",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 321,
+        "y": 45,
+        "width": 1106,
+        "height": 1718
+      },
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "reviewed": true,
+      "sha256": "c98f221ae8519f5d00f3813086c0e2450bfe5c6a761939ba54fcd3ba5ce00442",
+      "action": "Read billing and usage; no checkout, portal or paid operation executed",
+      "visualReviewer": "agent:/root/automation_account_documentation"
+    },
+    {
+      "article": "ai-keys-and-models-defaults",
+      "locale": "it",
+      "url": "http://localhost:3000/settings?tab=agent&section=account-agent",
+      "output": "public/documentation/it/ai-keys-and-models-defaults-workflow.png",
+      "lang": "it",
+      "text": "AI\nModello di codice predefinito\n\nScegli un modello per il provider attivo prima di avviare un altro agente di codice.\n\nScegli un modello\nRagionamento predefinito per il codice\n\nQuanto ragiona ogni nuovo agente di codice prima di agire. Gli agenti in corso mantengono il livello fissato.\n\nStandard",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 315,
+        "width": 768,
+        "height": 168.5
+      },
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "reviewed": true,
+      "sha256": "e02583079f03e4986bf6d87e6c48b932c66c585b554c5284a53cf7ed09e564d8",
+      "visualReviewer": "agent:/root/automation_account_documentation"
+    },
+    {
+      "article": "automation-settings-projects",
+      "locale": "it",
+      "url": "http://localhost:3000/settings?tab=automations&section=account-automations-projects",
+      "output": "public/documentation/it/automation-settings-projects-workflow.png",
+      "lang": "it",
+      "text": "Correte avanti\nBeacon\nAurora",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 303.75,
+        "width": 768,
+        "height": 127
+      },
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "reviewed": true,
+      "sha256": "bda84386f616f4fabc6051a8d4eebf8e0e99592f0687cacc9d43268e0a690237",
+      "visualReviewer": "agent:/root/automation_account_documentation"
+    },
+    {
+      "article": "transfer-between-instances-export",
+      "locale": "it",
+      "url": "http://localhost:3000/settings?tab=data&section=account-data-export",
+      "output": "public/documentation/it/transfer-between-instances-export-workflow.png",
+      "lang": "it",
+      "text": "Esporta i miei dati\nScarica i miei dati\n\nAccount, progetti, ticket, commenti, cicli e conversazioni. Nessuna chiave o gettoni sono inclusi.\n\nScarica i miei dati",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 406.5,
+        "width": 768,
+        "height": 98.75
+      },
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "reviewed": true,
+      "sha256": "1289642ca97eceb989bf4f0824caf82357356c780279c3eb25512fe53e168f54",
+      "visualReviewer": "agent:/root/automation_account_documentation"
+    },
+    {
+      "article": "git-accounts-and-repositories-project",
+      "locale": "it",
+      "url": "http://localhost:3000/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/settings?tab=git&section=project-git",
+      "output": "public/documentation/it/git-accounts-and-repositories-project-workflow.png",
+      "lang": "it",
+      "text": "Git\n\nNessun repository ancora collegato.\n\nConnetti GitHub\nConnetti GitLab",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 119,
+        "width": 768,
+        "height": 266.796875
+      },
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "reviewed": true,
+      "sha256": "294097a3650a25651a28eaac3e95d8e73ad5908ae59f37e24b81a9855a18cf72",
+      "visualReviewer": "agent:/root/automation_account_documentation"
+    },
+    {
+      "article": "import-issues",
+      "locale": "it",
+      "url": "http://localhost:3000/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/settings?tab=import&section=project-import",
+      "output": "public/documentation/it/import-issues-workflow.png",
+      "lang": "it",
+      "text": "Importazione\nLinear\nJira\nNotion\nGitHub\nTrello\nminddy\nIn Linear, aprire la vista tenendo i vostri ticket.\n⌘K → «Export issues as CSV».\nLascia il file qui sotto.\nLinear documentazione\n\nSbloccare un file CSV qui, o fare clic per sfogliare\n\nQualsiasi CSV funziona: Numo corrisponde alle colonne, alle persone e alle etichette per te. 5 MB massimo.\n\nScarica il modello CSV",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 119,
+        "width": 768,
+        "height": 428
+      },
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "reviewed": false,
+      "sha256": "eb21e6e32470f01d2a35322361dc825d097b91b8a63e8bda0d02b2380dfe3fe8"
+    },
+    {
+      "article": "external-minddy-mcp-install",
+      "locale": "it",
+      "url": "http://localhost:3000/settings?tab=mcp",
+      "output": "public/documentation/it/external-minddy-mcp-install-workflow.png",
+      "lang": "it",
+      "text": "Connetti Codex\n\nNessuna chiave da incollare: Codex aprirà il browser per accedere al primo utilizzo.\n\ncodex mcp add minddy --url http://localhost:3000/api/mcp && codex mcp login minddy\nCopia il comando di installazione\n\nIncolla questo comando nel terminale, poi autorizza l'accesso nel browser.\n\nÈ collegato.\nClose",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 464,
+        "y": 742,
+        "width": 512,
+        "height": 316
+      },
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "reviewed": true,
+      "sha256": "5f9e47277a09b421130ee1ebf38b3b334866c86e9cb2c71753569fd3d788e99e",
+      "action": "Open Codex installation instructions; no client command or authorization executed",
+      "visualReviewer": "agent:/root/automation_account_documentation"
+    },
+    {
+      "article": "plans-and-ai-usage",
+      "locale": "it",
+      "url": "http://localhost:3000/billing",
+      "output": "public/documentation/it/plans-and-ai-usage-workflow.png",
+      "lang": "it",
+      "text": "Fatturazione e utilizzo\n\nIl budget IA e l’abbonamento del tuo account.\n\nIl tuo budget IA\nPro\n99%\nrimanente\n0,3% consumato\n100% incluso\n\nPeriodo: 1 ott – 1 nov\n\nProssimo rinnovo\n1 novembre\nIl tuo budget IA si rinnova ogni mese.\nAndamento del budget\nConsumo cumulativo · % del budget incluso\nCumulativo\nGiornaliero\n0%\n50%\n100%\n1 ott\n16 ott\n1 nov\n100% incluso\n8 ott\n\n0,3% consumato fino a questa data\n\nI giorni sono raggruppati in UTC.\n\nCosa consuma il budget?\nPercentuale del budget incluso per tipo di utilizzo.\nLavoro sul codice di Numo\n0%\nRutine\n0%\nNumo\n0,3%\nDittatura vocale\n0%\nFeedback\n0%\nAutomazioni\n0%\nCronologia di utilizzo\nAzioni del periodo in corso e loro quota di bilancio.\nTutti i tipi\nChiacchierata con Numo\n1 ott, 23:20\n<0,1%\nChiacchierata con Numo\n1 ott, 23:18\n<0,1%\nChiacchierata con Numo\n1 ott, 23:11\n<0,1%\nChiacchierata con Numo\n1 ott, 23:08\n<0,1%\nChiacchierata con Numo\n1 ott, 23:06\n<0,1%\nChiacchierata con Numo\n1 ott, 23:05\n<0,1%\nChiacchierata con Numo\n1 ott, 22:45\n<0,1%\nChiacchierata con Numo\n1 ott, 22:30\n<0,1%\nChiacchierata con Numo\n1 ott, 22:28\n<0,1%",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 321,
+        "y": 45,
+        "width": 1106,
+        "height": 1718
+      },
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "reviewed": true,
+      "sha256": "e63e8adb3e2caf053852ebcbdd6c8200882ef34aac09ce1c4f0d8f5f19391080",
+      "action": "Read billing and usage; no checkout, portal or paid operation executed",
+      "visualReviewer": "agent:/root/automation_account_documentation"
+    },
+    {
+      "article": "ai-keys-and-models-defaults",
+      "locale": "pt-BR",
+      "url": "http://localhost:3000/settings?tab=agent&section=account-agent",
+      "output": "public/documentation/pt-BR/ai-keys-and-models-defaults-workflow.png",
+      "lang": "pt-BR",
+      "text": "AI\nModelo de código padrão\n\nEscolha um modelo para o provedor ativo antes de iniciar outro agente de código.\n\nEscolher um modelo\nRaciocínio de código padrão\n\nQuanto cada novo agente de código raciocina antes de agir. Agentes em execução mantêm o nível fixado.\n\nPadrão",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 315,
+        "width": 768,
+        "height": 168.5
+      },
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "reviewed": true,
+      "sha256": "e81bb96b4e9bee5bba49cba1221f169ffce944d1d2789818e9bbb4cdc1cf6f10",
+      "visualReviewer": "agent:/root/automation_account_documentation"
+    },
+    {
+      "article": "automation-settings-projects",
+      "locale": "pt-BR",
+      "url": "http://localhost:3000/settings?tab=automations&section=account-automations-projects",
+      "output": "public/documentation/pt-BR/automation-settings-projects-workflow.png",
+      "lang": "pt-BR",
+      "text": "Executar\nBeacon\nAurora",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 323.25,
+        "width": 768,
+        "height": 127
+      },
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "reviewed": true,
+      "sha256": "db7ea6492955d221c6b1c343932d8e124ff4596836e8674e7d3063bb274ac2cb",
+      "visualReviewer": "agent:/root/automation_account_documentation"
+    },
+    {
+      "article": "transfer-between-instances-export",
+      "locale": "pt-BR",
+      "url": "http://localhost:3000/settings?tab=data&section=account-data-export",
+      "output": "public/documentation/pt-BR/transfer-between-instances-export-workflow.png",
+      "lang": "pt-BR",
+      "text": "Exportar meus dados\nBaixar meus dados\n\nConta, projetos, problemas, comentários, ciclos e conversas. Nenhuma chave ou token está incluído.\n\nBaixar meus dados",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 406.5,
+        "width": 768,
+        "height": 98.75
+      },
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "reviewed": true,
+      "sha256": "170602779d91faa5a8b6e4032b0e95e8a47db72ead51f968b4c2476601143a02",
+      "visualReviewer": "agent:/root/automation_account_documentation"
+    },
+    {
+      "article": "git-accounts-and-repositories-project",
+      "locale": "pt-BR",
+      "url": "http://localhost:3000/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/settings?tab=git&section=project-git",
+      "output": "public/documentation/pt-BR/git-accounts-and-repositories-project-workflow.png",
+      "lang": "pt-BR",
+      "text": "Git\n\nNenhum repositório vinculado ainda.\n\nConectar GitHub\nConectar GitLab",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 119,
+        "width": 768,
+        "height": 266.796875
+      },
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "reviewed": true,
+      "sha256": "e986174d2949d8ab689f7612020559282ce60003f5abaefa50704ec043fac167",
+      "visualReviewer": "agent:/root/automation_account_documentation"
+    },
+    {
+      "article": "import-issues",
+      "locale": "pt-BR",
+      "url": "http://localhost:3000/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/settings?tab=import&section=project-import",
+      "output": "public/documentation/pt-BR/import-issues-workflow.png",
+      "lang": "pt-BR",
+      "text": "Importar\nLinear\nJira\nNotion\nGitHub\nTrello\nminddy\nEm Linear, abra a visualização que contém seus problemas.\n⌘K → “Exportar problemas como CSV”.\nSolte o arquivo abaixo.\nLinear documentação\n\nSolte um arquivo CSV aqui ou clique para navegar\n\nQualquer CSV funciona: Numo corresponde às colunas, às pessoas e aos rótulos para você. Máximo de 5 MB.\n\nBaixar o modelo CSV",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 119,
+        "width": 768,
+        "height": 428
+      },
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "reviewed": false,
+      "sha256": "8e853dd1fd1de7fa3929fc64c6a17c586f90147de626fe46a18b58b3882c1c8d"
+    },
+    {
+      "article": "external-minddy-mcp-install",
+      "locale": "pt-BR",
+      "url": "http://localhost:3000/settings?tab=mcp",
+      "output": "public/documentation/pt-BR/external-minddy-mcp-install-workflow.png",
+      "lang": "pt-BR",
+      "text": "Conectar Codex\n\nNenhuma chave para colar: Codex irá abrir seu navegador para fazer login no primeiro uso.\n\ncodex mcp add minddy --url http://localhost:3000/api/mcp && codex mcp login minddy\nCopiar comando de instalação\n\nCole este comando em seu terminal e autorize o acesso em seu navegador.\n\nEstá conectado\nClose",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 464,
+        "y": 742,
+        "width": 512,
+        "height": 316
+      },
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "reviewed": true,
+      "sha256": "87d25dee04ec0975ec09c3519f806df1af66c8ff6b202bc455cefea0265f5907",
+      "action": "Open Codex installation instructions; no client command or authorization executed",
+      "visualReviewer": "agent:/root/automation_account_documentation"
+    },
+    {
+      "article": "plans-and-ai-usage",
+      "locale": "pt-BR",
+      "url": "http://localhost:3000/billing",
+      "output": "public/documentation/pt-BR/plans-and-ai-usage-workflow.png",
+      "lang": "pt-BR",
+      "text": "Faturamento e uso\n\nO orçamento de IA e a assinatura da sua conta.\n\nSeu orçamento de IA\nPro\n99%\nrestante\n0,3% consumido\n100% incluído\n\nPeríodo: 1 de out. – 1 de nov.\n\nPróxima renovação\n1 de novembro\nSeu orçamento de IA é renovado todo mês.\nEvolução do orçamento\nConsumo acumulado · % do orçamento incluído\nAcumulado\nPor dia\n0%\n50%\n100%\n1 de out.\n16 de out.\n1 de nov.\n100% incluído\n8 de out.\n\n0,3% consumido até esta data\n\nOs dias são agrupados em UTC.\n\nO que consome seu orçamento?\nPercentual do orçamento incluído por tipo de uso.\nTrabalho de código do Numo\n0%\nRotinas\n0%\nNumo\n0,3%\nDitado de voz\n0%\nFeedback\n0%\nAutomações\n0%\nHistórico de uso\nAções do período atual e sua participação no orçamento.\nTodos os tipos\nBate-papo com Numo\n1 de out., 23:20\n<0,1%\nBate-papo com Numo\n1 de out., 23:18\n<0,1%\nBate-papo com Numo\n1 de out., 23:11\n<0,1%\nBate-papo com Numo\n1 de out., 23:08\n<0,1%\nBate-papo com Numo\n1 de out., 23:06\n<0,1%\nBate-papo com Numo\n1 de out., 23:05\n<0,1%\nBate-papo com Numo\n1 de out., 22:45\n<0,1%\nBate-papo com Numo\n1 de out., 22:30\n<0,1%\nBate-papo com Numo\n1 de out., 22:28\n<0,1%",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 321,
+        "y": 45,
+        "width": 1106,
+        "height": 1718
+      },
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "reviewed": true,
+      "sha256": "29eba37f196de6d82d2f5aa641c8d773ac25366a6d7349931fc308027deb81d3",
+      "action": "Read billing and usage; no checkout, portal or paid operation executed",
+      "visualReviewer": "agent:/root/automation_account_documentation"
+    },
+    {
+      "article": "numo-mcp-connections-config",
+      "locale": "en",
+      "url": "http://localhost:3000/settings?tab=mcp-clients",
+      "output": "public/documentation/en/numo-mcp-connections-config-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "lang": "en",
+      "text": "Add another MCP server\n\nEnter a name and the server URL to connect it to Numo.\n\nName\nServer URL\nAdvanced settings\n\nWorks with public HTTPS MCP servers, including servers outside this catalog. Choose SSE in advanced settings for older servers. Local commands and private networks are not supported.\n\nAuthentication\nSign in with OAuth\nSign in with OAuth\nBearer token\nNo authentication\n\nSign in on the provider’s website. Minddy can refresh your connection for Numo conversations and routines.\n\nOAuth app settings (if required)\nTransport\nStreamable HTTP\nStreamable HTTP\nSSE\nCustom headers (JSON)\n\nHeaders are encrypted. Leave blank to keep them, or enter {} to remove them. Changing the URL clears saved headers. Use the authentication selector for Authorization.\n\nSign in\nCancel\nClose",
+      "bounds": {
+        "x": 464,
+        "y": 464.875,
+        "width": 512,
+        "height": 870.25
+      },
+      "action": "Open blank custom server form and its actual advanced authentication/transport/header controls. No save, credentials, OAuth or external call.",
+      "reviewed": true,
+      "sha256": "cea95333b17abc36847992f243a91b1f59b8d484ebab2be923dc6188be889782",
+      "visualReviewer": "agent:/root/automation_account_documentation"
+    },
+    {
+      "article": "numo-mcp-connections-config",
+      "locale": "fr",
+      "url": "http://localhost:3000/settings?tab=mcp-clients",
+      "output": "public/documentation/fr/numo-mcp-connections-config-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "lang": "fr",
+      "text": "Ajouter un autre serveur MCP\n\nSaisissez un nom et l’URL du serveur pour le connecter à Numo.\n\nNom\nURL du serveur\nParamètres avancés\n\nCompatible avec les serveurs MCP HTTPS publics, même absents du catalogue. Choisissez SSE dans les paramètres avancés pour les anciens serveurs. Les commandes locales et réseaux privés ne sont pas pris en charge.\n\nAuthentification\nSe connecter avec OAuth\nSe connecter avec OAuth\nJeton Bearer\nSans authentification\n\nConnectez-vous sur le site du fournisseur. Minddy peut renouveler la connexion pour les conversations Numo et les routines.\n\nParamètres de l’application OAuth (si nécessaire)\nTransport\nStreamable HTTP\nStreamable HTTP\nSSE\nEn-têtes personnalisés (JSON)\n\nLes en-têtes sont chiffrés. Laissez vide pour les conserver, ou saisissez {} pour les retirer. Changer l’URL les supprime. Utilisez le choix d’authentification pour Authorization.\n\nSe connecter\nAnnuler\nClose",
+      "bounds": {
+        "x": 464,
+        "y": 464.875,
+        "width": 512,
+        "height": 870.25
+      },
+      "action": "Open blank custom server form and its actual advanced authentication/transport/header controls. No save, credentials, OAuth or external call.",
+      "reviewed": true,
+      "sha256": "62bbc6d7a3ab6195109545e46f926cdca5c8596f526e4f064adf156ed59ce60c",
+      "visualReviewer": "agent:/root/automation_account_documentation"
+    },
+    {
+      "article": "numo-mcp-connections-config",
+      "locale": "de",
+      "url": "http://localhost:3000/settings?tab=mcp-clients",
+      "output": "public/documentation/de/numo-mcp-connections-config-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "lang": "de",
+      "text": "Anderen MCP-Server hinzufügen\n\nGib einen Namen und die Server-URL ein, um ihn mit Numo zu verbinden.\n\nName\nServer-URL\nErweiterte Einstellungen\n\nUnterstützt öffentliche HTTPS-MCP-Server, auch außerhalb dieses Katalogs. Für ältere Server SSE in den erweiterten Einstellungen wählen. Lokale Befehle und private Netzwerke werden nicht unterstützt.\n\nAuthentifizierung\nMit OAuth anmelden\nMit OAuth anmelden\nBearer-Token\nKeine Authentifizierung\n\nMelde dich auf der Website des Anbieters an. Minddy kann die Verbindung für Numo-Unterhaltungen und Routinen erneuern.\n\nOAuth-App-Einstellungen (falls erforderlich)\nTransport\nStreamable HTTP\nStreamable HTTP\nSSE\nEigene Header (JSON)\n\nHeader werden verschlüsselt. Leer lassen zum Behalten, {} zum Entfernen. Eine neue URL löscht gespeicherte Header. Für Authorization die Authentifizierungsauswahl verwenden.\n\nAnmelden\nAbbrechen\nClose",
+      "bounds": {
+        "x": 464,
+        "y": 454.875,
+        "width": 512,
+        "height": 890.25
+      },
+      "action": "Open blank custom server form and its actual advanced authentication/transport/header controls. No save, credentials, OAuth or external call.",
+      "reviewed": true,
+      "sha256": "75aa9ee6e711097b68286ca31aae499885cc6a0ebc208de01bb921a18004e5fd",
+      "visualReviewer": "agent:/root/automation_account_documentation"
+    },
+    {
+      "article": "numo-mcp-connections-config",
+      "locale": "es",
+      "url": "http://localhost:3000/settings?tab=mcp-clients",
+      "output": "public/documentation/es/numo-mcp-connections-config-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "lang": "es",
+      "text": "Añadir otro servidor MCP\n\nIntroduce un nombre y la URL del servidor para conectarlo a Numo.\n\nNombre\nURL del servidor\nOpciones avanzadas\n\nCompatible con servidores MCP HTTPS públicos, incluso fuera del catálogo. Elige SSE en opciones avanzadas para servidores antiguos. No admite comandos locales ni redes privadas.\n\nAutenticación\nIniciar sesión con OAuth\nIniciar sesión con OAuth\nToken Bearer\nSin autenticación\n\nInicia sesión en el sitio del proveedor. Minddy puede renovar la conexión para las conversaciones con Numo y las rutinas.\n\nConfiguración de aplicación OAuth (si hace falta)\nTransporte\nStreamable HTTP\nStreamable HTTP\nSSE\nCabeceras personalizadas (JSON)\n\nLas cabeceras se cifran. Déjalo vacío para conservarlas o escribe {} para quitarlas. Cambiar la URL las elimina. Usa el selector de autenticación para Authorization.\n\nIniciar sesión\nCancelar\nClose",
+      "bounds": {
+        "x": 464,
+        "y": 464.875,
+        "width": 512,
+        "height": 870.25
+      },
+      "action": "Open blank custom server form and its actual advanced authentication/transport/header controls. No save, credentials, OAuth or external call.",
+      "reviewed": true,
+      "sha256": "4614d2a5d2653d26b9aebbb3b96becfebf2c1ff9cf2402f6f11e2d00b6da8925",
+      "visualReviewer": "agent:/root/automation_account_documentation"
+    },
+    {
+      "article": "numo-mcp-connections-config",
+      "locale": "it",
+      "url": "http://localhost:3000/settings?tab=mcp-clients",
+      "output": "public/documentation/it/numo-mcp-connections-config-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "lang": "it",
+      "text": "Aggiungi un altro server MCP\n\nInserisci un nome e l’URL del server per collegarlo a Numo.\n\nNome\nURL del server\nImpostazioni avanzate\n\nSupporta server MCP HTTPS pubblici, anche fuori dal catalogo. Scegli SSE nelle impostazioni avanzate per server meno recenti. Comandi locali e reti private non sono supportati.\n\nAutenticazione\nAccedi con OAuth\nAccedi con OAuth\nToken Bearer\nNessuna autenticazione\n\nAccedi al sito del provider. Minddy può aggiornare la connessione per le conversazioni con Numo e le routine.\n\nImpostazioni app OAuth (se richieste)\nTrasporto\nStreamable HTTP\nStreamable HTTP\nSSE\nHeader personalizzati (JSON)\n\nGli header sono crittografati. Lascia vuoto per mantenerli o inserisci {} per rimuoverli. Cambiare URL li elimina. Per Authorization usa il selettore di autenticazione.\n\nAccedi\nAnnulla\nClose",
+      "bounds": {
+        "x": 464,
+        "y": 464.875,
+        "width": 512,
+        "height": 870.25
+      },
+      "action": "Open blank custom server form and its actual advanced authentication/transport/header controls. No save, credentials, OAuth or external call.",
+      "reviewed": true,
+      "sha256": "c4c922f4be3ba439d903e484799c6786cf19de924606bc1c97f7d9e2cee7b214",
+      "visualReviewer": "agent:/root/automation_account_documentation"
+    },
+    {
+      "article": "numo-mcp-connections-config",
+      "locale": "pt-BR",
+      "url": "http://localhost:3000/settings?tab=mcp-clients",
+      "output": "public/documentation/pt-BR/numo-mcp-connections-config-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "lang": "pt-BR",
+      "text": "Adicionar outro servidor MCP\n\nInsira um nome e a URL do servidor para conectá-lo ao Numo.\n\nNome\nURL do servidor\nConfigurações avançadas\n\nCompatível com servidores MCP HTTPS públicos, mesmo fora do catálogo. Escolha SSE nas configurações avançadas para servidores antigos. Comandos locais e redes privadas não são compatíveis.\n\nAutenticação\nEntrar com OAuth\nEntrar com OAuth\nToken Bearer\nSem autenticação\n\nEntre no site do provedor. O Minddy pode renovar a conexão para conversas com o Numo e rotinas.\n\nConfigurações do aplicativo OAuth (se necessário)\nTransporte\nStreamable HTTP\nStreamable HTTP\nSSE\nCabeçalhos personalizados (JSON)\n\nOs cabeçalhos são criptografados. Deixe em branco para mantê-los ou insira {} para removê-los. Alterar a URL os apaga. Use o seletor de autenticação para Authorization.\n\nEntrar\nCancelar\nClose",
+      "bounds": {
+        "x": 464,
+        "y": 464.875,
+        "width": 512,
+        "height": 870.25
+      },
+      "action": "Open blank custom server form and its actual advanced authentication/transport/header controls. No save, credentials, OAuth or external call.",
+      "reviewed": true,
+      "sha256": "78cbf84c41411d10d987e04b3f4bb98be27fba7c0a8cfe450a261578be34f35c",
+      "visualReviewer": "agent:/root/automation_account_documentation"
+    }
+  ],
+  "visualReview": {
+    "date": "2026-10-08",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "method": "Inspected each final locale image, actual controls, locale, masked secrets and demonstration data. These images do not establish workflow execution or publication approval."
+  }
+}

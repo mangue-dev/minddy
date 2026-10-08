@@ -1,0 +1,251 @@
+{
+  "author": "agent:/root/operator_documentation",
+  "date": "2026-10-08",
+  "publicationApproved": false,
+  "codeRunOrPaidModelCallPerformed": false,
+  "original": {
+    "path": ".agents/skills/documentation-demo/SKILL.md",
+    "name": "documentation-demo",
+    "description": "Verify a small change in the isolated reader acceptance repository.",
+    "source": ".agents/skills",
+    "content": "Keep changes within this disposable repository. Run `npm test` after the change.\nInclude the observed test result in your report. Do not merge the pull request."
+  },
+  "translations": {
+    "en": [
+      "Verify a small change in the isolated reader acceptance repository.",
+      "Keep changes within this disposable repository. Run `npm test` after the change.\nInclude the observed test result in your report. Do not merge the pull request."
+    ],
+    "fr": [
+      "Vérifier une petite modification dans le dépôt isolé utilisé pour la validation des lecteurs.",
+      "Limitez les modifications à ce dépôt jetable. Exécutez `npm test` après la modification.\nIndiquez le résultat observé des tests dans votre compte rendu. Ne fusionnez pas la pull request."
+    ],
+    "de": [
+      "Prüfen Sie eine kleine Änderung im isolierten Repository für die Leserprüfung.",
+      "Beschränken Sie Änderungen auf dieses temporäre Repository. Führen Sie nach der Änderung `npm test` aus.\nGeben Sie das beobachtete Testergebnis in Ihrem Bericht an. Mergen Sie den Pull Request nicht."
+    ],
+    "es": [
+      "Compruebe un pequeño cambio en el repositorio aislado de validación para lectores.",
+      "Limite los cambios a este repositorio desechable. Ejecute `npm test` después del cambio.\nIncluya el resultado observado de las pruebas en su informe. No fusione la pull request."
+    ],
+    "it": [
+      "Verifica una piccola modifica nel repository isolato usato per la validazione con i lettori.",
+      "Limita le modifiche a questo repository temporaneo. Esegui `npm test` dopo la modifica.\nIncludi nel resoconto il risultato effettivo dei test. Non eseguire il merge della pull request."
+    ],
+    "pt-BR": [
+      "Verifique uma pequena alteração no repositório isolado usado na validação com leitores.",
+      "Mantenha as alterações neste repositório temporário. Execute `npm test` após a alteração.\nInclua no relatório o resultado observado dos testes. Não faça o merge da pull request."
+    ]
+  },
+  "captures": [
+    {
+      "locale": "en",
+      "article": "repository-skills",
+      "output": "public/documentation/en/repository-skills-workflow.png",
+      "sha256": "5535c3da841d1e93156cfec12e80196ce531174a76c7b17278a5c69a62da1911",
+      "capturedAt": "2026-10-08",
+      "viewport": [
+        1280,
+        920
+      ],
+      "theme": "light",
+      "reviewed": true,
+      "exchanges": [
+        {
+          "status": 200,
+          "list": true,
+          "beforeSha256": "db1e3d00a730a4ccf719df566472ee0417f061ad51d439d69b15697f1581c24f",
+          "afterSha256": "db1e3d00a730a4ccf719df566472ee0417f061ad51d439d69b15697f1581c24f"
+        },
+        {
+          "status": 200,
+          "list": true,
+          "beforeSha256": "db1e3d00a730a4ccf719df566472ee0417f061ad51d439d69b15697f1581c24f",
+          "afterSha256": "db1e3d00a730a4ccf719df566472ee0417f061ad51d439d69b15697f1581c24f"
+        },
+        {
+          "status": 200,
+          "list": false,
+          "beforeSha256": "2dedcd5d356868af96a94f6449d0df82457f7f4390db943eed517a6b177c0e18",
+          "afterSha256": "2dedcd5d356868af96a94f6449d0df82457f7f4390db943eed517a6b177c0e18"
+        }
+      ],
+      "qualification": "Real discovery and preview of a committed skill in the linked private demonstration repository. Only exact description/body narratives translated in successful GET responses; identity, path, source, command, prohibitions and success statuses preserved. Composer not submitted.",
+      "authorPixelReview": "Actual rendered UI inspected in every language; visible text, preserved conditions, readable layout, no secrets. Native OS installation or banner delivery not claimed."
+    },
+    {
+      "locale": "fr",
+      "article": "repository-skills",
+      "output": "public/documentation/fr/repository-skills-workflow.png",
+      "sha256": "69af8a89ec242131f5961158bea224ae9e5ec2c0271ca88be95c7de218f3700a",
+      "capturedAt": "2026-10-08",
+      "viewport": [
+        1280,
+        920
+      ],
+      "theme": "light",
+      "reviewed": true,
+      "exchanges": [
+        {
+          "status": 200,
+          "list": true,
+          "beforeSha256": "db1e3d00a730a4ccf719df566472ee0417f061ad51d439d69b15697f1581c24f",
+          "afterSha256": "ccb80cdc805f58777fe4cca1d46dc9c034c00b562ad1cdd3941b49a69ffae13b"
+        },
+        {
+          "status": 200,
+          "list": true,
+          "beforeSha256": "db1e3d00a730a4ccf719df566472ee0417f061ad51d439d69b15697f1581c24f",
+          "afterSha256": "ccb80cdc805f58777fe4cca1d46dc9c034c00b562ad1cdd3941b49a69ffae13b"
+        },
+        {
+          "status": 200,
+          "list": false,
+          "beforeSha256": "2dedcd5d356868af96a94f6449d0df82457f7f4390db943eed517a6b177c0e18",
+          "afterSha256": "267b0be9aacfc375187f597f6d7a5dbea725a41ef315dc74f097ce201d943c8d"
+        }
+      ],
+      "qualification": "Real discovery and preview of a committed skill in the linked private demonstration repository. Only exact description/body narratives translated in successful GET responses; identity, path, source, command, prohibitions and success statuses preserved. Composer not submitted.",
+      "authorPixelReview": "Actual rendered UI inspected in every language; visible text, preserved conditions, readable layout, no secrets. Native OS installation or banner delivery not claimed."
+    },
+    {
+      "locale": "de",
+      "article": "repository-skills",
+      "output": "public/documentation/de/repository-skills-workflow.png",
+      "sha256": "6c26ae2f9945bb1c421c63bf64de05bb680582a91b3b5363cecf87fcc9c90ddb",
+      "capturedAt": "2026-10-08",
+      "viewport": [
+        1280,
+        920
+      ],
+      "theme": "light",
+      "reviewed": true,
+      "exchanges": [
+        {
+          "status": 200,
+          "list": true,
+          "beforeSha256": "db1e3d00a730a4ccf719df566472ee0417f061ad51d439d69b15697f1581c24f",
+          "afterSha256": "f868aff4fb4614498df623c28cfe208f865c209105b24b26af9309bb84f5837e"
+        },
+        {
+          "status": 200,
+          "list": true,
+          "beforeSha256": "db1e3d00a730a4ccf719df566472ee0417f061ad51d439d69b15697f1581c24f",
+          "afterSha256": "f868aff4fb4614498df623c28cfe208f865c209105b24b26af9309bb84f5837e"
+        },
+        {
+          "status": 200,
+          "list": false,
+          "beforeSha256": "2dedcd5d356868af96a94f6449d0df82457f7f4390db943eed517a6b177c0e18",
+          "afterSha256": "368325fb813bf3f11b6bb75dbfcb3f574e242a649370cb1058e0e7d8975e299b"
+        }
+      ],
+      "qualification": "Real discovery and preview of a committed skill in the linked private demonstration repository. Only exact description/body narratives translated in successful GET responses; identity, path, source, command, prohibitions and success statuses preserved. Composer not submitted.",
+      "authorPixelReview": "Actual rendered UI inspected in every language; visible text, preserved conditions, readable layout, no secrets. Native OS installation or banner delivery not claimed."
+    },
+    {
+      "locale": "es",
+      "article": "repository-skills",
+      "output": "public/documentation/es/repository-skills-workflow.png",
+      "sha256": "f2b5c3d0101a27d0f56d334e37e3ca8bb955ac8dceaf72aeb3c58c032fe5d64a",
+      "capturedAt": "2026-10-08",
+      "viewport": [
+        1280,
+        920
+      ],
+      "theme": "light",
+      "reviewed": true,
+      "exchanges": [
+        {
+          "status": 200,
+          "list": true,
+          "beforeSha256": "db1e3d00a730a4ccf719df566472ee0417f061ad51d439d69b15697f1581c24f",
+          "afterSha256": "72171cfb36e73fc818745d874f8e611174645abf2f9411a5b047483ab314608c"
+        },
+        {
+          "status": 200,
+          "list": true,
+          "beforeSha256": "db1e3d00a730a4ccf719df566472ee0417f061ad51d439d69b15697f1581c24f",
+          "afterSha256": "72171cfb36e73fc818745d874f8e611174645abf2f9411a5b047483ab314608c"
+        },
+        {
+          "status": 200,
+          "list": false,
+          "beforeSha256": "2dedcd5d356868af96a94f6449d0df82457f7f4390db943eed517a6b177c0e18",
+          "afterSha256": "2acd87151ecb9fb437595eaff15736f35f18d6db96e75bdd22e03a0f159e00e5"
+        }
+      ],
+      "qualification": "Real discovery and preview of a committed skill in the linked private demonstration repository. Only exact description/body narratives translated in successful GET responses; identity, path, source, command, prohibitions and success statuses preserved. Composer not submitted.",
+      "authorPixelReview": "Actual rendered UI inspected in every language; visible text, preserved conditions, readable layout, no secrets. Native OS installation or banner delivery not claimed."
+    },
+    {
+      "locale": "it",
+      "article": "repository-skills",
+      "output": "public/documentation/it/repository-skills-workflow.png",
+      "sha256": "714e92f595bc9c2d24c72ef98393d7fcf3a22804a3bdaf01b9023a8f38c08736",
+      "capturedAt": "2026-10-08",
+      "viewport": [
+        1280,
+        920
+      ],
+      "theme": "light",
+      "reviewed": true,
+      "exchanges": [
+        {
+          "status": 200,
+          "list": true,
+          "beforeSha256": "db1e3d00a730a4ccf719df566472ee0417f061ad51d439d69b15697f1581c24f",
+          "afterSha256": "6fc72ee256123408bfc12eb280312462fc08ac1d3331c0dd5ab87755ddd866b2"
+        },
+        {
+          "status": 200,
+          "list": true,
+          "beforeSha256": "db1e3d00a730a4ccf719df566472ee0417f061ad51d439d69b15697f1581c24f",
+          "afterSha256": "6fc72ee256123408bfc12eb280312462fc08ac1d3331c0dd5ab87755ddd866b2"
+        },
+        {
+          "status": 200,
+          "list": false,
+          "beforeSha256": "2dedcd5d356868af96a94f6449d0df82457f7f4390db943eed517a6b177c0e18",
+          "afterSha256": "f6c8bdb789812920224ca2796f6e85de88668c1d01016f6dee08713ec4a3ac02"
+        }
+      ],
+      "qualification": "Real discovery and preview of a committed skill in the linked private demonstration repository. Only exact description/body narratives translated in successful GET responses; identity, path, source, command, prohibitions and success statuses preserved. Composer not submitted.",
+      "authorPixelReview": "Actual rendered UI inspected in every language; visible text, preserved conditions, readable layout, no secrets. Native OS installation or banner delivery not claimed."
+    },
+    {
+      "locale": "pt-BR",
+      "article": "repository-skills",
+      "output": "public/documentation/pt-BR/repository-skills-workflow.png",
+      "sha256": "9e330f0497ec0418ee3414f5d2b7f9d6b853355f333c6ffd102366c074348e21",
+      "capturedAt": "2026-10-08",
+      "viewport": [
+        1280,
+        920
+      ],
+      "theme": "light",
+      "reviewed": true,
+      "exchanges": [
+        {
+          "status": 200,
+          "list": true,
+          "beforeSha256": "db1e3d00a730a4ccf719df566472ee0417f061ad51d439d69b15697f1581c24f",
+          "afterSha256": "47024eee9d32ba4c26fa7ef1ef29329af95f9b38984f8dd4fd827130bd922919"
+        },
+        {
+          "status": 200,
+          "list": true,
+          "beforeSha256": "db1e3d00a730a4ccf719df566472ee0417f061ad51d439d69b15697f1581c24f",
+          "afterSha256": "47024eee9d32ba4c26fa7ef1ef29329af95f9b38984f8dd4fd827130bd922919"
+        },
+        {
+          "status": 200,
+          "list": false,
+          "beforeSha256": "2dedcd5d356868af96a94f6449d0df82457f7f4390db943eed517a6b177c0e18",
+          "afterSha256": "d9db8a1c25160cb9aa4beea6b8bf29261dc15990f77917e027b3f887f2c9a9a9"
+        }
+      ],
+      "qualification": "Real discovery and preview of a committed skill in the linked private demonstration repository. Only exact description/body narratives translated in successful GET responses; identity, path, source, command, prohibitions and success statuses preserved. Composer not submitted.",
+      "authorPixelReview": "Actual rendered UI inspected in every language; visible text, preserved conditions, readable layout, no secrets. Native OS installation or banner delivery not claimed."
+    }
+  ]
+}

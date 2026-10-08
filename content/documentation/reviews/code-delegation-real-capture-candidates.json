@@ -1,0 +1,1478 @@
+{
+  "author": "agent:/root/operator_documentation",
+  "date": "2026-10-08",
+  "conversationId": "fca0cb33-d0e3-4ae1-875c-168cd55d5b4e",
+  "initialRunId": "8a0f13ea-be6c-4fe1-ae1f-4c86ba4e35f3",
+  "correctedRunId": "b8d43dbf-2bc0-4498-afc0-5de17ca310dc",
+  "pr": "https://github.com/mangue-dev/minddy-min-664-reader-fixture/pull/1",
+  "head": "08b1544f76be74be399fef0989fc7d850d82309f",
+  "executionEvidence": "content/documentation/reviews/numo-code-reader-execution-2026-10-08.json",
+  "publicationApproved": false,
+  "localization": "Exact successful GET narrative/title translation only; commands, paths, IDs, states, timestamps, checks, code and artifacts preserved.",
+  "captures": [
+    {
+      "locale": "en",
+      "article": "recover-numo-work",
+      "output": "public/documentation/en/recover-numo-work-workflow.png",
+      "sha256": "7c58f669c986d619df407693463d22ea6bacf331cede7b9adbc0c0b6af79adb0",
+      "viewport": [
+        1480,
+        1100
+      ],
+      "theme": "light",
+      "capturedAt": "2026-10-08",
+      "reviewed": false,
+      "exchanges": [],
+      "qualification": "Actual parent Numo conversation showing the initial failed branch push after local work; no PR existed at that stage. Later recovery and correction occurred in this same conversation. Source narrative claims are not substituted for durable evidence."
+    },
+    {
+      "locale": "en",
+      "article": "delegate-code-work",
+      "output": "public/documentation/en/delegate-code-work-workflow.png",
+      "sha256": "bd40f02a132c06a47b091227f91a49e94db5e6922614c440cac90b1ebfac3a6e",
+      "viewport": [
+        1480,
+        1100
+      ],
+      "theme": "light",
+      "capturedAt": "2026-10-08",
+      "reviewed": false,
+      "exchanges": [],
+      "qualification": "Actual last delegated-work card, cropped from the real parent conversation; final response is not visible in this illustration. Parent independently inspected exact PR head08b1544f76be74be399fef0989fc7d850d82309f and executed4tests plus3direct assertions; no merge or provider CI success claimed."
+    },
+    {
+      "locale": "en",
+      "article": "review-pull-requests",
+      "output": "public/documentation/en/review-pull-requests-workflow.png",
+      "sha256": "865592b1e43978d2b07bad600e607ff779c640ffa89b090cdbce26a68910b631",
+      "viewport": [
+        1480,
+        1100
+      ],
+      "theme": "light",
+      "capturedAt": "2026-10-08",
+      "reviewed": false,
+      "exchanges": [],
+      "qualification": "Actual open unmerged private demonstration PR#1 at corrected head. Read-only Changes inspection; code/test strings and IDs remain exact. No approval, merge, provider CI or preview deployment is fabricated."
+    },
+    {
+      "locale": "fr",
+      "article": "recover-numo-work",
+      "output": "public/documentation/fr/recover-numo-work-workflow.png",
+      "sha256": "68be81ae29e7ebf8a9259977f4c13aaccedfa5bd07d4fe30111fb81932a1b31f",
+      "viewport": [
+        1480,
+        1100
+      ],
+      "theme": "light",
+      "capturedAt": "2026-10-08",
+      "reviewed": false,
+      "exchanges": [
+        {
+          "path": "/api/pull-requests",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f80f1e640808ca7a851e185ab2efb206640ea970024522ffbcddb2aae8d5efab",
+          "localizedSHA256": "85218c57ee384e1ed2a793eeb2cb85702109bc2a03f65d20d8183e5cbacf58b4"
+        },
+        {
+          "path": "/api/pull-requests",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f80f1e640808ca7a851e185ab2efb206640ea970024522ffbcddb2aae8d5efab",
+          "localizedSHA256": "85218c57ee384e1ed2a793eeb2cb85702109bc2a03f65d20d8183e5cbacf58b4"
+        },
+        {
+          "path": "/api/numo/conversations/fca0cb33-d0e3-4ae1-875c-168cd55d5b4e",
+          "status": 200,
+          "exactNarrativeReplacements": 11,
+          "originalSHA256": "4a7bfb0f5fb8a5c200b625d1fbed3565ab652555e18878ca1a517ad6cdf0a5d0",
+          "localizedSHA256": "da4e3f41d349861bbfd0f780901f85518a9af10b8583347171e25563bd6dce8f"
+        },
+        {
+          "path": "/api/pull-requests",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f80f1e640808ca7a851e185ab2efb206640ea970024522ffbcddb2aae8d5efab",
+          "localizedSHA256": "85218c57ee384e1ed2a793eeb2cb85702109bc2a03f65d20d8183e5cbacf58b4"
+        },
+        {
+          "path": "/api/agent-runs/8a0f13ea-be6c-4fe1-ae1f-4c86ba4e35f3",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "89a46cc6eee0df32a087d85e4edef4353d976322a0e8257f06cb77ec708cbe67",
+          "localizedSHA256": "e9a968a7b542747757e871ab3b93317c029e254d61596d9a0901024052a810dc"
+        },
+        {
+          "path": "/api/agent-runs/2edf486e-f669-4187-a0da-ee53e24f4473/events",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "ab166afc6ee658e181d0c275b4a7ce4d6cc15aa383481db69945b1bcee69fbff",
+          "localizedSHA256": "e3043181d8f377e89a2e89d9a2aab81ccf3ba7855027692063daa86dbf5dd478"
+        },
+        {
+          "path": "/api/agent-runs/b8d43dbf-2bc0-4498-afc0-5de17ca310dc",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "1ab2746e5d3f980bcdf67608bb85e1afb9c413f8ba30c3c474c004e9473bb152",
+          "localizedSHA256": "3cffd5c510d7d762caebac79c4b6281cac18220e4a530fa35b6862ded9d953b3"
+        },
+        {
+          "path": "/api/agent-runs/2edf486e-f669-4187-a0da-ee53e24f4473/events",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "ab166afc6ee658e181d0c275b4a7ce4d6cc15aa383481db69945b1bcee69fbff",
+          "localizedSHA256": "e3043181d8f377e89a2e89d9a2aab81ccf3ba7855027692063daa86dbf5dd478"
+        },
+        {
+          "path": "/api/pull-requests/d3d25f8b-8502-49df-8a36-3528707b6e51",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "96c0deaa4b403bf4c0bf5d288ec20688ac77b6fcf577bfce58c5b3770c219620",
+          "localizedSHA256": "6e45a54e6b36f16528458dcac56ea0fe29fe8f23e3155fe7816b518688e50f41"
+        }
+      ],
+      "qualification": "Actual parent Numo conversation showing the initial failed branch push after local work; no PR existed at that stage. Later recovery and correction occurred in this same conversation. Source narrative claims are not substituted for durable evidence."
+    },
+    {
+      "locale": "fr",
+      "article": "delegate-code-work",
+      "output": "public/documentation/fr/delegate-code-work-workflow.png",
+      "sha256": "44369530cbafd1fb53ed171afab9fbb0dd3027f73d562713e1de0f8c7ec3c1a1",
+      "viewport": [
+        1480,
+        1100
+      ],
+      "theme": "light",
+      "capturedAt": "2026-10-08",
+      "reviewed": false,
+      "exchanges": [
+        {
+          "path": "/api/pull-requests",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f80f1e640808ca7a851e185ab2efb206640ea970024522ffbcddb2aae8d5efab",
+          "localizedSHA256": "85218c57ee384e1ed2a793eeb2cb85702109bc2a03f65d20d8183e5cbacf58b4"
+        },
+        {
+          "path": "/api/pull-requests",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f80f1e640808ca7a851e185ab2efb206640ea970024522ffbcddb2aae8d5efab",
+          "localizedSHA256": "85218c57ee384e1ed2a793eeb2cb85702109bc2a03f65d20d8183e5cbacf58b4"
+        },
+        {
+          "path": "/api/numo/conversations/fca0cb33-d0e3-4ae1-875c-168cd55d5b4e",
+          "status": 200,
+          "exactNarrativeReplacements": 11,
+          "originalSHA256": "4a7bfb0f5fb8a5c200b625d1fbed3565ab652555e18878ca1a517ad6cdf0a5d0",
+          "localizedSHA256": "da4e3f41d349861bbfd0f780901f85518a9af10b8583347171e25563bd6dce8f"
+        },
+        {
+          "path": "/api/pull-requests",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f80f1e640808ca7a851e185ab2efb206640ea970024522ffbcddb2aae8d5efab",
+          "localizedSHA256": "85218c57ee384e1ed2a793eeb2cb85702109bc2a03f65d20d8183e5cbacf58b4"
+        },
+        {
+          "path": "/api/agent-runs/8a0f13ea-be6c-4fe1-ae1f-4c86ba4e35f3",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "89a46cc6eee0df32a087d85e4edef4353d976322a0e8257f06cb77ec708cbe67",
+          "localizedSHA256": "e9a968a7b542747757e871ab3b93317c029e254d61596d9a0901024052a810dc"
+        },
+        {
+          "path": "/api/agent-runs/2edf486e-f669-4187-a0da-ee53e24f4473/events",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "ab166afc6ee658e181d0c275b4a7ce4d6cc15aa383481db69945b1bcee69fbff",
+          "localizedSHA256": "e3043181d8f377e89a2e89d9a2aab81ccf3ba7855027692063daa86dbf5dd478"
+        },
+        {
+          "path": "/api/agent-runs/b8d43dbf-2bc0-4498-afc0-5de17ca310dc",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "1ab2746e5d3f980bcdf67608bb85e1afb9c413f8ba30c3c474c004e9473bb152",
+          "localizedSHA256": "3cffd5c510d7d762caebac79c4b6281cac18220e4a530fa35b6862ded9d953b3"
+        },
+        {
+          "path": "/api/agent-runs/2edf486e-f669-4187-a0da-ee53e24f4473/events",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "ab166afc6ee658e181d0c275b4a7ce4d6cc15aa383481db69945b1bcee69fbff",
+          "localizedSHA256": "e3043181d8f377e89a2e89d9a2aab81ccf3ba7855027692063daa86dbf5dd478"
+        },
+        {
+          "path": "/api/pull-requests/d3d25f8b-8502-49df-8a36-3528707b6e51",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "96c0deaa4b403bf4c0bf5d288ec20688ac77b6fcf577bfce58c5b3770c219620",
+          "localizedSHA256": "6e45a54e6b36f16528458dcac56ea0fe29fe8f23e3155fe7816b518688e50f41"
+        }
+      ],
+      "qualification": "Actual last delegated-work card, cropped from the real parent conversation; final response is not visible in this illustration. Parent independently inspected exact PR head08b1544f76be74be399fef0989fc7d850d82309f and executed4tests plus3direct assertions; no merge or provider CI success claimed.",
+      "localizationNote": "Exact GET card-title translation; source ID/state/branch/commit/PR unchanged. Runtime reasoningLow label corrected from primary low mapping."
+    },
+    {
+      "locale": "fr",
+      "article": "review-pull-requests",
+      "output": "public/documentation/fr/review-pull-requests-workflow.png",
+      "sha256": "e10c5b61c89a0e38c67f844725a36a4cbd44a5a2646e384be72b64d284bf5056",
+      "viewport": [
+        1480,
+        1100
+      ],
+      "theme": "light",
+      "capturedAt": "2026-10-08",
+      "reviewed": false,
+      "exchanges": [
+        {
+          "path": "/api/pull-requests",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f80f1e640808ca7a851e185ab2efb206640ea970024522ffbcddb2aae8d5efab",
+          "localizedSHA256": "85218c57ee384e1ed2a793eeb2cb85702109bc2a03f65d20d8183e5cbacf58b4"
+        },
+        {
+          "path": "/api/pull-requests",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f80f1e640808ca7a851e185ab2efb206640ea970024522ffbcddb2aae8d5efab",
+          "localizedSHA256": "85218c57ee384e1ed2a793eeb2cb85702109bc2a03f65d20d8183e5cbacf58b4"
+        },
+        {
+          "path": "/api/numo/conversations/fca0cb33-d0e3-4ae1-875c-168cd55d5b4e",
+          "status": 200,
+          "exactNarrativeReplacements": 11,
+          "originalSHA256": "4a7bfb0f5fb8a5c200b625d1fbed3565ab652555e18878ca1a517ad6cdf0a5d0",
+          "localizedSHA256": "da4e3f41d349861bbfd0f780901f85518a9af10b8583347171e25563bd6dce8f"
+        },
+        {
+          "path": "/api/pull-requests",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f80f1e640808ca7a851e185ab2efb206640ea970024522ffbcddb2aae8d5efab",
+          "localizedSHA256": "85218c57ee384e1ed2a793eeb2cb85702109bc2a03f65d20d8183e5cbacf58b4"
+        },
+        {
+          "path": "/api/agent-runs/8a0f13ea-be6c-4fe1-ae1f-4c86ba4e35f3",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "89a46cc6eee0df32a087d85e4edef4353d976322a0e8257f06cb77ec708cbe67",
+          "localizedSHA256": "e9a968a7b542747757e871ab3b93317c029e254d61596d9a0901024052a810dc"
+        },
+        {
+          "path": "/api/agent-runs/2edf486e-f669-4187-a0da-ee53e24f4473/events",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "ab166afc6ee658e181d0c275b4a7ce4d6cc15aa383481db69945b1bcee69fbff",
+          "localizedSHA256": "e3043181d8f377e89a2e89d9a2aab81ccf3ba7855027692063daa86dbf5dd478"
+        },
+        {
+          "path": "/api/agent-runs/b8d43dbf-2bc0-4498-afc0-5de17ca310dc",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "1ab2746e5d3f980bcdf67608bb85e1afb9c413f8ba30c3c474c004e9473bb152",
+          "localizedSHA256": "3cffd5c510d7d762caebac79c4b6281cac18220e4a530fa35b6862ded9d953b3"
+        },
+        {
+          "path": "/api/agent-runs/2edf486e-f669-4187-a0da-ee53e24f4473/events",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "ab166afc6ee658e181d0c275b4a7ce4d6cc15aa383481db69945b1bcee69fbff",
+          "localizedSHA256": "e3043181d8f377e89a2e89d9a2aab81ccf3ba7855027692063daa86dbf5dd478"
+        },
+        {
+          "path": "/api/pull-requests/d3d25f8b-8502-49df-8a36-3528707b6e51",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "96c0deaa4b403bf4c0bf5d288ec20688ac77b6fcf577bfce58c5b3770c219620",
+          "localizedSHA256": "6e45a54e6b36f16528458dcac56ea0fe29fe8f23e3155fe7816b518688e50f41"
+        },
+        {
+          "path": "/api/pull-requests",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f80f1e640808ca7a851e185ab2efb206640ea970024522ffbcddb2aae8d5efab",
+          "localizedSHA256": "85218c57ee384e1ed2a793eeb2cb85702109bc2a03f65d20d8183e5cbacf58b4"
+        },
+        {
+          "path": "/api/pull-requests",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f80f1e640808ca7a851e185ab2efb206640ea970024522ffbcddb2aae8d5efab",
+          "localizedSHA256": "85218c57ee384e1ed2a793eeb2cb85702109bc2a03f65d20d8183e5cbacf58b4"
+        },
+        {
+          "path": "/api/pull-requests",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f80f1e640808ca7a851e185ab2efb206640ea970024522ffbcddb2aae8d5efab",
+          "localizedSHA256": "85218c57ee384e1ed2a793eeb2cb85702109bc2a03f65d20d8183e5cbacf58b4"
+        },
+        {
+          "path": "/api/pull-requests",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f80f1e640808ca7a851e185ab2efb206640ea970024522ffbcddb2aae8d5efab",
+          "localizedSHA256": "85218c57ee384e1ed2a793eeb2cb85702109bc2a03f65d20d8183e5cbacf58b4"
+        },
+        {
+          "path": "/api/pull-requests",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f80f1e640808ca7a851e185ab2efb206640ea970024522ffbcddb2aae8d5efab",
+          "localizedSHA256": "85218c57ee384e1ed2a793eeb2cb85702109bc2a03f65d20d8183e5cbacf58b4"
+        },
+        {
+          "path": "/api/pull-requests",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f80f1e640808ca7a851e185ab2efb206640ea970024522ffbcddb2aae8d5efab",
+          "localizedSHA256": "85218c57ee384e1ed2a793eeb2cb85702109bc2a03f65d20d8183e5cbacf58b4"
+        },
+        {
+          "path": "/api/pull-requests/d3d25f8b-8502-49df-8a36-3528707b6e51/comments",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f4de4df3d82b7a27838e00563f9722acd1a6182c336b541dbf90d96f46a374c8",
+          "localizedSHA256": "262384fc7d0f492f8388e2439118bb21b9214f014199ebdabff7de65321f9279"
+        },
+        {
+          "path": "/api/pull-requests/d3d25f8b-8502-49df-8a36-3528707b6e51",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "96c0deaa4b403bf4c0bf5d288ec20688ac77b6fcf577bfce58c5b3770c219620",
+          "localizedSHA256": "6e45a54e6b36f16528458dcac56ea0fe29fe8f23e3155fe7816b518688e50f41"
+        }
+      ],
+      "qualification": "Actual open unmerged private demonstration PR#1 at corrected head. Read-only Changes inspection; code/test strings and IDs remain exact. No approval, merge, provider CI or preview deployment is fabricated."
+    },
+    {
+      "locale": "de",
+      "article": "recover-numo-work",
+      "output": "public/documentation/de/recover-numo-work-workflow.png",
+      "sha256": "bd755299d0ef0b267ea4e01992623813f8f589af6d594758bee7cf3c1b21edc9",
+      "viewport": [
+        1480,
+        1100
+      ],
+      "theme": "light",
+      "capturedAt": "2026-10-08",
+      "reviewed": false,
+      "exchanges": [
+        {
+          "path": "/api/pull-requests",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f80f1e640808ca7a851e185ab2efb206640ea970024522ffbcddb2aae8d5efab",
+          "localizedSHA256": "fd8edfa09ec1f5dbb12eb343192656f44a5db0cbaefb5e37b030d5db2c8fc405"
+        },
+        {
+          "path": "/api/numo/conversations/fca0cb33-d0e3-4ae1-875c-168cd55d5b4e",
+          "status": 200,
+          "exactNarrativeReplacements": 11,
+          "originalSHA256": "f31bbcac589a7d8e9d684f6d812cda7401c46bff5dce1cc522afc6cac9538bc7",
+          "localizedSHA256": "e2d9f575fbe9de8e848380aa70672a8573331ba37151464a00c14d6c9d592574"
+        },
+        {
+          "path": "/api/pull-requests",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f80f1e640808ca7a851e185ab2efb206640ea970024522ffbcddb2aae8d5efab",
+          "localizedSHA256": "fd8edfa09ec1f5dbb12eb343192656f44a5db0cbaefb5e37b030d5db2c8fc405"
+        },
+        {
+          "path": "/api/agent-runs/8a0f13ea-be6c-4fe1-ae1f-4c86ba4e35f3",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "89a46cc6eee0df32a087d85e4edef4353d976322a0e8257f06cb77ec708cbe67",
+          "localizedSHA256": "7c35f830b7d21278653c96cb0f6931cda195f268a0b2e8b95b40471705838b31"
+        },
+        {
+          "path": "/api/agent-runs/2edf486e-f669-4187-a0da-ee53e24f4473/events",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "ab166afc6ee658e181d0c275b4a7ce4d6cc15aa383481db69945b1bcee69fbff",
+          "localizedSHA256": "540edbc2e8114c7761ea9c37bae5b2d50e748684ce2beff62cd631050b212d8b"
+        },
+        {
+          "path": "/api/agent-runs/b8d43dbf-2bc0-4498-afc0-5de17ca310dc",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "1ab2746e5d3f980bcdf67608bb85e1afb9c413f8ba30c3c474c004e9473bb152",
+          "localizedSHA256": "8701a319c7d9bd567ebc6898a9c2c36e0b60dc9ad55b465469804fe7f6cfa116"
+        },
+        {
+          "path": "/api/agent-runs/2edf486e-f669-4187-a0da-ee53e24f4473/events",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "ab166afc6ee658e181d0c275b4a7ce4d6cc15aa383481db69945b1bcee69fbff",
+          "localizedSHA256": "540edbc2e8114c7761ea9c37bae5b2d50e748684ce2beff62cd631050b212d8b"
+        }
+      ],
+      "qualification": "Actual parent Numo conversation showing the initial failed branch push after local work; no PR existed at that stage. Later recovery and correction occurred in this same conversation. Source narrative claims are not substituted for durable evidence."
+    },
+    {
+      "locale": "de",
+      "article": "delegate-code-work",
+      "output": "public/documentation/de/delegate-code-work-workflow.png",
+      "sha256": "6ed41df09f8f6ad2081a6f7ee8e9a0f1f64d86c5a11e2fb61a3f7ae77ecf1f99",
+      "viewport": [
+        1480,
+        1100
+      ],
+      "theme": "light",
+      "capturedAt": "2026-10-08",
+      "reviewed": false,
+      "exchanges": [
+        {
+          "path": "/api/pull-requests",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f80f1e640808ca7a851e185ab2efb206640ea970024522ffbcddb2aae8d5efab",
+          "localizedSHA256": "fd8edfa09ec1f5dbb12eb343192656f44a5db0cbaefb5e37b030d5db2c8fc405"
+        },
+        {
+          "path": "/api/numo/conversations/fca0cb33-d0e3-4ae1-875c-168cd55d5b4e",
+          "status": 200,
+          "exactNarrativeReplacements": 11,
+          "originalSHA256": "f31bbcac589a7d8e9d684f6d812cda7401c46bff5dce1cc522afc6cac9538bc7",
+          "localizedSHA256": "e2d9f575fbe9de8e848380aa70672a8573331ba37151464a00c14d6c9d592574"
+        },
+        {
+          "path": "/api/pull-requests",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f80f1e640808ca7a851e185ab2efb206640ea970024522ffbcddb2aae8d5efab",
+          "localizedSHA256": "fd8edfa09ec1f5dbb12eb343192656f44a5db0cbaefb5e37b030d5db2c8fc405"
+        },
+        {
+          "path": "/api/agent-runs/8a0f13ea-be6c-4fe1-ae1f-4c86ba4e35f3",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "89a46cc6eee0df32a087d85e4edef4353d976322a0e8257f06cb77ec708cbe67",
+          "localizedSHA256": "7c35f830b7d21278653c96cb0f6931cda195f268a0b2e8b95b40471705838b31"
+        },
+        {
+          "path": "/api/agent-runs/2edf486e-f669-4187-a0da-ee53e24f4473/events",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "ab166afc6ee658e181d0c275b4a7ce4d6cc15aa383481db69945b1bcee69fbff",
+          "localizedSHA256": "540edbc2e8114c7761ea9c37bae5b2d50e748684ce2beff62cd631050b212d8b"
+        },
+        {
+          "path": "/api/agent-runs/b8d43dbf-2bc0-4498-afc0-5de17ca310dc",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "1ab2746e5d3f980bcdf67608bb85e1afb9c413f8ba30c3c474c004e9473bb152",
+          "localizedSHA256": "8701a319c7d9bd567ebc6898a9c2c36e0b60dc9ad55b465469804fe7f6cfa116"
+        },
+        {
+          "path": "/api/agent-runs/2edf486e-f669-4187-a0da-ee53e24f4473/events",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "ab166afc6ee658e181d0c275b4a7ce4d6cc15aa383481db69945b1bcee69fbff",
+          "localizedSHA256": "540edbc2e8114c7761ea9c37bae5b2d50e748684ce2beff62cd631050b212d8b"
+        }
+      ],
+      "qualification": "Actual last delegated-work card, cropped from the real parent conversation; final response is not visible in this illustration. Parent independently inspected exact PR head08b1544f76be74be399fef0989fc7d850d82309f and executed4tests plus3direct assertions; no merge or provider CI success claimed."
+    },
+    {
+      "locale": "de",
+      "article": "review-pull-requests",
+      "output": "public/documentation/de/review-pull-requests-workflow.png",
+      "sha256": "0c7a2bba1388d46500d1f30e8db3e014cd542518ad244455af794a7011f98597",
+      "viewport": [
+        1480,
+        1100
+      ],
+      "theme": "light",
+      "capturedAt": "2026-10-08",
+      "reviewed": false,
+      "exchanges": [
+        {
+          "path": "/api/pull-requests",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f80f1e640808ca7a851e185ab2efb206640ea970024522ffbcddb2aae8d5efab",
+          "localizedSHA256": "fd8edfa09ec1f5dbb12eb343192656f44a5db0cbaefb5e37b030d5db2c8fc405"
+        },
+        {
+          "path": "/api/numo/conversations/fca0cb33-d0e3-4ae1-875c-168cd55d5b4e",
+          "status": 200,
+          "exactNarrativeReplacements": 11,
+          "originalSHA256": "f31bbcac589a7d8e9d684f6d812cda7401c46bff5dce1cc522afc6cac9538bc7",
+          "localizedSHA256": "e2d9f575fbe9de8e848380aa70672a8573331ba37151464a00c14d6c9d592574"
+        },
+        {
+          "path": "/api/pull-requests",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f80f1e640808ca7a851e185ab2efb206640ea970024522ffbcddb2aae8d5efab",
+          "localizedSHA256": "fd8edfa09ec1f5dbb12eb343192656f44a5db0cbaefb5e37b030d5db2c8fc405"
+        },
+        {
+          "path": "/api/agent-runs/8a0f13ea-be6c-4fe1-ae1f-4c86ba4e35f3",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "89a46cc6eee0df32a087d85e4edef4353d976322a0e8257f06cb77ec708cbe67",
+          "localizedSHA256": "7c35f830b7d21278653c96cb0f6931cda195f268a0b2e8b95b40471705838b31"
+        },
+        {
+          "path": "/api/agent-runs/2edf486e-f669-4187-a0da-ee53e24f4473/events",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "ab166afc6ee658e181d0c275b4a7ce4d6cc15aa383481db69945b1bcee69fbff",
+          "localizedSHA256": "540edbc2e8114c7761ea9c37bae5b2d50e748684ce2beff62cd631050b212d8b"
+        },
+        {
+          "path": "/api/agent-runs/b8d43dbf-2bc0-4498-afc0-5de17ca310dc",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "1ab2746e5d3f980bcdf67608bb85e1afb9c413f8ba30c3c474c004e9473bb152",
+          "localizedSHA256": "8701a319c7d9bd567ebc6898a9c2c36e0b60dc9ad55b465469804fe7f6cfa116"
+        },
+        {
+          "path": "/api/agent-runs/2edf486e-f669-4187-a0da-ee53e24f4473/events",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "ab166afc6ee658e181d0c275b4a7ce4d6cc15aa383481db69945b1bcee69fbff",
+          "localizedSHA256": "540edbc2e8114c7761ea9c37bae5b2d50e748684ce2beff62cd631050b212d8b"
+        },
+        {
+          "path": "/api/pull-requests/d3d25f8b-8502-49df-8a36-3528707b6e51",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "96c0deaa4b403bf4c0bf5d288ec20688ac77b6fcf577bfce58c5b3770c219620",
+          "localizedSHA256": "17e19bd1469f7ee84e406c0169b7efd2c865487462186c63bbb25fead5558af4"
+        },
+        {
+          "path": "/api/pull-requests",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f80f1e640808ca7a851e185ab2efb206640ea970024522ffbcddb2aae8d5efab",
+          "localizedSHA256": "fd8edfa09ec1f5dbb12eb343192656f44a5db0cbaefb5e37b030d5db2c8fc405"
+        },
+        {
+          "path": "/api/pull-requests",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f80f1e640808ca7a851e185ab2efb206640ea970024522ffbcddb2aae8d5efab",
+          "localizedSHA256": "fd8edfa09ec1f5dbb12eb343192656f44a5db0cbaefb5e37b030d5db2c8fc405"
+        },
+        {
+          "path": "/api/pull-requests",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f80f1e640808ca7a851e185ab2efb206640ea970024522ffbcddb2aae8d5efab",
+          "localizedSHA256": "fd8edfa09ec1f5dbb12eb343192656f44a5db0cbaefb5e37b030d5db2c8fc405"
+        },
+        {
+          "path": "/api/pull-requests",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f80f1e640808ca7a851e185ab2efb206640ea970024522ffbcddb2aae8d5efab",
+          "localizedSHA256": "fd8edfa09ec1f5dbb12eb343192656f44a5db0cbaefb5e37b030d5db2c8fc405"
+        },
+        {
+          "path": "/api/pull-requests/d3d25f8b-8502-49df-8a36-3528707b6e51/comments",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f4de4df3d82b7a27838e00563f9722acd1a6182c336b541dbf90d96f46a374c8",
+          "localizedSHA256": "c7897912d79240e60b5129868038003bdac22559b58ca970455b1d4faf0392e9"
+        },
+        {
+          "path": "/api/pull-requests/d3d25f8b-8502-49df-8a36-3528707b6e51",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "96c0deaa4b403bf4c0bf5d288ec20688ac77b6fcf577bfce58c5b3770c219620",
+          "localizedSHA256": "17e19bd1469f7ee84e406c0169b7efd2c865487462186c63bbb25fead5558af4"
+        }
+      ],
+      "qualification": "Actual open unmerged private demonstration PR#1 at corrected head. Read-only Changes inspection; code/test strings and IDs remain exact. No approval, merge, provider CI or preview deployment is fabricated."
+    },
+    {
+      "locale": "es",
+      "article": "recover-numo-work",
+      "output": "public/documentation/es/recover-numo-work-workflow.png",
+      "sha256": "49098d9d714e85a0004bf11fc0e6e8157f8cc234b67cba873475395d620ec134",
+      "viewport": [
+        1480,
+        1100
+      ],
+      "theme": "light",
+      "capturedAt": "2026-10-08",
+      "reviewed": false,
+      "exchanges": [
+        {
+          "path": "/api/pull-requests",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f80f1e640808ca7a851e185ab2efb206640ea970024522ffbcddb2aae8d5efab",
+          "localizedSHA256": "30db5d321a90ab8181d788888a3d9a41dd8fd9eb6d606d2fba0bb8c71ce10f6f"
+        },
+        {
+          "path": "/api/numo/conversations/fca0cb33-d0e3-4ae1-875c-168cd55d5b4e",
+          "status": 200,
+          "exactNarrativeReplacements": 11,
+          "originalSHA256": "a71e96b9d5345b7056eff21095d75f6d16dc8f9656395da0a928364098f6fe96",
+          "localizedSHA256": "5508c4c8eff131a1946d0b9fb9cc92cabf591ac59357aa58f3b241753e5969dc"
+        },
+        {
+          "path": "/api/pull-requests",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f80f1e640808ca7a851e185ab2efb206640ea970024522ffbcddb2aae8d5efab",
+          "localizedSHA256": "30db5d321a90ab8181d788888a3d9a41dd8fd9eb6d606d2fba0bb8c71ce10f6f"
+        },
+        {
+          "path": "/api/pull-requests",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f80f1e640808ca7a851e185ab2efb206640ea970024522ffbcddb2aae8d5efab",
+          "localizedSHA256": "30db5d321a90ab8181d788888a3d9a41dd8fd9eb6d606d2fba0bb8c71ce10f6f"
+        },
+        {
+          "path": "/api/agent-runs/8a0f13ea-be6c-4fe1-ae1f-4c86ba4e35f3",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "89a46cc6eee0df32a087d85e4edef4353d976322a0e8257f06cb77ec708cbe67",
+          "localizedSHA256": "c8723a9e3eb26d92711f2d1938e778343fde01f89a3b8a383eb5aac698bfddec"
+        },
+        {
+          "path": "/api/agent-runs/2edf486e-f669-4187-a0da-ee53e24f4473/events",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "ab166afc6ee658e181d0c275b4a7ce4d6cc15aa383481db69945b1bcee69fbff",
+          "localizedSHA256": "10242310c695675d6a0b2ba56a0f8e795a32517bb60130d5318e722ce4196e74"
+        },
+        {
+          "path": "/api/agent-runs/2edf486e-f669-4187-a0da-ee53e24f4473/events",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "ab166afc6ee658e181d0c275b4a7ce4d6cc15aa383481db69945b1bcee69fbff",
+          "localizedSHA256": "10242310c695675d6a0b2ba56a0f8e795a32517bb60130d5318e722ce4196e74"
+        },
+        {
+          "path": "/api/agent-runs/b8d43dbf-2bc0-4498-afc0-5de17ca310dc",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "1ab2746e5d3f980bcdf67608bb85e1afb9c413f8ba30c3c474c004e9473bb152",
+          "localizedSHA256": "8b7ba42d8087080786a6ff5784f7ae2bdf164996334b4d5c6cc5ba682dbae31c"
+        },
+        {
+          "path": "/api/pull-requests/d3d25f8b-8502-49df-8a36-3528707b6e51",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "96c0deaa4b403bf4c0bf5d288ec20688ac77b6fcf577bfce58c5b3770c219620",
+          "localizedSHA256": "2f63a9773dd3a4d7345e1da58534e709fa62a194fc6f9970c5e803cb198af29c"
+        }
+      ],
+      "qualification": "Actual parent Numo conversation showing the initial failed branch push after local work; no PR existed at that stage. Later recovery and correction occurred in this same conversation. Source narrative claims are not substituted for durable evidence."
+    },
+    {
+      "locale": "es",
+      "article": "delegate-code-work",
+      "output": "public/documentation/es/delegate-code-work-workflow.png",
+      "sha256": "f300261dec5cecc90f7f88b1b7395b740e6bd0d31feb11a47c1b0be745bfbdbf",
+      "viewport": [
+        1480,
+        1100
+      ],
+      "theme": "light",
+      "capturedAt": "2026-10-08",
+      "reviewed": false,
+      "exchanges": [
+        {
+          "path": "/api/pull-requests",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f80f1e640808ca7a851e185ab2efb206640ea970024522ffbcddb2aae8d5efab",
+          "localizedSHA256": "30db5d321a90ab8181d788888a3d9a41dd8fd9eb6d606d2fba0bb8c71ce10f6f"
+        },
+        {
+          "path": "/api/numo/conversations/fca0cb33-d0e3-4ae1-875c-168cd55d5b4e",
+          "status": 200,
+          "exactNarrativeReplacements": 11,
+          "originalSHA256": "a71e96b9d5345b7056eff21095d75f6d16dc8f9656395da0a928364098f6fe96",
+          "localizedSHA256": "5508c4c8eff131a1946d0b9fb9cc92cabf591ac59357aa58f3b241753e5969dc"
+        },
+        {
+          "path": "/api/pull-requests",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f80f1e640808ca7a851e185ab2efb206640ea970024522ffbcddb2aae8d5efab",
+          "localizedSHA256": "30db5d321a90ab8181d788888a3d9a41dd8fd9eb6d606d2fba0bb8c71ce10f6f"
+        },
+        {
+          "path": "/api/pull-requests",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f80f1e640808ca7a851e185ab2efb206640ea970024522ffbcddb2aae8d5efab",
+          "localizedSHA256": "30db5d321a90ab8181d788888a3d9a41dd8fd9eb6d606d2fba0bb8c71ce10f6f"
+        },
+        {
+          "path": "/api/agent-runs/8a0f13ea-be6c-4fe1-ae1f-4c86ba4e35f3",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "89a46cc6eee0df32a087d85e4edef4353d976322a0e8257f06cb77ec708cbe67",
+          "localizedSHA256": "c8723a9e3eb26d92711f2d1938e778343fde01f89a3b8a383eb5aac698bfddec"
+        },
+        {
+          "path": "/api/agent-runs/2edf486e-f669-4187-a0da-ee53e24f4473/events",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "ab166afc6ee658e181d0c275b4a7ce4d6cc15aa383481db69945b1bcee69fbff",
+          "localizedSHA256": "10242310c695675d6a0b2ba56a0f8e795a32517bb60130d5318e722ce4196e74"
+        },
+        {
+          "path": "/api/agent-runs/2edf486e-f669-4187-a0da-ee53e24f4473/events",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "ab166afc6ee658e181d0c275b4a7ce4d6cc15aa383481db69945b1bcee69fbff",
+          "localizedSHA256": "10242310c695675d6a0b2ba56a0f8e795a32517bb60130d5318e722ce4196e74"
+        },
+        {
+          "path": "/api/agent-runs/b8d43dbf-2bc0-4498-afc0-5de17ca310dc",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "1ab2746e5d3f980bcdf67608bb85e1afb9c413f8ba30c3c474c004e9473bb152",
+          "localizedSHA256": "8b7ba42d8087080786a6ff5784f7ae2bdf164996334b4d5c6cc5ba682dbae31c"
+        },
+        {
+          "path": "/api/pull-requests/d3d25f8b-8502-49df-8a36-3528707b6e51",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "96c0deaa4b403bf4c0bf5d288ec20688ac77b6fcf577bfce58c5b3770c219620",
+          "localizedSHA256": "2f63a9773dd3a4d7345e1da58534e709fa62a194fc6f9970c5e803cb198af29c"
+        }
+      ],
+      "qualification": "Actual last delegated-work card, cropped from the real parent conversation; final response is not visible in this illustration. Parent independently inspected exact PR head08b1544f76be74be399fef0989fc7d850d82309f and executed4tests plus3direct assertions; no merge or provider CI success claimed."
+    },
+    {
+      "locale": "es",
+      "article": "review-pull-requests",
+      "output": "public/documentation/es/review-pull-requests-workflow.png",
+      "sha256": "6259ef0ee6c1d11b754589dacc22b8b3327b770f56da3867834cf91533ed8d72",
+      "viewport": [
+        1480,
+        1100
+      ],
+      "theme": "light",
+      "capturedAt": "2026-10-08",
+      "reviewed": false,
+      "exchanges": [
+        {
+          "path": "/api/pull-requests",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f80f1e640808ca7a851e185ab2efb206640ea970024522ffbcddb2aae8d5efab",
+          "localizedSHA256": "30db5d321a90ab8181d788888a3d9a41dd8fd9eb6d606d2fba0bb8c71ce10f6f"
+        },
+        {
+          "path": "/api/numo/conversations/fca0cb33-d0e3-4ae1-875c-168cd55d5b4e",
+          "status": 200,
+          "exactNarrativeReplacements": 11,
+          "originalSHA256": "a71e96b9d5345b7056eff21095d75f6d16dc8f9656395da0a928364098f6fe96",
+          "localizedSHA256": "5508c4c8eff131a1946d0b9fb9cc92cabf591ac59357aa58f3b241753e5969dc"
+        },
+        {
+          "path": "/api/pull-requests",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f80f1e640808ca7a851e185ab2efb206640ea970024522ffbcddb2aae8d5efab",
+          "localizedSHA256": "30db5d321a90ab8181d788888a3d9a41dd8fd9eb6d606d2fba0bb8c71ce10f6f"
+        },
+        {
+          "path": "/api/pull-requests",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f80f1e640808ca7a851e185ab2efb206640ea970024522ffbcddb2aae8d5efab",
+          "localizedSHA256": "30db5d321a90ab8181d788888a3d9a41dd8fd9eb6d606d2fba0bb8c71ce10f6f"
+        },
+        {
+          "path": "/api/agent-runs/8a0f13ea-be6c-4fe1-ae1f-4c86ba4e35f3",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "89a46cc6eee0df32a087d85e4edef4353d976322a0e8257f06cb77ec708cbe67",
+          "localizedSHA256": "c8723a9e3eb26d92711f2d1938e778343fde01f89a3b8a383eb5aac698bfddec"
+        },
+        {
+          "path": "/api/agent-runs/2edf486e-f669-4187-a0da-ee53e24f4473/events",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "ab166afc6ee658e181d0c275b4a7ce4d6cc15aa383481db69945b1bcee69fbff",
+          "localizedSHA256": "10242310c695675d6a0b2ba56a0f8e795a32517bb60130d5318e722ce4196e74"
+        },
+        {
+          "path": "/api/agent-runs/2edf486e-f669-4187-a0da-ee53e24f4473/events",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "ab166afc6ee658e181d0c275b4a7ce4d6cc15aa383481db69945b1bcee69fbff",
+          "localizedSHA256": "10242310c695675d6a0b2ba56a0f8e795a32517bb60130d5318e722ce4196e74"
+        },
+        {
+          "path": "/api/agent-runs/b8d43dbf-2bc0-4498-afc0-5de17ca310dc",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "1ab2746e5d3f980bcdf67608bb85e1afb9c413f8ba30c3c474c004e9473bb152",
+          "localizedSHA256": "8b7ba42d8087080786a6ff5784f7ae2bdf164996334b4d5c6cc5ba682dbae31c"
+        },
+        {
+          "path": "/api/pull-requests/d3d25f8b-8502-49df-8a36-3528707b6e51",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "96c0deaa4b403bf4c0bf5d288ec20688ac77b6fcf577bfce58c5b3770c219620",
+          "localizedSHA256": "2f63a9773dd3a4d7345e1da58534e709fa62a194fc6f9970c5e803cb198af29c"
+        },
+        {
+          "path": "/api/pull-requests",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f80f1e640808ca7a851e185ab2efb206640ea970024522ffbcddb2aae8d5efab",
+          "localizedSHA256": "30db5d321a90ab8181d788888a3d9a41dd8fd9eb6d606d2fba0bb8c71ce10f6f"
+        },
+        {
+          "path": "/api/pull-requests",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f80f1e640808ca7a851e185ab2efb206640ea970024522ffbcddb2aae8d5efab",
+          "localizedSHA256": "30db5d321a90ab8181d788888a3d9a41dd8fd9eb6d606d2fba0bb8c71ce10f6f"
+        },
+        {
+          "path": "/api/pull-requests",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f80f1e640808ca7a851e185ab2efb206640ea970024522ffbcddb2aae8d5efab",
+          "localizedSHA256": "30db5d321a90ab8181d788888a3d9a41dd8fd9eb6d606d2fba0bb8c71ce10f6f"
+        },
+        {
+          "path": "/api/pull-requests",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f80f1e640808ca7a851e185ab2efb206640ea970024522ffbcddb2aae8d5efab",
+          "localizedSHA256": "30db5d321a90ab8181d788888a3d9a41dd8fd9eb6d606d2fba0bb8c71ce10f6f"
+        },
+        {
+          "path": "/api/pull-requests",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f80f1e640808ca7a851e185ab2efb206640ea970024522ffbcddb2aae8d5efab",
+          "localizedSHA256": "30db5d321a90ab8181d788888a3d9a41dd8fd9eb6d606d2fba0bb8c71ce10f6f"
+        },
+        {
+          "path": "/api/pull-requests",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f80f1e640808ca7a851e185ab2efb206640ea970024522ffbcddb2aae8d5efab",
+          "localizedSHA256": "30db5d321a90ab8181d788888a3d9a41dd8fd9eb6d606d2fba0bb8c71ce10f6f"
+        },
+        {
+          "path": "/api/pull-requests/d3d25f8b-8502-49df-8a36-3528707b6e51/comments",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f4de4df3d82b7a27838e00563f9722acd1a6182c336b541dbf90d96f46a374c8",
+          "localizedSHA256": "4dbc282b5ef5e5e06761479b59bcc9114494c0c3121927e291fd37a59ba78ec2"
+        },
+        {
+          "path": "/api/pull-requests/d3d25f8b-8502-49df-8a36-3528707b6e51",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "96c0deaa4b403bf4c0bf5d288ec20688ac77b6fcf577bfce58c5b3770c219620",
+          "localizedSHA256": "2f63a9773dd3a4d7345e1da58534e709fa62a194fc6f9970c5e803cb198af29c"
+        }
+      ],
+      "qualification": "Actual open unmerged private demonstration PR#1 at corrected head. Read-only Changes inspection; code/test strings and IDs remain exact. No approval, merge, provider CI or preview deployment is fabricated."
+    },
+    {
+      "locale": "it",
+      "article": "recover-numo-work",
+      "output": "public/documentation/it/recover-numo-work-workflow.png",
+      "sha256": "d9f7a7b765ade0078975903155e069ae2b1d2184046edc521016b708611ef873",
+      "viewport": [
+        1480,
+        1100
+      ],
+      "theme": "light",
+      "capturedAt": "2026-10-08",
+      "reviewed": false,
+      "exchanges": [
+        {
+          "path": "/api/pull-requests",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f80f1e640808ca7a851e185ab2efb206640ea970024522ffbcddb2aae8d5efab",
+          "localizedSHA256": "df6015e74808c6bd270f0dff462bf4fd74d25f5e15d6e1ef1cbb8513287ae074"
+        },
+        {
+          "path": "/api/numo/conversations/fca0cb33-d0e3-4ae1-875c-168cd55d5b4e",
+          "status": 200,
+          "exactNarrativeReplacements": 11,
+          "originalSHA256": "a5bd513930e1b4294108a623e0825ab9d82ac05a1aaa4ddd7f23c17572b9930f",
+          "localizedSHA256": "7b2cd17198df3e2d8e9c15f01ff8895374462e83c4b0ca963a91a78fdd059ae5"
+        },
+        {
+          "path": "/api/pull-requests",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f80f1e640808ca7a851e185ab2efb206640ea970024522ffbcddb2aae8d5efab",
+          "localizedSHA256": "df6015e74808c6bd270f0dff462bf4fd74d25f5e15d6e1ef1cbb8513287ae074"
+        },
+        {
+          "path": "/api/pull-requests",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f80f1e640808ca7a851e185ab2efb206640ea970024522ffbcddb2aae8d5efab",
+          "localizedSHA256": "df6015e74808c6bd270f0dff462bf4fd74d25f5e15d6e1ef1cbb8513287ae074"
+        },
+        {
+          "path": "/api/agent-runs/8a0f13ea-be6c-4fe1-ae1f-4c86ba4e35f3",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "89a46cc6eee0df32a087d85e4edef4353d976322a0e8257f06cb77ec708cbe67",
+          "localizedSHA256": "2521aaded2328e19280a90e4a1a369409a9ec088ec7ad1c864b5d7a0c44bf01c"
+        },
+        {
+          "path": "/api/agent-runs/2edf486e-f669-4187-a0da-ee53e24f4473/events",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "ab166afc6ee658e181d0c275b4a7ce4d6cc15aa383481db69945b1bcee69fbff",
+          "localizedSHA256": "59ce19c5d2576d929d8cd4ed0ff3c3fd36d9182d5272c6176ea94a7ee9c692d8"
+        },
+        {
+          "path": "/api/agent-runs/b8d43dbf-2bc0-4498-afc0-5de17ca310dc",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "1ab2746e5d3f980bcdf67608bb85e1afb9c413f8ba30c3c474c004e9473bb152",
+          "localizedSHA256": "52cc08e62486cd4ba486cee45fe7b7526d3c5815048710beea0f01b2ae31a3a9"
+        },
+        {
+          "path": "/api/agent-runs/2edf486e-f669-4187-a0da-ee53e24f4473/events",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "ab166afc6ee658e181d0c275b4a7ce4d6cc15aa383481db69945b1bcee69fbff",
+          "localizedSHA256": "59ce19c5d2576d929d8cd4ed0ff3c3fd36d9182d5272c6176ea94a7ee9c692d8"
+        },
+        {
+          "path": "/api/pull-requests/d3d25f8b-8502-49df-8a36-3528707b6e51",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "96c0deaa4b403bf4c0bf5d288ec20688ac77b6fcf577bfce58c5b3770c219620",
+          "localizedSHA256": "914ae13575a3051463e8ef619eb27a21cddf51d47a389ee2bb3baa2ec97cf5e0"
+        }
+      ],
+      "qualification": "Actual parent Numo conversation showing the initial failed branch push after local work; no PR existed at that stage. Later recovery and correction occurred in this same conversation. Source narrative claims are not substituted for durable evidence."
+    },
+    {
+      "locale": "it",
+      "article": "delegate-code-work",
+      "output": "public/documentation/it/delegate-code-work-workflow.png",
+      "sha256": "0c724187f5ad732fe6d4bf944711d14e620fe818b0aff45b2810f988f69e02d4",
+      "viewport": [
+        1480,
+        1100
+      ],
+      "theme": "light",
+      "capturedAt": "2026-10-08",
+      "reviewed": false,
+      "exchanges": [
+        {
+          "path": "/api/pull-requests",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f80f1e640808ca7a851e185ab2efb206640ea970024522ffbcddb2aae8d5efab",
+          "localizedSHA256": "df6015e74808c6bd270f0dff462bf4fd74d25f5e15d6e1ef1cbb8513287ae074"
+        },
+        {
+          "path": "/api/numo/conversations/fca0cb33-d0e3-4ae1-875c-168cd55d5b4e",
+          "status": 200,
+          "exactNarrativeReplacements": 11,
+          "originalSHA256": "a5bd513930e1b4294108a623e0825ab9d82ac05a1aaa4ddd7f23c17572b9930f",
+          "localizedSHA256": "7b2cd17198df3e2d8e9c15f01ff8895374462e83c4b0ca963a91a78fdd059ae5"
+        },
+        {
+          "path": "/api/pull-requests",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f80f1e640808ca7a851e185ab2efb206640ea970024522ffbcddb2aae8d5efab",
+          "localizedSHA256": "df6015e74808c6bd270f0dff462bf4fd74d25f5e15d6e1ef1cbb8513287ae074"
+        },
+        {
+          "path": "/api/pull-requests",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f80f1e640808ca7a851e185ab2efb206640ea970024522ffbcddb2aae8d5efab",
+          "localizedSHA256": "df6015e74808c6bd270f0dff462bf4fd74d25f5e15d6e1ef1cbb8513287ae074"
+        },
+        {
+          "path": "/api/agent-runs/8a0f13ea-be6c-4fe1-ae1f-4c86ba4e35f3",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "89a46cc6eee0df32a087d85e4edef4353d976322a0e8257f06cb77ec708cbe67",
+          "localizedSHA256": "2521aaded2328e19280a90e4a1a369409a9ec088ec7ad1c864b5d7a0c44bf01c"
+        },
+        {
+          "path": "/api/agent-runs/2edf486e-f669-4187-a0da-ee53e24f4473/events",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "ab166afc6ee658e181d0c275b4a7ce4d6cc15aa383481db69945b1bcee69fbff",
+          "localizedSHA256": "59ce19c5d2576d929d8cd4ed0ff3c3fd36d9182d5272c6176ea94a7ee9c692d8"
+        },
+        {
+          "path": "/api/agent-runs/b8d43dbf-2bc0-4498-afc0-5de17ca310dc",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "1ab2746e5d3f980bcdf67608bb85e1afb9c413f8ba30c3c474c004e9473bb152",
+          "localizedSHA256": "52cc08e62486cd4ba486cee45fe7b7526d3c5815048710beea0f01b2ae31a3a9"
+        },
+        {
+          "path": "/api/agent-runs/2edf486e-f669-4187-a0da-ee53e24f4473/events",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "ab166afc6ee658e181d0c275b4a7ce4d6cc15aa383481db69945b1bcee69fbff",
+          "localizedSHA256": "59ce19c5d2576d929d8cd4ed0ff3c3fd36d9182d5272c6176ea94a7ee9c692d8"
+        },
+        {
+          "path": "/api/pull-requests/d3d25f8b-8502-49df-8a36-3528707b6e51",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "96c0deaa4b403bf4c0bf5d288ec20688ac77b6fcf577bfce58c5b3770c219620",
+          "localizedSHA256": "914ae13575a3051463e8ef619eb27a21cddf51d47a389ee2bb3baa2ec97cf5e0"
+        }
+      ],
+      "qualification": "Actual last delegated-work card, cropped from the real parent conversation; final response is not visible in this illustration. Parent independently inspected exact PR head08b1544f76be74be399fef0989fc7d850d82309f and executed4tests plus3direct assertions; no merge or provider CI success claimed.",
+      "localizationNote": "Exact GET card-title translation; source ID/state/branch/commit/PR unchanged. Runtime reasoningLow label corrected from primary low mapping."
+    },
+    {
+      "locale": "it",
+      "article": "review-pull-requests",
+      "output": "public/documentation/it/review-pull-requests-workflow.png",
+      "sha256": "4d34c77e6f35f6c698f10367830cb98a89e15532c450b76ca8c6fa5ef574dfb6",
+      "viewport": [
+        1480,
+        1100
+      ],
+      "theme": "light",
+      "capturedAt": "2026-10-08",
+      "reviewed": false,
+      "exchanges": [
+        {
+          "path": "/api/pull-requests",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f80f1e640808ca7a851e185ab2efb206640ea970024522ffbcddb2aae8d5efab",
+          "localizedSHA256": "df6015e74808c6bd270f0dff462bf4fd74d25f5e15d6e1ef1cbb8513287ae074"
+        },
+        {
+          "path": "/api/numo/conversations/fca0cb33-d0e3-4ae1-875c-168cd55d5b4e",
+          "status": 200,
+          "exactNarrativeReplacements": 11,
+          "originalSHA256": "a5bd513930e1b4294108a623e0825ab9d82ac05a1aaa4ddd7f23c17572b9930f",
+          "localizedSHA256": "7b2cd17198df3e2d8e9c15f01ff8895374462e83c4b0ca963a91a78fdd059ae5"
+        },
+        {
+          "path": "/api/pull-requests",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f80f1e640808ca7a851e185ab2efb206640ea970024522ffbcddb2aae8d5efab",
+          "localizedSHA256": "df6015e74808c6bd270f0dff462bf4fd74d25f5e15d6e1ef1cbb8513287ae074"
+        },
+        {
+          "path": "/api/pull-requests",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f80f1e640808ca7a851e185ab2efb206640ea970024522ffbcddb2aae8d5efab",
+          "localizedSHA256": "df6015e74808c6bd270f0dff462bf4fd74d25f5e15d6e1ef1cbb8513287ae074"
+        },
+        {
+          "path": "/api/agent-runs/8a0f13ea-be6c-4fe1-ae1f-4c86ba4e35f3",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "89a46cc6eee0df32a087d85e4edef4353d976322a0e8257f06cb77ec708cbe67",
+          "localizedSHA256": "2521aaded2328e19280a90e4a1a369409a9ec088ec7ad1c864b5d7a0c44bf01c"
+        },
+        {
+          "path": "/api/agent-runs/2edf486e-f669-4187-a0da-ee53e24f4473/events",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "ab166afc6ee658e181d0c275b4a7ce4d6cc15aa383481db69945b1bcee69fbff",
+          "localizedSHA256": "59ce19c5d2576d929d8cd4ed0ff3c3fd36d9182d5272c6176ea94a7ee9c692d8"
+        },
+        {
+          "path": "/api/agent-runs/b8d43dbf-2bc0-4498-afc0-5de17ca310dc",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "1ab2746e5d3f980bcdf67608bb85e1afb9c413f8ba30c3c474c004e9473bb152",
+          "localizedSHA256": "52cc08e62486cd4ba486cee45fe7b7526d3c5815048710beea0f01b2ae31a3a9"
+        },
+        {
+          "path": "/api/agent-runs/2edf486e-f669-4187-a0da-ee53e24f4473/events",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "ab166afc6ee658e181d0c275b4a7ce4d6cc15aa383481db69945b1bcee69fbff",
+          "localizedSHA256": "59ce19c5d2576d929d8cd4ed0ff3c3fd36d9182d5272c6176ea94a7ee9c692d8"
+        },
+        {
+          "path": "/api/pull-requests/d3d25f8b-8502-49df-8a36-3528707b6e51",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "96c0deaa4b403bf4c0bf5d288ec20688ac77b6fcf577bfce58c5b3770c219620",
+          "localizedSHA256": "914ae13575a3051463e8ef619eb27a21cddf51d47a389ee2bb3baa2ec97cf5e0"
+        },
+        {
+          "path": "/api/pull-requests",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f80f1e640808ca7a851e185ab2efb206640ea970024522ffbcddb2aae8d5efab",
+          "localizedSHA256": "df6015e74808c6bd270f0dff462bf4fd74d25f5e15d6e1ef1cbb8513287ae074"
+        },
+        {
+          "path": "/api/pull-requests",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f80f1e640808ca7a851e185ab2efb206640ea970024522ffbcddb2aae8d5efab",
+          "localizedSHA256": "df6015e74808c6bd270f0dff462bf4fd74d25f5e15d6e1ef1cbb8513287ae074"
+        },
+        {
+          "path": "/api/pull-requests",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f80f1e640808ca7a851e185ab2efb206640ea970024522ffbcddb2aae8d5efab",
+          "localizedSHA256": "df6015e74808c6bd270f0dff462bf4fd74d25f5e15d6e1ef1cbb8513287ae074"
+        },
+        {
+          "path": "/api/pull-requests",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f80f1e640808ca7a851e185ab2efb206640ea970024522ffbcddb2aae8d5efab",
+          "localizedSHA256": "df6015e74808c6bd270f0dff462bf4fd74d25f5e15d6e1ef1cbb8513287ae074"
+        },
+        {
+          "path": "/api/pull-requests",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f80f1e640808ca7a851e185ab2efb206640ea970024522ffbcddb2aae8d5efab",
+          "localizedSHA256": "df6015e74808c6bd270f0dff462bf4fd74d25f5e15d6e1ef1cbb8513287ae074"
+        },
+        {
+          "path": "/api/pull-requests",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f80f1e640808ca7a851e185ab2efb206640ea970024522ffbcddb2aae8d5efab",
+          "localizedSHA256": "df6015e74808c6bd270f0dff462bf4fd74d25f5e15d6e1ef1cbb8513287ae074"
+        },
+        {
+          "path": "/api/pull-requests/d3d25f8b-8502-49df-8a36-3528707b6e51/comments",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f4de4df3d82b7a27838e00563f9722acd1a6182c336b541dbf90d96f46a374c8",
+          "localizedSHA256": "f8126c3936925f83294a7ba6ed68effdb47d3c70e1145362807f9bfd7d71c25b"
+        },
+        {
+          "path": "/api/pull-requests/d3d25f8b-8502-49df-8a36-3528707b6e51",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "96c0deaa4b403bf4c0bf5d288ec20688ac77b6fcf577bfce58c5b3770c219620",
+          "localizedSHA256": "914ae13575a3051463e8ef619eb27a21cddf51d47a389ee2bb3baa2ec97cf5e0"
+        }
+      ],
+      "qualification": "Actual open unmerged private demonstration PR#1 at corrected head. Read-only Changes inspection; code/test strings and IDs remain exact. No approval, merge, provider CI or preview deployment is fabricated."
+    },
+    {
+      "locale": "pt-BR",
+      "article": "recover-numo-work",
+      "output": "public/documentation/pt-BR/recover-numo-work-workflow.png",
+      "sha256": "e9f37495da1b8eac1dc9302b2bd294db76cd6460e55b46c9efd84a0d3298408e",
+      "viewport": [
+        1480,
+        1100
+      ],
+      "theme": "light",
+      "capturedAt": "2026-10-08",
+      "reviewed": false,
+      "exchanges": [
+        {
+          "path": "/api/pull-requests",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f80f1e640808ca7a851e185ab2efb206640ea970024522ffbcddb2aae8d5efab",
+          "localizedSHA256": "40add3320c1b14ba520bf4b33adffefed300b00d4bcd96ad5b5d5659fb6b0ec7"
+        },
+        {
+          "path": "/api/numo/conversations/fca0cb33-d0e3-4ae1-875c-168cd55d5b4e",
+          "status": 200,
+          "exactNarrativeReplacements": 11,
+          "originalSHA256": "a5bd513930e1b4294108a623e0825ab9d82ac05a1aaa4ddd7f23c17572b9930f",
+          "localizedSHA256": "c236990e8b0814e29ab0049ec40ff7430e9a8b620a5325ef7883ee9f111ebde3"
+        },
+        {
+          "path": "/api/pull-requests",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f80f1e640808ca7a851e185ab2efb206640ea970024522ffbcddb2aae8d5efab",
+          "localizedSHA256": "40add3320c1b14ba520bf4b33adffefed300b00d4bcd96ad5b5d5659fb6b0ec7"
+        },
+        {
+          "path": "/api/pull-requests",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f80f1e640808ca7a851e185ab2efb206640ea970024522ffbcddb2aae8d5efab",
+          "localizedSHA256": "40add3320c1b14ba520bf4b33adffefed300b00d4bcd96ad5b5d5659fb6b0ec7"
+        },
+        {
+          "path": "/api/agent-runs/8a0f13ea-be6c-4fe1-ae1f-4c86ba4e35f3",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "89a46cc6eee0df32a087d85e4edef4353d976322a0e8257f06cb77ec708cbe67",
+          "localizedSHA256": "7a238d75c818fdcea3ce6646a74259a786191d9717d12b3271bb50c185984f7a"
+        },
+        {
+          "path": "/api/agent-runs/b8d43dbf-2bc0-4498-afc0-5de17ca310dc",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "1ab2746e5d3f980bcdf67608bb85e1afb9c413f8ba30c3c474c004e9473bb152",
+          "localizedSHA256": "dafa7d208738c11b8e016ae91af67a29f6ac054c321dfc6fc96e529693be0cea"
+        },
+        {
+          "path": "/api/agent-runs/2edf486e-f669-4187-a0da-ee53e24f4473/events",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "ab166afc6ee658e181d0c275b4a7ce4d6cc15aa383481db69945b1bcee69fbff",
+          "localizedSHA256": "ecb39091c36b995716c9b292de45fd6c93f6f5c56f30f83a67bff6d1829d1f41"
+        },
+        {
+          "path": "/api/agent-runs/2edf486e-f669-4187-a0da-ee53e24f4473/events",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "ab166afc6ee658e181d0c275b4a7ce4d6cc15aa383481db69945b1bcee69fbff",
+          "localizedSHA256": "ecb39091c36b995716c9b292de45fd6c93f6f5c56f30f83a67bff6d1829d1f41"
+        },
+        {
+          "path": "/api/pull-requests/d3d25f8b-8502-49df-8a36-3528707b6e51",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "96c0deaa4b403bf4c0bf5d288ec20688ac77b6fcf577bfce58c5b3770c219620",
+          "localizedSHA256": "0cdc7e4a43c801be614dc786598e2367403f3d20f02ebbfb203252703209b9eb"
+        }
+      ],
+      "qualification": "Actual parent Numo conversation showing the initial failed branch push after local work; no PR existed at that stage. Later recovery and correction occurred in this same conversation. Source narrative claims are not substituted for durable evidence."
+    },
+    {
+      "locale": "pt-BR",
+      "article": "delegate-code-work",
+      "output": "public/documentation/pt-BR/delegate-code-work-workflow.png",
+      "sha256": "40fecf84e29ca43393c87b61b696d9cee5865779557a1d1795efc199e2cec40b",
+      "viewport": [
+        1480,
+        1100
+      ],
+      "theme": "light",
+      "capturedAt": "2026-10-08",
+      "reviewed": false,
+      "exchanges": [
+        {
+          "path": "/api/pull-requests",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f80f1e640808ca7a851e185ab2efb206640ea970024522ffbcddb2aae8d5efab",
+          "localizedSHA256": "40add3320c1b14ba520bf4b33adffefed300b00d4bcd96ad5b5d5659fb6b0ec7"
+        },
+        {
+          "path": "/api/numo/conversations/fca0cb33-d0e3-4ae1-875c-168cd55d5b4e",
+          "status": 200,
+          "exactNarrativeReplacements": 11,
+          "originalSHA256": "a5bd513930e1b4294108a623e0825ab9d82ac05a1aaa4ddd7f23c17572b9930f",
+          "localizedSHA256": "c236990e8b0814e29ab0049ec40ff7430e9a8b620a5325ef7883ee9f111ebde3"
+        },
+        {
+          "path": "/api/pull-requests",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f80f1e640808ca7a851e185ab2efb206640ea970024522ffbcddb2aae8d5efab",
+          "localizedSHA256": "40add3320c1b14ba520bf4b33adffefed300b00d4bcd96ad5b5d5659fb6b0ec7"
+        },
+        {
+          "path": "/api/pull-requests",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f80f1e640808ca7a851e185ab2efb206640ea970024522ffbcddb2aae8d5efab",
+          "localizedSHA256": "40add3320c1b14ba520bf4b33adffefed300b00d4bcd96ad5b5d5659fb6b0ec7"
+        },
+        {
+          "path": "/api/agent-runs/8a0f13ea-be6c-4fe1-ae1f-4c86ba4e35f3",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "89a46cc6eee0df32a087d85e4edef4353d976322a0e8257f06cb77ec708cbe67",
+          "localizedSHA256": "7a238d75c818fdcea3ce6646a74259a786191d9717d12b3271bb50c185984f7a"
+        },
+        {
+          "path": "/api/agent-runs/b8d43dbf-2bc0-4498-afc0-5de17ca310dc",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "1ab2746e5d3f980bcdf67608bb85e1afb9c413f8ba30c3c474c004e9473bb152",
+          "localizedSHA256": "dafa7d208738c11b8e016ae91af67a29f6ac054c321dfc6fc96e529693be0cea"
+        },
+        {
+          "path": "/api/agent-runs/2edf486e-f669-4187-a0da-ee53e24f4473/events",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "ab166afc6ee658e181d0c275b4a7ce4d6cc15aa383481db69945b1bcee69fbff",
+          "localizedSHA256": "ecb39091c36b995716c9b292de45fd6c93f6f5c56f30f83a67bff6d1829d1f41"
+        },
+        {
+          "path": "/api/agent-runs/2edf486e-f669-4187-a0da-ee53e24f4473/events",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "ab166afc6ee658e181d0c275b4a7ce4d6cc15aa383481db69945b1bcee69fbff",
+          "localizedSHA256": "ecb39091c36b995716c9b292de45fd6c93f6f5c56f30f83a67bff6d1829d1f41"
+        },
+        {
+          "path": "/api/pull-requests/d3d25f8b-8502-49df-8a36-3528707b6e51",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "96c0deaa4b403bf4c0bf5d288ec20688ac77b6fcf577bfce58c5b3770c219620",
+          "localizedSHA256": "0cdc7e4a43c801be614dc786598e2367403f3d20f02ebbfb203252703209b9eb"
+        }
+      ],
+      "qualification": "Actual last delegated-work card, cropped from the real parent conversation; final response is not visible in this illustration. Parent independently inspected exact PR head08b1544f76be74be399fef0989fc7d850d82309f and executed4tests plus3direct assertions; no merge or provider CI success claimed.",
+      "localizationNote": "Exact GET card-title translation; source ID/state/branch/commit/PR unchanged. Runtime reasoningLow label corrected from primary low mapping."
+    },
+    {
+      "locale": "pt-BR",
+      "article": "review-pull-requests",
+      "output": "public/documentation/pt-BR/review-pull-requests-workflow.png",
+      "sha256": "74b9eb451b317e3800521d3f608ce5fd90acc03ebb1842ea03328e1eb1a4c648",
+      "viewport": [
+        1480,
+        1100
+      ],
+      "theme": "light",
+      "capturedAt": "2026-10-08",
+      "reviewed": false,
+      "exchanges": [
+        {
+          "path": "/api/pull-requests",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f80f1e640808ca7a851e185ab2efb206640ea970024522ffbcddb2aae8d5efab",
+          "localizedSHA256": "40add3320c1b14ba520bf4b33adffefed300b00d4bcd96ad5b5d5659fb6b0ec7"
+        },
+        {
+          "path": "/api/numo/conversations/fca0cb33-d0e3-4ae1-875c-168cd55d5b4e",
+          "status": 200,
+          "exactNarrativeReplacements": 11,
+          "originalSHA256": "a5bd513930e1b4294108a623e0825ab9d82ac05a1aaa4ddd7f23c17572b9930f",
+          "localizedSHA256": "c236990e8b0814e29ab0049ec40ff7430e9a8b620a5325ef7883ee9f111ebde3"
+        },
+        {
+          "path": "/api/pull-requests",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f80f1e640808ca7a851e185ab2efb206640ea970024522ffbcddb2aae8d5efab",
+          "localizedSHA256": "40add3320c1b14ba520bf4b33adffefed300b00d4bcd96ad5b5d5659fb6b0ec7"
+        },
+        {
+          "path": "/api/pull-requests",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f80f1e640808ca7a851e185ab2efb206640ea970024522ffbcddb2aae8d5efab",
+          "localizedSHA256": "40add3320c1b14ba520bf4b33adffefed300b00d4bcd96ad5b5d5659fb6b0ec7"
+        },
+        {
+          "path": "/api/agent-runs/8a0f13ea-be6c-4fe1-ae1f-4c86ba4e35f3",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "89a46cc6eee0df32a087d85e4edef4353d976322a0e8257f06cb77ec708cbe67",
+          "localizedSHA256": "7a238d75c818fdcea3ce6646a74259a786191d9717d12b3271bb50c185984f7a"
+        },
+        {
+          "path": "/api/agent-runs/b8d43dbf-2bc0-4498-afc0-5de17ca310dc",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "1ab2746e5d3f980bcdf67608bb85e1afb9c413f8ba30c3c474c004e9473bb152",
+          "localizedSHA256": "dafa7d208738c11b8e016ae91af67a29f6ac054c321dfc6fc96e529693be0cea"
+        },
+        {
+          "path": "/api/agent-runs/2edf486e-f669-4187-a0da-ee53e24f4473/events",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "ab166afc6ee658e181d0c275b4a7ce4d6cc15aa383481db69945b1bcee69fbff",
+          "localizedSHA256": "ecb39091c36b995716c9b292de45fd6c93f6f5c56f30f83a67bff6d1829d1f41"
+        },
+        {
+          "path": "/api/agent-runs/2edf486e-f669-4187-a0da-ee53e24f4473/events",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "ab166afc6ee658e181d0c275b4a7ce4d6cc15aa383481db69945b1bcee69fbff",
+          "localizedSHA256": "ecb39091c36b995716c9b292de45fd6c93f6f5c56f30f83a67bff6d1829d1f41"
+        },
+        {
+          "path": "/api/pull-requests/d3d25f8b-8502-49df-8a36-3528707b6e51",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "96c0deaa4b403bf4c0bf5d288ec20688ac77b6fcf577bfce58c5b3770c219620",
+          "localizedSHA256": "0cdc7e4a43c801be614dc786598e2367403f3d20f02ebbfb203252703209b9eb"
+        },
+        {
+          "path": "/api/pull-requests",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f80f1e640808ca7a851e185ab2efb206640ea970024522ffbcddb2aae8d5efab",
+          "localizedSHA256": "40add3320c1b14ba520bf4b33adffefed300b00d4bcd96ad5b5d5659fb6b0ec7"
+        },
+        {
+          "path": "/api/pull-requests",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f80f1e640808ca7a851e185ab2efb206640ea970024522ffbcddb2aae8d5efab",
+          "localizedSHA256": "40add3320c1b14ba520bf4b33adffefed300b00d4bcd96ad5b5d5659fb6b0ec7"
+        },
+        {
+          "path": "/api/pull-requests",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f80f1e640808ca7a851e185ab2efb206640ea970024522ffbcddb2aae8d5efab",
+          "localizedSHA256": "40add3320c1b14ba520bf4b33adffefed300b00d4bcd96ad5b5d5659fb6b0ec7"
+        },
+        {
+          "path": "/api/pull-requests",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f80f1e640808ca7a851e185ab2efb206640ea970024522ffbcddb2aae8d5efab",
+          "localizedSHA256": "40add3320c1b14ba520bf4b33adffefed300b00d4bcd96ad5b5d5659fb6b0ec7"
+        },
+        {
+          "path": "/api/pull-requests",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f80f1e640808ca7a851e185ab2efb206640ea970024522ffbcddb2aae8d5efab",
+          "localizedSHA256": "40add3320c1b14ba520bf4b33adffefed300b00d4bcd96ad5b5d5659fb6b0ec7"
+        },
+        {
+          "path": "/api/pull-requests",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f80f1e640808ca7a851e185ab2efb206640ea970024522ffbcddb2aae8d5efab",
+          "localizedSHA256": "40add3320c1b14ba520bf4b33adffefed300b00d4bcd96ad5b5d5659fb6b0ec7"
+        },
+        {
+          "path": "/api/pull-requests/d3d25f8b-8502-49df-8a36-3528707b6e51/comments",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "f4de4df3d82b7a27838e00563f9722acd1a6182c336b541dbf90d96f46a374c8",
+          "localizedSHA256": "912aa2b707e3230bac7e9b691a9d6f0af37662a5aa1ac9a7ca2abcfcf73eb662"
+        },
+        {
+          "path": "/api/pull-requests/d3d25f8b-8502-49df-8a36-3528707b6e51",
+          "status": 200,
+          "exactNarrativeReplacements": 1,
+          "originalSHA256": "96c0deaa4b403bf4c0bf5d288ec20688ac77b6fcf577bfce58c5b3770c219620",
+          "localizedSHA256": "0cdc7e4a43c801be614dc786598e2367403f3d20f02ebbfb203252703209b9eb"
+        }
+      ],
+      "qualification": "Actual open unmerged private demonstration PR#1 at corrected head. Read-only Changes inspection; code/test strings and IDs remain exact. No approval, merge, provider CI or preview deployment is fabricated."
+    }
+  ]
+}

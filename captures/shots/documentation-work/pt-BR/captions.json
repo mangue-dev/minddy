@@ -1,0 +1,70 @@
+[
+  [
+    "Navegação do projeto ao lado do quadro de tickets de demonstração.",
+    "A barra do projeto dá acesso aos tickets, objetivos, páginas e triagem."
+  ],
+  [
+    "Menu de ações para dois tickets de demonstração selecionados.",
+    "O menu atua nos tickets selecionados. Nenhuma alteração em grupo foi enviada nesta captura."
+  ],
+  [
+    "Busca de um ticket bloqueador pelo identificador.",
+    "Escolha o sentido da relação antes do destino. O seletor é mostrado sem enviar a relação."
+  ],
+  [
+    "Campo de criação de um subticket em um ticket pai de demonstração.",
+    "O campo cria um filho deste ticket; cada filho mantém seu próprio status e discussão."
+  ],
+  [
+    "Plano de demonstração com duas tarefas de trabalho concluídas de seis.",
+    "O plano salvo distingue etapas concluídas, ativas e pendentes. O progresso não comprova a execução da tarefa fictícia de código."
+  ],
+  [
+    "Janela para adicionar um link com um endereço de contato de exemplo.",
+    "Confira o destino antes de adicionar o recurso. Este link de exemplo não foi enviado."
+  ],
+  [
+    "Filtros manuais de uma visualização e menu de ordenação.",
+    "Filtre pelas propriedades dos tickets ou escolha uma ordem. O campo de IA é opcional para esses controles manuais."
+  ],
+  [
+    "Janela de compartilhamento de visualização com acesso privado selecionado.",
+    "Acesso privado, protegido por senha e público são escolhas distintas. A visualização continua privada nesta captura."
+  ],
+  [
+    "Resultados de busca do identificador de um ticket de demonstração.",
+    "A paleta encontra o ticket pelo identificador junto às páginas do projeto; abrir um resultado preserva suas regras de acesso."
+  ],
+  [
+    "Abas da caixa de entrada e lista vazia de itens não lidos.",
+    "A aba Não lidos vazia indica que essa visualização não tem itens não lidos. Todos mostra outras notificações mantidas."
+  ],
+  [
+    "Tarefas pessoais de demonstração traduzidas no caderno.",
+    "O caderno acompanha etapas pessoais fora da hierarquia de tickets do projeto. Os status das tarefas de exemplo permanecem iguais."
+  ],
+  [
+    "Estatísticas pessoais da conta de demonstração.",
+    "A amostra vem da atividade registrada da conta. Uma duração ausente não significa zero tempo de trabalho."
+  ],
+  [
+    "Ticket de demonstração concluído com descrição e comentário salvo.",
+    "O status concluído registra a verificação do percurso no aplicativo. Não afirma que o link de e-mail do site de exemplo foi testado."
+  ],
+  [
+    "Janela de criação de objetivo não enviada com um nome de resultado de exemplo.",
+    "Defina o resultado antes de escolher responsável, data prevista e status. Essa janela não criou um segundo objetivo."
+  ],
+  [
+    "Ritmo do objetivo após a conclusão real de um ticket de demonstração.",
+    "Leia o ritmo junto ao trabalho vinculado. O histórico disponível ainda não é suficiente para mostrar uma data estimada de conclusão."
+  ],
+  [
+    "Ticket de demonstração no backlog do ciclo pessoal.",
+    "A inclusão atribuiu o ticket ao titular do ciclo e preservou o status backlog."
+  ],
+  [
+    "Ticket de demonstração recuperável com trinta dias restantes na lixeira.",
+    "As ações da linha permitem restaurá-lo. Esvaziar a lixeira é uma operação permanente separada."
+  ]
+]

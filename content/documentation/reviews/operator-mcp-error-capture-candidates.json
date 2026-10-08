@@ -1,0 +1,129 @@
+{
+  "date": "2026-10-08",
+  "author": "agent:/root/operator_documentation",
+  "profile": "Actual candidate UI localhost:3000 and guarded demo account; controlled browser network failure; no mocked response or provider credentials",
+  "publicationApproved": false,
+  "captures": [
+    {
+      "article": "integration-troubleshooting",
+      "locale": "en",
+      "url": "http://localhost:3000/settings?tab=mcp-clients&section=account-mcp-clients",
+      "output": "public/documentation/en/integration-troubleshooting-error.png",
+      "lang": "en",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1100
+      ],
+      "text": "Could not load connections. Try again.\n\nTry again",
+      "action": "Temporarily abort browser GET /api/account/mcp-connections to reproduce a genuine transport failure; capture real error and retry controls; restore network, click Retry and confirm live empty connections state. No response data mocked, no connection created or OAuth provider contacted.",
+      "actualRetryRecovered": true,
+      "liveProviderReconnectTested": false,
+      "reviewed": true,
+      "sha256": "64875c6b9ce5dabd5865e57fea1afaa5fbd7b1e6abb23dec076fa140887a9e03"
+    },
+    {
+      "article": "integration-troubleshooting",
+      "locale": "fr",
+      "url": "http://localhost:3000/settings?tab=mcp-clients&section=account-mcp-clients",
+      "output": "public/documentation/fr/integration-troubleshooting-error.png",
+      "lang": "fr",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1100
+      ],
+      "text": "Impossible de charger les connexions. Réessayez.\n\nRéessayer",
+      "action": "Temporarily abort browser GET /api/account/mcp-connections to reproduce a genuine transport failure; capture real error and retry controls; restore network, click Retry and confirm live empty connections state. No response data mocked, no connection created or OAuth provider contacted.",
+      "actualRetryRecovered": true,
+      "liveProviderReconnectTested": false,
+      "reviewed": true,
+      "sha256": "d830b4011578ddba7354b302e224f392016063b69482b458a8e0d68bc4611173"
+    },
+    {
+      "article": "integration-troubleshooting",
+      "locale": "de",
+      "url": "http://localhost:3000/settings?tab=mcp-clients&section=account-mcp-clients",
+      "output": "public/documentation/de/integration-troubleshooting-error.png",
+      "lang": "de",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1100
+      ],
+      "text": "Verbindungen konnten nicht geladen werden. Versuche es erneut.\n\nErneut versuchen",
+      "action": "Temporarily abort browser GET /api/account/mcp-connections to reproduce a genuine transport failure; capture real error and retry controls; restore network, click Retry and confirm live empty connections state. No response data mocked, no connection created or OAuth provider contacted.",
+      "actualRetryRecovered": true,
+      "liveProviderReconnectTested": false,
+      "reviewed": true,
+      "sha256": "545f3dbd42b42a808007e5f307c2770e0d5b588afbb05de0dd034489034a2c58"
+    },
+    {
+      "article": "integration-troubleshooting",
+      "locale": "es",
+      "url": "http://localhost:3000/settings?tab=mcp-clients&section=account-mcp-clients",
+      "output": "public/documentation/es/integration-troubleshooting-error.png",
+      "lang": "es",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1100
+      ],
+      "text": "No se pudieron cargar las conexiones. Inténtalo de nuevo.\n\nReintentar",
+      "action": "Temporarily abort browser GET /api/account/mcp-connections to reproduce a genuine transport failure; capture real error and retry controls; restore network, click Retry and confirm live empty connections state. No response data mocked, no connection created or OAuth provider contacted.",
+      "actualRetryRecovered": true,
+      "liveProviderReconnectTested": false,
+      "reviewed": true,
+      "sha256": "201e33e3287c62bbad96807be7441e2fa41637e9f5f62b72c7bb67d7ed3e6ee3"
+    },
+    {
+      "article": "integration-troubleshooting",
+      "locale": "it",
+      "url": "http://localhost:3000/settings?tab=mcp-clients&section=account-mcp-clients",
+      "output": "public/documentation/it/integration-troubleshooting-error.png",
+      "lang": "it",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1100
+      ],
+      "text": "Impossibile caricare le connessioni. Riprova.\n\nRiprova",
+      "action": "Temporarily abort browser GET /api/account/mcp-connections to reproduce a genuine transport failure; capture real error and retry controls; restore network, click Retry and confirm live empty connections state. No response data mocked, no connection created or OAuth provider contacted.",
+      "actualRetryRecovered": true,
+      "liveProviderReconnectTested": false,
+      "reviewed": true,
+      "sha256": "8c1041d93fea1bfdb1c8b3530eced0a62f95562c00e4a16dde27122d079891dc"
+    },
+    {
+      "article": "integration-troubleshooting",
+      "locale": "pt-BR",
+      "url": "http://localhost:3000/settings?tab=mcp-clients&section=account-mcp-clients",
+      "output": "public/documentation/pt-BR/integration-troubleshooting-error.png",
+      "lang": "pt-BR",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1100
+      ],
+      "text": "Não foi possível carregar as conexões. Tente novamente.\n\nTentar novamente",
+      "action": "Temporarily abort browser GET /api/account/mcp-connections to reproduce a genuine transport failure; capture real error and retry controls; restore network, click Retry and confirm live empty connections state. No response data mocked, no connection created or OAuth provider contacted.",
+      "actualRetryRecovered": true,
+      "liveProviderReconnectTested": false,
+      "reviewed": true,
+      "sha256": "33dbc63bd01f23df1dd6d310b2c2d15f78511dd4e2ebefb682af049934487031"
+    }
+  ],
+  "visualReview": {
+    "reviewer": "agent:/root/operator_documentation",
+    "date": "2026-10-08",
+    "method": "Viewed all six localized MCP error crops at original dimensions; inspected all 18 administrator panels in six 720-pixel-wide contact sheets plus the English original at 1440 pixels. Checked locale chrome, correct panel, meaningful content, absence of secrets, and readable framing.",
+    "result": "approved-author-visual-review",
+    "humanReview": false
+  }
+}

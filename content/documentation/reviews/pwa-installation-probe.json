@@ -1,0 +1,17 @@
+{
+  "date": "2026-10-08",
+  "method": "Real Chromium PWA domain in a disposable browser profile, not a drawn install prompt",
+  "protocolSource": "https://github.com/ChromeDevTools/devtools-protocol/blob/master/json/browser_protocol.json",
+  "checks": [],
+  "error": "cdpSession.send: Protocol error (PWA.install): Couldn't fetch install info for http://localhost:3001/ from http://localhost:3001/",
+  "confirmedManifestCorrection": {
+    "before": [
+      "manifest-missing-suitable-icon",
+      "no-acceptable-icon"
+    ],
+    "change": "Both existing 192px and 512px PNG icons now declare any maskable purposes.",
+    "afterPersistentChromiumInstallabilityErrors": [],
+    "nativeInstallationObserved": false
+  },
+  "publicationApproved": false
+}

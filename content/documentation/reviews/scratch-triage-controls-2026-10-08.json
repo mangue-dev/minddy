@@ -1,0 +1,227 @@
+{
+  "fixture": {
+    "en": [
+      "Review an incoming keyboard report",
+      "Demonstration incoming report. Verify the described focus issue before accepting it."
+    ],
+    "fr": [
+      "Examiner un signalement reçu concernant le clavier",
+      "Signalement de démonstration. Vérifier le problème de focus décrit avant de l’accepter."
+    ],
+    "de": [
+      "Eingegangenen Tastaturbericht prüfen",
+      "Demobericht. Das beschriebene Fokusproblem vor dem Akzeptieren prüfen."
+    ],
+    "es": [
+      "Revisar un informe recibido sobre el teclado",
+      "Informe de demostración. Comprueba el problema de foco descrito antes de aceptarlo."
+    ],
+    "it": [
+      "Esaminare una segnalazione ricevuta sulla tastiera",
+      "Segnalazione dimostrativa. Verifica il problema di focus descritto prima di accettarla."
+    ],
+    "pt-BR": [
+      "Analisar um relato recebido sobre o teclado",
+      "Relato de demonstração. Verifique o problema de foco descrito antes de aceitá-lo."
+    ]
+  },
+  "records": [
+    {
+      "locale": "en",
+      "screen": "triage-incoming",
+      "src": "/documentation/en/triage-incoming.png",
+      "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+      "candidateVersion": "0.11.1",
+      "workingTreeChanges": true,
+      "projectId": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+      "issueId": "305a5c13-b838-4ad1-a0df-793ab3e159a9",
+      "date": "2026-10-08",
+      "theme": "light",
+      "browserViewport": [
+        1280,
+        900
+      ],
+      "viewport": [
+        946,
+        818
+      ],
+      "language": "en",
+      "displayAdaptation": [],
+      "blockedWrites": [
+        {
+          "method": "POST",
+          "path": "/api/me/local-snapshots"
+        }
+      ],
+      "submitted": false,
+      "reviewed": false,
+      "limitation": "Actual stored incoming demo issue. No accept, decline or duplicate action submitted."
+    },
+    {
+      "locale": "fr",
+      "screen": "triage-incoming",
+      "src": "/documentation/fr/triage-incoming.png",
+      "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+      "candidateVersion": "0.11.1",
+      "workingTreeChanges": true,
+      "projectId": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+      "issueId": "305a5c13-b838-4ad1-a0df-793ab3e159a9",
+      "date": "2026-10-08",
+      "theme": "light",
+      "browserViewport": [
+        1280,
+        900
+      ],
+      "viewport": [
+        946,
+        818
+      ],
+      "language": "fr",
+      "displayAdaptation": [
+        "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/issues"
+      ],
+      "blockedWrites": [
+        {
+          "method": "POST",
+          "path": "/api/me/local-snapshots"
+        }
+      ],
+      "submitted": false,
+      "reviewed": false,
+      "limitation": "Actual stored incoming demo issue. No accept, decline or duplicate action submitted."
+    },
+    {
+      "locale": "de",
+      "screen": "triage-incoming",
+      "src": "/documentation/de/triage-incoming.png",
+      "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+      "candidateVersion": "0.11.1",
+      "workingTreeChanges": true,
+      "projectId": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+      "issueId": "305a5c13-b838-4ad1-a0df-793ab3e159a9",
+      "date": "2026-10-08",
+      "theme": "light",
+      "browserViewport": [
+        1280,
+        900
+      ],
+      "viewport": [
+        946,
+        818
+      ],
+      "language": "de",
+      "displayAdaptation": [
+        "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/issues"
+      ],
+      "blockedWrites": [
+        {
+          "method": "POST",
+          "path": "/api/me/local-snapshots"
+        }
+      ],
+      "submitted": false,
+      "reviewed": false,
+      "limitation": "Actual stored incoming demo issue. No accept, decline or duplicate action submitted."
+    },
+    {
+      "locale": "es",
+      "screen": "triage-incoming",
+      "src": "/documentation/es/triage-incoming.png",
+      "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+      "candidateVersion": "0.11.1",
+      "workingTreeChanges": true,
+      "projectId": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+      "issueId": "305a5c13-b838-4ad1-a0df-793ab3e159a9",
+      "date": "2026-10-08",
+      "theme": "light",
+      "browserViewport": [
+        1280,
+        900
+      ],
+      "viewport": [
+        946,
+        818
+      ],
+      "language": "es",
+      "displayAdaptation": [
+        "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/issues",
+        "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/issues"
+      ],
+      "blockedWrites": [
+        {
+          "method": "POST",
+          "path": "/api/me/local-snapshots"
+        }
+      ],
+      "submitted": false,
+      "reviewed": false,
+      "limitation": "Actual stored incoming demo issue. No accept, decline or duplicate action submitted."
+    },
+    {
+      "locale": "it",
+      "screen": "triage-incoming",
+      "src": "/documentation/it/triage-incoming.png",
+      "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+      "candidateVersion": "0.11.1",
+      "workingTreeChanges": true,
+      "projectId": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+      "issueId": "305a5c13-b838-4ad1-a0df-793ab3e159a9",
+      "date": "2026-10-08",
+      "theme": "light",
+      "browserViewport": [
+        1280,
+        900
+      ],
+      "viewport": [
+        946,
+        818
+      ],
+      "language": "it",
+      "displayAdaptation": [
+        "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/issues"
+      ],
+      "blockedWrites": [
+        {
+          "method": "POST",
+          "path": "/api/me/local-snapshots"
+        }
+      ],
+      "submitted": false,
+      "reviewed": false,
+      "limitation": "Actual stored incoming demo issue. No accept, decline or duplicate action submitted."
+    },
+    {
+      "locale": "pt-BR",
+      "screen": "triage-incoming",
+      "src": "/documentation/pt-BR/triage-incoming.png",
+      "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+      "candidateVersion": "0.11.1",
+      "workingTreeChanges": true,
+      "projectId": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+      "issueId": "305a5c13-b838-4ad1-a0df-793ab3e159a9",
+      "date": "2026-10-08",
+      "theme": "light",
+      "browserViewport": [
+        1280,
+        900
+      ],
+      "viewport": [
+        946,
+        818
+      ],
+      "language": "pt-BR",
+      "displayAdaptation": [
+        "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/issues"
+      ],
+      "blockedWrites": [
+        {
+          "method": "POST",
+          "path": "/api/me/local-snapshots"
+        }
+      ],
+      "submitted": false,
+      "reviewed": false,
+      "limitation": "Actual stored incoming demo issue. No accept, decline or duplicate action submitted."
+    }
+  ]
+}

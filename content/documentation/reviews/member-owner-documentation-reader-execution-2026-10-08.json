@@ -1,0 +1,305 @@
+{
+  "reviewer": "agent:/root/automation_account_documentation",
+  "date": "2026-10-08",
+  "recordedAt": "2026-10-08T19:12:07.213408+00:00",
+  "human": false,
+  "instance": "http://localhost:3001",
+  "profile": "Disposable restored self-hosted candidate 0.11.1 aligned to candidate migrations; local preview, not a released Cloud deployment",
+  "repositoryHeadAtFinalRead": "fdaff66b145396b884fa5cbf1992522d7c7998f9",
+  "workingTreeChanges": true,
+  "projectId": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+  "roles": {
+    "member": "Sam Demo",
+    "owner": "Alex Demo"
+  },
+  "method": "Read complete rendered public articles, then operate actual application controls in isolated authenticated member/owner browser contexts. Essential reader prerequisites came from the rendered documentation. Repository code was used separately to diagnose harness selectors and correct the discovered documentation gap.",
+  "initialDocumentationReads": [
+    {
+      "url": "http://localhost:3001/docs/first-project",
+      "title": "Complete your first issue",
+      "reader": "member",
+      "read": "Rendered anonymous-access article UI, including requirements, limits and recovery; no repository prerequisites used",
+      "length": 2873,
+      "renderedTextEvidence": "output/playwright/min664-reader-member-owner/doc-first-project.txt",
+      "renderedTextSha256": "d19a37cfe2fe7b9bfbcae400d513ff8e8e4d6463a9027de7caac0ba112b1c0a2",
+      "revisionQualification": "The initial rendered transcript was read in full before dependent actions; its exact article revision was not recorded. Later final guidance evidence is separate."
+    },
+    {
+      "url": "http://localhost:3001/docs/create-an-issue",
+      "title": "Create and edit an issue",
+      "reader": "member",
+      "read": "Rendered anonymous-access article UI, including requirements, limits and recovery; no repository prerequisites used",
+      "length": 2140,
+      "renderedTextEvidence": "output/playwright/min664-reader-member-owner/doc-create-an-issue.txt",
+      "renderedTextSha256": "5fc60235b2c0fe325d2775963fd3dddc42a3fecba9e6e99c978f293449ca53c8",
+      "revisionQualification": "The initial rendered transcript was read in full before dependent actions; its exact article revision was not recorded. Later final guidance evidence is separate."
+    },
+    {
+      "url": "http://localhost:3001/docs/issue-statuses",
+      "title": "Move an issue through its lifecycle",
+      "reader": "member",
+      "read": "Rendered anonymous-access article UI, including requirements, limits and recovery; no repository prerequisites used",
+      "length": 1957,
+      "renderedTextEvidence": "output/playwright/min664-reader-member-owner/doc-issue-statuses.txt",
+      "renderedTextSha256": "d30eefd717e04858c9b161dd97db8c92e7d4b8c0ed347d87a3b45242cc6be5ed",
+      "revisionQualification": "The initial rendered transcript was read in full before dependent actions; its exact article revision was not recorded. Later final guidance evidence is separate."
+    },
+    {
+      "url": "http://localhost:3001/docs/implementation-plans",
+      "title": "Maintain an implementation plan",
+      "reader": "member",
+      "read": "Rendered anonymous-access article UI, including requirements, limits and recovery; no repository prerequisites used",
+      "length": 2578,
+      "renderedTextEvidence": "output/playwright/min664-reader-member-owner/doc-implementation-plans.txt",
+      "renderedTextSha256": "2be0d7f44f7ecbf8e41f94feebf189d1a6d861b891f8cefcf0fa1d31ea692f07",
+      "revisionQualification": "The initial rendered transcript was read in full before dependent actions; its exact article revision was not recorded. Later final guidance evidence is separate."
+    },
+    {
+      "url": "http://localhost:3001/docs/project-members",
+      "title": "Invite people to a project",
+      "reader": "member",
+      "read": "Rendered anonymous-access article UI, including requirements, limits and recovery; no repository prerequisites used",
+      "length": 2410,
+      "renderedTextEvidence": "output/playwright/min664-reader-member-owner/doc-project-members.txt",
+      "renderedTextSha256": "c664f913c5b65fd6774e01c1b4cb14c8ce2ff417143d139f3449b485ca711af5",
+      "revisionQualification": "The initial rendered transcript was read in full before dependent actions; its exact article revision was not recorded. Later final guidance evidence is separate."
+    },
+    {
+      "url": "http://localhost:3001/docs/project-members",
+      "title": "Invite people to a project",
+      "reader": "owner",
+      "read": "Rendered article UI; agent reads the saved full text before dependent actions",
+      "length": 2410,
+      "renderedTextEvidence": "output/playwright/min664-reader-member-owner/owner-doc-project-members.txt",
+      "renderedTextSha256": "c664f913c5b65fd6774e01c1b4cb14c8ce2ff417143d139f3449b485ca711af5",
+      "revisionQualification": "The initial rendered transcript was read in full before dependent actions; its exact article revision was not recorded. Later final guidance evidence is separate."
+    },
+    {
+      "url": "http://localhost:3001/docs/project-settings",
+      "title": "Configure a project",
+      "reader": "owner",
+      "read": "Rendered article UI; agent reads the saved full text before dependent actions",
+      "length": 1972,
+      "renderedTextEvidence": "output/playwright/min664-reader-member-owner/owner-doc-project-settings.txt",
+      "renderedTextSha256": "3309cb5dee9a7aee33ad3b4f9cb94f75c0ca37e2a304c7b98689e402389cd8f7",
+      "revisionQualification": "The initial rendered transcript was read in full before dependent actions; its exact article revision was not recorded. Later final guidance evidence is separate."
+    },
+    {
+      "url": "http://localhost:3001/docs/automation-settings",
+      "title": "Configure automatic issue work",
+      "reader": "owner",
+      "read": "Rendered article UI; agent reads the saved full text before dependent actions",
+      "length": 2165,
+      "renderedTextEvidence": "output/playwright/min664-reader-member-owner/owner-doc-automation-settings.txt",
+      "renderedTextSha256": "13819303dcf25a0a2e145008ae0d11ec1bccc220a163fef616d828528b2097c8",
+      "revisionQualification": "The initial rendered transcript was read in full before dependent actions; its exact article revision was not recorded. Later final guidance evidence is separate."
+    }
+  ],
+  "finalAnonymousDocumentationReads": [
+    {
+      "url": "http://localhost:3001/docs/first-project",
+      "status": 200,
+      "manualSmartFillGuidance": true,
+      "projectControlsDistinguished": true,
+      "role": "anonymous",
+      "readInFull": true,
+      "renderedTextEvidence": "output/playwright/min664-reader-member-owner/final-first-project-rendered.txt",
+      "renderedTextSha256": "6aac1c2f777d97d19492669d190973fb4e72722430886215649ca77afe5c7d4b",
+      "articleRevision": 2,
+      "sourceRevision": 2,
+      "articleSha256AtFinalRead": "f5b0913245142f70ececd6eecd6f6fd0c6a7665e48bf6fe0ae28545eeadd7ec4",
+      "publicationStatusAtFinalRead": "draft"
+    },
+    {
+      "url": "http://localhost:3001/docs/create-an-issue",
+      "status": 200,
+      "manualSmartFillGuidance": true,
+      "projectControlsDistinguished": true,
+      "role": "anonymous",
+      "readInFull": true,
+      "renderedTextEvidence": "output/playwright/min664-reader-member-owner/final-create-an-issue-rendered.txt",
+      "renderedTextSha256": "8ebe90f1f02cbf6ddda934446d0c97bc9016884ade244d234afae594e20899dd",
+      "articleRevision": 2,
+      "sourceRevision": 2,
+      "articleSha256AtFinalRead": "4543c013a79fbd97c2af3d266878f48371e99741f88eb7c367a9f89541c3f1ad",
+      "publicationStatusAtFinalRead": "draft"
+    }
+  ],
+  "manualTutorialCorrection": {
+    "observed": "The issue creation Smart-fill button was enabled even though project automation, Smart Assign and auto-assignment were disabled.",
+    "action": "The member explicitly switched Smart-fill off and the browser asserted aria-pressed=false before confirming this manual issue.",
+    "correction": "S01 and W01 now explain the manual switch and distinguish it from project automation and Smart Assign in all six locales.",
+    "sourceAndFigureRevalidation": "content/documentation/reviews/manual-smart-fill-reader-correction.json",
+    "independentPeerReview": "content/documentation/reviews/manual-smart-fill-independent-review-2026-10-08.json",
+    "finalRenderedEnglishVerified": true
+  },
+  "disposableIssue": {
+    "id": "0d0fd6df-6549-457a-aa9e-0522ed61c823",
+    "identifier": "DOC-13",
+    "title": "Verify the documentation article and saved task status",
+    "creation": "Exactly one task was created using the real UI. The first response listener targeted a different endpoint and did not capture creation status; a subsequent project GET and reloaded board independently found the stored task. No second task was created.",
+    "initialStatus": "backlog",
+    "ownerPlan": "Owner added and saved the plan in the actual Plan UI. A later GET and reopened tab confirmed storage before member task toggles.",
+    "initialPlanProgress": "0/3",
+    "finalPlanProgress": "3/3",
+    "nestedWorkTaskCounted": true,
+    "canceledTaskExcludedAndRetained": true,
+    "questionsTaskExcludedAndRetained": true,
+    "keyboardExecuted": "The first task control was focused and toggled with Space; the two remaining task controls were clicked.",
+    "savedComment": "Agent reader check on this local candidate: the public Complete your first issue article opened without a signed-in session, and its related Create and edit an issue link opened correctly. Smart-fill was explicitly turned off before creating DOC-13. The manual plan has three work tasks including a nested task; its canceled task and Questions item do not count (0/3 before completion). This is an agent check of documentation and application behavior, not human acceptance or a test of the example website email link.",
+    "finalStoredState": {
+      "id": "0d0fd6df-6549-457a-aa9e-0522ed61c823",
+      "number": 13,
+      "status": "done",
+      "plan": "## Checks\n\n- [x] Open the public article without signing in\n  - [x] Follow its Create and edit an issue related link\n- [x] Record the observed result in a comment\n- [-] Test the example website email link (outside this check)\n\n## Questions\n\n- [ ] Should this procedure later be checked on a shipped Cloud version?",
+      "commentBodies": [
+        "Agent reader check on this local candidate: the public Complete your first issue article opened without a signed-in session, and its related Create and edit an issue link opened correctly. Smart-fill was explicitly turned off before creating DOC-13. The manual plan has three work tasks including a nested task; its canceled task and Questions item do not count (0/3 before completion). This is an agent check of documentation and application behavior, not human acceptance or a test of the example website email link."
+      ]
+    },
+    "ownerReopenedOutcome": {
+      "status": "done",
+      "ownerSeesMemberComment": true,
+      "ownerPlanProgress": "3/3",
+      "canceledTaskRetained": true,
+      "questionRetained": true
+    }
+  },
+  "actionsWithObservedHttpStatuses": [
+    {
+      "role": "member",
+      "action": "Saved task independently found after reload; initial response instrumentation missed project-scoped creation endpoint",
+      "state": "backlog"
+    },
+    {
+      "role": "member",
+      "action": "Choose In progress in status picker",
+      "httpStatus": 200
+    },
+    {
+      "role": "member",
+      "action": "Reload project and find DOC-13 after status change",
+      "saved": true
+    },
+    {
+      "role": "anonymous",
+      "action": "Read public first-project article without session cookies and follow its related creation article",
+      "firstHttpStatus": 200,
+      "firstUrl": "http://localhost:3001/docs/first-project",
+      "relatedUrl": "http://localhost:3001/docs/create-an-issue",
+      "noindex": "noindex, nofollow"
+    },
+    {
+      "role": "member",
+      "action": "Save actual verification using the Comment submit control",
+      "httpStatus": 201
+    },
+    {
+      "role": "member",
+      "action": "Complete work task using focused button and Space",
+      "task": "Open the public article without signing in",
+      "httpStatus": 200
+    },
+    {
+      "role": "member",
+      "action": "Complete work task using task control",
+      "task": "Follow its Create and edit an issue related link",
+      "httpStatus": 200
+    },
+    {
+      "role": "member",
+      "action": "Complete work task using task control",
+      "task": "Record the observed result in a comment",
+      "httpStatus": 200
+    },
+    {
+      "role": "member",
+      "action": "Confirm saved 3/3 progress while canceled task and Questions item retain their states",
+      "saved": true
+    },
+    {
+      "role": "member",
+      "action": "Set Done after the documented check and comment",
+      "httpStatus": 200
+    }
+  ],
+  "ownershipBoundary": {
+    "evidence": "content/documentation/reviews/member-owner-permissions-reader-check.json",
+    "observed": "The member General view has static project-name/key text and no Save control; owner fields and Save are present. A same-name member PATCH engineering probe returned 403; a subsequent GET confirmed the name unchanged.",
+    "qualification": "The direct denied API probe supplements UI evidence; the public reader procedure does not instruct users to send it."
+  },
+  "separateExistingIssueReadOnlyCheck": "content/documentation/reviews/first-project-current-state-independent-check.json",
+  "sanitizedScreenEvidence": [
+    {
+      "path": "output/playwright/min664-reader-member-owner/member-create-controls.png",
+      "sha256": "d593feac850f6ad7c972f894367f3d1c78b73dde187e8c49a0e87979183bb666",
+      "inspectedBy": "agent:/root/automation_account_documentation",
+      "inspection": "The initial real creation dialog showed Smart-fill enabled despite project automation being off. It establishes the discovered manual-tutorial gap, not the corrected off state."
+    },
+    {
+      "path": "output/playwright/min664-reader-member-owner/member-plan-completed.png",
+      "sha256": "1a65636423a84ee42b3848fbc5cef1d22007ad143f84157a8cd1236f49b5897d",
+      "inspectedBy": "agent:/root/automation_account_documentation",
+      "inspection": "The member Plan tab shows 3/3, the nested work task completed, the canceled task retained and the Questions item unchecked."
+    },
+    {
+      "path": "output/playwright/min664-reader-member-owner/member-after-reload.png",
+      "sha256": "8082650adeb380a17f82a7a10142c191bcc8af2d9fbe6e666aff9a7e2a083dec",
+      "inspectedBy": "agent:/root/automation_account_documentation",
+      "inspection": "The reloaded board is visible; the Done column is outside this screenshot. This image alone does not establish saved done status."
+    },
+    {
+      "path": "output/playwright/min664-reader-member-owner/owner-done-comment.png",
+      "sha256": "2f81feb4f6b5d995e9a24042752048e19768578f6619964f1675125af1c8bc4b",
+      "inspectedBy": "agent:/root/automation_account_documentation",
+      "inspection": "The owner sees DOC-13 in Done and the member comment. The comment is partly clipped in this viewport; its full saved body was verified through DOM/API."
+    },
+    {
+      "path": "output/playwright/min664-reader-member-owner/owner-done-plan.png",
+      "sha256": "eb24aa6209d42a03127be4cfa8c74dc5f4590bd3d3b183e761f9fbaea0d20a4c",
+      "inspectedBy": "agent:/root/automation_account_documentation",
+      "inspection": "The owner sees saved 3/3, all three work tasks checked, and the canceled task and Questions item unchanged."
+    },
+    {
+      "path": "output/playwright/min664-reader-member-owner/member-general-permissions.png",
+      "sha256": "2c82e5ad149a1f481b8f2cd5e1a2f89796dc9fb6558ba019cd0796f49dd64705",
+      "inspectedBy": "agent:/root/automation_account_documentation",
+      "inspection": "The General section displays project name/key as static text and no Save control. Global navigation inputs are outside the asserted authorization boundary."
+    },
+    {
+      "path": "output/playwright/min664-reader-member-owner/owner-general-permissions.png",
+      "sha256": "560d0db85d27f85dd8b291e1790873b5fc6ddd261e6d2f188b44b570d2f4989f",
+      "inspectedBy": "agent:/root/automation_account_documentation",
+      "inspection": "The owner General section contains editable project-name/key fields and a Save control; no owner setting was changed."
+    },
+    {
+      "path": "output/playwright/min664-reader-member-owner/final-public-first-project.png",
+      "sha256": "2ae87ecaa9078d26a9a4dc19ea8c7e9688da6df19f9c83f2b57fba0e4654d43d",
+      "inspectedBy": "agent:/root/automation_account_documentation",
+      "inspection": "The anonymous documentation UI visibly includes the new Smart-fill-off manual instruction and its independence from project automation and Smart Assign."
+    }
+  ],
+  "mutationScope": {
+    "allowed": "Only the supplied local project and new DOC-13 task, including its plan, comment and status; normal app-tab navigation preferences were allowed.",
+    "cloudWritesPerformed": false,
+    "existingDoc1ThroughDoc11WritesPerformed": false,
+    "ownerSettingsChanged": false,
+    "blockedOutOfScopeWrite": "/api/me/local-snapshots POST was blocked by the browser request guard.",
+    "guardQualification": "Per-phase raw records can include repeated blocked attempts. They are not summed as a unique attempt count."
+  },
+  "harnessCorrections": [
+    "Used the actual project-settings text link after an initial button-role locator did not match.",
+    "The initial create-response listener missed the project-scoped endpoint; saved lookup was used before continuing, with no duplicate task.",
+    "Used the Plan accessible-name prefix after the saved 0/3 badge changed its full name.",
+    "An initial attempt selected the disabled resource Add control, not Comment; comments GET showed no saved comment. The actual enabled Comment submit control then returned 201.",
+    "Waited for asynchronous comment loading before asserting that the owner saw the saved member comment."
+  ],
+  "notExecuted": [
+    "Human acceptance or a human language review.",
+    "A released Minddy Cloud deployment or any Cloud mutation.",
+    "Signup, email confirmation, reset or mobile Done in this session; those belong to the separate root execution record.",
+    "The sample website email/contact link.",
+    "Any Numo/code/provider invocation, paid AI run or automatic-assignment execution.",
+    "Owner settings mutation, project creation or membership invitation in this session."
+  ],
+  "assessment": "The rendered documentation supports this actual local manual member-to-owner workflow after the Smart-fill clarification. The member saved a comment and all counted plan tasks, completed DOC-13, and the owner independently reopened the saved outcome. The member owner-only save was denied. This is agent execution evidence for this profile, not human acceptance or proof of all release platforms."
+}

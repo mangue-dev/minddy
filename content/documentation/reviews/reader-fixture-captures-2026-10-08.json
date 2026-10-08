@@ -1,0 +1,1379 @@
+[
+  {
+    "locale": "en",
+    "screen": "first-project",
+    "src": "/documentation/en/reader-first-project.png",
+    "date": "2026-10-08",
+    "candidateVersion": "0.11.1",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "workingTreeChanges": true,
+    "route": "/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+    "profile": "Disposable restored full-reference backend aligned to candidate migrations",
+    "viewport": [
+      460,
+      1048
+    ],
+    "browserViewport": [
+      1280,
+      1080
+    ],
+    "displayAdaptation": [
+      "/api/projects"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "reviewed": true,
+    "submitted": false,
+    "limitation": "Actual stored demonstration state; no fabricated result or human acceptance.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "095cc17df6504fd8cc567e83df123bc141788a5e3d5cb24431430687a7835922"
+  },
+  {
+    "locale": "en",
+    "screen": "objectives",
+    "src": "/documentation/en/reader-objectives.png",
+    "date": "2026-10-08",
+    "candidateVersion": "0.11.1",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "workingTreeChanges": true,
+    "route": "/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/objectives",
+    "profile": "Disposable restored full-reference backend aligned to candidate migrations",
+    "viewport": [
+      672,
+      282
+    ],
+    "browserViewport": [
+      1280,
+      1080
+    ],
+    "displayAdaptation": [
+      "/api/projects"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "reviewed": true,
+    "submitted": false,
+    "limitation": "Unsubmitted actual creation dialog.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "a26ac3dd08c50b4a85d808c16bdf6c8056517db8bd4fbc00cc93b26612bd1635"
+  },
+  {
+    "locale": "en",
+    "screen": "trash",
+    "src": "/documentation/en/reader-trash.png",
+    "date": "2026-10-08",
+    "candidateVersion": "0.11.1",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "workingTreeChanges": true,
+    "route": "/trash",
+    "profile": "Disposable restored full-reference backend aligned to candidate migrations",
+    "viewport": [
+      946,
+      998
+    ],
+    "browserViewport": [
+      1280,
+      1080
+    ],
+    "displayAdaptation": [
+      "/api/projects",
+      "/api/me/trash"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "reviewed": true,
+    "submitted": false,
+    "limitation": "Actual stored demonstration state; no fabricated result or human acceptance.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "58ecea73062090c973927e5889ad73d5f44d737c5569c3ef7d9221f1f7b07166"
+  },
+  {
+    "locale": "fr",
+    "screen": "first-project",
+    "src": "/documentation/fr/reader-first-project.png",
+    "date": "2026-10-08",
+    "candidateVersion": "0.11.1",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "workingTreeChanges": true,
+    "route": "/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+    "profile": "Disposable restored full-reference backend aligned to candidate migrations",
+    "viewport": [
+      460,
+      1048
+    ],
+    "browserViewport": [
+      1280,
+      1080
+    ],
+    "displayAdaptation": [
+      "/api/me/summary",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/objectives",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/issues",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/objectives",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/views",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/views",
+      "/api/me/search-index",
+      "/api/issues/cad26d0a-7e0c-4037-8a82-fa044a58b133/comments",
+      "/api/me/search-index"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "reviewed": true,
+    "submitted": false,
+    "limitation": "Actual stored demonstration state; no fabricated result or human acceptance.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "69c5a60390d4313bea7c74881767d9b702465f059556826936515517f365117b"
+  },
+  {
+    "locale": "fr",
+    "screen": "objectives",
+    "src": "/documentation/fr/reader-objectives.png",
+    "date": "2026-10-08",
+    "candidateVersion": "0.11.1",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "workingTreeChanges": true,
+    "route": "/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/objectives",
+    "profile": "Disposable restored full-reference backend aligned to candidate migrations",
+    "viewport": [
+      672,
+      282
+    ],
+    "browserViewport": [
+      1280,
+      1080
+    ],
+    "displayAdaptation": [
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/objectives",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/issues",
+      "/api/me/summary",
+      "/api/me/search-index"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "reviewed": true,
+    "submitted": false,
+    "limitation": "Unsubmitted actual creation dialog.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "5832b5aa8ccc2b38ccbef5f7121e34d6ba634de771f65ca78e2a62325e2fb74b"
+  },
+  {
+    "locale": "fr",
+    "screen": "trash",
+    "src": "/documentation/fr/reader-trash.png",
+    "date": "2026-10-08",
+    "candidateVersion": "0.11.1",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "workingTreeChanges": true,
+    "route": "/trash",
+    "profile": "Disposable restored full-reference backend aligned to candidate migrations",
+    "viewport": [
+      946,
+      998
+    ],
+    "browserViewport": [
+      1280,
+      1080
+    ],
+    "displayAdaptation": [
+      "/api/me/summary",
+      "/api/me/trash",
+      "/api/me/summary",
+      "/api/me/search-index"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "reviewed": true,
+    "submitted": false,
+    "limitation": "Actual stored demonstration state; no fabricated result or human acceptance.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "140ad50327130f1ff950b89f285cb5bd6cadd298f236965431a19ad5f5be06a6"
+  },
+  {
+    "locale": "de",
+    "screen": "first-project",
+    "src": "/documentation/de/reader-first-project.png",
+    "date": "2026-10-08",
+    "candidateVersion": "0.11.1",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "workingTreeChanges": true,
+    "route": "/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+    "profile": "Disposable restored full-reference backend aligned to candidate migrations",
+    "viewport": [
+      460,
+      1048
+    ],
+    "browserViewport": [
+      1280,
+      1080
+    ],
+    "displayAdaptation": [
+      "/api/projects",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/issues",
+      "/api/me/summary",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/objectives",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/objectives",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/views",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/views",
+      "/api/me/search-index",
+      "/api/me/summary",
+      "/api/me/summary",
+      "/api/issues/cad26d0a-7e0c-4037-8a82-fa044a58b133/comments"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "reviewed": true,
+    "submitted": false,
+    "limitation": "Actual stored demonstration state; no fabricated result or human acceptance.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "1b785b850041c4509c3c914e0d420f6f1132fb745c963c69ed085966a1fce92e"
+  },
+  {
+    "locale": "de",
+    "screen": "objectives",
+    "src": "/documentation/de/reader-objectives.png",
+    "date": "2026-10-08",
+    "candidateVersion": "0.11.1",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "workingTreeChanges": true,
+    "route": "/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/objectives",
+    "profile": "Disposable restored full-reference backend aligned to candidate migrations",
+    "viewport": [
+      672,
+      282
+    ],
+    "browserViewport": [
+      1280,
+      1080
+    ],
+    "displayAdaptation": [
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/objectives",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/issues",
+      "/api/projects",
+      "/api/me/summary",
+      "/api/me/search-index"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "reviewed": true,
+    "submitted": false,
+    "limitation": "Unsubmitted actual creation dialog.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "e1f4ddd66ff39a836517c1350492046a7b2b4c26757d9401d4d7f56d53efa313"
+  },
+  {
+    "locale": "de",
+    "screen": "trash",
+    "src": "/documentation/de/reader-trash.png",
+    "date": "2026-10-08",
+    "candidateVersion": "0.11.1",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "workingTreeChanges": true,
+    "route": "/trash",
+    "profile": "Disposable restored full-reference backend aligned to candidate migrations",
+    "viewport": [
+      946,
+      998
+    ],
+    "browserViewport": [
+      1280,
+      1080
+    ],
+    "displayAdaptation": [
+      "/api/me/trash",
+      "/api/projects",
+      "/api/me/summary",
+      "/api/projects",
+      "/api/me/summary",
+      "/api/me/search-index"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "reviewed": true,
+    "submitted": false,
+    "limitation": "Actual stored demonstration state; no fabricated result or human acceptance.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "b5e7533d5ff11ae067ff920cc4825a6dd159c4ed43e5e8ed9cdf2d38ca2425f8"
+  },
+  {
+    "locale": "es",
+    "screen": "first-project",
+    "src": "/documentation/es/reader-first-project.png",
+    "date": "2026-10-08",
+    "candidateVersion": "0.11.1",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "workingTreeChanges": true,
+    "route": "/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+    "profile": "Disposable restored full-reference backend aligned to candidate migrations",
+    "viewport": [
+      460,
+      1048
+    ],
+    "browserViewport": [
+      1280,
+      1080
+    ],
+    "displayAdaptation": [
+      "/api/projects",
+      "/api/me/summary",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/objectives",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/issues",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/views",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/objectives",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/views",
+      "/api/me/search-index",
+      "/api/issues/cad26d0a-7e0c-4037-8a82-fa044a58b133/comments"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "reviewed": true,
+    "submitted": false,
+    "limitation": "Actual stored demonstration state; no fabricated result or human acceptance.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "623f9c1779de96fa322a2aab38eabd8e44f114f3e62d56a38da32a5617455875"
+  },
+  {
+    "locale": "es",
+    "screen": "objectives",
+    "src": "/documentation/es/reader-objectives.png",
+    "date": "2026-10-08",
+    "candidateVersion": "0.11.1",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "workingTreeChanges": true,
+    "route": "/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/objectives",
+    "profile": "Disposable restored full-reference backend aligned to candidate migrations",
+    "viewport": [
+      672,
+      282
+    ],
+    "browserViewport": [
+      1280,
+      1080
+    ],
+    "displayAdaptation": [
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/issues",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/objectives",
+      "/api/projects",
+      "/api/me/summary",
+      "/api/me/search-index"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "reviewed": true,
+    "submitted": false,
+    "limitation": "Unsubmitted actual creation dialog.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "ab637e35d5307847d2aec3056efe228ca37bb84264d4500fd4eee181cfdb6f35"
+  },
+  {
+    "locale": "es",
+    "screen": "trash",
+    "src": "/documentation/es/reader-trash.png",
+    "date": "2026-10-08",
+    "candidateVersion": "0.11.1",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "workingTreeChanges": true,
+    "route": "/trash",
+    "profile": "Disposable restored full-reference backend aligned to candidate migrations",
+    "viewport": [
+      946,
+      998
+    ],
+    "browserViewport": [
+      1280,
+      1080
+    ],
+    "displayAdaptation": [
+      "/api/me/trash",
+      "/api/projects",
+      "/api/me/summary",
+      "/api/projects",
+      "/api/me/summary",
+      "/api/me/search-index",
+      "/api/me/summary",
+      "/api/projects",
+      "/api/me/summary"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "reviewed": true,
+    "submitted": false,
+    "limitation": "Actual stored demonstration state; no fabricated result or human acceptance.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "7c05c32f504cffb483d86c1174ec712086861bb41ecf7b36b44e2351bb0df6c0"
+  },
+  {
+    "locale": "it",
+    "screen": "objectives",
+    "src": "/documentation/it/reader-objectives.png",
+    "date": "2026-10-08",
+    "candidateVersion": "0.11.1",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "workingTreeChanges": true,
+    "route": "/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/objectives",
+    "profile": "Disposable restored full-reference backend aligned to candidate migrations",
+    "viewport": [
+      672,
+      282
+    ],
+    "browserViewport": [
+      1280,
+      1080
+    ],
+    "displayAdaptation": [
+      "/api/me/summary",
+      "/api/projects",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/objectives",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/issues",
+      "/api/me/search-index",
+      "/api/projects",
+      "/api/me/summary",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/issues",
+      "/api/me/search-index",
+      "/api/me/summary"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "reviewed": true,
+    "submitted": false,
+    "limitation": "Unsubmitted actual creation dialog.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "d0fae6773ed17e4c1ec5a56916a84d0d026861f143359ee206116e74e8c9706d"
+  },
+  {
+    "locale": "it",
+    "screen": "trash",
+    "src": "/documentation/it/reader-trash.png",
+    "date": "2026-10-08",
+    "candidateVersion": "0.11.1",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "workingTreeChanges": true,
+    "route": "/trash",
+    "profile": "Disposable restored full-reference backend aligned to candidate migrations",
+    "viewport": [
+      946,
+      998
+    ],
+    "browserViewport": [
+      1280,
+      1080
+    ],
+    "displayAdaptation": [
+      "/api/projects",
+      "/api/me/trash",
+      "/api/me/summary",
+      "/api/projects",
+      "/api/me/summary",
+      "/api/me/search-index"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "reviewed": true,
+    "submitted": false,
+    "limitation": "Actual stored demonstration state; no fabricated result or human acceptance.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "11876a66a78f87e6bd9d13f8a52fa050342c75fd8f179240be448d1101ecb77b"
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "first-project",
+    "src": "/documentation/pt-BR/reader-first-project.png",
+    "date": "2026-10-08",
+    "candidateVersion": "0.11.1",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "workingTreeChanges": true,
+    "route": "/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+    "profile": "Disposable restored full-reference backend aligned to candidate migrations",
+    "viewport": [
+      460,
+      1048
+    ],
+    "browserViewport": [
+      1280,
+      1080
+    ],
+    "displayAdaptation": [
+      "/api/projects",
+      "/api/me/summary",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/objectives",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/views",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/objectives",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/issues",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/views",
+      "/api/me/search-index",
+      "/api/issues/cad26d0a-7e0c-4037-8a82-fa044a58b133/comments"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "reviewed": true,
+    "submitted": false,
+    "limitation": "Actual stored demonstration state; no fabricated result or human acceptance.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "1a00aac29c5417d920362005830db831dab308e5356e3bcef951514536e21612"
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "objectives",
+    "src": "/documentation/pt-BR/reader-objectives.png",
+    "date": "2026-10-08",
+    "candidateVersion": "0.11.1",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "workingTreeChanges": true,
+    "route": "/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/objectives",
+    "profile": "Disposable restored full-reference backend aligned to candidate migrations",
+    "viewport": [
+      672,
+      282
+    ],
+    "browserViewport": [
+      1280,
+      1080
+    ],
+    "displayAdaptation": [
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/objectives",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/issues",
+      "/api/me/summary",
+      "/api/projects",
+      "/api/me/search-index"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "reviewed": true,
+    "submitted": false,
+    "limitation": "Unsubmitted actual creation dialog.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "a7622cfbfe2ad014f945df018f09bd17f954b5a920ae9bd6165a669ff16e6094"
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "trash",
+    "src": "/documentation/pt-BR/reader-trash.png",
+    "date": "2026-10-08",
+    "candidateVersion": "0.11.1",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "workingTreeChanges": true,
+    "route": "/trash",
+    "profile": "Disposable restored full-reference backend aligned to candidate migrations",
+    "viewport": [
+      946,
+      998
+    ],
+    "browserViewport": [
+      1280,
+      1080
+    ],
+    "displayAdaptation": [
+      "/api/projects",
+      "/api/me/summary",
+      "/api/me/trash",
+      "/api/me/summary",
+      "/api/me/search-index"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "reviewed": true,
+    "submitted": false,
+    "limitation": "Actual stored demonstration state; no fabricated result or human acceptance.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "7573e0c0873c26e1e4d93037fb1f3f7f53464dd060eee8796459d4abed3779ad"
+  },
+  {
+    "locale": "en",
+    "screen": "objective-momentum",
+    "src": "/documentation/en/reader-objective-momentum.png",
+    "date": "2026-10-08",
+    "candidateVersion": "0.11.1",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "workingTreeChanges": true,
+    "route": "/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/objectives?open=291500d1-2f9d-4725-a972-f38ce57570fd",
+    "profile": "Disposable restored full-reference backend aligned to candidate migrations",
+    "viewport": [
+      946,
+      998
+    ],
+    "browserViewport": [
+      1280,
+      1080
+    ],
+    "displayAdaptation": [
+      "/api/projects"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "reviewed": true,
+    "submitted": false,
+    "limitation": "Actual stored demonstration state; no fabricated result or human acceptance.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "5750110f11c0132f0deea04d6558a9d3298c6ffc8ff9536b34c5060ba12af24c"
+  },
+  {
+    "locale": "en",
+    "screen": "cycle",
+    "src": "/documentation/en/reader-cycle.png",
+    "date": "2026-10-08",
+    "candidateVersion": "0.11.1",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "workingTreeChanges": true,
+    "route": "/all?view=cycle",
+    "profile": "Disposable restored full-reference backend aligned to candidate migrations",
+    "viewport": [
+      946,
+      998
+    ],
+    "browserViewport": [
+      1280,
+      1080
+    ],
+    "displayAdaptation": [
+      "/api/projects"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "reviewed": true,
+    "submitted": false,
+    "limitation": "Actual stored demonstration state; no fabricated result or human acceptance.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "f556785e41427820552ecfe08a4eb7ee1e4a61659f94945e92150811360adff7"
+  },
+  {
+    "locale": "fr",
+    "screen": "objective-momentum",
+    "src": "/documentation/fr/reader-objective-momentum.png",
+    "date": "2026-10-08",
+    "candidateVersion": "0.11.1",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "workingTreeChanges": true,
+    "route": "/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/objectives?open=291500d1-2f9d-4725-a972-f38ce57570fd",
+    "profile": "Disposable restored full-reference backend aligned to candidate migrations",
+    "viewport": [
+      946,
+      998
+    ],
+    "browserViewport": [
+      1280,
+      1080
+    ],
+    "displayAdaptation": [
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/objectives",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/issues",
+      "/api/me/summary",
+      "/api/me/search-index"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "reviewed": true,
+    "submitted": false,
+    "limitation": "Actual stored demonstration state; no fabricated result or human acceptance.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "872a32b14511762f9cbb6d7f6d04f5dfd848162b4f5484ac1c4409609603d1c2"
+  },
+  {
+    "locale": "fr",
+    "screen": "cycle",
+    "src": "/documentation/fr/reader-cycle.png",
+    "date": "2026-10-08",
+    "candidateVersion": "0.11.1",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "workingTreeChanges": true,
+    "route": "/all?view=cycle",
+    "profile": "Disposable restored full-reference backend aligned to candidate migrations",
+    "viewport": [
+      946,
+      998
+    ],
+    "browserViewport": [
+      1280,
+      1080
+    ],
+    "displayAdaptation": [
+      "/api/me/views",
+      "/api/me/summary",
+      "/api/me/board",
+      "/api/me/views",
+      "/api/me/board",
+      "/api/me/issues",
+      "/api/me/views",
+      "/api/me/board",
+      "/api/me/summary",
+      "/api/me/board",
+      "/api/me/search-index"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "reviewed": true,
+    "submitted": false,
+    "limitation": "Actual stored demonstration state; no fabricated result or human acceptance.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "a109662ba8240f12721c7173ef8a53e98a889b16a93e689974b04e3ece35f594"
+  },
+  {
+    "locale": "de",
+    "screen": "objective-momentum",
+    "src": "/documentation/de/reader-objective-momentum.png",
+    "date": "2026-10-08",
+    "candidateVersion": "0.11.1",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "workingTreeChanges": true,
+    "route": "/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/objectives?open=291500d1-2f9d-4725-a972-f38ce57570fd",
+    "profile": "Disposable restored full-reference backend aligned to candidate migrations",
+    "viewport": [
+      946,
+      998
+    ],
+    "browserViewport": [
+      1280,
+      1080
+    ],
+    "displayAdaptation": [
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/issues",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/objectives",
+      "/api/projects",
+      "/api/me/summary",
+      "/api/me/search-index"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "reviewed": true,
+    "submitted": false,
+    "limitation": "Actual stored demonstration state; no fabricated result or human acceptance.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "42002264b050cbe5e685ee2f9da72c3a70acc8fe17e19b71829e3548bb544eca"
+  },
+  {
+    "locale": "de",
+    "screen": "cycle",
+    "src": "/documentation/de/reader-cycle.png",
+    "date": "2026-10-08",
+    "candidateVersion": "0.11.1",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "workingTreeChanges": true,
+    "route": "/all?view=cycle",
+    "profile": "Disposable restored full-reference backend aligned to candidate migrations",
+    "viewport": [
+      946,
+      998
+    ],
+    "browserViewport": [
+      1280,
+      1080
+    ],
+    "displayAdaptation": [
+      "/api/me/views",
+      "/api/me/board",
+      "/api/projects",
+      "/api/me/views",
+      "/api/me/summary",
+      "/api/me/board",
+      "/api/projects",
+      "/api/me/views",
+      "/api/me/issues",
+      "/api/me/board",
+      "/api/me/summary",
+      "/api/me/board",
+      "/api/me/search-index"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "reviewed": true,
+    "submitted": false,
+    "limitation": "Actual stored demonstration state; no fabricated result or human acceptance.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "48161eabe2d22ab8372a0e2b8ec9fcdf29d52a19eff6c8e7117086fb3fbd9ee5"
+  },
+  {
+    "locale": "es",
+    "screen": "objective-momentum",
+    "src": "/documentation/es/reader-objective-momentum.png",
+    "date": "2026-10-08",
+    "candidateVersion": "0.11.1",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "workingTreeChanges": true,
+    "route": "/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/objectives?open=291500d1-2f9d-4725-a972-f38ce57570fd",
+    "profile": "Disposable restored full-reference backend aligned to candidate migrations",
+    "viewport": [
+      946,
+      998
+    ],
+    "browserViewport": [
+      1280,
+      1080
+    ],
+    "displayAdaptation": [
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/issues",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/objectives",
+      "/api/projects",
+      "/api/me/summary",
+      "/api/me/search-index"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "reviewed": true,
+    "submitted": false,
+    "limitation": "Actual stored demonstration state; no fabricated result or human acceptance.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "d1ee60e93c44fecc46cad36b863378ba4aeb89a45ae705c5fca21de2822bcd99"
+  },
+  {
+    "locale": "es",
+    "screen": "cycle",
+    "src": "/documentation/es/reader-cycle.png",
+    "date": "2026-10-08",
+    "candidateVersion": "0.11.1",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "workingTreeChanges": true,
+    "route": "/all?view=cycle",
+    "profile": "Disposable restored full-reference backend aligned to candidate migrations",
+    "viewport": [
+      946,
+      998
+    ],
+    "browserViewport": [
+      1280,
+      1080
+    ],
+    "displayAdaptation": [
+      "/api/me/views",
+      "/api/me/board",
+      "/api/projects",
+      "/api/me/views",
+      "/api/me/summary",
+      "/api/me/board",
+      "/api/me/summary",
+      "/api/me/board",
+      "/api/me/search-index"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "reviewed": true,
+    "submitted": false,
+    "limitation": "Actual stored demonstration state; no fabricated result or human acceptance.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "8ee8e2fda8e54fc447fad77ec25685bbcf57d83548fcb7c3abc6d2ed3268f20a"
+  },
+  {
+    "locale": "it",
+    "screen": "objective-momentum",
+    "src": "/documentation/it/reader-objective-momentum.png",
+    "date": "2026-10-08",
+    "candidateVersion": "0.11.1",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "workingTreeChanges": true,
+    "route": "/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/objectives?open=291500d1-2f9d-4725-a972-f38ce57570fd",
+    "profile": "Disposable restored full-reference backend aligned to candidate migrations",
+    "viewport": [
+      946,
+      998
+    ],
+    "browserViewport": [
+      1280,
+      1080
+    ],
+    "displayAdaptation": [
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/objectives",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/issues",
+      "/api/projects",
+      "/api/me/summary",
+      "/api/me/search-index"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "reviewed": true,
+    "submitted": false,
+    "limitation": "Actual stored demonstration state; no fabricated result or human acceptance.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "9684580e6537afb1ea2eb91aef6a6b471883acbd07e80eb15543dd0d0ef5fd65"
+  },
+  {
+    "locale": "it",
+    "screen": "cycle",
+    "src": "/documentation/it/reader-cycle.png",
+    "date": "2026-10-08",
+    "candidateVersion": "0.11.1",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "workingTreeChanges": true,
+    "route": "/all?view=cycle",
+    "profile": "Disposable restored full-reference backend aligned to candidate migrations",
+    "viewport": [
+      946,
+      998
+    ],
+    "browserViewport": [
+      1280,
+      1080
+    ],
+    "displayAdaptation": [
+      "/api/me/views",
+      "/api/me/board",
+      "/api/projects",
+      "/api/me/views",
+      "/api/me/summary",
+      "/api/me/board",
+      "/api/me/issues",
+      "/api/projects",
+      "/api/me/summary",
+      "/api/me/views",
+      "/api/me/board",
+      "/api/me/search-index"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "reviewed": true,
+    "submitted": false,
+    "limitation": "Actual stored demonstration state; no fabricated result or human acceptance.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "e7fdb09c34f65fbb44e0afc663721d054121f27e24091788eeb160064730c49d"
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "objective-momentum",
+    "src": "/documentation/pt-BR/reader-objective-momentum.png",
+    "date": "2026-10-08",
+    "candidateVersion": "0.11.1",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "workingTreeChanges": true,
+    "route": "/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/objectives?open=291500d1-2f9d-4725-a972-f38ce57570fd",
+    "profile": "Disposable restored full-reference backend aligned to candidate migrations",
+    "viewport": [
+      946,
+      998
+    ],
+    "browserViewport": [
+      1280,
+      1080
+    ],
+    "displayAdaptation": [
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/objectives",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/issues",
+      "/api/projects",
+      "/api/me/summary",
+      "/api/me/search-index"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "reviewed": true,
+    "submitted": false,
+    "limitation": "Actual stored demonstration state; no fabricated result or human acceptance.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "c9229ebce69ff6430ff532f681458311546fcf1e053b7d2500831f1206345f58"
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "cycle",
+    "src": "/documentation/pt-BR/reader-cycle.png",
+    "date": "2026-10-08",
+    "candidateVersion": "0.11.1",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "workingTreeChanges": true,
+    "route": "/all?view=cycle",
+    "profile": "Disposable restored full-reference backend aligned to candidate migrations",
+    "viewport": [
+      946,
+      998
+    ],
+    "browserViewport": [
+      1280,
+      1080
+    ],
+    "displayAdaptation": [
+      "/api/me/views",
+      "/api/me/summary",
+      "/api/me/board",
+      "/api/projects",
+      "/api/me/views",
+      "/api/me/board",
+      "/api/me/search-index",
+      "/api/me/issues",
+      "/api/me/summary",
+      "/api/me/board",
+      "/api/me/summary",
+      "/api/me/summary",
+      "/api/me/summary"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "reviewed": true,
+    "submitted": false,
+    "limitation": "Actual stored demonstration state; no fabricated result or human acceptance.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "9b36513cd1260a583fb0b7941fa979b2f862ffe17555b2d507d26e397a111614"
+  },
+  {
+    "locale": "it",
+    "screen": "first-project",
+    "src": "/documentation/it/reader-first-project.png",
+    "date": "2026-10-08",
+    "candidateVersion": "0.11.1",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "workingTreeChanges": true,
+    "route": "/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+    "profile": "Disposable restored full-reference backend aligned to candidate migrations",
+    "viewport": [
+      460,
+      1048
+    ],
+    "browserViewport": [
+      1280,
+      1080
+    ],
+    "displayAdaptation": [
+      "/api/projects",
+      "/api/me/summary",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/objectives",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/objectives",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/views",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/issues",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/views",
+      "/api/me/search-index",
+      "/api/issues/cad26d0a-7e0c-4037-8a82-fa044a58b133/comments"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "reviewed": true,
+    "submitted": false,
+    "limitation": "Actual stored demonstration state; no fabricated result or human acceptance.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "cc7151595d589debe296606651b8aed755e44f471c6c9905c86d1fd7c6fae050"
+  },
+  {
+    "locale": "fr",
+    "screen": "statistics",
+    "src": "/documentation/fr/reader-statistics.png",
+    "date": "2026-10-08",
+    "candidateVersion": "0.11.1",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "workingTreeChanges": true,
+    "route": "/statistics",
+    "profile": "Disposable restored full-reference backend aligned to candidate migrations",
+    "viewport": [
+      946,
+      998
+    ],
+    "browserViewport": [
+      1280,
+      1080
+    ],
+    "displayAdaptation": [
+      "/api/stats",
+      "/api/me/summary",
+      "/api/me/summary",
+      "/api/stats",
+      "/api/me/search-index"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "reviewed": false,
+    "submitted": false,
+    "limitation": "Actual stored demonstration state; no fabricated result or human acceptance."
+  },
+  {
+    "locale": "en",
+    "screen": "statistics",
+    "src": "/documentation/en/reader-statistics.png",
+    "date": "2026-10-08",
+    "candidateVersion": "0.11.1",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "workingTreeChanges": true,
+    "route": "/statistics",
+    "profile": "Disposable restored full-reference backend aligned to candidate migrations",
+    "viewport": [
+      946,
+      998
+    ],
+    "browserViewport": [
+      1280,
+      1080
+    ],
+    "displayAdaptation": [
+      "/api/stats",
+      "/api/projects",
+      "/api/projects",
+      "/api/stats"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "reviewed": false,
+    "submitted": false,
+    "limitation": "Actual stored demonstration state; no fabricated result or human acceptance."
+  },
+  {
+    "locale": "es",
+    "screen": "statistics",
+    "src": "/documentation/es/reader-statistics.png",
+    "date": "2026-10-08",
+    "candidateVersion": "0.11.1",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "workingTreeChanges": true,
+    "route": "/statistics",
+    "profile": "Disposable restored full-reference backend aligned to candidate migrations",
+    "viewport": [
+      946,
+      998
+    ],
+    "browserViewport": [
+      1280,
+      1080
+    ],
+    "displayAdaptation": [
+      "/api/stats",
+      "/api/projects",
+      "/api/me/summary",
+      "/api/projects",
+      "/api/me/summary",
+      "/api/stats",
+      "/api/me/search-index"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "reviewed": false,
+    "submitted": false,
+    "limitation": "Actual stored demonstration state; no fabricated result or human acceptance."
+  },
+  {
+    "locale": "it",
+    "screen": "statistics",
+    "src": "/documentation/it/reader-statistics.png",
+    "date": "2026-10-08",
+    "candidateVersion": "0.11.1",
+    "sourceCommit": "419e3778ee5627c5d4df218b7916fbd214b899cb",
+    "workingTreeChanges": true,
+    "route": "/statistics",
+    "profile": "Disposable restored full-reference backend aligned to candidate migrations",
+    "viewport": [
+      946,
+      998
+    ],
+    "browserViewport": [
+      1280,
+      1080
+    ],
+    "displayAdaptation": [
+      "/api/stats",
+      "/api/projects",
+      "/api/me/summary",
+      "/api/me/summary",
+      "/api/stats",
+      "/api/me/search-index"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "reviewed": false,
+    "submitted": false,
+    "limitation": "Actual stored demonstration state; no fabricated result or human acceptance."
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "statistics",
+    "src": "/documentation/pt-BR/reader-statistics.png",
+    "date": "2026-10-08",
+    "candidateVersion": "0.11.1",
+    "sourceCommit": "419e3778ee5627c5d4df218b7916fbd214b899cb",
+    "workingTreeChanges": true,
+    "route": "/statistics",
+    "profile": "Disposable restored full-reference backend aligned to candidate migrations",
+    "viewport": [
+      946,
+      998
+    ],
+    "browserViewport": [
+      1280,
+      1080
+    ],
+    "displayAdaptation": [
+      "/api/projects",
+      "/api/me/summary",
+      "/api/stats",
+      "/api/projects",
+      "/api/stats",
+      "/api/me/summary",
+      "/api/me/search-index"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "reviewed": false,
+    "submitted": false,
+    "limitation": "Actual stored demonstration state; no fabricated result or human acceptance."
+  },
+  {
+    "locale": "de",
+    "screen": "statistics",
+    "src": "/documentation/de/reader-statistics.png",
+    "date": "2026-10-08",
+    "candidateVersion": "0.11.1",
+    "sourceCommit": "419e3778ee5627c5d4df218b7916fbd214b899cb",
+    "workingTreeChanges": true,
+    "route": "/statistics",
+    "profile": "Disposable restored full-reference backend aligned to candidate migrations",
+    "viewport": [
+      946,
+      998
+    ],
+    "browserViewport": [
+      1280,
+      1080
+    ],
+    "displayAdaptation": [
+      "/api/stats",
+      "/api/me/summary",
+      "/api/projects",
+      "/api/projects",
+      "/api/stats",
+      "/api/me/summary",
+      "/api/me/search-index"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "reviewed": false,
+    "submitted": false,
+    "limitation": "Actual stored demonstration state; no fabricated result or human acceptance."
+  }
+]

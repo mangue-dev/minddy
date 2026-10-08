@@ -1,0 +1,70 @@
+[
+  [
+    "Navigation du projet à côté du tableau de tickets de démonstration.",
+    "La barre du projet donne accès aux tickets, objectifs, pages et arrivées en triage."
+  ],
+  [
+    "Menu d’actions pour deux tickets de démonstration sélectionnés.",
+    "Le menu agit sur les tickets sélectionnés. Aucune modification groupée n’a été envoyée sur cette capture."
+  ],
+  [
+    "Recherche d’un préalable par identifiant de ticket.",
+    "Choisissez le sens de la relation avant sa destination. Aucune relation n’a été envoyée dans ce sélecteur."
+  ],
+  [
+    "Champ de création d’un sous-ticket dans un parent de démonstration.",
+    "Ce champ crée un enfant sous le parent ; chaque enfant conserve son état et sa discussion."
+  ],
+  [
+    "Plan de démonstration avec deux tâches de travail terminées sur six.",
+    "Le plan enregistré distingue les étapes terminées, actives et en attente. Sa progression ne prouve pas l’exécution de la tâche de code fictive."
+  ],
+  [
+    "Dialogue d’ajout de lien avec une adresse de contact d’exemple.",
+    "Vérifiez la destination avant d’ajouter la ressource. Ce lien d’exemple n’a pas été envoyé."
+  ],
+  [
+    "Filtres manuels d’une vue et menu de classement.",
+    "Filtrez par propriétés du ticket ou choisissez un ordre. Le champ IA est facultatif pour ces commandes manuelles."
+  ],
+  [
+    "Dialogue de partage d’une vue avec l’accès privé sélectionné.",
+    "Les accès privé, protégé par mot de passe et public correspondent à trois choix distincts. Cette vue reste privée sur la capture."
+  ],
+  [
+    "Résultats de recherche pour l’identifiant d’un ticket de démonstration.",
+    "La palette retrouve le ticket par identifiant avec les pages du projet ; ouvrir un résultat conserve ses règles d’accès."
+  ],
+  [
+    "Onglets de la boîte de réception et liste non lue vide.",
+    "L’onglet Non lues vide indique l’absence d’éléments non lus dans cette vue ; Toutes permet d’examiner les autres notifications conservées."
+  ],
+  [
+    "Tâches personnelles de démonstration localisées dans le carnet.",
+    "Le carnet suit des étapes personnelles hors de la hiérarchie des tickets du projet. Les états des tâches d’exemple restent inchangés."
+  ],
+  [
+    "Statistiques personnelles du compte de démonstration.",
+    "L’échantillon affiché vient de l’activité enregistrée du compte. Une durée absente ne signifie pas zéro temps de travail."
+  ],
+  [
+    "Ticket de démonstration terminé, avec description et commentaire enregistré.",
+    "L’état terminé correspond au contrôle du parcours applicatif. Il ne signifie pas que le lien e-mail du site d’exemple a été testé."
+  ],
+  [
+    "Dialogue de création d’objectif non envoyé avec un nom de résultat d’exemple.",
+    "Nommez le résultat avant de choisir le responsable, la date cible et l’état. Ce dialogue n’a pas créé un deuxième objectif."
+  ],
+  [
+    "Élan d’un objectif après la clôture réelle d’un ticket de démonstration.",
+    "Consultez l’élan avec le travail associé. L’historique disponible ne suffit pas à afficher une date de fin estimée."
+  ],
+  [
+    "Ticket de démonstration dans le backlog du cycle personnel.",
+    "L’ajout à ce cycle a attribué le ticket au propriétaire du cycle tout en conservant l’état backlog."
+  ],
+  [
+    "Ticket de démonstration récupérable avec trente jours restants dans la corbeille.",
+    "Les actions de la ligne permettent de restaurer le ticket. Vider la corbeille est une opération permanente distincte."
+  ]
+]

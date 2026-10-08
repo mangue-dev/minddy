@@ -1,0 +1,192 @@
+{
+  "date": "2026-10-08",
+  "reviewer": "agent:/root/review_documentation_locales",
+  "scope": "Independent complete read of 54 new SelfHostingInstall interface strings, current command/clone-prompt boundaries and localized H02/H03/H10 guide links. Original localized release-stage PNGs, English full-preparation and dark-mobile PNGs individually inspected. No installer command executed by this reviewer.",
+  "sourcesRead": [
+    "components/marketing/self-hosting-install-wizard.tsx:458",
+    "app/(marketing)/self-hosting/install/page.tsx:50",
+    "git:v0.11.0:scripts/self-hosting-install.mjs",
+    "git:v0.11.0:scripts/bootstrap-supabase.mjs",
+    "git:v0.11.0:deploy/self-hosted/compose.full.yml:65",
+    "git:v0.11.0:lib/server/encryption/content-config.ts",
+    "scripts/self-hosting-install.mjs:48",
+    "scripts/bootstrap-supabase.mjs:79",
+    "git:v0.11.0:scripts/self-hosting-install.mjs:533",
+    "content/documentation/reviews/public-wizard-published-parser-check.json"
+  ],
+  "resolvedFindings": [
+    "Unsupported --encryption flag removed from commands cloning the published v0.11.0 tag; candidate-specific tooling is distinguished before adding users.",
+    "Root key retention/recovery and credential-encryption distinction preserved in every locale.",
+    "Initially false claim that tagged Compose does not transmit encryption flag removed: env_file loads all configured keys. Current note asks for effective application configuration and matching schema, rather than inferring protection from key presence.",
+    "Full-profile installer now receives --skip-start and is accurately described as protected configuration creation only, with pinned preparation and adapted startup required before email/diagnostics/sign-up. Linked H03#adapted-start and profile-specific procedure are present in UI and assistant prompt.",
+    "Nine new German/Spanish wizard strings use the existing visible du/tú form consistently; formal operator article style remains unchanged."
+  ],
+  "openFindings": [],
+  "humanAcceptance": false,
+  "runtimeExecutionClaimed": false,
+  "records": [
+    {
+      "locale": "en",
+      "keys": {
+        "releaseProcedureBody": "The published MINDDY_RELEASE_TAG has verified installation and runtime limitations. Follow the procedure for your profile, including its version-specific preparation and startup steps. Advancing through this assistant does not verify that services have started or that an instance is ready.",
+        "releaseProcedureGuide": "Follow the procedure for this profile",
+        "fullPreparationTitle": "Prepare the full-profile configuration",
+        "fullPreparationBody": "This command creates the protected configuration with --skip-start; it does not start the stack or apply the database bootstrap. Before continuing to email, diagnostics or sign-up, follow the server guide’s pinned tooling workaround and adapted full-profile startup. Preserve the generated secrets and the verified image digest.",
+        "fullPreparedDone": "The protected configuration exists and its release and image have been checked. Complete the linked preparation and startup procedure before verifying the running instance.",
+        "encryptionReleaseTitle": "Encryption for this release",
+        "encryptionReleaseBody": "These commands clone MINDDY_RELEASE_TAG and do not configure workspace encryption. The --encryption options documented for the 0.11.1 candidate are not accepted by the published v0.11.0 scripts. To encrypt content, follow the version-specific guide and verify matching tooling and runtime configuration before adding users.",
+        "encryptionReleaseKeyNote": "Keep MINDDY_DATA_ROOT_KEY across updates and store a protected recovery copy. Its presence alone does not prove that workspace content is encrypted. Check the application’s effective configuration and the matching schema before relying on content encryption. Credential encryption is a separate mechanism.",
+        "encryptionReleaseGuide": "Read the version-specific encryption guide"
+      },
+      "selectedCopySha256": "c327b5ec24f4b1bdeb499d2cb76a206d24794b7792be40909da2a415c9802aac",
+      "reviewedAt": "2026-10-08",
+      "reviewer": "agent:/root/review_documentation_locales",
+      "idiomAndMeaningParityReviewed": true
+    },
+    {
+      "locale": "fr",
+      "keys": {
+        "releaseProcedureBody": "La release publique MINDDY_RELEASE_TAG présente des limites d’installation et d’exécution vérifiées. Suivez la procédure de votre profil, y compris les étapes de préparation et de démarrage propres à cette version. Avancer dans cet assistant ne vérifie pas que les services ont démarré ni que l’instance est prête.",
+        "releaseProcedureGuide": "Suivre la procédure de ce profil",
+        "fullPreparationTitle": "Préparer la configuration du profil complet",
+        "fullPreparationBody": "Cette commande crée la configuration protégée avec --skip-start : elle ne démarre pas les services et n’exécute pas l’initialisation de la base. Avant de passer aux e-mails, au diagnostic ou à l’inscription, suivez dans le guide serveur l’adaptation des outils épinglés et le démarrage adapté du profil complet. Conservez les secrets générés et le digest vérifié de l’image.",
+        "fullPreparedDone": "La configuration protégée existe et sa release ainsi que son image ont été contrôlées. Terminez la procédure de préparation et de démarrage liée avant de vérifier l’instance en fonctionnement.",
+        "encryptionReleaseTitle": "Le chiffrement dans cette version",
+        "encryptionReleaseBody": "Ces commandes clonent MINDDY_RELEASE_TAG sans configurer le chiffrement du contenu. Les scripts de la release publique v0.11.0 ne reconnaissent pas les options --encryption documentées pour le candidat 0.11.1. Pour chiffrer le contenu, suivez le guide de la version concernée et vérifiez que les outils et la configuration du serveur correspondent avant d’ajouter des utilisateurs.",
+        "encryptionReleaseKeyNote": "Conservez MINDDY_DATA_ROOT_KEY lors des mises à jour et gardez une copie de récupération protégée. Sa présence ne prouve pas que le contenu est chiffré. Vérifiez la configuration effective de l’application et le schéma correspondant avant de vous fier au chiffrement du contenu. Le chiffrement des identifiants repose sur un mécanisme distinct.",
+        "encryptionReleaseGuide": "Lire le guide de chiffrement de la version concernée"
+      },
+      "selectedCopySha256": "65436948f8649aaec9d538444b1990e34cae40f5aa489d56a4cb1b48820061da",
+      "reviewedAt": "2026-10-08",
+      "reviewer": "agent:/root/review_documentation_locales",
+      "idiomAndMeaningParityReviewed": true
+    },
+    {
+      "locale": "de",
+      "keys": {
+        "releaseProcedureBody": "Bei der veröffentlichten Version MINDDY_RELEASE_TAG wurden Einschränkungen bei Installation und Ausführung festgestellt. Folge der Anleitung für dein Profil einschließlich der versionsabhängigen Vorbereitungs- und Startschritte. Das Durchlaufen dieses Assistenten bestätigt weder den Start der Dienste noch die Betriebsbereitschaft der Instanz.",
+        "releaseProcedureGuide": "Anleitung für dieses Profil befolgen",
+        "fullPreparationTitle": "Konfiguration des vollständigen Profils vorbereiten",
+        "fullPreparationBody": "Dieser Befehl erstellt die geschützte Konfiguration mit --skip-start; er startet weder den Stack noch die Datenbankinitialisierung. Führe vor E-Mail-Einrichtung, Diagnose und Registrierung die in der Serveranleitung beschriebenen Anpassungen der festgelegten Werkzeuge und den angepassten Start des vollständigen Profils durch. Bewahre die erzeugten Geheimnisse und den geprüften Image-Digest auf.",
+        "fullPreparedDone": "Die geschützte Konfiguration liegt vor; ihre Version und ihr Image wurden geprüft. Schließe die verlinkte Vorbereitung und den Start ab, bevor du die laufende Instanz prüfst.",
+        "encryptionReleaseTitle": "Versionsabhängige Verschlüsselung",
+        "encryptionReleaseBody": "Diese Befehle klonen MINDDY_RELEASE_TAG, richten aber keine Verschlüsselung der Arbeitsbereichsinhalte ein. Die Skripte der veröffentlichten Version v0.11.0 akzeptieren die für den Kandidaten 0.11.1 dokumentierten Optionen --encryption nicht. Wenn du Inhalte verschlüsseln möchtest, folge der Anleitung für die betreffende Version. Prüfe vor dem Hinzufügen von Benutzern, ob Werkzeuge und Laufzeitkonfiguration dazu passen.",
+        "encryptionReleaseKeyNote": "Bewahre MINDDY_DATA_ROOT_KEY bei Updates auf und halte eine geschützte Wiederherstellungskopie bereit. Ein vorhandener Schlüssel beweist allein nicht, dass Arbeitsbereichsinhalte verschlüsselt sind. Prüfe die tatsächlich wirksame Anwendungskonfiguration und das zugehörige Schema, bevor du dich auf die Inhaltsverschlüsselung verlässt. Zugangsdaten werden über einen gesonderten Mechanismus verschlüsselt.",
+        "encryptionReleaseGuide": "Versionsspezifische Verschlüsselungsanleitung lesen"
+      },
+      "selectedCopySha256": "16f7af175ebf4fe044598f932f10c37c37660b62470130bd02b1e6d8e2c8f544",
+      "reviewedAt": "2026-10-08",
+      "reviewer": "agent:/root/review_documentation_locales",
+      "idiomAndMeaningParityReviewed": true
+    },
+    {
+      "locale": "es",
+      "keys": {
+        "releaseProcedureBody": "La versión publicada MINDDY_RELEASE_TAG tiene limitaciones de instalación y ejecución verificadas. Sigue el procedimiento de tu perfil, incluidos los pasos de preparación y arranque propios de esa versión. Avanzar por este asistente no verifica que los servicios hayan arrancado ni que la instancia esté lista.",
+        "releaseProcedureGuide": "Seguir el procedimiento de este perfil",
+        "fullPreparationTitle": "Preparar la configuración del perfil completo",
+        "fullPreparationBody": "Este comando crea la configuración protegida con --skip-start; no arranca los servicios ni ejecuta la inicialización de la base de datos. Antes de continuar con el correo, el diagnóstico o el registro, sigue en la guía del servidor la adaptación de las herramientas fijadas y el arranque adaptado del perfil completo. Conserva los secretos generados y el digest verificado de la imagen.",
+        "fullPreparedDone": "La configuración protegida existe y se han comprobado su versión y su imagen. Completa el procedimiento enlazado de preparación y arranque antes de verificar la instancia en funcionamiento.",
+        "encryptionReleaseTitle": "Cifrado en esta versión",
+        "encryptionReleaseBody": "Estos comandos clonan MINDDY_RELEASE_TAG sin configurar el cifrado del contenido. Los scripts de la versión publicada v0.11.0 no aceptan las opciones --encryption documentadas para el candidato 0.11.1. Para cifrar el contenido, sigue la guía de la versión correspondiente y comprueba que las herramientas y la configuración del servidor coinciden antes de añadir usuarios.",
+        "encryptionReleaseKeyNote": "Conserva MINDDY_DATA_ROOT_KEY durante las actualizaciones y guarda una copia de recuperación protegida. Su presencia no demuestra que el contenido esté cifrado. Comprueba la configuración efectiva de la aplicación y el esquema correspondiente antes de confiar en el cifrado del contenido. El cifrado de las credenciales utiliza un mecanismo independiente.",
+        "encryptionReleaseGuide": "Leer la guía de cifrado de la versión correspondiente"
+      },
+      "selectedCopySha256": "7077a2e922f15b52c138d3536db274ae0f2fca6832369b5db509402c6f034066",
+      "reviewedAt": "2026-10-08",
+      "reviewer": "agent:/root/review_documentation_locales",
+      "idiomAndMeaningParityReviewed": true
+    },
+    {
+      "locale": "it",
+      "keys": {
+        "releaseProcedureBody": "La versione pubblicata MINDDY_RELEASE_TAG presenta limiti di installazione ed esecuzione verificati. Segui la procedura del tuo profilo, compresi i passaggi di preparazione e avvio specifici per questa versione. Proseguire nell’assistente non verifica che i servizi siano stati avviati o che l’istanza sia pronta.",
+        "releaseProcedureGuide": "Segui la procedura di questo profilo",
+        "fullPreparationTitle": "Prepara la configurazione del profilo completo",
+        "fullPreparationBody": "Questo comando crea la configurazione protetta con --skip-start: non avvia i servizi e non esegue l’inizializzazione del database. Prima di proseguire con le e-mail, la diagnostica o la registrazione, segui nella guida del server l’adattamento degli strumenti fissati e l’avvio adattato del profilo completo. Conserva i segreti generati e il digest verificato dell’immagine.",
+        "fullPreparedDone": "La configurazione protetta esiste e la sua versione e la sua immagine sono state verificate. Completa la procedura di preparazione e avvio collegata prima di verificare l’istanza in esecuzione.",
+        "encryptionReleaseTitle": "Crittografia in questa versione",
+        "encryptionReleaseBody": "Questi comandi clonano MINDDY_RELEASE_TAG senza configurare la crittografia dei contenuti. Gli script della versione pubblicata v0.11.0 non accettano le opzioni --encryption documentate per il candidato 0.11.1. Per crittografare i contenuti, segui la guida della versione pertinente e verifica che gli strumenti e la configurazione del server siano compatibili prima di aggiungere utenti.",
+        "encryptionReleaseKeyNote": "Conserva MINDDY_DATA_ROOT_KEY durante gli aggiornamenti e mantieni una copia di ripristino protetta. La sua presenza non dimostra che i contenuti siano crittografati. Verifica la configurazione effettiva dell’applicazione e lo schema corrispondente prima di fare affidamento sulla crittografia dei contenuti. La crittografia delle credenziali utilizza un meccanismo distinto.",
+        "encryptionReleaseGuide": "Leggi la guida alla crittografia della versione pertinente"
+      },
+      "selectedCopySha256": "868aab8df1935e9c6fdcb6ca57161ab7b261d9245a4876caaf4ce213255d2b41",
+      "reviewedAt": "2026-10-08",
+      "reviewer": "agent:/root/review_documentation_locales",
+      "idiomAndMeaningParityReviewed": true
+    },
+    {
+      "locale": "pt-BR",
+      "keys": {
+        "releaseProcedureBody": "A versão publicada MINDDY_RELEASE_TAG tem limitações de instalação e execução verificadas. Siga o procedimento do seu perfil, incluindo as etapas de preparação e inicialização específicas dessa versão. Avançar neste assistente não verifica se os serviços foram iniciados nem se a instância está pronta.",
+        "releaseProcedureGuide": "Siga o procedimento deste perfil",
+        "fullPreparationTitle": "Prepare a configuração do perfil completo",
+        "fullPreparationBody": "Este comando cria a configuração protegida com --skip-start; ele não inicia os serviços nem executa a inicialização do banco de dados. Antes de continuar com e-mail, diagnóstico ou cadastro, siga no guia do servidor a adaptação das ferramentas fixadas e a inicialização adaptada do perfil completo. Preserve os segredos gerados e o digest verificado da imagem.",
+        "fullPreparedDone": "A configuração protegida existe e sua versão e sua imagem foram verificadas. Conclua o procedimento de preparação e inicialização indicado no link antes de verificar a instância em execução.",
+        "encryptionReleaseTitle": "Criptografia nesta versão",
+        "encryptionReleaseBody": "Estes comandos clonam MINDDY_RELEASE_TAG sem configurar a criptografia do conteúdo. Os scripts da versão publicada v0.11.0 não aceitam as opções --encryption documentadas para o candidato 0.11.1. Para criptografar o conteúdo, siga o guia da versão correspondente e verifique se as ferramentas e a configuração do servidor são compatíveis antes de adicionar usuários.",
+        "encryptionReleaseKeyNote": "Preserve MINDDY_DATA_ROOT_KEY durante as atualizações e guarde uma cópia de recuperação protegida. Sua presença não comprova que o conteúdo esteja criptografado. Verifique a configuração efetiva da aplicação e o esquema correspondente antes de confiar na criptografia do conteúdo. A criptografia das credenciais usa um mecanismo separado.",
+        "encryptionReleaseGuide": "Leia o guia de criptografia da versão correspondente"
+      },
+      "selectedCopySha256": "53055d4fc922b840d38465f699e2a1d56f9b326cb0348575e56b0f095236d9fc",
+      "reviewedAt": "2026-10-08",
+      "reviewer": "agent:/root/review_documentation_locales",
+      "idiomAndMeaningParityReviewed": true
+    }
+  ],
+  "originalPngReview": [
+    {
+      "locale": "en",
+      "path": "output/playwright/min664-wizard-release-boundary/en.png",
+      "sha256": "73d174d1c10c3e91a18ca5e59e909618ea1883d9f80a994b3fe8033a0c860ac8",
+      "individuallyViewed": true,
+      "finding": "Readable complete release boundary, root-key warning and guide links; no unsupported encryption toggle or executed-installation claim."
+    },
+    {
+      "locale": "fr",
+      "path": "output/playwright/min664-wizard-release-boundary/fr.png",
+      "sha256": "4499bd46bd061ac2a4f8166d32ae99a192a51567d7acdb89b306dd505531935f",
+      "individuallyViewed": true,
+      "finding": "Readable complete release boundary, root-key warning and guide links; no unsupported encryption toggle or executed-installation claim."
+    },
+    {
+      "locale": "it",
+      "path": "output/playwright/min664-wizard-release-boundary/it.png",
+      "sha256": "fc55ec082529fd782118f615ea4325de9a3d5590db894d6f1b02a6371c0fe54a",
+      "individuallyViewed": true,
+      "finding": "Readable complete release boundary, root-key warning and guide links; no unsupported encryption toggle or executed-installation claim."
+    },
+    {
+      "locale": "pt-BR",
+      "path": "output/playwright/min664-wizard-release-boundary/pt-BR.png",
+      "sha256": "223a5860b14440baf7273e8c7c92c5f3a574d0478e10490a8f07d510d3e01ae0",
+      "individuallyViewed": true,
+      "finding": "Readable complete release boundary, root-key warning and guide links; no unsupported encryption toggle or executed-installation claim."
+    },
+    {
+      "locale": "de",
+      "path": "output/playwright/min664-wizard-release-boundary/de.png",
+      "sha256": "2525665f7d1e7651813c5842445395e31e0104aa8f3fe7405d255f90de5071b3",
+      "individuallyViewed": true,
+      "finding": "Readable complete release boundary, root-key warning and guide links; no unsupported encryption toggle or executed-installation claim."
+    },
+    {
+      "locale": "es",
+      "path": "output/playwright/min664-wizard-release-boundary/es.png",
+      "sha256": "5aa61ada8efc44187bf80198dd4f415749c204b22a276b34303ce5c012ee0e23",
+      "individuallyViewed": true,
+      "finding": "Readable complete release boundary, root-key warning and guide links; no unsupported encryption toggle or executed-installation claim."
+    },
+    {
+      "path": "output/playwright/min664-wizard-release-boundary/en-full-preparation.png",
+      "sha256": "fb4159837877ec04c601f48f9cbb7d0997737cd9d4c523d44704046bc29dbcb2",
+      "individuallyViewed": true
+    },
+    {
+      "path": "output/playwright/min664-wizard-release-boundary/en-mobile-dark.png",
+      "sha256": "e710fc2454b4f623439c7d2f9ad78e765c35ca25fee74de15786d551d2e80902",
+      "individuallyViewed": true
+    }
+  ],
+  "runtimeQualification": "Tagged parser source returns after configuration/checkpoint when start is false; inspected author parser-only probes and browser UI evidence are not service startup, runtime encryption or full release acceptance."
+}

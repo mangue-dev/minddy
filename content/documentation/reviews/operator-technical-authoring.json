@@ -1,0 +1,659 @@
+{
+  "reviewer": "Codex operator_documentation source adaptation agent",
+  "reviewDate": "2026-10-08",
+  "sourceSnapshot": "89ebb59a502884e79e3c5fc459403d26bad1f8f0",
+  "compatibility": "0.11.1 candidate source; v0.11.0 distribution matrix; Cloud deployed version unknown",
+  "articles": [
+    {
+      "id": "self-hosted-compatibility",
+      "workflow": "H01",
+      "audiences": [
+        "operator"
+      ],
+      "readerOutcome": "Select a supported topology release and host",
+      "revision": 1,
+      "draftReason": "Release/profile execution or illustration acceptance is not established. Source adaptation is not operational acceptance.",
+      "requiredIllustration": "Localized topology diagram and version table",
+      "sourceReview": "Selected facts adapted from source with profile, permission and key boundaries preserved.",
+      "languageReview": {
+        "en": "Author translation prepared; independent idiom/meaning review pending.",
+        "fr": "Author translation prepared; independent idiom/meaning review pending.",
+        "de": "Author translation prepared; independent idiom/meaning review pending.",
+        "es": "Independent agent review of complete Spanish editorial revision approved on 2026-10-08; recorded in operator-spanish-independent-review.json. Operational publication acceptance remains pending.",
+        "it": "Author translation prepared; independent idiom/meaning review pending.",
+        "pt-BR": "Author translation prepared; independent idiom/meaning review pending."
+      },
+      "claimSources": [
+        "deploy/self-hosted/compatibility.json",
+        "docs/container-image.md",
+        "docs/self-hosting-distribution.md"
+      ]
+    },
+    {
+      "id": "install-locally",
+      "workflow": "H02",
+      "audiences": [
+        "operator"
+      ],
+      "readerOutcome": "Install a private local instance and connect desktop",
+      "revision": 1,
+      "draftReason": "Release/profile execution or illustration acceptance is not established. Source adaptation is not operational acceptance.",
+      "requiredIllustration": "New wizard/native setup, sanitized command output",
+      "sourceReview": "Selected facts adapted from source with profile, permission and key boundaries preserved.",
+      "languageReview": {
+        "en": "Author translation prepared; independent idiom/meaning review pending.",
+        "fr": "Author translation prepared; independent idiom/meaning review pending.",
+        "de": "Author translation prepared; independent idiom/meaning review pending.",
+        "es": "Independent agent review of complete Spanish editorial revision approved on 2026-10-08; recorded in operator-spanish-independent-review.json. Operational publication acceptance remains pending.",
+        "it": "Author translation prepared; independent idiom/meaning review pending.",
+        "pt-BR": "Author translation prepared; independent idiom/meaning review pending."
+      },
+      "claimSources": [
+        "docs/self-hosting.md",
+        "scripts/self-hosting-local.mjs",
+        "content/knowledge/self-hosting.md"
+      ]
+    },
+    {
+      "id": "install-a-server",
+      "workflow": "H03",
+      "audiences": [
+        "operator"
+      ],
+      "readerOutcome": "Install the full reference profile for a shared instance",
+      "revision": 1,
+      "draftReason": "Release/profile execution or illustration acceptance is not established. Source adaptation is not operational acceptance.",
+      "requiredIllustration": "Localized deployment diagram; wizard capture",
+      "sourceReview": "Selected facts adapted from source with profile, permission and key boundaries preserved.",
+      "languageReview": {
+        "en": "Author translation prepared; independent idiom/meaning review pending.",
+        "fr": "Author translation prepared; independent idiom/meaning review pending.",
+        "de": "Author translation prepared; independent idiom/meaning review pending.",
+        "es": "Independent agent review of complete Spanish editorial revision approved on 2026-10-08; recorded in operator-spanish-independent-review.json. Operational publication acceptance remains pending.",
+        "it": "Author translation prepared; independent idiom/meaning review pending.",
+        "pt-BR": "Author translation prepared; independent idiom/meaning review pending."
+      },
+      "claimSources": [
+        "docs/self-hosting.md",
+        "scripts/self-hosting-install.mjs",
+        "deploy/self-hosted/compose.full.yml"
+      ]
+    },
+    {
+      "id": "managed-or-source-installation",
+      "workflow": "H04",
+      "audiences": [
+        "operator"
+      ],
+      "readerOutcome": "Use managed Supabase or the supported source path",
+      "revision": 1,
+      "draftReason": "Release/profile execution or illustration acceptance is not established. Source adaptation is not operational acceptance.",
+      "requiredIllustration": "Localized deployment diagram plus sanitized commands",
+      "sourceReview": "Selected facts adapted from source with profile, permission and key boundaries preserved.",
+      "languageReview": {
+        "en": "Author translation prepared; independent idiom/meaning review pending.",
+        "fr": "Author translation prepared; independent idiom/meaning review pending.",
+        "de": "Author translation prepared; independent idiom/meaning review pending.",
+        "es": "Independent agent review of complete Spanish editorial revision approved on 2026-10-08; recorded in operator-spanish-independent-review.json. Operational publication acceptance remains pending.",
+        "it": "Author translation prepared; independent idiom/meaning review pending.",
+        "pt-BR": "Author translation prepared; independent idiom/meaning review pending."
+      },
+      "claimSources": [
+        "docs/self-hosting.md",
+        "docs/self-hosting-distribution.md",
+        "deploy/self-hosted/compose.managed.yml"
+      ]
+    },
+    {
+      "id": "instance-configuration",
+      "workflow": "H05",
+      "audiences": [
+        "operator"
+      ],
+      "readerOutcome": "Configure public origins environment secrets and capabilities",
+      "revision": 1,
+      "draftReason": "Release/profile execution or illustration acceptance is not established. Source adaptation is not operational acceptance.",
+      "requiredIllustration": "Text tables and sanitized examples",
+      "sourceReview": "Selected facts adapted from source with profile, permission and key boundaries preserved.",
+      "languageReview": {
+        "en": "Author translation prepared; independent idiom/meaning review pending.",
+        "fr": "Author translation prepared; independent idiom/meaning review pending.",
+        "de": "Author translation prepared; independent idiom/meaning review pending.",
+        "es": "Independent agent review of complete Spanish editorial revision approved on 2026-10-08; recorded in operator-spanish-independent-review.json. Operational publication acceptance remains pending.",
+        "it": "Author translation prepared; independent idiom/meaning review pending.",
+        "pt-BR": "Author translation prepared; independent idiom/meaning review pending."
+      },
+      "claimSources": [
+        ".env.example",
+        "docs/self-hosting.md",
+        "lib/capabilities.ts"
+      ]
+    },
+    {
+      "id": "authentication-and-email",
+      "workflow": "H06",
+      "audiences": [
+        "operator"
+      ],
+      "readerOutcome": "Configure and verify signup recovery MFA and SMTP",
+      "revision": 1,
+      "draftReason": "Release/profile execution or illustration acceptance is not established. Source adaptation is not operational acceptance.",
+      "requiredIllustration": "New redacted settings or localized auth sequence",
+      "sourceReview": "Selected facts adapted from source with profile, permission and key boundaries preserved.",
+      "languageReview": {
+        "en": "Author translation prepared; independent idiom/meaning review pending.",
+        "fr": "Author translation prepared; independent idiom/meaning review pending.",
+        "de": "Author translation prepared; independent idiom/meaning review pending.",
+        "es": "Independent agent review of complete Spanish editorial revision approved on 2026-10-08; recorded in operator-spanish-independent-review.json. Operational publication acceptance remains pending.",
+        "it": "Author translation prepared; independent idiom/meaning review pending.",
+        "pt-BR": "Author translation prepared; independent idiom/meaning review pending."
+      },
+      "claimSources": [
+        "docs/self-hosting-auth.md",
+        "supabase/email-templates/confirm-signup.html",
+        "supabase/email-templates/reset-password.html",
+        "lib/self-hosting-email-templates.ts"
+      ]
+    },
+    {
+      "id": "storage-and-attachments",
+      "workflow": "H07",
+      "audiences": [
+        "operator"
+      ],
+      "readerOutcome": "Operate durable Storage and diagnose file access",
+      "revision": 1,
+      "draftReason": "Release/profile execution or illustration acceptance is not established. Source adaptation is not operational acceptance.",
+      "requiredIllustration": "Localized data-flow diagram",
+      "sourceReview": "Selected facts adapted from source with profile, permission and key boundaries preserved.",
+      "languageReview": {
+        "en": "Author translation prepared; independent idiom/meaning review pending.",
+        "fr": "Author translation prepared; independent idiom/meaning review pending.",
+        "de": "Author translation prepared; independent idiom/meaning review pending.",
+        "es": "Independent agent review of complete Spanish editorial revision approved on 2026-10-08; recorded in operator-spanish-independent-review.json. Operational publication acceptance remains pending.",
+        "it": "Author translation prepared; independent idiom/meaning review pending.",
+        "pt-BR": "Author translation prepared; independent idiom/meaning review pending."
+      },
+      "claimSources": [
+        "docs/self-hosting.md",
+        "docs/self-hosting-operations.md",
+        "docs/self-hosting-logical-operations.md",
+        "lib/server/page-files.ts",
+        "lib/server/page-publication.ts"
+      ]
+    },
+    {
+      "id": "proxy-network-and-jobs",
+      "workflow": "H08",
+      "audiences": [
+        "operator"
+      ],
+      "readerOutcome": "Expose the right origins and operate scheduled jobs",
+      "revision": 1,
+      "draftReason": "Release/profile execution or illustration acceptance is not established. Source adaptation is not operational acceptance.",
+      "requiredIllustration": "Localized network/jobs diagram",
+      "sourceReview": "Selected facts adapted from source with profile, permission and key boundaries preserved.",
+      "languageReview": {
+        "en": "Author translation prepared; independent idiom/meaning review pending.",
+        "fr": "Author translation prepared; independent idiom/meaning review pending.",
+        "de": "Author translation prepared; independent idiom/meaning review pending.",
+        "es": "Independent agent review of complete Spanish editorial revision approved on 2026-10-08; recorded in operator-spanish-independent-review.json. Operational publication acceptance remains pending.",
+        "it": "Author translation prepared; independent idiom/meaning review pending.",
+        "pt-BR": "Author translation prepared; independent idiom/meaning review pending."
+      },
+      "claimSources": [
+        "docs/self-hosting-distribution.md",
+        "vercel.json",
+        "deploy/self-hosted/compose.full.yml",
+        "deploy/self-hosted/scheduler.mjs"
+      ]
+    },
+    {
+      "id": "optional-providers",
+      "workflow": "H09",
+      "audiences": [
+        "operator"
+      ],
+      "readerOutcome": "Enable chosen AI Git MCP push or analytics capabilities",
+      "revision": 1,
+      "draftReason": "Release/profile execution or illustration acceptance is not established. Source adaptation is not operational acceptance.",
+      "requiredIllustration": "Localized optional-provider diagram and sanitized config",
+      "sourceReview": "Selected facts adapted from source with profile, permission and key boundaries preserved.",
+      "languageReview": {
+        "en": "Author translation prepared; independent idiom/meaning review pending.",
+        "fr": "Author translation prepared; independent idiom/meaning review pending.",
+        "de": "Author translation prepared; independent idiom/meaning review pending.",
+        "es": "Independent agent review of complete Spanish editorial revision approved on 2026-10-08; recorded in operator-spanish-independent-review.json. Operational publication acceptance remains pending.",
+        "it": "Author translation prepared; independent idiom/meaning review pending.",
+        "pt-BR": "Author translation prepared; independent idiom/meaning review pending."
+      },
+      "claimSources": [
+        "docs/editions.md",
+        ".env.example",
+        "lib/capabilities.ts",
+        "content/knowledge/self-hosting.md"
+      ]
+    },
+    {
+      "id": "workspace-encryption",
+      "workflow": "H10",
+      "audiences": [
+        "operator"
+      ],
+      "readerOutcome": "Configure content encryption and preserve recovery keys",
+      "revision": 1,
+      "draftReason": "Release/profile execution or illustration acceptance is not established. Source adaptation is not operational acceptance.",
+      "requiredIllustration": "Localized encryption/backup diagram",
+      "sourceReview": "Selected facts adapted from source with profile, permission and key boundaries preserved.",
+      "languageReview": {
+        "en": "Author translation prepared; independent idiom/meaning review pending.",
+        "fr": "Author translation prepared; independent idiom/meaning review pending.",
+        "de": "Author translation prepared; independent idiom/meaning review pending.",
+        "es": "Independent agent review of complete Spanish editorial revision approved on 2026-10-08; recorded in operator-spanish-independent-review.json. Operational publication acceptance remains pending.",
+        "it": "Author translation prepared; independent idiom/meaning review pending.",
+        "pt-BR": "Author translation prepared; independent idiom/meaning review pending."
+      },
+      "claimSources": [
+        "docs/self-hosting.md",
+        "scripts/self-hosting-encryption.mjs",
+        "lib/server/encryption/data-policy.json"
+      ]
+    },
+    {
+      "id": "back-up-the-reference-instance",
+      "workflow": "H11",
+      "audiences": [
+        "operator"
+      ],
+      "readerOutcome": "Create and verify a complete consistent full-profile backup",
+      "revision": 1,
+      "draftReason": "Release/profile execution or illustration acceptance is not established. Source adaptation is not operational acceptance.",
+      "requiredIllustration": "Text commands and checklist; no real environment output",
+      "sourceReview": "Selected facts adapted from source with profile, permission and key boundaries preserved.",
+      "languageReview": {
+        "en": "Author translation prepared; independent idiom/meaning review pending.",
+        "fr": "Author translation prepared; independent idiom/meaning review pending.",
+        "de": "Author translation prepared; independent idiom/meaning review pending.",
+        "es": "Independent agent review of complete Spanish editorial revision approved on 2026-10-08; recorded in operator-spanish-independent-review.json. Operational publication acceptance remains pending.",
+        "it": "Author translation prepared; independent idiom/meaning review pending.",
+        "pt-BR": "Author translation prepared; independent idiom/meaning review pending."
+      },
+      "claimSources": [
+        "docs/self-hosting-operations.md"
+      ]
+    },
+    {
+      "id": "logical-and-provider-backups",
+      "workflow": "H12",
+      "audiences": [
+        "operator"
+      ],
+      "readerOutcome": "Back up a source or managed database and object storage",
+      "revision": 1,
+      "draftReason": "Release/profile execution or illustration acceptance is not established. Source adaptation is not operational acceptance.",
+      "requiredIllustration": "Text commands and provider conditions",
+      "sourceReview": "Selected facts adapted from source with profile, permission and key boundaries preserved.",
+      "languageReview": {
+        "en": "Author translation prepared; independent idiom/meaning review pending.",
+        "fr": "Author translation prepared; independent idiom/meaning review pending.",
+        "de": "Author translation prepared; independent idiom/meaning review pending.",
+        "es": "Independent agent review of complete Spanish editorial revision approved on 2026-10-08; recorded in operator-spanish-independent-review.json. Operational publication acceptance remains pending.",
+        "it": "Author translation prepared; independent idiom/meaning review pending.",
+        "pt-BR": "Author translation prepared; independent idiom/meaning review pending."
+      },
+      "claimSources": [
+        "docs/self-hosting-logical-operations.md",
+        "content/knowledge/self-hosting-operations.md"
+      ]
+    },
+    {
+      "id": "update-an-instance",
+      "workflow": "H13",
+      "audiences": [
+        "operator"
+      ],
+      "readerOutcome": "Upgrade one supported release while preserving recovery",
+      "revision": 1,
+      "draftReason": "Release/profile execution or illustration acceptance is not established. Source adaptation is not operational acceptance.",
+      "requiredIllustration": "Localized update sequence; sanitized examples",
+      "sourceReview": "Selected facts adapted from source with profile, permission and key boundaries preserved.",
+      "languageReview": {
+        "en": "Author translation prepared; independent idiom/meaning review pending.",
+        "fr": "Author translation prepared; independent idiom/meaning review pending.",
+        "de": "Author translation prepared; independent idiom/meaning review pending.",
+        "es": "Independent agent review of complete Spanish editorial revision approved on 2026-10-08; recorded in operator-spanish-independent-review.json. Operational publication acceptance remains pending.",
+        "it": "Author translation prepared; independent idiom/meaning review pending.",
+        "pt-BR": "Author translation prepared; independent idiom/meaning review pending."
+      },
+      "claimSources": [
+        "docs/self-hosting-operations.md",
+        "docs/self-hosting-logical-operations.md",
+        "docs/self-hosting-distribution.md"
+      ]
+    },
+    {
+      "id": "restore-and-roll-back",
+      "workflow": "H14",
+      "audiences": [
+        "operator"
+      ],
+      "readerOutcome": "Restore a complete matching set to a blank target",
+      "revision": 1,
+      "draftReason": "Release/profile execution or illustration acceptance is not established. Source adaptation is not operational acceptance.",
+      "requiredIllustration": "Localized restore sequence and sample checklist",
+      "sourceReview": "Selected facts adapted from source with profile, permission and key boundaries preserved.",
+      "languageReview": {
+        "en": "Author translation prepared; independent idiom/meaning review pending.",
+        "fr": "Author translation prepared; independent idiom/meaning review pending.",
+        "de": "Author translation prepared; independent idiom/meaning review pending.",
+        "es": "Independent agent review of complete Spanish editorial revision approved on 2026-10-08; recorded in operator-spanish-independent-review.json. Operational publication acceptance remains pending.",
+        "it": "Author translation prepared; independent idiom/meaning review pending.",
+        "pt-BR": "Author translation prepared; independent idiom/meaning review pending."
+      },
+      "claimSources": [
+        "docs/self-hosting-operations.md",
+        "docs/self-hosting-logical-operations.md"
+      ]
+    },
+    {
+      "id": "self-hosted-diagnostics",
+      "workflow": "H15",
+      "audiences": [
+        "operator"
+      ],
+      "readerOutcome": "Diagnose incomplete installation and operational failures",
+      "revision": 1,
+      "draftReason": "Release/profile execution or illustration acceptance is not established. Source adaptation is not operational acceptance.",
+      "requiredIllustration": "Sanitized diagnostic example with translated explanation",
+      "sourceReview": "Selected facts adapted from source with profile, permission and key boundaries preserved.",
+      "languageReview": {
+        "en": "Author translation prepared; independent idiom/meaning review pending.",
+        "fr": "Author translation prepared; independent idiom/meaning review pending.",
+        "de": "Author translation prepared; independent idiom/meaning review pending.",
+        "es": "Independent agent review of complete Spanish editorial revision approved on 2026-10-08; recorded in operator-spanish-independent-review.json. Operational publication acceptance remains pending.",
+        "it": "Author translation prepared; independent idiom/meaning review pending.",
+        "pt-BR": "Author translation prepared; independent idiom/meaning review pending."
+      },
+      "claimSources": [
+        "scripts/self-hosting-doctor.mjs",
+        "docs/self-hosting.md",
+        "docs/self-hosting-clean-room.md"
+      ]
+    },
+    {
+      "id": "instance-administration",
+      "workflow": "H16",
+      "audiences": [
+        "operator"
+      ],
+      "readerOutcome": "Manage authorized instance-wide settings and responsibilities",
+      "revision": 1,
+      "draftReason": "Release/profile execution or illustration acceptance is not established. Source adaptation is not operational acceptance.",
+      "requiredIllustration": "New demo administrator panels without other-user private data",
+      "sourceReview": "Selected facts adapted from source with profile, permission and key boundaries preserved.",
+      "languageReview": {
+        "en": "Author translation prepared; independent idiom/meaning review pending.",
+        "fr": "Author translation prepared; independent idiom/meaning review pending.",
+        "de": "Author translation prepared; independent idiom/meaning review pending.",
+        "es": "Independent agent review of complete Spanish editorial revision approved on 2026-10-08; recorded in operator-spanish-independent-review.json. Operational publication acceptance remains pending.",
+        "it": "Author translation prepared; independent idiom/meaning review pending.",
+        "pt-BR": "Author translation prepared; independent idiom/meaning review pending."
+      },
+      "claimSources": [
+        "app/(app)/admin/page.tsx",
+        "app/(app)/admin/layout.tsx",
+        "components/admin/admin-dashboard.tsx",
+        "lib/admin-tabs.ts",
+        "lib/server/admin.ts",
+        "docs/self-hosting-auth.md"
+      ]
+    },
+    {
+      "id": "glossary-and-data-model",
+      "workflow": "T01",
+      "audiences": [
+        "member",
+        "integrator"
+      ],
+      "readerOutcome": "Distinguish project issue objective cycle page database and feedback",
+      "revision": 1,
+      "draftReason": "Release/profile execution or illustration acceptance is not established. Source adaptation is not operational acceptance.",
+      "requiredIllustration": "Localized entity diagram",
+      "sourceReview": "Selected facts adapted from source with profile, permission and key boundaries preserved.",
+      "languageReview": {
+        "en": "Author translation prepared; independent idiom/meaning review pending.",
+        "fr": "Author translation prepared; independent idiom/meaning review pending.",
+        "de": "Author translation prepared; independent idiom/meaning review pending.",
+        "es": "Independent agent review of complete Spanish editorial revision approved on 2026-10-08; recorded in operator-spanish-independent-review.json. Operational publication acceptance remains pending.",
+        "it": "Author translation prepared; independent idiom/meaning review pending.",
+        "pt-BR": "Author translation prepared; independent idiom/meaning review pending."
+      },
+      "claimSources": [
+        "content/knowledge/core-tracker.md",
+        "content/knowledge/productivity.md",
+        "content/knowledge/pages.md",
+        "content/knowledge/feedback.md"
+      ]
+    },
+    {
+      "id": "permissions-and-public-links",
+      "workflow": "T02",
+      "audiences": [
+        "owner",
+        "integrator"
+      ],
+      "readerOutcome": "Predict who can read change or share an object",
+      "revision": 1,
+      "draftReason": "Release/profile execution or illustration acceptance is not established. Source adaptation is not operational acceptance.",
+      "requiredIllustration": "Localized access diagram and table",
+      "sourceReview": "Selected facts adapted from source with profile, permission and key boundaries preserved.",
+      "languageReview": {
+        "en": "Author translation prepared; independent idiom/meaning review pending.",
+        "fr": "Author translation prepared; independent idiom/meaning review pending.",
+        "de": "Author translation prepared; independent idiom/meaning review pending.",
+        "es": "Independent agent review of complete Spanish editorial revision approved on 2026-10-08; recorded in operator-spanish-independent-review.json. Operational publication acceptance remains pending.",
+        "it": "Author translation prepared; independent idiom/meaning review pending.",
+        "pt-BR": "Author translation prepared; independent idiom/meaning review pending."
+      },
+      "claimSources": [
+        "lib/server/pages.ts",
+        "lib/server/page-publication.ts",
+        "lib/server/mcp/auth.ts",
+        "proxy.ts",
+        "content/knowledge/settings-and-data.md"
+      ]
+    },
+    {
+      "id": "architecture-and-data-flows",
+      "workflow": "T03",
+      "audiences": [
+        "operator",
+        "integrator"
+      ],
+      "readerOutcome": "Understand application Supabase Storage jobs and optional providers",
+      "revision": 1,
+      "draftReason": "Release/profile execution or illustration acceptance is not established. Source adaptation is not operational acceptance.",
+      "requiredIllustration": "Localized architecture diagram",
+      "sourceReview": "Selected facts adapted from source with profile, permission and key boundaries preserved.",
+      "languageReview": {
+        "en": "Author translation prepared; independent idiom/meaning review pending.",
+        "fr": "Author translation prepared; independent idiom/meaning review pending.",
+        "de": "Author translation prepared; independent idiom/meaning review pending.",
+        "es": "Independent agent review of complete Spanish editorial revision approved on 2026-10-08; recorded in operator-spanish-independent-review.json. Operational publication acceptance remains pending.",
+        "it": "Author translation prepared; independent idiom/meaning review pending.",
+        "pt-BR": "Author translation prepared; independent idiom/meaning review pending."
+      },
+      "claimSources": [
+        "docs/editions.md",
+        "docs/self-hosting-distribution.md",
+        "lib/server/capabilities.ts"
+      ]
+    },
+    {
+      "id": "encryption-and-data-boundaries",
+      "workflow": "T04",
+      "audiences": [
+        "member",
+        "operator"
+      ],
+      "readerOutcome": "Understand protected content and remaining exposure",
+      "revision": 1,
+      "draftReason": "Release/profile execution or illustration acceptance is not established. Source adaptation is not operational acceptance.",
+      "requiredIllustration": "Localized encryption boundary diagram",
+      "sourceReview": "Selected facts adapted from source with profile, permission and key boundaries preserved.",
+      "languageReview": {
+        "en": "Author translation prepared; independent idiom/meaning review pending.",
+        "fr": "Author translation prepared; independent idiom/meaning review pending.",
+        "de": "Author translation prepared; independent idiom/meaning review pending.",
+        "es": "Independent agent review of complete Spanish editorial revision approved on 2026-10-08; recorded in operator-spanish-independent-review.json. Operational publication acceptance remains pending.",
+        "it": "Author translation prepared; independent idiom/meaning review pending.",
+        "pt-BR": "Author translation prepared; independent idiom/meaning review pending."
+      },
+      "claimSources": [
+        "docs/self-hosting.md",
+        "lib/server/encryption/data-policy.json",
+        "lib/server/encryption.ts",
+        "docs/editions.md"
+      ]
+    },
+    {
+      "id": "numo-execution-model",
+      "workflow": "T05",
+      "audiences": [
+        "integrator",
+        "operator"
+      ],
+      "readerOutcome": "Understand conversation turns tools routines and workers",
+      "revision": 1,
+      "draftReason": "Release/profile execution or illustration acceptance is not established. Source adaptation is not operational acceptance.",
+      "requiredIllustration": "Localized execution/state diagram",
+      "sourceReview": "Selected facts adapted from source with profile, permission and key boundaries preserved.",
+      "languageReview": {
+        "en": "Author translation prepared; independent idiom/meaning review pending.",
+        "fr": "Author translation prepared; independent idiom/meaning review pending.",
+        "de": "Author translation prepared; independent idiom/meaning review pending.",
+        "es": "Independent agent review of complete Spanish editorial revision approved on 2026-10-08; recorded in operator-spanish-independent-review.json. Operational publication acceptance remains pending.",
+        "it": "Author translation prepared; independent idiom/meaning review pending.",
+        "pt-BR": "Author translation prepared; independent idiom/meaning review pending."
+      },
+      "claimSources": [
+        "docs/architecture/numo-persistence.md",
+        "docs/architecture/numo-durable-turns.md",
+        "content/knowledge/agents-and-mcp.md"
+      ]
+    },
+    {
+      "id": "mcp-tool-reference",
+      "workflow": "T06",
+      "audiences": [
+        "integrator"
+      ],
+      "readerOutcome": "Use Minddy MCP discovery issue plans pages and routines",
+      "revision": 1,
+      "draftReason": "Release/profile execution or illustration acceptance is not established. Source adaptation is not operational acceptance.",
+      "requiredIllustration": "Text reference; optional localized sequence",
+      "sourceReview": "Selected facts adapted from source with profile, permission and key boundaries preserved.",
+      "languageReview": {
+        "en": "Author translation prepared; independent idiom/meaning review pending.",
+        "fr": "Author translation prepared; independent idiom/meaning review pending.",
+        "de": "Author translation prepared; independent idiom/meaning review pending.",
+        "es": "Independent agent review of complete Spanish editorial revision approved on 2026-10-08; recorded in operator-spanish-independent-review.json. Operational publication acceptance remains pending.",
+        "it": "Author translation prepared; independent idiom/meaning review pending.",
+        "pt-BR": "Author translation prepared; independent idiom/meaning review pending."
+      },
+      "claimSources": [
+        "lib/server/mcp/catalog.ts",
+        "lib/server/mcp/tools.ts",
+        "lib/server/mcp/page-tools.ts",
+        "lib/server/mcp/auth.ts",
+        "app/llms-full.txt/route.ts"
+      ]
+    },
+    {
+      "id": "integration-api-and-webhooks",
+      "workflow": "T07",
+      "audiences": [
+        "integrator"
+      ],
+      "readerOutcome": "Send issues or feedback and receive signed event updates",
+      "revision": 1,
+      "draftReason": "Release/profile execution or illustration acceptance is not established. Source adaptation is not operational acceptance.",
+      "requiredIllustration": "Localized sequence diagram plus sanitized code",
+      "sourceReview": "Selected facts adapted from source with profile, permission and key boundaries preserved.",
+      "languageReview": {
+        "en": "Author translation prepared; independent idiom/meaning review pending.",
+        "fr": "Author translation prepared; independent idiom/meaning review pending.",
+        "de": "Author translation prepared; independent idiom/meaning review pending.",
+        "es": "Independent agent review of complete Spanish editorial revision approved on 2026-10-08; recorded in operator-spanish-independent-review.json. Operational publication acceptance remains pending.",
+        "it": "Author translation prepared; independent idiom/meaning review pending.",
+        "pt-BR": "Author translation prepared; independent idiom/meaning review pending."
+      },
+      "claimSources": [
+        "lib/feedback/integration-contract.ts",
+        "lib/server/integration-auth.ts",
+        "lib/server/integrations.ts",
+        "app/api/v1/issues/route.ts",
+        "app/api/v1/feedback/route.ts"
+      ]
+    },
+    {
+      "id": "integration-troubleshooting",
+      "workflow": "T08",
+      "audiences": [
+        "integrator"
+      ],
+      "readerOutcome": "Recover failed OAuth MCP webhook or Git synchronization",
+      "revision": 1,
+      "draftReason": "Release/profile execution or illustration acceptance is not established. Source adaptation is not operational acceptance.",
+      "requiredIllustration": "New redacted reconnect/error controls",
+      "sourceReview": "Selected facts adapted from source with profile, permission and key boundaries preserved.",
+      "languageReview": {
+        "en": "Author translation prepared; independent idiom/meaning review pending.",
+        "fr": "Author translation prepared; independent idiom/meaning review pending.",
+        "de": "Author translation prepared; independent idiom/meaning review pending.",
+        "es": "Independent agent review of complete Spanish editorial revision approved on 2026-10-08; recorded in operator-spanish-independent-review.json. Operational publication acceptance remains pending.",
+        "it": "Author translation prepared; independent idiom/meaning review pending.",
+        "pt-BR": "Author translation prepared; independent idiom/meaning review pending."
+      },
+      "claimSources": [
+        "content/knowledge/agents-and-mcp.md",
+        "docs/github-issue-sync.md",
+        "lib/server/integration-auth.ts",
+        "lib/mcp-authorization.ts"
+      ]
+    }
+  ],
+  "operationalExecution": {
+    "performed": true,
+    "evidence": "operator-operational-validation.json",
+    "qualification": "Engineering profile with explicit release and Docker Desktop adaptations; unchanged release and omitted journeys are not accepted."
+  },
+  "publicationApprovals": [],
+  "illustrationReview": {
+    "reviewer": "Codex operator_documentation author visual inspection",
+    "date": "2026-10-08",
+    "performed": true,
+    "assets": 102,
+    "method": "Rendered all 17 diagrams in each of six locales at 360 CSS pixels wide with Sharp and visually inspected six contact sheets at original resolution. Checked wrapping, contrast, text clipping and sequence/component meaning against each article.",
+    "outcome": "No clipping found; labels remain readable at the inspected width. This is author visual inspection, not independent language approval or product screenshot acceptance.",
+    "missing": [
+      "H02 native desktop server/local dialog: browser-only capture environment cannot inspect the native application. Public wizard profile screenshot and local lifecycle diagram are present."
+    ],
+    "screenshotsAdded": {
+      "H16": 18,
+      "T08": 6,
+      "evidence": [
+        "operator-capture-candidates.json",
+        "operator-mcp-error-capture-candidates.json",
+        "operator-wizard-capture-candidates.json"
+      ],
+      "H02": 6,
+      "H03": 6
+    }
+  },
+  "independentReview": {
+    "assignedReviewer": "Codex automation_account_documentation agent",
+    "status": "All 144 variants read by an independent agent; reported semantic and language corrections applied. Spanish editorial rewrite reviewed separately. Final follow-up metadata approval and new caption review requested from the independent reviewer; pending until its actual record is written.",
+    "approval": false
+  }
+}

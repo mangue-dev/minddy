@@ -1,0 +1,54 @@
+{
+  "date": "2026-10-08",
+  "executedBy": "agent:/root",
+  "recordedBy": "agent:/root/operator_documentation",
+  "profile": "Disposable full-reference engineering profile on Linux aarch64 Docker Desktop; Node24/npm/Git dedicated worker, explicit executable sandbox tmpfs, published v0.11.0 application image",
+  "sourceCommit": "89ab340cb10ec729948fc6e596fb7ab0326fc470",
+  "workerImage": "sha256:c323824e2f17acc5fe8bc17eea0a827f9bfc342b61b69137fdd827ea7c6c2e05",
+  "recipe": "deploy/self-hosted/Dockerfile.agent-sandbox",
+  "recipeSHA256": "e13e758193b83e158a5499dbd38d923ac7bcd0d97cc8485e5d7963e77c17ecf9",
+  "pinVersions": {
+    "opencode-ai": "1.18.16",
+    "@opencode-ai/plugin": "1.18.16"
+  },
+  "requests": [
+    {
+      "method": "POST",
+      "action": "/v1/sandboxes/<disposable-sandbox>",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "action": "/v1/sandboxes/<disposable-sandbox>/commands",
+      "status": 200
+    },
+    {
+      "method": "DELETE",
+      "action": "/v1/sandboxes/<disposable-sandbox>",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "action": "/v1/sandboxes/<disposable-sandbox>",
+      "status": 200
+    }
+  ],
+  "bootstrapAndBinaryCommandExit": 0,
+  "observedBinaryVersion": "1.18.16",
+  "sandboxDeleted": true,
+  "privateProbeSHA256": "8e1ff69e7040d04009cc6ddb424ba501b4f661a880ba0a10d4fdb6d4c43262a0",
+  "before": {
+    "execDisabledWorkspace": "Native binary failed with permission error/exit126; package postinstall fallback subsequently reported EBADPLATFORM for musl on glibc. Parent independently isolated the noexec mount cause.",
+    "applicationImage": "Fresh worker bootstrap failed with spawn npm ENOENT; no repository edit/test was verified."
+  },
+  "after": {
+    "exactPinnedPackagesInstalled": true,
+    "nativeBinaryVersionObserved": true
+  },
+  "limits": [
+    "This is a no-LLM fresh-sandbox bootstrap and native binary execution, not a delegated code task or completed PR.",
+    "It does not qualify the unmodified published image or a new compatibility row.",
+    "No provider keys, control tokens or credential-bearing URLs are included.",
+    "The package registry was reachable; offline bootstrap was not exercised."
+  ]
+}

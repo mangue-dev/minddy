@@ -1,0 +1,99 @@
+{
+  "date": "2026-10-08",
+  "executor": "agent:/root/operator_documentation",
+  "baseDistribution": "v0.11.0 engineering restored profile",
+  "sourceCommit": "7fee59e8d7b86d892d9232a9beb07dd2ad800c38",
+  "workingTreeSource": "Current candidate migrations; per-file hashes identify the exact applied SQL.",
+  "migrations": [
+    {
+      "path": "supabase/migrations/20270109200017_custom_domain_cleanup.sql",
+      "sha256": "3169ddc269f12e51dab9bc50633b61669f1a2bd84a4e0529d8f95dd095ddbd28"
+    },
+    {
+      "path": "supabase/migrations/20270109200018_agent_launch_json_nulls.sql",
+      "sha256": "165df49195754d1097f748673c2a954082387d347c7797d203a32d36dce4a142"
+    },
+    {
+      "path": "supabase/migrations/20270109200019_pull_request_issue_links.sql",
+      "sha256": "b0f0ecd7aee367e9ac96fb1b6d2808ae240d713182337bc49398e4de8d699094"
+    },
+    {
+      "path": "supabase/migrations/20270109200020_unlink_pull_request_issues.sql",
+      "sha256": "b55060f08b1d5438e9a8f210fa0ba6d7d559b5960c5047e1e0863bee825321bb"
+    },
+    {
+      "path": "supabase/migrations/20270109200021_numo_durable_worker_stop.sql",
+      "sha256": "284079b1b43d970e198ff379c3eaee105187c330b7678a1db3ff4cdc576d25c9"
+    },
+    {
+      "path": "supabase/migrations/20270109200022_concurrent_numo_budget.sql",
+      "sha256": "14f311132b8d6c7621de62444a5497311861e5e7cc587e4b863a11bb5911e68d"
+    },
+    {
+      "path": "supabase/migrations/20270109200023_usage_daily_analytics.sql",
+      "sha256": "9d49751c8aa1f77291bccc3ade186306aee4644772b7e4c50ab07888bf73755a"
+    },
+    {
+      "path": "supabase/migrations/20270109200024_numo_completion_repairs.sql",
+      "sha256": "f400ee68518c8997833a26ca40606e6598e4dd438b1159541b58f26cdf277dd9"
+    },
+    {
+      "path": "supabase/migrations/20270109200025_indexed_backfill_progress.sql",
+      "sha256": "41b6e468d09252a82920fa384631bb8ca098aea1e8533c21a4538dd8987df73a"
+    },
+    {
+      "path": "supabase/migrations/20270109200026_oauth_activity_bookkeeping.sql",
+      "sha256": "655a0b5cb3e7ce9eca10d5abcdbeb8a45751dfeb74feab77914acde8c42b67c0"
+    },
+    {
+      "path": "supabase/migrations/20270109200027_rules_only_smart_triage.sql",
+      "sha256": "c2afd2039fab89a1e9b9dd0a320289582a9d24cb5810bedca9b3ab09d70680bf"
+    },
+    {
+      "path": "supabase/migrations/20270109200028_routine_worker_usage.sql",
+      "sha256": "e4f125f8b4531c9b8b84b6c1077cd4d48a13e4572d7a0f6cc7c5423931b68833"
+    },
+    {
+      "path": "supabase/migrations/20270109200029_remove_custom_domains.sql",
+      "sha256": "315c0cc8d9f2dfd7f1180ac89cc318cab33813de3141f605c8a2e5e1022708f8"
+    },
+    {
+      "path": "supabase/migrations/20270109200030_admin_data_minimisation.sql",
+      "sha256": "3f9021d24220e6dadbbf87998d7bfab8fd5d9ccb28b0be10df8fa7aed87aa2b2"
+    },
+    {
+      "path": "supabase/migrations/20270109200031_numo_event_lock_order.sql",
+      "sha256": "5f5161530eae4b101a6a1c13a9dd5c76c2be11ee242b8b5ff08399b152aa68e6"
+    }
+  ],
+  "command": "Imported bootstrap-supabase main --db-url <private loopback URL> --env-file <protected restored env> --existing-env --supabase-url <loopback maintenance API> --enable scheduler",
+  "exitCode": 0,
+  "servicesStopped": false,
+  "environmentModified": false,
+  "resetPerformed": false,
+  "releasedArchiveModified": false,
+  "publicationApproval": false,
+  "evidence": "operator-evidence/candidate-bootstrap-sanitized.log",
+  "ledgerAfter": {
+    "migrationCount": 242,
+    "latestVersion": "20270109200031",
+    "newVersions": [
+      "20270109200017",
+      "20270109200018",
+      "20270109200019",
+      "20270109200020",
+      "20270109200021",
+      "20270109200022",
+      "20270109200023",
+      "20270109200024",
+      "20270109200025",
+      "20270109200026",
+      "20270109200027",
+      "20270109200028",
+      "20270109200029",
+      "20270109200030",
+      "20270109200031"
+    ]
+  },
+  "actualAdminOverviewAPI": "200 after schema alignment; before alignment missing get_admin_onboarding_signals returned 500"
+}

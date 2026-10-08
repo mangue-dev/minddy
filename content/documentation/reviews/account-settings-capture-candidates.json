@@ -1,0 +1,1465 @@
+{
+  "reviewer": "Codex agent automation_account_documentation",
+  "date": "2026-10-08",
+  "profile": "local Next.js candidate with guarded demo account; read-only settings navigation",
+  "publicationApproved": false,
+  "captures": [
+    {
+      "article": "profile-and-preferences",
+      "locale": "en",
+      "url": "http://localhost:3000/settings?tab=profile&section=account-profile",
+      "output": "public/documentation/en/profile-and-preferences-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 119,
+        "width": 768,
+        "height": 367.5
+      },
+      "lang": "en",
+      "text": "Profile\nAvatar\n\nUse a generated Lorelei avatar or upload your own image.\n\nUpload image\nNew Lorelei avatar\nUsername\nEmail\n\nYour address can't be changed.\n\ncaptures-demo@minddy.app\nDesktop app\n\nAvailable for macOS, Windows, and Linux. Its own window, server selector, and updates.\n\nDownload\nSave",
+      "reviewed": true,
+      "imageHash": "503d5ef0b342b213875b1df0a2055f69b655d6412d8c6909e351cf8cc4c59622"
+    },
+    {
+      "article": "profile-and-preferences-preferences",
+      "locale": "en",
+      "url": "http://localhost:3000/settings?tab=preferences&section=account-appearance",
+      "output": "public/documentation/en/profile-and-preferences-preferences-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 119,
+        "width": 768,
+        "height": 163.75
+      },
+      "lang": "en",
+      "text": "Appearance\nLanguage\nEnglish\nTheme\n\nSaved to your account — the same theme on every device.\n\nLight\nDark\nSystem",
+      "reviewed": true,
+      "imageHash": "21f36e596207d9939bcbb19594979411ab3da72c52e0429e87dbcf46a9ccdd18"
+    },
+    {
+      "article": "account-security",
+      "locale": "en",
+      "url": "http://localhost:3000/settings?tab=security&section=account-security",
+      "output": "public/documentation/en/account-security-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 119,
+        "width": 768,
+        "height": 179
+      },
+      "lang": "en",
+      "text": "Two-factor authentication\n\nA password alone opens this account\n\nRecommended\n\nIt carries write access to your connected Git repositories through Numo's delegated code work, plus your model keys and everything you can delete here. A second factor closes that door.\n\nTurn on",
+      "reviewed": true,
+      "imageHash": "fe3acd1f4b96f20b0f4f1ed1fab62e1db69eaa9407da5dc4a48c7b987854860f"
+    },
+    {
+      "article": "devices-and-notifications",
+      "locale": "en",
+      "url": "http://localhost:3000/settings?tab=inbox&section=account-push-devices",
+      "output": "public/documentation/en/devices-and-notifications-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 738,
+        "width": 768,
+        "height": 147.75
+      },
+      "lang": "en",
+      "text": "Push notifications\nNotify this device\n\nNotifications are blocked for minddy in this browser. Re-allow them in its site settings; asking again from here won't reopen the prompt.\n\nNo device receives notifications yet.",
+      "reviewed": true,
+      "imageHash": "21e93a5ac28870250605c13f00802b836a22be4e3328bf1eaf56c87a464960e0"
+    },
+    {
+      "article": "ai-keys-and-models",
+      "locale": "en",
+      "url": "http://localhost:3000/settings?tab=agent&section=account-ai-provider",
+      "output": "public/documentation/en/ai-keys-and-models-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 119,
+        "width": 768,
+        "height": 164
+      },
+      "lang": "en",
+      "text": "AI provider\nminddy Cloud\n\nUses your minddy Cloud plan. No API key is needed.",
+      "reviewed": true,
+      "imageHash": "6c3425d75b824cb667295d46d917135876c270bcfd0eab5ee2ab0fcefc1bf7d0"
+    },
+    {
+      "article": "automation-settings",
+      "locale": "en",
+      "url": "http://localhost:3000/settings?tab=automations&section=account-automations",
+      "output": "public/documentation/en/automation-settings-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 119,
+        "width": 768,
+        "height": 152.75
+      },
+      "lang": "en",
+      "text": "Automations\nAutomation preset\nNone\n\nNo preset; nothing runs, whatever the toggles below say.",
+      "reviewed": true,
+      "imageHash": "e8342d2709788514c58732d5ff7723e675482b5e2c70b54df6a60695599ac97f"
+    },
+    {
+      "article": "transfer-between-instances",
+      "locale": "en",
+      "url": "http://localhost:3000/settings?tab=data&section=account-data-import",
+      "output": "public/documentation/en/transfer-between-instances-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 275.75,
+        "width": 768,
+        "height": 98.75
+      },
+      "lang": "en",
+      "text": "Transfer data from another minddy instance\nImport a transfer file\n\nProjects, issues, pages, settings and history are restored; credentials and subscriptions never are.\n\nImport a transfer file",
+      "reviewed": true,
+      "imageHash": "566fe3efb449ce535a8cd07cbe69497120a0f787db85775086e774c016ed10f8"
+    },
+    {
+      "article": "privacy-and-account-deletion",
+      "locale": "en",
+      "url": "http://localhost:3000/settings?tab=data&section=account-data-delete",
+      "output": "public/documentation/en/privacy-and-account-deletion-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 537.25,
+        "width": 768,
+        "height": 182
+      },
+      "lang": "en",
+      "text": "Delete my account\nWhat will be deleted\nDelete my account\nYour account, preferences, cycles, scratchpad, and Numo conversations.\nThe 2 projects you own: 30 issues and all attached files.\n2 other members lose their access.\n\nExport your data first if you want to keep a copy.",
+      "reviewed": true,
+      "imageHash": "606be300516bc5d177998059266a5b8bb280e2ed79aa4ce971267ddbca4351f4"
+    },
+    {
+      "article": "numo-mcp-connections",
+      "locale": "en",
+      "url": "http://localhost:3000/settings?tab=mcp-clients&section=account-mcp-clients",
+      "output": "public/documentation/en/numo-mcp-connections-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 119,
+        "width": 768,
+        "height": 1265.25
+      },
+      "lang": "en",
+      "text": "MCP for Numo\nAdd another MCP server\n\nYour connections are personal. Project routines use the project owner’s connections.\n\nNo MCP servers connected yet. Add a server to give Numo access to its tools.\n\nChoose a service or add your own\nNotion\nLinear\nGmail\nGoogle Drive\nGoogle Calendar\nGoogle Docs\nGoogle Sheets\nGoogle Slides\nGoogle Chat\nGoogle Contacts\nGitHub\nAtlassian (Jira, Confluence)\nSlack\nFigma\nAsana\nPostHog\nCanva\nSentry\nSupabase\nVercel\nStripe\nHubSpot\nZapier\nmonday.com\nPayPal\nAirtable\nWebflow\nWix\nGitLab\nGrafana\nHugging Face\nCloudflare Docs\nCloudflare Bindings\nExa\nDropbox\nIntercom\nBox\nClickUp\nSquare\nRamp",
+      "reviewed": true,
+      "imageHash": "4c45b680343bd1ee089273a534a99fbf8b4e2275e570a112561c90f56fecad1b"
+    },
+    {
+      "article": "external-minddy-mcp",
+      "locale": "en",
+      "url": "http://localhost:3000/settings?tab=mcp&section=account-mcp",
+      "output": "public/documentation/en/external-minddy-mcp-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 119,
+        "width": 768,
+        "height": 204
+      },
+      "lang": "en",
+      "text": "Connect assistants to Minddy\nClaude Code\nClaude Desktop\nCodex\nCursor\nGemini CLI\nOpenCode\nVS Code\nWindsurf",
+      "reviewed": true,
+      "imageHash": "86d67f48392b4ebcddc91fbad1d6bba8725a12eb055f1f8b8dde49766fda05fb"
+    },
+    {
+      "article": "git-accounts-and-repositories",
+      "locale": "en",
+      "url": "http://localhost:3000/settings?tab=git&section=account-git-connections",
+      "output": "public/documentation/en/git-accounts-and-repositories-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 249.75,
+        "width": 768,
+        "height": 280
+      },
+      "lang": "en",
+      "text": "Connected git accounts\nGitHub\n\nminddy can't act in your name.\n\nAuthorize\nGitLab\n\nminddy can't act in your name.\n\nAuthorize",
+      "reviewed": true,
+      "imageHash": "f327694e41cb7203dec13f45a7b326e88e357e57bd86b3ddf70fe46ff98c26e1"
+    },
+    {
+      "article": "profile-and-preferences",
+      "locale": "fr",
+      "url": "http://localhost:3000/settings?tab=profile&section=account-profile",
+      "output": "public/documentation/fr/profile-and-preferences-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 119,
+        "width": 768,
+        "height": 367.5
+      },
+      "lang": "fr",
+      "text": "Profil\nAvatar\n\nUtilisez un avatar Lorelei généré ou importez votre propre image.\n\nImporter une image\nNouvel avatar Lorelei\nNom d'utilisateur\nE-mail\n\nVotre adresse ne peut pas être modifiée.\n\ncaptures-demo@minddy.app\nApp de bureau\n\nDisponible sur macOS, Windows et Linux. Sa fenêtre, le choix du serveur et les mises à jour.\n\nTélécharger\nEnregistrer",
+      "reviewed": true,
+      "imageHash": "e8ee28f31f57f2e619ee691c1488c9ca18a9588d53b7365bba416a84e50aec43"
+    },
+    {
+      "article": "profile-and-preferences-preferences",
+      "locale": "fr",
+      "url": "http://localhost:3000/settings?tab=preferences&section=account-appearance",
+      "output": "public/documentation/fr/profile-and-preferences-preferences-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 119,
+        "width": 768,
+        "height": 163.75
+      },
+      "lang": "fr",
+      "text": "Apparence\nLangue\nFrançais\nThème\n\nEnregistré dans votre compte — le même thème sur tous vos appareils.\n\nClair\nSombre\nSystème",
+      "reviewed": true,
+      "imageHash": "8cc2e40de4f7ccfe7c93dbfacad9235e25fd98a4ab8c22f7be2569d5b3e3c73b"
+    },
+    {
+      "article": "account-security",
+      "locale": "fr",
+      "url": "http://localhost:3000/settings?tab=security&section=account-security",
+      "output": "public/documentation/fr/account-security-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 119,
+        "width": 768,
+        "height": 179
+      },
+      "lang": "fr",
+      "text": "Double authentification\n\nUn mot de passe suffit à ouvrir ce compte\n\nRecommandé\n\nIl donne l'accès en écriture à vos dépôts Git reliés, via l'agent de code, ainsi qu'à vos clés de modèle et à tout ce que vous pouvez supprimer ici. Un second facteur ferme cette porte.\n\nActiver",
+      "reviewed": true,
+      "imageHash": "e205002bc36abde05dff0ca8f83838113d49bf42ece058f6eb64722a5f725ce8"
+    },
+    {
+      "article": "devices-and-notifications",
+      "locale": "fr",
+      "url": "http://localhost:3000/settings?tab=inbox&section=account-push-devices",
+      "output": "public/documentation/fr/devices-and-notifications-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 738,
+        "width": 768,
+        "height": 147.75
+      },
+      "lang": "fr",
+      "text": "Notifications push\nPrévenir cet appareil\n\nLes notifications sont bloquées pour minddy dans ce navigateur. Réautorisez-les dans les réglages du site; redemander depuis ici ne rouvrira pas la fenêtre.\n\nAucun appareil ne reçoit encore les notifications.",
+      "reviewed": true,
+      "imageHash": "885c219e5701b8e608e20fa6adbc85e45a31bcb4e2b1b40c9c23c0e77047b1a2"
+    },
+    {
+      "article": "ai-keys-and-models",
+      "locale": "fr",
+      "url": "http://localhost:3000/settings?tab=agent&section=account-ai-provider",
+      "output": "public/documentation/fr/ai-keys-and-models-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 119,
+        "width": 768,
+        "height": 164
+      },
+      "lang": "fr",
+      "text": "Provider IA\nminddy Cloud\n\nUtilise votre forfait minddy Cloud. Aucune clé API n’est nécessaire.",
+      "reviewed": true,
+      "imageHash": "2877fd97235a1fd868ba20ac8eb5c8af929f0644ef02f56d1291f00c2f77f5b5"
+    },
+    {
+      "article": "automation-settings",
+      "locale": "fr",
+      "url": "http://localhost:3000/settings?tab=automations&section=account-automations",
+      "output": "public/documentation/fr/automation-settings-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 119,
+        "width": 768,
+        "height": 172.25
+      },
+      "lang": "fr",
+      "text": "Automatisations\nPréréglage d'automatisation\nAucun\n\nAucun préréglage; rien ne se déclenche, quels que soient les interrupteurs ci-dessous.",
+      "reviewed": true,
+      "imageHash": "5ae6777765e380611d316733193b2c2e601bd3cc92524f2ce6ab692c3838149c"
+    },
+    {
+      "article": "transfer-between-instances",
+      "locale": "fr",
+      "url": "http://localhost:3000/settings?tab=data&section=account-data-import",
+      "output": "public/documentation/fr/transfer-between-instances-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 275.75,
+        "width": 768,
+        "height": 98.75
+      },
+      "lang": "fr",
+      "text": "Transférer des données depuis une autre instance minddy\nImporter un fichier de transfert\n\nProjets, tickets, pages, réglages et historique sont restaurés ; jamais les identifiants secrets ni les abonnements.\n\nImporter un fichier de transfert",
+      "reviewed": true,
+      "imageHash": "80f3bebb72b4d1c5096b9e02ef53774bb87be5124a4eb6fe994eab42b59b4e3e"
+    },
+    {
+      "article": "privacy-and-account-deletion",
+      "locale": "fr",
+      "url": "http://localhost:3000/settings?tab=data&section=account-data-delete",
+      "output": "public/documentation/fr/privacy-and-account-deletion-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 537.25,
+        "width": 768,
+        "height": 182
+      },
+      "lang": "fr",
+      "text": "Supprimer mon compte\nCe qui sera supprimé\nSupprimer mon compte\nVotre compte, vos préférences, vos cycles, votre carnet et vos conversations Numo.\nLes 2 projets dont vous êtes propriétaire : 30 tickets et tous les fichiers attachés.\n2 autres membres perdent leur accès.\n\nExportez vos données avant de continuer si vous voulez en garder une copie.",
+      "reviewed": true,
+      "imageHash": "139cee84848da916684756e426797b43dadd43f43130a426daff55bba920ca25"
+    },
+    {
+      "article": "numo-mcp-connections",
+      "locale": "fr",
+      "url": "http://localhost:3000/settings?tab=mcp-clients&section=account-mcp-clients",
+      "output": "public/documentation/fr/numo-mcp-connections-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 119,
+        "width": 768,
+        "height": 1265.25
+      },
+      "lang": "fr",
+      "text": "MCP pour Numo\nAjouter un autre serveur MCP\n\nVos connexions sont personnelles. Les routines utilisent celles du propriétaire du projet.\n\nAucun serveur MCP connecté. Ajoutez un serveur pour que Numo accède à ses outils.\n\nChoisir un service ou ajouter le vôtre\nNotion\nLinear\nGmail\nGoogle Drive\nGoogle Calendar\nGoogle Docs\nGoogle Sheets\nGoogle Slides\nGoogle Chat\nGoogle Contacts\nGitHub\nAtlassian (Jira, Confluence)\nSlack\nFigma\nAsana\nPostHog\nCanva\nSentry\nSupabase\nVercel\nStripe\nHubSpot\nZapier\nmonday.com\nPayPal\nAirtable\nWebflow\nWix\nGitLab\nGrafana\nHugging Face\nCloudflare Docs\nCloudflare Bindings\nExa\nDropbox\nIntercom\nBox\nClickUp\nSquare\nRamp",
+      "reviewed": true,
+      "imageHash": "6261e7f29e7cd34d81186bd8352c5b8aa51a9b0aff9560410ad6512d71e991fd"
+    },
+    {
+      "article": "external-minddy-mcp",
+      "locale": "fr",
+      "url": "http://localhost:3000/settings?tab=mcp&section=account-mcp",
+      "output": "public/documentation/fr/external-minddy-mcp-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 119,
+        "width": 768,
+        "height": 204
+      },
+      "lang": "fr",
+      "text": "Connecter des assistants à Minddy\nClaude Code\nClaude Desktop\nCodex\nCursor\nGemini CLI\nOpenCode\nVS Code\nWindsurf",
+      "reviewed": true,
+      "imageHash": "0626867ca6795c4ad84e5f8737210f9392e2f00e0aaa032e2c991f706a858cf5"
+    },
+    {
+      "article": "git-accounts-and-repositories",
+      "locale": "fr",
+      "url": "http://localhost:3000/settings?tab=git&section=account-git-connections",
+      "output": "public/documentation/fr/git-accounts-and-repositories-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 249.75,
+        "width": 768,
+        "height": 280
+      },
+      "lang": "fr",
+      "text": "Comptes git connectés\nGitHub\n\nminddy ne peut pas agir en votre nom.\n\nAutoriser\nGitLab\n\nminddy ne peut pas agir en votre nom.\n\nAutoriser",
+      "reviewed": true,
+      "imageHash": "c1e925b67437b72fc623416814ba6494cbf47f9b57c95a9694980e233b8195fd"
+    },
+    {
+      "article": "profile-and-preferences",
+      "locale": "de",
+      "url": "http://localhost:3000/settings?tab=profile&section=account-profile",
+      "output": "public/documentation/de/profile-and-preferences-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 119,
+        "width": 768,
+        "height": 367.5
+      },
+      "lang": "de",
+      "text": "Profil\nAvatar\n\nVerwenden Sie einen generierten Lorelei-Avatar oder laden Sie Ihr eigenes Bild hoch.\n\nBild hochladen\nNeuer Lorelei-Avatar\nBenutzername\nE-Mail\n\nIhre Adresse kann nicht geändert werden.\n\ncaptures-demo@minddy.app\nDesktop-App\n\nVerfügbar für macOS, Windows und Linux. Ein eigenes Fenster, eine Serverauswahl und Aktualisierungen.\n\nHerunterladen\nSpeichern",
+      "reviewed": true,
+      "imageHash": "91b0797f2c98c2a024805e60b5466787fdb2004b893d463fb60f77f3ca3b05cc"
+    },
+    {
+      "article": "profile-and-preferences-preferences",
+      "locale": "de",
+      "url": "http://localhost:3000/settings?tab=preferences&section=account-appearance",
+      "output": "public/documentation/de/profile-and-preferences-preferences-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 119,
+        "width": 768,
+        "height": 163.75
+      },
+      "lang": "de",
+      "text": "Aussehen\nSprache\nDeutsch\nDesign\n\nIn Ihrem Konto gespeichert – das gleiche Design auf jedem Gerät.\n\nHell\nDunkel\nSystem",
+      "reviewed": true,
+      "imageHash": "e7f465a2751023541d4d0081ef0d5102f01e1918fc9e002fd1300d6159500927"
+    },
+    {
+      "article": "account-security",
+      "locale": "de",
+      "url": "http://localhost:3000/settings?tab=security&section=account-security",
+      "output": "public/documentation/de/account-security-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 119,
+        "width": 768,
+        "height": 179
+      },
+      "lang": "de",
+      "text": "Zwei-Faktor-Authentifizierung\n\nEin Passwort allein öffnet dieses Konto\n\nEmpfohlen\n\nEs ermöglicht Schreibzugriff auf Ihre verbundenen Git-Repositorys über den Code-Agenten sowie Ihre Modellschlüssel und alles, was Sie hier löschen können. Ein zweiter Faktor schließt diese Tür.\n\nAktivieren",
+      "reviewed": true,
+      "imageHash": "edfcf69d9c5daaf1508983d13c475113c0fc372f14cd8f780840bd7e0a0f67ed"
+    },
+    {
+      "article": "devices-and-notifications",
+      "locale": "de",
+      "url": "http://localhost:3000/settings?tab=inbox&section=account-push-devices",
+      "output": "public/documentation/de/devices-and-notifications-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 738,
+        "width": 768,
+        "height": 147.75
+      },
+      "lang": "de",
+      "text": "Push-Benachrichtigungen\nDieses Gerät benachrichtigen\n\nBenachrichtigungen für minddy sind in diesem Browser blockiert. Erlauben Sie sie erneut in den Website-Einstellungen; eine weitere Anfrage an dieser Stelle öffnet den Browserdialog nicht erneut.\n\nNoch empfängt kein Gerät Benachrichtigungen.",
+      "reviewed": true,
+      "imageHash": "b1b1e13f2d890b9baa8bfe433a57bf68711be393f3bb84c5e6310edf636a20bd"
+    },
+    {
+      "article": "ai-keys-and-models",
+      "locale": "de",
+      "url": "http://localhost:3000/settings?tab=agent&section=account-ai-provider",
+      "output": "public/documentation/de/ai-keys-and-models-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 119,
+        "width": 768,
+        "height": 164
+      },
+      "lang": "de",
+      "text": "KI-Anbieter\nminddy Cloud\n\nNutzt Ihren minddy-Cloud-Tarif. Es ist kein API-Schlüssel erforderlich.",
+      "reviewed": true,
+      "imageHash": "2c7c8df55af0f5b78458df52db13ef2e188e9ba9084b175766e898ba19591afa"
+    },
+    {
+      "article": "automation-settings",
+      "locale": "de",
+      "url": "http://localhost:3000/settings?tab=automations&section=account-automations",
+      "output": "public/documentation/de/automation-settings-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 119,
+        "width": 768,
+        "height": 152.75
+      },
+      "lang": "de",
+      "text": "Automatisierungen\nAutomatisierungsvoreinstellung\nKeine\n\nKeine Voreinstellung; unabhängig von den Schaltern unten wird nichts ausgeführt.",
+      "reviewed": true,
+      "imageHash": "5e5ac8e9297febb01d2a9586c9012c2b155e89984dff68f9a4e62a81d07d2b40"
+    },
+    {
+      "article": "transfer-between-instances",
+      "locale": "de",
+      "url": "http://localhost:3000/settings?tab=data&section=account-data-import",
+      "output": "public/documentation/de/transfer-between-instances-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 275.75,
+        "width": 768,
+        "height": 98.75
+      },
+      "lang": "de",
+      "text": "Daten von einer anderen minddy-Instanz übertragen\nEine Übertragungsdatei importieren\n\nProjekte, Probleme, Seiten, Einstellungen und der persönliche Verlauf werden wiederhergestellt. Mitgliedschaften werden nur für Projekte wiederhergestellt, die hier bereits vorhanden sind; Anmeldeinformationen und Abonnements werden nie importiert.\n\nEine Übertragungsdatei importieren",
+      "reviewed": true,
+      "imageHash": "5cec0ef611af67557d74d113ec8bb633657979920bb039a8bd25f2e76a54bf6f"
+    },
+    {
+      "article": "privacy-and-account-deletion",
+      "locale": "de",
+      "url": "http://localhost:3000/settings?tab=data&section=account-data-delete",
+      "output": "public/documentation/de/privacy-and-account-deletion-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 537.25,
+        "width": 768,
+        "height": 182
+      },
+      "lang": "de",
+      "text": "Mein Konto löschen\nWas gelöscht wird\nMein Konto löschen\nDein Konto, deine Einstellungen, Zyklen, Notizen und Numo-Unterhaltungen.\nDie 2 Projekte, die Ihnen gehören: 30 Probleme und alle angehängten Dateien.\n2 Andere Mitglieder verlieren ihren Zugriff.\n\nExportieren Sie zuerst Ihre Daten, wenn Sie eine Kopie behalten möchten.",
+      "reviewed": true,
+      "imageHash": "b33e750fa46841d451739cbfe9f785c8351b8128e39e3a62444ad984bb3f192b"
+    },
+    {
+      "article": "numo-mcp-connections",
+      "locale": "de",
+      "url": "http://localhost:3000/settings?tab=mcp-clients&section=account-mcp-clients",
+      "output": "public/documentation/de/numo-mcp-connections-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 119,
+        "width": 768,
+        "height": 1265.25
+      },
+      "lang": "de",
+      "text": "MCP für Numo\nAnderen MCP-Server hinzufügen\n\nDeine Verbindungen sind persönlich. Routinen verwenden die Verbindungen des Projektinhabers.\n\nNoch kein MCP-Server verbunden. Füge einen Server hinzu, um Numo Zugriff auf seine Tools zu geben.\n\nDienst auswählen oder eigenen hinzufügen\nNotion\nLinear\nGmail\nGoogle Drive\nGoogle Calendar\nGoogle Docs\nGoogle Sheets\nGoogle Slides\nGoogle Chat\nGoogle Contacts\nGitHub\nAtlassian (Jira, Confluence)\nSlack\nFigma\nAsana\nPostHog\nCanva\nSentry\nSupabase\nVercel\nStripe\nHubSpot\nZapier\nmonday.com\nPayPal\nAirtable\nWebflow\nWix\nGitLab\nGrafana\nHugging Face\nCloudflare Docs\nCloudflare Bindings\nExa\nDropbox\nIntercom\nBox\nClickUp\nSquare\nRamp",
+      "reviewed": true,
+      "imageHash": "033835de6777e12992687ad9c65e494b5596fb9b27227f044935fe6566c53c22"
+    },
+    {
+      "article": "external-minddy-mcp",
+      "locale": "de",
+      "url": "http://localhost:3000/settings?tab=mcp&section=account-mcp",
+      "output": "public/documentation/de/external-minddy-mcp-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 119,
+        "width": 768,
+        "height": 204
+      },
+      "lang": "de",
+      "text": "Assistenten mit Minddy verbinden\nClaude Code\nClaude Desktop\nCodex\nCursor\nGemini CLI\nOpenCode\nVS Code\nWindsurf",
+      "reviewed": true,
+      "imageHash": "0844ba248fe28692837f4854c4c8f1d40a66c24a791a3f1f8541d8ec013513ab"
+    },
+    {
+      "article": "git-accounts-and-repositories",
+      "locale": "de",
+      "url": "http://localhost:3000/settings?tab=git&section=account-git-connections",
+      "output": "public/documentation/de/git-accounts-and-repositories-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 249.75,
+        "width": 768,
+        "height": 280
+      },
+      "lang": "de",
+      "text": "Verbundene Git-Konten\nGitHub\n\nminddy kann nicht in Ihrem Namen handeln.\n\nAutorisieren\nGitLab\n\nminddy kann nicht in Ihrem Namen handeln.\n\nAutorisieren",
+      "reviewed": true,
+      "imageHash": "3ba8e352f2a415bd7e17feb3f427d57398038a4b68bb23af06fb23bedcc09814"
+    },
+    {
+      "article": "profile-and-preferences",
+      "locale": "es",
+      "url": "http://localhost:3000/settings?tab=profile&section=account-profile",
+      "output": "public/documentation/es/profile-and-preferences-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 119,
+        "width": 768,
+        "height": 367.5
+      },
+      "lang": "es",
+      "text": "Perfil\nAvatar\n\nUsa un avatar Lorelei generado o sube tu propia imagen.\n\nCargar imagen\nNuevo avatar de Lorelei\nNombre de usuario\nCorreo electrónico\n\nTu dirección no puede ser cambiada.\n\ncaptures-demo@minddy.app\nAplicación de escritorio\n\nDisponible para macOS, Windows y Linux. Su propia ventana, selector de servidores y actualizaciones.\n\nDescargar\nGuardar",
+      "reviewed": true,
+      "imageHash": "e3560ff75b6ee39883abed933dc48995448e6887ed1c11fb6de31fa9cd484d24"
+    },
+    {
+      "article": "profile-and-preferences-preferences",
+      "locale": "es",
+      "url": "http://localhost:3000/settings?tab=preferences&section=account-appearance",
+      "output": "public/documentation/es/profile-and-preferences-preferences-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 119,
+        "width": 768,
+        "height": 163.75
+      },
+      "lang": "es",
+      "text": "Apariencia\nIdioma\nEspañol\nTema\n\nGuardado en su cuenta — el mismo tema en cada dispositivo.\n\nClaro\nOscuro\nSistema",
+      "reviewed": true,
+      "imageHash": "c323a2738c179fed6e425ec18b7fa42309cf309c17827f837f0faf1cc779945d"
+    },
+    {
+      "article": "account-security",
+      "locale": "es",
+      "url": "http://localhost:3000/settings?tab=security&section=account-security",
+      "output": "public/documentation/es/account-security-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 119,
+        "width": 768,
+        "height": 179
+      },
+      "lang": "es",
+      "text": "Autenticación de dos factores\n\nUna contraseña por sí sola abre esta cuenta\n\nRecomendado\n\nLleva acceso a escritura a los repositorios Git conectados, a través del agente de código, además de las claves de modelo y todo lo que se puede eliminar aquí. Un segundo factor cierra esa puerta.\n\nEnciende",
+      "reviewed": true,
+      "imageHash": "5ba119e916b5bb5b20a7c418470a7a7ce0cc90856ed492017ac3969a5d310db9"
+    },
+    {
+      "article": "devices-and-notifications",
+      "locale": "es",
+      "url": "http://localhost:3000/settings?tab=inbox&section=account-push-devices",
+      "output": "public/documentation/es/devices-and-notifications-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 738,
+        "width": 768,
+        "height": 147.75
+      },
+      "lang": "es",
+      "text": "Notificaciones push\nNotificar este dispositivo\n\nLas notificaciones de minddy están bloqueadas en este navegador. Vuelve a permitirlas en los ajustes del sitio; solicitarlas de nuevo desde aquí no reabrirá el aviso.\n\nNingún dispositivo recibe notificaciones todavía.",
+      "reviewed": true,
+      "imageHash": "7db086add285c54d4a5454e6bfed3bf253c933002a9604ca7bb9d88f6332f553"
+    },
+    {
+      "article": "ai-keys-and-models",
+      "locale": "es",
+      "url": "http://localhost:3000/settings?tab=agent&section=account-ai-provider",
+      "output": "public/documentation/es/ai-keys-and-models-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 119,
+        "width": 768,
+        "height": 164
+      },
+      "lang": "es",
+      "text": "Proveedor de IA\nminddy Cloud\n\nUsa tu plan de minddy Cloud. No necesitas una clave API.",
+      "reviewed": true,
+      "imageHash": "1466f05018320b715dc4d348edc4b2e3f004bc0dff03738c85e1a07893a2eaf2"
+    },
+    {
+      "article": "automation-settings",
+      "locale": "es",
+      "url": "http://localhost:3000/settings?tab=automations&section=account-automations",
+      "output": "public/documentation/es/automation-settings-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 119,
+        "width": 768,
+        "height": 172.25
+      },
+      "lang": "es",
+      "text": "Automatizaciones\nAutomatización preestablecida\nNinguno\n\nNo hay ningún preajuste: no se ejecutará nada, independientemente de los selectores de abajo.",
+      "reviewed": true,
+      "imageHash": "fd1bc213368e205689a6de1c8982a4afa1c3fae73da4adeca7c2167183832257"
+    },
+    {
+      "article": "transfer-between-instances",
+      "locale": "es",
+      "url": "http://localhost:3000/settings?tab=data&section=account-data-import",
+      "output": "public/documentation/es/transfer-between-instances-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 275.75,
+        "width": 768,
+        "height": 98.75
+      },
+      "lang": "es",
+      "text": "Transferir datos de otra instancia de minddy\nImportar un archivo de transferencia\n\nSe restauran proyectos, incidencias, páginas, configuraciones e historial personal. Las afiliaciones se restauran sólo para proyectos que ya existen aquí; las credenciales y suscripciones nunca se importan.\n\nImportar un archivo de transferencia",
+      "reviewed": true,
+      "imageHash": "9d36599d75b8e039a8638b66455f5159b19253d5b37984e369e671c689608f1d"
+    },
+    {
+      "article": "privacy-and-account-deletion",
+      "locale": "es",
+      "url": "http://localhost:3000/settings?tab=data&section=account-data-delete",
+      "output": "public/documentation/es/privacy-and-account-deletion-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 537.25,
+        "width": 768,
+        "height": 182
+      },
+      "lang": "es",
+      "text": "Borrar mi cuenta\n¿Qué se eliminará?\nBorrar mi cuenta\nTu cuenta, preferencias, ciclos, cuaderno y conversaciones con Numo.\nLos 2 proyectos que posees: 30 Incidencias y todos los archivos adjuntos.\n2 otros miembros pierden su acceso.\n\nExporta primero tus datos si quieres guardar una copia.",
+      "reviewed": true,
+      "imageHash": "55fc398beb8dc45912a651403751b61cac2e3c5b481766119712ffe3bd9f13ec"
+    },
+    {
+      "article": "numo-mcp-connections",
+      "locale": "es",
+      "url": "http://localhost:3000/settings?tab=mcp-clients&section=account-mcp-clients",
+      "output": "public/documentation/es/numo-mcp-connections-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 119,
+        "width": 768,
+        "height": 1265.25
+      },
+      "lang": "es",
+      "text": "MCP para Numo\nAñadir otro servidor MCP\n\nTus conexiones son personales. Las rutinas usan las conexiones del propietario del proyecto.\n\nNo hay servidores MCP conectados. Añade uno para que Numo acceda a sus herramientas.\n\nElige un servicio o añade el tuyo\nNotion\nLinear\nGmail\nGoogle Drive\nGoogle Calendar\nGoogle Docs\nGoogle Sheets\nGoogle Slides\nGoogle Chat\nGoogle Contacts\nGitHub\nAtlassian (Jira, Confluence)\nSlack\nFigma\nAsana\nPostHog\nCanva\nSentry\nSupabase\nVercel\nStripe\nHubSpot\nZapier\nmonday.com\nPayPal\nAirtable\nWebflow\nWix\nGitLab\nGrafana\nHugging Face\nCloudflare Docs\nCloudflare Bindings\nExa\nDropbox\nIntercom\nBox\nClickUp\nSquare\nRamp",
+      "reviewed": true,
+      "imageHash": "a1c9a764eb04b52431b4768c31224e92676f4f6c4998e10ee11789913b775b76"
+    },
+    {
+      "article": "external-minddy-mcp",
+      "locale": "es",
+      "url": "http://localhost:3000/settings?tab=mcp&section=account-mcp",
+      "output": "public/documentation/es/external-minddy-mcp-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 119,
+        "width": 768,
+        "height": 204
+      },
+      "lang": "es",
+      "text": "Conectar asistentes a Minddy\nClaude Code\nClaude Desktop\nCodex\nCursor\nGemini CLI\nOpenCode\nVS Code\nWindsurf",
+      "reviewed": true,
+      "imageHash": "84be1d9bdebb5d2e5150c21b23769a51db452fda1ca76f5f8ea8d6609eb4e4d8"
+    },
+    {
+      "article": "git-accounts-and-repositories",
+      "locale": "es",
+      "url": "http://localhost:3000/settings?tab=git&section=account-git-connections",
+      "output": "public/documentation/es/git-accounts-and-repositories-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 249.75,
+        "width": 768,
+        "height": 280
+      },
+      "lang": "es",
+      "text": "Cuentas git conectadas\nGitHub\n\nminddy no puede actuar en tu nombre.\n\nAutorizar\nGitLab\n\nminddy no puede actuar en tu nombre.\n\nAutorizar",
+      "reviewed": true,
+      "imageHash": "3306b43ff91a6f86d141a1872e7fdf3b226d6ceb414c56e5adb8e9effb247f0c"
+    },
+    {
+      "article": "profile-and-preferences",
+      "locale": "it",
+      "url": "http://localhost:3000/settings?tab=profile&section=account-profile",
+      "output": "public/documentation/it/profile-and-preferences-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 119,
+        "width": 768,
+        "height": 367.5
+      },
+      "lang": "it",
+      "text": "Profilo\nAvatar\n\nUsa un avatar generato di Lorelei o carica la tua immagine.\n\nCarica immagine\nNuovo avatar di Lorelei\nNome utente\nEmail\n\nIl tuo indirizzo non può essere cambiato.\n\ncaptures-demo@minddy.app\nApp desktop\n\nDisponibile per macOS, Windows e Linux. La sua finestra, il selettore del server e gli aggiornamenti.\n\nScarica\nSalva",
+      "reviewed": true,
+      "imageHash": "95ba97ce467e849033037b59c25744fca75d5974905d5466e938566a8550285d"
+    },
+    {
+      "article": "profile-and-preferences-preferences",
+      "locale": "it",
+      "url": "http://localhost:3000/settings?tab=preferences&section=account-appearance",
+      "output": "public/documentation/it/profile-and-preferences-preferences-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 119,
+        "width": 768,
+        "height": 163.75
+      },
+      "lang": "it",
+      "text": "Aspetto\nLingua\nItaliano\nTema\n\nSalvato sul tuo account — lo stesso tema su ogni dispositivo.\n\nLuce\nOscuro\nSistema",
+      "reviewed": true,
+      "imageHash": "a86b363e39cbf9850d1d154c48f875f7178379bc1f288b18c1ee72b34ed6662b"
+    },
+    {
+      "article": "account-security",
+      "locale": "it",
+      "url": "http://localhost:3000/settings?tab=security&section=account-security",
+      "output": "public/documentation/it/account-security-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 119,
+        "width": 768,
+        "height": 179
+      },
+      "lang": "it",
+      "text": "Autenticazione a due fattori\n\nUna sola password apre questo account\n\nConsigliato\n\nConsente l'accesso in scrittura ai repository git collegati tramite l'agente di codice, oltre alle chiavi dei modelli e a tutto ciò che puoi eliminare qui. Un secondo fattore protegge questo accesso.\n\nAccendete",
+      "reviewed": true,
+      "imageHash": "d34afac2aaf9fd6d4103a2e779d6878d61739b64d7cce76e9a1e78aa067031c8"
+    },
+    {
+      "article": "devices-and-notifications",
+      "locale": "it",
+      "url": "http://localhost:3000/settings?tab=inbox&section=account-push-devices",
+      "output": "public/documentation/it/devices-and-notifications-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 738,
+        "width": 768,
+        "height": 147.75
+      },
+      "lang": "it",
+      "text": "Avvisi di avviso\nAvvisa questo dispositivo\n\nLe notifiche sono bloccate per minddy in questo browser. Ri-permettetele nelle impostazioni del sito; chiedere di nuovo da qui non riaprirà il prompt.\n\nNessun dispositivo riceve ancora notifiche.",
+      "reviewed": true,
+      "imageHash": "f36e8b11afea5716ebea87c45895f5d38e363aaf031f6cbfbf213ca66216b1e8"
+    },
+    {
+      "article": "ai-keys-and-models",
+      "locale": "it",
+      "url": "http://localhost:3000/settings?tab=agent&section=account-ai-provider",
+      "output": "public/documentation/it/ai-keys-and-models-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 119,
+        "width": 768,
+        "height": 164
+      },
+      "lang": "it",
+      "text": "Produttore di AI\nminddy Cloud\n\nUsa il tuo piano minddy Cloud. Non serve una chiave API.",
+      "reviewed": true,
+      "imageHash": "5a00db4e32a44c0b844a74fa1d0675b612c50e032b0b8e6750a6c586ffdd10be"
+    },
+    {
+      "article": "automation-settings",
+      "locale": "it",
+      "url": "http://localhost:3000/settings?tab=automations&section=account-automations",
+      "output": "public/documentation/it/automation-settings-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 119,
+        "width": 768,
+        "height": 152.75
+      },
+      "lang": "it",
+      "text": "Automazioni\nPredefinito l'automazione\nNessuna\n\nNessun preassetto; niente funziona, qualunque sia l'interruttore qui sotto dica.",
+      "reviewed": true,
+      "imageHash": "f76ad4f491df2e244da817841a0194047bff77aab8464038bce053bdde3c4466"
+    },
+    {
+      "article": "transfer-between-instances",
+      "locale": "it",
+      "url": "http://localhost:3000/settings?tab=data&section=account-data-import",
+      "output": "public/documentation/it/transfer-between-instances-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 275.75,
+        "width": 768,
+        "height": 98.75
+      },
+      "lang": "it",
+      "text": "Trasferire dati da un'altra istanza minddy\nImporta un file di trasferimento\n\nI progetti, i ticket, le pagine, le impostazioni e la cronologia personale vengono ripristinati. Le iscrizioni vengono ripristinate solo per i progetti che già esistono qui; le credenziali e gli abbonamenti non vengono mai importati.\n\nImporta un file di trasferimento",
+      "reviewed": true,
+      "imageHash": "5ec79dcdbdf20ec0df6510a5a24ba122c79d62d10eb22c5dfa781cabfe97992c"
+    },
+    {
+      "article": "privacy-and-account-deletion",
+      "locale": "it",
+      "url": "http://localhost:3000/settings?tab=data&section=account-data-delete",
+      "output": "public/documentation/it/privacy-and-account-deletion-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 537.25,
+        "width": 768,
+        "height": 182
+      },
+      "lang": "it",
+      "text": "Cancella il mio account\nCosa verrà eliminato\nCancella il mio account\nIl tuo account, le preferenze, i cicli, il taccuino e le conversazioni con Numo.\nI 2 progetti che possiedi: 30 ticket e tutti i file allegati.\n2 altri membri perdono l'accesso.\n\nEsporta i tuoi dati prima se vuoi tenere una copia.",
+      "reviewed": true,
+      "imageHash": "14836e5f5c9c8b0643890c442b7ab18c5ed4868f37d380b39e2bbce844689889"
+    },
+    {
+      "article": "numo-mcp-connections",
+      "locale": "it",
+      "url": "http://localhost:3000/settings?tab=mcp-clients&section=account-mcp-clients",
+      "output": "public/documentation/it/numo-mcp-connections-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 119,
+        "width": 768,
+        "height": 1265.25
+      },
+      "lang": "it",
+      "text": "MCP per Numo\nAggiungi un altro server MCP\n\nLe connessioni sono personali. Le routine usano quelle del proprietario del progetto.\n\nNessun server MCP collegato. Aggiungine uno per dare a Numo accesso ai suoi strumenti.\n\nScegli un servizio o aggiungi il tuo\nNotion\nLinear\nGmail\nGoogle Drive\nGoogle Calendar\nGoogle Docs\nGoogle Sheets\nGoogle Slides\nGoogle Chat\nGoogle Contacts\nGitHub\nAtlassian (Jira, Confluence)\nSlack\nFigma\nAsana\nPostHog\nCanva\nSentry\nSupabase\nVercel\nStripe\nHubSpot\nZapier\nmonday.com\nPayPal\nAirtable\nWebflow\nWix\nGitLab\nGrafana\nHugging Face\nCloudflare Docs\nCloudflare Bindings\nExa\nDropbox\nIntercom\nBox\nClickUp\nSquare\nRamp",
+      "reviewed": true,
+      "imageHash": "8db60ffc79db1ca4f93371625c636817830c2bdf4b6afb4e1fd6dd0b9ab34bf6"
+    },
+    {
+      "article": "external-minddy-mcp",
+      "locale": "it",
+      "url": "http://localhost:3000/settings?tab=mcp&section=account-mcp",
+      "output": "public/documentation/it/external-minddy-mcp-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 119,
+        "width": 768,
+        "height": 204
+      },
+      "lang": "it",
+      "text": "Collega assistenti a Minddy\nClaude Code\nClaude Desktop\nCodex\nCursor\nGemini CLI\nOpenCode\nVS Code\nWindsurf",
+      "reviewed": true,
+      "imageHash": "e71a8e7cfe8f4f143c39dca0bbadfe0fec63cb845cbf026be878da45d351d52a"
+    },
+    {
+      "article": "git-accounts-and-repositories",
+      "locale": "it",
+      "url": "http://localhost:3000/settings?tab=git&section=account-git-connections",
+      "output": "public/documentation/it/git-accounts-and-repositories-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 249.75,
+        "width": 768,
+        "height": 280
+      },
+      "lang": "it",
+      "text": "Account git collegati\nGitHub\n\nminddy non può agire a tuo nome.\n\nAutorizzazione\nGitLab\n\nminddy non può agire a tuo nome.\n\nAutorizzazione",
+      "reviewed": true,
+      "imageHash": "5487232912fc51f96548ae60e2486d79eeb9af0d5cb2b8b0b57755482f60d7b0"
+    },
+    {
+      "article": "profile-and-preferences",
+      "locale": "pt-BR",
+      "url": "http://localhost:3000/settings?tab=profile&section=account-profile",
+      "output": "public/documentation/pt-BR/profile-and-preferences-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 119,
+        "width": 768,
+        "height": 367.5
+      },
+      "lang": "pt-BR",
+      "text": "Perfil\nAvatar\n\nUse um avatar Lorelei gerado ou carregue sua própria imagem.\n\nCarregar imagem\nNovo avatar de Lorelei\nNome de usuário\nE-mail\n\nSeu endereço não pode ser alterado.\n\ncaptures-demo@minddy.app\nAplicativo de desktop\n\nDisponível para macOS, Windows e Linux. Sua própria janela, seletor de servidor e atualizações.\n\nBaixar\nSalvar",
+      "reviewed": true,
+      "imageHash": "9d0ee8a8cdbca0d95047dd1a7da284c723a872297c0c531ecd0424923fb78c85"
+    },
+    {
+      "article": "profile-and-preferences-preferences",
+      "locale": "pt-BR",
+      "url": "http://localhost:3000/settings?tab=preferences&section=account-appearance",
+      "output": "public/documentation/pt-BR/profile-and-preferences-preferences-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 119,
+        "width": 768,
+        "height": 163.75
+      },
+      "lang": "pt-BR",
+      "text": "Aparência\nIdioma\nPortuguês (Brasil)\nTema\n\nSalvo em sua conta - o mesmo tema em todos os dispositivos.\n\nClaro\nEscuro\nSistema",
+      "reviewed": true,
+      "imageHash": "84e3ce6ad6c3b916d77db381283e64263fa4d560fad35ac6d9d373d4cb28737d"
+    },
+    {
+      "article": "account-security",
+      "locale": "pt-BR",
+      "url": "http://localhost:3000/settings?tab=security&section=account-security",
+      "output": "public/documentation/pt-BR/account-security-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 119,
+        "width": 768,
+        "height": 179
+      },
+      "lang": "pt-BR",
+      "text": "Autenticação de dois fatores\n\nUma senha sozinha abre esta conta\n\nRecomendado\n\nEla carrega acesso de gravação aos seus repositórios Git conectados, através do agente de código, além de suas chaves de modelo e tudo que você pode excluir aqui. Um segundo fator fecha essa porta.\n\nAtive",
+      "reviewed": true,
+      "imageHash": "79270408c3a247d8f2588e8a9736fadc1d737ab644387657d2113321ce939b73"
+    },
+    {
+      "article": "devices-and-notifications",
+      "locale": "pt-BR",
+      "url": "http://localhost:3000/settings?tab=inbox&section=account-push-devices",
+      "output": "public/documentation/pt-BR/devices-and-notifications-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 738,
+        "width": 768,
+        "height": 147.75
+      },
+      "lang": "pt-BR",
+      "text": "Notificações push\nNotifique este dispositivo\n\nAs notificações estão bloqueadas para minddy neste navegador. Permita-os novamente nas configurações do site; perguntar novamente a partir daqui não reabrirá o prompt.\n\nNenhum dispositivo recebeu notificações ainda.",
+      "reviewed": true,
+      "imageHash": "71bb7c60e5f9bcbfc556e3099c588e792d16715b761dfd49b0b34bccc8e5ffef"
+    },
+    {
+      "article": "ai-keys-and-models",
+      "locale": "pt-BR",
+      "url": "http://localhost:3000/settings?tab=agent&section=account-ai-provider",
+      "output": "public/documentation/pt-BR/ai-keys-and-models-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 119,
+        "width": 768,
+        "height": 164
+      },
+      "lang": "pt-BR",
+      "text": "Provedor de IA\nminddy Cloud\n\nUsa seu plano minddy Cloud. Nenhuma chave de API é necessária.",
+      "reviewed": true,
+      "imageHash": "06aeade0a7330e92d305e5d42632f5e6f3e988045071c8406b7cd0e129ef377a"
+    },
+    {
+      "article": "automation-settings",
+      "locale": "pt-BR",
+      "url": "http://localhost:3000/settings?tab=automations&section=account-automations",
+      "output": "public/documentation/pt-BR/automation-settings-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 119,
+        "width": 768,
+        "height": 172.25
+      },
+      "lang": "pt-BR",
+      "text": "Automações\nPredefinição de automação\nNenhum\n\nSem predefinição; nada é executado, independentemente do que as opções abaixo digam.",
+      "reviewed": true,
+      "imageHash": "af73b2e15dd084e63529b62047ba5a57616d65b554e72ddf98b867c3ddaa926a"
+    },
+    {
+      "article": "transfer-between-instances",
+      "locale": "pt-BR",
+      "url": "http://localhost:3000/settings?tab=data&section=account-data-import",
+      "output": "public/documentation/pt-BR/transfer-between-instances-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 275.75,
+        "width": 768,
+        "height": 98.75
+      },
+      "lang": "pt-BR",
+      "text": "Transfira dados de outra instância minddy\nImportar um arquivo de transferência\n\nProjetos, problemas, páginas, configurações e histórico pessoal são restaurados. As associações são restauradas apenas para projetos que já existem aqui; credenciais e assinaturas nunca são importadas.\n\nImportar um arquivo de transferência",
+      "reviewed": true,
+      "imageHash": "b4cf70529b581c75899461ad7e71c6486c80f19306aa35eee4eb6d4d58a6dc6e"
+    },
+    {
+      "article": "privacy-and-account-deletion",
+      "locale": "pt-BR",
+      "url": "http://localhost:3000/settings?tab=data&section=account-data-delete",
+      "output": "public/documentation/pt-BR/privacy-and-account-deletion-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 537.25,
+        "width": 768,
+        "height": 182
+      },
+      "lang": "pt-BR",
+      "text": "Excluir minha conta\nO que será excluído\nExcluir minha conta\nSua conta, preferências, ciclos, caderno e conversas com o Numo.\nOs 2 projetos que você possui: 30 problemas e todos os arquivos anexados.\n2 outros membros perdem o acesso acessar.\n\nExporte seus dados primeiro se quiser manter uma cópia.",
+      "reviewed": true,
+      "imageHash": "64671eb4526bb14e104266d024e401c693108e29935ffcf696ac8e70d49436da"
+    },
+    {
+      "article": "numo-mcp-connections",
+      "locale": "pt-BR",
+      "url": "http://localhost:3000/settings?tab=mcp-clients&section=account-mcp-clients",
+      "output": "public/documentation/pt-BR/numo-mcp-connections-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 119,
+        "width": 768,
+        "height": 1265.25
+      },
+      "lang": "pt-BR",
+      "text": "MCP para o Numo\nAdicionar outro servidor MCP\n\nSuas conexões são pessoais. As rotinas usam as conexões do proprietário do projeto.\n\nNenhum servidor MCP conectado. Adicione um servidor para o Numo acessar suas ferramentas.\n\nEscolha um serviço ou adicione o seu\nNotion\nLinear\nGmail\nGoogle Drive\nGoogle Calendar\nGoogle Docs\nGoogle Sheets\nGoogle Slides\nGoogle Chat\nGoogle Contacts\nGitHub\nAtlassian (Jira, Confluence)\nSlack\nFigma\nAsana\nPostHog\nCanva\nSentry\nSupabase\nVercel\nStripe\nHubSpot\nZapier\nmonday.com\nPayPal\nAirtable\nWebflow\nWix\nGitLab\nGrafana\nHugging Face\nCloudflare Docs\nCloudflare Bindings\nExa\nDropbox\nIntercom\nBox\nClickUp\nSquare\nRamp",
+      "reviewed": true,
+      "imageHash": "51c18f2e5fc70bc95a14c1173e4633c0b8287654c5fe492cd8fd5e7efba67cfb"
+    },
+    {
+      "article": "external-minddy-mcp",
+      "locale": "pt-BR",
+      "url": "http://localhost:3000/settings?tab=mcp&section=account-mcp",
+      "output": "public/documentation/pt-BR/external-minddy-mcp-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 119,
+        "width": 768,
+        "height": 204
+      },
+      "lang": "pt-BR",
+      "text": "Conectar assistentes ao Minddy\nClaude Code\nClaude Desktop\nCodex\nCursor\nGemini CLI\nOpenCode\nVS Code\nWindsurf",
+      "reviewed": true,
+      "imageHash": "12788c7feb97e708c95213630688e7dde4dd84d329ea7d3a2a6f8459830bbdcc"
+    },
+    {
+      "article": "git-accounts-and-repositories",
+      "locale": "pt-BR",
+      "url": "http://localhost:3000/settings?tab=git&section=account-git-connections",
+      "output": "public/documentation/pt-BR/git-accounts-and-repositories-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "bounds": {
+        "x": 490,
+        "y": 249.75,
+        "width": 768,
+        "height": 280
+      },
+      "lang": "pt-BR",
+      "text": "Contas git conectadas\nGitHub\n\nminddy não pode agir em seu nome.\n\nAutorizar\nGitLab\n\nminddy não pode agir em seu nome.\n\nAutorizar",
+      "reviewed": true,
+      "imageHash": "e8aba70de2ad42edb98275c027d75e7362fb39d1ee43db1e96411bae6677714d"
+    }
+  ],
+  "visualReview": {
+    "reviewer": "Codex agent automation_account_documentation",
+    "date": "2026-10-08",
+    "method": "Viewed all locale image pixels after final capture. Checked UI labels, readable controls, correct locale, no loading state or secrets. Entry-point figures do not establish workflow execution."
+  }
+}

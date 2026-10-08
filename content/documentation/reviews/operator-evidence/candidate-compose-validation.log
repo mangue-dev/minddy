@@ -1,0 +1,5 @@
+
+> minddy@0.11.1 validate:self-hosted-compose
+> node scripts/validate-self-hosted-compose.mjs
+
+Self-hosted Compose validation failed: No compatibility row exists for minddy 0.11.1.

@@ -1,0 +1,85 @@
+{
+  "date": "2026-10-08",
+  "reviewer": "agent:/root/review_documentation_locales",
+  "scope": "Nine observed UI translation defects only: seven PullRequests keys and two Agent reasoningLow keys. Existing data and unrelated catalog keys preserved.",
+  "sourceRead": "components/pull-requests/pr-viewer-callout.tsx:64 (provider placeholder substitution and unavailable authorization state)",
+  "findings": [
+    "Spanish and Italian literal provider-before-sentence substitution generated ungrammatical authorization banners.",
+    "Italian and Brazilian Portuguese open-state badge used imperative action instead of state adjective.",
+    "German split diff label meant share rather than side-by-side comparison.",
+    "Italian Luce and Portuguese Claro incorrectly described lighting in the code-worker reasoning badge; Light means reduced reasoning effort."
+  ],
+  "changes": [
+    {
+      "locale": "es",
+      "namespace": "PullRequests",
+      "before": {
+        "viewerProviderUnavailableTitle": "{provider} las acciones no están disponibles aquí",
+        "viewerProviderUnavailable": "Esta instancia de minddy no puede solicitar {provider} autorización del usuario, por lo que no se puede enviar ninguna acción en su nombre. Un administrador tiene que habilitar."
+      },
+      "after": {
+        "viewerProviderUnavailableTitle": "Las acciones de {provider} no están disponibles aquí",
+        "viewerProviderUnavailable": "Esta instancia de minddy no puede solicitar la autorización de usuario de {provider}, por lo que no se puede realizar ninguna acción en su nombre. Un administrador debe habilitar esta función."
+      }
+    },
+    {
+      "locale": "it",
+      "namespace": "PullRequests",
+      "before": {
+        "viewerProviderUnavailableTitle": "{provider} le azioni non sono disponibili qui",
+        "viewerProviderUnavailable": "Questa istanza minddy non può richiedere {provider} autorizzazione utente, quindi nessuna azione può essere inviata a nome tuo. Un amministratore deve abilitarlo.",
+        "stateOpen": "Apri"
+      },
+      "after": {
+        "viewerProviderUnavailableTitle": "Le azioni su {provider} non sono disponibili qui",
+        "viewerProviderUnavailable": "Questa istanza di minddy non può richiedere l’autorizzazione dell’utente su {provider}, quindi non può eseguire azioni a tuo nome. Un amministratore deve abilitare questa funzione.",
+        "stateOpen": "Aperta"
+      }
+    },
+    {
+      "locale": "pt-BR",
+      "namespace": "PullRequests",
+      "before": {
+        "stateOpen": "Abrir"
+      },
+      "after": {
+        "stateOpen": "Aberto"
+      }
+    },
+    {
+      "locale": "de",
+      "namespace": "PullRequests",
+      "before": {
+        "split": "Teilen"
+      },
+      "after": {
+        "split": "Nebeneinander"
+      }
+    },
+    {
+      "locale": "it",
+      "namespace": "Agent",
+      "before": {
+        "reasoningLow": "Luce"
+      },
+      "after": {
+        "reasoningLow": "Leggero"
+      }
+    },
+    {
+      "locale": "pt-BR",
+      "namespace": "Agent",
+      "before": {
+        "reasoningLow": "Claro"
+      },
+      "after": {
+        "reasoningLow": "Leve"
+      }
+    }
+  ],
+  "humanAcceptance": false,
+  "sourcesRead": [
+    "components/pull-requests/pr-viewer-callout.tsx:64",
+    "components/assistant/delegated-work-card.tsx:101"
+  ]
+}

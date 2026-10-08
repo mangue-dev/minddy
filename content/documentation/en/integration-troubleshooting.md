@@ -1,0 +1,93 @@
+---
+{
+  "id": "integration-troubleshooting",
+  "locale": "en",
+  "title": "Recover an OAuth, MCP, webhook or Git connection failure",
+  "summary": "Minddy MCP connects an external assistant to Minddy; personal MCP connections let Numo call another server.",
+  "topic": "Technical concepts",
+  "type": "troubleshooting",
+  "audiences": [
+    "integrator"
+  ],
+  "workflows": [
+    "T08"
+  ],
+  "visibility": "public",
+  "status": "published",
+  "revision": 1,
+  "sourceRevision": 1,
+  "owner": "@mangue-dev",
+  "updatedAt": "2026-10-08",
+  "compatibility": {
+    "version": "0.11.1 candidate (89ebb59a5)",
+    "editions": [
+      "Cloud",
+      "self-hosted"
+    ],
+    "profiles": [
+      "web",
+      "desktop",
+      "mobile",
+      "full",
+      "managed"
+    ],
+    "evidence": [
+      "content/knowledge/agents-and-mcp.md",
+      "docs/github-issue-sync.md",
+      "lib/server/integration-auth.ts",
+      "lib/mcp-authorization.ts"
+    ]
+  },
+  "review": {
+    "revision": 1,
+    "fact": "agent:/root/automation_account_documentation (independent targeted primary-source review)",
+    "language": "agent:/root/automation_account_documentation (complete independent article and caption review)",
+    "date": "2026-10-08"
+  },
+  "related": [
+    "integration-api-and-webhooks",
+    "mcp-tool-reference"
+  ],
+  "aliases": [],
+  "tags": [],
+  "figures": [
+    {
+      "id": "integration-troubleshooting-flow",
+      "kind": "screenshot",
+      "src": "/documentation/en/integration-troubleshooting-error.png",
+      "alt": "MCP connection loading error with the Try again button.",
+      "caption": "Try again reloads the connections after the network becomes available.",
+      "revision": 1,
+      "reviewed": true,
+      "capturedAt": "2026-10-08",
+      "viewport": [
+        1440,
+        1100
+      ],
+      "theme": "light"
+    }
+  ],
+  "requiredFigures": [
+    "integration-troubleshooting-flow"
+  ]
+}
+---
+
+## Locate the failed connection {#integration-troubleshooting}
+
+Minddy MCP connects an external assistant to Minddy; personal MCP connections let Numo call another server. They have different account tabs and credentials. For personal MCP, inspect the connection status in account settings and use its test/reconnect action. OAuth discovery, dynamic registration, PKCE and refresh are supported, but a catalog entry does not bypass provider approval, developer preview or registered-app requirements. Confirm current provider requirements before assuming a Minddy defect.
+
+
+![MCP connection loading error with the Try again button.](/documentation/en/integration-troubleshooting-error.png)
+
+## Reconnect without losing the access boundary {#oauth}
+
+Register the exact displayed callback in the provider OAuth app when existing client credentials are required. Desktop OAuth opens in the system browser and returns to the app. Remote connections require public HTTPS; local commands and private network servers are unsupported. Put bearer tokens and custom secrets in authentication/headers, not query URLs. Changing the URL clears saved credentials and headers. Disabling/removing stops new calls, but a request already sent may finish. Routine connections belong to the current project owner; ownership changes cannot reuse the previous owner’s personal access.
+
+## Inspect the outcome before repeating a call {#webhooks}
+
+Remote MCP calls have a 30-second deadline, 1 MiB transport limit and 64 KB result limit. A timeout does not prove a remote mutation failed. Check the destination before retrying. For API 401, verify key kind/instance and revocation without logging the key; wrong kind returns 403. For webhooks, inspect last status, public destination reachability, raw-body HMAC verification and delivery_id deduplication. Best-effort dropped deliveries have no durable retry queue. Preserve controlled codes and times, removing private content and credentials.
+
+## Check provider permissions and synchronization {#git}
+
+Git adapters target github.com and gitlab.com. Confirm the linked repository, installation access and selected connection channel. GitHub issue synchronization needs Issues read/write and Issues, Issue comments and Issue dependencies webhook subscriptions; existing installations must accept changed permissions. Older payload timestamps cannot overwrite newer local edits. Duplicate deliveries use remote identities to avoid repeats. Inline attachment URLs remain forge links rather than copied file bytes. Verify remote and local state before reconnecting or retrying a write and share only redacted diagnostics.

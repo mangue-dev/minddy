@@ -1,0 +1,70 @@
+[
+  [
+    "Navegación del proyecto junto al tablero de incidencias de demostración.",
+    "La barra del proyecto da acceso a incidencias, objetivos, páginas y clasificación de entradas."
+  ],
+  [
+    "Menú de acciones para dos incidencias de demostración seleccionadas.",
+    "El menú actúa sobre las incidencias seleccionadas. En esta captura no se envió ningún cambio conjunto."
+  ],
+  [
+    "Búsqueda de una incidencia bloqueante por identificador.",
+    "Elige el sentido de la relación antes de su destino. El selector se muestra sin enviar la relación."
+  ],
+  [
+    "Campo para crear una subincidencia en una incidencia principal de demostración.",
+    "El campo crea una hija de esta incidencia; cada hija conserva su estado y conversación."
+  ],
+  [
+    "Plan de demostración con dos tareas de trabajo completadas de seis.",
+    "El plan guardado distingue pasos completados, activos y pendientes. Su progreso no demuestra que se ejecutara la tarea de código ficticia."
+  ],
+  [
+    "Diálogo para añadir un enlace con una dirección de contacto de ejemplo.",
+    "Revisa el destino antes de añadir el recurso. Este enlace de ejemplo no se ha enviado."
+  ],
+  [
+    "Filtros manuales de una vista y menú de ordenación.",
+    "Filtra por propiedades de las incidencias o elige un orden. El campo de IA es opcional para estos controles manuales."
+  ],
+  [
+    "Diálogo para compartir una vista con acceso privado seleccionado.",
+    "El acceso privado, protegido por contraseña y público son opciones distintas. La vista permanece privada en esta captura."
+  ],
+  [
+    "Resultados de búsqueda del identificador de una incidencia de demostración.",
+    "La paleta encuentra la incidencia por identificador junto a las páginas del proyecto; abrir un resultado conserva sus reglas de acceso."
+  ],
+  [
+    "Pestañas de la bandeja de entrada y lista sin elementos no leídos.",
+    "La pestaña Sin leer vacía indica que esta vista no contiene elementos sin leer. Todos muestra otras notificaciones conservadas."
+  ],
+  [
+    "Tareas personales de demostración traducidas en el cuaderno.",
+    "El cuaderno mantiene los pasos personales fuera de la jerarquía de incidencias del proyecto. Los estados del ejemplo no se modifican."
+  ],
+  [
+    "Estadísticas personales de la cuenta de demostración.",
+    "La muestra procede de la actividad registrada de la cuenta. La ausencia de una duración no equivale a cero tiempo de trabajo."
+  ],
+  [
+    "Incidencia de demostración completada con su descripción y comentario guardado.",
+    "El estado completado registra la comprobación del recorrido de la aplicación. No afirma que se probara el enlace de correo del sitio de ejemplo."
+  ],
+  [
+    "Diálogo de creación de objetivo sin enviar con un nombre de resultado de ejemplo.",
+    "Nombra el resultado antes de elegir responsable, fecha objetivo y estado. Este diálogo no ha creado un segundo objetivo."
+  ],
+  [
+    "Ritmo del objetivo tras completar realmente una incidencia de demostración.",
+    "Lee el ritmo junto al trabajo vinculado. El historial disponible aún no permite mostrar una fecha estimada de finalización."
+  ],
+  [
+    "Incidencia de demostración en el backlog del ciclo personal.",
+    "Al añadirla se asignó al titular del ciclo y se conservó su estado de backlog."
+  ],
+  [
+    "Incidencia de demostración recuperable con treinta días restantes en la papelera.",
+    "Las acciones de la fila permiten restaurarla. Vaciar la papelera es una operación permanente independiente."
+  ]
+]

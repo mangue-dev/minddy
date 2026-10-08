@@ -1,0 +1,70 @@
+[
+  [
+    "Navigazione del progetto accanto alla bacheca dei ticket dimostrativi.",
+    "La barra del progetto permette di aprire ticket, obiettivi, pagine e triage."
+  ],
+  [
+    "Menu delle azioni per due ticket dimostrativi selezionati.",
+    "Il menu agisce sui ticket selezionati. In questa schermata non è stata inviata alcuna modifica collettiva."
+  ],
+  [
+    "Ricerca di un ticket bloccante tramite identificativo.",
+    "Scegli la direzione della relazione prima della destinazione. Il selettore è mostrato senza inviare la relazione."
+  ],
+  [
+    "Campo per creare un sotto-ticket in un ticket principale dimostrativo.",
+    "Il campo crea un figlio di questo ticket; ogni figlio conserva stato e discussione propri."
+  ],
+  [
+    "Piano dimostrativo con due attività di lavoro completate su sei.",
+    "Il piano salvato distingue passaggi completati, attivi e in attesa. L’avanzamento non dimostra l’esecuzione dell’attività di codice fittizia."
+  ],
+  [
+    "Finestra di aggiunta di un link con un indirizzo di contatto d’esempio.",
+    "Controlla la destinazione prima di aggiungere la risorsa. Questo link d’esempio non è stato inviato."
+  ],
+  [
+    "Filtri manuali di una vista e menu di ordinamento.",
+    "Filtra per proprietà dei ticket o scegli un ordine. Il campo IA è facoltativo per questi comandi manuali."
+  ],
+  [
+    "Finestra di condivisione di una vista con accesso privato selezionato.",
+    "Accesso privato, protetto da password e pubblico sono scelte distinte. In questa schermata la vista rimane privata."
+  ],
+  [
+    "Risultati della ricerca dell’identificativo di un ticket dimostrativo.",
+    "La palette trova il ticket tramite identificativo insieme alle pagine del progetto; aprire un risultato conserva le sue regole di accesso."
+  ],
+  [
+    "Schede della posta in arrivo e lista vuota degli elementi non letti.",
+    "La scheda Non letto vuota indica che la vista non contiene elementi non letti. Tutti mostra le altre notifiche conservate."
+  ],
+  [
+    "Attività personali dimostrative tradotte nel taccuino.",
+    "Il taccuino segue passaggi personali fuori dalla gerarchia dei ticket del progetto. Gli stati delle attività d’esempio restano invariati."
+  ],
+  [
+    "Statistiche personali dell’account dimostrativo.",
+    "Il campione deriva dall’attività registrata dell’account. Una durata assente non significa zero tempo di lavoro."
+  ],
+  [
+    "Ticket dimostrativo completato con descrizione e commento salvato.",
+    "Lo stato completato documenta la verifica del percorso nell’applicazione. Non afferma che sia stato provato il link email del sito d’esempio."
+  ],
+  [
+    "Finestra di creazione obiettivo non inviata con un nome di risultato d’esempio.",
+    "Definisci il risultato prima di scegliere responsabile, data limite e stato. Questa finestra non ha creato un secondo obiettivo."
+  ],
+  [
+    "Ritmo dell’obiettivo dopo un ticket dimostrativo realmente completato.",
+    "Leggi il ritmo insieme al lavoro collegato. La cronologia disponibile non è ancora sufficiente per mostrare una data stimata di conclusione."
+  ],
+  [
+    "Ticket dimostrativo nel backlog del ciclo personale.",
+    "L’aggiunta ha assegnato il ticket al titolare del ciclo e mantenuto lo stato backlog."
+  ],
+  [
+    "Ticket dimostrativo recuperabile con trenta giorni rimanenti nel cestino.",
+    "Le azioni della riga permettono di ripristinarlo. Svuotare il cestino è un’operazione definitiva separata."
+  ]
+]

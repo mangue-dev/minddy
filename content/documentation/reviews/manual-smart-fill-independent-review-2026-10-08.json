@@ -1,0 +1,248 @@
+{
+  "reviewer": "Codex agent review_documentation_locales",
+  "date": "2026-10-08",
+  "records": [
+    {
+      "article": "first-project",
+      "locale": "en",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "d4b87575fa865fa8503361e7f29e04e41f82e3551cb181878b2e92ceca0c9c83",
+      "reviewer": "Codex agent review_documentation_locales",
+      "reviewedAt": "2026-10-08",
+      "sourcesRead": [
+        "components/create-issue-dialog.tsx:226",
+        "components/create-issue-dialog.tsx:760",
+        "components/create-issue-dialog.tsx:821",
+        "components/create-issue-dialog.tsx:847",
+        "components/issue-compact-fields.tsx:400"
+      ],
+      "observed": "Complete body independently read after manual tutorial correction. Smart Fill visibility follows account master preference; per-issue switch restores its account default on reopen. Off reveals priority, effort, categories and objective. New manual condition is independent of project automation/Smart Assign. Exact six localized button labels checked.",
+      "languageAdjustments": "German/Spanish additions preserve the article’s existing du/tú address. Italian effort property uses the verified Impegno term.",
+      "runtimeLimit": "Author separately recorded actual aria-pressed true→false and manual DOC-13 creation. This independent review verifies implementation and retained meaning, not another execution.",
+      "humanAcceptance": false
+    },
+    {
+      "article": "create-an-issue",
+      "locale": "en",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "f36e235e2750d0bcbdfc582c7d3e9dde63e4d00ef9bacad689021cb6868a0ebf",
+      "reviewer": "Codex agent review_documentation_locales",
+      "reviewedAt": "2026-10-08",
+      "sourcesRead": [
+        "components/create-issue-dialog.tsx:226",
+        "components/create-issue-dialog.tsx:760",
+        "components/create-issue-dialog.tsx:821",
+        "components/create-issue-dialog.tsx:847",
+        "components/issue-compact-fields.tsx:400"
+      ],
+      "observed": "Complete body independently read after manual tutorial correction. Smart Fill visibility follows account master preference; per-issue switch restores its account default on reopen. Off reveals priority, effort, categories and objective. New manual condition is independent of project automation/Smart Assign. Exact six localized button labels checked.",
+      "languageAdjustments": "German/Spanish additions preserve the article’s existing du/tú address. Italian effort property uses the verified Impegno term.",
+      "runtimeLimit": "Author separately recorded actual aria-pressed true→false and manual DOC-13 creation. This independent review verifies implementation and retained meaning, not another execution.",
+      "humanAcceptance": false
+    },
+    {
+      "article": "first-project",
+      "locale": "fr",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "652f5970d748903f9ca0f5e07877aa13a947b1770750d3ae7e264aed8b891f3e",
+      "reviewer": "Codex agent review_documentation_locales",
+      "reviewedAt": "2026-10-08",
+      "sourcesRead": [
+        "components/create-issue-dialog.tsx:226",
+        "components/create-issue-dialog.tsx:760",
+        "components/create-issue-dialog.tsx:821",
+        "components/create-issue-dialog.tsx:847",
+        "components/issue-compact-fields.tsx:400"
+      ],
+      "observed": "Complete body independently read after manual tutorial correction. Smart Fill visibility follows account master preference; per-issue switch restores its account default on reopen. Off reveals priority, effort, categories and objective. New manual condition is independent of project automation/Smart Assign. Exact six localized button labels checked.",
+      "languageAdjustments": "German/Spanish additions preserve the article’s existing du/tú address. Italian effort property uses the verified Impegno term.",
+      "runtimeLimit": "Author separately recorded actual aria-pressed true→false and manual DOC-13 creation. This independent review verifies implementation and retained meaning, not another execution.",
+      "humanAcceptance": false
+    },
+    {
+      "article": "create-an-issue",
+      "locale": "fr",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "5da92ac361bebd6490fdf4f8ae97142f425eca75e55a17b28d751568abf72bd1",
+      "reviewer": "Codex agent review_documentation_locales",
+      "reviewedAt": "2026-10-08",
+      "sourcesRead": [
+        "components/create-issue-dialog.tsx:226",
+        "components/create-issue-dialog.tsx:760",
+        "components/create-issue-dialog.tsx:821",
+        "components/create-issue-dialog.tsx:847",
+        "components/issue-compact-fields.tsx:400"
+      ],
+      "observed": "Complete body independently read after manual tutorial correction. Smart Fill visibility follows account master preference; per-issue switch restores its account default on reopen. Off reveals priority, effort, categories and objective. New manual condition is independent of project automation/Smart Assign. Exact six localized button labels checked.",
+      "languageAdjustments": "German/Spanish additions preserve the article’s existing du/tú address. Italian effort property uses the verified Impegno term.",
+      "runtimeLimit": "Author separately recorded actual aria-pressed true→false and manual DOC-13 creation. This independent review verifies implementation and retained meaning, not another execution.",
+      "humanAcceptance": false
+    },
+    {
+      "article": "first-project",
+      "locale": "de",
+      "revision": 3,
+      "sourceRevision": 2,
+      "bodySha256": "6518d48e7327e7a4e7df40a088c390ab431e0cf542904cf61ab33a4dcc307067",
+      "reviewer": "Codex agent review_documentation_locales",
+      "reviewedAt": "2026-10-08",
+      "sourcesRead": [
+        "components/create-issue-dialog.tsx:226",
+        "components/create-issue-dialog.tsx:760",
+        "components/create-issue-dialog.tsx:821",
+        "components/create-issue-dialog.tsx:847",
+        "components/issue-compact-fields.tsx:400"
+      ],
+      "observed": "Complete body independently read after manual tutorial correction. Smart Fill visibility follows account master preference; per-issue switch restores its account default on reopen. Off reveals priority, effort, categories and objective. New manual condition is independent of project automation/Smart Assign. Exact six localized button labels checked.",
+      "languageAdjustments": "German/Spanish additions preserve the article’s existing du/tú address. Italian effort property uses the verified Impegno term.",
+      "runtimeLimit": "Author separately recorded actual aria-pressed true→false and manual DOC-13 creation. This independent review verifies implementation and retained meaning, not another execution.",
+      "humanAcceptance": false
+    },
+    {
+      "article": "create-an-issue",
+      "locale": "de",
+      "revision": 4,
+      "sourceRevision": 2,
+      "bodySha256": "d3f0207087a219420ba1dfd275808fdc1add3406ca3b8ced605f68d42cf6f8f4",
+      "reviewer": "Codex agent review_documentation_locales",
+      "reviewedAt": "2026-10-08",
+      "sourcesRead": [
+        "components/create-issue-dialog.tsx:226",
+        "components/create-issue-dialog.tsx:760",
+        "components/create-issue-dialog.tsx:821",
+        "components/create-issue-dialog.tsx:847",
+        "components/issue-compact-fields.tsx:400"
+      ],
+      "observed": "Complete body independently read after manual tutorial correction. Smart Fill visibility follows account master preference; per-issue switch restores its account default on reopen. Off reveals priority, effort, categories and objective. New manual condition is independent of project automation/Smart Assign. Exact six localized button labels checked.",
+      "languageAdjustments": "German/Spanish additions preserve the article’s existing du/tú address. Italian effort property uses the verified Impegno term.",
+      "runtimeLimit": "Author separately recorded actual aria-pressed true→false and manual DOC-13 creation. This independent review verifies implementation and retained meaning, not another execution.",
+      "humanAcceptance": false
+    },
+    {
+      "article": "first-project",
+      "locale": "es",
+      "revision": 3,
+      "sourceRevision": 2,
+      "bodySha256": "e9417e65e89c1b23157c98c7dc95f0520b7249922b7d4f1847beb6beaf81df2b",
+      "reviewer": "Codex agent review_documentation_locales",
+      "reviewedAt": "2026-10-08",
+      "sourcesRead": [
+        "components/create-issue-dialog.tsx:226",
+        "components/create-issue-dialog.tsx:760",
+        "components/create-issue-dialog.tsx:821",
+        "components/create-issue-dialog.tsx:847",
+        "components/issue-compact-fields.tsx:400"
+      ],
+      "observed": "Complete body independently read after manual tutorial correction. Smart Fill visibility follows account master preference; per-issue switch restores its account default on reopen. Off reveals priority, effort, categories and objective. New manual condition is independent of project automation/Smart Assign. Exact six localized button labels checked.",
+      "languageAdjustments": "German/Spanish additions preserve the article’s existing du/tú address. Italian effort property uses the verified Impegno term.",
+      "runtimeLimit": "Author separately recorded actual aria-pressed true→false and manual DOC-13 creation. This independent review verifies implementation and retained meaning, not another execution.",
+      "humanAcceptance": false
+    },
+    {
+      "article": "create-an-issue",
+      "locale": "es",
+      "revision": 4,
+      "sourceRevision": 2,
+      "bodySha256": "5f187941b893320c83f84c806da0795b9811c38a9378891fcd02026e2d3e6074",
+      "reviewer": "Codex agent review_documentation_locales",
+      "reviewedAt": "2026-10-08",
+      "sourcesRead": [
+        "components/create-issue-dialog.tsx:226",
+        "components/create-issue-dialog.tsx:760",
+        "components/create-issue-dialog.tsx:821",
+        "components/create-issue-dialog.tsx:847",
+        "components/issue-compact-fields.tsx:400"
+      ],
+      "observed": "Complete body independently read after manual tutorial correction. Smart Fill visibility follows account master preference; per-issue switch restores its account default on reopen. Off reveals priority, effort, categories and objective. New manual condition is independent of project automation/Smart Assign. Exact six localized button labels checked.",
+      "languageAdjustments": "German/Spanish additions preserve the article’s existing du/tú address. Italian effort property uses the verified Impegno term.",
+      "runtimeLimit": "Author separately recorded actual aria-pressed true→false and manual DOC-13 creation. This independent review verifies implementation and retained meaning, not another execution.",
+      "humanAcceptance": false
+    },
+    {
+      "article": "first-project",
+      "locale": "it",
+      "revision": 3,
+      "sourceRevision": 2,
+      "bodySha256": "a74a607a93d1d6d690b75e8ebfda23be6eb9dace6d0013b97e6ef5a2558d9cbc",
+      "reviewer": "Codex agent review_documentation_locales",
+      "reviewedAt": "2026-10-08",
+      "sourcesRead": [
+        "components/create-issue-dialog.tsx:226",
+        "components/create-issue-dialog.tsx:760",
+        "components/create-issue-dialog.tsx:821",
+        "components/create-issue-dialog.tsx:847",
+        "components/issue-compact-fields.tsx:400"
+      ],
+      "observed": "Complete body independently read after manual tutorial correction. Smart Fill visibility follows account master preference; per-issue switch restores its account default on reopen. Off reveals priority, effort, categories and objective. New manual condition is independent of project automation/Smart Assign. Exact six localized button labels checked.",
+      "languageAdjustments": "German/Spanish additions preserve the article’s existing du/tú address. Italian effort property uses the verified Impegno term.",
+      "runtimeLimit": "Author separately recorded actual aria-pressed true→false and manual DOC-13 creation. This independent review verifies implementation and retained meaning, not another execution.",
+      "humanAcceptance": false
+    },
+    {
+      "article": "create-an-issue",
+      "locale": "it",
+      "revision": 3,
+      "sourceRevision": 2,
+      "bodySha256": "a1fdffa37c6716d29b89f2752d10a5e9604132a3d467c95c264760839857698c",
+      "reviewer": "Codex agent review_documentation_locales",
+      "reviewedAt": "2026-10-08",
+      "sourcesRead": [
+        "components/create-issue-dialog.tsx:226",
+        "components/create-issue-dialog.tsx:760",
+        "components/create-issue-dialog.tsx:821",
+        "components/create-issue-dialog.tsx:847",
+        "components/issue-compact-fields.tsx:400"
+      ],
+      "observed": "Complete body independently read after manual tutorial correction. Smart Fill visibility follows account master preference; per-issue switch restores its account default on reopen. Off reveals priority, effort, categories and objective. New manual condition is independent of project automation/Smart Assign. Exact six localized button labels checked.",
+      "languageAdjustments": "German/Spanish additions preserve the article’s existing du/tú address. Italian effort property uses the verified Impegno term.",
+      "runtimeLimit": "Author separately recorded actual aria-pressed true→false and manual DOC-13 creation. This independent review verifies implementation and retained meaning, not another execution.",
+      "humanAcceptance": false
+    },
+    {
+      "article": "first-project",
+      "locale": "pt-BR",
+      "revision": 4,
+      "sourceRevision": 2,
+      "bodySha256": "8985b06c899cc2df3649a56e0eb46f97a53111d57fe1b960265646618e4ae8ed",
+      "reviewer": "Codex agent review_documentation_locales",
+      "reviewedAt": "2026-10-08",
+      "sourcesRead": [
+        "components/create-issue-dialog.tsx:226",
+        "components/create-issue-dialog.tsx:760",
+        "components/create-issue-dialog.tsx:821",
+        "components/create-issue-dialog.tsx:847",
+        "components/issue-compact-fields.tsx:400"
+      ],
+      "observed": "Complete body independently read after manual tutorial correction. Smart Fill visibility follows account master preference; per-issue switch restores its account default on reopen. Off reveals priority, effort, categories and objective. New manual condition is independent of project automation/Smart Assign. Exact six localized button labels checked.",
+      "languageAdjustments": "German/Spanish additions preserve the article’s existing du/tú address. Italian effort property uses the verified Impegno term.",
+      "runtimeLimit": "Author separately recorded actual aria-pressed true→false and manual DOC-13 creation. This independent review verifies implementation and retained meaning, not another execution.",
+      "humanAcceptance": false
+    },
+    {
+      "article": "create-an-issue",
+      "locale": "pt-BR",
+      "revision": 3,
+      "sourceRevision": 2,
+      "bodySha256": "eeae37b8912e9f8eaae064cc2c56b757b743301031343105c95a5479d9339d75",
+      "reviewer": "Codex agent review_documentation_locales",
+      "reviewedAt": "2026-10-08",
+      "sourcesRead": [
+        "components/create-issue-dialog.tsx:226",
+        "components/create-issue-dialog.tsx:760",
+        "components/create-issue-dialog.tsx:821",
+        "components/create-issue-dialog.tsx:847",
+        "components/issue-compact-fields.tsx:400"
+      ],
+      "observed": "Complete body independently read after manual tutorial correction. Smart Fill visibility follows account master preference; per-issue switch restores its account default on reopen. Off reveals priority, effort, categories and objective. New manual condition is independent of project automation/Smart Assign. Exact six localized button labels checked.",
+      "languageAdjustments": "German/Spanish additions preserve the article’s existing du/tú address. Italian effort property uses the verified Impegno term.",
+      "runtimeLimit": "Author separately recorded actual aria-pressed true→false and manual DOC-13 creation. This independent review verifies implementation and retained meaning, not another execution.",
+      "humanAcceptance": false
+    }
+  ],
+  "priorAuthorExecution": "manual-smart-fill-reader-correction.json",
+  "humanAcceptance": false
+}

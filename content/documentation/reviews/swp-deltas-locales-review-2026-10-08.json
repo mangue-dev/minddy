@@ -1,0 +1,1224 @@
+{
+  "reviewer": "Codex agent review_documentation_locales",
+  "method": "Previous complete S/W/P body review, followed by full translation and explicit post-change meaning review of the 18 corrected articles. Conditions were checked against the source passages and independent English/French source-review record; selected implementation paths were additionally inspected directly (triage tiers, inherited blocker resolver, create-issue parent/objective validation, recurrence copying/failure, plan indentation, shortcuts, autosave block conflict controls, database setup/import request identifier, stats timestamps, page-file MIME and publication TTL). This is agent review, not human acceptance or proof of every runtime outcome.",
+  "sourceReview": "content/documentation/reviews/product-deltas-independent-review-2026-10-08.json",
+  "additionalCorrections": [
+    "Spanish W03 now distinguishes feedback requests from public comments. Spanish W05 no longer calls public feedback replies generic comments.",
+    "Localized status labels match the corrected actual Italian/Spanish/Brazilian Portuguese controls.",
+    "French-only S02 clarification uses locale revision 2 with source English revision 1."
+  ],
+  "articles": [
+    {
+      "article": "account-access",
+      "locale": "de",
+      "revision": 2,
+      "sourceRevision": 1,
+      "bodySha256": "5a3a739420b1380d165fe856ca08f3b3232fdb2af900b369923777eb529c64d2",
+      "englishBodySha256": "b4cbbe652238dcf95f43b57bbf7af6a229105c206a6c0c10de26028cdd7194bc",
+      "sourceEvidence": [
+        "app/(auth)/signup/page.tsx",
+        "components/auth/signup-wizard.tsx",
+        "lib/signup-wizard.ts",
+        "lib/password-policy.ts",
+        "app/(auth)/login/page.tsx",
+        "app/auth/confirm/page.tsx"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanReview": false
+    },
+    {
+      "article": "account-access",
+      "locale": "es",
+      "revision": 2,
+      "sourceRevision": 1,
+      "bodySha256": "400b396e39dd8fd7d6daceb4476467be0a90aaf4756ee6c92f2a5ef7cdd776da",
+      "englishBodySha256": "b4cbbe652238dcf95f43b57bbf7af6a229105c206a6c0c10de26028cdd7194bc",
+      "sourceEvidence": [
+        "app/(auth)/signup/page.tsx",
+        "components/auth/signup-wizard.tsx",
+        "lib/signup-wizard.ts",
+        "lib/password-policy.ts",
+        "app/(auth)/login/page.tsx",
+        "app/auth/confirm/page.tsx"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanReview": false
+    },
+    {
+      "article": "account-access",
+      "locale": "it",
+      "revision": 2,
+      "sourceRevision": 1,
+      "bodySha256": "7daad99e4137de84b520682327262e657ef4c3358b935fed077784e7788956ab",
+      "englishBodySha256": "b4cbbe652238dcf95f43b57bbf7af6a229105c206a6c0c10de26028cdd7194bc",
+      "sourceEvidence": [
+        "app/(auth)/signup/page.tsx",
+        "components/auth/signup-wizard.tsx",
+        "lib/signup-wizard.ts",
+        "lib/password-policy.ts",
+        "app/(auth)/login/page.tsx",
+        "app/auth/confirm/page.tsx"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanReview": false
+    },
+    {
+      "article": "account-access",
+      "locale": "pt-BR",
+      "revision": 2,
+      "sourceRevision": 1,
+      "bodySha256": "02a578924158c8962dff4ad24f055f936439f8bb9785a379d311e72a05950b99",
+      "englishBodySha256": "b4cbbe652238dcf95f43b57bbf7af6a229105c206a6c0c10de26028cdd7194bc",
+      "sourceEvidence": [
+        "app/(auth)/signup/page.tsx",
+        "components/auth/signup-wizard.tsx",
+        "lib/signup-wizard.ts",
+        "lib/password-policy.ts",
+        "app/(auth)/login/page.tsx",
+        "app/auth/confirm/page.tsx"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanReview": false
+    },
+    {
+      "article": "create-a-database",
+      "locale": "de",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "e2f44c2ca28d6dad127106fdfb2aa76e132e64a1243cb116cd60ba980264b9b8",
+      "englishBodySha256": "ada2117bfc7cd22c797b6faaf8319200e7cd6f590ca9eabfbc7aa7a03287c7ab",
+      "sourceEvidence": [
+        "content/knowledge/pages.md",
+        "components/pages/database-setup-banner.tsx",
+        "components/pages/database-property-dialogs.tsx",
+        "lib/page-creation-settlement.ts"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanReview": false
+    },
+    {
+      "article": "create-a-database",
+      "locale": "es",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "4b2c4cbfbf94ccfd82ab3f35d141174a7b27fd7596b874c89660147240210c97",
+      "englishBodySha256": "ada2117bfc7cd22c797b6faaf8319200e7cd6f590ca9eabfbc7aa7a03287c7ab",
+      "sourceEvidence": [
+        "content/knowledge/pages.md",
+        "components/pages/database-setup-banner.tsx",
+        "components/pages/database-property-dialogs.tsx",
+        "lib/page-creation-settlement.ts"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanReview": false
+    },
+    {
+      "article": "create-a-database",
+      "locale": "it",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "ec376e28caf19a83ecdb98a1ac8e620df7a9a32b23f919fa46b797da540531cf",
+      "englishBodySha256": "ada2117bfc7cd22c797b6faaf8319200e7cd6f590ca9eabfbc7aa7a03287c7ab",
+      "sourceEvidence": [
+        "content/knowledge/pages.md",
+        "components/pages/database-setup-banner.tsx",
+        "components/pages/database-property-dialogs.tsx",
+        "lib/page-creation-settlement.ts"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanReview": false
+    },
+    {
+      "article": "create-a-database",
+      "locale": "pt-BR",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "264bc030b77da758d39458e2010f7bfc405375211527f025746ebd48a2093038",
+      "englishBodySha256": "ada2117bfc7cd22c797b6faaf8319200e7cd6f590ca9eabfbc7aa7a03287c7ab",
+      "sourceEvidence": [
+        "content/knowledge/pages.md",
+        "components/pages/database-setup-banner.tsx",
+        "components/pages/database-property-dialogs.tsx",
+        "lib/page-creation-settlement.ts"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanReview": false
+    },
+    {
+      "article": "implementation-plans",
+      "locale": "de",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "a272b04f98728fcb830f6efa8d66ab4fb5529ca3f19fd39124823ae2d94c04fc",
+      "englishBodySha256": "64cab9b8a471551544747464366f69e1584b6f7a7c6bf347559552edfffe5bae",
+      "sourceEvidence": [
+        "content/knowledge/plans-and-agents.md",
+        "components/issue-plan.tsx",
+        "captures/shots/issue-plan/intent.md",
+        "lib/plan.ts"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanReview": false
+    },
+    {
+      "article": "implementation-plans",
+      "locale": "es",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "d155b72e371d29139ed24ab0dbb4c390c1cbd5b5b21c513aa0e385f1c33cbc1e",
+      "englishBodySha256": "64cab9b8a471551544747464366f69e1584b6f7a7c6bf347559552edfffe5bae",
+      "sourceEvidence": [
+        "content/knowledge/plans-and-agents.md",
+        "components/issue-plan.tsx",
+        "captures/shots/issue-plan/intent.md",
+        "lib/plan.ts"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanReview": false
+    },
+    {
+      "article": "implementation-plans",
+      "locale": "it",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "1b1454c06e46bbc2ef50ceb69a25ef6ae21e52e98f7fc2f43f7a8c68344b2e2f",
+      "englishBodySha256": "64cab9b8a471551544747464366f69e1584b6f7a7c6bf347559552edfffe5bae",
+      "sourceEvidence": [
+        "content/knowledge/plans-and-agents.md",
+        "components/issue-plan.tsx",
+        "captures/shots/issue-plan/intent.md",
+        "lib/plan.ts"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanReview": false
+    },
+    {
+      "article": "implementation-plans",
+      "locale": "pt-BR",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "da88b590fc30a313efe4084c1e882ecc5eeb7fa97a43d65195a0ae998c10ebe0",
+      "englishBodySha256": "64cab9b8a471551544747464366f69e1584b6f7a7c6bf347559552edfffe5bae",
+      "sourceEvidence": [
+        "content/knowledge/plans-and-agents.md",
+        "components/issue-plan.tsx",
+        "captures/shots/issue-plan/intent.md",
+        "lib/plan.ts"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanReview": false
+    },
+    {
+      "article": "import-a-database",
+      "locale": "de",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "62d42da5a7d6666fb4836d891fbbf5645df74719e314cd30141751014584b278",
+      "englishBodySha256": "42139bf928fec1199d42c5b46f79173f51589c5221c055ea668857cb6aa840dc",
+      "sourceEvidence": [
+        "components/pages/database-import-dialog.tsx",
+        "lib/server/database-import.ts",
+        "content/knowledge/pages.md"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanReview": false
+    },
+    {
+      "article": "import-a-database",
+      "locale": "es",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "a8a4feb0cf23bc3bb5425093bf6600e1717213625efd47d0614c0d7b0c9558bf",
+      "englishBodySha256": "42139bf928fec1199d42c5b46f79173f51589c5221c055ea668857cb6aa840dc",
+      "sourceEvidence": [
+        "components/pages/database-import-dialog.tsx",
+        "lib/server/database-import.ts",
+        "content/knowledge/pages.md"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanReview": false
+    },
+    {
+      "article": "import-a-database",
+      "locale": "it",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "b3a65bddb17cf960a37982549f901137217f1fa7fab7a7de2d3757df520a2b8c",
+      "englishBodySha256": "42139bf928fec1199d42c5b46f79173f51589c5221c055ea668857cb6aa840dc",
+      "sourceEvidence": [
+        "components/pages/database-import-dialog.tsx",
+        "lib/server/database-import.ts",
+        "content/knowledge/pages.md"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanReview": false
+    },
+    {
+      "article": "import-a-database",
+      "locale": "pt-BR",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "10419ee51a179204aea4ecbd86508926699f2a1492d7e69d5a23d502d887e883",
+      "englishBodySha256": "42139bf928fec1199d42c5b46f79173f51589c5221c055ea668857cb6aa840dc",
+      "sourceEvidence": [
+        "components/pages/database-import-dialog.tsx",
+        "lib/server/database-import.ts",
+        "content/knowledge/pages.md"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanReview": false
+    },
+    {
+      "article": "issue-dependencies",
+      "locale": "de",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "733f47691f6414577f5e182f97bac457b479c3be9a1e911a41ec6134f164d8ea",
+      "englishBodySha256": "787a280e79bd8ab21dc269d8d8086fe346e8c8cae82e4bee123a06f7b168729a",
+      "sourceEvidence": [
+        "content/knowledge/core-tracker.md",
+        "components/issue-side-panel.tsx",
+        "components/issue-indicators.tsx",
+        "captures/shots/relations/intent.md",
+        "lib/server/issue-relations.ts",
+        "lib/relation-constants.ts"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanReview": false
+    },
+    {
+      "article": "issue-dependencies",
+      "locale": "es",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "49a70666fa23e03c55ebbc88b1a0ab292bbc65826257b94bb8d076205600bb7c",
+      "englishBodySha256": "787a280e79bd8ab21dc269d8d8086fe346e8c8cae82e4bee123a06f7b168729a",
+      "sourceEvidence": [
+        "content/knowledge/core-tracker.md",
+        "components/issue-side-panel.tsx",
+        "components/issue-indicators.tsx",
+        "captures/shots/relations/intent.md",
+        "lib/server/issue-relations.ts",
+        "lib/relation-constants.ts"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanReview": false
+    },
+    {
+      "article": "issue-dependencies",
+      "locale": "it",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "2a3fdc973a431c8806a32af95e2232e2f1e68590a0a0eb9d75e66aa5d6f50447",
+      "englishBodySha256": "787a280e79bd8ab21dc269d8d8086fe346e8c8cae82e4bee123a06f7b168729a",
+      "sourceEvidence": [
+        "content/knowledge/core-tracker.md",
+        "components/issue-side-panel.tsx",
+        "components/issue-indicators.tsx",
+        "captures/shots/relations/intent.md",
+        "lib/server/issue-relations.ts",
+        "lib/relation-constants.ts"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanReview": false
+    },
+    {
+      "article": "issue-dependencies",
+      "locale": "pt-BR",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "15d66bba2aa26d5821c80be3dac3db7b707c82af01c7c3f2a89847381d2b1d42",
+      "englishBodySha256": "787a280e79bd8ab21dc269d8d8086fe346e8c8cae82e4bee123a06f7b168729a",
+      "sourceEvidence": [
+        "content/knowledge/core-tracker.md",
+        "components/issue-side-panel.tsx",
+        "components/issue-indicators.tsx",
+        "captures/shots/relations/intent.md",
+        "lib/server/issue-relations.ts",
+        "lib/relation-constants.ts"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanReview": false
+    },
+    {
+      "article": "notifications-and-inbox",
+      "locale": "de",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "bcdccc90741cae52e3ca50f842b4134c72494ca86358a12745f938d9eb66c3ea",
+      "englishBodySha256": "b91a892f81880a0fe24494b25dbede3c3924a8d4bf3c138df817c34c345fdcca",
+      "sourceEvidence": [
+        "content/knowledge/productivity.md",
+        "components/inbox-popover.tsx",
+        "components/inbox-content.tsx",
+        "components/settings/account-notifications-section.tsx"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanReview": false
+    },
+    {
+      "article": "notifications-and-inbox",
+      "locale": "es",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "0fa024d48bd4ef9d5a14f988bd74921860cc20079d36f2bffafa5e49fab57968",
+      "englishBodySha256": "b91a892f81880a0fe24494b25dbede3c3924a8d4bf3c138df817c34c345fdcca",
+      "sourceEvidence": [
+        "content/knowledge/productivity.md",
+        "components/inbox-popover.tsx",
+        "components/inbox-content.tsx",
+        "components/settings/account-notifications-section.tsx"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanReview": false
+    },
+    {
+      "article": "notifications-and-inbox",
+      "locale": "it",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "a6d0c1815df79f4283c664c7d95e7fbe2a13d54300fae4a3f61ba66ded4371f0",
+      "englishBodySha256": "b91a892f81880a0fe24494b25dbede3c3924a8d4bf3c138df817c34c345fdcca",
+      "sourceEvidence": [
+        "content/knowledge/productivity.md",
+        "components/inbox-popover.tsx",
+        "components/inbox-content.tsx",
+        "components/settings/account-notifications-section.tsx"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanReview": false
+    },
+    {
+      "article": "notifications-and-inbox",
+      "locale": "pt-BR",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "542d99375aeab883b21456c5629f7d5135a031628decedaf715f3e065400ed91",
+      "englishBodySha256": "b91a892f81880a0fe24494b25dbede3c3924a8d4bf3c138df817c34c345fdcca",
+      "sourceEvidence": [
+        "content/knowledge/productivity.md",
+        "components/inbox-popover.tsx",
+        "components/inbox-content.tsx",
+        "components/settings/account-notifications-section.tsx"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanReview": false
+    },
+    {
+      "article": "objective-dependencies-and-momentum",
+      "locale": "de",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "bc2ddf2d9f859cf3f1649fe4b9bc99e7651cc7821514b1b6bf07a04f3501f079",
+      "englishBodySha256": "8b816e491f8f91dcaa33556d708041f85bb396758262459e28cff175cbc6a2dc",
+      "sourceEvidence": [
+        "components/objective-relations-section.tsx",
+        "components/objective-momentum.tsx",
+        "content/knowledge/core-tracker.md",
+        "lib/relation-constants.ts",
+        "lib/server/issue-relations.ts",
+        "lib/objective-momentum.ts"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanReview": false
+    },
+    {
+      "article": "objective-dependencies-and-momentum",
+      "locale": "es",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "21b6e1b859de41566fe599f82fabac389d0088a4582d33fdb5469a0bb66f78b2",
+      "englishBodySha256": "8b816e491f8f91dcaa33556d708041f85bb396758262459e28cff175cbc6a2dc",
+      "sourceEvidence": [
+        "components/objective-relations-section.tsx",
+        "components/objective-momentum.tsx",
+        "content/knowledge/core-tracker.md",
+        "lib/relation-constants.ts",
+        "lib/server/issue-relations.ts",
+        "lib/objective-momentum.ts"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanReview": false
+    },
+    {
+      "article": "objective-dependencies-and-momentum",
+      "locale": "it",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "a77b0f53bf3c1055254526cd01e8c5baf1978bba3ecd186419bbf013ab650c7f",
+      "englishBodySha256": "8b816e491f8f91dcaa33556d708041f85bb396758262459e28cff175cbc6a2dc",
+      "sourceEvidence": [
+        "components/objective-relations-section.tsx",
+        "components/objective-momentum.tsx",
+        "content/knowledge/core-tracker.md",
+        "lib/relation-constants.ts",
+        "lib/server/issue-relations.ts",
+        "lib/objective-momentum.ts"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanReview": false
+    },
+    {
+      "article": "objective-dependencies-and-momentum",
+      "locale": "pt-BR",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "2a25be056825e19bd470302ae68be8669c1db9985bebf728908ffde00bcf93e9",
+      "englishBodySha256": "8b816e491f8f91dcaa33556d708041f85bb396758262459e28cff175cbc6a2dc",
+      "sourceEvidence": [
+        "components/objective-relations-section.tsx",
+        "components/objective-momentum.tsx",
+        "content/knowledge/core-tracker.md",
+        "lib/relation-constants.ts",
+        "lib/server/issue-relations.ts",
+        "lib/objective-momentum.ts"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanReview": false
+    },
+    {
+      "article": "page-comments-and-collaboration",
+      "locale": "de",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "6549075598605ed65b06c38fa7ef792dee1bb66b4fe83848bd201759f2ee4074",
+      "englishBodySha256": "06ab476b0f50a1325805e24559dde2949bdf9f7c6d3bd9a57c5752987f7a7474",
+      "sourceEvidence": [
+        "components/pages/page-comment-popover.tsx",
+        "components/pages/page-presence.tsx",
+        "components/pages/page-conflict-banner.tsx",
+        "lib/pages-merge.ts",
+        "components/pages/page-view.tsx"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanReview": false
+    },
+    {
+      "article": "page-comments-and-collaboration",
+      "locale": "es",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "8cc97038cfb04a9d0285b7f8223924ae4a125df6fb4e4935b98ed8eb360a5eea",
+      "englishBodySha256": "06ab476b0f50a1325805e24559dde2949bdf9f7c6d3bd9a57c5752987f7a7474",
+      "sourceEvidence": [
+        "components/pages/page-comment-popover.tsx",
+        "components/pages/page-presence.tsx",
+        "components/pages/page-conflict-banner.tsx",
+        "lib/pages-merge.ts",
+        "components/pages/page-view.tsx"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanReview": false
+    },
+    {
+      "article": "page-comments-and-collaboration",
+      "locale": "it",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "df06b47bb42ced114d4c803ed3cc8c8e206cb8cf035e51d8bf1abbfc5105b831",
+      "englishBodySha256": "06ab476b0f50a1325805e24559dde2949bdf9f7c6d3bd9a57c5752987f7a7474",
+      "sourceEvidence": [
+        "components/pages/page-comment-popover.tsx",
+        "components/pages/page-presence.tsx",
+        "components/pages/page-conflict-banner.tsx",
+        "lib/pages-merge.ts",
+        "components/pages/page-view.tsx"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanReview": false
+    },
+    {
+      "article": "page-comments-and-collaboration",
+      "locale": "pt-BR",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "a3fbb4e7ac8348326a36b60b61ce6d247d5bbd3257b298925ca76b4fc3854cfd",
+      "englishBodySha256": "06ab476b0f50a1325805e24559dde2949bdf9f7c6d3bd9a57c5752987f7a7474",
+      "sourceEvidence": [
+        "components/pages/page-comment-popover.tsx",
+        "components/pages/page-presence.tsx",
+        "components/pages/page-conflict-banner.tsx",
+        "lib/pages-merge.ts",
+        "components/pages/page-view.tsx"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanReview": false
+    },
+    {
+      "article": "page-files",
+      "locale": "de",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "eb7095aaa0144e0bddb8abd60387e6cf4484e297dc88341ce405050035197dcd",
+      "englishBodySha256": "5482d5a7013ed1000399b80c2ade54d4ccaee28550acf40c0726aa50bff402bb",
+      "sourceEvidence": [
+        "components/pages/page-uploads.tsx",
+        "lib/server/page-files.ts",
+        "content/knowledge/pages.md",
+        "lib/server/page-publication.ts"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanReview": false
+    },
+    {
+      "article": "page-files",
+      "locale": "es",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "5d21d73a058fd45b2d19eff550b71eac2c9167b2bef5fa9380dc7277002ea02b",
+      "englishBodySha256": "5482d5a7013ed1000399b80c2ade54d4ccaee28550acf40c0726aa50bff402bb",
+      "sourceEvidence": [
+        "components/pages/page-uploads.tsx",
+        "lib/server/page-files.ts",
+        "content/knowledge/pages.md",
+        "lib/server/page-publication.ts"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanReview": false
+    },
+    {
+      "article": "page-files",
+      "locale": "it",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "cc97a7fa4f9febc428899c82aee4080a3361938c6ff925d41a37bd3c0704dc87",
+      "englishBodySha256": "5482d5a7013ed1000399b80c2ade54d4ccaee28550acf40c0726aa50bff402bb",
+      "sourceEvidence": [
+        "components/pages/page-uploads.tsx",
+        "lib/server/page-files.ts",
+        "content/knowledge/pages.md",
+        "lib/server/page-publication.ts"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanReview": false
+    },
+    {
+      "article": "page-files",
+      "locale": "pt-BR",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "12d9965b412dd79988f412ae62b58e982630c4aabba70e57e6dc91f89d7caf06",
+      "englishBodySha256": "5482d5a7013ed1000399b80c2ade54d4ccaee28550acf40c0726aa50bff402bb",
+      "sourceEvidence": [
+        "components/pages/page-uploads.tsx",
+        "lib/server/page-files.ts",
+        "content/knowledge/pages.md",
+        "lib/server/page-publication.ts"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanReview": false
+    },
+    {
+      "article": "personal-statistics",
+      "locale": "de",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "bf7766ce04d61677ab4e5e78a5d4211c513755282cfa7d7214cbe5f80f717ce8",
+      "englishBodySha256": "332e8b6c4e8e7adf09ec7c38ecd9dbb6ce0f3273e0c2994f4e1eb0f658801e2b",
+      "sourceEvidence": [
+        "app/(app)/statistics/page.tsx",
+        "components/stats/effort-durations.tsx",
+        "content/knowledge/productivity.md",
+        "lib/stats-derive.ts",
+        "lib/server/stats.ts",
+        "supabase/migrations/20270107070000_history_encryption.sql",
+        "supabase/migrations/20270107720000_project_content_encryption.sql"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanReview": false
+    },
+    {
+      "article": "personal-statistics",
+      "locale": "es",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "c272bcd86180ae4fc61b5c79ecd59090ad0e66b618ce0816e73e9ad9dcb96874",
+      "englishBodySha256": "332e8b6c4e8e7adf09ec7c38ecd9dbb6ce0f3273e0c2994f4e1eb0f658801e2b",
+      "sourceEvidence": [
+        "app/(app)/statistics/page.tsx",
+        "components/stats/effort-durations.tsx",
+        "content/knowledge/productivity.md",
+        "lib/stats-derive.ts",
+        "lib/server/stats.ts",
+        "supabase/migrations/20270107070000_history_encryption.sql",
+        "supabase/migrations/20270107720000_project_content_encryption.sql"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanReview": false
+    },
+    {
+      "article": "personal-statistics",
+      "locale": "it",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "f9a7d77b4621a7d8c92dbe064b716802f3117db79a86af93623e43f91125391a",
+      "englishBodySha256": "332e8b6c4e8e7adf09ec7c38ecd9dbb6ce0f3273e0c2994f4e1eb0f658801e2b",
+      "sourceEvidence": [
+        "app/(app)/statistics/page.tsx",
+        "components/stats/effort-durations.tsx",
+        "content/knowledge/productivity.md",
+        "lib/stats-derive.ts",
+        "lib/server/stats.ts",
+        "supabase/migrations/20270107070000_history_encryption.sql",
+        "supabase/migrations/20270107720000_project_content_encryption.sql"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanReview": false
+    },
+    {
+      "article": "personal-statistics",
+      "locale": "pt-BR",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "a7f5590b88c3428331ed5323509a613968e25db6baf81668f499f8f28e9843dc",
+      "englishBodySha256": "332e8b6c4e8e7adf09ec7c38ecd9dbb6ce0f3273e0c2994f4e1eb0f658801e2b",
+      "sourceEvidence": [
+        "app/(app)/statistics/page.tsx",
+        "components/stats/effort-durations.tsx",
+        "content/knowledge/productivity.md",
+        "lib/stats-derive.ts",
+        "lib/server/stats.ts",
+        "supabase/migrations/20270107070000_history_encryption.sql",
+        "supabase/migrations/20270107720000_project_content_encryption.sql"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanReview": false
+    },
+    {
+      "article": "project-members",
+      "locale": "de",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "521fe8acebc9b33ff34c3d7cebbb6b7ae2bb766969bea04f4b473a7b601f848f",
+      "englishBodySha256": "b717d8551910ce7b1bdd5c0caf3cfdc4c06d2efc72199ef3917418ce039ad7da",
+      "sourceEvidence": [
+        "components/inbox-content.tsx",
+        "components/home/onboarding-join-dialog.tsx",
+        "content/knowledge/settings-and-data.md",
+        "components/project-members.tsx",
+        "lib/server/update-project.ts"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanReview": false
+    },
+    {
+      "article": "project-members",
+      "locale": "es",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "26da9c4fcf4832782586d9a879f1fcce69b2f0872e7d49af051039d2d07e3a96",
+      "englishBodySha256": "b717d8551910ce7b1bdd5c0caf3cfdc4c06d2efc72199ef3917418ce039ad7da",
+      "sourceEvidence": [
+        "components/inbox-content.tsx",
+        "components/home/onboarding-join-dialog.tsx",
+        "content/knowledge/settings-and-data.md",
+        "components/project-members.tsx",
+        "lib/server/update-project.ts"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanReview": false
+    },
+    {
+      "article": "project-members",
+      "locale": "it",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "031f3eab431a5fd8d27c5327f0a9dd72cbe6d6f9cb8a1940570add66c39eef0b",
+      "englishBodySha256": "b717d8551910ce7b1bdd5c0caf3cfdc4c06d2efc72199ef3917418ce039ad7da",
+      "sourceEvidence": [
+        "components/inbox-content.tsx",
+        "components/home/onboarding-join-dialog.tsx",
+        "content/knowledge/settings-and-data.md",
+        "components/project-members.tsx",
+        "lib/server/update-project.ts"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanReview": false
+    },
+    {
+      "article": "project-members",
+      "locale": "pt-BR",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "e12d37322ddb1961dfd4b29c80ab2e465f85c16069c47f3ad479f2e092d10840",
+      "englishBodySha256": "b717d8551910ce7b1bdd5c0caf3cfdc4c06d2efc72199ef3917418ce039ad7da",
+      "sourceEvidence": [
+        "components/inbox-content.tsx",
+        "components/home/onboarding-join-dialog.tsx",
+        "content/knowledge/settings-and-data.md",
+        "components/project-members.tsx",
+        "lib/server/update-project.ts"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanReview": false
+    },
+    {
+      "article": "publish-a-page",
+      "locale": "de",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "769f10f2602c20d59d6f56786c51461d2d3b25cd37015231d7845f3c3b759476",
+      "englishBodySha256": "0d79c507eee0c26021280bafd9f12cf9d23df6b8ecabdb9fea1e79eb0dc2cb64",
+      "sourceEvidence": [
+        "components/pages/page-publish-dialog.tsx",
+        "lib/server/page-publication.ts",
+        "app/p/[token]/page.tsx"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanReview": false
+    },
+    {
+      "article": "publish-a-page",
+      "locale": "es",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "60ce2b52ab5f5d8bd74fd6bd2117b14194b7886057b9d5228774f2734b8cafa7",
+      "englishBodySha256": "0d79c507eee0c26021280bafd9f12cf9d23df6b8ecabdb9fea1e79eb0dc2cb64",
+      "sourceEvidence": [
+        "components/pages/page-publish-dialog.tsx",
+        "lib/server/page-publication.ts",
+        "app/p/[token]/page.tsx"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanReview": false
+    },
+    {
+      "article": "publish-a-page",
+      "locale": "it",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "ad3ca8c0fe3c9b06acbbf18f049775c47b30f342b0f11d118fd23de04b9f8512",
+      "englishBodySha256": "0d79c507eee0c26021280bafd9f12cf9d23df6b8ecabdb9fea1e79eb0dc2cb64",
+      "sourceEvidence": [
+        "components/pages/page-publish-dialog.tsx",
+        "lib/server/page-publication.ts",
+        "app/p/[token]/page.tsx"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanReview": false
+    },
+    {
+      "article": "publish-a-page",
+      "locale": "pt-BR",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "d1464ae4e59c7a7db3dad042a44b2d91c0308d0411d79070b9f81023af39c3a0",
+      "englishBodySha256": "0d79c507eee0c26021280bafd9f12cf9d23df6b8ecabdb9fea1e79eb0dc2cb64",
+      "sourceEvidence": [
+        "components/pages/page-publish-dialog.tsx",
+        "lib/server/page-publication.ts",
+        "app/p/[token]/page.tsx"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanReview": false
+    },
+    {
+      "article": "recurring-issues",
+      "locale": "de",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "4dfb90d84d2897828f105ebb15e2c8e0383d23307e13ef401726c52096ff0a74",
+      "englishBodySha256": "518f5e49f3e1f6d647706b8706713d270ba90505188ed1c2d698baad842b7681",
+      "sourceEvidence": [
+        "components/settings/project-recurrences-section.tsx",
+        "content/knowledge/core-tracker.md",
+        "lib/server/recurrence.ts"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanReview": false
+    },
+    {
+      "article": "recurring-issues",
+      "locale": "es",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "6f485cb5e57aaeae11c17581d0dce10d5842c1087ce98265cad9ff1d35efc9b5",
+      "englishBodySha256": "518f5e49f3e1f6d647706b8706713d270ba90505188ed1c2d698baad842b7681",
+      "sourceEvidence": [
+        "components/settings/project-recurrences-section.tsx",
+        "content/knowledge/core-tracker.md",
+        "lib/server/recurrence.ts"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanReview": false
+    },
+    {
+      "article": "recurring-issues",
+      "locale": "it",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "960a7a2938d0ad13c6361df6f3f0fb9bdbb84db4ce2f5ff6b689cc7f6db923af",
+      "englishBodySha256": "518f5e49f3e1f6d647706b8706713d270ba90505188ed1c2d698baad842b7681",
+      "sourceEvidence": [
+        "components/settings/project-recurrences-section.tsx",
+        "content/knowledge/core-tracker.md",
+        "lib/server/recurrence.ts"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanReview": false
+    },
+    {
+      "article": "recurring-issues",
+      "locale": "pt-BR",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "2fdf182574aa09da074c7c305748f3cd1d80d5ec7cec92824a3ee7f235c5494a",
+      "englishBodySha256": "518f5e49f3e1f6d647706b8706713d270ba90505188ed1c2d698baad842b7681",
+      "sourceEvidence": [
+        "components/settings/project-recurrences-section.tsx",
+        "content/knowledge/core-tracker.md",
+        "lib/server/recurrence.ts"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanReview": false
+    },
+    {
+      "article": "search-and-shortcuts",
+      "locale": "de",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "11bd403575cb86e31ebcd5085ca2836196161e6874f46155cf78ba8cec08ee26",
+      "englishBodySha256": "bbcaf596d521de49521bf4bae3faa9cbe31b0d93567aa5229fad3f4e589480b6",
+      "sourceEvidence": [
+        "components/command-palette.tsx",
+        "components/keyboard-cheatsheet.tsx",
+        "components/issue-field-shortcuts.tsx",
+        "lib/keyboard/shortcuts.ts",
+        "lib/keyboard/keyboard-context.tsx"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanReview": false
+    },
+    {
+      "article": "search-and-shortcuts",
+      "locale": "es",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "ef1c010f19a21906c6149c2a337f2c63a1c185e050199db2c10f3449271cda5e",
+      "englishBodySha256": "bbcaf596d521de49521bf4bae3faa9cbe31b0d93567aa5229fad3f4e589480b6",
+      "sourceEvidence": [
+        "components/command-palette.tsx",
+        "components/keyboard-cheatsheet.tsx",
+        "components/issue-field-shortcuts.tsx",
+        "lib/keyboard/shortcuts.ts",
+        "lib/keyboard/keyboard-context.tsx"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanReview": false
+    },
+    {
+      "article": "search-and-shortcuts",
+      "locale": "it",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "531e11dfe16915ff0853ba8c20289bff41c69b675074316cad5158cfa965fb91",
+      "englishBodySha256": "bbcaf596d521de49521bf4bae3faa9cbe31b0d93567aa5229fad3f4e589480b6",
+      "sourceEvidence": [
+        "components/command-palette.tsx",
+        "components/keyboard-cheatsheet.tsx",
+        "components/issue-field-shortcuts.tsx",
+        "lib/keyboard/shortcuts.ts",
+        "lib/keyboard/keyboard-context.tsx"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanReview": false
+    },
+    {
+      "article": "search-and-shortcuts",
+      "locale": "pt-BR",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "87cbce947ec74d689678b4f4eb7441d7fd6fce368227fed4767c6ccb4b504baa",
+      "englishBodySha256": "bbcaf596d521de49521bf4bae3faa9cbe31b0d93567aa5229fad3f4e589480b6",
+      "sourceEvidence": [
+        "components/command-palette.tsx",
+        "components/keyboard-cheatsheet.tsx",
+        "components/issue-field-shortcuts.tsx",
+        "lib/keyboard/shortcuts.ts",
+        "lib/keyboard/keyboard-context.tsx"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanReview": false
+    },
+    {
+      "article": "share-a-view",
+      "locale": "de",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "57c33a287f20c6af3ff12ba0b093f20845a985d4979a598e36ea55afb15454b8",
+      "englishBodySha256": "75194fabeea57219f6870efbca7425869ecef39dd5d21fa8f54a51bea64259f2",
+      "sourceEvidence": [
+        "app/api/views/[id]/share/route.ts",
+        "app/share/[token]/page.tsx",
+        "content/knowledge/feedback.md",
+        "lib/server/view-shares.ts",
+        "components/board-toolbar.tsx",
+        "lib/public-board-projection.ts"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanReview": false
+    },
+    {
+      "article": "share-a-view",
+      "locale": "es",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "1179990924ed3489654fe928f355cf0ece77e79185273aee65b3e3a6335edb53",
+      "englishBodySha256": "75194fabeea57219f6870efbca7425869ecef39dd5d21fa8f54a51bea64259f2",
+      "sourceEvidence": [
+        "app/api/views/[id]/share/route.ts",
+        "app/share/[token]/page.tsx",
+        "content/knowledge/feedback.md",
+        "lib/server/view-shares.ts",
+        "components/board-toolbar.tsx",
+        "lib/public-board-projection.ts"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanReview": false
+    },
+    {
+      "article": "share-a-view",
+      "locale": "it",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "c84101baa47213612c75b2b43cd8a998037b27dd6fec40fc2c8371bf196b2931",
+      "englishBodySha256": "75194fabeea57219f6870efbca7425869ecef39dd5d21fa8f54a51bea64259f2",
+      "sourceEvidence": [
+        "app/api/views/[id]/share/route.ts",
+        "app/share/[token]/page.tsx",
+        "content/knowledge/feedback.md",
+        "lib/server/view-shares.ts",
+        "components/board-toolbar.tsx",
+        "lib/public-board-projection.ts"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanReview": false
+    },
+    {
+      "article": "share-a-view",
+      "locale": "pt-BR",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "41c9d851306e42d5ed5e4c6463807792f32a3336ffe374f1d6e5e9d0056e3f91",
+      "englishBodySha256": "75194fabeea57219f6870efbca7425869ecef39dd5d21fa8f54a51bea64259f2",
+      "sourceEvidence": [
+        "app/api/views/[id]/share/route.ts",
+        "app/share/[token]/page.tsx",
+        "content/knowledge/feedback.md",
+        "lib/server/view-shares.ts",
+        "components/board-toolbar.tsx",
+        "lib/public-board-projection.ts"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanReview": false
+    },
+    {
+      "article": "sub-issues",
+      "locale": "de",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "02bb5765b8c91b1df6d44284e4cbd54ef27634ee410bb01ebca5cffc45fbf4d5",
+      "englishBodySha256": "bf40907e76c95a5e511c256127d658551f462b8729977b67f8863700ecbc3f92",
+      "sourceEvidence": [
+        "components/issue-parent-menu.tsx",
+        "components/issue-family-banner.tsx",
+        "lib/server/create-issue.ts",
+        "lib/server/update-issue.ts"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanReview": false
+    },
+    {
+      "article": "sub-issues",
+      "locale": "es",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "7acbed6daa979c842359ca8ca2c558ee92940832fed4a58b37889a9366b20586",
+      "englishBodySha256": "bf40907e76c95a5e511c256127d658551f462b8729977b67f8863700ecbc3f92",
+      "sourceEvidence": [
+        "components/issue-parent-menu.tsx",
+        "components/issue-family-banner.tsx",
+        "lib/server/create-issue.ts",
+        "lib/server/update-issue.ts"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanReview": false
+    },
+    {
+      "article": "sub-issues",
+      "locale": "it",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "7738658a88f035d959f8d36195b0c6889e1ca93468be08777ab53ab76a4e4f74",
+      "englishBodySha256": "bf40907e76c95a5e511c256127d658551f462b8729977b67f8863700ecbc3f92",
+      "sourceEvidence": [
+        "components/issue-parent-menu.tsx",
+        "components/issue-family-banner.tsx",
+        "lib/server/create-issue.ts",
+        "lib/server/update-issue.ts"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanReview": false
+    },
+    {
+      "article": "sub-issues",
+      "locale": "pt-BR",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "d30388ee2aca1702862798329266419005fedd7380cc0f0eece1ae83072c0b5f",
+      "englishBodySha256": "bf40907e76c95a5e511c256127d658551f462b8729977b67f8863700ecbc3f92",
+      "sourceEvidence": [
+        "components/issue-parent-menu.tsx",
+        "components/issue-family-banner.tsx",
+        "lib/server/create-issue.ts",
+        "lib/server/update-issue.ts"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanReview": false
+    },
+    {
+      "article": "task-notebook",
+      "locale": "de",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "7758fc462301cf73156da2f10d2bf1a24382e347dff0ac134aed46d1b8a8ec23",
+      "englishBodySha256": "696e88b1fa7f11307add8dbb1d4040cec3fbb45ba6d94172cc2432a0626f189b",
+      "sourceEvidence": [
+        "content/knowledge/productivity.md",
+        "components/scratchpad/scratchpad-modal.tsx",
+        "components/scratchpad/start-tasks.ts",
+        "components/scratchpad/scratchpad-task.tsx",
+        "components/scratchpad/task-item-view.tsx",
+        "lib/keyboard/shortcuts.ts",
+        "lib/keyboard/keyboard-context.tsx",
+        "components/scratchpad/scratchpad-trigger.tsx"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanReview": false
+    },
+    {
+      "article": "task-notebook",
+      "locale": "es",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "a7ec40ebdf839baa396c7f747f4d54d60cd74a12418df4af5fbd0fe571ff768a",
+      "englishBodySha256": "696e88b1fa7f11307add8dbb1d4040cec3fbb45ba6d94172cc2432a0626f189b",
+      "sourceEvidence": [
+        "content/knowledge/productivity.md",
+        "components/scratchpad/scratchpad-modal.tsx",
+        "components/scratchpad/start-tasks.ts",
+        "components/scratchpad/scratchpad-task.tsx",
+        "components/scratchpad/task-item-view.tsx",
+        "lib/keyboard/shortcuts.ts",
+        "lib/keyboard/keyboard-context.tsx",
+        "components/scratchpad/scratchpad-trigger.tsx"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanReview": false
+    },
+    {
+      "article": "task-notebook",
+      "locale": "it",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "1b969919c3d967d4ff16baf9bb908939404fb01a014bee533f4f1ce257a7301c",
+      "englishBodySha256": "696e88b1fa7f11307add8dbb1d4040cec3fbb45ba6d94172cc2432a0626f189b",
+      "sourceEvidence": [
+        "content/knowledge/productivity.md",
+        "components/scratchpad/scratchpad-modal.tsx",
+        "components/scratchpad/start-tasks.ts",
+        "components/scratchpad/scratchpad-task.tsx",
+        "components/scratchpad/task-item-view.tsx",
+        "lib/keyboard/shortcuts.ts",
+        "lib/keyboard/keyboard-context.tsx",
+        "components/scratchpad/scratchpad-trigger.tsx"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanReview": false
+    },
+    {
+      "article": "task-notebook",
+      "locale": "pt-BR",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "5b29a30c0b2f6d9159c1c761ec356d26cbf31778872a9a37161d0bc216c23de7",
+      "englishBodySha256": "696e88b1fa7f11307add8dbb1d4040cec3fbb45ba6d94172cc2432a0626f189b",
+      "sourceEvidence": [
+        "content/knowledge/productivity.md",
+        "components/scratchpad/scratchpad-modal.tsx",
+        "components/scratchpad/start-tasks.ts",
+        "components/scratchpad/scratchpad-task.tsx",
+        "components/scratchpad/task-item-view.tsx",
+        "lib/keyboard/shortcuts.ts",
+        "lib/keyboard/keyboard-context.tsx",
+        "components/scratchpad/scratchpad-trigger.tsx"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanReview": false
+    },
+    {
+      "article": "triage-incoming-work",
+      "locale": "de",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "dddc08bb9c065c01db7badca2e3c84c90356c9ae51cfcc4a80826f57289d8317",
+      "englishBodySha256": "29e96e2810f94f10a45ac447dc8b4c21dc9556ada3826f391d700c471abbd653",
+      "sourceEvidence": [
+        "app/(app)/projects/[id]/triage/page.tsx",
+        "components/triage/triage-page.tsx",
+        "lib/smart-triage.ts",
+        "lib/view-filter.ts"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanReview": false
+    },
+    {
+      "article": "triage-incoming-work",
+      "locale": "es",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "35e89b87f246318e3236d58edc79d84f36b3900823fe7829e8b4ee0a57398d1d",
+      "englishBodySha256": "29e96e2810f94f10a45ac447dc8b4c21dc9556ada3826f391d700c471abbd653",
+      "sourceEvidence": [
+        "app/(app)/projects/[id]/triage/page.tsx",
+        "components/triage/triage-page.tsx",
+        "lib/smart-triage.ts",
+        "lib/view-filter.ts"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanReview": false
+    },
+    {
+      "article": "triage-incoming-work",
+      "locale": "it",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "0c9114feee5a070e84d400c7135ec50f29eb5ccf0c4489b638c7bbafc76c4220",
+      "englishBodySha256": "29e96e2810f94f10a45ac447dc8b4c21dc9556ada3826f391d700c471abbd653",
+      "sourceEvidence": [
+        "app/(app)/projects/[id]/triage/page.tsx",
+        "components/triage/triage-page.tsx",
+        "lib/smart-triage.ts",
+        "lib/view-filter.ts"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanReview": false
+    },
+    {
+      "article": "triage-incoming-work",
+      "locale": "pt-BR",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "9101c5b4cc78d5222423f6825df17e7b5bd02a8717e71814ab4f533d384ac61d",
+      "englishBodySha256": "29e96e2810f94f10a45ac447dc8b4c21dc9556ada3826f391d700c471abbd653",
+      "sourceEvidence": [
+        "app/(app)/projects/[id]/triage/page.tsx",
+        "components/triage/triage-page.tsx",
+        "lib/smart-triage.ts",
+        "lib/view-filter.ts"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanReview": false
+    }
+  ]
+}

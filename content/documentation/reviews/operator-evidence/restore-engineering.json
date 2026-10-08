@@ -1,0 +1,13 @@
+{
+  "checksumsVerified": true,
+  "blankTargetChecked": true,
+  "sourceDataPreserved": true,
+  "databaseImageMatchBeforeStart": true,
+  "VaultKeysRestored": true,
+  "coldFilesystemExtracted": true,
+  "isolatedVolumeIdentity": "min664-restored-db-config",
+  "rootSecretsPreserved": true,
+  "GNUtarHelperAdaptation": true,
+  "offlineBundlePrepared": true,
+  "maintenanceBackendHealthy": true
+}

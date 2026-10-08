@@ -1,0 +1,133 @@
+{
+  "author": "agent:/root/operator_documentation",
+  "date": "2026-10-08",
+  "profile": "Disposable persistent Chromium browser and candidate backend with newly generated local VAPID identity.",
+  "publicationApproved": false,
+  "endpointPublished": false,
+  "checks": [
+    {
+      "action": "Remove earlier disposable test browser registration",
+      "status": 200
+    },
+    {
+      "action": "Disable registered device",
+      "status": 200
+    },
+    {
+      "action": "Reject test for disabled registered device",
+      "status": 409,
+      "expected": 409
+    },
+    {
+      "action": "Reenable registered device",
+      "status": 200
+    },
+    {
+      "action": "Send actual browser push test",
+      "status": 200
+    },
+    {
+      "action": "Read actual service-worker notification receipt and close test banner",
+      "notificationCount": 0,
+      "nativeOperatingSystemBannerObserved": false
+    }
+  ],
+  "captures": [
+    {
+      "locale": "en",
+      "article": "devices-and-notifications",
+      "output": "public/documentation/en/devices-and-notifications-registered.png",
+      "sha256": "a27fef96fccc2352b0cc10951de97878dbf7306e3960608d160970dbbb29b1db",
+      "capturedAt": "2026-10-08",
+      "viewport": [
+        1240,
+        950
+      ],
+      "theme": "light",
+      "reviewed": true,
+      "text": "Push notifications\nNotify this device\n\nYour browser will ask for permission.\n\nChrome on macOS\nAdded Oct 8, 2026 · last notification Oct 8, 2026, 8:34 PM",
+      "qualification": "Real browser permission, push subscription and server registration; exact GET localization of the platform label only, IDs, endpoints, enabled state, dates and last-push result preserved.",
+      "authorPixelReview": "Actual rendered UI inspected in every language; visible text, preserved conditions, readable layout, no secrets. Native OS installation or banner delivery not claimed."
+    },
+    {
+      "locale": "fr",
+      "article": "devices-and-notifications",
+      "output": "public/documentation/fr/devices-and-notifications-registered.png",
+      "sha256": "0f382e401fa351fde2a0df4f90ad264ff0a0bd8261a78b85519b15a77206e9ca",
+      "capturedAt": "2026-10-08",
+      "viewport": [
+        1240,
+        950
+      ],
+      "theme": "light",
+      "reviewed": true,
+      "text": "Notifications push\nPrévenir cet appareil\n\nVotre navigateur va demander l'autorisation.\n\nChrome sur macOS\nAjouté le 8 oct. 2026 · dernière notification 8 oct. 2026, 20:34",
+      "qualification": "Real browser permission, push subscription and server registration; exact GET localization of the platform label only, IDs, endpoints, enabled state, dates and last-push result preserved.",
+      "authorPixelReview": "Actual rendered UI inspected in every language; visible text, preserved conditions, readable layout, no secrets. Native OS installation or banner delivery not claimed."
+    },
+    {
+      "locale": "de",
+      "article": "devices-and-notifications",
+      "output": "public/documentation/de/devices-and-notifications-registered.png",
+      "sha256": "f6ca6e3abd4fbdc5423e0df70b1609d13d70d950faffbf2c95454aa9183652eb",
+      "capturedAt": "2026-10-08",
+      "viewport": [
+        1240,
+        950
+      ],
+      "theme": "light",
+      "reviewed": true,
+      "text": "Push-Benachrichtigungen\nDieses Gerät benachrichtigen\n\nIhr Browser wird Sie um Erlaubnis bitten.\n\nChrome unter macOS\nHinzugefügt 08.10.2026 · letzte Benachrichtigung 08.10.2026, 20:34",
+      "qualification": "Real browser permission, push subscription and server registration; exact GET localization of the platform label only, IDs, endpoints, enabled state, dates and last-push result preserved.",
+      "authorPixelReview": "Actual rendered UI inspected in every language; visible text, preserved conditions, readable layout, no secrets. Native OS installation or banner delivery not claimed."
+    },
+    {
+      "locale": "es",
+      "article": "devices-and-notifications",
+      "output": "public/documentation/es/devices-and-notifications-registered.png",
+      "sha256": "5d133e6c8d067d6d60f54c21641e67536f9de870df7af22d77d99dad077f3771",
+      "capturedAt": "2026-10-08",
+      "viewport": [
+        1240,
+        950
+      ],
+      "theme": "light",
+      "reviewed": true,
+      "text": "Notificaciones push\nNotificar este dispositivo\n\nTu navegador te pedirá permiso.\n\nChrome en macOS\nAñadido 8 oct 2026 · última notificación 8 oct 2026, 20:34",
+      "qualification": "Real browser permission, push subscription and server registration; exact GET localization of the platform label only, IDs, endpoints, enabled state, dates and last-push result preserved.",
+      "authorPixelReview": "Actual rendered UI inspected in every language; visible text, preserved conditions, readable layout, no secrets. Native OS installation or banner delivery not claimed."
+    },
+    {
+      "locale": "pt-BR",
+      "article": "devices-and-notifications",
+      "output": "public/documentation/pt-BR/devices-and-notifications-registered.png",
+      "sha256": "299b159a230b93cdde5bf0818dc6733a8baf236af54c49f486665ae064da882e",
+      "capturedAt": "2026-10-08",
+      "viewport": [
+        1240,
+        950
+      ],
+      "theme": "light",
+      "reviewed": true,
+      "text": "Notificações push\nNotifique este dispositivo\n\nSeu navegador solicitará permissão.\n\nChrome no macOS\nAdicionado 8 de out. de 2026 · última notificação 8 de out. de 2026, 20:34",
+      "qualification": "Real browser permission, push subscription and server registration; exact GET localization of the platform label only, IDs, endpoints, enabled state, dates and last-push result preserved.",
+      "authorPixelReview": "Actual rendered UI inspected in every language; visible text, preserved conditions, readable layout, no secrets. Native OS installation or banner delivery not claimed."
+    },
+    {
+      "locale": "it",
+      "article": "devices-and-notifications",
+      "output": "public/documentation/it/devices-and-notifications-registered.png",
+      "sha256": "4b74b5aa6938564fd488f278b7af4cde5b4e88689aa983c25796f0a5b54fb5b3",
+      "capturedAt": "2026-10-08",
+      "viewport": [
+        1240,
+        950
+      ],
+      "theme": "light",
+      "reviewed": true,
+      "text": "Notifiche push\nAvvisa questo dispositivo\n\nIl browser chiederà il permesso.\n\nChrome su macOS\nAggiunto 8 ott 2026 · ultima notifica 8 ott 2026, 20:34",
+      "qualification": "Real browser permission, push subscription and server registration; exact GET localization of the platform label only, IDs, endpoints, enabled state, dates and last-push result preserved.",
+      "authorPixelReview": "Actual rendered UI inspected in every language; visible text, preserved conditions, readable layout, no secrets. Native OS installation or banner delivery not claimed."
+    }
+  ]
+}

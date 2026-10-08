@@ -1,0 +1,570 @@
+{
+  "date": "2026-10-08",
+  "author": "agent:/root/automation_account_documentation",
+  "scope": "Targeted EN/FR corrections after independent full-body review. These newly authored passages require another agent’s independent review; other locales remain at their previous sourceRevision until translated. No runtime or human review claimed.",
+  "changes": [
+    {
+      "article": "account-access",
+      "locale": "fr",
+      "sha256": "e4346b5142bd0483f397fe83f6e3a9294411a0d4d4eb43bb9b4fbc717f660f09",
+      "passages": [
+        {
+          "before": "Connaître l’URL d’un projet ne donne pas accès à ses membres.",
+          "after": "Connaître l’URL d’un projet ne donne pas accès au projet.",
+          "sources": [
+            "lib/server/project-access.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "article": "triage-incoming-work",
+      "locale": "en",
+      "sha256": "d303764f2c3e38bbc63003bcdf5b11eb38705968196579e337476b207d87870b",
+      "passages": [
+        {
+          "before": "Smart Triage uses deterministic sorting rules.",
+          "after": "Smart Triage uses deterministic sorting rules.\n\nWithin each status column, the rules first put open issues blocking other open work ahead of unblocked issues. Issues blocked by open work go last, even when they also block other issues. Closed endpoints no longer create that priority. Within a tier, higher priority, smaller effort and overdue or imminent due dates bring work forward. Within the same blocking tier, issues sharing an objective stay together, ordered by the best-ranked issue in their group. Ties use due date, then oldest creation date, then manual position, with the identifier as a final stable tie-break. A related link does not affect this ordering.",
+          "sources": [
+            "lib/smart-triage.ts",
+            "lib/view-filter.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "article": "triage-incoming-work",
+      "locale": "fr",
+      "sha256": "ee65afd628f0dd91c4fe0f890b505bc8c01b91904b3ea58c2fe8f5dc525fa909",
+      "passages": [
+        {
+          "before": "Smart Triage utilise des règles de classement déterministes.",
+          "after": "Smart Triage utilise des règles de classement déterministes.\n\nDans chaque colonne d’état, les règles placent d’abord les tickets ouverts qui bloquent du travail ouvert, puis les tickets sans blocage. Les tickets bloqués par du travail ouvert passent en dernier, même s’ils en bloquent d’autres. Une extrémité clôturée ne crée plus cette priorité. Dans chaque groupe, une priorité élevée, un effort plus petit et une échéance dépassée ou proche font remonter le travail. À l’intérieur d’un même niveau de blocage, les tickets d’un objectif restent ensemble, avec un ordre fondé sur le ticket le mieux classé du groupe. Les égalités sont départagées par l’échéance, puis l’ancienneté de création, la position manuelle et enfin l’identifiant. Une relation associée ne modifie pas ce classement.",
+          "sources": [
+            "lib/smart-triage.ts",
+            "lib/view-filter.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "article": "issue-dependencies",
+      "locale": "en",
+      "sha256": "14a4db0be4d73f6132d4994dd9f9a0bb8b42b55b65e721efb63f2b117ed24de4",
+      "passages": [
+        {
+          "before": "Terminal statuses done, canceled and duplicate stop an issue from blocking work. Inspect unresolved blockers and inherited blockers when the current issue still appears blocked. Work shown through another project remains subject to that project's access; a relation is not a public share.",
+          "after": "Terminal statuses done, canceled and duplicate stop an issue from blocking work. Relations connect issues or objectives in the same project; both endpoints must be accessible there. They do not link arbitrary private work across projects or publish either endpoint.\n\nAn open issue can inherit a blocker through its open objective. If A blocks objective B, open issues attached to B show A as an inherited blocker, even without a direct A-to-issue relation. The display names the actual blocker and the objective responsible for inheritance. Inspect that objective relation before trying to unlink it from the issue. Closing A, closing B or moving the issue out of B removes that inherited blockage. This mechanism follows objective membership, not the parent/sub-issue hierarchy.",
+          "sources": [
+            "lib/server/issue-relations.ts",
+            "lib/relation-constants.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "article": "sub-issues",
+      "locale": "en",
+      "sha256": "aa02827ed6ec9b710147cb1f5f78dc47331d5ca06d05d7332e410505289f5953",
+      "passages": [
+        {
+          "before": "A child remains an issue with its own status and discussion. Check parent progress alongside child states.",
+          "after": "The hierarchy permits one level: a parent must be a top-level issue in the same project, and a sub-issue cannot itself have children. When no objective is explicitly chosen during creation, the child inherits the parent’s objective; inspect the resulting properties rather than assuming that later parent edits propagate.\n\nA child remains an issue with its own status and discussion. The parent’s progress indicator is weighted by child effort and status completion credit. The sub-issue list’s completed/total counter is a separate raw count. Read the child states alongside both measures.",
+          "sources": [
+            "lib/server/create-issue.ts",
+            "lib/server/update-issue.ts",
+            "components/issue-family-banner.tsx"
+          ]
+        }
+      ]
+    },
+    {
+      "article": "implementation-plans",
+      "locale": "en",
+      "sha256": "a78b7a47f01d3f9e105eb36fb58b98e2c4cc14c920273ae4a6368af5223c2fd3",
+      "passages": [
+        {
+          "before": "The plan uses Markdown task lines:",
+          "after": "Indent a task line with two spaces for each nesting level; a tab counts as four spaces. Nesting organizes steps in the plan and does not create issue parent/child relationships. Each noncanceled work task still contributes to progress, including nested tasks.\n\nThe plan uses Markdown task lines:",
+          "sources": [
+            "lib/plan.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "article": "recurring-issues",
+      "locale": "en",
+      "sha256": "1953e9cc9178f28747ef3239fdf5b4a4689cd38959bbcd908d32c96b96bc73ab",
+      "passages": [
+        {
+          "before": "Check the next issue's identifier and properties after completing a recurrence.",
+          "after": "Check the next issue's identifier and properties after completing a recurrence.\n\nThe next due date comes from the previous due date plus one cadence, not from the day you completed the task. The successor copies title, description, priority, effort, assignee, objective and categories. It does not copy the implementation plan, parent relationship, resources or comments. Recurrence moves to the successor; reopening and completing the old issue again does not create another occurrence. If successor creation fails, the series stops rather than repeatedly retrying on the completed issue. Inspect the result and configure recurrence on the appropriate next task after resolving the failure.",
+          "sources": [
+            "lib/server/recurrence.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "article": "objective-dependencies-and-momentum",
+      "locale": "en",
+      "sha256": "ae5bc6bade158b37ed19a1a79554ba7cc9db99aedfdd914b75ef122b1d1a3fcc",
+      "passages": [
+        {
+          "before": "Inherited blockers can explain why an outcome still has constrained work even when its own visible task seems ready.",
+          "after": "A blocking relation may connect an issue or another objective to this objective, within the same project. Its open member issues inherit the unresolved blocker: the displayed relation identifies both the actual prerequisite and the objective passing it on. This is not a new direct relation stored on every issue. Closing the blocker or the blocked objective, or removing an issue from that objective, removes the corresponding inherited blockage.",
+          "sources": [
+            "lib/relation-constants.ts",
+            "lib/server/issue-relations.ts"
+          ]
+        },
+        {
+          "before": "An estimated finish date appears only when there is enough activity to calculate a meaningful estimate.",
+          "after": "An estimated finish date requires at least two completions, a full observed week, positive delivered effort and remaining work. Only currently linked issues contribute; a completion predating objective creation does not manufacture recent momentum. With a valid target, history spans creation to that date and throughput uses observed time since creation, including time after a missed target. Without a valid target, the calculation uses a rolling eight-week history and a 28-day forecast window.",
+          "sources": [
+            "lib/objective-momentum.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "article": "search-and-shortcuts",
+      "locale": "en",
+      "sha256": "bffbc3be54b9530716e74f5571de063b5e664bf5fbc1eedc984db16eac387e0d",
+      "passages": [
+        {
+          "before": "Use the keyboard shortcuts help to inspect the commands available on your platform.",
+          "after": "Press Command+K on macOS or Ctrl+K on Windows/Linux to open the command palette; Command/Ctrl+P is an alternative application binding. Outside editable text, ? opens shortcut help and C opens issue creation. On a hovered issue card or its supported detail controls, S opens status, P priority, E effort, A assignee, L categories, D due date and O objective. These single-key actions do not intercept typing in an input, textarea or content editor. Navigation sequences such as G then H (Home) and G then I (Inbox) use two successive keys; G then W reaches Pages only in a project context.\n\nUse the keyboard shortcuts help to inspect the commands available on your platform.",
+          "sources": [
+            "lib/keyboard/shortcuts.ts",
+            "lib/keyboard/keyboard-context.tsx",
+            "components/issue-field-shortcuts.tsx"
+          ]
+        }
+      ]
+    },
+    {
+      "article": "task-notebook",
+      "locale": "en",
+      "sha256": "59dc6d4e2632e155e6a4549fe7c4d84ade3667f88b65f7ad31b98a760677fa5e",
+      "passages": [
+        {
+          "before": "Open the task notebook from the personal application controls.",
+          "after": "Open the task notebook from the personal application controls, or use Command+Shift+K on macOS and Ctrl+Shift+K on Windows/Linux when focus is outside editable text.",
+          "sources": [
+            "lib/keyboard/shortcuts.ts",
+            "lib/keyboard/keyboard-context.tsx",
+            "components/scratchpad/scratchpad-trigger.tsx"
+          ]
+        }
+      ]
+    },
+    {
+      "article": "page-comments-and-collaboration",
+      "locale": "en",
+      "sha256": "8fa4c9cf151e7dd08ca638664ff58709f8acdafc47f0d2e4c490b2ad95e50a2d",
+      "passages": [
+        {
+          "before": "If the page displays a conflict banner, preserve your unsaved text and inspect the offered reload or recovery action. Compare with the latest saved content before replacing another person's work. Use history to inspect saved versions and identify the change that needs recovery.",
+          "after": "Minddy merges edits to different top-level document blocks when it can preserve both changes. It does not merge simultaneous text edits inside the same block character by character. If both people changed that block, the document retains the remote version and a banner offers your previous block for review.\n\nCompare the named block with the current document. Choose Restore mine only when replacing that block with your version is intended. If your conflicting action was a deletion, Delete it again applies that deletion explicitly. Dismiss keeps the adopted document and closes the warning; it does not restore your version. Preserve any wanted text before dismissing, and use history to inspect saved versions when a broader recovery is needed. These choices affect the identified block rather than blindly replacing the whole page.",
+          "sources": [
+            "lib/pages-merge.ts",
+            "components/pages/page-conflict-banner.tsx",
+            "components/pages/page-view.tsx"
+          ]
+        }
+      ]
+    },
+    {
+      "article": "create-a-database",
+      "locale": "en",
+      "sha256": "5d07e6e75d83e60302da4a2f634218172705d0ea50edcc67faba3c8763175478",
+      "passages": [
+        {
+          "before": "Manual setup remains available without AI.",
+          "after": "Manual setup remains available without AI. Choosing setup with Numo opens a prepared request with this database as page context, after its creation has settled. Review and send that request to ask for the structure you need; merely opening the conversation does not complete the setup. Actual AI work needs a configured provider and available usage or a compatible personal key. Inspect the resulting schema and entries before relying on them.",
+          "sources": [
+            "components/pages/database-setup-banner.tsx",
+            "lib/page-creation-settlement.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "article": "import-a-database",
+      "locale": "en",
+      "sha256": "bfcf9bdaf5d06be23403aab1413549ef85079fadf179466e4913dc0939d3dbed",
+      "passages": [
+        {
+          "before": "A failed database write rolls back imported rows, and retrying the same import does not create duplicates.",
+          "after": "The database write is transactional. A retry of the same attempt in the open dialog keeps its request identifier, so a completed attempt is returned without duplicating rows. Loading another file or reopening a fresh dialog can create a new attempt. After an uncertain network result, inspect the destination before restarting; an already populated database no longer satisfies the empty-target prerequisite.",
+          "sources": [
+            "lib/server/database-import.ts",
+            "components/pages/database-import-dialog.tsx"
+          ]
+        }
+      ]
+    },
+    {
+      "article": "issue-dependencies",
+      "locale": "fr",
+      "sha256": "9d8865ff06a3ac536d3f95104ee6d0ddde0f256f935fb433d13b09a252c6f6f7",
+      "passages": [
+        {
+          "before": "Les états terminaux terminé, annulé et doublon cessent de bloquer le travail. Inspectez les blocages non résolus et hérités si le ticket reste bloqué. Une relation vers un autre projet reste soumise aux permissions de ce projet ; ce n’est pas un partage public.",
+          "after": "Les états terminaux terminé, annulé et doublon cessent de bloquer le travail. Une relation relie des tickets ou objectifs du même projet ; ses deux extrémités doivent y être accessibles. Elle ne relie pas arbitrairement du travail privé de plusieurs projets et ne publie aucun des objets.\n\nUn ticket ouvert peut hériter d’un blocage par son objectif ouvert. Si A bloque l’objectif B, les tickets ouverts rattachés à B affichent A comme blocage hérité, sans relation directe entre A et chaque ticket. L’affichage nomme le vrai blocage et l’objectif à l’origine de l’héritage. Inspectez cette relation d’objectif avant de chercher à la dissocier du ticket. Clôturer A, clôturer B ou retirer le ticket de B supprime ce blocage hérité. Le mécanisme suit l’appartenance à l’objectif, pas la hiérarchie parent/sous-ticket.",
+          "sources": [
+            "lib/server/issue-relations.ts",
+            "lib/relation-constants.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "article": "sub-issues",
+      "locale": "fr",
+      "sha256": "cc2304e2bb062bb8ee2a5872db910961f229e56695dfdb9946387fb945b0cc5a",
+      "passages": [
+        {
+          "before": "Un enfant reste un ticket avec son état et sa discussion. Examinez le progrès du parent avec les états des enfants.",
+          "after": "La hiérarchie accepte un seul niveau : le parent doit être un ticket de premier niveau du même projet et un sous-ticket ne peut pas avoir ses propres enfants. Sans objectif explicitement choisi à la création, l’enfant hérite de celui du parent ; vérifiez les propriétés obtenues plutôt que de supposer que les modifications ultérieures du parent se propagent.\n\nUn enfant reste un ticket avec son état et sa discussion. L’indicateur de progrès du parent est pondéré par l’effort des enfants et le crédit de progression de leurs états. Le compteur terminé/total de la liste des sous-tickets est un décompte brut distinct. Lisez les états des enfants avec ces deux mesures.",
+          "sources": [
+            "lib/server/create-issue.ts",
+            "lib/server/update-issue.ts",
+            "components/issue-family-banner.tsx"
+          ]
+        }
+      ]
+    },
+    {
+      "article": "implementation-plans",
+      "locale": "fr",
+      "sha256": "37db2d02e03d448bda5d751264518f9a4d0db551a36a8212d42e3ad801a809eb",
+      "passages": [
+        {
+          "before": "Le plan utilise des lignes de tâches Markdown :",
+          "after": "Indentez une ligne de tâche de deux espaces par niveau ; une tabulation compte pour quatre espaces. Cette imbrication organise les étapes du plan, sans créer de relation parent-enfant entre tickets. Chaque tâche de travail non annulée contribue à la progression, y compris les tâches imbriquées.\n\nLe plan utilise des lignes de tâches Markdown :",
+          "sources": [
+            "lib/plan.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "article": "recurring-issues",
+      "locale": "fr",
+      "sha256": "2c86a1192f562bbcd7505141711a3564a13c9dde87e49d5a82dda1b861b96367",
+      "passages": [
+        {
+          "before": "Après réalisation, vérifiez l’identifiant et les propriétés du ticket suivant.",
+          "after": "Après réalisation, vérifiez l’identifiant et les propriétés du ticket suivant.\n\nL’échéance suivante reprend l’échéance précédente augmentée d’une période, pas le jour de réalisation. Le nouveau ticket reprend titre, description, priorité, effort, responsable, objectif et catégories. Il ne copie ni plan d’implémentation, ni parent, ni ressources, ni commentaires. La récurrence passe au ticket suivant ; rouvrir et terminer de nouveau l’ancien ne crée pas une autre occurrence. Si la création suivante échoue, la série s’arrête plutôt que de réessayer en boucle sur le ticket terminé. Examinez le résultat et configurez la récurrence sur la prochaine tâche appropriée après résolution de l’échec.",
+          "sources": [
+            "lib/server/recurrence.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "article": "objective-dependencies-and-momentum",
+      "locale": "fr",
+      "sha256": "100c657e6df72edc650addc2e0a415308f16992669e5a23b913af6630512574a",
+      "passages": [
+        {
+          "before": "Un blocage hérité peut expliquer pourquoi du travail reste contraint même si la tâche visible semble prête.",
+          "after": "Une relation de blocage peut relier un ticket ou un autre objectif à cet objectif, dans le même projet. Ses tickets membres ouverts héritent du blocage non résolu : l’affichage identifie le vrai préalable et l’objectif qui le transmet. Ce n’est pas une nouvelle relation directe enregistrée sur chaque ticket. Clôturer le ticket ou l’objectif bloquant, ou l’objectif bloqué, ou retirer un ticket de cet objectif, supprime le blocage hérité correspondant.",
+          "sources": [
+            "lib/relation-constants.ts",
+            "lib/server/issue-relations.ts"
+          ]
+        },
+        {
+          "before": "Une estimation de fin apparaît uniquement lorsque l’activité permet un calcul significatif.",
+          "after": "Une estimation de fin exige au moins deux réalisations, une semaine complète d’observation, un effort réalisé positif et du travail restant. Seuls les tickets actuellement associés contribuent ; une réalisation antérieure à la création de l’objectif ne fabrique pas une dynamique récente. Avec une date cible valide, l’historique va de la création à cette date et le débit utilise le temps observé depuis la création, y compris après une échéance dépassée. Sans date cible valide, le calcul utilise huit semaines d’historique glissant et une fenêtre de prévision de 28 jours.",
+          "sources": [
+            "lib/objective-momentum.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "article": "search-and-shortcuts",
+      "locale": "fr",
+      "sha256": "fea37db80e2925c29471a8738153d4a8c82c8141ea99b87cb9f46b8c69e26401",
+      "passages": [
+        {
+          "before": "Consultez l’aide des raccourcis pour votre plateforme.",
+          "after": "Utilisez Commande+K sur macOS ou Ctrl+K sur Windows/Linux pour ouvrir la palette ; Commande/Ctrl+P constitue une autre combinaison de l’application. Hors d’un champ de texte, ? ouvre l’aide des raccourcis et C la création de ticket. Sur une carte survolée ou les commandes de détail compatibles, S ouvre l’état, P la priorité, E l’effort, A le responsable, L les catégories, D l’échéance et O l’objectif. Ces touches seules n’interceptent pas la saisie dans un champ, une zone de texte ou un éditeur. Les séquences G puis H (Accueil) et G puis I (Boîte de réception) utilisent deux touches successives ; G puis W ouvre les pages uniquement dans le contexte d’un projet.\n\nConsultez l’aide des raccourcis pour votre plateforme.",
+          "sources": [
+            "lib/keyboard/shortcuts.ts",
+            "lib/keyboard/keyboard-context.tsx",
+            "components/issue-field-shortcuts.tsx"
+          ]
+        }
+      ]
+    },
+    {
+      "article": "task-notebook",
+      "locale": "fr",
+      "sha256": "168050918e23a425e88578ee99545d654cd6b117e6b78558e52568d9e039d569",
+      "passages": [
+        {
+          "before": "Ouvrez le carnet depuis les commandes personnelles.",
+          "after": "Ouvrez le carnet depuis les commandes personnelles, ou utilisez Commande+Maj+K sur macOS et Ctrl+Maj+K sur Windows/Linux lorsque le focus est hors d’un champ de texte.",
+          "sources": [
+            "lib/keyboard/shortcuts.ts",
+            "lib/keyboard/keyboard-context.tsx",
+            "components/scratchpad/scratchpad-trigger.tsx"
+          ]
+        }
+      ]
+    },
+    {
+      "article": "page-comments-and-collaboration",
+      "locale": "fr",
+      "sha256": "6966a17da505714e913faa2f9c2038aa4940e296a53e6653ce40859be2cb0f51",
+      "passages": [
+        {
+          "before": "Si une bannière de conflit apparaît, conservez le texte non enregistré et examinez l’action de rechargement ou de récupération proposée. Comparez avec le dernier contenu avant de remplacer le travail d’une autre personne. Consultez l’historique pour identifier la version à récupérer.",
+          "after": "Minddy fusionne les modifications de blocs de premier niveau différents lorsqu’il peut conserver les deux changements. Il ne fusionne pas caractère par caractère les textes écrits simultanément dans un même bloc. Si les deux personnes ont modifié ce bloc, le document garde la version distante et une bannière propose votre ancien bloc pour examen.\n\nComparez le bloc désigné avec le document actuel. Choisissez Restaurer la mienne seulement si vous voulez le remplacer par votre version. Si votre action en conflit était une suppression, Le supprimer à nouveau applique explicitement cette suppression. Fermer conserve le document adopté et ferme l’avertissement ; cette action ne restaure pas votre version. Conservez le texte à garder avant de fermer et consultez l’historique si une récupération plus large est nécessaire. Ces choix ciblent le bloc identifié plutôt que de remplacer aveuglément toute la page.",
+          "sources": [
+            "lib/pages-merge.ts",
+            "components/pages/page-conflict-banner.tsx",
+            "components/pages/page-view.tsx"
+          ]
+        }
+      ]
+    },
+    {
+      "article": "create-a-database",
+      "locale": "fr",
+      "sha256": "fadf001a5596964278f05c3d67d10baac111ac22919c105549a4041d6d970465",
+      "passages": [
+        {
+          "before": "La configuration manuelle reste disponible sans IA.",
+          "after": "La configuration manuelle reste disponible sans IA. Choisir la création avec Numo ouvre une demande préparée avec cette base comme contexte de page, après confirmation de sa création. Relisez et envoyez la demande pour décrire la structure souhaitée ; ouvrir la conversation ne termine pas la configuration. Le travail IA nécessite un fournisseur configuré et un budget disponible ou une clé personnelle compatible. Inspectez le schéma et les entrées obtenus avant de vous y fier.",
+          "sources": [
+            "components/pages/database-setup-banner.tsx",
+            "lib/page-creation-settlement.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "article": "import-a-database",
+      "locale": "fr",
+      "sha256": "8bec731bfd682e840f6f1ad525710ded9255b6b8b72c13c3cff4c8d0f7a0f415",
+      "passages": [
+        {
+          "before": "Un échec d’écriture annule les lignes importées ; réessayer le même import ne crée pas de doublons.",
+          "after": "L’écriture en base est transactionnelle. Réessayer la même tentative dans le dialogue ouvert conserve son identifiant de requête : une tentative déjà terminée est retournée sans dupliquer les lignes. Charger un autre fichier ou rouvrir un dialogue peut créer une nouvelle tentative. Après un résultat réseau incertain, inspectez la destination avant de recommencer ; une base déjà remplie ne répond plus au prérequis de destination vide.",
+          "sources": [
+            "lib/server/database-import.ts",
+            "components/pages/database-import-dialog.tsx"
+          ]
+        }
+      ]
+    },
+    {
+      "article": "personal-statistics",
+      "locale": "fr",
+      "sha256": "0c197b8a03ba6db887ff24eacd5de07a4c577fe2dc45055c0d596ba8edd97992",
+      "passages": [
+        {
+          "before": "Une période vide peut refléter l’absence de travail terminé correspondant, trop peu d’activité.",
+          "after": "Une période vide peut refléter l’absence de travail terminé correspondant ou une activité insuffisante.",
+          "sources": [
+            "lib/stats-derive.ts"
+          ]
+        },
+        {
+          "before": "Le temps par ticket peut être résumé par effort, avec des médianes lorsqu’elles sont disponibles.",
+          "after": "La grille d’activité compte les événements de réalisation de tickets et de tâches du carnet, regroupés en jours calendaires dans votre fuseau. Un jour actif contient au moins un de ces événements ; la série courante tolère un jour présent vide, puis s’arrête au prochain jour vide. Le total historique des tickets terminés déduplique les identifiants : un compte d’événements et un total de tickets distincts ne répondent pas à la même question.\n\nLe temps par effort est la médiane du temps écoulé entre le premier passage enregistré d’un ticket en cours et sa réalisation, pour les tickets terminés qui vous sont attribués et possèdent effort et horodatages nécessaires. Il comprend le temps d’attente écoulé ; ce n’est pas un chronomètre d’heures travaillées. La vue des quantités montre la taille de l’échantillon. Une médiane absente peut indiquer l’absence de mesures admissibles, pas une durée nulle.",
+          "sources": [
+            "lib/stats-derive.ts",
+            "lib/server/stats.ts",
+            "supabase/migrations/20270107070000_history_encryption.sql",
+            "supabase/migrations/20270107720000_project_content_encryption.sql"
+          ]
+        }
+      ]
+    },
+    {
+      "article": "share-a-view",
+      "locale": "en",
+      "passages": [
+        {
+          "before": "A public link grants the view's read-only access rather than membership or edit permission in the project.",
+          "after": "A public link grants the view's read-only access rather than membership or edit permission in the project.\n\nShared cards expose their titles, descriptions and displayed properties, including assignee names, categories, objective names, due dates, recurrence and any remote forge links. The projection excludes implementation-plan bodies and member email addresses. Parent and relation chips can show identifiers of project issues outside the view filter. Review those descriptions, names and identifiers as well as the visible columns; hiding a card property is not a general content-redaction tool.",
+          "sources": [
+            "lib/public-board-projection.ts",
+            "app/share/[token]/page.tsx"
+          ]
+        }
+      ],
+      "sha256": "87c2b201362de245bc21368f52f0e1a1bafcfe379ecc79f7844de101062b81e3"
+    },
+    {
+      "article": "personal-statistics",
+      "locale": "en",
+      "passages": [
+        {
+          "before": "Time per ticket can be summarized by effort, including median values where available.",
+          "after": "The activity grid counts issue-completion and notebook-task-completion events, grouped into calendar days in your time zone. An active day has at least one such event; the current streak tolerates an empty today but ends at the next empty day. All-time completed-issue totals deduplicate issue identifiers, so an event count and a distinct-issue total answer different questions.\n\nTime by effort is the median elapsed time from an issue’s first recorded move to in progress until completion, for eligible done issues assigned to you with an effort and both timestamps. It includes elapsed waiting time; it is not a stopwatch of hours worked. The quantity view shows the underlying sample size. A missing median can reflect no eligible measurements rather than zero duration.",
+          "sources": [
+            "lib/stats-derive.ts",
+            "lib/server/stats.ts",
+            "supabase/migrations/20270107070000_history_encryption.sql",
+            "supabase/migrations/20270107720000_project_content_encryption.sql"
+          ]
+        }
+      ],
+      "sha256": "e1ecaf8c07eba34d48644b4bdce79f5218f1a47179e66988f89a2d9e38231545"
+    },
+    {
+      "article": "notifications-and-inbox",
+      "locale": "en",
+      "passages": [
+        {
+          "before": "Select an item to inspect its underlying issue or page and check the read state.",
+          "after": "Select an item to inspect its underlying issue or page and check the read state. Opening a notification marks it read. Its row also offers mark-read or mark-unread controls, and the popover can mark all notifications read. Marking unread restores that activity marker; it does not undo the underlying issue or page change.",
+          "sources": [
+            "components/inbox-content.tsx"
+          ]
+        }
+      ],
+      "sha256": "27801273c23bc6dec9bfd6eb6190daf5925754fd6327087302344e99a0eb28c0"
+    },
+    {
+      "article": "page-files",
+      "locale": "en",
+      "passages": [
+        {
+          "before": "Keep the original until the upload succeeds.",
+          "after": "Keep the original until the upload succeeds.\n\nImages can be inserted as image blocks, and other documents can be attached as file blocks. The server determines the stored media type from the bytes rather than trusting the filename or browser label. Upload acceptance does not guarantee that every format has an inline preview; use the file download when a preview is unavailable.",
+          "sources": [
+            "components/pages/page-uploads.tsx",
+            "lib/server/page-files.ts"
+          ]
+        },
+        {
+          "before": "Revoking a share stops new authorized visits but cannot recall copies already downloaded.",
+          "after": "Published file URLs are signed for up to 24 hours when the page is rendered. Revoking a share stops new authorized page visits but does not immediately invalidate file URLs already delivered; those can remain usable until their expiry. Downloaded copies cannot be recalled.",
+          "sources": [
+            "lib/server/page-publication.ts"
+          ]
+        }
+      ],
+      "sha256": "4d108b3c9b94afe0e0c292556acbbb9b0a26bd164c54965b6868c3c5e835a1e2"
+    },
+    {
+      "article": "share-a-view",
+      "locale": "fr",
+      "passages": [
+        {
+          "before": "Le lien donne un accès en lecture à la vue, pas une adhésion ni des droits de modification au projet.",
+          "after": "Le lien donne un accès en lecture à la vue, pas une adhésion ni des droits de modification au projet.\n\nLes cartes partagées exposent leurs titres, descriptions et propriétés affichées : noms des responsables, catégories, noms des objectifs, échéances, récurrences et éventuels liens de forge. La projection exclut le corps des plans d’implémentation et les e-mails des membres. Les indicateurs de parent et de relation peuvent montrer les identifiants de tickets du projet hors des filtres de la vue. Examinez descriptions, noms et identifiants autant que les colonnes visibles ; masquer une propriété de carte n’est pas un outil général de suppression de contenu sensible.",
+          "sources": [
+            "lib/public-board-projection.ts",
+            "app/share/[token]/page.tsx"
+          ]
+        }
+      ],
+      "sha256": "44033403b08727cd198bade91832e9624575d724e490cf4cb3e799b027af4a2c"
+    },
+    {
+      "article": "notifications-and-inbox",
+      "locale": "fr",
+      "passages": [
+        {
+          "before": "Sélectionnez un élément pour inspecter le ticket ou la page et vérifier sa lecture.",
+          "after": "Sélectionnez un élément pour inspecter le ticket ou la page et vérifier sa lecture. Ouvrir une notification la marque comme lue. Sa ligne propose aussi les commandes de lecture ou de retour à l’état non lu, et le volet permet de tout marquer comme lu. Repasser en non lu rétablit ce repère d’activité ; cela n’annule pas le changement du ticket ou de la page.",
+          "sources": [
+            "components/inbox-content.tsx"
+          ]
+        }
+      ],
+      "sha256": "d7b88d856a0c77b97101d0067ca6111afdaeaff175d278074c7786141a70c484"
+    },
+    {
+      "article": "page-files",
+      "locale": "fr",
+      "passages": [
+        {
+          "before": "Gardez l’original jusqu’au succès.",
+          "after": "Gardez l’original jusqu’au succès.\n\nLes images peuvent être insérées en blocs d’image et les autres documents en blocs de fichier. Le serveur détermine le type stocké à partir des octets, sans se fier au nom du fichier ou au libellé du navigateur. L’envoi réussi ne garantit pas un aperçu intégré pour tous les formats ; téléchargez le fichier si l’aperçu est indisponible.",
+          "sources": [
+            "components/pages/page-uploads.tsx",
+            "lib/server/page-files.ts"
+          ]
+        },
+        {
+          "before": "Révoquer un partage arrête les nouvelles visites autorisées, sans rappeler les copies téléchargées.",
+          "after": "Les adresses de fichiers publiés sont signées pour une durée allant jusqu’à 24 heures lors de l’affichage de la page. Révoquer un partage arrête les nouvelles visites autorisées de la page, sans invalider immédiatement les adresses déjà transmises : elles peuvent rester utilisables jusqu’à expiration. Les copies téléchargées ne peuvent pas être rappelées.",
+          "sources": [
+            "lib/server/page-publication.ts"
+          ]
+        }
+      ],
+      "sha256": "055f417a418d2d22baf1b0e64a18ef41a137a74a0eff29f2590efbc82cf2a9d0"
+    },
+    {
+      "article": "project-members",
+      "locale": "en",
+      "passages": [
+        {
+          "before": "Review the member list before removing someone or transferring ownership.",
+          "after": "Review the member list before removing someone. The owner row has no removal action, and these member controls do not transfer project ownership. The owner can cancel a pending invitation before it is accepted; pending state does not disclose whether that address already has an account.",
+          "sources": [
+            "components/project-members.tsx",
+            "lib/server/update-project.ts"
+          ]
+        }
+      ],
+      "sha256": "967734227f15256bee9f4ccd51c252fac45e102db88a41999f1f364e3b73972e"
+    },
+    {
+      "article": "project-members",
+      "locale": "fr",
+      "passages": [
+        {
+          "before": "Examinez la liste avant de retirer un membre ou de transférer la propriété.",
+          "after": "Examinez la liste avant de retirer un membre. La ligne du propriétaire ne propose pas de retrait et ces commandes ne transfèrent pas la propriété du projet. Le propriétaire peut annuler une invitation en attente avant son acceptation ; cet état ne révèle pas si l’adresse possède déjà un compte.",
+          "sources": [
+            "components/project-members.tsx",
+            "lib/server/update-project.ts"
+          ]
+        }
+      ],
+      "sha256": "10f7d38b2124e774ae1da78eeecd1b6b6fac3ad0f3beddb36559e46f06035cc7"
+    },
+    {
+      "article": "publish-a-page",
+      "locale": "en",
+      "passages": [
+        {
+          "before": "Copies or screenshots already received cannot be recalled.",
+          "after": "Copies or screenshots already received cannot be recalled. File download URLs already delivered by a published page are signed for up to 24 hours. Revocation prevents new page visits but those previously issued file URLs can remain valid until they expire.",
+          "sources": [
+            "lib/server/page-publication.ts"
+          ]
+        }
+      ],
+      "sha256": "efaf389962e3acb45c2b68dd3e5b55d72baf6beaea58b039efd0ddb42864130e"
+    },
+    {
+      "article": "publish-a-page",
+      "locale": "fr",
+      "passages": [
+        {
+          "before": "Les copies ou captures déjà reçues ne peuvent pas être rappelées.",
+          "after": "Les copies ou captures déjà reçues ne peuvent pas être rappelées. Les adresses de téléchargement déjà transmises par une page publiée sont signées pour une durée allant jusqu’à 24 heures. La révocation bloque les nouvelles visites de la page, mais ces adresses peuvent rester valides jusqu’à leur expiration.",
+          "sources": [
+            "lib/server/page-publication.ts"
+          ]
+        }
+      ],
+      "sha256": "78275e373aaa8780f565cfe2f69150d631b8e77c17157cbe9552d9f96da1516f"
+    }
+  ]
+}

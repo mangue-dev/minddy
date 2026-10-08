@@ -1,0 +1,212 @@
+{
+  "reviewer": "agent:/root/automation_account_documentation",
+  "date": "2026-10-08",
+  "human": false,
+  "records": [
+    {
+      "article": "self-hosted-compatibility",
+      "locale": "en",
+      "revision": 1,
+      "sourceRevision": 1,
+      "section": "known-runner-limits",
+      "sectionSha256": "b7f8e3ca7422c6f752400d0a0e7c6d3ae42dd1d09c27e622df6ca7feaad268eb",
+      "fullBodySha256": "3e3621c3ed520ac075c7daacf9081ad6fd474aa77a8d8d29124cea12509aae3f",
+      "assessment": "Independent factual and language reading approved for this paragraph: all six retain published-image versus mounted-candidate distinction, three failure conditions, unchecked historical exit result, no new compatibility support or release claim, and mandatory real code-work checks",
+      "sources": [
+        "v0.11.0:deploy/self-hosted/agent-runner.mjs:58,134,430",
+        "deploy/self-hosted/agent-runner.mjs:58,133,193",
+        "deploy/self-hosted/agent-runner-storage.mjs:10,18",
+        "content/documentation/reviews/operator-large-runner-write.json"
+      ],
+      "evidenceQualification": "Tagged/current source compared; sanitized prior/after engineering record read. This reviewer did not execute these runner rehearsals or approve operational lifecycle."
+    },
+    {
+      "article": "self-hosted-compatibility",
+      "locale": "fr",
+      "revision": 1,
+      "sourceRevision": 1,
+      "section": "known-runner-limits",
+      "sectionSha256": "e8eb04926e00dde52abaec94cffa8a0fa62f1546e18cffdd298ff83783f33ca4",
+      "fullBodySha256": "8dbaa419c01184e2ff0bf1d951a479c2c8e25f0e88c33652da5ee921b2dc6689",
+      "assessment": "Independent factual and language reading approved for this paragraph: all six retain published-image versus mounted-candidate distinction, three failure conditions, unchecked historical exit result, no new compatibility support or release claim, and mandatory real code-work checks",
+      "sources": [
+        "v0.11.0:deploy/self-hosted/agent-runner.mjs:58,134,430",
+        "deploy/self-hosted/agent-runner.mjs:58,133,193",
+        "deploy/self-hosted/agent-runner-storage.mjs:10,18",
+        "content/documentation/reviews/operator-large-runner-write.json"
+      ],
+      "evidenceQualification": "Tagged/current source compared; sanitized prior/after engineering record read. This reviewer did not execute these runner rehearsals or approve operational lifecycle."
+    },
+    {
+      "article": "self-hosted-compatibility",
+      "locale": "de",
+      "revision": 1,
+      "sourceRevision": 1,
+      "section": "known-runner-limits",
+      "sectionSha256": "cb5bdfb238b906505e201393603a24a14bc5513a865359ebc4d70de33d7c4b23",
+      "fullBodySha256": "c624c666b00144c015a1143e068bd9e4a20730862726bce21f52ce51084244bf",
+      "assessment": "Independent factual and language reading approved for this paragraph: all six retain published-image versus mounted-candidate distinction, three failure conditions, unchecked historical exit result, no new compatibility support or release claim, and mandatory real code-work checks",
+      "sources": [
+        "v0.11.0:deploy/self-hosted/agent-runner.mjs:58,134,430",
+        "deploy/self-hosted/agent-runner.mjs:58,133,193",
+        "deploy/self-hosted/agent-runner-storage.mjs:10,18",
+        "content/documentation/reviews/operator-large-runner-write.json"
+      ],
+      "evidenceQualification": "Tagged/current source compared; sanitized prior/after engineering record read. This reviewer did not execute these runner rehearsals or approve operational lifecycle."
+    },
+    {
+      "article": "self-hosted-compatibility",
+      "locale": "es",
+      "revision": 1,
+      "sourceRevision": 1,
+      "section": "known-runner-limits",
+      "sectionSha256": "5e98a983faaf5fcd95fa360a7657f24fc2a277d3d73b7ca3674ea13273764f1f",
+      "fullBodySha256": "140afa4860de0bdc5e373f6487041b26a7bdff73f8473a40b3fa95ef079c5e69",
+      "assessment": "Independent factual and language reading approved for this paragraph: all six retain published-image versus mounted-candidate distinction, three failure conditions, unchecked historical exit result, no new compatibility support or release claim, and mandatory real code-work checks",
+      "sources": [
+        "v0.11.0:deploy/self-hosted/agent-runner.mjs:58,134,430",
+        "deploy/self-hosted/agent-runner.mjs:58,133,193",
+        "deploy/self-hosted/agent-runner-storage.mjs:10,18",
+        "content/documentation/reviews/operator-large-runner-write.json"
+      ],
+      "evidenceQualification": "Tagged/current source compared; sanitized prior/after engineering record read. This reviewer did not execute these runner rehearsals or approve operational lifecycle."
+    },
+    {
+      "article": "self-hosted-compatibility",
+      "locale": "it",
+      "revision": 1,
+      "sourceRevision": 1,
+      "section": "known-runner-limits",
+      "sectionSha256": "d831112c93e6c083d0b351baba7ef3f16ec0ba0b5503497b1ed3941ef62b686f",
+      "fullBodySha256": "54e425b9c2b6854f59bdf563a6fa3b58068e571e4efcc0414ba6c163eeaf383e",
+      "assessment": "Independent factual and language reading approved for this paragraph: all six retain published-image versus mounted-candidate distinction, three failure conditions, unchecked historical exit result, no new compatibility support or release claim, and mandatory real code-work checks",
+      "sources": [
+        "v0.11.0:deploy/self-hosted/agent-runner.mjs:58,134,430",
+        "deploy/self-hosted/agent-runner.mjs:58,133,193",
+        "deploy/self-hosted/agent-runner-storage.mjs:10,18",
+        "content/documentation/reviews/operator-large-runner-write.json"
+      ],
+      "evidenceQualification": "Tagged/current source compared; sanitized prior/after engineering record read. This reviewer did not execute these runner rehearsals or approve operational lifecycle."
+    },
+    {
+      "article": "self-hosted-compatibility",
+      "locale": "pt-BR",
+      "revision": 1,
+      "sourceRevision": 1,
+      "section": "known-runner-limits",
+      "sectionSha256": "06d88a06552c01ee603f47a2f66ac5e11a297bcaa72e3bcd39d09d0fef357359",
+      "fullBodySha256": "f5172323c3938252b9ecba3df0935a032ae7448c0acb34b68a329bf2b2e1f621",
+      "assessment": "Independent factual and language reading approved for this paragraph: all six retain published-image versus mounted-candidate distinction, three failure conditions, unchecked historical exit result, no new compatibility support or release claim, and mandatory real code-work checks",
+      "sources": [
+        "v0.11.0:deploy/self-hosted/agent-runner.mjs:58,134,430",
+        "deploy/self-hosted/agent-runner.mjs:58,133,193",
+        "deploy/self-hosted/agent-runner-storage.mjs:10,18",
+        "content/documentation/reviews/operator-large-runner-write.json"
+      ],
+      "evidenceQualification": "Tagged/current source compared; sanitized prior/after engineering record read. This reviewer did not execute these runner rehearsals or approve operational lifecycle."
+    },
+    {
+      "article": "install-a-server",
+      "locale": "en",
+      "revision": 1,
+      "sourceRevision": 1,
+      "section": "known-runner-limits",
+      "sectionSha256": "b7f8e3ca7422c6f752400d0a0e7c6d3ae42dd1d09c27e622df6ca7feaad268eb",
+      "fullBodySha256": "e88467f354119a582716a220609be3392e228f097d6c34c863f40cbc9f68e66e",
+      "assessment": "Independent factual and language reading approved for this paragraph: all six retain published-image versus mounted-candidate distinction, three failure conditions, unchecked historical exit result, no new compatibility support or release claim, and mandatory real code-work checks",
+      "sources": [
+        "v0.11.0:deploy/self-hosted/agent-runner.mjs:58,134,430",
+        "deploy/self-hosted/agent-runner.mjs:58,133,193",
+        "deploy/self-hosted/agent-runner-storage.mjs:10,18",
+        "content/documentation/reviews/operator-large-runner-write.json"
+      ],
+      "evidenceQualification": "Tagged/current source compared; sanitized prior/after engineering record read. This reviewer did not execute these runner rehearsals or approve operational lifecycle."
+    },
+    {
+      "article": "install-a-server",
+      "locale": "fr",
+      "revision": 1,
+      "sourceRevision": 1,
+      "section": "known-runner-limits",
+      "sectionSha256": "e8eb04926e00dde52abaec94cffa8a0fa62f1546e18cffdd298ff83783f33ca4",
+      "fullBodySha256": "6bed29cd9b19f2f7fca07df54c96e6cb1e1d32dcc6133cfab1050796f2ea4a17",
+      "assessment": "Independent factual and language reading approved for this paragraph: all six retain published-image versus mounted-candidate distinction, three failure conditions, unchecked historical exit result, no new compatibility support or release claim, and mandatory real code-work checks",
+      "sources": [
+        "v0.11.0:deploy/self-hosted/agent-runner.mjs:58,134,430",
+        "deploy/self-hosted/agent-runner.mjs:58,133,193",
+        "deploy/self-hosted/agent-runner-storage.mjs:10,18",
+        "content/documentation/reviews/operator-large-runner-write.json"
+      ],
+      "evidenceQualification": "Tagged/current source compared; sanitized prior/after engineering record read. This reviewer did not execute these runner rehearsals or approve operational lifecycle."
+    },
+    {
+      "article": "install-a-server",
+      "locale": "de",
+      "revision": 1,
+      "sourceRevision": 1,
+      "section": "known-runner-limits",
+      "sectionSha256": "cb5bdfb238b906505e201393603a24a14bc5513a865359ebc4d70de33d7c4b23",
+      "fullBodySha256": "8f22959a408940afdb09c62d5be886b53a1975e37bb77874dffdffd50f5aedbd",
+      "assessment": "Independent factual and language reading approved for this paragraph: all six retain published-image versus mounted-candidate distinction, three failure conditions, unchecked historical exit result, no new compatibility support or release claim, and mandatory real code-work checks",
+      "sources": [
+        "v0.11.0:deploy/self-hosted/agent-runner.mjs:58,134,430",
+        "deploy/self-hosted/agent-runner.mjs:58,133,193",
+        "deploy/self-hosted/agent-runner-storage.mjs:10,18",
+        "content/documentation/reviews/operator-large-runner-write.json"
+      ],
+      "evidenceQualification": "Tagged/current source compared; sanitized prior/after engineering record read. This reviewer did not execute these runner rehearsals or approve operational lifecycle."
+    },
+    {
+      "article": "install-a-server",
+      "locale": "es",
+      "revision": 1,
+      "sourceRevision": 1,
+      "section": "known-runner-limits",
+      "sectionSha256": "5e98a983faaf5fcd95fa360a7657f24fc2a277d3d73b7ca3674ea13273764f1f",
+      "fullBodySha256": "1e4be8938aec4f27c583d0e5f2a6d05187ffd09d2fc152f26fe18dc4f7d35aee",
+      "assessment": "Independent factual and language reading approved for this paragraph: all six retain published-image versus mounted-candidate distinction, three failure conditions, unchecked historical exit result, no new compatibility support or release claim, and mandatory real code-work checks",
+      "sources": [
+        "v0.11.0:deploy/self-hosted/agent-runner.mjs:58,134,430",
+        "deploy/self-hosted/agent-runner.mjs:58,133,193",
+        "deploy/self-hosted/agent-runner-storage.mjs:10,18",
+        "content/documentation/reviews/operator-large-runner-write.json"
+      ],
+      "evidenceQualification": "Tagged/current source compared; sanitized prior/after engineering record read. This reviewer did not execute these runner rehearsals or approve operational lifecycle."
+    },
+    {
+      "article": "install-a-server",
+      "locale": "it",
+      "revision": 1,
+      "sourceRevision": 1,
+      "section": "known-runner-limits",
+      "sectionSha256": "d831112c93e6c083d0b351baba7ef3f16ec0ba0b5503497b1ed3941ef62b686f",
+      "fullBodySha256": "77e74a6abb13ce21321cd3b583c47f9fe85dea51fa744a883664f21107e5f675",
+      "assessment": "Independent factual and language reading approved for this paragraph: all six retain published-image versus mounted-candidate distinction, three failure conditions, unchecked historical exit result, no new compatibility support or release claim, and mandatory real code-work checks",
+      "sources": [
+        "v0.11.0:deploy/self-hosted/agent-runner.mjs:58,134,430",
+        "deploy/self-hosted/agent-runner.mjs:58,133,193",
+        "deploy/self-hosted/agent-runner-storage.mjs:10,18",
+        "content/documentation/reviews/operator-large-runner-write.json"
+      ],
+      "evidenceQualification": "Tagged/current source compared; sanitized prior/after engineering record read. This reviewer did not execute these runner rehearsals or approve operational lifecycle."
+    },
+    {
+      "article": "install-a-server",
+      "locale": "pt-BR",
+      "revision": 1,
+      "sourceRevision": 1,
+      "section": "known-runner-limits",
+      "sectionSha256": "06d88a06552c01ee603f47a2f66ac5e11a297bcaa72e3bcd39d09d0fef357359",
+      "fullBodySha256": "b3eaf80acc908ba7f6cf961fbb17610586b1ebd4cffa6982c138a70399350b18",
+      "assessment": "Independent factual and language reading approved for this paragraph: all six retain published-image versus mounted-candidate distinction, three failure conditions, unchecked historical exit result, no new compatibility support or release claim, and mandatory real code-work checks",
+      "sources": [
+        "v0.11.0:deploy/self-hosted/agent-runner.mjs:58,134,430",
+        "deploy/self-hosted/agent-runner.mjs:58,133,193",
+        "deploy/self-hosted/agent-runner-storage.mjs:10,18",
+        "content/documentation/reviews/operator-large-runner-write.json"
+      ],
+      "evidenceQualification": "Tagged/current source compared; sanitized prior/after engineering record read. This reviewer did not execute these runner rehearsals or approve operational lifecycle."
+    }
+  ],
+  "lifecycleApproved": false
+}

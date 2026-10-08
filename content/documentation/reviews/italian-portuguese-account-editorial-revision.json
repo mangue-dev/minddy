@@ -1,0 +1,168 @@
+{
+  "author": "agent:/root/automation_account_documentation",
+  "date": "2026-10-08",
+  "humanReview": false,
+  "scope": "Complete idiomatic Italian and Brazilian Portuguese account prose rewrite after independent review, preserving English source actions, conditions, values, tables and section/image identities. Requires complete independent rereading before language approval.",
+  "records": [
+    {
+      "article": "account-security",
+      "locale": "it",
+      "revision": 2,
+      "sourceRevision": 1,
+      "bodySha256": "260054b47a19775fe25177fdebd58d5123d717033d9844a76e274037bedf9a59",
+      "figuresPreserved": true,
+      "sectionIdsPreserved": true,
+      "independentReviewPending": true
+    },
+    {
+      "article": "account-security",
+      "locale": "pt-BR",
+      "revision": 2,
+      "sourceRevision": 1,
+      "bodySha256": "c5188d0fa834ddcf9dcd6fdc582b1e8fdaa64d4bcf251c2e1c638a8feed1f2d1",
+      "figuresPreserved": true,
+      "sectionIdsPreserved": true,
+      "independentReviewPending": true
+    },
+    {
+      "article": "devices-and-notifications",
+      "locale": "it",
+      "revision": 2,
+      "sourceRevision": 1,
+      "bodySha256": "4e10963c7eaa98285e59f8423accfed5392701ba2aea8a7c578c72a66abc7d70",
+      "figuresPreserved": true,
+      "sectionIdsPreserved": true,
+      "independentReviewPending": true
+    },
+    {
+      "article": "devices-and-notifications",
+      "locale": "pt-BR",
+      "revision": 2,
+      "sourceRevision": 1,
+      "bodySha256": "3b917bdda00bc04cc4e2a0bab8e0a8423bb6460e7691200adb96b6755d221c3a",
+      "figuresPreserved": true,
+      "sectionIdsPreserved": true,
+      "independentReviewPending": true
+    },
+    {
+      "article": "ai-keys-and-models",
+      "locale": "it",
+      "revision": 2,
+      "sourceRevision": 1,
+      "bodySha256": "386eb6a5005cd9222004cdfd3590d4b1b0099f00259cdfacf16e47a9e8cf79b0",
+      "figuresPreserved": true,
+      "sectionIdsPreserved": true,
+      "independentReviewPending": true
+    },
+    {
+      "article": "ai-keys-and-models",
+      "locale": "pt-BR",
+      "revision": 2,
+      "sourceRevision": 1,
+      "bodySha256": "5aaa425680464a8c0b8ac580d7a76310b91a2f80ce10e17cff98984f218b1a1e",
+      "figuresPreserved": true,
+      "sectionIdsPreserved": true,
+      "independentReviewPending": true
+    },
+    {
+      "article": "automation-settings",
+      "locale": "it",
+      "revision": 2,
+      "sourceRevision": 1,
+      "bodySha256": "c053716219297b61db8c48d74d3db6a9a4fecba4e8eafecdb2c493560e298bf5",
+      "figuresPreserved": true,
+      "sectionIdsPreserved": true,
+      "independentReviewPending": true
+    },
+    {
+      "article": "automation-settings",
+      "locale": "pt-BR",
+      "revision": 2,
+      "sourceRevision": 1,
+      "bodySha256": "20abb1c724a56ef64fd47d0f8c99e82c43120c0633c32377ff94108187241ce0",
+      "figuresPreserved": true,
+      "sectionIdsPreserved": true,
+      "independentReviewPending": true
+    },
+    {
+      "article": "import-issues",
+      "locale": "it",
+      "revision": 2,
+      "sourceRevision": 1,
+      "bodySha256": "b0272b35f3283cfee5e5ee290ba8387f792d9030c6114c1690abdadb6f7b2a2c",
+      "figuresPreserved": true,
+      "sectionIdsPreserved": true,
+      "independentReviewPending": true
+    },
+    {
+      "article": "import-issues",
+      "locale": "pt-BR",
+      "revision": 2,
+      "sourceRevision": 1,
+      "bodySha256": "8e7e32a73c4c10960c1c4d5ae68d38fa5c899a500b5893060d5efa6140bfba10",
+      "figuresPreserved": true,
+      "sectionIdsPreserved": true,
+      "independentReviewPending": true
+    },
+    {
+      "article": "transfer-between-instances",
+      "locale": "it",
+      "revision": 2,
+      "sourceRevision": 1,
+      "bodySha256": "7ae409c6b85c1c48348e964695f3fab425c849919827c39f20e9b7532b621f01",
+      "figuresPreserved": true,
+      "sectionIdsPreserved": true,
+      "independentReviewPending": true
+    },
+    {
+      "article": "transfer-between-instances",
+      "locale": "pt-BR",
+      "revision": 2,
+      "sourceRevision": 1,
+      "bodySha256": "e0239b847b94d29f07895d0b68909ab2fa28f9cd21a47d04b46544adad11da6c",
+      "figuresPreserved": true,
+      "sectionIdsPreserved": true,
+      "independentReviewPending": true
+    },
+    {
+      "article": "plans-and-ai-usage",
+      "locale": "it",
+      "revision": 2,
+      "sourceRevision": 1,
+      "bodySha256": "b6e8874a56cde3e18856de39d7e3a042b37a6d8dbddbca961e9ce9809e0e426d",
+      "figuresPreserved": true,
+      "sectionIdsPreserved": true,
+      "independentReviewPending": true
+    },
+    {
+      "article": "plans-and-ai-usage",
+      "locale": "pt-BR",
+      "revision": 2,
+      "sourceRevision": 1,
+      "bodySha256": "07aeec3779534a54bdc457a618d1e65784b573e9c19fff00a7908a37d2fcc71c",
+      "figuresPreserved": true,
+      "sectionIdsPreserved": true,
+      "independentReviewPending": true
+    },
+    {
+      "article": "privacy-and-account-deletion",
+      "locale": "it",
+      "revision": 2,
+      "sourceRevision": 1,
+      "bodySha256": "fae1f6f3cf8257abd1974fd57c3eb5ab5d661e58cd0d6b48ad9f7cf10f0eba1f",
+      "figuresPreserved": true,
+      "sectionIdsPreserved": true,
+      "independentReviewPending": true
+    },
+    {
+      "article": "privacy-and-account-deletion",
+      "locale": "pt-BR",
+      "revision": 2,
+      "sourceRevision": 1,
+      "bodySha256": "f7c64d648f54b8a80c41781005b71d4e9b3bfbf69f03eef28d6ce561ff242b6b",
+      "figuresPreserved": true,
+      "sectionIdsPreserved": true,
+      "independentReviewPending": true
+    }
+  ]
+}

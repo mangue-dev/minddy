@@ -1,0 +1,53 @@
+{
+  "author": "agent:/root/automation_account_documentation",
+  "date": "2026-10-08",
+  "humanReview": false,
+  "scope": "Five complete Spanish account articles rewritten idiomatically after independent review feedback. Awaiting actual independent rereading; no approval invented.",
+  "records": [
+    {
+      "article": "ai-keys-and-models",
+      "locale": "es",
+      "revision": 2,
+      "sha256": "d3dea5bb2ca4fc22435bf0e39922e779cfb0b6c447233ceb1117869766f1fe2a",
+      "meaningComparedWith": "en",
+      "newLanguageReviewRequired": true,
+      "conditionsRetained": "Complete account procedures, permission/Cloud/self-hosted/provider/sandbox distinctions, transfer exceptions, quotas and plan table, privacy/device scope and fresh-authentication deletion conditions."
+    },
+    {
+      "article": "automation-settings",
+      "locale": "es",
+      "revision": 2,
+      "sha256": "5e613b009c50cd1ded0a52782913c096c0da9ca9d8cd0abde362b51b35e70f55",
+      "meaningComparedWith": "en",
+      "newLanguageReviewRequired": true,
+      "conditionsRetained": "Complete account procedures, permission/Cloud/self-hosted/provider/sandbox distinctions, transfer exceptions, quotas and plan table, privacy/device scope and fresh-authentication deletion conditions."
+    },
+    {
+      "article": "transfer-between-instances",
+      "locale": "es",
+      "revision": 2,
+      "sha256": "64b1df92a48af02f9d4aaec9d31801d375e26f4832706a43738eb737ac35fd71",
+      "meaningComparedWith": "en",
+      "newLanguageReviewRequired": true,
+      "conditionsRetained": "Complete account procedures, permission/Cloud/self-hosted/provider/sandbox distinctions, transfer exceptions, quotas and plan table, privacy/device scope and fresh-authentication deletion conditions."
+    },
+    {
+      "article": "plans-and-ai-usage",
+      "locale": "es",
+      "revision": 2,
+      "sha256": "0f8d02c998428b43ae7b50673145bc2b26f350551cf909b35335692091c84989",
+      "meaningComparedWith": "en",
+      "newLanguageReviewRequired": true,
+      "conditionsRetained": "Complete account procedures, permission/Cloud/self-hosted/provider/sandbox distinctions, transfer exceptions, quotas and plan table, privacy/device scope and fresh-authentication deletion conditions."
+    },
+    {
+      "article": "privacy-and-account-deletion",
+      "locale": "es",
+      "revision": 2,
+      "sha256": "7fd695653671239fbf137475595545816b458a38f9b0c3433820e04fdfabfbf5",
+      "meaningComparedWith": "en",
+      "newLanguageReviewRequired": true,
+      "conditionsRetained": "Complete account procedures, permission/Cloud/self-hosted/provider/sandbox distinctions, transfer exceptions, quotas and plan table, privacy/device scope and fresh-authentication deletion conditions."
+    }
+  ]
+}

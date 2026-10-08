@@ -4,12 +4,15 @@ This is the scope ledger for MIN-664, accepted by the issue owner on 2026-10-08
 as recorded in the [study](min-664-public-documentation-study.md). A row names
 an observable reader task or a specific reference need. It is not satisfied by
 a topic landing page.
-Article IDs are proposed stable IDs; several rows can share an article only if
+Article IDs are stable IDs; several rows can share an article only if
 each outcome remains findable and has a complete, directly linked section.
 
-**Status of every retained row:** source inventory complete; public guide,
-translations, illustration approval and reader acceptance pending. Source
-existence does not establish publication or procedural verification. The
+**Status of every retained row, 2026-10-08:** complete articles published in all
+six locales, with independent agent language/factual reviews and approved
+illustrations. `check:documentation:release` verifies 90/90 workflows. Actual
+representative reader and operational executions, qualifications and final
+browser checks are in the [delivery ledger](min-664-delivery.md). No human
+acceptance or production deployment is claimed. The
 [source inventory](min-664-source-inventory.md) gives the release boundary and
 source dispositions.
 

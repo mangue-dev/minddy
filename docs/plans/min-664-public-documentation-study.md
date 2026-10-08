@@ -336,3 +336,14 @@ Cloud baseline. Assign qualified article/locale reviewers and representative
 readers, and retain sanitized acceptance records with the article revisions.
 Those verification activities remain open; no procedural or reader approval
 is inferred from approval of the scope.
+
+## Delivery follow-up: 2026-10-08
+
+The accepted scope now has 90 complete articles in each of six locales and
+approved localized illustrations. The [delivery ledger](min-664-delivery.md)
+records independent agent reviews authorized by the owner, actual representative
+reader executions, the identified adapted self-hosted lifecycle, and anonymous
+production-build checks. The historical findings and first-lot limits above
+remain unchanged; later evidence does not turn them into successful tests.
+No human acceptance, unchanged-tag installation, current Cloud deployment
+version or production deployment is inferred from the delivered candidate.

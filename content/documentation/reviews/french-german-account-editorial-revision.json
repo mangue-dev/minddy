@@ -1,0 +1,168 @@
+{
+  "author": "agent:/root/automation_account_documentation",
+  "date": "2026-10-08",
+  "humanReview": false,
+  "scope": "Complete idiomatic French and German account prose rewrite after independent review, preserving English source actions, conditions, values, tables and section/image identities. Requires complete independent rereading before language approval.",
+  "records": [
+    {
+      "article": "account-security",
+      "locale": "fr",
+      "revision": 2,
+      "sourceRevision": 1,
+      "bodySha256": "17e37f5d7a5295ab9381cf99c28980e276c061e0bf06ef9e0968383a317242ea",
+      "figuresPreserved": true,
+      "sectionIdsPreserved": true,
+      "independentReviewPending": true
+    },
+    {
+      "article": "account-security",
+      "locale": "de",
+      "revision": 2,
+      "sourceRevision": 1,
+      "bodySha256": "af46d08735ee81ce0b5798b964e9b796f0bde1bdb06bd9c2b8086f384689133a",
+      "figuresPreserved": true,
+      "sectionIdsPreserved": true,
+      "independentReviewPending": true
+    },
+    {
+      "article": "devices-and-notifications",
+      "locale": "fr",
+      "revision": 2,
+      "sourceRevision": 1,
+      "bodySha256": "6638974a343f9494d59779360e8626b1a4f91dbbe4e00fc736fc3ff3698f25f4",
+      "figuresPreserved": true,
+      "sectionIdsPreserved": true,
+      "independentReviewPending": true
+    },
+    {
+      "article": "devices-and-notifications",
+      "locale": "de",
+      "revision": 2,
+      "sourceRevision": 1,
+      "bodySha256": "a821f7d752939b78c658254a8a420fcac953a0e68bd57acfd6c8516a3aa0a356",
+      "figuresPreserved": true,
+      "sectionIdsPreserved": true,
+      "independentReviewPending": true
+    },
+    {
+      "article": "ai-keys-and-models",
+      "locale": "fr",
+      "revision": 2,
+      "sourceRevision": 1,
+      "bodySha256": "30ecbd62052bed4bb30e2d573fe80c0a998f463f1df926ca8455a2ee6771d043",
+      "figuresPreserved": true,
+      "sectionIdsPreserved": true,
+      "independentReviewPending": true
+    },
+    {
+      "article": "ai-keys-and-models",
+      "locale": "de",
+      "revision": 2,
+      "sourceRevision": 1,
+      "bodySha256": "00ba227a0ff96e83d4584e2a12a871c2fed0a50116978834be7ce454ca7834f4",
+      "figuresPreserved": true,
+      "sectionIdsPreserved": true,
+      "independentReviewPending": true
+    },
+    {
+      "article": "automation-settings",
+      "locale": "fr",
+      "revision": 2,
+      "sourceRevision": 1,
+      "bodySha256": "561c07698e1a70bde2c350fadab9ad5382258e4958c02d2aceaaa2758e302b59",
+      "figuresPreserved": true,
+      "sectionIdsPreserved": true,
+      "independentReviewPending": true
+    },
+    {
+      "article": "automation-settings",
+      "locale": "de",
+      "revision": 2,
+      "sourceRevision": 1,
+      "bodySha256": "ed1af46bfeb9e5dd54b0b20a833adb48e918cc9f6ef05b41fdd03c687b7b98a9",
+      "figuresPreserved": true,
+      "sectionIdsPreserved": true,
+      "independentReviewPending": true
+    },
+    {
+      "article": "import-issues",
+      "locale": "fr",
+      "revision": 2,
+      "sourceRevision": 1,
+      "bodySha256": "105265518f4410aa4b76bfe628ce3302a552bb14a138bdc54a2a539fb8ead734",
+      "figuresPreserved": true,
+      "sectionIdsPreserved": true,
+      "independentReviewPending": true
+    },
+    {
+      "article": "import-issues",
+      "locale": "de",
+      "revision": 2,
+      "sourceRevision": 1,
+      "bodySha256": "ac1aec57fed37574695747d8e8bf9ec1ec3cfac0f9e5d49b66c2da6c82668a9b",
+      "figuresPreserved": true,
+      "sectionIdsPreserved": true,
+      "independentReviewPending": true
+    },
+    {
+      "article": "transfer-between-instances",
+      "locale": "fr",
+      "revision": 2,
+      "sourceRevision": 1,
+      "bodySha256": "438e85621ae0f68f5d40a43efca3e8a14e373b5c8114cf1235d0b6fa56619dc6",
+      "figuresPreserved": true,
+      "sectionIdsPreserved": true,
+      "independentReviewPending": true
+    },
+    {
+      "article": "transfer-between-instances",
+      "locale": "de",
+      "revision": 2,
+      "sourceRevision": 1,
+      "bodySha256": "6d10856e0894486777f4b7fd335e000d126fd10d9ca869f60b92935682a3b9f3",
+      "figuresPreserved": true,
+      "sectionIdsPreserved": true,
+      "independentReviewPending": true
+    },
+    {
+      "article": "plans-and-ai-usage",
+      "locale": "fr",
+      "revision": 2,
+      "sourceRevision": 1,
+      "bodySha256": "7669415e6774bd39ed93781f43c2d61c69b0c439c97b6eae2a234447ff00d98d",
+      "figuresPreserved": true,
+      "sectionIdsPreserved": true,
+      "independentReviewPending": true
+    },
+    {
+      "article": "plans-and-ai-usage",
+      "locale": "de",
+      "revision": 2,
+      "sourceRevision": 1,
+      "bodySha256": "0a70fd68d15760e3c230edbcada06dc0cc0838fbf0ac993bac5bb06786fa4ddc",
+      "figuresPreserved": true,
+      "sectionIdsPreserved": true,
+      "independentReviewPending": true
+    },
+    {
+      "article": "privacy-and-account-deletion",
+      "locale": "fr",
+      "revision": 2,
+      "sourceRevision": 1,
+      "bodySha256": "246553af65a46cc4473472d8cdd1d7a5803ec910055b4968bfd4bb5a50e54324",
+      "figuresPreserved": true,
+      "sectionIdsPreserved": true,
+      "independentReviewPending": true
+    },
+    {
+      "article": "privacy-and-account-deletion",
+      "locale": "de",
+      "revision": 2,
+      "sourceRevision": 1,
+      "bodySha256": "2dc727b027c1aa15657d8d51bca8564ddb3152809349554a9267b0c69c54bc9b",
+      "figuresPreserved": true,
+      "sectionIdsPreserved": true,
+      "independentReviewPending": true
+    }
+  ]
+}

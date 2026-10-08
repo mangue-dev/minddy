@@ -1,0 +1,88 @@
+{
+  "date": "2026-10-08",
+  "beforeInitializerFix": {
+    "date": "2026-10-08",
+    "scope": "Disposable real sandbox DNS and unauthenticated health request only; no LLM or forge credentials",
+    "requests": [
+      {
+        "method": "POST",
+        "action": "/v1/sandboxes/<disposable-sandbox>",
+        "status": 200
+      },
+      {
+        "method": "POST",
+        "action": "/v1/sandboxes/<disposable-sandbox>/commands",
+        "status": 200
+      },
+      {
+        "method": "DELETE",
+        "action": "/v1/sandboxes/<disposable-sandbox>",
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "action": "/v1/sandboxes/<disposable-sandbox>",
+        "status": 200
+      }
+    ],
+    "exitCode": 127,
+    "result": {
+      "failed": true
+    },
+    "sandboxDeleted": true
+  },
+  "afterInitializerFix": {
+    "date": "2026-10-08",
+    "scope": "Disposable real sandbox DNS and unauthenticated health request only; no LLM or forge credentials",
+    "requests": [
+      {
+        "method": "POST",
+        "action": "/v1/sandboxes/<disposable-sandbox>",
+        "status": 200
+      },
+      {
+        "method": "POST",
+        "action": "/v1/sandboxes/<disposable-sandbox>/commands",
+        "status": 200
+      },
+      {
+        "method": "DELETE",
+        "action": "/v1/sandboxes/<disposable-sandbox>",
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "action": "/v1/sandboxes/<disposable-sandbox>",
+        "status": 200
+      }
+    ],
+    "exitCode": 0,
+    "result": {
+      "directories": [
+        {
+          "exists": true,
+          "uid": 10001
+        },
+        {
+          "exists": true,
+          "uid": 10001
+        },
+        {
+          "exists": true,
+          "uid": 10001
+        },
+        {
+          "exists": true,
+          "uid": 10001
+        }
+      ],
+      "cwd": "/vercel/sandbox",
+      "dnsResolved": true,
+      "healthStatus": 200
+    },
+    "sandboxDeleted": true
+  },
+  "runnerHash": "d3d02f8b8033f6451f9506118144cda6b817ed24698216d778e8c425d1f9a230",
+  "scope": "Candidate runner and helper mounted read-only on published OCI v0.11.0; initialization evaluated before any files/write request, not untouched release acceptance",
+  "publicationApproved": false
+}

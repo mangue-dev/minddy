@@ -1,0 +1,82 @@
+{
+  "date": "2026-10-08",
+  "executor": "agent:/root with real browser, Numo worker, GitHub API and isolated Git checkout",
+  "humanAcceptance": false,
+  "profile": "self-hosted candidate 0.11.1 with adapted/restored v0.11.0 backend, 242 applied migrations; Docker Desktop aarch64",
+  "repository": "mangue-dev/minddy-min-664-reader-fixture",
+  "conversationId": "fca0cb33-d0e3-4ae1-875c-168cd55d5b4e",
+  "unavailableCase": {
+    "observed": "With no AI provider configured, the UI displays the unavailable configuration explanation and has no active composer.",
+    "record": "numo-account-independent-source-review-2026-10-08.json"
+  },
+  "initialCodeRun": {
+    "runId": "8a0f13ea-be6c-4fe1-ae1f-4c86ba4e35f3",
+    "observed": "Real edits and three passing tests. PR creation refused because asynchronous title changed the expected branch.",
+    "status": "partial",
+    "localCommit": "f6e3228f33b2a1237a8e7b471f0bbb9d377be3a1"
+  },
+  "branchRepair": {
+    "minddyCommit": "00a911af4",
+    "observed": "Strict branch verification retained; both executor and control plane derive the branch from immutable initial request, not the asynchronous title.",
+    "targetedTests": {
+      "passed": 124,
+      "suites": 3
+    }
+  },
+  "prCreation": {
+    "runId": "2edf486e-f669-4187-a0da-ee53e24f4473",
+    "pr": "https://github.com/mangue-dev/minddy-min-664-reader-fixture/pull/1",
+    "head": "3b33d8262a7c9b7928f44997a78a0ccfae953356",
+    "finding": "Independent inspection found the worker had used stranger instead of the requested World fallback. Passing self-written tests did not satisfy the request."
+  },
+  "reviewAndCorrection": {
+    "runId": "b8d43dbf-2bc0-4498-afc0-5de17ca310dc",
+    "observed": "Sent the exact finding in the existing Numo conversation. The worker updated the existing PR branch; no duplicate PR or merge.",
+    "head": "08b1544f76be74be399fef0989fc7d850d82309f",
+    "workerVerification": [
+      {
+        "status": "passed",
+        "command": "git diff main"
+      },
+      {
+        "status": "passed",
+        "command": "node --test greeting.test.js"
+      }
+    ],
+    "changedFiles": [
+      "greeting.js",
+      "greeting.test.js"
+    ],
+    "independentVerification": {
+      "repositoryHead": "08b1544f76be74be399fef0989fc7d850d82309f",
+      "npmTest": {
+        "exit": 0,
+        "passed": 4,
+        "failed": 0
+      },
+      "assertions": [
+        "greeting(\" Alex \") = Hello, Alex!",
+        "greeting(\"\") = Hello, World!",
+        "greeting(\"   \") = Hello, World!"
+      ],
+      "assertionExit": 0,
+      "cosmeticLimitation": "Two test names still say stranger; their actual assertions expect World."
+    },
+    "dco": "Both bot commits have a Signed-off-by trailer matching their actual author identity.",
+    "prState": "OPEN",
+    "merged": false
+  },
+  "harnessDiagnosticFailures": [
+    {
+      "scope": "Independent checkout helper initially ran npm test and assertions from /tmp instead of the cloned repository",
+      "observed": "ENOENT /tmp/package.json and module not found",
+      "correction": "Repeated both commands from the verified checkout; four tests and three requirement assertions passed."
+    }
+  ],
+  "claimsExcluded": [
+    "No production deployment",
+    "No human review",
+    "No claim that the initial failing run created a PR",
+    "No claim that a passing worker test alone proves the requested behavior"
+  ]
+}

@@ -1,0 +1,74 @@
+{
+  "date": "2026-10-08",
+  "profile": "Published v0.11.0 OCI engineering profile with current candidate runner and storage helper mounted read-only; not an untouched release validation",
+  "beforeCurrentChunkFix": {
+    "date": "2026-10-08",
+    "scope": "Nonsecret 1.2 MB deterministic disposable file write, no harness or control tokens read",
+    "requests": [
+      {
+        "method": "POST",
+        "action": "/v1/sandboxes/<disposable-sandbox>",
+        "status": 200
+      },
+      {
+        "method": "POST",
+        "action": "/v1/sandboxes/<disposable-sandbox>/files/write",
+        "status": 500,
+        "publicError": "agent runner request failed"
+      },
+      {
+        "method": "DELETE",
+        "action": "/v1/sandboxes/<disposable-sandbox>",
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "action": "/v1/sandboxes/<disposable-sandbox>",
+        "status": 200
+      }
+    ],
+    "writeSucceeded": false,
+    "sandboxDeleted": true
+  },
+  "afterCurrentChunkFix": {
+    "date": "2026-10-08",
+    "scope": "Nonsecret 1.2 MB deterministic disposable file write, no harness or control tokens read",
+    "requests": [
+      {
+        "method": "POST",
+        "action": "/v1/sandboxes/<disposable-sandbox>",
+        "status": 200
+      },
+      {
+        "method": "POST",
+        "action": "/v1/sandboxes/<disposable-sandbox>/files/write",
+        "status": 200
+      },
+      {
+        "method": "POST",
+        "action": "/v1/sandboxes/<disposable-sandbox>/files/read",
+        "status": 200
+      },
+      {
+        "method": "DELETE",
+        "action": "/v1/sandboxes/<disposable-sandbox>",
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "action": "/v1/sandboxes/<disposable-sandbox>",
+        "status": 200
+      }
+    ],
+    "writeSucceeded": true,
+    "readExists": true,
+    "sha256Matches": true,
+    "sha256": "5f9ba20054d5f86075105e6e444758e871807cc819cd862d400f22d9ceb75aba",
+    "sandboxDeleted": true
+  },
+  "sourceHashes": {
+    "deploy/self-hosted/agent-runner.mjs": "aee3f9f21defee8833292e73b8f6b72ef26b96f407f4b6bad0b60a51bf09fbb7",
+    "deploy/self-hosted/agent-runner-storage.mjs": "156970bda9b2a3237f168c97dfab7a6fccfabada07761458d9d058d9de9c8aa7"
+  },
+  "publicationApproved": false
+}

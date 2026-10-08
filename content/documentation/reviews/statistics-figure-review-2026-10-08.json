@@ -1,0 +1,90 @@
+{
+  "reviewer": "Codex agent review_documentation_locales",
+  "date": "2026-10-08",
+  "figures": [
+    {
+      "article": "personal-statistics",
+      "locale": "en",
+      "figureId": "personal-statistics-steps",
+      "src": "/documentation/en/reader-statistics.png",
+      "sha256": "66b8fc63cdae4ba5a9f6f35c6cdbf0196a1de8d6224722d59e163afdff1f9ed6",
+      "sourceRecord": "content/documentation/reviews/reader-fixture-captures-2026-10-08.json",
+      "reviewer": "Codex agent review_documentation_locales",
+      "reviewedAt": "2026-10-08",
+      "observed": "Actual annual activity grid, breakdowns, rhythm and all-time totals; one completed issue and eleven created issues. No fabricated metric. All six exact images individually inspected.",
+      "limitations": "The annual grid is horizontally scrollable; the current-day edge is partly outside this initial scroll position. Names localized in GET display fixtures, numbers unchanged. No human acceptance."
+    },
+    {
+      "article": "personal-statistics",
+      "locale": "fr",
+      "figureId": "personal-statistics-steps",
+      "src": "/documentation/fr/reader-statistics.png",
+      "sha256": "22d533e01fb58da38b930e3440ad56cb03f07ce7101111719cc4b483aad22335",
+      "sourceRecord": "content/documentation/reviews/reader-fixture-captures-2026-10-08.json",
+      "reviewer": "Codex agent review_documentation_locales",
+      "reviewedAt": "2026-10-08",
+      "observed": "Actual annual activity grid, breakdowns, rhythm and all-time totals; one completed issue and eleven created issues. No fabricated metric. All six exact images individually inspected.",
+      "limitations": "The annual grid is horizontally scrollable; the current-day edge is partly outside this initial scroll position. Names localized in GET display fixtures, numbers unchanged. No human acceptance."
+    },
+    {
+      "article": "personal-statistics",
+      "locale": "de",
+      "figureId": "personal-statistics-steps",
+      "src": "/documentation/de/reader-statistics.png",
+      "sha256": "9e0041c0260741386fb1b195256cea3194128a84c0f5a921b8c35609519182c4",
+      "sourceRecord": "content/documentation/reviews/reader-fixture-captures-2026-10-08.json",
+      "reviewer": "Codex agent review_documentation_locales",
+      "reviewedAt": "2026-10-08",
+      "observed": "Actual annual activity grid, breakdowns, rhythm and all-time totals; one completed issue and eleven created issues. No fabricated metric. All six exact images individually inspected.",
+      "limitations": "The annual grid is horizontally scrollable; the current-day edge is partly outside this initial scroll position. Names localized in GET display fixtures, numbers unchanged. No human acceptance.",
+      "additionalCopyReview": "workLandscapeIntro singular/plural corrected in this locale, 43 focused tests rerun and exact resulting PNG individually inspected."
+    },
+    {
+      "article": "personal-statistics",
+      "locale": "es",
+      "figureId": "personal-statistics-steps",
+      "src": "/documentation/es/reader-statistics.png",
+      "sha256": "67c01a3ef2a8c03c2f3523103a29f9398041e97c97f486f82437282472b40beb",
+      "sourceRecord": "content/documentation/reviews/reader-fixture-captures-2026-10-08.json",
+      "reviewer": "Codex agent review_documentation_locales",
+      "reviewedAt": "2026-10-08",
+      "observed": "Actual annual activity grid, breakdowns, rhythm and all-time totals; one completed issue and eleven created issues. No fabricated metric. All six exact images individually inspected.",
+      "limitations": "The annual grid is horizontally scrollable; the current-day edge is partly outside this initial scroll position. Names localized in GET display fixtures, numbers unchanged. No human acceptance."
+    },
+    {
+      "article": "personal-statistics",
+      "locale": "it",
+      "figureId": "personal-statistics-steps",
+      "src": "/documentation/it/reader-statistics.png",
+      "sha256": "bba46d9c3781e0b9c316fa1326933830d244cdeff39602997249092b70593adf",
+      "sourceRecord": "content/documentation/reviews/reader-fixture-captures-2026-10-08.json",
+      "reviewer": "Codex agent review_documentation_locales",
+      "reviewedAt": "2026-10-08",
+      "observed": "Actual annual activity grid, breakdowns, rhythm and all-time totals; one completed issue and eleven created issues. No fabricated metric. All six exact images individually inspected.",
+      "limitations": "The annual grid is horizontally scrollable; the current-day edge is partly outside this initial scroll position. Names localized in GET display fixtures, numbers unchanged. No human acceptance.",
+      "additionalCopyReview": "workLandscapeIntro singular/plural corrected in this locale, 43 focused tests rerun and exact resulting PNG individually inspected."
+    },
+    {
+      "article": "personal-statistics",
+      "locale": "pt-BR",
+      "figureId": "personal-statistics-steps",
+      "src": "/documentation/pt-BR/reader-statistics.png",
+      "sha256": "fdf652ab912607a83111b964c68e5facb6fda7b7340fec4a2f25a2a8058c6ede",
+      "sourceRecord": "content/documentation/reviews/reader-fixture-captures-2026-10-08.json",
+      "reviewer": "Codex agent review_documentation_locales",
+      "reviewedAt": "2026-10-08",
+      "observed": "Actual annual activity grid, breakdowns, rhythm and all-time totals; one completed issue and eleven created issues. No fabricated metric. All six exact images individually inspected.",
+      "limitations": "The annual grid is horizontally scrollable; the current-day edge is partly outside this initial scroll position. Names localized in GET display fixtures, numbers unchanged. No human acceptance.",
+      "additionalCopyReview": "workLandscapeIntro singular/plural corrected in this locale, 43 focused tests rerun and exact resulting PNG individually inspected."
+    }
+  ],
+  "checks": [
+    "43 focused statistics/i18n tests passed",
+    "All six exact final images individually visually inspected"
+  ],
+  "copyChanges": [
+    "Stats.heroTotalLabel: ICU singular/plural in six locales",
+    "Stats.cycleCount: idiomatic one/many in Italian and Brazilian Portuguese",
+    "Stats.workLandscapeIntro: idiomatic singular/plural in German, Italian and Brazilian Portuguese."
+  ]
+}

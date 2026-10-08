@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="640" viewBox="0 0 720 640" role="img" aria-labelledby="title desc">
+<title id="title">Arbeitsbereich verschlüsseln und Schlüssel erhalten</title>
+<desc id="desc">Diagramm: Eigener Wurzelschlüssel außerhalb PostgreSQL. Umschlossene Projekt-, Nutzer-, Systemschlüssel. Autorisierte Serverentschlüsselung. Restore: Datenbank + Storage + passende Schlüssel.</desc>
+<rect width="720" height="640" rx="20" fill="#fafaf9"/>
+<rect x="24" y="24" width="672" height="128" rx="16" fill="#ffffff" stroke="#a8a29e" stroke-width="2"/>
+<circle cx="60" cy="88" r="20" fill="#0f766e"/>
+<circle cx="60" cy="88" r="5" fill="#ffffff"/>
+<text x="98" y="81" font-family="Arial, sans-serif" font-size="29" fill="#1c1917">Eigener Wurzelschlüssel außerhalb</text>
+<text x="98" y="115" font-family="Arial, sans-serif" font-size="29" fill="#1c1917">PostgreSQL</text>
+<rect x="24" y="178" width="672" height="128" rx="16" fill="#ffffff" stroke="#a8a29e" stroke-width="2"/>
+<circle cx="60" cy="242" r="20" fill="#0f766e"/>
+<circle cx="60" cy="242" r="5" fill="#ffffff"/>
+<text x="98" y="235" font-family="Arial, sans-serif" font-size="29" fill="#1c1917">Umschlossene Projekt-, Nutzer-,</text>
+<text x="98" y="269" font-family="Arial, sans-serif" font-size="29" fill="#1c1917">Systemschlüssel</text>
+<rect x="24" y="332" width="672" height="128" rx="16" fill="#ffffff" stroke="#a8a29e" stroke-width="2"/>
+<circle cx="60" cy="396" r="20" fill="#0f766e"/>
+<circle cx="60" cy="396" r="5" fill="#ffffff"/>
+<text x="98" y="406" font-family="Arial, sans-serif" font-size="29" fill="#1c1917">Autorisierte Serverentschlüsselung</text>
+<rect x="24" y="486" width="672" height="128" rx="16" fill="#ffffff" stroke="#a8a29e" stroke-width="2"/>
+<circle cx="60" cy="550" r="20" fill="#0f766e"/>
+<circle cx="60" cy="550" r="5" fill="#ffffff"/>
+<text x="98" y="543" font-family="Arial, sans-serif" font-size="29" fill="#1c1917">Restore: Datenbank + Storage +</text>
+<text x="98" y="577" font-family="Arial, sans-serif" font-size="29" fill="#1c1917">passende Schlüssel</text>
+</svg>

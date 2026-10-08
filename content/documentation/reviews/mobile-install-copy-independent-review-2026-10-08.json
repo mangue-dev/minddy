@@ -1,0 +1,56 @@
+{
+  "date": "2026-10-08",
+  "reviewer": "agent:/root/review_documentation_locales",
+  "entries": [
+    {
+      "locale": "en",
+      "selectedCopySha256": "d9256432e2d42759f369713a2af4afed8da8916276ea1bec9184dd48fe854c02",
+      "review": "Full selected iOS/Android guide actions, public guide strings, conditions and illustrated labels read. Exact platform evidence is separately qualified; no native install performed.",
+      "humanAcceptance": false
+    },
+    {
+      "locale": "fr",
+      "selectedCopySha256": "fd8528406f93e0afe2f7ebae3db8bf727fdb96f63b173ca9400b8e6364ed722d",
+      "review": "Full selected iOS/Android guide actions, public guide strings, conditions and illustrated labels read. Exact platform evidence is separately qualified; no native install performed.",
+      "humanAcceptance": false
+    },
+    {
+      "locale": "de",
+      "selectedCopySha256": "31dcd3d1aee431f18c3a79253ebb8ae9365afcd96f3459dd30ea101ccec58936",
+      "review": "Full selected iOS/Android guide actions, public guide strings, conditions and illustrated labels read. Exact platform evidence is separately qualified; no native install performed.",
+      "humanAcceptance": false
+    },
+    {
+      "locale": "es",
+      "selectedCopySha256": "528cbf453c66c1d1becca39515999bbc23fbb268801e48f8ac413aa3a352e77e",
+      "review": "Full selected iOS/Android guide actions, public guide strings, conditions and illustrated labels read. Exact platform evidence is separately qualified; no native install performed.",
+      "humanAcceptance": false
+    },
+    {
+      "locale": "it",
+      "selectedCopySha256": "3c3444d1e496cf3fbc19dac9e70072b3680f4d49d42ffd8d235f5b3f076b9d16",
+      "review": "Full selected iOS/Android guide actions, public guide strings, conditions and illustrated labels read. Exact platform evidence is separately qualified; no native install performed.",
+      "humanAcceptance": false
+    },
+    {
+      "locale": "pt-BR",
+      "selectedCopySha256": "99ca88c0cdf905fc92e10f95f6e07a2547e35f88195af931ff03f3db6d783373",
+      "review": "Full selected iOS/Android guide actions, public guide strings, conditions and illustrated labels read. Exact platform evidence is separately qualified; no native install performed.",
+      "humanAcceptance": false
+    }
+  ],
+  "sourceRead": [
+    "components/marketing/mobile-pwa-install-guide.tsx",
+    "components/marketing/mobile-install-guide-copy.ts",
+    "public/sw.js"
+  ],
+  "officialReferences": [
+    "https://support.apple.com/guide/iphone/iphea86e5236/ios",
+    "https://support.apple.com/fr-fr/guide/iphone/iphea86e5236/ios",
+    "https://support.apple.com/de-de/guide/iphone/iphea86e5236/ios",
+    "https://support.apple.com/es-es/guide/iphone/iphea86e5236/ios",
+    "https://support.apple.com/it-it/guide/iphone/iphea86e5236/ios",
+    "https://support.apple.com/pt-br/guide/iphone/iphea86e5236/ios",
+    "https://support.google.com/chrome/answer/9658361?co=GENIE.Platform%3DAndroid&hl=it"
+  ]
+}

@@ -1,0 +1,222 @@
+{
+  "reviewer": "Codex root agent",
+  "date": "2026-10-08",
+  "kind": "Actual representative owner and member browser execution, not human acceptance",
+  "version": "0.11.1 candidate",
+  "sourceCommit": "d29222b173fedaf316cf5b7706410ad11d11c723",
+  "workingTreeChanges": true,
+  "profile": "Candidate localhost:3001 with disposable adapted and restored v0.11.0 full-stack backend; SMTP Mailpit; no production deployment",
+  "projectId": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+  "guides": [
+    {
+      "id": "account-access",
+      "locale": "fr",
+      "url": "http://localhost:3001/fr/documentation/account-access",
+      "revision": 2,
+      "sourceRevision": 1,
+      "sha256": "274db2abf9029bbe6bed1f05a7f030a53b40ae119c3711b1a7d9dffe9762fadd"
+    },
+    {
+      "id": "account-recovery",
+      "locale": "fr",
+      "url": "http://localhost:3001/fr/documentation/account-recovery",
+      "revision": 1,
+      "sourceRevision": 1,
+      "sha256": "18cfcb734609eebb95363de11497a349d5d9acc60cfb92cd30b55318d82ed944"
+    },
+    {
+      "id": "first-project",
+      "locale": "fr",
+      "url": "http://localhost:3001/fr/documentation/first-project",
+      "revision": 2,
+      "sourceRevision": 2,
+      "sha256": "c963f5f0727f6ac5b6dfa9b0c32b642f2d271049320e5abc76afca15a6960b76"
+    },
+    {
+      "id": "project-members",
+      "locale": "fr",
+      "url": "http://localhost:3001/fr/documentation/project-members",
+      "revision": 2,
+      "sourceRevision": 2,
+      "sha256": "f4de4d34c336ed9307bd710f90a85efd13c41e70f807a04fb116859b3697dff9"
+    },
+    {
+      "id": "implementation-plans",
+      "locale": "fr",
+      "url": "http://localhost:3001/fr/documentation/implementation-plans",
+      "revision": 2,
+      "sourceRevision": 2,
+      "sha256": "2952ae40002b4b7f257ae57238b7c9b01671818d33347c5b10c96b821e17efac"
+    },
+    {
+      "id": "issue-statuses",
+      "locale": "fr",
+      "url": "http://localhost:3001/fr/documentation/issue-statuses",
+      "revision": 1,
+      "sourceRevision": 1,
+      "sha256": "f5875342a8038292a26ab6418157ef2ae038f52646a7d2eb68c0597c57778ef8"
+    },
+    {
+      "id": "sub-issues",
+      "locale": "fr",
+      "url": "http://localhost:3001/fr/documentation/sub-issues",
+      "revision": 2,
+      "sourceRevision": 2,
+      "sha256": "65f5c50a4f897244a52d8180ab04244b331199d9414885fb6fa5eba8326700e6"
+    },
+    {
+      "id": "issue-dependencies",
+      "locale": "fr",
+      "url": "http://localhost:3001/fr/documentation/issue-dependencies",
+      "revision": 2,
+      "sourceRevision": 2,
+      "sha256": "b51017df8addfa15ec07ce1430241156ab4564e57973e868989214dde1f73360"
+    },
+    {
+      "id": "personal-cycle",
+      "locale": "fr",
+      "url": "http://localhost:3001/fr/documentation/personal-cycle",
+      "revision": 1,
+      "sourceRevision": 1,
+      "sha256": "07715e2b42ff487bae87ed9911f5f66105d9da0028c994fa1d01442f260f23a0"
+    },
+    {
+      "id": "trash-and-recovery",
+      "locale": "fr",
+      "url": "http://localhost:3001/fr/documentation/trash-and-recovery",
+      "revision": 1,
+      "sourceRevision": 1,
+      "sha256": "96f61f4d177f831f2ebd4ca25f2a13a09e87b9c5e5a705a0c7a2f38c50ff105c"
+    }
+  ],
+  "procedureSource": "Public documentation preview, product controls and actual responses. Source code was used to diagnose observed failures, not as evidence of unexecuted reader outcomes.",
+  "results": [
+    {
+      "procedure": "project",
+      "claims": [
+        "New-project wizard completed with optional icon/repository/brief skipped and automatic assignment disabled."
+      ],
+      "failures": []
+    },
+    {
+      "procedure": "actions",
+      "claims": [
+        "DOC-1 status changed to in progress using actual picker."
+      ],
+      "failures": []
+    },
+    {
+      "procedure": "member",
+      "claims": [
+        "Invited member joined from the Home invitation banner and opened the shared project board.",
+        "Member saw the owner's persisted manual plan with 1/3 progress, excluding canceled tasks and Questions.",
+        "Non-owner membership screen has no invite form.",
+        "Non-owner invitation rejected with HTTP 403; no invitation added."
+      ],
+      "failures": []
+    },
+    {
+      "procedure": "realtime",
+      "claims": [
+        "A separately signed-in member saw the owner's persisted issue title change through Realtime without reload."
+      ],
+      "failures": []
+    },
+    {
+      "procedure": "hierarchy",
+      "claims": [
+        "An actual inline sub-issue inherited the top-level parent and its objective.",
+        "The saved child appears under its parent after reload.",
+        "The incoming triage issue is stored for localized captures before acceptance."
+      ],
+      "failures": []
+    },
+    {
+      "procedure": "cycle-verify",
+      "claims": [
+        "After toggling off/on through settings, the same browser session reads enabled=true and a current cycle from the real board API without signing in again.",
+        "DOC-2 entered the current cycle, acquired the cycle owner as assignee and kept backlog status.",
+        "The actual Cycle view displays DOC-2."
+      ],
+      "failures": []
+    },
+    {
+      "procedure": "delete",
+      "claims": [
+        "DOC-3 deleted after the issue-panel confirmation and appears in recoverable trash."
+      ],
+      "failures": []
+    },
+    {
+      "procedure": "restore",
+      "claims": [
+        "DOC-3 was restored through the actual trash menu and returned to its project after reload; no permanent deletion."
+      ],
+      "failures": []
+    },
+    {
+      "procedure": "auth-continue-result",
+      "claims": [
+        "Actual password sign-in succeeded for the newly registered and SMTP-confirmed account. Confirmation ends at /auth/confirmed and requires the documented sign-in step.",
+        "Actual SMTP recovery email, confirmation gesture, password reset and authenticated home return succeeded.",
+        "A new browser session signed in with the replacement password."
+      ],
+      "failures": []
+    },
+    {
+      "procedure": "new-member-mobile-first-use",
+      "viewport": [
+        390,
+        844
+      ],
+      "issueId": "a5223613-e3d9-452c-b46c-5833ee28fc07",
+      "claims": [
+        "The newly SMTP-confirmed member accepted the real invitation and opened the project on a 390px viewport.",
+        "Created a real demonstration issue through the mobile UI. No AI provider is configured for this member, so Smart-fill is absent."
+      ],
+      "failures": []
+    },
+    {
+      "procedure": "new-member-mobile-complete-confirmed",
+      "viewport": [
+        390,
+        844
+      ],
+      "issueId": "a5223613-e3d9-452c-b46c-5833ee28fc07",
+      "claims": [
+        "The mobile UI completion PATCH succeeded in the prior attempt; an independent fresh authenticated GET confirms the same newly created member issue persists as done. The reopened mobile page was captured."
+      ],
+      "failures": []
+    }
+  ],
+  "additionalObservedOutcomes": [
+    {
+      "procedure": "issue-plan-checkbox",
+      "outcome": "Actual plan checkbox changed progress 1/3 to 2/3 after persistence and reload; canceled tasks and Questions excluded. Restored the checkbox; no email-composer verification claimed."
+    },
+    {
+      "procedure": "issue-relations",
+      "outcome": "Actual blocking relation to accepted incoming issue persisted after reload."
+    },
+    {
+      "procedure": "triage",
+      "outcome": "Incoming issue moved from triage to backlog through acceptance confirmation."
+    },
+    {
+      "procedure": "completed-issue",
+      "outcome": "DOC-1 in-progress, objective link, observed application-check comment and done state persisted and were reopened for reviewed six-locale screenshots."
+    }
+  ],
+  "resolvedHarnessFailures": [
+    "The first signup helper incorrectly awaited Home: actual confirmation opens /auth/confirmed and the subsequent documented sign-in succeeded.",
+    "Early helpers matched duplicate progress labels, an incorrect invitations/relations/restore endpoint or a desktop-only status button on mobile. Corrected control targeting and fresh persisted reads supplied the subsequent evidence.",
+    "Cycle enablement initially needed another session because cached auth preferences were stale. Corrected AuthContext refresh and repeated the same-session toggle and assignment successfully."
+  ],
+  "limitations": [
+    "Review and execution were performed by agents. No human usability or accessibility-assistive-technology session is claimed.",
+    "SMTP delivery was observed inside Mailpit on the disposable instance; no external mailbox delivery is claimed.",
+    "The demo website contact link is a fictional issue. Completion records verified application actions, not an external website or email-composer test.",
+    "Draft-preview reading was permitted explicitly; final production publication and anonymous browser checks are recorded separately."
+  ],
+  "privacy": "Email links, passwords, tokens, auth state, provider keys and raw configuration remain outside the repository."
+}

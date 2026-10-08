@@ -1,0 +1,126 @@
+{
+  "author": "agent:/root/automation_account_documentation",
+  "date": "2026-10-08",
+  "records": [
+    {
+      "locale": "en",
+      "article": "ai-keys-and-models",
+      "revision": 3,
+      "sourceRevision": 3,
+      "old": "Your provider bills calls made with its key; server-sandbox compute still consumes included usage.",
+      "new": "Your provider bills calls made with its key. Server-sandbox compute still has a real cost and is recorded in usage. This recording is separate from applying an account limit: a worker using validated BYOK bypasses the plan quota and compute cap, while Minddy-funded work remains subject to its included allowance.",
+      "bodySha256": "95478e9ac851f1f2d388e2da4f555d79afe7ac2b8db370c1fdd6c4a4a4648777",
+      "assessment": "Author source comparison; independent fact/language signature pending"
+    },
+    {
+      "locale": "fr",
+      "article": "ai-keys-and-models",
+      "revision": 4,
+      "sourceRevision": 3,
+      "old": "Votre fournisseur facture les appels réalisés avec sa clé ; le calcul de la sandbox serveur continue à consommer l’utilisation incluse.",
+      "new": "Votre fournisseur facture les appels réalisés avec sa clé. Le calcul de la sandbox serveur conserve un coût réel et reste comptabilisé dans l’utilisation. Cette comptabilisation est distincte de l’application d’une limite du compte : un worker utilisant une clé BYOK validée contourne le quota du forfait et le plafond de calcul, tandis que le travail financé par Minddy reste soumis à son allocation incluse.",
+      "bodySha256": "cb90a25f741175c9d826af973393ca78b2efae8be8a2da62827b2faef2ed1b2e",
+      "assessment": "Author source comparison; independent fact/language signature pending"
+    },
+    {
+      "locale": "de",
+      "article": "ai-keys-and-models",
+      "revision": 4,
+      "sourceRevision": 3,
+      "old": "Ihr Anbieter berechnet Aufrufe mit seinem Schlüssel; Rechenleistung der Serversandbox verbraucht weiterhin das enthaltene Kontingent.",
+      "new": "Ihr Anbieter berechnet Aufrufe mit seinem Schlüssel. Die Rechenleistung der Serversandbox verursacht weiterhin tatsächliche Kosten und wird im Verbrauch erfasst. Diese Erfassung ist von einem Kontolimit zu unterscheiden: Für einen Worker mit validiertem BYOK gelten weder das Tarifkontingent noch dessen Rechenleistungslimit; von Minddy finanzierte Arbeit bleibt dagegen an das enthaltene Kontingent gebunden.",
+      "bodySha256": "650a635866b57f322cce37105c04dbec29c824e028f681a7f49c765853005ce1",
+      "assessment": "Author source comparison; independent fact/language signature pending"
+    },
+    {
+      "locale": "es",
+      "article": "ai-keys-and-models",
+      "revision": 4,
+      "sourceRevision": 3,
+      "old": "El proveedor factura las llamadas realizadas con su clave; el cómputo de la sandbox del servidor sigue consumiendo el uso incluido.",
+      "new": "El proveedor factura las llamadas realizadas con su clave. El cómputo de la sandbox del servidor sigue teniendo un coste real y se registra en el uso. Ese registro es independiente de la aplicación de un límite de la cuenta: un worker con BYOK validado no está sujeto a la cuota del plan ni al límite de cómputo, mientras que el trabajo financiado por Minddy sigue sujeto a su asignación incluida.",
+      "bodySha256": "15ff92c54d6de5761af7495f91a869f8903db67a2d6b4055b1e993f31ada1a91",
+      "assessment": "Author source comparison; independent fact/language signature pending"
+    },
+    {
+      "locale": "it",
+      "article": "ai-keys-and-models",
+      "revision": 4,
+      "sourceRevision": 3,
+      "old": "Il provider fattura le chiamate effettuate con la sua chiave; il calcolo nella sandbox server continua comunque a consumare l’utilizzo incluso.",
+      "new": "Il provider fattura le chiamate effettuate con la sua chiave. Il calcolo nella sandbox server continua ad avere un costo reale e viene registrato nell’utilizzo. Questa registrazione è distinta dall’applicazione di un limite dell’account: un worker con BYOK convalidato non è soggetto alla quota del piano né al limite di calcolo, mentre il lavoro finanziato da Minddy resta soggetto al budget incluso.",
+      "bodySha256": "44a7a91af04d16942bdd5d36f2f6bf24658392d0738e2f1b3c6ae8ae1b6591fd",
+      "assessment": "Author source comparison; independent fact/language signature pending"
+    },
+    {
+      "locale": "pt-BR",
+      "article": "ai-keys-and-models",
+      "revision": 4,
+      "sourceRevision": 3,
+      "old": "O provedor cobra as chamadas feitas com a chave dele; o processamento da sandbox no servidor continua consumindo o uso incluído.",
+      "new": "O provedor cobra as chamadas feitas com a chave dele. O processamento da sandbox no servidor continua tendo um custo real e é registrado no uso. Esse registro é separado da aplicação de um limite da conta: um worker com BYOK validado não está sujeito à cota do plano nem ao limite de processamento, enquanto o trabalho financiado pelo Minddy continua sujeito à franquia incluída.",
+      "bodySha256": "d94e18e5730b38a713ec1b4a100ecd4fda7d268fb09abdfb9b84189441e5edb4",
+      "assessment": "Author source comparison; independent fact/language signature pending"
+    },
+    {
+      "locale": "en",
+      "article": "automation-settings",
+      "revision": 2,
+      "sourceRevision": 2,
+      "old": "AI steps need a usable configured provider and available usage; personal keys may shift model billing to that provider, not sandbox compute.",
+      "new": "AI steps need a usable configured provider and must satisfy the usage checks that apply to that call. Compatible validated personal keys can exempt their calls from the account’s included-AI quota and move model billing to the provider. They do not make sandbox compute free; its cost is recorded separately, and a routine’s per-run budget remains a distinct limit.",
+      "bodySha256": "1b70ad9b5796a2bf0ef458dd8627d95bc7f814045a0b00420ac757a9b3d99ee7",
+      "assessment": "Author source comparison; independent fact/language signature pending"
+    },
+    {
+      "locale": "fr",
+      "article": "automation-settings",
+      "revision": 3,
+      "sourceRevision": 2,
+      "old": "Les étapes IA exigent un fournisseur configuré et utilisable ainsi qu’un budget disponible ; les clés personnelles peuvent déplacer la facturation des modèles vers ce fournisseur, pas celle du calcul de la sandbox.",
+      "new": "Les étapes IA exigent un fournisseur configuré et utilisable et doivent satisfaire les contrôles de budget applicables à l’appel concerné. Des clés personnelles compatibles et validées peuvent exempter leurs appels du quota d’IA incluse du compte et faire facturer les modèles par le fournisseur. Elles ne rendent pas gratuit le calcul de la sandbox : son coût reste comptabilisé séparément, et le plafond par exécution d’une routine constitue une limite distincte.",
+      "bodySha256": "a17e27474f5b20d5eccde3f05d5e55fc89f43f812cd850a4fde9b62216c4aa45",
+      "assessment": "Author source comparison; independent fact/language signature pending"
+    },
+    {
+      "locale": "de",
+      "article": "automation-settings",
+      "revision": 3,
+      "sourceRevision": 2,
+      "old": "KI-Schritte benötigen einen nutzbaren konfigurierten Anbieter und verfügbares Kontingent. Persönliche Schlüssel können die Modellkosten zum Anbieter verlagern, nicht die Sandbox-Rechenkosten.",
+      "new": "KI-Schritte benötigen einen nutzbaren konfigurierten Anbieter und müssen die Budgetprüfungen bestehen, die für den jeweiligen Aufruf gelten. Kompatible validierte persönliche Schlüssel können ihre Aufrufe vom enthaltenen KI-Kontingent des Kontos ausnehmen und die Modellabrechnung zum Anbieter verlagern. Die Sandbox-Rechenleistung wird dadurch nicht kostenlos: Ihre Kosten werden weiterhin separat erfasst, und das Budget pro Routinenlauf bleibt eine eigene Grenze.",
+      "bodySha256": "297c8cc42f852c13cfd514b0fc9cd5398e1a361b30c517a1685c49a5ea9ca4be",
+      "assessment": "Author source comparison; independent fact/language signature pending"
+    },
+    {
+      "locale": "es",
+      "article": "automation-settings",
+      "revision": 3,
+      "sourceRevision": 2,
+      "old": "Los pasos con IA necesitan un proveedor configurado y utilizable, además de presupuesto disponible. Las claves personales pueden trasladar la facturación del modelo a ese proveedor, pero no la del cómputo de la sandbox.",
+      "new": "Los pasos con IA necesitan un proveedor configurado y utilizable y deben superar los controles de presupuesto aplicables a esa llamada. Las claves personales compatibles y validadas pueden eximir sus llamadas de la cuota de IA incluida de la cuenta y trasladar la facturación del modelo al proveedor. No hacen gratuito el cómputo de la sandbox: su coste se sigue registrando por separado, y el presupuesto por ejecución de una rutina sigue siendo un límite independiente.",
+      "bodySha256": "69df6bfaf9d6d6931097dfd0187f4d2f1a6810381692153a0fcb7ee9b8816876",
+      "assessment": "Author source comparison; independent fact/language signature pending"
+    },
+    {
+      "locale": "it",
+      "article": "automation-settings",
+      "revision": 3,
+      "sourceRevision": 2,
+      "old": "I passaggi IA richiedono un provider configurato e utilizzabile e un budget disponibile; le chiavi personali possono trasferire al provider la fatturazione dei modelli, ma non quella del calcolo nella sandbox.",
+      "new": "I passaggi IA richiedono un provider configurato e utilizzabile e devono superare i controlli del budget applicabili a quella chiamata. Le chiavi personali compatibili e convalidate possono esentare le loro chiamate dalla quota IA inclusa dell’account e trasferire al provider la fatturazione dei modelli. Non rendono gratuito il calcolo nella sandbox: il suo costo continua a essere registrato separatamente, e il budget per esecuzione di una routine rimane un limite distinto.",
+      "bodySha256": "ed95cfca210e44bc7bb973426fd4da3d6d9ae485c509249b3fb20434db7b8bbe",
+      "assessment": "Author source comparison; independent fact/language signature pending"
+    },
+    {
+      "locale": "pt-BR",
+      "article": "automation-settings",
+      "revision": 3,
+      "sourceRevision": 2,
+      "old": "As etapas de IA exigem um provedor configurado e utilizável e saldo disponível; chaves pessoais podem transferir a cobrança dos modelos para esse provedor, mas não a do processamento da sandbox.",
+      "new": "As etapas de IA exigem um provedor configurado e utilizável e devem passar pelas verificações de orçamento aplicáveis à chamada. Chaves pessoais compatíveis e validadas podem isentar suas chamadas da cota de IA incluída da conta e transferir a cobrança dos modelos para o provedor. Elas não tornam gratuito o processamento da sandbox: o custo continua sendo registrado separadamente, e o orçamento por execução de uma rotina permanece um limite distinto.",
+      "bodySha256": "6c397cd1d2d20946ab7d741bb3cfbaa681e75fdbfdd66455b6f4919ed99d0444",
+      "assessment": "Author source comparison; independent fact/language signature pending"
+    }
+  ]
+}

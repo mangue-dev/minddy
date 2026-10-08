@@ -1,0 +1,969 @@
+[
+  {
+    "locale": "fr",
+    "error": "locator.boundingBox: Timeout 20000ms exceeded.",
+    "reviewed": false
+  },
+  {
+    "locale": "pt-BR",
+    "error": "locator.waitFor: Timeout 20000ms exceeded.",
+    "reviewed": false
+  },
+  {
+    "locale": "en",
+    "screen": "page-file-states",
+    "src": "/documentation/en/page-file-states.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "workingTreeChanges": true,
+    "runtime": "Isolated restored backend",
+    "projectId": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+    "pageId": "a0fb9f3a-4421-4af0-a018-82074e21aff8",
+    "date": "2026-10-08",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      900
+    ],
+    "viewport": [
+      1130,
+      418
+    ],
+    "language": "en",
+    "displayAdaptation": [
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages"
+    ],
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "submitted": false,
+    "reviewed": false,
+    "limitation": "Actual saved demo file states and historical snapshots; menu drafts do not save or restore content."
+  },
+  {
+    "locale": "en",
+    "screen": "page-create-menu",
+    "src": "/documentation/en/page-create-menu.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "workingTreeChanges": true,
+    "runtime": "Isolated restored backend",
+    "projectId": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+    "pageId": "a0fb9f3a-4421-4af0-a018-82074e21aff8",
+    "date": "2026-10-08",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      900
+    ],
+    "viewport": [
+      216,
+      104
+    ],
+    "language": "en",
+    "displayAdaptation": [
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages"
+    ],
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "submitted": false,
+    "reviewed": false,
+    "limitation": "Actual saved demo file states and historical snapshots; menu drafts do not save or restore content."
+  },
+  {
+    "locale": "en",
+    "screen": "page-block-menu",
+    "src": "/documentation/en/page-block-menu.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "workingTreeChanges": true,
+    "runtime": "Isolated restored backend",
+    "projectId": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+    "pageId": "a0fb9f3a-4421-4af0-a018-82074e21aff8",
+    "date": "2026-10-08",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      900
+    ],
+    "viewport": [
+      232,
+      354
+    ],
+    "language": "en",
+    "displayAdaptation": [
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages"
+    ],
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "submitted": false,
+    "reviewed": false,
+    "limitation": "Actual saved demo file states and historical snapshots; menu drafts do not save or restore content."
+  },
+  {
+    "locale": "en",
+    "screen": "page-history-preview",
+    "src": "/documentation/en/page-history-preview.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "workingTreeChanges": true,
+    "runtime": "Isolated restored backend",
+    "projectId": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+    "pageId": "a0fb9f3a-4421-4af0-a018-82074e21aff8",
+    "date": "2026-10-08",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      900
+    ],
+    "viewport": [
+      584,
+      490
+    ],
+    "language": "en",
+    "displayAdaptation": [
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8/versions"
+    ],
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8"
+      }
+    ],
+    "submitted": false,
+    "reviewed": false,
+    "limitation": "Actual saved demo file states and historical snapshots; menu drafts do not save or restore content."
+  },
+  {
+    "locale": "fr",
+    "screen": "page-file-states",
+    "src": "/documentation/fr/page-file-states.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "workingTreeChanges": true,
+    "runtime": "Isolated restored backend",
+    "projectId": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+    "pageId": "a0fb9f3a-4421-4af0-a018-82074e21aff8",
+    "date": "2026-10-08",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      900
+    ],
+    "viewport": [
+      1130,
+      418
+    ],
+    "language": "fr",
+    "displayAdaptation": [],
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "submitted": false,
+    "reviewed": false,
+    "limitation": "Actual saved demo file states and historical snapshots; menu drafts do not save or restore content."
+  },
+  {
+    "locale": "fr",
+    "screen": "page-create-menu",
+    "src": "/documentation/fr/page-create-menu.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "workingTreeChanges": true,
+    "runtime": "Isolated restored backend",
+    "projectId": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+    "pageId": "a0fb9f3a-4421-4af0-a018-82074e21aff8",
+    "date": "2026-10-08",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      900
+    ],
+    "viewport": [
+      254,
+      104
+    ],
+    "language": "fr",
+    "displayAdaptation": [],
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "submitted": false,
+    "reviewed": false,
+    "limitation": "Actual saved demo file states and historical snapshots; menu drafts do not save or restore content."
+  },
+  {
+    "locale": "fr",
+    "screen": "page-block-menu",
+    "src": "/documentation/fr/page-block-menu.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "workingTreeChanges": true,
+    "runtime": "Isolated restored backend",
+    "projectId": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+    "pageId": "a0fb9f3a-4421-4af0-a018-82074e21aff8",
+    "date": "2026-10-08",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      900
+    ],
+    "viewport": [
+      232,
+      354
+    ],
+    "language": "fr",
+    "displayAdaptation": [],
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "submitted": false,
+    "reviewed": false,
+    "limitation": "Actual saved demo file states and historical snapshots; menu drafts do not save or restore content."
+  },
+  {
+    "locale": "fr",
+    "screen": "page-history-preview",
+    "src": "/documentation/fr/page-history-preview.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "workingTreeChanges": true,
+    "runtime": "Isolated restored backend",
+    "projectId": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+    "pageId": "a0fb9f3a-4421-4af0-a018-82074e21aff8",
+    "date": "2026-10-08",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      900
+    ],
+    "viewport": [
+      584,
+      490
+    ],
+    "language": "fr",
+    "displayAdaptation": [],
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "submitted": false,
+    "reviewed": false,
+    "limitation": "Actual saved demo file states and historical snapshots; menu drafts do not save or restore content."
+  },
+  {
+    "locale": "de",
+    "screen": "page-file-states",
+    "src": "/documentation/de/page-file-states.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "workingTreeChanges": true,
+    "runtime": "Isolated restored backend",
+    "projectId": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+    "pageId": "a0fb9f3a-4421-4af0-a018-82074e21aff8",
+    "date": "2026-10-08",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      900
+    ],
+    "viewport": [
+      1130,
+      418
+    ],
+    "language": "de",
+    "displayAdaptation": [
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8"
+    ],
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "submitted": false,
+    "reviewed": false,
+    "limitation": "Actual saved demo file states and historical snapshots; menu drafts do not save or restore content."
+  },
+  {
+    "locale": "de",
+    "screen": "page-create-menu",
+    "src": "/documentation/de/page-create-menu.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "workingTreeChanges": true,
+    "runtime": "Isolated restored backend",
+    "projectId": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+    "pageId": "a0fb9f3a-4421-4af0-a018-82074e21aff8",
+    "date": "2026-10-08",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      900
+    ],
+    "viewport": [
+      216,
+      104
+    ],
+    "language": "de",
+    "displayAdaptation": [
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8"
+    ],
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "submitted": false,
+    "reviewed": false,
+    "limitation": "Actual saved demo file states and historical snapshots; menu drafts do not save or restore content."
+  },
+  {
+    "locale": "de",
+    "screen": "page-block-menu",
+    "src": "/documentation/de/page-block-menu.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "workingTreeChanges": true,
+    "runtime": "Isolated restored backend",
+    "projectId": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+    "pageId": "a0fb9f3a-4421-4af0-a018-82074e21aff8",
+    "date": "2026-10-08",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      900
+    ],
+    "viewport": [
+      232,
+      354
+    ],
+    "language": "de",
+    "displayAdaptation": [
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8"
+    ],
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "submitted": false,
+    "reviewed": false,
+    "limitation": "Actual saved demo file states and historical snapshots; menu drafts do not save or restore content."
+  },
+  {
+    "locale": "de",
+    "screen": "page-history-preview",
+    "src": "/documentation/de/page-history-preview.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "workingTreeChanges": true,
+    "runtime": "Isolated restored backend",
+    "projectId": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+    "pageId": "a0fb9f3a-4421-4af0-a018-82074e21aff8",
+    "date": "2026-10-08",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      900
+    ],
+    "viewport": [
+      584,
+      490
+    ],
+    "language": "de",
+    "displayAdaptation": [
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8/versions"
+    ],
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "submitted": false,
+    "reviewed": false,
+    "limitation": "Actual saved demo file states and historical snapshots; menu drafts do not save or restore content."
+  },
+  {
+    "locale": "es",
+    "screen": "page-file-states",
+    "src": "/documentation/es/page-file-states.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "workingTreeChanges": true,
+    "runtime": "Isolated restored backend",
+    "projectId": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+    "pageId": "a0fb9f3a-4421-4af0-a018-82074e21aff8",
+    "date": "2026-10-08",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      900
+    ],
+    "viewport": [
+      1130,
+      418
+    ],
+    "language": "es",
+    "displayAdaptation": [
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8"
+    ],
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "submitted": false,
+    "reviewed": false,
+    "limitation": "Actual saved demo file states and historical snapshots; menu drafts do not save or restore content."
+  },
+  {
+    "locale": "es",
+    "screen": "page-create-menu",
+    "src": "/documentation/es/page-create-menu.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "workingTreeChanges": true,
+    "runtime": "Isolated restored backend",
+    "projectId": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+    "pageId": "a0fb9f3a-4421-4af0-a018-82074e21aff8",
+    "date": "2026-10-08",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      900
+    ],
+    "viewport": [
+      218,
+      104
+    ],
+    "language": "es",
+    "displayAdaptation": [
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8"
+    ],
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "submitted": false,
+    "reviewed": false,
+    "limitation": "Actual saved demo file states and historical snapshots; menu drafts do not save or restore content."
+  },
+  {
+    "locale": "es",
+    "screen": "page-block-menu",
+    "src": "/documentation/es/page-block-menu.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "workingTreeChanges": true,
+    "runtime": "Isolated restored backend",
+    "projectId": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+    "pageId": "a0fb9f3a-4421-4af0-a018-82074e21aff8",
+    "date": "2026-10-08",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      900
+    ],
+    "viewport": [
+      232,
+      354
+    ],
+    "language": "es",
+    "displayAdaptation": [
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8"
+    ],
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "submitted": false,
+    "reviewed": false,
+    "limitation": "Actual saved demo file states and historical snapshots; menu drafts do not save or restore content."
+  },
+  {
+    "locale": "es",
+    "screen": "page-history-preview",
+    "src": "/documentation/es/page-history-preview.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "workingTreeChanges": true,
+    "runtime": "Isolated restored backend",
+    "projectId": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+    "pageId": "a0fb9f3a-4421-4af0-a018-82074e21aff8",
+    "date": "2026-10-08",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      900
+    ],
+    "viewport": [
+      584,
+      490
+    ],
+    "language": "es",
+    "displayAdaptation": [
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8/versions"
+    ],
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "submitted": false,
+    "reviewed": false,
+    "limitation": "Actual saved demo file states and historical snapshots; menu drafts do not save or restore content."
+  },
+  {
+    "locale": "it",
+    "screen": "page-file-states",
+    "src": "/documentation/it/page-file-states.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "workingTreeChanges": true,
+    "runtime": "Isolated restored backend",
+    "projectId": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+    "pageId": "a0fb9f3a-4421-4af0-a018-82074e21aff8",
+    "date": "2026-10-08",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      900
+    ],
+    "viewport": [
+      1130,
+      418
+    ],
+    "language": "it",
+    "displayAdaptation": [
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8"
+    ],
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "submitted": false,
+    "reviewed": false,
+    "limitation": "Actual saved demo file states and historical snapshots; menu drafts do not save or restore content."
+  },
+  {
+    "locale": "it",
+    "screen": "page-create-menu",
+    "src": "/documentation/it/page-create-menu.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "workingTreeChanges": true,
+    "runtime": "Isolated restored backend",
+    "projectId": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+    "pageId": "a0fb9f3a-4421-4af0-a018-82074e21aff8",
+    "date": "2026-10-08",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      900
+    ],
+    "viewport": [
+      216,
+      104
+    ],
+    "language": "it",
+    "displayAdaptation": [
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8"
+    ],
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "submitted": false,
+    "reviewed": false,
+    "limitation": "Actual saved demo file states and historical snapshots; menu drafts do not save or restore content."
+  },
+  {
+    "locale": "it",
+    "screen": "page-block-menu",
+    "src": "/documentation/it/page-block-menu.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "workingTreeChanges": true,
+    "runtime": "Isolated restored backend",
+    "projectId": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+    "pageId": "a0fb9f3a-4421-4af0-a018-82074e21aff8",
+    "date": "2026-10-08",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      900
+    ],
+    "viewport": [
+      232,
+      354
+    ],
+    "language": "it",
+    "displayAdaptation": [
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8"
+    ],
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "submitted": false,
+    "reviewed": false,
+    "limitation": "Actual saved demo file states and historical snapshots; menu drafts do not save or restore content."
+  },
+  {
+    "locale": "it",
+    "screen": "page-history-preview",
+    "src": "/documentation/it/page-history-preview.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "workingTreeChanges": true,
+    "runtime": "Isolated restored backend",
+    "projectId": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+    "pageId": "a0fb9f3a-4421-4af0-a018-82074e21aff8",
+    "date": "2026-10-08",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      900
+    ],
+    "viewport": [
+      584,
+      490
+    ],
+    "language": "it",
+    "displayAdaptation": [
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8/versions"
+    ],
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "submitted": false,
+    "reviewed": false,
+    "limitation": "Actual saved demo file states and historical snapshots; menu drafts do not save or restore content."
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "page-file-states",
+    "src": "/documentation/pt-BR/page-file-states.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "workingTreeChanges": true,
+    "runtime": "Isolated restored backend",
+    "projectId": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+    "pageId": "a0fb9f3a-4421-4af0-a018-82074e21aff8",
+    "date": "2026-10-08",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      900
+    ],
+    "viewport": [
+      1130,
+      418
+    ],
+    "language": "pt-BR",
+    "displayAdaptation": [
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8"
+    ],
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "submitted": false,
+    "reviewed": false,
+    "limitation": "Actual saved demo file states and historical snapshots; menu drafts do not save or restore content."
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "page-create-menu",
+    "src": "/documentation/pt-BR/page-create-menu.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "workingTreeChanges": true,
+    "runtime": "Isolated restored backend",
+    "projectId": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+    "pageId": "a0fb9f3a-4421-4af0-a018-82074e21aff8",
+    "date": "2026-10-08",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      900
+    ],
+    "viewport": [
+      224,
+      104
+    ],
+    "language": "pt-BR",
+    "displayAdaptation": [
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8"
+    ],
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "submitted": false,
+    "reviewed": false,
+    "limitation": "Actual saved demo file states and historical snapshots; menu drafts do not save or restore content."
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "page-block-menu",
+    "src": "/documentation/pt-BR/page-block-menu.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "workingTreeChanges": true,
+    "runtime": "Isolated restored backend",
+    "projectId": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+    "pageId": "a0fb9f3a-4421-4af0-a018-82074e21aff8",
+    "date": "2026-10-08",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      900
+    ],
+    "viewport": [
+      232,
+      354
+    ],
+    "language": "pt-BR",
+    "displayAdaptation": [
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8"
+    ],
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "submitted": false,
+    "reviewed": false,
+    "limitation": "Actual saved demo file states and historical snapshots; menu drafts do not save or restore content."
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "page-history-preview",
+    "src": "/documentation/pt-BR/page-history-preview.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "workingTreeChanges": true,
+    "runtime": "Isolated restored backend",
+    "projectId": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+    "pageId": "a0fb9f3a-4421-4af0-a018-82074e21aff8",
+    "date": "2026-10-08",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      900
+    ],
+    "viewport": [
+      584,
+      490
+    ],
+    "language": "pt-BR",
+    "displayAdaptation": [
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8/versions"
+    ],
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8"
+      }
+    ],
+    "submitted": false,
+    "reviewed": false,
+    "limitation": "Actual saved demo file states and historical snapshots; menu drafts do not save or restore content."
+  }
+]

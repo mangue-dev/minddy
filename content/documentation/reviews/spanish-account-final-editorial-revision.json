@@ -1,0 +1,38 @@
+{
+  "author": "agent:/root/automation_account_documentation",
+  "date": "2026-10-08",
+  "humanReview": false,
+  "scope": "Complete idiomatic final Spanish account prose rewrite after independent review, preserving English source actions, conditions, values, tables and section/image identities. Requires complete independent rereading before language approval.",
+  "records": [
+    {
+      "article": "account-security",
+      "locale": "es",
+      "revision": 2,
+      "sourceRevision": 1,
+      "bodySha256": "eb1d004ae8b822b16ef985d35ed396f46e70ae211c8c75611c0f69353f568b70",
+      "figuresPreserved": true,
+      "sectionIdsPreserved": true,
+      "independentReviewPending": true
+    },
+    {
+      "article": "devices-and-notifications",
+      "locale": "es",
+      "revision": 2,
+      "sourceRevision": 1,
+      "bodySha256": "9e2237ede1ba7aeca9e5eb5b4d3df8197d7ab0537f265060f358db2f1b1453e5",
+      "figuresPreserved": true,
+      "sectionIdsPreserved": true,
+      "independentReviewPending": true
+    },
+    {
+      "article": "import-issues",
+      "locale": "es",
+      "revision": 2,
+      "sourceRevision": 1,
+      "bodySha256": "96a712ee49b3a30cbf9e2bf843caab1ba7e3daa50b18e9ce7fe4acbe64084976",
+      "figuresPreserved": true,
+      "sectionIdsPreserved": true,
+      "independentReviewPending": true
+    }
+  ]
+}

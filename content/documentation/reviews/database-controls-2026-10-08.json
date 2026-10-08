@@ -1,0 +1,2475 @@
+[
+  {
+    "locale": "fr",
+    "error": "Cannot read properties of undefined (reading 'next')",
+    "date": "2026-10-08",
+    "reviewed": false
+  },
+  {
+    "locale": "en",
+    "screen": "database-table",
+    "src": "/documentation/en/database-table.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "workingTreeChanges": true,
+    "runtime": "Isolated adapted backend on localhost:8000",
+    "projectId": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+    "databaseId": "7f171445-675b-45f4-835c-c475a4f3c1df",
+    "entryId": "4a7fd286-4eb7-4289-92f8-44848d1b79df",
+    "route": "/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      1130,
+      506
+    ],
+    "language": "en",
+    "theme": "light",
+    "date": "2026-10-08",
+    "displayAdaptation": [
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df"
+    ],
+    "writes": [
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "blocked": [],
+    "reviewed": false,
+    "limitation": "Real controls and previews. No conversion or import is committed by this capture script."
+  },
+  {
+    "locale": "en",
+    "screen": "database-property-types",
+    "src": "/documentation/en/database-property-types.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "workingTreeChanges": true,
+    "runtime": "Isolated adapted backend on localhost:8000",
+    "projectId": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+    "databaseId": "7f171445-675b-45f4-835c-c475a4f3c1df",
+    "entryId": "4a7fd286-4eb7-4289-92f8-44848d1b79df",
+    "route": "/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      416,
+      288
+    ],
+    "language": "en",
+    "theme": "light",
+    "date": "2026-10-08",
+    "displayAdaptation": [
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df"
+    ],
+    "writes": [
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "blocked": [],
+    "reviewed": false,
+    "limitation": "Real controls and previews. No conversion or import is committed by this capture script."
+  },
+  {
+    "locale": "en",
+    "screen": "database-conversion-warning",
+    "src": "/documentation/en/database-conversion-warning.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "workingTreeChanges": true,
+    "runtime": "Isolated adapted backend on localhost:8000",
+    "projectId": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+    "databaseId": "7f171445-675b-45f4-835c-c475a4f3c1df",
+    "entryId": "4a7fd286-4eb7-4289-92f8-44848d1b79df",
+    "route": "/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      408,
+      234
+    ],
+    "language": "en",
+    "theme": "light",
+    "date": "2026-10-08",
+    "displayAdaptation": [
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df"
+    ],
+    "writes": [
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df/database"
+      }
+    ],
+    "blocked": [],
+    "reviewed": false,
+    "limitation": "Real controls and previews. No conversion or import is committed by this capture script."
+  },
+  {
+    "locale": "en",
+    "screen": "database-entry",
+    "src": "/documentation/en/database-entry.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "workingTreeChanges": true,
+    "runtime": "Isolated adapted backend on localhost:8000",
+    "projectId": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+    "databaseId": "7f171445-675b-45f4-835c-c475a4f3c1df",
+    "entryId": "4a7fd286-4eb7-4289-92f8-44848d1b79df",
+    "route": "/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/4a7fd286-4eb7-4289-92f8-44848d1b79df",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      1130,
+      381
+    ],
+    "language": "en",
+    "theme": "light",
+    "date": "2026-10-08",
+    "displayAdaptation": [
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/4a7fd286-4eb7-4289-92f8-44848d1b79df"
+    ],
+    "writes": [
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df/database"
+      },
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/4a7fd286-4eb7-4289-92f8-44848d1b79df/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "blocked": [],
+    "reviewed": false,
+    "limitation": "Real controls and previews. No conversion or import is committed by this capture script."
+  },
+  {
+    "locale": "en",
+    "screen": "database-import-mapping",
+    "src": "/documentation/en/database-import-mapping.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "workingTreeChanges": true,
+    "runtime": "Isolated adapted backend on localhost:8000",
+    "projectId": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+    "databaseId": "7f171445-675b-45f4-835c-c475a4f3c1df",
+    "entryId": "4a7fd286-4eb7-4289-92f8-44848d1b79df",
+    "route": "/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/0a6f9e42-f3f0-4228-807e-176a6238b2fe",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      696,
+      504
+    ],
+    "language": "en",
+    "theme": "light",
+    "date": "2026-10-08",
+    "displayAdaptation": [
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/4a7fd286-4eb7-4289-92f8-44848d1b79df",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/0a6f9e42-f3f0-4228-807e-176a6238b2fe"
+    ],
+    "writes": [
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df/database"
+      },
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/4a7fd286-4eb7-4289-92f8-44848d1b79df/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/0a6f9e42-f3f0-4228-807e-176a6238b2fe/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "blocked": [
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/import-plan",
+        "reason": "Optional AI type recommendation omitted; local mapping remains"
+      }
+    ],
+    "reviewed": false,
+    "limitation": "Real controls and previews. No conversion or import is committed by this capture script."
+  },
+  {
+    "locale": "en",
+    "screen": "database-import-review",
+    "src": "/documentation/en/database-import-review.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "workingTreeChanges": true,
+    "runtime": "Isolated adapted backend on localhost:8000",
+    "projectId": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+    "databaseId": "7f171445-675b-45f4-835c-c475a4f3c1df",
+    "entryId": "4a7fd286-4eb7-4289-92f8-44848d1b79df",
+    "route": "/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/0a6f9e42-f3f0-4228-807e-176a6238b2fe",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      696,
+      463
+    ],
+    "language": "en",
+    "theme": "light",
+    "date": "2026-10-08",
+    "displayAdaptation": [
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/4a7fd286-4eb7-4289-92f8-44848d1b79df",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/0a6f9e42-f3f0-4228-807e-176a6238b2fe"
+    ],
+    "writes": [
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df/database"
+      },
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/4a7fd286-4eb7-4289-92f8-44848d1b79df/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/0a6f9e42-f3f0-4228-807e-176a6238b2fe/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "blocked": [
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/import-plan",
+        "reason": "Optional AI type recommendation omitted; local mapping remains"
+      }
+    ],
+    "reviewed": false,
+    "limitation": "Real controls and previews. No conversion or import is committed by this capture script."
+  },
+  {
+    "locale": "fr",
+    "screen": "database-table",
+    "src": "/documentation/fr/database-table.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "workingTreeChanges": true,
+    "runtime": "Isolated adapted backend on localhost:8000",
+    "projectId": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+    "databaseId": "7f171445-675b-45f4-835c-c475a4f3c1df",
+    "entryId": "4a7fd286-4eb7-4289-92f8-44848d1b79df",
+    "route": "/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      1130,
+      506
+    ],
+    "language": "fr",
+    "theme": "light",
+    "date": "2026-10-08",
+    "displayAdaptation": [],
+    "writes": [
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "blocked": [],
+    "reviewed": false,
+    "limitation": "Real controls and previews. No conversion or import is committed by this capture script."
+  },
+  {
+    "locale": "fr",
+    "screen": "database-property-types",
+    "src": "/documentation/fr/database-property-types.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "workingTreeChanges": true,
+    "runtime": "Isolated adapted backend on localhost:8000",
+    "projectId": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+    "databaseId": "7f171445-675b-45f4-835c-c475a4f3c1df",
+    "entryId": "4a7fd286-4eb7-4289-92f8-44848d1b79df",
+    "route": "/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      416,
+      288
+    ],
+    "language": "fr",
+    "theme": "light",
+    "date": "2026-10-08",
+    "displayAdaptation": [],
+    "writes": [
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "blocked": [],
+    "reviewed": false,
+    "limitation": "Real controls and previews. No conversion or import is committed by this capture script."
+  },
+  {
+    "locale": "fr",
+    "screen": "database-conversion-warning",
+    "src": "/documentation/fr/database-conversion-warning.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "workingTreeChanges": true,
+    "runtime": "Isolated adapted backend on localhost:8000",
+    "projectId": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+    "databaseId": "7f171445-675b-45f4-835c-c475a4f3c1df",
+    "entryId": "4a7fd286-4eb7-4289-92f8-44848d1b79df",
+    "route": "/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      408,
+      258
+    ],
+    "language": "fr",
+    "theme": "light",
+    "date": "2026-10-08",
+    "displayAdaptation": [],
+    "writes": [
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df/database"
+      }
+    ],
+    "blocked": [],
+    "reviewed": false,
+    "limitation": "Real controls and previews. No conversion or import is committed by this capture script."
+  },
+  {
+    "locale": "fr",
+    "screen": "database-entry",
+    "src": "/documentation/fr/database-entry.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "workingTreeChanges": true,
+    "runtime": "Isolated adapted backend on localhost:8000",
+    "projectId": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+    "databaseId": "7f171445-675b-45f4-835c-c475a4f3c1df",
+    "entryId": "4a7fd286-4eb7-4289-92f8-44848d1b79df",
+    "route": "/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/4a7fd286-4eb7-4289-92f8-44848d1b79df",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      1130,
+      381
+    ],
+    "language": "fr",
+    "theme": "light",
+    "date": "2026-10-08",
+    "displayAdaptation": [],
+    "writes": [
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df/database"
+      },
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/4a7fd286-4eb7-4289-92f8-44848d1b79df/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "blocked": [],
+    "reviewed": false,
+    "limitation": "Real controls and previews. No conversion or import is committed by this capture script."
+  },
+  {
+    "locale": "fr",
+    "screen": "database-import-mapping",
+    "src": "/documentation/fr/database-import-mapping.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "workingTreeChanges": true,
+    "runtime": "Isolated adapted backend on localhost:8000",
+    "projectId": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+    "databaseId": "7f171445-675b-45f4-835c-c475a4f3c1df",
+    "entryId": "4a7fd286-4eb7-4289-92f8-44848d1b79df",
+    "route": "/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/0a6f9e42-f3f0-4228-807e-176a6238b2fe",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      696,
+      504
+    ],
+    "language": "fr",
+    "theme": "light",
+    "date": "2026-10-08",
+    "displayAdaptation": [],
+    "writes": [
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df/database"
+      },
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/4a7fd286-4eb7-4289-92f8-44848d1b79df/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/0a6f9e42-f3f0-4228-807e-176a6238b2fe/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "blocked": [
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/import-plan",
+        "reason": "Optional AI type recommendation omitted; local mapping remains"
+      }
+    ],
+    "reviewed": false,
+    "limitation": "Real controls and previews. No conversion or import is committed by this capture script."
+  },
+  {
+    "locale": "fr",
+    "screen": "database-import-review",
+    "src": "/documentation/fr/database-import-review.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "workingTreeChanges": true,
+    "runtime": "Isolated adapted backend on localhost:8000",
+    "projectId": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+    "databaseId": "7f171445-675b-45f4-835c-c475a4f3c1df",
+    "entryId": "4a7fd286-4eb7-4289-92f8-44848d1b79df",
+    "route": "/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/0a6f9e42-f3f0-4228-807e-176a6238b2fe",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      696,
+      463
+    ],
+    "language": "fr",
+    "theme": "light",
+    "date": "2026-10-08",
+    "displayAdaptation": [],
+    "writes": [
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df/database"
+      },
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/4a7fd286-4eb7-4289-92f8-44848d1b79df/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/0a6f9e42-f3f0-4228-807e-176a6238b2fe/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "blocked": [
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/import-plan",
+        "reason": "Optional AI type recommendation omitted; local mapping remains"
+      }
+    ],
+    "reviewed": false,
+    "limitation": "Real controls and previews. No conversion or import is committed by this capture script."
+  },
+  {
+    "locale": "de",
+    "screen": "database-table",
+    "src": "/documentation/de/database-table.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "workingTreeChanges": true,
+    "runtime": "Isolated adapted backend on localhost:8000",
+    "projectId": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+    "databaseId": "7f171445-675b-45f4-835c-c475a4f3c1df",
+    "entryId": "4a7fd286-4eb7-4289-92f8-44848d1b79df",
+    "route": "/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      1130,
+      506
+    ],
+    "language": "de",
+    "theme": "light",
+    "date": "2026-10-08",
+    "displayAdaptation": [
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df"
+    ],
+    "writes": [
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "blocked": [],
+    "reviewed": false,
+    "limitation": "Real controls and previews. No conversion or import is committed by this capture script."
+  },
+  {
+    "locale": "de",
+    "screen": "database-property-types",
+    "src": "/documentation/de/database-property-types.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "workingTreeChanges": true,
+    "runtime": "Isolated adapted backend on localhost:8000",
+    "projectId": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+    "databaseId": "7f171445-675b-45f4-835c-c475a4f3c1df",
+    "entryId": "4a7fd286-4eb7-4289-92f8-44848d1b79df",
+    "route": "/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      416,
+      288
+    ],
+    "language": "de",
+    "theme": "light",
+    "date": "2026-10-08",
+    "displayAdaptation": [
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df"
+    ],
+    "writes": [
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "blocked": [],
+    "reviewed": false,
+    "limitation": "Real controls and previews. No conversion or import is committed by this capture script."
+  },
+  {
+    "locale": "de",
+    "screen": "database-conversion-warning",
+    "src": "/documentation/de/database-conversion-warning.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "workingTreeChanges": true,
+    "runtime": "Isolated adapted backend on localhost:8000",
+    "projectId": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+    "databaseId": "7f171445-675b-45f4-835c-c475a4f3c1df",
+    "entryId": "4a7fd286-4eb7-4289-92f8-44848d1b79df",
+    "route": "/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      408,
+      258
+    ],
+    "language": "de",
+    "theme": "light",
+    "date": "2026-10-08",
+    "displayAdaptation": [
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df"
+    ],
+    "writes": [
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df/database"
+      }
+    ],
+    "blocked": [],
+    "reviewed": false,
+    "limitation": "Real controls and previews. No conversion or import is committed by this capture script."
+  },
+  {
+    "locale": "de",
+    "screen": "database-entry",
+    "src": "/documentation/de/database-entry.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "workingTreeChanges": true,
+    "runtime": "Isolated adapted backend on localhost:8000",
+    "projectId": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+    "databaseId": "7f171445-675b-45f4-835c-c475a4f3c1df",
+    "entryId": "4a7fd286-4eb7-4289-92f8-44848d1b79df",
+    "route": "/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/4a7fd286-4eb7-4289-92f8-44848d1b79df",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      1130,
+      381
+    ],
+    "language": "de",
+    "theme": "light",
+    "date": "2026-10-08",
+    "displayAdaptation": [
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/4a7fd286-4eb7-4289-92f8-44848d1b79df"
+    ],
+    "writes": [
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df/database"
+      },
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/4a7fd286-4eb7-4289-92f8-44848d1b79df/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "blocked": [],
+    "reviewed": false,
+    "limitation": "Real controls and previews. No conversion or import is committed by this capture script."
+  },
+  {
+    "locale": "de",
+    "screen": "database-import-mapping",
+    "src": "/documentation/de/database-import-mapping.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "workingTreeChanges": true,
+    "runtime": "Isolated adapted backend on localhost:8000",
+    "projectId": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+    "databaseId": "7f171445-675b-45f4-835c-c475a4f3c1df",
+    "entryId": "4a7fd286-4eb7-4289-92f8-44848d1b79df",
+    "route": "/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/0a6f9e42-f3f0-4228-807e-176a6238b2fe",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      696,
+      504
+    ],
+    "language": "de",
+    "theme": "light",
+    "date": "2026-10-08",
+    "displayAdaptation": [
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/4a7fd286-4eb7-4289-92f8-44848d1b79df",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/0a6f9e42-f3f0-4228-807e-176a6238b2fe"
+    ],
+    "writes": [
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df/database"
+      },
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/4a7fd286-4eb7-4289-92f8-44848d1b79df/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/0a6f9e42-f3f0-4228-807e-176a6238b2fe/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "blocked": [
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/import-plan",
+        "reason": "Optional AI type recommendation omitted; local mapping remains"
+      }
+    ],
+    "reviewed": false,
+    "limitation": "Real controls and previews. No conversion or import is committed by this capture script."
+  },
+  {
+    "locale": "de",
+    "screen": "database-import-review",
+    "src": "/documentation/de/database-import-review.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "workingTreeChanges": true,
+    "runtime": "Isolated adapted backend on localhost:8000",
+    "projectId": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+    "databaseId": "7f171445-675b-45f4-835c-c475a4f3c1df",
+    "entryId": "4a7fd286-4eb7-4289-92f8-44848d1b79df",
+    "route": "/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/0a6f9e42-f3f0-4228-807e-176a6238b2fe",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      696,
+      463
+    ],
+    "language": "de",
+    "theme": "light",
+    "date": "2026-10-08",
+    "displayAdaptation": [
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/4a7fd286-4eb7-4289-92f8-44848d1b79df",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/0a6f9e42-f3f0-4228-807e-176a6238b2fe"
+    ],
+    "writes": [
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df/database"
+      },
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/4a7fd286-4eb7-4289-92f8-44848d1b79df/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/0a6f9e42-f3f0-4228-807e-176a6238b2fe/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "blocked": [
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/import-plan",
+        "reason": "Optional AI type recommendation omitted; local mapping remains"
+      }
+    ],
+    "reviewed": false,
+    "limitation": "Real controls and previews. No conversion or import is committed by this capture script."
+  },
+  {
+    "locale": "es",
+    "screen": "database-table",
+    "src": "/documentation/es/database-table.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "workingTreeChanges": true,
+    "runtime": "Isolated adapted backend on localhost:8000",
+    "projectId": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+    "databaseId": "7f171445-675b-45f4-835c-c475a4f3c1df",
+    "entryId": "4a7fd286-4eb7-4289-92f8-44848d1b79df",
+    "route": "/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      1130,
+      506
+    ],
+    "language": "es",
+    "theme": "light",
+    "date": "2026-10-08",
+    "displayAdaptation": [
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df"
+    ],
+    "writes": [
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "blocked": [],
+    "reviewed": false,
+    "limitation": "Real controls and previews. No conversion or import is committed by this capture script."
+  },
+  {
+    "locale": "es",
+    "screen": "database-property-types",
+    "src": "/documentation/es/database-property-types.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "workingTreeChanges": true,
+    "runtime": "Isolated adapted backend on localhost:8000",
+    "projectId": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+    "databaseId": "7f171445-675b-45f4-835c-c475a4f3c1df",
+    "entryId": "4a7fd286-4eb7-4289-92f8-44848d1b79df",
+    "route": "/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      416,
+      288
+    ],
+    "language": "es",
+    "theme": "light",
+    "date": "2026-10-08",
+    "displayAdaptation": [
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df"
+    ],
+    "writes": [
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "blocked": [],
+    "reviewed": false,
+    "limitation": "Real controls and previews. No conversion or import is committed by this capture script."
+  },
+  {
+    "locale": "es",
+    "screen": "database-conversion-warning",
+    "src": "/documentation/es/database-conversion-warning.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "workingTreeChanges": true,
+    "runtime": "Isolated adapted backend on localhost:8000",
+    "projectId": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+    "databaseId": "7f171445-675b-45f4-835c-c475a4f3c1df",
+    "entryId": "4a7fd286-4eb7-4289-92f8-44848d1b79df",
+    "route": "/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      408,
+      234
+    ],
+    "language": "es",
+    "theme": "light",
+    "date": "2026-10-08",
+    "displayAdaptation": [
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df"
+    ],
+    "writes": [
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df/database"
+      }
+    ],
+    "blocked": [],
+    "reviewed": false,
+    "limitation": "Real controls and previews. No conversion or import is committed by this capture script."
+  },
+  {
+    "locale": "es",
+    "screen": "database-entry",
+    "src": "/documentation/es/database-entry.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "workingTreeChanges": true,
+    "runtime": "Isolated adapted backend on localhost:8000",
+    "projectId": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+    "databaseId": "7f171445-675b-45f4-835c-c475a4f3c1df",
+    "entryId": "4a7fd286-4eb7-4289-92f8-44848d1b79df",
+    "route": "/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/4a7fd286-4eb7-4289-92f8-44848d1b79df",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      1130,
+      381
+    ],
+    "language": "es",
+    "theme": "light",
+    "date": "2026-10-08",
+    "displayAdaptation": [
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/4a7fd286-4eb7-4289-92f8-44848d1b79df"
+    ],
+    "writes": [
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df/database"
+      },
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/4a7fd286-4eb7-4289-92f8-44848d1b79df/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "blocked": [],
+    "reviewed": false,
+    "limitation": "Real controls and previews. No conversion or import is committed by this capture script."
+  },
+  {
+    "locale": "es",
+    "screen": "database-import-mapping",
+    "src": "/documentation/es/database-import-mapping.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "workingTreeChanges": true,
+    "runtime": "Isolated adapted backend on localhost:8000",
+    "projectId": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+    "databaseId": "7f171445-675b-45f4-835c-c475a4f3c1df",
+    "entryId": "4a7fd286-4eb7-4289-92f8-44848d1b79df",
+    "route": "/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/0a6f9e42-f3f0-4228-807e-176a6238b2fe",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      696,
+      504
+    ],
+    "language": "es",
+    "theme": "light",
+    "date": "2026-10-08",
+    "displayAdaptation": [
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/4a7fd286-4eb7-4289-92f8-44848d1b79df",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/0a6f9e42-f3f0-4228-807e-176a6238b2fe"
+    ],
+    "writes": [
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df/database"
+      },
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/4a7fd286-4eb7-4289-92f8-44848d1b79df/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/0a6f9e42-f3f0-4228-807e-176a6238b2fe/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "blocked": [
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/import-plan",
+        "reason": "Optional AI type recommendation omitted; local mapping remains"
+      }
+    ],
+    "reviewed": false,
+    "limitation": "Real controls and previews. No conversion or import is committed by this capture script."
+  },
+  {
+    "locale": "es",
+    "screen": "database-import-review",
+    "src": "/documentation/es/database-import-review.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "workingTreeChanges": true,
+    "runtime": "Isolated adapted backend on localhost:8000",
+    "projectId": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+    "databaseId": "7f171445-675b-45f4-835c-c475a4f3c1df",
+    "entryId": "4a7fd286-4eb7-4289-92f8-44848d1b79df",
+    "route": "/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/0a6f9e42-f3f0-4228-807e-176a6238b2fe",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      696,
+      463
+    ],
+    "language": "es",
+    "theme": "light",
+    "date": "2026-10-08",
+    "displayAdaptation": [
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/4a7fd286-4eb7-4289-92f8-44848d1b79df",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/0a6f9e42-f3f0-4228-807e-176a6238b2fe"
+    ],
+    "writes": [
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df/database"
+      },
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/4a7fd286-4eb7-4289-92f8-44848d1b79df/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/0a6f9e42-f3f0-4228-807e-176a6238b2fe/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "blocked": [
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/import-plan",
+        "reason": "Optional AI type recommendation omitted; local mapping remains"
+      }
+    ],
+    "reviewed": false,
+    "limitation": "Real controls and previews. No conversion or import is committed by this capture script."
+  },
+  {
+    "locale": "it",
+    "screen": "database-table",
+    "src": "/documentation/it/database-table.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "workingTreeChanges": true,
+    "runtime": "Isolated adapted backend on localhost:8000",
+    "projectId": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+    "databaseId": "7f171445-675b-45f4-835c-c475a4f3c1df",
+    "entryId": "4a7fd286-4eb7-4289-92f8-44848d1b79df",
+    "route": "/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      1130,
+      506
+    ],
+    "language": "it",
+    "theme": "light",
+    "date": "2026-10-08",
+    "displayAdaptation": [
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df"
+    ],
+    "writes": [
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "blocked": [],
+    "reviewed": false,
+    "limitation": "Real controls and previews. No conversion or import is committed by this capture script."
+  },
+  {
+    "locale": "it",
+    "screen": "database-property-types",
+    "src": "/documentation/it/database-property-types.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "workingTreeChanges": true,
+    "runtime": "Isolated adapted backend on localhost:8000",
+    "projectId": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+    "databaseId": "7f171445-675b-45f4-835c-c475a4f3c1df",
+    "entryId": "4a7fd286-4eb7-4289-92f8-44848d1b79df",
+    "route": "/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      416,
+      288
+    ],
+    "language": "it",
+    "theme": "light",
+    "date": "2026-10-08",
+    "displayAdaptation": [
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df"
+    ],
+    "writes": [
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "blocked": [],
+    "reviewed": false,
+    "limitation": "Real controls and previews. No conversion or import is committed by this capture script."
+  },
+  {
+    "locale": "it",
+    "screen": "database-conversion-warning",
+    "src": "/documentation/it/database-conversion-warning.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "workingTreeChanges": true,
+    "runtime": "Isolated adapted backend on localhost:8000",
+    "projectId": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+    "databaseId": "7f171445-675b-45f4-835c-c475a4f3c1df",
+    "entryId": "4a7fd286-4eb7-4289-92f8-44848d1b79df",
+    "route": "/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      408,
+      234
+    ],
+    "language": "it",
+    "theme": "light",
+    "date": "2026-10-08",
+    "displayAdaptation": [
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df"
+    ],
+    "writes": [
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df/database"
+      }
+    ],
+    "blocked": [],
+    "reviewed": false,
+    "limitation": "Real controls and previews. No conversion or import is committed by this capture script."
+  },
+  {
+    "locale": "it",
+    "screen": "database-entry",
+    "src": "/documentation/it/database-entry.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "workingTreeChanges": true,
+    "runtime": "Isolated adapted backend on localhost:8000",
+    "projectId": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+    "databaseId": "7f171445-675b-45f4-835c-c475a4f3c1df",
+    "entryId": "4a7fd286-4eb7-4289-92f8-44848d1b79df",
+    "route": "/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/4a7fd286-4eb7-4289-92f8-44848d1b79df",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      1130,
+      381
+    ],
+    "language": "it",
+    "theme": "light",
+    "date": "2026-10-08",
+    "displayAdaptation": [
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/4a7fd286-4eb7-4289-92f8-44848d1b79df"
+    ],
+    "writes": [
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df/database"
+      },
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/4a7fd286-4eb7-4289-92f8-44848d1b79df/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "blocked": [],
+    "reviewed": false,
+    "limitation": "Real controls and previews. No conversion or import is committed by this capture script."
+  },
+  {
+    "locale": "it",
+    "screen": "database-import-mapping",
+    "src": "/documentation/it/database-import-mapping.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "workingTreeChanges": true,
+    "runtime": "Isolated adapted backend on localhost:8000",
+    "projectId": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+    "databaseId": "7f171445-675b-45f4-835c-c475a4f3c1df",
+    "entryId": "4a7fd286-4eb7-4289-92f8-44848d1b79df",
+    "route": "/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/0a6f9e42-f3f0-4228-807e-176a6238b2fe",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      696,
+      504
+    ],
+    "language": "it",
+    "theme": "light",
+    "date": "2026-10-08",
+    "displayAdaptation": [
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/4a7fd286-4eb7-4289-92f8-44848d1b79df",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/0a6f9e42-f3f0-4228-807e-176a6238b2fe"
+    ],
+    "writes": [
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df/database"
+      },
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/4a7fd286-4eb7-4289-92f8-44848d1b79df/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/0a6f9e42-f3f0-4228-807e-176a6238b2fe/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "blocked": [
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/import-plan",
+        "reason": "Optional AI type recommendation omitted; local mapping remains"
+      }
+    ],
+    "reviewed": false,
+    "limitation": "Real controls and previews. No conversion or import is committed by this capture script."
+  },
+  {
+    "locale": "it",
+    "screen": "database-import-review",
+    "src": "/documentation/it/database-import-review.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "workingTreeChanges": true,
+    "runtime": "Isolated adapted backend on localhost:8000",
+    "projectId": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+    "databaseId": "7f171445-675b-45f4-835c-c475a4f3c1df",
+    "entryId": "4a7fd286-4eb7-4289-92f8-44848d1b79df",
+    "route": "/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/0a6f9e42-f3f0-4228-807e-176a6238b2fe",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      696,
+      463
+    ],
+    "language": "it",
+    "theme": "light",
+    "date": "2026-10-08",
+    "displayAdaptation": [
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/4a7fd286-4eb7-4289-92f8-44848d1b79df",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/0a6f9e42-f3f0-4228-807e-176a6238b2fe"
+    ],
+    "writes": [
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df/database"
+      },
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/4a7fd286-4eb7-4289-92f8-44848d1b79df/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/0a6f9e42-f3f0-4228-807e-176a6238b2fe/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "blocked": [
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/import-plan",
+        "reason": "Optional AI type recommendation omitted; local mapping remains"
+      }
+    ],
+    "reviewed": false,
+    "limitation": "Real controls and previews. No conversion or import is committed by this capture script."
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "database-table",
+    "src": "/documentation/pt-BR/database-table.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "workingTreeChanges": true,
+    "runtime": "Isolated adapted backend on localhost:8000",
+    "projectId": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+    "databaseId": "7f171445-675b-45f4-835c-c475a4f3c1df",
+    "entryId": "4a7fd286-4eb7-4289-92f8-44848d1b79df",
+    "route": "/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      1130,
+      506
+    ],
+    "language": "pt-BR",
+    "theme": "light",
+    "date": "2026-10-08",
+    "displayAdaptation": [
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df"
+    ],
+    "writes": [
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "blocked": [],
+    "reviewed": false,
+    "limitation": "Real controls and previews. No conversion or import is committed by this capture script."
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "database-property-types",
+    "src": "/documentation/pt-BR/database-property-types.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "workingTreeChanges": true,
+    "runtime": "Isolated adapted backend on localhost:8000",
+    "projectId": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+    "databaseId": "7f171445-675b-45f4-835c-c475a4f3c1df",
+    "entryId": "4a7fd286-4eb7-4289-92f8-44848d1b79df",
+    "route": "/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      416,
+      288
+    ],
+    "language": "pt-BR",
+    "theme": "light",
+    "date": "2026-10-08",
+    "displayAdaptation": [
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df"
+    ],
+    "writes": [
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "blocked": [],
+    "reviewed": false,
+    "limitation": "Real controls and previews. No conversion or import is committed by this capture script."
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "database-conversion-warning",
+    "src": "/documentation/pt-BR/database-conversion-warning.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "workingTreeChanges": true,
+    "runtime": "Isolated adapted backend on localhost:8000",
+    "projectId": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+    "databaseId": "7f171445-675b-45f4-835c-c475a4f3c1df",
+    "entryId": "4a7fd286-4eb7-4289-92f8-44848d1b79df",
+    "route": "/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      408,
+      234
+    ],
+    "language": "pt-BR",
+    "theme": "light",
+    "date": "2026-10-08",
+    "displayAdaptation": [
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df"
+    ],
+    "writes": [
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df/database"
+      }
+    ],
+    "blocked": [],
+    "reviewed": false,
+    "limitation": "Real controls and previews. No conversion or import is committed by this capture script."
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "database-entry",
+    "src": "/documentation/pt-BR/database-entry.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "workingTreeChanges": true,
+    "runtime": "Isolated adapted backend on localhost:8000",
+    "projectId": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+    "databaseId": "7f171445-675b-45f4-835c-c475a4f3c1df",
+    "entryId": "4a7fd286-4eb7-4289-92f8-44848d1b79df",
+    "route": "/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/4a7fd286-4eb7-4289-92f8-44848d1b79df",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      1130,
+      381
+    ],
+    "language": "pt-BR",
+    "theme": "light",
+    "date": "2026-10-08",
+    "displayAdaptation": [
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/4a7fd286-4eb7-4289-92f8-44848d1b79df"
+    ],
+    "writes": [
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df/database"
+      },
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/4a7fd286-4eb7-4289-92f8-44848d1b79df/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "blocked": [],
+    "reviewed": false,
+    "limitation": "Real controls and previews. No conversion or import is committed by this capture script."
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "database-import-mapping",
+    "src": "/documentation/pt-BR/database-import-mapping.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "workingTreeChanges": true,
+    "runtime": "Isolated adapted backend on localhost:8000",
+    "projectId": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+    "databaseId": "7f171445-675b-45f4-835c-c475a4f3c1df",
+    "entryId": "4a7fd286-4eb7-4289-92f8-44848d1b79df",
+    "route": "/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/0a6f9e42-f3f0-4228-807e-176a6238b2fe",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      696,
+      504
+    ],
+    "language": "pt-BR",
+    "theme": "light",
+    "date": "2026-10-08",
+    "displayAdaptation": [
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/4a7fd286-4eb7-4289-92f8-44848d1b79df",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/0a6f9e42-f3f0-4228-807e-176a6238b2fe"
+    ],
+    "writes": [
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df/database"
+      },
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/4a7fd286-4eb7-4289-92f8-44848d1b79df/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/0a6f9e42-f3f0-4228-807e-176a6238b2fe/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "blocked": [
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/import-plan",
+        "reason": "Optional AI type recommendation omitted; local mapping remains"
+      }
+    ],
+    "reviewed": false,
+    "limitation": "Real controls and previews. No conversion or import is committed by this capture script."
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "database-import-review",
+    "src": "/documentation/pt-BR/database-import-review.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "workingTreeChanges": true,
+    "runtime": "Isolated adapted backend on localhost:8000",
+    "projectId": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+    "databaseId": "7f171445-675b-45f4-835c-c475a4f3c1df",
+    "entryId": "4a7fd286-4eb7-4289-92f8-44848d1b79df",
+    "route": "/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/0a6f9e42-f3f0-4228-807e-176a6238b2fe",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      696,
+      463
+    ],
+    "language": "pt-BR",
+    "theme": "light",
+    "date": "2026-10-08",
+    "displayAdaptation": [
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/4a7fd286-4eb7-4289-92f8-44848d1b79df",
+      "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/0a6f9e42-f3f0-4228-807e-176a6238b2fe"
+    ],
+    "writes": [
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df/database"
+      },
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/4a7fd286-4eb7-4289-92f8-44848d1b79df/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/0a6f9e42-f3f0-4228-807e-176a6238b2fe/watch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "blocked": [
+      {
+        "method": "POST",
+        "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/import-plan",
+        "reason": "Optional AI type recommendation omitted; local mapping remains"
+      }
+    ],
+    "reviewed": false,
+    "limitation": "Real controls and previews. No conversion or import is committed by this capture script."
+  }
+]
