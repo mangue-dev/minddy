@@ -12,6 +12,7 @@ import { Sheet, SheetClose, SheetContent, SheetTitle, SheetTrigger } from "mangu
 import { cn } from "mangue-ui/lib/utils";
 import { MinddyLogo } from "@/components/minddy-logo";
 import styles from "./nav-wordmark.module.css";
+import { WordmarkLetters } from "./wordmark-letters";
 import { NavProductMenu, type ProductEntry } from "./nav-product-menu";
 import { ENV_LOGO_TINT, getAppEnv } from "@/lib/env";
 import { useAnalytics } from "@/lib/use-analytics";
@@ -61,21 +62,12 @@ const LINKS: ReadonlyArray<NavLink> = [
 const MOBILE_ROW =
   "flex min-h-11 items-center justify-between gap-4 rounded-lg py-2 text-xl leading-snug tracking-tight transition-colors hover:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring";
 
-const WORDMARK_COLORS = ["#cbd9e6", "#ccdccb", "#e7d3c4", "#c9dedd", "#c9dedd", "#dfd9b8"];
-
 function NavLogo() {
   return (
     <span className={cn("flex items-center gap-2", styles.brand)}>
       <MinddyLogo className={cn("h-7 w-auto text-foreground", ENV_LOGO_TINT[getAppEnv()])} />
       <span className="font-display text-lg font-semibold tracking-tight" aria-hidden>
-        {Array.from("minddy", (letter, index) => (
-          <span key={index} className={styles.letter} style={{
-            "--letter-color": WORDMARK_COLORS[index],
-            "--letter-index": index,
-          } as React.CSSProperties}>
-            {letter}
-          </span>
-        ))}
+        <WordmarkLetters text="minddy" />
       </span>
     </span>
   );

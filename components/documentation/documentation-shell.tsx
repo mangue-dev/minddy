@@ -6,6 +6,8 @@ import { documentationPath } from "@/lib/documentation-core.mjs";
 import { localizedHref } from "@/lib/locale-href";
 import { MinddyLogo } from "@/components/minddy-logo";
 import { LanguageSwitcher } from "@/components/marketing/language-switcher";
+import { WordmarkLetters } from "@/components/marketing/wordmark-letters";
+import wordmarkStyles from "@/components/marketing/nav-wordmark.module.css";
 import { DocumentationMobileNavigation, DocumentationSearch, DocumentationSidebar } from "./documentation-navigation";
 import { DocumentationContents } from "./documentation-contents";
 
@@ -36,7 +38,9 @@ export async function DocumentationShell({ articles, locale, currentId, title, t
         <div className="flex items-center gap-3">
           <a href={localizedHref("/", locale)} aria-label="minddy" className="rounded focus-visible:outline-2 focus-visible:outline-ring"><MinddyLogo className="h-6" /></a>
           <span aria-hidden className="text-border">|</span>
-          <a href={documentationPath(null, locale)} className="rounded text-sm font-medium focus-visible:outline-2 focus-visible:outline-ring">{t("navTitle")}</a>
+          <a href={documentationPath(null, locale)} className="rounded text-sm font-medium focus-visible:outline-2 focus-visible:outline-ring">
+            <span className={wordmarkStyles.brand}><WordmarkLetters text={t("navTitle")} /></span>
+          </a>
         </div>
         <div className="ml-2 lg:ml-auto"><DocumentationSearch articles={searchArticles}
           locale={locale} initialQuery={initialQuery} labels={{ search: t("search"), articles: t("articles"), noResults: t("noResults"), open: t("openArticle") }} /></div>
