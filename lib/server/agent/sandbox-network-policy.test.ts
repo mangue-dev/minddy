@@ -39,6 +39,7 @@ beforeEach(() => {
   });
   vi.stubEnv("AGENT_EXECUTION_BACKEND", "vercel");
   vi.stubEnv("VERCEL", "1");
+  vi.stubEnv("MINDDY_DATA_ROOT_KEY", "ab".repeat(32));
   h.created = false;
   h.resumed = false;
   h.allocation = null;
@@ -79,6 +80,19 @@ afterEach(() => {
 });
 
 describe("persistent Sandbox network policy refresh", () => {
+  it.each([undefined, "malformed-root-key"])(
+    "rejects an unusable root key before allocating a Vercel sandbox (%s)",
+    async (rootKey) => {
+      vi.stubEnv("MINDDY_CONTENT_ENCRYPTION_ENABLED", "false");
+      vi.stubEnv("MINDDY_DATA_ROOT_KEY", rootKey);
+      const onCreate = vi.fn(async () => {});
+      await expect(getOrCreateAgentSandbox({ name: "agent-no-root-key", onCreate }))
+        .rejects.toThrow("MINDDY_DATA_ROOT_KEY (64 hexadecimal characters)");
+      expect(h.getOrCreate).not.toHaveBeenCalled();
+      expect(onCreate).not.toHaveBeenCalled();
+    },
+  );
+
   it("erases old snapshots when an account is deleted", async () => {
     await deleteSandboxByName("agent-11111111-2222-4333-8444-555555555555");
     expect(h.get).toHaveBeenCalledWith(expect.objectContaining({

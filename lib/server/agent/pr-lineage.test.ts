@@ -177,6 +177,7 @@ const lineage = (over: Record<string, unknown> = {}) => ({
 beforeEach(() => {
   vi.stubEnv("AGENT_EXECUTION_BACKEND", "vercel");
   vi.stubEnv("VERCEL", "1");
+  vi.stubEnv("MINDDY_DATA_ROOT_KEY", "ab".repeat(32));
   h.created = [];
   h.activeCalls = [];
   h.issueLineage = null;
@@ -214,6 +215,23 @@ beforeEach(() => {
 });
 
 describe("worker configuration boundary", () => {
+  it.each([undefined, "malformed-root-key"])(
+    "rejects Vercel admission without a usable root key (%s)",
+    async (rootKey) => {
+      vi.stubEnv("MINDDY_DATA_ROOT_KEY", rootKey);
+      vi.stubEnv("MINDDY_CONTENT_ENCRYPTION_ENABLED", "false");
+      const result = await launchAgentRun({
+        projectId: PROJECT_ID,
+        userId: USER_ID,
+        triggeredBy: "chat",
+        prompt: "Work on the issue",
+      });
+      expect(result).toEqual({ ok: false, error: "executionBackendUnavailable" });
+      expect(h.created).toEqual([]);
+      expect(h.agentModelCalls).toEqual([]);
+    },
+  );
+
   it("rejects caller-supplied model and reasoning before resolving a run", async () => {
     const result = await launchAgentRun({
       projectId: PROJECT_ID,

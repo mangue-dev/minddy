@@ -60,6 +60,13 @@ session directly. The original bounded model key, control-plane forwarding,
 public connectivity and denied subnet rules survive. No shared model key is
 substituted and no plaintext policy is persisted or returned to the VM.
 
+Vercel execution now requires a valid `MINDDY_DATA_ROOT_KEY` (64 hexadecimal
+characters), including on Vercel-hosted deployments with content encryption
+disabled. The shared capability check rejects missing or malformed keys at
+agent admission and before provider allocation, instead of failing when sealing
+the refresh policy after allocation. The self-hosted runner does not acquire
+this prerequisite.
+
 A context from another project/allocation/session, tampered ciphertext, missing
 context, a stopped session or a failed provider update cannot install credentials.
 The route returns a controlled 503 without logging provider bodies. Self-hosted
@@ -111,11 +118,15 @@ maintenance cancellation and domain diagnostics, and current admin RPC paths.
 The agent VM bundle builds successfully. Targeted lint, owned-English,
 encrypted-column access, encryption inventory and whitespace checks pass.
 
+The root-key prerequisite follow-up passes 111 focused tests across six files,
+including missing/malformed configuration, rejection before run creation and
+provider allocation, and existing sandbox allocation/refresh/watchdog behavior.
+
 The standard TypeScript command includes pre-existing ignored Playwright
 capture sources under `output/` and reports errors there. A temporary config
 extending the repository config, with only that ignored output directory added
 to the exclusions, passes; application TypeScript configuration is unchanged.
-Historical migrations, locale catalogs and deployment configuration are untouched.
+Historical migrations, locale catalogs and production deployment settings are untouched.
 
 Log collection follows the
 [Supabase unified logs API](https://supabase.com/docs/reference/api/v1-get-project-logs)

@@ -136,7 +136,13 @@ Only the trusted runner container has host-level Docker authority, so protect
 the server and never expose port 6464.
 
 `AGENT_EXECUTION_BACKEND=vercel` remains available for deployments that
-deliberately use an operator-owned Vercel Sandbox project. Desktop-local code
+deliberately use an operator-owned Vercel Sandbox project. It requires a valid
+`MINDDY_DATA_ROOT_KEY` (64 hexadecimal characters) to protect sandbox credential
+refresh policies, even when `MINDDY_CONTENT_ENCRYPTION_ENABLED=false`. This
+prerequisite also applies when the application runs on Vercel. Keep the existing
+root key if one is already configured; otherwise generate it once with
+`openssl rand -hex 32` and back it up separately from the database. Incomplete
+configuration blocks agent execution before sandbox allocation. Desktop-local code
 execution is retired; `AGENT_EXECUTION_BACKEND` accepts only `self-hosted` or
 `vercel`.
 

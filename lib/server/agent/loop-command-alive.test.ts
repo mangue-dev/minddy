@@ -25,6 +25,7 @@ const pendingUntilAbort = (p?: { signal?: AbortSignal }) =>
 beforeEach(() => {
   vi.stubEnv("AGENT_EXECUTION_BACKEND", "vercel");
   vi.stubEnv("VERCEL", "1");
+  vi.stubEnv("MINDDY_DATA_ROOT_KEY", "ab".repeat(32));
   vi.clearAllMocks();
   h.status = "running";
   h.command = { exitCode: null, wait: vi.fn(pendingUntilAbort) };

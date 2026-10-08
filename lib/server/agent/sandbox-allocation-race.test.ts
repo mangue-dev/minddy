@@ -89,6 +89,7 @@ beforeEach(() => {
   state.rows = []; state.release = null; state.started = null;
   state.deleted.mockReset(); state.revoked.mockReset();
   vi.stubEnv("VERCEL", "1");
+  vi.stubEnv("MINDDY_DATA_ROOT_KEY", "ab".repeat(32));
   vi.stubEnv("AGENT_RUNNER_URL", "http://synthetic.invalid");
   vi.stubEnv("AGENT_RUNNER_SECRET", "synthetic");
 });
