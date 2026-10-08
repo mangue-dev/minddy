@@ -30,10 +30,8 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { AiAutoRotateIcon as CycleIcon, Bookmark01Icon, BookmarkAdd01Icon, CircleIcon, ComputerIcon, Copy01Icon, Delete02Icon, Link02Icon, MoonIcon, Edit04Icon, SignalFull01Icon, Sun01Icon, Target01Icon, TriangleIcon, UserCircleIcon } from "@hugeicons/core-free-icons";
 import {
   useCallback,
-  useEffect,
   useMemo,
   useRef,
-  useState,
   type ComponentType,
   type ReactNode,
 } from "react";
@@ -80,11 +78,6 @@ import { useCurrentView } from "@/lib/current-view-context";
 import { useSavedViewsQuery } from "@/lib/use-saved-views-query";
 import { useProjects } from "@/lib/projects-context";
 import { useCategoriesQuery } from "@/lib/use-categories-query";
-import {
-  resolvePaletteFavorites,
-  togglePaletteFavorite,
-  PALETTE_FAVORITES_META_KEY,
-} from "@/lib/palette-favorites";
 import {
   ALL_STATUSES,
   PRIORITIES,
@@ -241,7 +234,7 @@ export function CommandPalette({
   const router = useAppRouter();
   const appTabs = useOptionalAppTabSession();
   const queryClient = useQueryClient();
-  const { user, updateUserMetadata } = useAuth();
+  const { user } = useAuth();
   const { projects } = useProjects();
   const assistant = useAssistantPanelActions();
   const { openCreateIssue, openCreateObjective } = useCreate();
@@ -265,17 +258,6 @@ export function CommandPalette({
   const { request: bulkRequest } = useBulkActions();
   const showBulk = useBulkPaletteMode({ open, destinationOnly, onOpenChange });
 
-  // Favorites persisted in the account (user_metadata.palette_favorites) — same
-  // mechanism as the account preferences, so they survive reloads and sync
-  // across devices (vs the package's device-local localStorage default). Local
-  // state mirrors the metadata and updates optimistically, reverting on failure.
-  const serverFavorites = resolvePaletteFavorites(user?.user_metadata);
-  const [favorites, setFavorites] = useState<string[]>(serverFavorites);
-  const favoritesRef = useRef(favorites);
-  useEffect(() => {
-    favoritesRef.current = favorites;
-  }, [favorites]);
-
   // One warmup attempt per destination while the palette stays mounted:
   // repeated hovers and keyboard passes over the same row cost nothing.
   const prefetchAttempted = useRef(new Set<string>());
@@ -290,27 +272,6 @@ export function CommandPalette({
     prefetchAttempted.current.add(destination);
     onPrefetchDestination(destination);
   }, [onPrefetchDestination]);
-  // Re-sync when the account metadata changes (another tab/device, or after a
-  // write settles). Keyed on the serialized value to avoid an identity-churn loop.
-  const serverFavoritesKey = serverFavorites.join(" ");
-  useEffect(() => {
-    setFavorites(serverFavorites);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [serverFavoritesKey]);
-
-  const handleToggleFavorite = useCallback(
-    (id: string) => {
-      const prev = favoritesRef.current;
-      const next = togglePaletteFavorite(prev, id);
-      setFavorites(next);
-      favoritesRef.current = next;
-      updateUserMetadata({ [PALETTE_FAVORITES_META_KEY]: next }).catch(() => {
-        setFavorites(prev);
-        favoritesRef.current = prev;
-      });
-    },
-    [updateUserMetadata]
-  );
 
   const currentProjectId = projectIdFromPath(pathname);
   const { members } = useMembersQuery(currentProjectId, !!currentProjectId);
@@ -454,10 +415,6 @@ export function CommandPalette({
         icon: <HugeiconsIcon icon={Bookmark01Icon} className="size-4" />,
         filterCategory: "views",
         entityType: "saved-view",
-        // No stars: a saved view IS already a shortcut that we have
-        // made. Bookmarking it would pin a bookmark to a bookmark — and
-        // would leave its id in the account once the view is forgotten.
-        favoritable: false,
         data: view,
         href: view.href,
         execute: () => {
@@ -491,7 +448,6 @@ export function CommandPalette({
       icon: <HugeiconsIcon icon={BookmarkAdd01Icon} className="size-4" />,
       filterCategory: "views",
       entityType: "save-view",
-      favoritable: false,
     });
 
     return mapped;
@@ -1014,7 +970,6 @@ export function CommandPalette({
     const field = (f: string): Partial<CpPaletteItem> => ({
       filterCategory: "bulk",
       entityType: "bulk-field",
-      favoritable: false,
       data: { field: f },
     });
 
@@ -1025,7 +980,6 @@ export function CommandPalette({
         icon: <NumoActionIcon className="size-4" />,
         keywords: ["numo", "agent", "ai", "demander"],
         filterCategory: "bulk",
-        favoritable: false,
         execute: () => {
           onAskNumo();
         },
@@ -1040,7 +994,6 @@ export function CommandPalette({
               keywords: ["prompt", "copy", "copier", "agent", "code"],
               shortcut: ["⇧", "P"],
               filterCategory: "bulk",
-              favoritable: false,
               execute: () => {
                 onCopyPrompt();
               },
@@ -1058,7 +1011,6 @@ export function CommandPalette({
               keywords: ["numo", "agent", "implement", "launch", "lancer"],
               shortcut: ["⇧", "A"],
               filterCategory: "bulk",
-              favoritable: false,
               execute: () => {
                 onLaunchAgent();
               },
@@ -1116,7 +1068,6 @@ export function CommandPalette({
         icon: <AppIcon icon={CycleIcon} className="size-4" />,
         keywords: ["cycle", "semaine", "week", "sprint", "ajouter"],
         filterCategory: "bulk",
-        favoritable: false,
         execute: () => {
           cycle.onAdd();
           toast.success(tCycles("bulkAdded", { count: cycle.addable }));
@@ -1130,7 +1081,6 @@ export function CommandPalette({
         icon: <AppIcon icon={CycleIcon} className="size-4" />,
         keywords: ["cycle", "semaine", "week", "sprint", "retirer"],
         filterCategory: "bulk",
-        favoritable: false,
         execute: () => {
           cycle.onRemove();
           toast.success(tCycles("bulkRemoved", { count: cycle.removable }));
@@ -1147,7 +1097,6 @@ export function CommandPalette({
         icon: <HugeiconsIcon icon={Link02Icon} className="size-4" />,
         keywords: ["lier", "link", "relation", "related", "liés"],
         filterCategory: "bulk",
-        favoritable: false,
         execute: () => {
           onLink();
           toast.success(tBulk("linked"));
@@ -1162,7 +1111,6 @@ export function CommandPalette({
         icon: <HugeiconsIcon icon={Delete02Icon} className="size-4" />,
         keywords: ["supprimer", "delete", "remove"],
         filterCategory: "bulk",
-        favoritable: false,
         execute: () => {
           if (
             typeof window !== "undefined" &&
@@ -1406,8 +1354,6 @@ export function CommandPalette({
       actionContext={currentProjectId ? { contextId: currentProjectId } : undefined}
       storagePrefix={destinationOnly ? "minddy-cp-destinations" : "minddy-cp"}
       actionsShortcutKey=";"
-      favorites={destinationOnly ? [] : favorites}
-      onToggleFavorite={destinationOnly ? undefined : handleToggleFavorite}
       onToast={(message, type) => {
         if (type === "error") toast.error(message);
         else if (type === "success") toast.success(message);

@@ -8,7 +8,7 @@
  * - Fuzzy matching for typo tolerance
  * - Abbreviation matching (e.g. "ct" matches "Create a task")
  * - Accent normalization ("creer" matches "Create")
- * - Relevance scoring with context/usage/favorite boosts
+ * - Relevance scoring with context and usage boosts
  * - Query history recall (ArrowUp in the empty field)
  */
 
@@ -25,7 +25,6 @@ import { SearchBar } from "../components/SearchBar";
 import {
   calculateSearchScore,
   loadUsageStats,
-  loadFavorites,
   type SearchContext,
   type UsageStats,
 } from "../search/engine";
@@ -36,7 +35,7 @@ import { usePaletteStore } from "../store";
 import { orderByCategoryRank } from "../category-order";
 import styles from "../styles/SearchView.module.css";
 import type { ActionExecutionContext } from "../registry/types";
-import type { PaletteItem, FavoritePaletteItem } from "../types";
+import type { PaletteItem } from "../types";
 
 // =============================================================================
 // HOOKS
@@ -82,8 +81,6 @@ export interface SearchViewProps {
   quickAi?: { icon: ReactNode; onSelect: (query: string) => void };
   /** Compact mode: show only the search bar until the user types. */
   compactMode?: boolean;
-  /** Favorite item ids (overrides localStorage persistence). */
-  favorites?: string[];
   /** Current history navigation index (-1 = not navigating). */
   historyIndex?: number;
   /** Navigate history (up/down), returns the query string or null. */
@@ -110,7 +107,6 @@ export function SearchView({
   tabHint,
   quickAi,
   compactMode = false,
-  favorites: favoritesProp,
   historyIndex = -1,
   onHistoryNavigate,
   onHistoryReset,
@@ -160,32 +156,9 @@ export function SearchView({
     setUsageStats(loadUsageStats());
   }, []);
 
-  // Favorites: prop wins, else localStorage
-  const [favoritesVersion, setFavoritesVersion] = useState(0);
-  const favorites = useMemo(() => {
-    if (favoritesProp) {
-      return new Set(favoritesProp);
-    }
-    return loadFavorites();
-    // favoritesVersion forces a reload after toggleFavorite
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [favoritesProp, favoritesVersion]);
-
-  // Wrap the context so the built-in favorite action refreshes the list
-  const viewActionContext = useMemo(
-    () => ({
-      ...actionContext,
-      onFavoriteChange: () => {
-        actionContext.onFavoriteChange?.();
-        setFavoritesVersion((v) => v + 1);
-      },
-    }),
-    [actionContext]
-  );
-
   // Search context for relevance boosting
-  const currentContextId = viewActionContext.meta.contextId as string | undefined;
-  const currentSubContextId = viewActionContext.meta.subContextId as string | undefined;
+  const currentContextId = actionContext.meta.contextId as string | undefined;
+  const currentSubContextId = actionContext.meta.subContextId as string | undefined;
   const searchContext = useMemo<SearchContext>(
     () => ({ currentContextId, currentSubContextId }),
     [currentContextId, currentSubContextId]
@@ -258,8 +231,7 @@ export function SearchView({
         debouncedQuery,
         searchableItem,
         searchContext,
-        usageStats,
-        favorites
+        usageStats
       );
 
       const categoryBoost = matchingCategories.get(item.filterCategory) ?? 0;
@@ -276,42 +248,15 @@ export function SearchView({
     scoredItems.sort((a, b) => b.score - a.score);
 
     return scoredItems.map((s) => s.item);
-  }, [items, debouncedQuery, categoryFilter, searchContext, usageStats, favorites, categories, findMatchingCategories]);
+  }, [items, debouncedQuery, categoryFilter, searchContext, usageStats, categories, findMatchingCategories]);
 
-  // Compose final list: favorites group + category sort.
-  // IMPORTANT: items are sorted so activeIndex matches the visual position.
+  // Sort by category so activeIndex matches the visual position.
   const orderedItems = useMemo(() => {
-    let list = filteredItems;
-
-    // Favorites group when not searching
-    if (!query.trim() && favorites.size > 0) {
-      const favoriteItems: PaletteItem[] = [];
-      const nonFavoriteItems: PaletteItem[] = [];
-
-      for (const item of list) {
-        if (favorites.has(item.id)) {
-          // Clone into the favorites group, keeping the original identity
-          // so the registry finds the right provider
-          favoriteItems.push({
-            ...item,
-            filterCategory: "favorites",
-            originalFilterCategory: item.filterCategory,
-            id: `fav:${item.id}`,
-            originalId: item.id,
-          } as FavoritePaletteItem);
-        } else {
-          nonFavoriteItems.push(item);
-        }
-      }
-
-      list = [...favoriteItems, ...nonFavoriteItems];
-    }
-
     // Group by category order so visual order matches array order (critical for
     // keyboard navigation: activeIndex === globalIndex). This stays linear for
     // the thousands of issue rows shown by an empty-query palette.
-    return orderByCategoryRank(list, categoryOrder);
-  }, [filteredItems, query, favorites, categoryOrder]);
+    return orderByCategoryRank(filteredItems, categoryOrder);
+  }, [filteredItems, categoryOrder]);
 
   // Group items for the virtualized list
   const groups = useMemo<ItemGroup[]>(() => {
@@ -326,7 +271,6 @@ export function SearchView({
     }
 
     const labelFor = (catId: string): string => {
-      if (catId === "favorites") return t("categories.favorites");
       return categories.find((c) => c.id === catId)?.label ?? t("categories.other");
     };
 
@@ -371,18 +315,18 @@ export function SearchView({
       } else {
         // A default action without execute but with a form opens the inline
         // form directly (e.g. a "change setting" item selected with Enter)
-        const defaultAction = registry.getDefaultAction(item, viewActionContext);
+        const defaultAction = registry.getDefaultAction(item, actionContext);
         if (defaultAction && !defaultAction.execute && defaultAction.requiresForm) {
           openFormForAction(defaultAction, item);
           return;
         }
-        const result = await registry.executeDefaultAction(item, viewActionContext);
+        const result = await registry.executeDefaultAction(item, actionContext);
         if (result.closeMenu) {
           onClose();
         }
       }
     },
-    [registry, viewActionContext, onClose, onQuerySubmit, onSelectItem, query, openFormForAction]
+    [registry, actionContext, onClose, onQuerySubmit, onSelectItem, query, openFormForAction]
   );
 
   // Keyboard navigation.
@@ -391,7 +335,7 @@ export function SearchView({
   // - empty query at the first item (ArrowUp should recall history, not wrap)
   useKeyboardNavigation({
     items: orderedItems,
-    actionContext: viewActionContext,
+    actionContext,
     onClose,
     onSelectItem: handleSelect,
     enabled: true,
@@ -404,15 +348,15 @@ export function SearchView({
   // Mobile gestures
   const gestures = useMobileGestures({
     onSwipeLeft: (item) => {
-      if (registry.hasActionsForItem(item, viewActionContext)) openActionsForItem(item);
+      if (registry.hasActionsForItem(item, actionContext)) openActionsForItem(item);
     },
     enabled: isTouchDevice,
   });
 
   // Check if item has actions
   const hasActions = useCallback(
-    (item: PaletteItem) => registry.hasActionsForItem(item, viewActionContext),
-    [registry, viewActionContext]
+    (item: PaletteItem) => registry.hasActionsForItem(item, actionContext),
+    [registry, actionContext]
   );
 
   // Clicking the actions pill opens the popover on the highlighted item,
@@ -557,7 +501,7 @@ export function SearchView({
           item={actionTargetItem}
           isOpen={isActionsPopoverOpen}
           onClose={handleCloseActionsPopover}
-          actionContext={viewActionContext}
+          actionContext={actionContext}
           onActionExecuted={onClose}
           anchorRef={containerRef}
         />

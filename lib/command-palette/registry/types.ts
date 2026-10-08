@@ -65,13 +65,6 @@ export interface ActionExecutionContext {
   /** Show a toast notification (wired by the host). */
   showToast?: (message: string, type: "success" | "error" | "info") => void;
 
-  // === Favorites ===
-  isFavorite?: (itemId: string) => boolean;
-  /** Toggle favorite status for an item. */
-  toggleFavorite?: (itemId: string) => void;
-  /** Callback triggered after favorite status changes (for UI refresh). */
-  onFavoriteChange?: () => void;
-
   /** Arbitrary host data (typed by the host app). */
   meta: Record<string, unknown>;
 }
@@ -178,7 +171,7 @@ export interface ContextualAction {
   priority?: number;
 
   /**
-   * Marks a GENERIC action (open, toggle favorite, open in a new tab, copy
+   * Marks a GENERIC action (open, open in a new tab, copy
    * link…) that does not justify the actions submenu on its own. An item
    * only surfaces the submenu when it has at least one action that is not
    * basic — see ActionRegistry.hasActionsForItem.
@@ -197,7 +190,7 @@ export interface ContextualAction {
  *   item.entityType ?? item.filterCategory
  *
  * A provider handling "*" matches every entity type (used for fallbacks
- * like the built-in execute/favorite provider).
+ * like the built-in execute provider).
  */
 export interface ActionProvider {
   /** Unique provider identifier. */

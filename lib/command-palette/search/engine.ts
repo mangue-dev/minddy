@@ -114,9 +114,6 @@ const SCORE_WEIGHTS = {
   // Usage boosts
   RECENT_USAGE: 250,
   FREQUENT_USAGE: 100,
-
-  // Favorite boost (highest priority)
-  FAVORITE: 500,
 } as const;
 
 // =============================================================================
@@ -366,14 +363,12 @@ export function matchesSearchFields(
  * - Match location (title > keywords > description)
  * - Context boost (current project/module)
  * - Usage boost (recent, frequent)
- * - Favorite boost (highest priority)
  */
 export function calculateSearchScore<T extends SearchableItem>(
   query: string,
   item: T,
   context?: SearchContext,
-  usageStats?: Map<string, UsageStats>,
-  favorites?: Set<string>
+  usageStats?: Map<string, UsageStats>
 ): ScoredSearchResult<T> | null {
   const normalizedQuery = normalizeSearchText(query);
 
@@ -510,11 +505,6 @@ export function calculateSearchScore<T extends SearchableItem>(
     }
   }
 
-  // === Favorite Boost ===
-  if (favorites && favorites.has(item.id)) {
-    score += SCORE_WEIGHTS.FAVORITE;
-  }
-
   return { item, score, matchDetails: { matchType, matchedOn } };
 }
 
@@ -546,11 +536,11 @@ export function searchWithRelevance<T extends SearchableItem>(
 }
 
 // =============================================================================
-// FAVORITES TRACKING
+// SEARCH STORAGE
 // =============================================================================
 
 /**
- * Storage key prefix for favorites/usage persistence.
+ * Storage key prefix for usage persistence.
  * Configurable so multiple apps don't collide on the same localStorage keys.
  */
 let storagePrefix = "command-palette";
@@ -558,99 +548,6 @@ let storagePrefix = "command-palette";
 /** Configure the localStorage key prefix (call once at app startup). */
 export function configureSearchStorage(prefix: string): void {
   storagePrefix = prefix;
-  cachedFavorites = null;
-  cachedFavoritesTimestamp = 0;
-}
-
-const FAVORITES_STORAGE_KEY = () => `${storagePrefix}:favorites`;
-
-// MENU-M2 FIX: Cache localStorage parsing to avoid repeated JSON.parse
-let cachedFavorites: Set<string> | null = null;
-let cachedFavoritesTimestamp = 0;
-const FAVORITES_CACHE_TTL = 1000; // 1 second cache
-
-/**
- * Load favorites from localStorage.
- * MENU-M2 FIX: Uses in-memory cache to avoid repeated parsing.
- */
-export function loadFavorites(): Set<string> {
-  const now = Date.now();
-
-  // Return cached value if fresh
-  if (cachedFavorites && now - cachedFavoritesTimestamp < FAVORITES_CACHE_TTL) {
-    return cachedFavorites;
-  }
-
-  try {
-    const stored = localStorage.getItem(FAVORITES_STORAGE_KEY());
-    if (!stored) {
-      cachedFavorites = new Set();
-    } else {
-      const parsed = JSON.parse(stored) as string[];
-      cachedFavorites = new Set(parsed);
-    }
-    cachedFavoritesTimestamp = now;
-    return cachedFavorites;
-  } catch {
-    cachedFavorites = new Set();
-    cachedFavoritesTimestamp = now;
-    return cachedFavorites;
-  }
-}
-
-/**
- * Save favorites to localStorage.
- * MENU-M2 FIX: Also updates the cache.
- */
-function saveFavorites(favorites: Set<string>): void {
-  try {
-    const arr = Array.from(favorites);
-    localStorage.setItem(FAVORITES_STORAGE_KEY(), JSON.stringify(arr));
-    // Update cache immediately
-    cachedFavorites = favorites;
-    cachedFavoritesTimestamp = Date.now();
-  } catch {
-    // Ignore storage errors
-  }
-}
-
-/**
- * Get the real item ID, stripping the 'fav:' prefix if present.
- * This ensures favorites operations work correctly for items in the favorites group.
- */
-export function getRealItemId(itemId: string): string {
-  if (itemId.startsWith("fav:")) {
-    return itemId.slice(4);
-  }
-  return itemId;
-}
-
-/**
- * Toggle favorite status for an item.
- * Returns the new favorite status.
- */
-export function toggleFavorite(itemId: string): boolean {
-  const realId = getRealItemId(itemId);
-  const favorites = loadFavorites();
-
-  if (favorites.has(realId)) {
-    favorites.delete(realId);
-    saveFavorites(favorites);
-    return false;
-  } else {
-    favorites.add(realId);
-    saveFavorites(favorites);
-    return true;
-  }
-}
-
-/**
- * Check if an item is favorited.
- */
-export function isFavorite(itemId: string): boolean {
-  const realId = getRealItemId(itemId);
-  const favorites = loadFavorites();
-  return favorites.has(realId);
 }
 
 // =============================================================================
