@@ -14,18 +14,6 @@ import "@/components/command-palette.css";
 
 export type DocumentationNavigationEntry = Pick<DocumentationArticle, "id" | "title" | "topic">;
 
-export function DocumentationMobileContents({ sections, label }: { sections: DocumentationArticle["sections"]; label: string }) {
-  const [open, setOpen] = useState(false);
-  return <Collapsible open={open} onOpenChange={setOpen} className="fixed inset-x-0 top-24 z-20 border-b border-border bg-background px-6 sm:top-16 lg:left-72 xl:hidden">
-    <CollapsibleTrigger className="group flex h-12 w-full items-center justify-between text-sm font-medium focus-visible:outline-2 focus-visible:outline-ring">
-      {label}<HugeiconsIcon icon={ArrowRight01Icon} className="size-4 transition-transform duration-200 group-data-[state=open]:rotate-90 motion-reduce:transition-none" aria-hidden />
-    </CollapsibleTrigger>
-    <CollapsibleContent className="motion-reduce:animate-none"><nav aria-label={label} className="max-h-[calc(100dvh-12rem)] overflow-y-auto overscroll-contain pb-4 text-sm">
-      {sections.map(section => <a key={section.id} href={`#${section.id}`} onClick={() => setOpen(false)} className={`block py-1.5 text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring ${section.level === 3 ? "pl-3" : ""}`}>{section.title}</a>)}
-    </nav></CollapsibleContent>
-  </Collapsible>;
-}
-
 export function DocumentationSidebar({ articles, locale, currentId, labels, onNavigate }: {
   articles: DocumentationNavigationEntry[];
   locale: Locale;

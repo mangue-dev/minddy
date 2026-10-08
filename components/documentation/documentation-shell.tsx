@@ -5,7 +5,8 @@ import type { DocumentationArticle } from "@/lib/documentation";
 import { documentationPath } from "@/lib/documentation-core.mjs";
 import { MinddyLogo } from "@/components/minddy-logo";
 import { LanguageSwitcher } from "@/components/marketing/language-switcher";
-import { DocumentationMobileContents, DocumentationMobileNavigation, DocumentationSearch, DocumentationSidebar } from "./documentation-navigation";
+import { DocumentationMobileNavigation, DocumentationSearch, DocumentationSidebar } from "./documentation-navigation";
+import { DocumentationContents } from "./documentation-contents";
 
 export async function DocumentationShell({ articles, locale, currentId, title, topic, sections, initialQuery, children }: {
   articles: DocumentationArticle[];
@@ -26,9 +27,6 @@ export async function DocumentationShell({ articles, locale, currentId, title, t
       content: [t("welcomeUse"), t("welcomeOperate"), t("welcomeIntegrate")].join("\n\n") },
     ...articles.map(({ id, locale, title, summary, content, tags, topic }) => ({ id, locale, title, summary, content, tags, topic })),
   ];
-  const contents = <ul className="space-y-1 text-[13px] leading-5">{sections.map(section => <li key={section.id} className={section.level === 3 ? "pl-3" : ""}>
-    <a href={`#${section.id}`} className="block rounded py-1.5 text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring">{section.title}</a>
-  </li>)}</ul>;
   return <>
     <a href="#documentation-article" className="sr-only z-50 rounded bg-background p-3 focus:not-sr-only focus:fixed focus:top-2">{t("skip")}</a>
     <header className="fixed inset-x-0 top-0 z-30 flex h-24 items-center border-b border-border bg-background px-3 pb-8 sm:h-16 sm:px-6 sm:pb-0">
@@ -46,7 +44,7 @@ export async function DocumentationShell({ articles, locale, currentId, title, t
       </nav>
       <div className="ml-auto min-w-0 max-w-[40%] shrink-0 [&_[data-slot=select-trigger]]:max-w-full [&_[data-slot=select-value]]:truncate"><LanguageSwitcher /></div>
     </header>
-    <DocumentationMobileContents sections={sections} label={t("contents")} />
+    <DocumentationContents key={currentId ?? "welcome"} sections={sections} label={t("contents")} />
     <aside className="fixed bottom-0 left-0 top-16 hidden w-72 overflow-y-auto overscroll-contain border-r border-border lg:block">
       <DocumentationSidebar {...navigation} />
     </aside>
@@ -57,8 +55,5 @@ export async function DocumentationShell({ articles, locale, currentId, title, t
         </article>
       </div>
     </main>
-    <aside className="fixed bottom-0 right-0 top-16 hidden w-64 overflow-y-auto overscroll-contain px-6 py-12 xl:block">
-      <nav aria-label={t("contents")}><p className="mb-4 text-xs font-medium">{t("contents")}</p>{contents}</nav>
-    </aside>
   </>;
 }
