@@ -132,3 +132,21 @@ No production deployment is included.
 A pre-existing private VAPID value appeared in diagnostic tool output during
 the rehearsal. It was not committed or reproduced in the documentation or
 screenshots. Production credential rotation was not performed in this task.
+
+## Configured publication scan follow-up
+
+The first GitHub validation run (`37840938098`) stopped before lint/build on
+26 publication-marker findings: the documented LAN example, a non-routable
+capture email and the synthetic scheduler sentinel. Both unit-test shards and
+CodeQL passed. Four exact value-and-path exceptions preserve these intentional
+examples without excluding the corpus or its evidence directory. An executable
+scanner regression rejects 15 changed-value, undocumented-path and unrelated-file
+counterexamples; all three policy tests passed without skips locally.
+
+The corrected checked-in policy scanned 13 new commits and the clean publication
+clone's 1,541 commits (70.11 MB) without findings before the follow-up commit.
+The canonical checkout's extra historical private refs are not claimed clean;
+no exceptions were added for their ten unrelated historical findings. The
+earlier default-rule directory scan did not exercise the custom publication
+markers. The complete configured history scan is the publication evidence.
+The GitHub follow-up result is pending the policy commit and push.

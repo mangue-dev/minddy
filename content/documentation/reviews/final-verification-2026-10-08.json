@@ -71,6 +71,10 @@
     {
       "command": "git diff --check",
       "result": "PASS"
+    },
+    {
+      "command": "node --test scripts/gitleaks-policy.test.mjs",
+      "result": "PASS 3/3; actual scanner integration executed, not skipped; 15 counterexamples rejected"
     }
   ],
   "overlappingTestCountsNotAggregated": true,
@@ -93,5 +97,18 @@
     "operator-upgrade-execution.json",
     "operator-adapted-tooling-restoration.json"
   ],
-  "operationalScope": "Explicitly adapted identified fullOCI aarch64 Docker Desktop profile; native host/provider/off-host/publicTLS/externalSMTP not inferred."
+  "operationalScope": "Explicitly adapted identified fullOCI aarch64 Docker Desktop profile; native host/provider/off-host/publicTLS/externalSMTP not inferred.",
+  "configuredSecretScan": {
+    "scanner": "Gitleaks 8.30.1",
+    "policy": ".gitleaks.toml",
+    "initialCiRun": 37840938098,
+    "initialCiFindings": 26,
+    "cause": "Exact documented LAN examples and synthetic capture/scheduler fixtures; not provider credentials.",
+    "resolution": "Four value-and-path constrained allowlists, with 15 rejected counterexamples covering changed values, undocumented paths and unrelated files.",
+    "newCommitRange": "PASS 13 commits, zero findings before policy follow-up commit",
+    "publicCloneAllRefs": "PASS 1541 commits, 70.11 MB, zero findings before policy follow-up commit",
+    "canonicalPrivateExtraRefs": "Not asserted clean; ten unrelated historical findings remain outside the publishable clone. No exceptions added for those findings.",
+    "githubUnitShards": "Both shards passed in initial CI; required aggregate failed because validation stopped at the scanner.",
+    "rerun": "Pending after policy follow-up commit"
+  }
 }
