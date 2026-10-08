@@ -167,9 +167,10 @@ import {
 } from "@/lib/server/mcp/discovery-metadata";
 
 /**
- * MCP tools from minddy — naming minddy_<verbe>_<nom>, voluntarily reduced surface
- *: projects (reading), tickets (+ plan), objectives, comments.
- * No Views, no deletions, no member/category management.
+ * MCP tools from minddy — naming minddy_<verb>_<noun>, a deliberately reduced
+ * surface: projects, issues (+ plan), objectives, comments, resources, pages,
+ * scratchpad, cycles, feedback board, integrations and routines. No Views, no
+ * member/category management, no trash except routines (minddy_delete_routine).
  * Each tool re-authenticates (requireUser) and re-verifies project access —
  * there is no session state between two calls (stateless transport).
  */
@@ -1158,7 +1159,7 @@ export function registerMinddyTools(
         "it again; 'resolved: false' also covers 'the forge did not say'. " +
         "Use it to review a PR, explain what it changes, or act on the review feedback. " +
         "Fails if the issue has no agent-opened PR, or if the project has no linked " +
-        "GitHub repo.",
+        "repository (GitHub or GitLab).",
       inputSchema: z.object({ project_id: PROJECT_ID, issue: ISSUE_REF }),
       annotations: { readOnlyHint: true, openWorldHint: true },
     },
@@ -1451,8 +1452,9 @@ export function registerMinddyTools(
         "List a project's objectives (issue groups with a shared goal): id, name, " +
         "a TRUNCATED description, " +
         "status (planned/in_progress/done/canceled), lead, target date, " +
-        "progress: { done, total, percent } computed from linked issues " +
-        "(status 'done' / all linked), same as the UI's progress bar. Plus, when " +
+        "progress: { done, total, percent } computed from linked issues — done " +
+        "counts every closed status (done/canceled/duplicate), percent is " +
+        "effort-weighted, same as the UI's progress bar. Plus, when " +
         "present, the objective's own resources — files, links AND pages of the " +
         "wiki (id + kind, file name/type/size, url, or page_id; read one with " +
         "minddy_get_resource). " +

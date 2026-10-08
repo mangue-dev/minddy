@@ -128,7 +128,7 @@ const MCP_SERVER_MODEL = `- **Project**: the workspace. Everything else belongs 
 - **Plan**: markdown on an issue. \`- [ ]\` pending, \`- [~]\` in progress,
   \`- [x]\` done, \`- [-]\` cancelled. Checkboxes under a \`## Questions\`
   heading are open questions, not work, and never count towards progress.
-- **Cycle**: the key owner's personal, cross-project fortnight.
+- **Cycle**: the key owner's personal, cross-project week/fortnight.
 - **Scratchpad**: the key owner's personal notes doc, same checkbox markdown.
 - **Feedback**: user requests on a public board, separate from issues, with
   votes and a public status; can be promoted into an issue.`;
