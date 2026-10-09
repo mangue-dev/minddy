@@ -102,11 +102,11 @@ describe("backend outage fallback", () => {
     expect(new URL(response.headers.get("location")!).search).toBe("?q=numo");
   });
 
-  it("returns a connected reader to their documentation article from login", async () => {
+  it.each(["/fr/documentation/numo?q=help#permissions", "/fr/auto-hebergement/installer?route=team", "/self-hosting"])("returns a connected reader to their public guide from login: %s", async target => {
     session = { user: { id: "u1" } };
-    const response = await proxy(request("/login?redirect=" + encodeURIComponent("/fr/documentation/numo?q=help#permissions")));
+    const response = await proxy(request("/login?redirect=" + encodeURIComponent(target)));
     const destination = new URL(response.headers.get("location")!);
-    expect(destination.pathname + destination.search + destination.hash).toBe("/fr/documentation/numo?q=help#permissions");
+    expect(destination.pathname + destination.search + destination.hash).toBe(target);
   });
   it.each(["/", "/login", "/home"])(
     "redirects %s to the retryable recovery page on a Supabase 522",

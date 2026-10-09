@@ -35,6 +35,7 @@ vi.mock("@/lib/server/numo/worker-mediation", () => ({
 }));
 
 import { POST } from "@/app/api/assistant/chat/route";
+import { SELF_HOSTING_OVERVIEW } from "@/lib/self-hosting-help-context";
 
 function database({ owner = "user", status = "idle", visible = new Set(["a", "b"]) } = {}) {
   const rows: Array<Record<string, unknown>> = [];
@@ -138,6 +139,28 @@ beforeEach(() => {
 });
 
 describe("conversation identity across project contexts", () => {
+  it("uses the latest self-hosting step and choices while retaining public-help tools", async () => {
+    const db = database();
+    for (const stepId of ["desktop-app", "team-access"] as const) {
+      const selfHosting = { ...SELF_HOSTING_OVERVIEW, stepId, path: "team", serverAccess: "public", supabaseMode: "full" };
+      expect(await send({ conversationId: "conversation", pageContext: { documentation: {
+        articleId: "installation", locale: "fr", selfHosting: { ...selfHosting, password: "must-not-reach-help", domain: "private.example" },
+      } } })).toBe(200);
+      expect(db.rows.findLast(row => row.role === "user")?.context).toEqual({ documentation: { articleId: "installation", locale: "fr", selfHosting } });
+      const call = h.process.mock.calls.at(-1)!;
+      expect(call[0][0].content).toContain(`(${stepId})`);
+      expect(call[0][0].content).toContain('"serverAccess":"public"');
+      expect(call[0][0].content).not.toContain("must-not-reach-help");
+      expect(call[0][0].content).not.toContain("private.example");
+      expect(call[1].map((tool: { function: { name: string } }) => tool.function.name)).toEqual(["get_help"]);
+    }
+    expect(h.process.mock.calls.at(-1)![0][0].content).toContain("Comment accédera-t-on au serveur ?");
+  });
+  it.each([{ stepId: "invented-step" }, { method: "execute-arbitrary-command" }, { path: "../private" }])("rejects malformed wizard context: %s", async malformed => {
+    database();
+    expect(await send({ pageContext: { documentation: { articleId: "installation", locale: "en", selfHosting: { ...SELF_HOSTING_OVERVIEW, ...malformed } } } })).toBe(400);
+    expect(h.process).not.toHaveBeenCalled();
+  });
   it("admits documentation help with the guide locale, account billing and restricted execution", async () => {
     const db = database();
     h.managed = true;

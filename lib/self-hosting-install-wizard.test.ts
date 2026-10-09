@@ -4,6 +4,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SelfHostingInstallWizard } from "@/components/marketing/self-hosting-install-wizard";
 import en from "@/messages/en.json";
+import { DocumentationHelpContext } from "@/components/documentation/documentation-help-context";
 
 vi.mock("@hugeicons/react", () => ({ HugeiconsIcon: () => null }));
 vi.mock("@/components/icon", () => ({ AppIcon: () => null }));
@@ -26,6 +27,7 @@ vi.mock("mangue-ui/components/ui/accordion", () => ({
 const copy = en.SelfHostingInstall;
 let host: HTMLDivElement;
 let root: Root;
+const setWizard = vi.fn();
 
 beforeEach(() => {
   vi.stubGlobal("React", React);
@@ -35,13 +37,16 @@ beforeEach(() => {
   host = document.createElement("div");
   document.body.append(host);
   root = createRoot(host);
-  act(() => root.render(createElement(SelfHostingInstallWizard, {
+  setWizard.mockClear();
+  act(() => root.render(createElement(DocumentationHelpContext.Provider, { value: {
+    open: false, setOpen: vi.fn(), setArticle: vi.fn(), setWizard,
+  } }, createElement(SelfHostingInstallWizard, {
     copy,
     links: { guide: "https://example.test/install", download: "https://example.test/download", release: "https://example.test/release", operations: "https://example.test/operations", encryption: "https://example.test/docs/workspace-encryption", localInstallation: "https://example.test/docs/install-locally", serverInstallation: "https://example.test/docs/install-a-server", mcpAccess: "https://example.test/docs/minddy-mcp#network-access" },
     guidePath: "/self-hosting",
     emailTemplates: { confirmSignup: { subject: "Confirm", body: "Confirm" }, resetPassword: { subject: "Reset", body: "Reset" } },
     repositoryUrl: "https://github.com/mangue-dev/minddy", releaseTag: "v0.11.0", pnpmVersion: "10.28.0",
-  })));
+  }))));
 });
 
 afterEach(() => {
@@ -102,6 +107,16 @@ function copiedText() {
 }
 
 describe("published self-hosting installation capabilities", () => {
+  it("keeps help on the current step when navigating forward and back, without form values", () => {
+    expect(setWizard).toHaveBeenLastCalledWith(expect.objectContaining({ stepId: "desktop-app", path: null }));
+    choose("team", "manual", true);
+    reach(copy.fullPreparationTitle);
+    expect(setWizard).toHaveBeenLastCalledWith({ stepId: "team-installer", path: "team", method: "manual", serverAccess: "private", supabaseMode: "full", migrate: false });
+    expect(JSON.stringify(setWizard.mock.calls)).not.toMatch(/192\.168|ops@example/);
+    const back = [...host.querySelectorAll("button")].find(button => button.textContent === copy.backLabel)!;
+    act(() => back.click());
+    expect(setWizard).toHaveBeenLastCalledWith(expect.objectContaining({ stepId: "team-fetch" }));
+  });
   for (const path of ["local", "team", "full"] as const) {
     it(`${path} manual commands omit the unsupported encryption flag`, () => {
       choose(path === "full" ? "team" : path, "manual", path === "full");

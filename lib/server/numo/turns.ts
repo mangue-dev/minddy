@@ -105,7 +105,7 @@ export const NUMO_TURN_STATUSES = [
 ] as const;
 export interface NumoTurnIntent {
   /** Public help uses the same billing and durable lifecycle, with restricted tools. */
-  documentation?: { articleId: string | null };
+  documentation?: Omit<NonNullable<AssistantPageContext["documentation"]>, "locale">;
   projectId: string | null;
   locale: string;
   timezone: string;
@@ -571,7 +571,7 @@ async function buildExecutionInput(input: {
   const intent = turn.intent;
   let systemPrompt: string;
   if (intent.documentation) {
-    systemPrompt = buildDocumentationHelpPrompt(intent.locale, intent.documentation.articleId);
+    systemPrompt = await buildDocumentationHelpPrompt(intent.locale, intent.documentation.articleId, intent.documentation.selfHosting);
   } else if (intent.projectId) {
     const access = await getProjectAccess(turn.user_id, intent.projectId);
     if (!access) throw new Error("The attached project is no longer accessible");

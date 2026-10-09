@@ -12,6 +12,8 @@ import { cn } from "mangue-ui/lib/utils";
 import { McpAvatar } from "@/components/actor-avatars";
 import { CopyButton } from "@/components/marketing/copy-button";
 import { CARD_TONES } from "@/components/marketing/card-tones";
+import { useDocumentationWizardContext } from "@/components/documentation/documentation-help-context";
+import type { SelfHostingHelpStep } from "@/lib/self-hosting-help-context";
 
 type Path = "local" | "team";
 type SupabaseMode = "managed" | "full";
@@ -58,7 +60,7 @@ interface SelfHostingInstallWizardProps {
 }
 
 interface Step {
-  id: string;
+  id: SelfHostingHelpStep;
   title: string;
   body?: string;
   canContinue: boolean;
@@ -544,7 +546,7 @@ export function SelfHostingInstallWizard({
 
   const stages: Step[] = [
     {
-      id: "desktop-app",
+      id: "desktop-app" as const,
       title: copy.desktopSetupTitle,
       body: copy.desktopSetupBody,
       canContinue: true,
@@ -564,7 +566,7 @@ export function SelfHostingInstallWizard({
       ),
     },
     {
-      id: "route",
+      id: "route" as const,
       title: copy.routeTitle,
       body: copy.routeBody,
       canContinue: path !== null,
@@ -582,7 +584,7 @@ export function SelfHostingInstallWizard({
       ),
     },
     {
-      id: "encryption-choice",
+      id: "encryption-choice" as const,
       title: copy.encryptionReleaseTitle,
       body: encryptionReleaseNote,
       canContinue: true,
@@ -596,7 +598,7 @@ export function SelfHostingInstallWizard({
       ),
     },
     {
-      id: "migration-choice",
+      id: "migration-choice" as const,
       title: copy.migrateTitle,
       body: copy.migrateBody,
       canContinue: migrate !== null,
@@ -608,7 +610,7 @@ export function SelfHostingInstallWizard({
       ),
     },
     ...(migrate ? [{
-      id: "migration-export",
+      id: "migration-export" as const,
       title: copy.exportTitle,
       body: copy.exportGoal,
       canContinue: true,
@@ -627,7 +629,7 @@ export function SelfHostingInstallWizard({
     }] : []),
     ...(path === "team" ? [
       {
-        id: "team-access",
+        id: "team-access" as const,
         title: copy.accessTitle,
         body: copy.accessBody,
         canContinue: serverSetupValid,
@@ -662,7 +664,7 @@ export function SelfHostingInstallWizard({
         ),
       },
       {
-        id: "team-backend",
+        id: "team-backend" as const,
         title: copy.backendTitle,
         body: copy.backendBody,
         canContinue: true,
@@ -694,7 +696,7 @@ export function SelfHostingInstallWizard({
       },
     ] : []),
     {
-      id: "capacity",
+      id: "capacity" as const,
       title: path === "local" ? copy.capacityLocalTitle : copy.capacityTeamTitle,
       body: copy.capacityBody,
       canContinue: true,
@@ -713,7 +715,7 @@ export function SelfHostingInstallWizard({
       ),
     },
     {
-      id: "method",
+      id: "method" as const,
       title: copy.methodTitle,
       body: copy.methodBody,
       canContinue: method !== null,
@@ -725,7 +727,7 @@ export function SelfHostingInstallWizard({
       ),
     },
     ...(method === "agent" ? [{
-      id: "agent",
+      id: "agent" as const,
       title: copy.agentTitle,
       body: path === "local" ? copy.agentLocalGoal : copy.agentTeamGoal,
       canContinue: true,
@@ -739,7 +741,7 @@ export function SelfHostingInstallWizard({
     }] : []),
     ...(method === "manual" && path === "local" ? [
       {
-        id: "local-tools",
+        id: "local-tools" as const,
         title: copy.toolsTitle,
         body: copy.toolsBody,
         canContinue: true,
@@ -758,7 +760,7 @@ export function SelfHostingInstallWizard({
         ),
       },
       {
-        id: "local-install",
+        id: "local-install" as const,
         title: copy.manualLocalTitle,
         body: copy.manualLocalBody,
         canContinue: true,
@@ -775,7 +777,7 @@ export function SelfHostingInstallWizard({
     ] : []),
     ...(method === "manual" && path === "team" ? [
       {
-        id: "team-prepare",
+        id: "team-prepare" as const,
         title: copy.prepareTitle,
         body: copy.prepareBody,
         canContinue: true,
@@ -790,7 +792,7 @@ export function SelfHostingInstallWizard({
         ),
       },
       {
-        id: "team-release",
+        id: "team-release" as const,
         title: copy.releaseTitle,
         body: copy.releaseBody.replace("{release}", releaseTag),
         canContinue: true,
@@ -800,7 +802,7 @@ export function SelfHostingInstallWizard({
         ),
       },
       ...(supabaseMode === "full" ? [{
-        id: "team-fetch",
+        id: "team-fetch" as const,
         title: copy.fetchSupabaseTitle,
         body: copy.fetchSupabaseBody,
         canContinue: true,
@@ -808,7 +810,7 @@ export function SelfHostingInstallWizard({
         content: <div className={PANEL}><CommandBlock command={fetchSupabase} copy={copy} /><CompletionNote copy={copy} criterion={copy.fetchDone} /></div>,
       }] : []),
       {
-        id: "team-installer",
+        id: "team-installer" as const,
         title: supabaseMode === "full" ? copy.fullPreparationTitle : copy.installerTitle,
         body: supabaseMode === "full" ? copy.fullPreparationBody : copy.installerBody,
         canContinue: true,
@@ -819,7 +821,7 @@ export function SelfHostingInstallWizard({
       },
     ] : []),
     ...(path === "team" && method === "manual" ? [{
-      id: "team-email",
+      id: "team-email" as const,
       title: copy.emailTitle,
       body: supabaseMode === "managed" ? copy.emailManagedBody : copy.emailFullBody,
       canContinue: true,
@@ -827,7 +829,7 @@ export function SelfHostingInstallWizard({
       content: <div><EmailConfiguration serverOrigin={serverOrigin} mode={supabaseMode} templates={emailTemplates} copy={copy} /><CompletionNote copy={copy} criterion={copy.emailDone} /></div>,
     }] : []),
     ...(path === "local" && migrate === false ? [{
-      id: "local-verify",
+      id: "local-verify" as const,
       title: copy.verifyLocalTitle,
       body: copy.verifyLocalBody,
       canContinue: true,
@@ -843,7 +845,7 @@ export function SelfHostingInstallWizard({
       ),
     }] : []),
     ...(path === "team" ? [{
-      id: "team-verify",
+      id: "team-verify" as const,
       title: copy.verifyTeamTitle,
       body: copy.verifyTeamBody,
       canContinue: true,
@@ -851,7 +853,7 @@ export function SelfHostingInstallWizard({
       content: <div className={HIGHLIGHT_PANEL}><CommandBlock command={doctor} copy={copy} /><Checklist items={serverAccess === "private" ? [copy.doctorPass, copy.emailPass, copy.backupPass] : [copy.doctorPass, copy.httpsPass, copy.emailPass, copy.backupPass]} /><CompletionNote copy={copy} criterion={copy.verifyTeamDone} /></div>,
     }] : []),
     ...(path === "team" && migrate === false ? [{
-      id: "team-open",
+      id: "team-open" as const,
       title: copy.openTeamTitle,
       body: copy.openTeamBody,
       canContinue: true,
@@ -864,7 +866,7 @@ export function SelfHostingInstallWizard({
       ),
     }] : []),
     ...(migrate ? [{
-      id: "migration-import",
+      id: "migration-import" as const,
       title: copy.importTitle,
       body: copy.importGoal,
       canContinue: true,
@@ -882,7 +884,7 @@ export function SelfHostingInstallWizard({
       ),
     }] : []),
     {
-      id: "done",
+      id: "done" as const,
       title: path === "local" ? copy.doneLocalTitle : copy.doneTeamTitle,
       canContinue: false,
       content: (
@@ -898,6 +900,7 @@ export function SelfHostingInstallWizard({
 
   const currentIndex = Math.min(stepIndex, stages.length - 1);
   const currentStage = stages[currentIndex];
+  useDocumentationWizardContext({ stepId: currentStage.id, path, method, serverAccess, supabaseMode, migrate });
 
   const headingRef = useRef<HTMLHeadingElement>(null);
   const previousIndex = useRef(currentIndex);

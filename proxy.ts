@@ -435,7 +435,9 @@ async function routeRequest(request: NextRequest) {
       applySession = applyCookies;
       if (session && !awaitsMfaChallenge(session)) {
         const redirect = sanitizeInternalRedirectPath(request.nextUrl.searchParams.get("redirect"));
-        const destination = resolveDocumentationPath(new URL(redirect, request.url).pathname) ? redirect : "/home";
+        const targetPath = new URL(redirect, request.url).pathname;
+        const guideRoute = routeByPath(targetPath)?.key;
+        const destination = resolveDocumentationPath(targetPath) || guideRoute === "selfHosting" || guideRoute === "selfHostingInstall" ? redirect : "/home";
         return applySession(NextResponse.redirect(new URL(destination, process.env.MINDDY_PUBLIC_APP_URL || request.url)));
       }
     }

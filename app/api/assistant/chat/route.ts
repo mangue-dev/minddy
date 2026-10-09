@@ -19,6 +19,7 @@ import type {
 import { createSafeEmitter } from "@/lib/server/assistant/sse";
 import { parseCommand } from "@/lib/server/assistant/commands";
 import { parseSelectedSkills } from "@/lib/server/assistant/skills";
+import { parseSelfHostingHelpContext } from "@/lib/self-hosting-help-context";
 import { sanitizeAssistantMessageContent } from "@/lib/server/assistant/sanitize";
 import { fallbackShortTitle, generateShortTitle } from "@/lib/server/short-title";
 import { encodeConversationTitle, shouldProtectConversationTitle } from
@@ -156,8 +157,10 @@ function parsePageContext(raw: unknown): AssistantPageContext | null {
   if (obj.documentation && typeof obj.documentation === "object") {
     const documentation = obj.documentation as Record<string, unknown>;
     const locale = typeof documentation.locale === "string" ? supportedLocaleForTag(documentation.locale) : null;
+    const selfHosting = documentation.selfHosting === undefined ? undefined : parseSelfHostingHelpContext(documentation.selfHosting);
+    if (selfHosting === null) return null;
     if (locale && (documentation.articleId === null || typeof documentation.articleId === "string" && /^[a-z0-9-]{1,100}$/.test(documentation.articleId))) {
-      return { documentation: { articleId: documentation.articleId as string | null, locale } };
+      return { documentation: { articleId: documentation.articleId as string | null, locale, ...(selfHosting ? { selfHosting } : {}) } };
     }
   }
   const pick = (key: string): string | undefined =>
@@ -731,7 +734,8 @@ export async function POST(request: NextRequest) {
         timezone,
         numoDefaultStatus,
         webSearchEnabled,
-        ...(pageContext?.documentation ? { documentation: { articleId: pageContext.documentation.articleId } } : {}),
+        ...(pageContext?.documentation ? { documentation: { articleId: pageContext.documentation.articleId,
+          ...(pageContext.documentation.selfHosting ? { selfHosting: pageContext.documentation.selfHosting } : {}) } } : {}),
         ...(routineContinuation
           ? {
               routineId: routineContinuation.routine.id,

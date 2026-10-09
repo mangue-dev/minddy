@@ -6466,6 +6466,7 @@
     "numoDescription": "Ask me how to use minddy. I can explain this guide or help you find another.",
     "numoQuestion": "Ask about minddy…",
     "numoThinking": "Reading the documentation…",
+    "numoSignInRequired": "You must sign in to use Numo.",
     "numoUsage": "Uses your account’s allowance",
     "navTitle": "Docs",
     "welcome": "Welcome to minddy",
