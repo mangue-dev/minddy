@@ -267,6 +267,8 @@ export interface AssistantSkillSelection {
  * Client-set, server-validated.
  */
 export interface AssistantPageContext {
+  /** Public guide context; this surface only permits documentation help. */
+  documentation?: { articleId: string | null; locale: string };
   projectId?: string;
   /** The account-level inbox is the current ambient surface. */
   inbox?: true;

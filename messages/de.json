@@ -6451,6 +6451,14 @@
     "error": "Die Antwort konnte nicht erstellt werden. Versuche es gleich noch einmal."
   },
   "Documentation": {
+    "account": "Kontoeinstellungen",
+    "signUp": "Registrieren",
+    "numoHelp": "Numo-Hilfe",
+    "numoWelcome": "Wie kann ich helfen?",
+    "numoDescription": "Frag mich, wie du minddy nutzen kannst. Ich kann diesen Leitfaden erklären oder dir helfen, einen anderen zu finden.",
+    "numoQuestion": "Frage zu minddy stellen…",
+    "numoThinking": "Dokumentation wird gelesen…",
+    "numoUsage": "Nutzt das KI-Kontingent deines Kontos.",
     "navTitle": "Doku",
     "welcome": "Willkommen bei minddy",
     "gettingStarted": "Erste Schritte",

@@ -48,6 +48,13 @@ describe("resolveAiRuntime", () => {
     expect(getUserByok).toHaveBeenCalledWith("u1", "assistant", "text");
   });
 
+  it("uses the managed allowance for documentation even with an active personal provider", async () => {
+    getUserByok.mockResolvedValue({ provider: "anthropic", apiKey: "user-key", featureModels: { assistant_model: "personal-model" } });
+    await expect(resolveAiRuntime({ userId: "u1", modelKey: "assistant_model", managedOnly: true }))
+      .resolves.toMatchObject({ mode: "platform", apiKey: "platform-key", model: "platform/chat" });
+    expect(getUserByok).not.toHaveBeenCalled();
+  });
+
   it("never uses the platform key without managed-service opt-in", async () => {
     process.env.MINDDY_MANAGED_AI = "";
     getUserByok.mockResolvedValue(null);

@@ -55,6 +55,11 @@ beforeEach(() => {
   h.conversationModels.mockImplementation(async () => (await h.catalog()).models);
 });
 
+it("preserves the documentation managed-provider requirement", async () => {
+  await resolveNumoTurnConfiguration({ userId: "user", managedOnly: true });
+  expect(h.runtime).toHaveBeenCalledWith(expect.objectContaining({ userId: "user", managedOnly: true }));
+});
+
 describe("Numo conversation configuration", () => {
   it("does not wait for picker-only account and recommendation work on OpenRouter admission", async () => {
     h.catalog.mockImplementation(() => new Promise(() => {}));

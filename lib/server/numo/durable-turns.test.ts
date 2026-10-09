@@ -168,7 +168,7 @@ vi.mock("@/lib/server/assistant/skills", () => ({
 }));
 vi.mock("@/lib/server/assistant/attachment-parts", () => ({ buildAttachmentParts: async () => [] }));
 vi.mock("@/lib/server/assistant/tools", () => ({
-  CONVERSATION_ASSISTANT_TOOLS: [{ function: { name: "get_issue" } }],
+  CONVERSATION_ASSISTANT_TOOLS: [{ function: { name: "get_issue" } }, { function: { name: "get_help" } }],
   AUTOMATION_ASSISTANT_TOOLS: [
     { function: { name: "get_issue" } },
     { function: { name: "report_automation_outcome" } },
@@ -294,6 +294,17 @@ beforeEach(() => {
 });
 
 describe("durable Numo execution", () => {
+  it("uses the published guide and only help tools for a documentation turn", async () => {
+    h.turn = { ...h.turn!, intent: { ...(h.turn!.intent as object), locale: "fr", documentation: { articleId: "numo" } } };
+    await executeNumoTurn({ turnId: h.turn.id as string, readClient: service });
+    const [messages, tools, , context] = h.processChat.mock.calls[0];
+    expect(messages[0].content).toContain("documentation assistant");
+    expect(messages[0].content).toContain("/fr/documentation/numo");
+    expect(messages[0].content).toContain("Use idiomatic French");
+    expect(tools.map((tool: { function: { name: string } }) => tool.function.name)).toEqual(["get_help"]);
+    expect(context).toMatchObject({ documentationHelp: true, userId: h.turn.user_id });
+    expect(resolveAiRuntime).toHaveBeenCalledWith(expect.objectContaining({ managedOnly: true }));
+  });
   it("streams a text answer before a cold OpenRouter catalog finishes loading", async () => {
     let releaseCatalog!: () => void;
     h.fetchModelIndex.mockReturnValue(new Promise((resolve) => {

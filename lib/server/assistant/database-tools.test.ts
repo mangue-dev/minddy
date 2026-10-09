@@ -122,6 +122,13 @@ describe("code-worker launch diagnostics", () => {
 });
 
 describe("Numo database tool dispatch", () => {
+  it.each(["get_issue", "list_projects", "create_issue", "launch_code_agent", "update_account_settings", "web_search", "call_mcp_tool"])("blocks %s on the public documentation surface before dispatch", async tool => {
+    const result = await executeTool(tool, {}, { ...ctx, documentationHelp: true });
+    expect(result.success).toBe(false);
+    expect(result.result).toEqual({ error: "Only public documentation help is available in this conversation." });
+    expect(h.access).not.toHaveBeenCalled();
+    expect(h.launch).not.toHaveBeenCalled();
+  });
   it("exposes a project-scoped database tool and returns schema read results", async () => {
     const tool = PROJECT_ASSISTANT_TOOLS.find(
       (t) => t.function.name === "update_page_database",

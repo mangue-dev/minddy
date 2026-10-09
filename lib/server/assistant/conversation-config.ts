@@ -89,6 +89,7 @@ export async function resolveNumoTurnConfiguration(input: {
   model?: unknown;
   reasoningLevel?: unknown;
   admittedBilling?: ResolvedBilling;
+  managedOnly?: boolean;
 }): Promise<ResolvedNumoTurnConfiguration> {
   const persistedModel = normalizeModel(input.model);
   const persistedReasoningLevel = normalizeReasoning(input.reasoningLevel);
@@ -100,6 +101,7 @@ export async function resolveNumoTurnConfiguration(input: {
     modelKey: "assistant_model",
     surface: "assistant",
     modelOverride: persistedModel,
+    ...(input.managedOnly ? { managedOnly: true } : {}),
   });
 
   // Inherited settings must use the same model capabilities as the picker.

@@ -3307,3 +3307,11 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
   .mobile-kanban-scroller { scrollbar-width: none; }
   .mobile-kanban-scroller::-webkit-scrollbar { display: none; }
 }
+
+/* Keep the article readable beside the documentation help conversation. */
+@media (min-width: 1024px) {
+  html[data-app-layout="desktop"] [data-documentation-numo-open="true"] [data-documentation-main] { padding-right: 24rem; }
+  html[data-app-layout="desktop"] [data-documentation-numo-open="true"] [data-documentation-contents] { display: none; }
+  html[data-app-layout="desktop"] [data-documentation-numo-open="true"] [data-documentation-main] > div { padding-left: 1.5rem; padding-right: 1.5rem; }
+  html[data-app-layout="desktop"] [data-documentation-numo-open="true"] [data-documentation-mobile-contents] { right: 24rem; }
+}

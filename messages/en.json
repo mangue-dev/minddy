@@ -6451,6 +6451,14 @@
     "error": "The answer could not be generated. Try again in a moment."
   },
   "Documentation": {
+    "account": "Account settings",
+    "signUp": "Sign up",
+    "numoHelp": "Numo help",
+    "numoWelcome": "How can I help?",
+    "numoDescription": "Ask me how to use minddy. I can explain this guide or help you find another.",
+    "numoQuestion": "Ask about minddy…",
+    "numoThinking": "Reading the documentation…",
+    "numoUsage": "Uses your account’s AI allowance.",
     "navTitle": "Docs",
     "welcome": "Welcome to minddy",
     "gettingStarted": "Get started",

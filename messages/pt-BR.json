@@ -6451,6 +6451,14 @@
     "error": "Não foi possível gerar a resposta. Tente novamente em instantes."
   },
   "Documentation": {
+    "account": "Configurações da conta",
+    "signUp": "Cadastrar-se",
+    "numoHelp": "Ajuda do Numo",
+    "numoWelcome": "Como posso ajudar?",
+    "numoDescription": "Pergunte como usar o minddy. Posso explicar este guia ou ajudar você a encontrar outro.",
+    "numoQuestion": "Pergunte sobre o minddy…",
+    "numoThinking": "Lendo a documentação…",
+    "numoUsage": "Usa a cota de IA da sua conta.",
     "navTitle": "Docs",
     "welcome": "Boas-vindas ao minddy",
     "gettingStarted": "Primeiros passos",

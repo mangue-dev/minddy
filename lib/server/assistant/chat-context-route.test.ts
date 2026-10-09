@@ -80,7 +80,7 @@ function database({ owner = "user", status = "idle", visible = new Set(["a", "b"
     if (name === "begin_numo_turn_with_budget" && h.reservation) {
       return { data: { turn: null, ...h.reservation }, error: null };
     }
-    if (name === "begin_numo_turn") {
+    if (name === "begin_numo_turn" || name === "begin_numo_turn_with_budget") {
       if (status === "generating") return { data: null, error: { message: "conversation_busy" } };
       turn = {
         id: "turn",
@@ -104,7 +104,7 @@ function database({ owner = "user", status = "idle", visible = new Set(["a", "b"
         context: args.p_context,
         metadata: args.p_metadata,
       });
-      return { data: turn, error: null };
+      return { data: name === "begin_numo_turn_with_budget" ? { turn } : turn, error: null };
     }
     if (name === "claim_numo_turn") {
       if (h.claimError) return { data: null, error: { message: "database unavailable" } };
@@ -138,6 +138,24 @@ beforeEach(() => {
 });
 
 describe("conversation identity across project contexts", () => {
+  it("admits documentation help with the guide locale, account billing and restricted execution", async () => {
+    const db = database();
+    h.managed = true;
+    expect(await send({ pageContext: { documentation: { articleId: "numo", locale: "fr" } } })).toBe(200);
+    expect(db.rows.find(row => row.role === "user")?.context).toEqual({ documentation: { articleId: "numo", locale: "fr" } });
+    expect(h.process.mock.calls[0][1].map((tool: { function: { name: string } }) => tool.function.name)).toEqual(["get_help"]);
+    expect(h.process.mock.calls[0][3]).toMatchObject({ documentationHelp: true, locale: "fr", userId: "user" });
+  });
+  it("rejects workspace attachments on a documentation request", async () => {
+    database();
+    expect(await send({ projectId: "project", pageContext: { documentation: { articleId: null, locale: "en" } } })).toBe(400);
+    expect(h.process).not.toHaveBeenCalled();
+  });
+  it.each([{ articleId: "../private", locale: "fr" }, { articleId: null, locale: "unknown" }])("rejects malformed help context rather than opening an unrestricted assistant", async documentation => {
+    database();
+    expect(await send({ pageContext: { documentation } })).toBe(400);
+    expect(h.process).not.toHaveBeenCalled();
+  });
   it.each([
     { spent: 0.1, reserved: 9.9, status: 409, code: "usage_budget_reserved", copy: "usageBudgetReserved" },
     { spent: 10, reserved: 0, status: 403, code: "usage_budget_exceeded", copy: "usageBudgetExceeded" },

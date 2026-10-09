@@ -5,7 +5,7 @@ import type { DocumentationArticle } from "@/lib/documentation";
 import { documentationPath } from "@/lib/documentation-core.mjs";
 import { localizedHref } from "@/lib/locale-href";
 import { MinddyLogo } from "@/components/minddy-logo";
-import { LanguageSwitcher } from "@/components/marketing/language-switcher";
+import { DocumentationAccountActions } from "./documentation-session";
 import { WordmarkLetters } from "@/components/marketing/wordmark-letters";
 import wordmarkStyles from "@/components/marketing/nav-wordmark.module.css";
 import { DocumentationMobileNavigation, DocumentationSearch, DocumentationSidebar } from "./documentation-navigation";
@@ -37,8 +37,8 @@ export async function DocumentationShell({ articles, locale, currentId, title, t
         <DocumentationMobileNavigation {...navigation} />
         <div className="flex items-center gap-3">
           <a href={localizedHref("/", locale)} aria-label="minddy" className="rounded focus-visible:outline-2 focus-visible:outline-ring"><MinddyLogo className="h-6" /></a>
-          <span aria-hidden className="text-border">|</span>
-          <a href={documentationPath(null, locale)} className="rounded text-sm font-medium focus-visible:outline-2 focus-visible:outline-ring">
+          <span aria-hidden className="hidden text-border min-[375px]:inline">|</span>
+          <a href={documentationPath(null, locale)} className="hidden rounded text-sm font-medium focus-visible:outline-2 focus-visible:outline-ring min-[375px]:inline">
             <span className={wordmarkStyles.brand}><WordmarkLetters text={t("navTitle")} /></span>
           </a>
         </div>
@@ -49,13 +49,13 @@ export async function DocumentationShell({ articles, locale, currentId, title, t
         <span className="max-w-[45%] shrink-0 truncate text-muted-foreground sm:max-w-none">{topic}</span><span aria-hidden className="text-muted-foreground/50">/</span>
         <span aria-current="page" className="truncate">{title}</span>
       </nav>
-      <div className="ml-auto min-w-0 max-w-[40%] shrink-0 [&_[data-slot=select-trigger]]:max-w-full [&_[data-slot=select-value]]:truncate"><LanguageSwitcher /></div>
+      <div className="ml-auto shrink-0"><DocumentationAccountActions currentId={currentId} locale={locale} /></div>
     </header>
     <DocumentationContents key={currentId ?? "welcome"} sections={sections} label={t("contents")} />
     <aside className="fixed bottom-0 left-0 top-16 hidden w-72 overflow-y-auto overscroll-contain border-r border-border lg:block">
       <DocumentationSidebar {...navigation} />
     </aside>
-    <main className="min-w-0 pt-36 sm:pt-28 lg:pl-72 xl:pr-64 xl:pt-16">
+    <main data-documentation-main className="min-w-0 pt-36 sm:pt-28 lg:pl-72 xl:pr-64 xl:pt-16">
       <div className="mx-auto max-w-[52rem] px-6 pb-16 pt-10 sm:px-10 sm:pt-12 lg:px-12">
         <article id="documentation-article" tabIndex={-1} className="min-w-0 scroll-mt-40 outline-none sm:scroll-mt-32 xl:scroll-mt-24">
           {children}

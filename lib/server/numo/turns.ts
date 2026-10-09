@@ -34,6 +34,7 @@ import {
 } from "@/lib/server/assistant/prompt";
 import { authorizedSkillsNotes } from "@/lib/server/assistant/skills";
 import { commandNote } from "@/lib/server/assistant/commands";
+import { buildDocumentationHelpPrompt } from "@/lib/server/assistant/documentation-help";
 import { sanitizeAssistantMessageContent } from "@/lib/server/assistant/sanitize";
 import {
   AUTOMATION_WORKER_MEDIATION_ASSISTANT_TOOLS,
@@ -103,6 +104,8 @@ export const NUMO_TURN_STATUSES = [
   "failed",
 ] as const;
 export interface NumoTurnIntent {
+  /** Public help uses the same billing and durable lifecycle, with restricted tools. */
+  documentation?: { articleId: string | null };
   projectId: string | null;
   locale: string;
   timezone: string;
@@ -567,7 +570,9 @@ async function buildExecutionInput(input: {
   const { turn, readClient, service, runtime } = input;
   const intent = turn.intent;
   let systemPrompt: string;
-  if (intent.projectId) {
+  if (intent.documentation) {
+    systemPrompt = buildDocumentationHelpPrompt(intent.locale, intent.documentation.articleId);
+  } else if (intent.projectId) {
     const access = await getProjectAccess(turn.user_id, intent.projectId);
     if (!access) throw new Error("The attached project is no longer accessible");
     const promptProject = await gatherProjectPromptContext({
@@ -728,6 +733,7 @@ async function buildExecutionInput(input: {
       : intent.automation ? AUTOMATION_ASSISTANT_TOOLS : []
     : intent.automation ? AUTOMATION_ASSISTANT_TOOLS : CONVERSATION_ASSISTANT_TOOLS;
   if (!intent.webSearchEnabled) tools = withoutWebSearch(tools);
+  if (intent.documentation) tools = CONVERSATION_ASSISTANT_TOOLS.filter(tool => tool.function.name === "get_help");
   return { messages, tools, ...(workerInput ? { workerInput } : {}) };
 }
 
@@ -1144,6 +1150,7 @@ async function executeClaimedNumoTurn(input: {
       modelKey: "assistant_model",
       surface: "assistant",
       modelOverride: claimed.model,
+      ...(claimed.intent.documentation ? { managedOnly: true } : {}),
     });
     // The turn row is the admission-time authority. A queued or recovered
     // turn must not pick up a later conversation setting, and an immediate
@@ -1163,6 +1170,7 @@ async function executeClaimedNumoTurn(input: {
       phase: "execution_prepared", executionElapsedMs: Math.round(performance.now() - executionStartedAt) });
     const result = await processChat(execution.messages, execution.tools, emitter, {
       projectId: claimed.intent.projectId,
+      documentationHelp: !!claimed.intent.documentation,
       requireExplicitProjectTarget: true,
       userId: claimed.user_id,
       supabase: readClient,

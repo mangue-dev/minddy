@@ -1,3 +1,4 @@
+import { sanitizeInternalRedirectPath } from "@/lib/auth-redirect";
 import { supabaseServerFetchWithTimeout as supabaseServerFetch } from "@/lib/server/supabase-fetch";
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
@@ -325,7 +326,18 @@ async function routeRequest(request: NextRequest) {
   const supabaseKey = process.env.MINDDY_PUBLIC_SUPABASE_ANON_KEY;
 
   // Official documentation is independent of sessions and backend availability.
-  if (resolveDocumentationPath(pathname)) return serveLocalizedPublicRoute(request, pathname);
+  if (resolveDocumentationPath(pathname)) {
+    if (pathname === "/docs") {
+      const preferred = supportedLocaleForTag(request.cookies.get("NEXT_LOCALE")?.value)
+        ?? detectFromAcceptLanguage(request.headers.get("accept-language"));
+      if (preferred && preferred !== "en") {
+        const target = request.nextUrl.clone();
+        target.pathname = documentationPath(null, preferred);
+        return NextResponse.redirect(target, 307);
+      }
+    }
+    return serveLocalizedPublicRoute(request, pathname);
+  }
 
   // Supabase not configured (empty .env) → don't block navigation.
   if (!supabaseUrl || !supabaseKey) {
@@ -404,7 +416,9 @@ async function routeRequest(request: NextRequest) {
       );
       applySession = applyCookies;
       if (session && !awaitsMfaChallenge(session)) {
-        return applySession(NextResponse.redirect(new URL("/home", process.env.MINDDY_PUBLIC_APP_URL || request.url)));
+        const redirect = sanitizeInternalRedirectPath(request.nextUrl.searchParams.get("redirect"));
+        const destination = resolveDocumentationPath(new URL(redirect, request.url).pathname) ? redirect : "/home";
+        return applySession(NextResponse.redirect(new URL(destination, process.env.MINDDY_PUBLIC_APP_URL || request.url)));
       }
     }
 

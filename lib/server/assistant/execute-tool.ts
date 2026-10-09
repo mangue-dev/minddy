@@ -245,6 +245,8 @@ import { readPlanUsageTool, readUserStatsTool } from "./stats-tools";
 // every event/notification stays attributed to the human who asked.
 
 export interface ToolContext {
+  /** The public documentation surface can only read the help corpus. */
+  documentationHelp?: boolean;
   /** Cancels the database transport of project and issue listing tools. */
   readAbortSignal?: AbortSignal;
   /** Context project for legacy comment entry points. */
@@ -863,6 +865,9 @@ export async function executeTool(
   args: Record<string, unknown>,
   ctx: ToolContext,
 ): Promise<ToolExecution> {
+  if (ctx.documentationHelp && toolName !== "get_help") {
+    return toolError("Only public documentation help is available in this conversation.");
+  }
   if (ctx.readAbortSignal && (toolName === "list_projects" || toolName === "list_issues")) {
     ctx = { ...ctx,
       service: abortableReadClient(ctx.service, ctx.readAbortSignal),
