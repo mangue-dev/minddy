@@ -102,17 +102,22 @@ rides in a single prompt. Existing model, disablement and cost guards remain.
 ## Release maintenance
 
 `@mangue-dev` is responsible for the manual until another maintainer is named.
-Documentation maintenance is mandatory for every code change, not only feature
-PRs. Review affected public guides, technical references and internal
-instructions in the same PR. Add documentation for new capabilities, correct
-changed behavior, and remove retired procedures, claims and illustrations.
+Review documentation impact for every code change. Documentation edits are
+required only when documented behavior, controls, configuration or contributor
+workflows change. Small fixes, refactors, formatting and test-only PRs that
+leave documentation accurate need no documentation edit, new illustration or
+article review record. Complete affected public guides, technical references
+and internal instructions in the same PR. Add documentation for new
+capabilities, correct changed behavior, and remove retired procedures, claims
+and illustrations.
 Reconcile related links, navigation, aliases, coverage mappings and glossary
 entries when their meaning changes; preserve valid legacy URLs. Do not postpone
 required documentation to another task or release.
 
-PRs list affected workflow, article and figure IDs, evidence and checks. If
-documentation remains accurate, record the reviewed scope and reason rather
-than making cosmetic edits. Update English facts and full `fr`, `de`, `es`,
+When documentation changes, PRs list affected workflow, article and figure IDs,
+evidence and checks. For a PR with no documentation impact, a brief note
+suffices; article IDs and release-wide checks are unnecessary. Avoid cosmetic
+edits. Update English facts and full `fr`, `de`, `es`,
 `it`, and `pt-BR` translations together, including localized labels, examples,
 captions and alternative text. Follow the editorial guide for writing and
 illustrations: refresh screenshots of changed controls, update responsive

@@ -30,13 +30,17 @@ make the exception obvious from its surrounding code or fixture path.
   changes.
 - Review `git diff --check` and confirm that excluded paths are untouched.
 
-## Documentation is part of every change
+## Review documentation impact
 
 - Always review documentation impact when modifying code. Add documentation
   for new features, correct it when behavior changes, and remove obsolete
   instructions and illustrations when a feature is removed. Complete affected
   public guides, technical references and internal instructions in the same PR;
   do not defer documentation to a later release or separate task.
+- Documentation edits are required only when the change affects documented
+  behavior, controls, configuration or contributor workflows. A small fix,
+  refactor, formatting change or test-only PR that leaves documentation accurate
+  needs no documentation edit, new illustration or article review record.
 - Follow the [documentation maintenance contract](content/documentation/README.md#release-maintenance)
   and [editorial guide](docs/documentation-editorial-guide.md), including their
   writing, technical inline-code, factual review and illustration rules.
@@ -51,9 +55,10 @@ make the exception obvious from its surrounding code or fixture path.
 - Run `npm run check:documentation`, `npm run check:knowledge` and
   `npm run check:owned-english` for documentation changes, and require
   `npm run check:documentation:release` before publication. Record affected
-  article/workflow/figure IDs and checks in the PR. If a code change leaves the
-  documentation accurate, record the reviewed scope and reason; avoid cosmetic
-  edits or invented review dates. Unresolved documentation gaps block completion.
+  article/workflow/figure IDs and checks when documentation changes. For a PR
+  with no documentation impact, a brief note is sufficient; do not require
+  article IDs or release-wide checks. Avoid cosmetic edits or invented review
+  dates. Unresolved documentation gaps caused by the change block completion.
 
 ## Git workflow (this repository only)
 

@@ -54,8 +54,11 @@ assets in `public/documentation/<locale>/` use the declared reader language.
 
 ## Keep documentation current
 
-Documentation maintenance is required for every code change and every release
-that changes the desktop version. Add guides for new features, update changed
+Review documentation impact for every code change. Edit documentation only
+when the change affects documented behavior, controls, configuration or
+contributor workflows. Small fixes, refactors, formatting and test-only PRs
+that leave documentation accurate need no documentation edit, new illustration
+or article review record. Add guides for new features, update changed
 behavior and remove retired instructions and figures in the same PR. Review
 affected public articles, technical references and internal instructions; do
 not leave documentation work for later.
@@ -71,7 +74,8 @@ the manual and update affected content, visuals, compatibility and verified
 review evidence. Run `npm run check:documentation`, `npm run check:knowledge`,
 `npm run check:owned-english` and `git diff --check`; require
 `npm run check:documentation:release` before publication. Report affected
-article/workflow/figure IDs and any unchanged documentation scope in the PR.
+article/workflow/figure IDs when documentation changes. A brief note suffices
+for a PR with no documentation impact; it needs no release-wide checks.
 An accurate manual may need no prose edit, but it always needs an impact review.
 Do not invent review evidence or mark work complete with unresolved gaps.
 

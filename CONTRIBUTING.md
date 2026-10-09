@@ -123,19 +123,25 @@ merged changes should reach production.
 
 ## Documentation maintenance
 
-Documentation is required work for every code change. Document added features,
-correct changed behavior and remove retired instructions and visuals before
+Review documentation impact for every code change. Documentation edits are
+required only when documented behavior, controls, configuration or contributor
+workflows change. Small fixes, refactors, formatting and test-only PRs that
+leave documentation accurate need no documentation edit, new illustration or
+article review record. Document added features, correct changed behavior and
+remove retired instructions and visuals before
 the pull request is ready. Follow the
 [maintenance contract](content/documentation/README.md#release-maintenance) and
 [editorial guide](docs/documentation-editorial-guide.md). Keep all six public
 languages, localized examples, captions, alternative text, screenshots and
 responsive diagrams current together; internal instructions remain English.
-List affected article, workflow and figure IDs in the pull request, or explain
-why the reviewed documentation still matches the behavior.
+List affected article, workflow and figure IDs when documentation changes.
+A brief note suffices for a PR with no documentation impact; it needs no
+article IDs or release-wide checks.
 
 Every release that changes the desktop version requires a documentation review
-and update before the candidate is frozen. Run `npm run check:documentation`,
-`npm run check:knowledge`, `npm run check:owned-english` and `git diff --check`
+and any necessary updates before the candidate is frozen. Run
+`npm run check:documentation`, `npm run check:knowledge`,
+`npm run check:owned-english` and `git diff --check`
 after documentation edits; require `npm run check:documentation:release`
 before publication. Passing structural checks does not replace factual,
 language and visual review.

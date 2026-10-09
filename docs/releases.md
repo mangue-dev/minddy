@@ -81,7 +81,11 @@ configuration, performance budgets, and historical backfill.
 ## Documentation gate
 
 Documentation must remain current with every code change, including feature
-additions, behavior changes and removals. Follow the
+additions, behavior changes and removals. Review impact first: small fixes,
+refactors, formatting and test-only PRs that leave documentation accurate need
+no documentation edit or new illustration. A brief note suffices for that PR;
+the release documentation gate still applies when the desktop version changes.
+Follow the
 [maintenance contract](../content/documentation/README.md#release-maintenance)
 and [editorial guide](documentation-editorial-guide.md). Update affected public
 guides in all six languages, localized examples, captions, alternative text,
