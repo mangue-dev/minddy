@@ -6451,8 +6451,11 @@
     "error": "Não foi possível gerar a resposta. Tente novamente em instantes."
   },
   "Documentation": {
+    "openApp": "Abrir o app",
+    "signOut": "Sair",
     "help": "Ajuda",
-    "account": "Configurações da conta",
+    "account": "Menu da conta",
+    "signOutFailed": "Não foi possível sair. Tente novamente.",
     "signUp": "Cadastrar-se",
     "numoHelp": "Ajuda do Numo",
     "numoWelcome": "Como posso ajudar?",

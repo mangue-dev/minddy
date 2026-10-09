@@ -6451,8 +6451,11 @@
     "error": "No se pudo generar la respuesta. Inténtalo de nuevo en un momento."
   },
   "Documentation": {
+    "openApp": "Abrir la aplicación",
+    "signOut": "Cerrar sesión",
     "help": "Ayuda",
-    "account": "Ajustes de la cuenta",
+    "account": "Menú de la cuenta",
+    "signOutFailed": "No se pudo cerrar la sesión. Inténtalo de nuevo.",
     "signUp": "Registrarse",
     "numoHelp": "Ayuda de Numo",
     "numoWelcome": "¿Cómo puedo ayudarte?",

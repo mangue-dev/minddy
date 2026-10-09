@@ -6451,8 +6451,11 @@
     "error": "Die Antwort konnte nicht erstellt werden. Versuche es gleich noch einmal."
   },
   "Documentation": {
+    "openApp": "App öffnen",
+    "signOut": "Abmelden",
     "help": "Hilfe",
-    "account": "Kontoeinstellungen",
+    "account": "Kontomenü",
+    "signOutFailed": "Abmelden fehlgeschlagen. Versuche es erneut.",
     "signUp": "Registrieren",
     "numoHelp": "Numo-Hilfe",
     "numoWelcome": "Wie kann ich helfen?",

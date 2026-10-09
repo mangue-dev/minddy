@@ -6451,8 +6451,11 @@
     "error": "The answer could not be generated. Try again in a moment."
   },
   "Documentation": {
+    "openApp": "Open app",
+    "signOut": "Sign out",
     "help": "Help",
-    "account": "Account settings",
+    "account": "Account menu",
+    "signOutFailed": "Could not sign out. Try again.",
     "signUp": "Sign up",
     "numoHelp": "Numo help",
     "numoWelcome": "How can I help?",

@@ -4,13 +4,17 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Button } from "mangue-ui";
+import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "mangue-ui";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowUpRight01Icon, LogOutIcon } from "@hugeicons/core-free-icons";
+import { toast } from "sonner";
 import { AuthProvider, useAuth, useAuthOptional } from "@/lib/auth-context";
 import { useRuntimeConfig } from "@/lib/runtime-config-provider";
 import { AccountQueryProvider } from "@/lib/account-query-provider";
 import { useMyAvatarSource } from "@/lib/use-my-avatar";
 import { UserAvatar } from "@/components/user-avatar";
 import { NumoFace } from "@/components/numo-face";
+import { LazyToaster } from "@/components/lazy-toaster";
 import { documentationPath } from "@/lib/documentation-core.mjs";
 import type { Locale } from "@/i18n/config";
 
@@ -31,6 +35,7 @@ function Session({ children, locale }: { children: ReactNode; locale: Locale }) 
   return <SessionContext.Provider value={{ open, setOpen: changeOpen, articleId, setArticleId }}>
     <div data-documentation-numo-open={user && open ? "true" : undefined}>{children}</div>
     {user && activated && <DocumentationNumo key={user.id} open={open} onClose={() => setOpen(false)} articleId={articleId} locale={locale} />}
+    <LazyToaster />
   </SessionContext.Provider>;
 }
 
@@ -64,9 +69,19 @@ function DocumentationGuestActions({ currentId, locale }: { currentId: string | 
 
 function SessionAccountActions({ currentId, locale }: { currentId: string | null; locale: Locale }) {
   const session = useContext(SessionContext)!;
-  const { user, loading } = useAuth();
+  const { user, loading, signOut } = useAuth();
+  const [signingOut, setSigningOut] = useState(false);
   const avatar = useMyAvatarSource();
   const t = useTranslations("Documentation");
+  const handleSignOut = async () => {
+    setSigningOut(true);
+    try {
+      await signOut();
+    } catch {
+      setSigningOut(false);
+      toast.error(t("signOutFailed"));
+    }
+  };
   useEffect(() => session.setArticleId(currentId), [currentId, session.setArticleId]);
   if (loading) return <div aria-busy="true" className="h-9 w-24 animate-pulse rounded bg-muted" />;
   if (!user) return <DocumentationGuestActions currentId={currentId} locale={locale} />;
@@ -74,6 +89,15 @@ function SessionAccountActions({ currentId, locale }: { currentId: string | null
     <Button variant="ghost" size="sm" aria-expanded={session.open} aria-controls="documentation-numo" onClick={() => session.setOpen(!session.open)} data-documentation-numo-launcher>
       <NumoFace className="size-5" />{t("help")}
     </Button>
-    <Link href="/settings?tab=profile" aria-label={t("account")} className="flex size-11 items-center justify-center rounded-full focus-visible:outline-2 focus-visible:outline-ring"><UserAvatar seed={avatar} className="size-8" /></Link>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon" aria-label={t("account")} className="size-11 rounded-full"><UserAvatar seed={avatar} className="size-8" /></Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem asChild><Link href="/home"><HugeiconsIcon icon={ArrowUpRight01Icon} aria-hidden />{t("openApp")}</Link></DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem variant="destructive" disabled={signingOut} onSelect={() => { void handleSignOut(); }}><HugeiconsIcon icon={LogOutIcon} aria-hidden />{t("signOut")}</DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   </div>;
 }

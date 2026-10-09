@@ -3,9 +3,9 @@
 import { useEffect, useRef, useState, type ComponentPropsWithoutRef } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Button, Sheet, SheetTitle, Spinner, Textarea } from "mangue-ui";
+import { Button, SendButtonWithCost, Sheet, SheetTitle, Spinner, Textarea } from "mangue-ui";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Add01Icon, ArrowUp01Icon, Cancel01Icon, SquareIcon } from "@hugeicons/core-free-icons";
+import { Add01Icon, Cancel01Icon, SquareIcon } from "@hugeicons/core-free-icons";
 import { MobileSheetContent } from "@/components/ui/mobile-sheet";
 import { useMobileLayout, useMobileViewport } from "@/lib/use-mobile-layout";
 import { useAssistantChat } from "@/lib/use-assistant-chat";
@@ -93,7 +93,7 @@ export function DocumentationNumo({ open, onClose, articleId, locale }: {
         }} />
         {busy
           ? <Button type="button" size="icon" className="absolute bottom-2 right-2 size-8 rounded-full" aria-label={assistant("stop")} onClick={abort}><HugeiconsIcon icon={SquareIcon} className="size-3 fill-current" aria-hidden /></Button>
-          : <Button type="submit" size="icon" className="absolute bottom-2 right-2 size-8 rounded-full" aria-label={assistant("send")} disabled={!draft.trim()}><HugeiconsIcon icon={ArrowUp01Icon} className="size-4" aria-hidden /></Button>}
+          : <div className="absolute bottom-2 right-2"><SendButtonWithCost cost={null} isLoading={false} disabled={!draft.trim()} onClick={submit} ariaLabel={assistant("send")} tooltipLabel={assistant("send")} /></div>}
       </div>
       <p className="text-center text-xs text-muted-foreground">{t("numoUsage")}</p>
     </form>
