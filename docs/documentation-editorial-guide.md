@@ -121,6 +121,24 @@ These are editing rules. A punctuation mark or phrase does not establish who
 wrote a text. Review usefulness and accuracy directly; an AI-detection score
 is not publication evidence.
 
+## Format technical references as inline code
+
+When citing a technical element in article prose, lists, or table cells, wrap
+it in Markdown backticks so it appears as inline code. This applies to library
+and package names, commands and flags, variables and environment variables,
+functions, configuration keys, literal values, file paths, and API identifiers.
+For example: use the `@supabase/supabase-js` library, run
+`npm run self-host:doctor`, or set the `NEXT_PUBLIC_SUPABASE_URL` environment
+variable. Apply this rule consistently in all six article locales.
+
+Keep the exact spelling, case, punctuation, and executable syntax inside the
+backticks. Include the complete short command when citing it in a sentence;
+use a fenced code block with an appropriate language for multiline commands,
+scripts, or configuration examples. Keep explanations outside the code span.
+Use ordinary prose for general technical concepts and product names, and
+preserve UI labels as UI labels. Inline code identifies a technical reference;
+it is not a substitute for emphasis throughout a sentence.
+
 ## Examples of substantive edits
 
 These examples illustrate editorial decisions using facts identified in the
@@ -225,6 +243,8 @@ For each article and locale, complete these checks before publication:
   audience; filler, repeated explanations, and unsupported promises are gone.
 - [ ] Prose reads naturally aloud, technical conditions survived editing, and
   the house rules have been checked.
+- [ ] Technical references use inline code consistently in prose, lists, and
+  tables; exact syntax is preserved, and multiline examples use fenced blocks.
 - [ ] Illustrations clarify the text, match the steps, remain legible on mobile,
   and use suitable localized demo data, captions, and alternative text.
 - [ ] All six locales retain the complete meaning at the reviewed revision,
