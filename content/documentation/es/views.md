@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -43,9 +43,9 @@
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions)",
+    "revision": 6,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review)",
     "date": "2026-10-09"
   },
   "related": [
@@ -68,7 +68,7 @@
       "src": "/documentation/es/work-view-filters.png",
       "alt": "Filtros manuales de una vista y menú de ordenación.",
       "caption": "Filtra por propiedades de las incidencias o elige un orden. El campo de IA es opcional para estos controles manuales.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -84,7 +84,7 @@
       "src": "/documentation/es/work-share-view.png",
       "alt": "Diálogo para compartir una vista con acceso privado seleccionado.",
       "caption": "El acceso privado, protegido por contraseña y público son opciones distintas. La vista permanece privada en esta captura.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -134,6 +134,6 @@ Las tarjetas compartidas muestran sus títulos, descripciones y propiedades visi
 
 Vuelve a los controles de uso compartido y cambia la vista a privada para revocar la publicación. Abre otra vez el enlace antiguo sin identificarte y comprueba que se deniega el acceso. La revocación no puede recuperar copias o capturas ya guardadas por un visitante.
 
-Los enlaces secretos de vistas utilizan la ruta de publicación de enlaces privados y mantienen noindex. Esta política limita su aparición en buscadores, pero no es una contraseña. Mantén el enlace privado si contiene información sensible y utiliza protección por contraseña cuando corresponda. No confundas una vista compartida de un usuario con la documentación oficial indexada.
+Los enlaces secretos de vistas utilizan la ruta de publicación de enlaces privados y mantienen `noindex`. Esta política limita su aparición en buscadores, pero no es una contraseña. Mantén el enlace privado si contiene información sensible y utiliza protección por contraseña cuando corresponda. No confundas una vista compartida de un usuario con la documentación oficial indexada.
 
 Si el resultado anónimo difiere de lo esperado, revisa la vista guardada y la configuración antes de reenviar el enlace. Comprueba de nuevo el alcance después de cambiar filtros o contenidos enlazados.

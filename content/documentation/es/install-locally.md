@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 3,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -40,9 +40,9 @@
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (collection-caption clarity)",
+    "revision": 4,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (collection-caption clarity); agent:/root (inline-code syntax and unchanged-text review)",
     "date": "2026-10-09"
   },
   "related": [
@@ -60,7 +60,7 @@
       "src": "/documentation/es/install-locally-flow.svg",
       "alt": "Diagrama: La aplicación de escritorio selecciona el clon. Aplicación loopback: puerto 6463. Supabase mínimo y datos duraderos. Salir detiene la aplicación y el backend.",
       "caption": "La aplicación de escritorio controla los servicios locales del clon elegido, cuyos datos se conservan de forma duradera.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -92,7 +92,7 @@
       "src": "/documentation/es/install-locally-wizard.png",
       "alt": "Asistente público de instalación con el perfil de este ordenador seleccionado.",
       "caption": "Elija la instalación personal cuando la aplicación de escritorio deba gestionar los servicios locales.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -112,7 +112,7 @@
 
 ## Ejecutar una instancia local desde la aplicación de escritorio {#install-locally}
 
-Prepare un clon dedicado a la evaluación con Node.js 24, pnpm 10.28.0, Git, Supabase CLI y Docker en ejecución. Reserve al menos 4 GB de RAM libre, dos núcleos y 10 GB libres en SSD; se recomiendan 8 GB, cuatro núcleos y 20 GB. Instale primero la aplicación de escritorio firmada desde la página de descargas. En Windows se distribuye mediante Microsoft Store; macOS y Linux tienen sus descargas correspondientes. Seleccione en el clon la versión que desea evaluar antes de instalar las dependencias.
+Prepare un clon dedicado a la evaluación con Node.js 24, `pnpm` 10.28.0, Git, Supabase CLI y Docker en ejecución. Reserve al menos 4 GB de RAM libre, dos núcleos y 10 GB libres en SSD; se recomiendan 8 GB, cuatro núcleos y 20 GB. Instale primero la aplicación de escritorio firmada desde la página de descargas. En Windows se distribuye mediante Microsoft Store; macOS y Linux tienen sus descargas correspondientes. Seleccione en el clon la versión que desea evaluar antes de instalar las dependencias.
 
 ```bash
 git clone https://github.com/mangue-dev/minddy.git
@@ -130,8 +130,8 @@ pnpm install --frozen-lockfile
 
 ## Dejar que la aplicación gestione los servicios {#launch}
 
-Abra el menú nativo minddy. En Windows y Linux, pulse Alt para mostrar la barra de menús; en macOS, utilice la barra global. Abra el diálogo de conexión al servidor, elija la opción de instancia local y seleccione la raíz del clon. La aplicación ejecuta self-host:local --no-open, prepara un Supabase mínimo, aplica las migraciones y la configuración de Storage, compila cuando hace falta y espera a que /api/health responda antes de abrir el registro. Solo escucha en loopback, en el puerto 6463, recuerda la carpeta y controla tanto el inicio como la parada.
+Abra el menú nativo minddy. En Windows y Linux, pulse Alt para mostrar la barra de menús; en macOS, utilice la barra global. Abra el diálogo de conexión al servidor, elija la opción de instancia local y seleccione la raíz del clon. La aplicación ejecuta `self-host:local --no-open`, prepara un Supabase mínimo, aplica las migraciones y la configuración de Storage, compila cuando hace falta y espera a que `/api/health` responda antes de abrir el registro. Solo escucha en loopback, en el puerto 6463, recuerda la carpeta y controla tanto el inicio como la parada.
 
 ## Recuperarse de un fallo {#recover}
 
-Si el inicio falla, copie el informe de diagnóstico desde el menú nativo de ayuda. Compruebe Docker, la disponibilidad de la CLI, el espacio libre y si otro proceso ocupa el puerto 6463. Puede ejecutar pnpm self-host:local desde el terminal para diagnosticar el problema. Deténgalo con Ctrl+C antes de devolver el control a la aplicación, que no asume procesos ajenos. Salir por completo de la aplicación normalmente también detiene Supabase; cerrar una ventana no equivale a salir. La opción --keep-backend modifica ese comportamiento de forma explícita. No utilice supabase db reset --local como método de recuperación: destruye los datos de evaluación. Compruebe la creación de una cuenta, un proyecto, una incidencia y un archivo adjunto antes de confiar en la instancia.
+Si el inicio falla, copie el informe de diagnóstico desde el menú nativo de ayuda. Compruebe Docker, la disponibilidad de la CLI, el espacio libre y si otro proceso ocupa el puerto 6463. Puede ejecutar `pnpm self-host:local` desde el terminal para diagnosticar el problema. Deténgalo con Ctrl+C antes de devolver el control a la aplicación, que no asume procesos ajenos. Salir por completo de la aplicación normalmente también detiene Supabase; cerrar una ventana no equivale a salir. La opción `--keep-backend` modifica ese comportamiento de forma explícita. No utilice `supabase db reset --local` como método de recuperación: destruye los datos de evaluación. Compruebe la creación de una cuenta, un proyecto, una incidencia y un archivo adjunto antes de confiar en la instancia.

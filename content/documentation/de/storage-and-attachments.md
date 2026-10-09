@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 3,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -41,9 +41,9 @@
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (collection-caption clarity)",
+    "revision": 4,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
+    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (collection-caption clarity); agent:/root (inline-code syntax and unchanged-text review)",
     "date": "2026-10-09"
   },
   "related": [
@@ -60,7 +60,7 @@
       "src": "/documentation/de/storage-and-attachments-flow.svg",
       "alt": "Diagramm: Autorisierter Anwendungsdateizugriff. PostgreSQL-Objektmetadaten. Rohbytes im Dateisystem oder S3. Passende Konfiguration und Schlüssel.",
       "caption": "Eine Wiederherstellung braucht zusammengehörige Metadaten, Dateiinhalte und die passende geschützte Konfiguration.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -95,7 +95,7 @@
 
 ## Storage dauerhaft betreiben und Anhänge prüfen {#storage-and-attachments}
 
-PostgreSQL speichert Storage-Objektmetadaten und Anwendungsreferenzen. Das Storage-Backend enthält die Dateibytes. Beide gehören zu derselben Instanz und demselben Sicherungspunkt. Das full-Dateisystemprofil speichert Bytes unter docker/volumes/storage im festgelegten Upstream; S3-kompatibler Storage benötigt einen getrennten Rohdaten-Snapshot. Vergängliche Containerdateien sind kein dauerhafter Storage. Überwachen Sie Kapazität für Datenbank, Anhänge und Sicherungen und speichern Sie Backups außerhalb der aktiven Storage-Platte.
+PostgreSQL speichert Storage-Objektmetadaten und Anwendungsreferenzen. Das Storage-Backend enthält die Dateibytes. Beide gehören zu derselben Instanz und demselben Sicherungspunkt. Das full-Dateisystemprofil speichert Bytes unter `docker/volumes/storage` im festgelegten Upstream; S3-kompatibler Storage benötigt einen getrennten Rohdaten-Snapshot. Vergängliche Containerdateien sind kein dauerhafter Storage. Überwachen Sie Kapazität für Datenbank, Anhänge und Sicherungen und speichern Sie Backups außerhalb der aktiven Storage-Platte.
 
 
 ![Diagramm: Autorisierter Anwendungsdateizugriff. PostgreSQL-Objektmetadaten. Rohbytes im Dateisystem oder S3. Passende Konfiguration und Schlüssel.](/documentation/de/storage-and-attachments-flow.svg)
@@ -106,7 +106,7 @@ Private Seiten- und Ticketdateien durchlaufen Anwendungsautorisierung vor erlaub
 
 ## Fehler beheben {#recover}
 
-Führen Sie die Supabase-Prüfung aus, prüfen Sie richtigen Stack und Service-Role-Konfiguration und vergleichen Sie Objektdatensätze, Rohbytes und erhaltene Schlüssel. Beheben Sie Dienst-, Richtlinien- oder Konfigurationsfehler vor Wiederholung. Löschen Sie niemals einen nicht leeren avatars-Bucket wegen einer Warnung. SQL-Datensätze allein stellen keine Bytes wieder her. Stellen Sie bei S3 den Rohbackend-Snapshot wieder her, nicht über /storage/v1/s3, das widersprüchliche Metadaten erzeugen kann.
+Führen Sie die Supabase-Prüfung aus, prüfen Sie richtigen Stack und Service-Role-Konfiguration und vergleichen Sie Objektdatensätze, Rohbytes und erhaltene Schlüssel. Beheben Sie Dienst-, Richtlinien- oder Konfigurationsfehler vor Wiederholung. Löschen Sie niemals einen nicht leeren `avatars`-Bucket wegen einer Warnung. SQL-Datensätze allein stellen keine Bytes wieder her. Stellen Sie bei S3 den Rohbackend-Snapshot wieder her, nicht über `/storage/v1/s3`, das widersprüchliche Metadaten erzeugen kann.
 
 ```bash
 pnpm verify:supabase --db-url "$SUPABASE_DB_URL" \
@@ -116,7 +116,7 @@ pnpm verify:supabase --db-url "$SUPABASE_DB_URL" \
 
 ## Dateisystem-Storage unter Docker Desktop {#docker-desktop}
 
-Im getesteten macOS-Profil mit Docker Desktop lieferte ein Host-Bind-Mount ENOTSUP, als Storage erweiterte Attribute schrieb. Ein neues benanntes Linux-Volume verhinderte diesen Fehler. Bei einer neuen Installation ohne Objektbytes ersetzt der folgende dauerhafte Override nur den Storage-Mount. Behalten Sie RESTORE_OVERRIDE im installierten Compose-Kontext bei. Ersetzen Sie keinen bereits befüllten Mount durch ein leeres Volume und überschreiben Sie keinen vorhandenen Restore-Override: Stoppen Sie Schreibzugriffe und sichern Sie zuerst die Bytes mit den Sicherungs- und Wiederherstellungsverfahren.
+Im getesteten macOS-Profil mit Docker Desktop lieferte ein Host-Bind-Mount `ENOTSUP`, als Storage erweiterte Attribute schrieb. Ein neues benanntes Linux-Volume verhinderte diesen Fehler. Bei einer neuen Installation ohne Objektbytes ersetzt der folgende dauerhafte Override nur den Storage-Mount. Behalten Sie `RESTORE_OVERRIDE` im installierten Compose-Kontext bei. Ersetzen Sie keinen bereits befüllten Mount durch ein leeres Volume und überschreiben Sie keinen vorhandenen Restore-Override: Stoppen Sie Schreibzugriffe und sichern Sie zuerst die Bytes mit den Sicherungs- und Wiederherstellungsverfahren.
 
 ```bash
 : "${RESTORE_OVERRIDE:=/etc/minddy/storage-volume.yml}"

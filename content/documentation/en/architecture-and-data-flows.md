@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 3,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -42,9 +42,9 @@
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (collection-caption clarity)",
+    "revision": 4,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
+    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (collection-caption clarity); agent:/root (inline-code syntax and unchanged-text review)",
     "date": "2026-10-09"
   },
   "related": [
@@ -63,7 +63,7 @@
       "src": "/documentation/en/architecture-and-data-flows-flow.svg",
       "alt": "Diagram: Browser and authenticated application. Supabase: PostgreSQL, Auth, Storage, Realtime. Independent scheduler and trusted runner. Optional providers have separate data destinations.",
       "caption": "The application coordinates access to persistent data and background work, with separate destinations for external integrations.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -98,7 +98,7 @@
 
 ## Locate durable state {#architecture-and-data-flows}
 
-The Next.js application serves the interface and authorized server APIs. Supabase provides PostgreSQL, Auth, Storage and Realtime. PostgreSQL holds application records, account/platform state and Storage metadata; the Storage backend holds object bytes. Protected server configuration contains keys and provider credentials. Application containers can be recreated, but database volumes, raw Storage and matching keys must persist. A complete restore needs them together.
+The `Next.js` application serves the interface and authorized server APIs. Supabase provides PostgreSQL, Auth, Storage and Realtime. PostgreSQL holds application records, account/platform state and Storage metadata; the Storage backend holds object bytes. Protected server configuration contains keys and provider credentials. Application containers can be recreated, but database volumes, raw Storage and matching keys must persist. A complete restore needs them together.
 
 
 ![Diagram: Browser and authenticated application. Supabase: PostgreSQL, Auth, Storage, Realtime. Independent scheduler and trusted runner. Optional providers have separate data destinations.](/documentation/en/architecture-and-data-flows-flow.svg)

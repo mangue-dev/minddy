@@ -21,8 +21,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
-  "sourceRevision": 6,
+  "revision": 7,
+  "sourceRevision": 7,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -60,9 +60,9 @@
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review)",
+    "revision": 7,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
+    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root (inline-code syntax and unchanged-text review)",
     "date": "2026-10-09"
   },
   "related": [
@@ -98,7 +98,7 @@
       "src": "/documentation/fr/page-create-menu.png",
       "alt": "Menu de création proposant Nouvelle page et Nouvelle base de données.",
       "caption": "Les contrôles des pages du projet permettent de choisir un document ou une base de données.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -114,7 +114,7 @@
       "src": "/documentation/fr/page-editor.png",
       "alt": "Page de démonstration avec titres, paragraphes, cases de tâches et mention d’un ticket.",
       "caption": "Les titres, blocs de tâches et la mention AUR-2 structurent la page. Ce contenu est un exemple de démonstration.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -130,7 +130,7 @@
       "src": "/documentation/fr/page-comments.png",
       "alt": "Fenêtre d’activité de la page avec modification de démonstration et champ de commentaire vide.",
       "caption": "Lisez l’activité et rédigez un commentaire dans le champ. Aucun commentaire n’a été envoyé dans cet exemple.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -146,7 +146,7 @@
       "src": "/documentation/fr/page-file-states.png",
       "alt": "Page de démonstration avec un envoi inachevé et un fichier enregistré de 67 octets proposant Télécharger.",
       "caption": "Vérifiez l’état réel du fichier : la seconde pièce jointe est disponible, contrairement au premier envoi inachevé.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -162,7 +162,7 @@
       "src": "/documentation/fr/page-history-preview.png",
       "alt": "Onglet Versions avec un état antérieur déplié, son auteur, Restaurer et l’indication de conservation pendant 30 jours.",
       "caption": "Prévisualisez un état enregistré et comparez-le à la page actuelle avant de le restaurer.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -178,7 +178,7 @@
       "src": "/documentation/fr/page-publish.png",
       "alt": "Fenêtre de publication avec Privée sélectionné et options par mot de passe ou lien.",
       "caption": "Privée conserve la page dans le projet. Vérifiez le public souhaité avant de modifier la publication.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -194,7 +194,7 @@
       "src": "/documentation/fr/page-export.png",
       "alt": "Menu d’export du document avec Markdown (.md) et Imprimer / PDF.",
       "caption": "Choisissez Markdown pour télécharger le document, ou Imprimer / PDF pour ouvrir la vue imprimable.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -253,7 +253,7 @@ Les exports Markdown et les lectures par des agents préservent les icônes et c
 
 Ouvrez une page du projet et ses commentaires. Sélectionnez le contenu concerné pour créer un commentaire ancré, expliquez votre question ou votre proposition et mentionnez le membre à solliciter. Répondez dans le fil pour garder la décision près du contexte. Résolvez-le lorsque la question est effectivement traitée.
 
-Les avatars de présence indiquent les personnes qui consultent la page. Ils ne prouvent pas que le texte non enregistré d’une autre personne a atteint le serveur ou que les modifications simultanées fusionnent automatiquement. Vérifiez l’enregistrement avant de quitter.
+Les `avatars` de présence indiquent les personnes qui consultent la page. Ils ne prouvent pas que le texte non enregistré d’une autre personne a atteint le serveur ou que les modifications simultanées fusionnent automatiquement. Vérifiez l’enregistrement avant de quitter.
 
 
 ![Fenêtre d’activité de la page avec modification de démonstration et champ de commentaire vide.](/documentation/fr/page-comments.png)
@@ -313,7 +313,7 @@ Ouvrez le lien dans une session sans votre compte. Testez mot de passe éventuel
 
 Revenez à la publication et choisissez privé. Après succès, ouvrez l’ancien lien anonymement pour vérifier le refus d’accès. Les copies ou captures déjà reçues ne peuvent pas être rappelées. Les adresses de téléchargement déjà transmises par une page publiée sont signées pour une durée allant jusqu’à 24 heures. La révocation bloque les nouvelles visites de la page, mais ces adresses peuvent rester valides jusqu’à leur expiration.
 
-Les liens des utilisateurs restent noindex et distincts du manuel officiel indexé. Noindex limite la découverte, ce n’est pas un mot de passe. Si un enfant ou fichier est visible à tort, révoquez d’abord, inspectez la branche publiée et retestez avant d’envoyer un lien corrigé. Une référence interne ne donne pas accès aux fichiers d’une page non publiée.
+Les liens des utilisateurs restent `noindex` et distincts du manuel officiel indexé. Noindex limite la découverte, ce n’est pas un mot de passe. Si un enfant ou fichier est visible à tort, révoquez d’abord, inspectez la branche publiée et retestez avant d’envoyer un lien corrigé. Une référence interne ne donne pas accès aux fichiers d’une page non publiée.
 
 ## Exporter ou imprimer une page {#import-export-and-print-pages}
 

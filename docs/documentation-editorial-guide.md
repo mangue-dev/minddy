@@ -123,8 +123,9 @@ is not publication evidence.
 
 ## Format technical references as inline code
 
-When citing a technical element in article prose, lists, or table cells, wrap
-it in Markdown backticks so it appears as inline code. This applies to library
+When citing a technical element in article prose, lists, table cells, figure
+captions, or diagram labels, wrap it in Markdown backticks so it appears as
+inline code. This applies to library
 and package names, commands and flags, variables and environment variables,
 functions, configuration keys, literal values, file paths, and API identifiers.
 For example: use the `@supabase/supabase-js` library, run
@@ -243,8 +244,9 @@ For each article and locale, complete these checks before publication:
   audience; filler, repeated explanations, and unsupported promises are gone.
 - [ ] Prose reads naturally aloud, technical conditions survived editing, and
   the house rules have been checked.
-- [ ] Technical references use inline code consistently in prose, lists, and
-  tables; exact syntax is preserved, and multiline examples use fenced blocks.
+- [ ] Technical references use inline code consistently in prose, lists, tables,
+  captions, and diagram labels; exact syntax is preserved, and multiline
+  examples use fenced blocks.
 - [ ] Illustrations clarify the text, match the steps, remain legible on mobile,
   and use suitable localized demo data, captions, and alternative text.
 - [ ] All six locales retain the complete meaning at the reviewed revision,

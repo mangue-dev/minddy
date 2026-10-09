@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 3,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -44,9 +44,9 @@
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (collection-caption clarity)",
+    "revision": 4,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (collection-caption clarity); agent:/root (inline-code syntax and unchanged-text review)",
     "date": "2026-10-09"
   },
   "related": [
@@ -65,7 +65,7 @@
       "src": "/documentation/es/permissions-and-public-links-flow.svg",
       "alt": "Diagrama: Permisos de cuenta y proyecto. Objeto privado o publicación explícita. Solo conjunto publicado y archivos firmados. Revocar enlace; archivos caducan después.",
       "caption": "Compartir da acceso solo al contenido seleccionado; los enlaces de archivo ya emitidos pueden seguir siendo válidos después de revocar el acceso compartido.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -110,4 +110,4 @@ Una página publicada o una vista compartida usa un enlace opaco, que puede tene
 
 ## Probar publicación y revocación {#revocation}
 
-Abra el enlace en una sesión independiente sin iniciar sesión y compruebe contenido, archivos y exclusiones. Revóquelo y repita la prueba. Las copias ya descargadas no se pueden retirar; las URL firmadas siguen siendo válidas hasta que expiran, con un plazo de 24 horas para las páginas. Los enlaces secretos mantienen noindex, mientras el centro de documentación puede indexarse. noindex orienta a los rastreadores; no controla el acceso. No incluya enlaces privados en informes ni ejemplos públicos.
+Abra el enlace en una sesión independiente sin iniciar sesión y compruebe contenido, archivos y exclusiones. Revóquelo y repita la prueba. Las copias ya descargadas no se pueden retirar; las URL firmadas siguen siendo válidas hasta que expiran, con un plazo de 24 horas para las páginas. Los enlaces secretos mantienen `noindex`, mientras el centro de documentación puede indexarse. `noindex` orienta a los rastreadores; no controla el acceso. No incluya enlaces privados en informes ni ejemplos públicos.

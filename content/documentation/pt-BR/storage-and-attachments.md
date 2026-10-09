@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 3,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -41,9 +41,9 @@
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (collection-caption clarity)",
+    "revision": 4,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (collection-caption clarity); agent:/root (inline-code syntax and unchanged-text review)",
     "date": "2026-10-09"
   },
   "related": [
@@ -60,7 +60,7 @@
       "src": "/documentation/pt-BR/storage-and-attachments-flow.svg",
       "alt": "Diagrama: Acesso autorizado ao arquivo. Metadados PostgreSQL do objeto. Bytes brutos em arquivos ou S3. Configuração e chaves correspondentes.",
       "caption": "Um arquivo só pode ser recuperado se seus metadados, bytes e chaves forem preservados juntos.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -95,7 +95,7 @@
 
 ## Manter Storage durável e diagnosticar anexos {#storage-and-attachments}
 
-O PostgreSQL guarda metadados Storage e referências aos objetos; o backend Storage guarda os bytes. Ambos precisam pertencer à mesma instância e ao mesmo ponto de backup. O perfil full com backend filesystem persiste os arquivos em docker/volumes/storage da distribuição upstream fixada. Um backend compatível com S3 exige um snapshot bruto separado. Arquivos efêmeros de containers não são Storage durável. Confira a capacidade para banco, anexos e backups, mantendo as cópias fora do disco ativo.
+O PostgreSQL guarda metadados Storage e referências aos objetos; o backend Storage guarda os bytes. Ambos precisam pertencer à mesma instância e ao mesmo ponto de backup. O perfil full com backend filesystem persiste os arquivos em `docker/volumes/storage` da distribuição upstream fixada. Um backend compatível com S3 exige um snapshot bruto separado. Arquivos efêmeros de containers não são Storage durável. Confira a capacidade para banco, anexos e backups, mantendo as cópias fora do disco ativo.
 
 ![Diagrama: Acesso autorizado ao arquivo. Metadados PostgreSQL do objeto. Bytes brutos em arquivos ou S3. Configuração e chaves correspondentes.](/documentation/pt-BR/storage-and-attachments-flow.svg)
 
@@ -105,7 +105,7 @@ Arquivos privados exigem autorização antes do download. Publicar uma página e
 
 ## Recuperar após uma falha {#recover}
 
-Execute a verificação Supabase, confira se a stack e a chave service-role correspondem e compare registros, bytes e chaves. Corrija serviço, política ou configuração antes de tentar novamente. Não apague um bucket avatars preenchido para remover um aviso. Restaurar apenas SQL não recupera os bytes dos arquivos. Em S3, restaure o snapshot bruto, não por /storage/v1/s3, que cria metadados em conflito.
+Execute a verificação Supabase, confira se a stack e a chave service-role correspondem e compare registros, bytes e chaves. Corrija serviço, política ou configuração antes de tentar novamente. Não apague um bucket `avatars` preenchido para remover um aviso. Restaurar apenas SQL não recupera os bytes dos arquivos. Em S3, restaure o snapshot bruto, não por `/storage/v1/s3`, que cria metadados em conflito.
 
 ```bash
 pnpm verify:supabase --db-url "$SUPABASE_DB_URL" \
@@ -115,7 +115,7 @@ pnpm verify:supabase --db-url "$SUPABASE_DB_URL" \
 
 ## Storage em sistema de arquivos com Docker Desktop {#docker-desktop}
 
-No perfil macOS com Docker Desktop testado, uma pasta do host montada por bind retornou ENOTSUP quando Storage gravou atributos estendidos. Um novo volume Linux nomeado evitou a falha. Para uma instalação nova sem bytes de objetos, o override persistente abaixo substitui apenas a montagem de Storage. Mantenha RESTORE_OVERRIDE no contexto Compose instalado. Não substitua uma montagem com dados por um volume vazio nem sobrescreva um override de restauração existente: interrompa as gravações e preserve os bytes primeiro com os procedimentos de backup e restauração.
+No perfil macOS com Docker Desktop testado, uma pasta do host montada por bind retornou `ENOTSUP` quando Storage gravou atributos estendidos. Um novo volume Linux nomeado evitou a falha. Para uma instalação nova sem bytes de objetos, o override persistente abaixo substitui apenas a montagem de Storage. Mantenha `RESTORE_OVERRIDE` no contexto Compose instalado. Não substitua uma montagem com dados por um volume vazio nem sobrescreva um override de restauração existente: interrompa as gravações e preserve os bytes primeiro com os procedimentos de backup e restauração.
 
 ```bash
 : "${RESTORE_OVERRIDE:=/etc/minddy/storage-volume.yml}"

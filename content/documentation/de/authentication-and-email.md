@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -37,9 +37,9 @@
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison)",
+    "revision": 3,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
+    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root (inline-code syntax and unchanged-text review)",
     "date": "2026-10-09"
   },
   "related": [
@@ -57,7 +57,7 @@
       "src": "/documentation/de/authentication-and-email-flow.svg",
       "alt": "Diagramm: Auth-Origin und Weiterleitungen. Eigenes SMTP und versionierte Vorlagen. Bestätigung und Passwortanmeldung. TOTP, Wiederherstellung, alte Passwortprüfung.",
       "caption": "Lesen Sie die Schritte in dieser Reihenfolge. Auth-Origin und Weiterleitungen. Eigenes SMTP und versionierte Vorlagen. Bestätigung und Passwortanmeldung. TOTP, Wiederherstellung, alte Passwortprüfung.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -92,10 +92,10 @@
 
 ## Kontomails, MFA und Wiederherstellung konfigurieren {#authentication-and-email}
 
-Auth-E-Mails gehören zu Supabase/GoTrue. Resend-Anwendungsbenachrichtigungen konfigurieren weder Bestätigung noch Passwortwiederherstellung. Behalten Sie bei full das minddy-Overlay in jedem Compose-Aufruf. Setzen Sie SITE_URL, API_EXTERNAL_URL, SUPABASE_PUBLIC_URL und ADDITIONAL_REDIRECT_URLS auf Ihre Origins. Konfigurieren Sie SMTP_ADMIN_EMAIL, SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS und SMTP_SENDER_NAME mit Ihrem Anbieter. Lassen Sie Bestätigung eingeschaltet und starten Sie Auth im installierten Compose-Kontext neu.
+Auth-E-Mails gehören zu Supabase/GoTrue. Resend-Anwendungsbenachrichtigungen konfigurieren weder Bestätigung noch Passwortwiederherstellung. Behalten Sie bei full das minddy-Overlay in jedem Compose-Aufruf. Setzen Sie `SITE_URL`, `API_EXTERNAL_URL`, `SUPABASE_PUBLIC_URL` und `ADDITIONAL_REDIRECT_URLS` auf Ihre Origins. Konfigurieren Sie `SMTP_ADMIN_EMAIL`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` und `SMTP_SENDER_NAME` mit Ihrem Anbieter. Lassen Sie Bestätigung eingeschaltet und starten Sie Auth im installierten Compose-Kontext neu.
 
 
-Definieren Sie vor den folgenden compose-Befehlen die Funktion für das installierte full-Profil aus [dem Referenzkontext für Compose](/de/dokumentation/backups-and-restoration#context).
+Definieren Sie vor den folgenden `compose`-Befehlen die Funktion für das installierte full-Profil aus [dem Referenzkontext für Compose](/de/dokumentation/backups-and-restoration#context).
 
 ```bash
 compose up -d --wait auth
@@ -106,8 +106,8 @@ compose up -d --wait auth
 
 ## Managed Supabase konfigurieren {#managed}
 
-Setzen Sie in Authentication Ihres eigenen Projekts Site URL und genau `<app-origin>/auth/callback` als Weiterleitung. Konfigurieren Sie eigenes SMTP und beide versionierten Bestätigungs-/Wiederherstellungsvorlagen. Bestätigung verwendet token_hash und type=signup. Verlangen Sie mindestens acht Zeichen mit Kleinbuchstaben, Großbuchstaben und Ziffern und aktivieren Sie TOTP-Einrichtung und -Prüfung. Aktivieren Sie kompromittierte Passwortprüfung, soweit unterstützt, und dokumentieren Sie Anbietergrenzen. Das full-Overlay verweigert bei Prüfungsfehlern den Zugriff und benötigt ausgehenden Zugang zu api.pwnedpasswords.com. Erfassen Sie Sitzungsdauer, Refresh-Token-Rotation, Widerruf und Auth-Ratenlimits; SQL-Bootstrap setzt diese Plattformwerte nicht.
+Setzen Sie in Authentication Ihres eigenen Projekts Site URL und genau `<app-origin>/auth/callback` als Weiterleitung. Konfigurieren Sie eigenes SMTP und beide versionierten Bestätigungs-/Wiederherstellungsvorlagen. Bestätigung verwendet `token_hash` und `type=signup`. Verlangen Sie mindestens acht Zeichen mit Kleinbuchstaben, Großbuchstaben und Ziffern und aktivieren Sie TOTP-Einrichtung und -Prüfung. Aktivieren Sie kompromittierte Passwortprüfung, soweit unterstützt, und dokumentieren Sie Anbietergrenzen. Das full-Overlay verweigert bei Prüfungsfehlern den Zugriff und benötigt ausgehenden Zugang zu `api.pwnedpasswords.com`. Erfassen Sie Sitzungsdauer, Refresh-Token-Rotation, Widerruf und Auth-Ratenlimits; SQL-Bootstrap setzt diese Plattformwerte nicht.
 
 ## Ergebnis überprüfen {#verify}
 
-Verwenden Sie eine kontrollierte Wegwerfadresse. Prüfen Sie Zustellung, Öffnung auf dieser Instanz und erforderliche Bestätigungsgeste. Richten Sie TOTP in der Kontosicherheit ein und verwahren Sie Wiederherstellungscodes außerhalb des Browsers. Melden Sie sich ab und mit Passwort plus TOTP erneut an. Fordern Sie Passwortwiederherstellung an und prüfen Sie, dass das alte Passwort danach scheitert. Prüfen Sie Administratorzugriff für ADMIN_EMAILS erst nach MFA. Erfassen Sie Versionen, Datum und bereinigte Ergebnisse. Containerzustand belegt weder Zustellung noch Kontosicherheit. Keine E-Mail-Tokens, Passwörter, Sitzungen, TOTP-Geheimnisse oder Wiederherstellungscodes gehören ins Protokoll.
+Verwenden Sie eine kontrollierte Wegwerfadresse. Prüfen Sie Zustellung, Öffnung auf dieser Instanz und erforderliche Bestätigungsgeste. Richten Sie TOTP in der Kontosicherheit ein und verwahren Sie Wiederherstellungscodes außerhalb des Browsers. Melden Sie sich ab und mit Passwort plus TOTP erneut an. Fordern Sie Passwortwiederherstellung an und prüfen Sie, dass das alte Passwort danach scheitert. Prüfen Sie Administratorzugriff für `ADMIN_EMAILS` erst nach MFA. Erfassen Sie Versionen, Datum und bereinigte Ergebnisse. Containerzustand belegt weder Zustellung noch Kontosicherheit. Keine E-Mail-Tokens, Passwörter, Sitzungen, TOTP-Geheimnisse oder Wiederherstellungscodes gehören ins Protokoll.

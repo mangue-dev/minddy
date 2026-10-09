@@ -16,8 +16,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 3,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -50,9 +50,9 @@
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions)",
+    "revision": 4,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
+    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review)",
     "date": "2026-10-09"
   },
   "related": [
@@ -74,7 +74,7 @@
       "src": "/documentation/de/external-minddy-mcp-workflow.png",
       "alt": "minddy-MCP-Clientauswahl mit Claude, Codex und weiteren Assistenten.",
       "caption": "Wähle deinen Client, um dessen Installationsbefehl oder Konfiguration anzuzeigen.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -91,7 +91,7 @@
       "src": "/documentation/de/external-minddy-mcp-install-workflow.png",
       "alt": "Codex-Installationsdialog auf der lokalen Instanz.",
       "caption": "Codex-Installationsdialog. Verwende den Ursprung deiner eigenen Instanz; der angezeigte Befehl wurde für diese Aufnahme nicht ausgeführt.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -131,19 +131,19 @@ Der Bereich minddy MCP in den Kontoeinstellungen zeigt externe Zugriffe und Wide
 
 ## minddy MCP nutzen und aktuelle Werkzeuge entdecken {#mcp-tool-reference}
 
-minddy bietet /api/mcp mit Streamable HTTP, zustandslosen Werkzeugen und OAuth 2.1. Verbinden Sie Ihr Konto durch Browserzustimmung; alte statische mdyk_-Schlüssel gelten nicht. Starten Sie minddy_list_projects für zugängliche Projekt-UUIDs und lesen Sie Schemas des verbundenen Servers. /llms-full.txt wird daraus erzeugt und nennt genaue aktuelle Parameter. Erraten Sie Werkzeuge nicht anhand alter Kopien. Projektwerkzeuge prüfen Zugriff erneut und geben stabile Fehlercodes zurück.
+minddy bietet `/api/mcp` mit Streamable HTTP, zustandslosen Werkzeugen und OAuth 2.1. Verbinden Sie Ihr Konto durch Browserzustimmung; alte statische `mdyk_`-Schlüssel gelten nicht. Starten Sie `minddy_list_projects` für zugängliche Projekt-UUIDs und lesen Sie Schemas des verbundenen Servers. `/llms-full.txt` wird daraus erzeugt und nennt genaue aktuelle Parameter. Erraten Sie Werkzeuge nicht anhand alter Kopien. Projektwerkzeuge prüfen Zugriff erneut und geben stabile Fehlercodes zurück.
 
 ### Vor Planänderungen lesen {#issue-plans}
 
-minddy_get_issue akzeptiert eine Ticket-UUID, eine Ticketkennung wie DEMO-42 oder eine Ticketnummer; project_id wird separat angegeben. plan_tasks liefert nullbasierte task_index-Werte. minddy_update_plan_task nimmt tasks mit pending, in_progress, completed oder cancelled an; ein ungültiger Index lehnt den ganzen Satz ab. Ergänzen Sie mit minddy_append_to_plan und ändern Sie Passagen mit minddy_edit_issue_text sowie eindeutigen exakten old_string/new_string. Lesen Sie bei veralteter Passage neu. Gesamtersatz kann fremden Fortschritt überschreiben. Fragen unter ## Questions zählen nicht als Aufgaben.
+`minddy_get_issue` akzeptiert eine Ticket-UUID, eine Ticketkennung wie `DEMO-42` oder eine Ticketnummer; `project_id` wird separat angegeben. `plan_tasks` liefert nullbasierte `task_index`-Werte. `minddy_update_plan_task` nimmt `tasks` mit `pending`, `in_progress`, `completed` oder `cancelled` an; ein ungültiger Index lehnt den ganzen Satz ab. Ergänzen Sie mit `minddy_append_to_plan` und ändern Sie Passagen mit `minddy_edit_issue_text` sowie eindeutigen exakten `old_string`/`new_string`. Lesen Sie bei veralteter Passage neu. Gesamtersatz kann fremden Fortschritt überschreiben. Fragen unter `## Questions` zählen nicht als Aufgaben.
 
 ### Versionen und Eigentum beachten {#pages-and-routines}
 
-minddy_list_pages zeigt Hierarchie, minddy_search_pages Textausschnitte und minddy_get_page vollständiges Markdown, Kommentare und Datenbankwerte. Verwenden Sie Teiländerungen und aktuelle Versionsguards bei Gesamtersatz. Erhalten Sie Datei-/Bild-URLs exakt. minddy_create_page mit database=true erstellt Datenbanken; minddy_update_page_database verlangt Revision für Schema, vorherigen Wert für Zellen und Vorschau-/Anwendungstokens für Konvertierung. Eigentümerwerkzeuge erstellen, pausieren, verschieben und entfernen Routinen. Lesen Sie zuerst vorhandene Routinen gegen Duplikate. minddy_add_resource begrenzt Dateien auf 10 MB; Seitenwerkzeuge erfinden keine URLs.
+`minddy_list_pages` zeigt Hierarchie, `minddy_search_pages` Textausschnitte und `minddy_get_page` vollständiges Markdown, Kommentare und Datenbankwerte. Verwenden Sie Teiländerungen und aktuelle Versionsguards bei Gesamtersatz. Erhalten Sie Datei-/Bild-URLs exakt. `minddy_create_page` mit `database=true` erstellt Datenbanken; `minddy_update_page_database` verlangt Revision für Schema, vorherigen Wert für Zellen und Vorschau-/Anwendungstokens für Konvertierung. Eigentümerwerkzeuge erstellen, pausieren, verschieben und entfernen Routinen. Lesen Sie zuerst vorhandene Routinen gegen Duplikate. `minddy_add_resource` begrenzt Dateien auf 10 MB; Seitenwerkzeuge erfinden keine URLs.
 
 ### Mit einem Beispiel überprüfen {#example}
 
-Das bereinigte Beispiel ändert die erste Aufgabe eines zuvor gelesenen Plans. Ersetzen Sie Projekt-UUID und Ticket durch entdeckte Werte; task_index muss aus der letzten Lektüre stammen. Prüfen Sie zurückgegebene plan_tasks und plan_progress. Bei Zugriffsfehlern prüfen Sie Konto/Projekt, bei veraltetem Konflikt lesen Sie erneut und ändern nur das Gewünschte. Wiederholen Sie unklare externe Mutationen nicht vor Ergebniskontrolle.
+Das bereinigte Beispiel ändert die erste Aufgabe eines zuvor gelesenen Plans. Ersetzen Sie Projekt-UUID und Ticket durch entdeckte Werte; `task_index` muss aus der letzten Lektüre stammen. Prüfen Sie zurückgegebene `plan_tasks` und `plan_progress`. Bei Zugriffsfehlern prüfen Sie Konto/Projekt, bei veraltetem Konflikt lesen Sie erneut und ändern nur das Gewünschte. Wiederholen Sie unklare externe Mutationen nicht vor Ergebniskontrolle.
 
 ```json
 {

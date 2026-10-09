@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -36,9 +36,9 @@
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison)",
+    "revision": 3,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root (inline-code syntax and unchanged-text review)",
     "date": "2026-10-09"
   },
   "related": [
@@ -55,7 +55,7 @@
       "src": "/documentation/es/update-an-instance-flow.svg",
       "alt": "Diagrama: Parar escrituras y tareas. Sellar copia completa anterior. Migraciones destino, luego aplicación. Verificar recuperación y reabrir.",
       "caption": "Siga las etapas en este orden. Parar escrituras y tareas. Sellar copia completa anterior. Migraciones destino, luego aplicación. Verificar recuperación y reabrir.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -96,9 +96,9 @@ Actualice una versión publicada cada vez. Revise las notas, las diferencias de 
 
 ## Actualizar el perfil full {#full}
 
-Utilice [el contexto Compose full de la copia en frío](/es/documentacion/backups-and-restoration#context). Detenga las entradas públicas, todas las escrituras, los workers y el planificador; después cree la copia sellada completa. Copie el entorno actual con permisos 0600 a TARGET_ENV_FILE y modifique solo MINDDY_RELEASE, MINDDY_IMAGE, MINDDY_DEPLOY_DIR y MINDDY_ENV_FILE para el destino verificado. Conserve las URL, las credenciales, las claves de cifrado y las opciones de funcionalidades. La secuencia siguiente arranca las dependencias del backend, aplica las migraciones del destino y verifica la aplicación y el runner mientras el planificador y Caddy permanecen detenidos.
+Utilice [el contexto Compose full de la copia en frío](/es/documentacion/backups-and-restoration#context). Detenga las entradas públicas, todas las escrituras, los workers y el planificador; después cree la copia sellada completa. Copie el entorno actual con permisos `0600` a `TARGET_ENV_FILE` y modifique solo `MINDDY_RELEASE`, `MINDDY_IMAGE`, `MINDDY_DEPLOY_DIR` y `MINDDY_ENV_FILE` para el destino verificado. Conserve las URL, las credenciales, las claves de cifrado y las opciones de funcionalidades. La secuencia siguiente arranca las dependencias del backend, aplica las migraciones del destino y verifica la aplicación y el runner mientras el planificador y Caddy permanecen detenidos.
 
-Al actualizar de v0.10.30 a v0.11.0, la versión de destino introduce MINDDY_DATA_ROOT_KEY. Añada la clave solo si la configuración existente no contiene una raíz y conserve todos los secretos que ya cifran las credenciales. El comando siguiente escribe una nueva raíz de 32 bytes directamente en el archivo de destino protegido, sin mostrarla, y se niega a sustituir un valor guardado no válido. La raíz por sí sola no activa el cifrado del contenido. Antes de iniciar la versión de destino, aplique las [adaptaciones fijadas del runner y de las funciones sin conexión](/es/documentacion/installation#runner-workaround) y conserve RUNNER_FIX_OVERRIDE en cada operación de Compose. Este perfil está adaptado explícitamente; no demuestra una instalación satisfactoria de la etiqueta histórica sin cambios.
+Al actualizar de v0.10.30 a v0.11.0, la versión de destino introduce `MINDDY_DATA_ROOT_KEY`. Añada la clave solo si la configuración existente no contiene una raíz y conserve todos los secretos que ya cifran las credenciales. El comando siguiente escribe una nueva raíz de 32 bytes directamente en el archivo de destino protegido, sin mostrarla, y se niega a sustituir un valor guardado no válido. La raíz por sí sola no activa el cifrado del contenido. Antes de iniciar la versión de destino, aplique las [adaptaciones fijadas del runner y de las funciones sin conexión](/es/documentacion/installation#runner-workaround) y conserve `RUNNER_FIX_OVERRIDE` en cada operación de Compose. Este perfil está adaptado explícitamente; no demuestra una instalación satisfactoria de la etiqueta histórica sin cambios.
 
 ```bash
 export TARGET_RELEASE_DIR=/srv/minddy/releases/vX.Y.NEXT
@@ -150,7 +150,7 @@ Para managed OCI, siga la misma secuencia de entorno e imagen de destino usando 
 
 Los comandos Compose siguientes solo corresponden a un backend controlado por el operador. Con Supabase gestionado, sustituya su parada, inicio y acceso a migraciones por las operaciones admitidas por el proveedor, conservando el entorno protegido y la copia completa.
 
-Para la secuencia desde el código, MINDDY_REPO es el repositorio versionado y SUPABASE_COMPOSE_DIR es el backend controlado por el operador, como en [el contexto de copia lógica](/es/documentacion/backups-and-restoration#outage). Defina TO_TAG con la siguiente etiqueta realmente publicada y verificada y TARGET_RELEASE_DIR con su checkout separado, ya compilado. Configure SUPABASE_DB_URL, MINDDY_PUBLIC_SUPABASE_URL y SUPABASE_SERVICE_ROLE_KEY en privado para ese destino. Tras bootstrap y verify, inicie pnpm start o el supervisor ya configurado, manteniendo las entradas y los trabajos cerrados hasta completar las verificaciones.
+Para la secuencia desde el código, `MINDDY_REPO` es el repositorio versionado y `SUPABASE_COMPOSE_DIR` es el backend controlado por el operador, como en [el contexto de copia lógica](/es/documentacion/backups-and-restoration#outage). Defina `TO_TAG` con la siguiente etiqueta realmente publicada y verificada y `TARGET_RELEASE_DIR` con su checkout separado, ya compilado. Configure `SUPABASE_DB_URL`, `MINDDY_PUBLIC_SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` en privado para ese destino. Tras bootstrap y verify, inicie `pnpm start` o el supervisor ya configurado, manteniendo las entradas y los trabajos cerrados hasta completar las verificaciones.
 
 ```bash
 test "$(git -C "$TARGET_RELEASE_DIR" rev-parse HEAD)" = \

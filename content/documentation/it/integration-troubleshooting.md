@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 3,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -39,9 +39,9 @@
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions)",
+    "revision": 4,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review)",
     "date": "2026-10-09"
   },
   "related": [
@@ -68,7 +68,7 @@ Se il provider richiede un’app client già registrata, inserisci esattamente i
 
 ## Controllare prima di ripetere {#webhooks}
 
-Le chiamate MCP remote hanno un timeout di 30 secondi, un limite di trasporto di 1 MiB e un risultato massimo di 64 KB. Un timeout non prova che una modifica sia fallita: controlla la destinazione. Per API 401, verifica istanza, tipo di chiave e revoca senza mostrarla; il tipo errato restituisce 403. Per i webhook controlla stato corrente, raggiungibilità, HMAC sui byte originali e delivery_id. Gli eventi scartati non hanno una coda duratura di nuovi tentativi. Conserva codici e tempi senza contenuti privati o credenziali.
+Le chiamate MCP remote hanno un timeout di 30 secondi, un limite di trasporto di 1 MiB e un risultato massimo di 64 KB. Un timeout non prova che una modifica sia fallita: controlla la destinazione. Per API 401, verifica istanza, tipo di chiave e revoca senza mostrarla; il tipo errato restituisce 403. Per i webhook controlla stato corrente, raggiungibilità, HMAC sui byte originali e `delivery_id`. Gli eventi scartati non hanno una coda duratura di nuovi tentativi. Conserva codici e tempi senza contenuti privati o credenziali.
 
 ## Verificare permessi e sincronizzazione {#git}
 

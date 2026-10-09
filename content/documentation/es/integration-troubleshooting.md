@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 3,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -39,9 +39,9 @@
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions)",
+    "revision": 4,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review)",
     "date": "2026-10-09"
   },
   "related": [
@@ -70,7 +70,7 @@ Si el proveedor exige credenciales de una aplicación cliente existente, registr
 
 ## Inspeccionar antes de repetir {#webhooks}
 
-Las llamadas MCP remotas tienen un timeout de 30 segundos, un límite de transporte de 1 MiB y un resultado máximo de 64 KB. Un timeout no demuestra que una modificación haya fallado. Compruebe el destino antes de repetir. Para API 401, revise instancia, tipo de clave y revocación sin registrar la clave; un tipo incorrecto devuelve 403. Para webhooks, compruebe el último estado, la accesibilidad pública del destino, el HMAC de los bytes originales y la deduplicación delivery_id. Las entregas descartadas no tienen una cola de reintentos duradera. Conserve códigos controlados y horas, excluyendo contenido privado y credenciales.
+Las llamadas MCP remotas tienen un timeout de 30 segundos, un límite de transporte de 1 MiB y un resultado máximo de 64 KB. Un timeout no demuestra que una modificación haya fallado. Compruebe el destino antes de repetir. Para API 401, revise instancia, tipo de clave y revocación sin registrar la clave; un tipo incorrecto devuelve 403. Para webhooks, compruebe el último estado, la accesibilidad pública del destino, el HMAC de los bytes originales y la deduplicación `delivery_id`. Las entregas descartadas no tienen una cola de reintentos duradera. Conserve códigos controlados y horas, excluyendo contenido privado y credenciales.
 
 ## Comprobar permisos y sincronización {#git}
 

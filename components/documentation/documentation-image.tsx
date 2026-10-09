@@ -3,6 +3,7 @@
 import { LayoutGroup, motion, useReducedMotion } from "framer-motion";
 import { useId, useState } from "react";
 import { IMAGE_HERO_TRANSITION, ImageViewer } from "@/components/image-viewer";
+import { DocumentationInlineText } from "./documentation-inline-text";
 
 export function DocumentationImage({ src, alt, width, height, caption, openLabel }: {
   src: string;
@@ -29,7 +30,7 @@ export function DocumentationImage({ src, alt, width, height, caption, openLabel
           <img src={src} alt={alt} loading="lazy" width={width} height={height} className="h-auto max-w-full rounded-lg" />
         </motion.span>
       </button>
-      {caption && <span className="mt-2 block text-sm text-muted-foreground">{caption}</span>}
+      {caption && <span className="mt-2 block text-sm text-muted-foreground"><DocumentationInlineText>{caption}</DocumentationInlineText></span>}
     </span>
     <ImageViewer src={src} alt={alt} label={alt || openLabel} open={open} onOpenChange={setOpen} layoutId={layoutId} />
   </LayoutGroup>;

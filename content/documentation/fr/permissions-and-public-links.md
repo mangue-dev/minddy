@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 3,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -44,9 +44,9 @@
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (collection-caption clarity)",
+    "revision": 4,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
+    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (collection-caption clarity); agent:/root (inline-code syntax and unchanged-text review)",
     "date": "2026-10-09"
   },
   "related": [
@@ -65,7 +65,7 @@
       "src": "/documentation/fr/permissions-and-public-links-flow.svg",
       "alt": "Schéma: Contrôles du compte et du projet. Objet privé ou publication explicite. Ensemble publié uniquement et fichiers signés. Révoquer le lien ; fichiers signés expirent après.",
       "caption": "La publication expose uniquement le contenu sélectionné ; les liens de fichiers déjà délivrés peuvent rester valides après révocation, jusqu’à leur expiration.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -111,4 +111,4 @@ Une page publiée ou vue partagée utilise un lien opaque, éventuellement prot�
 
 ## Tester le partage et sa révocation {#revocation}
 
-Ouvrez le résultat dans une session déconnectée séparée, examinez contenu et fichiers attendus et vérifiez l’inaccessibilité des éléments exclus. Révoquez la publication et testez à nouveau. Les données déjà copiées ne peuvent être rappelées ; une URL de fichier signée reste éventuellement valide jusqu’à expiration, soit 24 heures pour les fichiers de page. Les liens secrets utilisateurs restent noindex, contrairement à la documentation officielle indexable. noindex guide les robots, sans contrôler l’accès. Ne collez pas de lien privé dans un rapport public ou un exemple.
+Ouvrez le résultat dans une session déconnectée séparée, examinez contenu et fichiers attendus et vérifiez l’inaccessibilité des éléments exclus. Révoquez la publication et testez à nouveau. Les données déjà copiées ne peuvent être rappelées ; une URL de fichier signée reste éventuellement valide jusqu’à expiration, soit 24 heures pour les fichiers de page. Les liens secrets utilisateurs restent `noindex`, contrairement à la documentation officielle indexable. `noindex` guide les robots, sans contrôler l’accès. Ne collez pas de lien privé dans un rapport public ou un exemple.

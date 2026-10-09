@@ -16,8 +16,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 3,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -50,9 +50,9 @@
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions)",
+    "revision": 4,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review)",
     "date": "2026-10-09"
   },
   "related": [
@@ -76,7 +76,7 @@
       "src": "/documentation/it/external-minddy-mcp-workflow.png",
       "alt": "Selettore dei client MCP minddy con Claude, Codex e altri assistenti.",
       "caption": "Scegli il client per visualizzare il comando o la configurazione di installazione.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -93,7 +93,7 @@
       "src": "/documentation/it/external-minddy-mcp-install-workflow.png",
       "alt": "Finestra di installazione di Codex.",
       "caption": "Finestra di installazione di Codex. Usa l’origine della tua istanza; il comando mostrato non è stato eseguito per questa cattura.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -133,19 +133,19 @@ minddy MCP nelle impostazioni dell’account elenca accessi esterni e controlli 
 
 ## Usare minddy MCP e scoprire gli strumenti attuali {#mcp-tool-reference}
 
-/api/mcp usa Streamable HTTP, strumenti stateless e OAuth 2.1. Collega il tuo account tramite il consenso nel browser; le vecchie chiavi mdyk_ non sono accettate. Usa minddy_list_projects per trovare gli UUID, poi leggi gli schemi del server collegato. /llms-full.txt genera i parametri esatti dai registri degli strumenti. Non ricostruirli da un elenco obsoleto. Ogni strumento di progetto ricontrolla l’accesso e restituisce codici di errore stabili.
+`/api/mcp` usa Streamable HTTP, strumenti stateless e OAuth 2.1. Collega il tuo account tramite il consenso nel browser; le vecchie chiavi `mdyk_` non sono accettate. Usa `minddy_list_projects` per trovare gli UUID, poi leggi gli schemi del server collegato. `/llms-full.txt` genera i parametri esatti dai registri degli strumenti. Non ricostruirli da un elenco obsoleto. Ogni strumento di progetto ricontrolla l’accesso e restituisce codici di errore stabili.
 
 ### Leggere prima di modificare i piani {#issue-plans}
 
-minddy_get_issue accetta l’UUID di una issue, un identificatore di issue come DEMO-42 oppure il numero della issue; project_id viene fornito separatamente. plan_tasks indica task_index a partire da zero. minddy_update_plan_task riceve un array tasks con gli stati pending, in_progress, completed o cancelled; un indice non valido fa rifiutare l’intero batch. minddy_append_to_plan aggiunge contenuto, mentre minddy_edit_issue_text sostituisce una coppia old_string/new_string esatta e univoca. Rileggi un piano che può essere cambiato: sostituirlo interamente potrebbe sovrascrivere il progresso di altri. La sezione ## Questions è esclusa dal conteggio delle attività.
+`minddy_get_issue` accetta l’UUID di una issue, un identificatore di issue come `DEMO-42` oppure il numero della issue; `project_id` viene fornito separatamente. `plan_tasks` indica `task_index` a partire da zero. `minddy_update_plan_task` riceve un array `tasks` con gli stati `pending`, `in_progress`, `completed` o `cancelled`; un indice non valido fa rifiutare l’intero batch. `minddy_append_to_plan` aggiunge contenuto, mentre `minddy_edit_issue_text` sostituisce una coppia `old_string`/`new_string` esatta e univoca. Rileggi un piano che può essere cambiato: sostituirlo interamente potrebbe sovrascrivere il progresso di altri. La sezione `## Questions` è esclusa dal conteggio delle attività.
 
 ### Rispettare revisioni e proprietà {#pages-and-routines}
 
-minddy_list_pages mostra la gerarchia, minddy_search_pages restituisce estratti e minddy_get_page restituisce Markdown, commenti e valori completi. Preferisci modifiche parziali e usa la versione corrente quando sostituisci il contenuto. Mantieni le URL di file e immagini. minddy_create_page con database=true crea un database di pagine. minddy_update_page_database richiede la revisione dello schema, il valore precedente della cella e i token preview/apply per le conversioni. Solo il proprietario può creare, sospendere, ripianificare o eliminare le proprie routine. Leggi prima di creare per evitare duplicati. minddy_add_resource limita i file a 10 MB; gli strumenti delle pagine non inventano URL.
+`minddy_list_pages` mostra la gerarchia, `minddy_search_pages` restituisce estratti e `minddy_get_page` restituisce Markdown, commenti e valori completi. Preferisci modifiche parziali e usa la versione corrente quando sostituisci il contenuto. Mantieni le URL di file e immagini. `minddy_create_page` con `database=true` crea un database di pagine. `minddy_update_page_database` richiede la revisione dello schema, il valore precedente della cella e i token `preview`/`apply` per le conversioni. Solo il proprietario può creare, sospendere, ripianificare o eliminare le proprie routine. Leggi prima di creare per evitare duplicati. `minddy_add_resource` limita i file a 10 MB; gli strumenti delle pagine non inventano URL.
 
 ### Verificare con un esempio {#example}
 
-L’esempio modifica la prima attività di un piano già letto. Sostituisci l’UUID del progetto e il ticket con quelli trovati tramite discovery, e usa l’indice dell’ultima lettura. Controlla poi plan_tasks e plan_progress. Per un errore di accesso, verifica account e progetto; per un conflitto, rileggi e applica solo la modifica necessaria. Non ripetere una modifica esterna con esito incerto senza averne verificato il risultato.
+L’esempio modifica la prima attività di un piano già letto. Sostituisci l’UUID del progetto e il ticket con quelli trovati tramite discovery, e usa l’indice dell’ultima lettura. Controlla poi `plan_tasks` e `plan_progress`. Per un errore di accesso, verifica account e progetto; per un conflitto, rileggi e applica solo la modifica necessaria. Non ripetere una modifica esterna con esito incerto senza averne verificato il risultato.
 
 ```json
 {

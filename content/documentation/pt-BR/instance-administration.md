@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 3,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -39,9 +39,9 @@
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions)",
+    "revision": 4,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review)",
     "date": "2026-10-09"
   },
   "related": [
@@ -59,7 +59,7 @@
       "src": "/documentation/pt-BR/instance-administration-overview.png",
       "alt": "Visão geral administrativa com indicadores agregados de contas, integração inicial e conteúdo.",
       "caption": "Visão geral mostra os indicadores agregados da instância. Finanças não aparece neste perfil de demonstração porque não há chave gerenciada do OpenRouter configurada.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -75,7 +75,7 @@
       "src": "/documentation/pt-BR/instance-administration-models.png",
       "alt": "Configurações de modelos de IA e raciocínio da instância.",
       "caption": "Modelos configura padrões e usos específicos. A captura mostra a configuração existente; nenhum modelo ou provedor foi alterado.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -94,7 +94,7 @@
 
 ## Usar a administração da instância {#instance-administration}
 
-Administrar a instância é diferente de ser proprietário de um projeto. ADMIN_EMAILS lista as contas confirmadas autorizadas no servidor; app_metadata.role=admin assinado também é uma fonte válida. São exigidos aal2, MFA verificada e verificações atuais de conta e sessão. Se elas falham, o acesso é negado. Entre, complete TOTP e abra /admin. Não altere papéis no banco para contornar MFA. O console e as APIs privadas continuam noindex.
+Administrar a instância é diferente de ser proprietário de um projeto. `ADMIN_EMAILS` lista as contas confirmadas autorizadas no servidor; `app_metadata.role=admin` assinado também é uma fonte válida. São exigidos `aal2`, MFA verificada e verificações atuais de conta e sessão. Se elas falham, o acesso é negado. Entre, complete TOTP e abra `/admin`. Não altere papéis no banco para contornar MFA. O console e as APIs privadas continuam `noindex`.
 
 
 ![Visão geral administrativa com indicadores agregados de contas, integração inicial e conteúdo.](/documentation/pt-BR/instance-administration-overview.png)

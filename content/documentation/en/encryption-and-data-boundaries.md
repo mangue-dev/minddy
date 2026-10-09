@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 3,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -43,9 +43,9 @@
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (collection-caption clarity)",
+    "revision": 4,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
+    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (collection-caption clarity); agent:/root (inline-code syntax and unchanged-text review)",
     "date": "2026-10-09"
   },
   "related": [
@@ -64,7 +64,7 @@
       "src": "/documentation/en/encryption-and-data-boundaries-flow.svg",
       "alt": "Diagram: Encrypted durable content and wrapped keys. Root key stays in protected server configuration. Authorized runtime can decrypt content. Exports and external providers need separate care.",
       "caption": "The application can decrypt stored content for authorized access; exports and external services need separate protection.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -110,4 +110,4 @@ Auth keeps login email as account identity. Routing IDs, project/issue keys, sta
 
 ## Preserve keys with a coordinated recovery plan {#recovery}
 
-Keep MINDDY_DATA_ROOT_KEY protected outside the database and retain recovery copies for current and historical backups. Recover database, Storage bytes and matching configuration as one consistent set. Encrypt the outer backup if it contains both data and keys. Changing the root without rewrapping keys makes existing content unreadable; turning content encryption off does not convert ciphertext back to plaintext. Rehearse recovery before activating encryption on existing data and verify actual decrypted content and downloaded bytes.
+Keep `MINDDY_DATA_ROOT_KEY` protected outside the database and retain recovery copies for current and historical backups. Recover database, Storage bytes and matching configuration as one consistent set. Encrypt the outer backup if it contains both data and keys. Changing the root without rewrapping keys makes existing content unreadable; turning content encryption off does not convert ciphertext back to plaintext. Rehearse recovery before activating encryption on existing data and verify actual decrypted content and downloaded bytes.

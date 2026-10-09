@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -43,9 +43,9 @@
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions)",
+    "revision": 6,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review)",
     "date": "2026-10-09"
   },
   "related": [
@@ -68,7 +68,7 @@
       "src": "/documentation/it/work-view-filters.png",
       "alt": "Filtri manuali di una vista e menu di ordinamento.",
       "caption": "Filtra per proprietà dei ticket o scegli un ordine. Il campo IA è facoltativo per questi comandi manuali.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -84,7 +84,7 @@
       "src": "/documentation/it/work-share-view.png",
       "alt": "Finestra di condivisione di una vista con accesso privato selezionato.",
       "caption": "Accesso privato, protetto da password e pubblico sono scelte distinte. In questa schermata la vista rimane privata.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -134,6 +134,6 @@ Le schede condivise espongono titoli, descrizioni e proprietà visualizzate, com
 
 Torna ai controlli di condivisione e rendi la vista privata per revocarne la pubblicazione. Apri di nuovo il vecchio link senza autenticarti e controlla che l’accesso sia negato. La revoca non recupera copie o screenshot già salvati dal visitatore.
 
-I link segreti delle viste usano il percorso di pubblicazione dei link privati e mantengono noindex. Questa regola limita la ricerca tramite motori di ricerca, ma non è una password. Mantieni privato il link se contiene informazioni sensibili e usa la protezione con password quando opportuno. Non confondere una vista condivisa dell’utente con la documentazione ufficiale indicizzata.
+I link segreti delle viste usano il percorso di pubblicazione dei link privati e mantengono `noindex`. Questa regola limita la ricerca tramite motori di ricerca, ma non è una password. Mantieni privato il link se contiene informazioni sensibili e usa la protezione con password quando opportuno. Non confondere una vista condivisa dell’utente con la documentazione ufficiale indicizzata.
 
 Se il risultato anonimo differisce dalle aspettative, controlla la vista salvata e la configurazione prima di inoltrare il link. Verifica nuovamente l’ambito dopo aver cambiato filtri o contenuti collegati.

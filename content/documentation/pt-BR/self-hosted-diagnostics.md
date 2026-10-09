@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 3,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -36,9 +36,9 @@
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions)",
+    "revision": 4,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review)",
     "date": "2026-10-09"
   },
   "related": [
@@ -57,7 +57,7 @@
 
 ## Diagnosticar uma instalação self-hosted {#self-hosted-diagnostics}
 
-Execute o doctor em modo somente leitura a partir da versão instalada com seu ambiente protegido. Para --mode full, forneça o Compose upstream; para managed, forneça a conexão do provedor. O doctor verifica compatibilidade, configuração, containers, DNS, TLS, aplicação, disco, agendador e runner. As verificações de banco, migrações e Storage exigem uma conexão. O relatório oculta segredos, mas você ainda precisa revisá-lo antes de compartilhar. A saúde dos serviços não comprova entrega de email, decifragem ou recuperação de arquivos.
+Execute o doctor em modo somente leitura a partir da versão instalada com seu ambiente protegido. Para `--mode full`, forneça o Compose upstream; para managed, forneça a conexão do provedor. O doctor verifica compatibilidade, configuração, containers, DNS, TLS, aplicação, disco, agendador e runner. As verificações de banco, migrações e Storage exigem uma conexão. O relatório oculta segredos, mas você ainda precisa revisá-lo antes de compartilhar. A saúde dos serviços não comprova entrega de email, decifragem ou recuperação de arquivos.
 
 ```bash
 pnpm self-host:doctor -- --mode full --env-file "$MINDDY_ENV_FILE" \
@@ -66,17 +66,17 @@ pnpm self-host:doctor -- --mode full --env-file "$MINDDY_ENV_FILE" \
 
 ## Associar sintomas e verificações {#symptoms}
 
-Se receber muitos 401 após restaurar, confira se JWT, chaves anon e service-role pertencem à mesma stack. Para uploads com falha ou 404, compare políticas, registros, bytes e chaves. Se faltarem relações, preserve o primeiro erro de migração e confira espaço, bloqueios e URL do banco; repita o bootstrap depois de corrigir a causa. Não marque manualmente como aplicadas as migrações que falharam. Para Realtime, confira publication, JWT, WebSocket e logs. Para cron inativo ou 401, verifique em privado agendador, origem e CRON_SECRET.
+Se receber muitos 401 após restaurar, confira se JWT, chaves anon e service-role pertencem à mesma stack. Para uploads com falha ou 404, compare políticas, registros, bytes e chaves. Se faltarem relações, preserve o primeiro erro de migração e confira espaço, bloqueios e URL do banco; repita o bootstrap depois de corrigir a causa. Não marque manualmente como aplicadas as migrações que falharam. Para Realtime, confira publication, JWT, WebSocket e logs. Para cron inativo ou 401, verifique em privado agendador, origem e `CRON_SECRET`.
 
 ## Preservar a recuperação {#recovery}
 
-Corrija Docker, CLI ou valores API e repita o instalador idempotente preservando o ambiente existente. Depois de corrigir URLs de runtime, recrie a aplicação sem recompilar OCI. Não apague buckets preenchidos, dados ou chaves raiz para eliminar um aviso. Recursos opcionais desativados podem ser normais. Compartilhe versão, perfil, horários, códigos e logs sanitizados; exclua senhas, tokens, cabeçalhos Authorization, cookies, URLs privadas e conteúdo de usuários.
+Corrija Docker, CLI ou valores API e repita o instalador idempotente preservando o ambiente existente. Depois de corrigir URLs de runtime, recrie a aplicação sem recompilar OCI. Não apague buckets preenchidos, dados ou chaves raiz para eliminar um aviso. Recursos opcionais desativados podem ser normais. Compartilhe versão, perfil, horários, códigos e logs sanitizados; exclua senhas, tokens, cabeçalhos `Authorization`, cookies, URLs privadas e conteúdo de usuários.
 
 
 
-Se o primeiro download parar com um log longo de progresso e sem erro do registro de imagens, o instalador v0.11.0 pode ter excedido o buffer de saída do subprocesso. No contexto Compose exato da instalação, compose pull --quiet funcionou no teste descartável. Depois repita o mesmo instalador com --skip-pull para usar as imagens locais, preservando o ambiente. Isso não corrige erros do registro nem assinaturas inválidas.
+Se o primeiro download parar com um log longo de progresso e sem erro do registro de imagens, o instalador v0.11.0 pode ter excedido o buffer de saída do subprocesso. No contexto Compose exato da instalação, `compose pull --quiet` funcionou no teste descartável. Depois repita o mesmo instalador com `--skip-pull` para usar as imagens locais, preservando o ambiente. Isso não corrige erros do registro nem assinaturas inválidas.
 
-Se a compilação offline indicar uma versão jose diferente após instalar dependências fixadas, pare: a versão exige 6.2.3, mas sua dependência direta fixada resolve 6.2.12. Obtenha uma combinação corrigida de versão e ferramentas antes de aceitar a instalação padrão; não afrouxe silenciosamente a verificação de identidade.
+Se a compilação offline indicar uma versão `jose` diferente após instalar dependências fixadas, pare: a versão exige 6.2.3, mas sua dependência direta fixada resolve 6.2.12. Obtenha uma combinação corrigida de versão e ferramentas antes de aceitar a instalação padrão; não afrouxe silenciosamente a verificação de identidade.
 
 
-O runner OCI de v0.11.0 também não inicia: agent-runner-storage.mjs falta na imagem de execução. O Dockerfile atual já inclui essa dependência. O ensaio de engenharia descartável forneceu o arquivo da mesma tag por montagem somente leitura; esse perfil modificado não valida a imagem assinada intacta. Não publique a porta do runner nem retire seu isolamento para contornar falhas de início.
+O runner OCI de v0.11.0 também não inicia: `agent-runner-storage.mjs` falta na imagem de execução. O `Dockerfile` atual já inclui essa dependência. O ensaio de engenharia descartável forneceu o arquivo da mesma tag por montagem somente leitura; esse perfil modificado não valida a imagem assinada intacta. Não publique a porta do runner nem retire seu isolamento para contornar falhas de início.

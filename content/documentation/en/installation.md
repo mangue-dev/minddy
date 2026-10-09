@@ -16,8 +16,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 3,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -48,9 +48,9 @@
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (collection-caption clarity)",
+    "revision": 4,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
+    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (collection-caption clarity); agent:/root (inline-code syntax and unchanged-text review)",
     "date": "2026-10-09"
   },
   "related": [
@@ -75,8 +75,8 @@
       "kind": "diagram",
       "src": "/documentation/en/self-hosted-compatibility-flow.svg",
       "alt": "Diagram: Annotated source tag. Assets and SHA256SUMS. Official OCI signature and digest. Selected compatibility profile.",
-      "caption": "Read the stages in order. Annotated source tag. Assets and SHA256SUMS. Official OCI signature and digest. Selected compatibility profile.",
-      "revision": 3,
+      "caption": "Read the stages in order. Annotated source tag. Assets and `SHA256SUMS`. Official OCI signature and digest. Selected compatibility profile.",
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -91,7 +91,7 @@
             "title": "Annotated source tag"
           },
           {
-            "title": "Assets and SHA256SUMS"
+            "title": "Assets and `SHA256SUMS`"
           },
           {
             "title": "Official OCI signature and digest"
@@ -108,7 +108,7 @@
       "src": "/documentation/en/install-a-server-flow.svg",
       "alt": "Diagram: Verified release and protected environment. Installer: full reference profile. Official Supabase, app, scheduler, runner. Account, file and recovery acceptance.",
       "caption": "Read the stages in order. Verified release and protected environment. Installer: full reference profile. Official Supabase, app, scheduler, runner. Account, file and recovery acceptance.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -140,7 +140,7 @@
       "src": "/documentation/en/install-a-server-wizard.png",
       "alt": "Public installation wizard with Supabase on the same server selected.",
       "caption": "The full profile keeps the application and Supabase on your server. In this example, their private network access is restricted to the LAN.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -157,7 +157,7 @@
       "src": "/documentation/en/managed-or-source-installation-flow.svg",
       "alt": "Diagram: Your managed Supabase project. PostgreSQL, Auth, Storage, Realtime. OCI profile OR tagged source application. Profile-specific jobs and backup procedure.",
       "caption": "A managed backend can serve either deployment method, with scheduling and backups configured for the chosen profile.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -196,7 +196,7 @@ Install a self-hosted instance from a verified release and the matching profile:
 
 ## Select a supported release and installation profile {#self-hosted-compatibility}
 
-Use an immutable release from the public mangue-dev/minddy repository. The v0.11.0 compatibility row supports Linux amd64 and arm64 production hosts, Node.js 24, pnpm 10.28.0, Docker Engine 27.0.0 or later and Compose plugin 2.29.0 or later. The full profile pins official Supabase self-hosted/v0.7.2 at commit 549db119c44c25167461812041ba198bde2b31a4. Keep its complete image set; upgrading one service separately creates an operator-managed variant.
+Use an immutable release from the public `mangue-dev/minddy` repository. The v0.11.0 compatibility row supports Linux amd64 and arm64 production hosts, Node.js 24, `pnpm` 10.28.0, Docker Engine 27.0.0 or later and Compose plugin 2.29.0 or later. The full profile pins official Supabase `self-hosted/v0.7.2` at commit `549db119c44c25167461812041ba198bde2b31a4`. Keep its complete image set; upgrading one service separately creates an operator-managed variant.
 
 The managed profile connects to a Supabase project on supabase.com. It must expose PostgreSQL, Auth, Storage and Realtime and pass the release verification. PostgreSQL alone is insufficient. The Supabase CLI local stack is for development and evaluation, not a public production service.
 
@@ -205,7 +205,7 @@ The managed profile connects to a Supabase project on supabase.com. It must expo
 
 ### Verify before execution {#verify-release}
 
-Check the annotated tag, release assets, SHA256SUMS and official OCI signature before installing dependencies or executing the release. The following Bash commands start in the selected tagged checkout and leave IMAGE set to its verified digest. Stop on a failed check. Install Cosign using its official instructions first. The command preserves source and image identity; it does not prove the deployment works.
+Check the annotated tag, release assets, `SHA256SUMS` and official OCI signature before installing dependencies or executing the release. The following Bash commands start in the selected tagged checkout and leave `IMAGE` set to its verified digest. Stop on a failed check. Install Cosign using its official instructions first. The command preserves source and image identity; it does not prove the deployment works.
 
 ```bash
 set -euo pipefail
@@ -251,17 +251,17 @@ Install one published release at a time. Migrations are forward-only; incompatib
 
 ### Known runner limits in the published release {#known-runner-limits}
 
-The published v0.11.0 runner has additional code-execution blockers: it rejects sandbox names with the allocation suffix, writes base64 file chunks larger than Linux permits in one environment value, and initializes a UID-10001, mode-0700 temporary store as root after dropping all capabilities. The last command can fail without its exit being checked, leaving the working directory absent. A healthy runner endpoint does not validate cloning or code execution. The current candidate corrects these paths; a disposable rehearsal used the current runner and storage helper as explicit read-only mounts on the v0.11.0 image. This does not produce a corrected published image or a new supported compatibility row. Obtain a corrected release/tooling combination and run the code-work acceptance checks before enabling code agents for a team.
+The published v0.11.0 runner has additional code-execution blockers: it rejects sandbox names with the allocation suffix, writes base64 file chunks larger than Linux permits in one environment value, and initializes a UID-10001, mode-`0700` temporary store as root after dropping all capabilities. The last command can fail without its exit being checked, leaving the working directory absent. A healthy runner endpoint does not validate cloning or code execution. The current candidate corrects these paths; a disposable rehearsal used the current runner and storage helper as explicit read-only mounts on the v0.11.0 image. This does not produce a corrected published image or a new supported compatibility row. Obtain a corrected release/tooling combination and run the code-work acceptance checks before enabling code agents for a team.
 
 The Git relay in v0.11.0 also omits the HTTP Basic challenge, preventing an ordinary Git client from sending its credentials. The [pinned engineering workaround](/docs/installation#runner-workaround) supplies matching runner files and their checksums; it does not change the published image or create a supported release.
 
-The published application image includes Node.js and Git but deliberately removes npm, npx and Corepack. The reference Compose profile also selects that image for workers through AGENT_RUNNER_SANDBOX_IMAGE=MINDDY_IMAGE. This is insufficient for a fresh code worker: the OpenCode bootstrap uses npm to install its pinned runtime and plugin, even for a repository with no project dependencies. Without npm, execution stops at bootstrap; no project edit or test success can be inferred from the conversation. Use an operator-built and verified dedicated worker image with Node.js 24, npm, Git and the project’s required tools, selected by overriding AGENT_RUNNER_SANDBOX_IMAGE in the runner service. Keep the runner’s isolation constraints. Verify bootstrap, repository cloning, actual tests and the resulting diff before enabling code delegation. Fixing the runner files alone does not supply this worker toolchain.
+The published application image includes Node.js and Git but deliberately removes `npm`, `npx` and Corepack. The reference Compose profile also selects that image for workers through `AGENT_RUNNER_SANDBOX_IMAGE=MINDDY_IMAGE`. This is insufficient for a fresh code worker: the OpenCode bootstrap uses `npm` to install its pinned runtime and plugin, even for a repository with no project dependencies. Without `npm`, execution stops at bootstrap; no project edit or test success can be inferred from the conversation. Use an operator-built and verified dedicated worker image with Node.js 24, `npm`, Git and the project’s required tools, selected by overriding `AGENT_RUNNER_SANDBOX_IMAGE` in the runner service. Keep the runner’s isolation constraints. Verify bootstrap, repository cloning, actual tests and the resulting diff before enabling code delegation. Fixing the runner files alone does not supply this worker toolchain.
 
-The pinned storage helper also makes the sandbox workspace executable. Docker otherwise mounts this tmpfs with noexec, preventing the native OpenCode binary from starting and potentially surfacing a misleading musl-package fallback error. The correction retains nosuid, nodev, UID/GID 10001, mode 0700, read-only root filesystem, dropped capabilities and the disposable per-sandbox store. It does not grant executable access to host data or make the application image a suitable worker image.
+The pinned storage helper also makes the sandbox workspace executable. Docker otherwise mounts this tmpfs with `noexec`, preventing the native OpenCode binary from starting and potentially surfacing a misleading musl-package fallback error. The correction retains `nosuid`, `nodev`, UID/GID 10001, mode `0700`, read-only root filesystem, dropped capabilities and the disposable per-sandbox store. It does not grant executable access to host data or make the application image a suitable worker image.
 
 ## Install the reference server profile {#install-a-server}
 
-Start from a verified tagged checkout and immutable image digest. Linux amd64 and arm64 are supported. Allow 4 GB RAM, two cores and 20 GB SSD for managed Supabase; allow 8 GB RAM, four cores and 60 GB SSD when Supabase shares the host. Public service requires DNS and HTTPS on your own origins. HTTP is accepted only on localhost or a private IPv4 network. Restrict private HTTP to a trusted LAN and never forward router ports. The full profile exposes the app on port 80 and its API on 8000 in that mode.
+Start from a verified tagged checkout and immutable image digest. Linux amd64 and arm64 are supported. Allow 4 GB RAM, two cores and 20 GB SSD for managed Supabase; allow 8 GB RAM, four cores and 60 GB SSD when Supabase shares the host. Public service requires DNS and HTTPS on your own origins. HTTP is accepted only on `localhost` or a private IPv4 network. Restrict private HTTP to a trusted LAN and never forward router ports. The full profile exposes the app on port 80 and its API on 8000 in that mode.
 
 
 ![Diagram: Verified release and protected environment. Installer: full reference profile. Official Supabase, app, scheduler, runner. Account, file and recovery acceptance.](/documentation/en/install-a-server-flow.svg)
@@ -271,10 +271,10 @@ Start from a verified tagged checkout and immutable image digest. Linux amd64 an
 
 ### Configure and run the installer {#install}
 
-Run pnpm self-host:install from the release directory. Select managed or full, your application origin and administrator address. For full, first fetch the pinned upstream checkout. The installer writes a mode-0600 environment, generates distinct missing secrets, pulls the selected profile, starts it and runs idempotent bootstrap. It retains an existing image pin and secrets. The example uses the IMAGE digest [verified in the compatibility section](#verify-release). For real Auth email, add --skip-start first, then configure SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_ADMIN_EMAIL and SMTP_SENDER_NAME in the protected file before rerunning. Keep ENABLE_EMAIL_AUTOCONFIRM=false. The placeholder supabase-mail is not a production inbox.
+Run `pnpm self-host:install` from the release directory. Select managed or full, your application origin and administrator address. For full, first fetch the pinned upstream checkout. The installer writes a mode-`0600` environment, generates distinct missing secrets, pulls the selected profile, starts it and runs idempotent bootstrap. It retains an existing image pin and secrets. The example uses the `IMAGE` digest [verified in the compatibility section](#verify-release). For real Auth email, add `--skip-start` first, then configure `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_ADMIN_EMAIL` and `SMTP_SENDER_NAME` in the protected file before rerunning. Keep `ENABLE_EMAIL_AUTOCONFIRM=false`. The placeholder `supabase-mail` is not a production inbox.
 
 
-Before starting, compare MINDDY_RELEASE and MINDDY_IMAGE in the protected file with the selected compatibility row and verified container asset. The v0.11.0 deployment template still says 0.10.30, and --image changes only the image reference; there is no --release flag. For a new v0.11.0 installation prepared with --skip-start, set MINDDY_RELEASE=0.11.0 explicitly and keep the verified immutable image reference. Do not replace generated credentials or encryption keys. Never infer a supported 0.11.1 profile from the candidate package version: it has no compatibility row in this snapshot.
+Before starting, compare `MINDDY_RELEASE` and `MINDDY_IMAGE` in the protected file with the selected compatibility row and verified container asset. The v0.11.0 deployment template still says 0.10.30, and `--image` changes only the image reference; there is no `--release` flag. For a new v0.11.0 installation prepared with `--skip-start`, set `MINDDY_RELEASE=0.11.0` explicitly and keep the verified immutable image reference. Do not replace generated credentials or encryption keys. Never infer a supported 0.11.1 profile from the candidate package version: it has no compatibility row in this snapshot.
 
 ```bash
 node scripts/fetch-official-supabase.mjs --destination /srv/minddy/supabase
@@ -284,11 +284,11 @@ pnpm self-host:install -- --non-interactive --mode full \
 ```
 
 
-The command above creates deploy/self-hosted/.env in the selected release directory. Edit that protected file before starting. For the v0.11.0 engineering variant documented here, stop the automatic installer at this configuration stage: follow the [pinned runner and worker procedure](/docs/installation#runner-workaround), then the [explicit full-profile start](/docs/installation#adapted-start). Do not rerun the historical installer without --skip-start: it omits the required overlay and cannot complete this variant. Existing origins, image and secrets remain in the protected file.
+The command above creates `deploy/self-hosted/.env` in the selected release directory. Edit that protected file before starting. For the v0.11.0 engineering variant documented here, stop the automatic installer at this configuration stage: follow the [pinned runner and worker procedure](/docs/installation#runner-workaround), then the [explicit full-profile start](/docs/installation#adapted-start). Do not rerun the historical installer without `--skip-start`: it omits the required overlay and cannot complete this variant. Existing origins, image and secrets remain in the protected file.
 
 ### Check before admitting users {#accept}
 
-The reference profiles include the scheduler and trusted sandbox runner. Never publish runner port 6464 or PostgreSQL to the Internet. Run the doctor with the installed environment and full-profile upstream Compose file. Test confirmation, sign-in, MFA, reset, project and issue creation, attachment upload/download and Realtime in two sessions. A 200 response from /api/health only proves application liveness. If interrupted, resume the explicit adapted sequence with the same Compose context and protected environment; do not reset data. Establish an off-host backup and blank-target restore before onboarding a team.
+The reference profiles include the scheduler and trusted sandbox runner. Never publish runner port 6464 or PostgreSQL to the Internet. Run the doctor with the installed environment and full-profile upstream Compose file. Test confirmation, sign-in, MFA, reset, project and issue creation, attachment upload/download and Realtime in two sessions. A 200 response from `/api/health` only proves application liveness. If interrupted, resume the explicit adapted sequence with the same Compose context and protected environment; do not reset data. Establish an off-host backup and blank-target restore before onboarding a team.
 
 ### Runner prerequisites for the server profile {#install-a-server-known-runner-limits}
 
@@ -296,11 +296,11 @@ The [published runner limits](#known-runner-limits) affect cloning and code exec
 
 ### Apply the pinned engineering workaround {#runner-workaround}
 
-For the published v0.11.0 image, the following explicit tooling variant also supplies the Basic authentication challenge required by Git HTTP clients. It is a workaround pinned to source commit 89ab340cb10ec729948fc6e596fb7ab0326fc470, not a newly published image or compatibility row. Prepare the base configuration first; apply this variant before starting the full stack. The two files must stay together, at their verified hashes, on persistent storage. These commands expose no runner port.
+For the published v0.11.0 image, the following explicit tooling variant also supplies the Basic authentication challenge required by Git HTTP clients. It is a workaround pinned to source commit `89ab340cb10ec729948fc6e596fb7ab0326fc470`, not a newly published image or compatibility row. Prepare the base configuration first; apply this variant before starting the full stack. The two files must stay together, at their verified hashes, on persistent storage. These commands expose no runner port.
 
-First set the installed context in [the reference backup procedure](/docs/backups-and-restoration#context). Its Compose function must include RUNNER_FIX_OVERRIDE. Then download and verify the two public files below. A mismatch is an abort condition.
+First set the installed context in [the reference backup procedure](/docs/backups-and-restoration#context). Its Compose function must include `RUNNER_FIX_OVERRIDE`. Then download and verify the two public files below. A mismatch is an abort condition.
 
-This procedure also builds a separate code-worker image. The application image lacks npm and cannot bootstrap a fresh code worker; the separate image is required.  The base is pinned, but Debian packages are resolved at build time; inspect the resulting Docker image ID and retain that exact image with the backup. Never substitute the application image after a restore. Building requires access to the base registry and Debian package repositories; fresh OpenCode bootstrap also needs the npm registry. The recipe supplies the bootstrap tools, not every project’s dependencies. Additional build tools require an explicitly maintained variant. The Compose overlay below sets the runner service’s image environment directly because the historical reference Compose file ignores a standalone AGENT_RUNNER_SANDBOX_IMAGE value in the protected file.
+This procedure also builds a separate code-worker image. The application image lacks `npm` and cannot bootstrap a fresh code worker; the separate image is required.  The base is pinned, but Debian packages are resolved at build time; inspect the resulting Docker image ID and retain that exact image with the backup. Never substitute the application image after a restore. Building requires access to the base registry and Debian package repositories; fresh OpenCode bootstrap also needs the `npm` registry. The recipe supplies the bootstrap tools, not every project’s dependencies. Additional build tools require an explicitly maintained variant. The Compose overlay below sets the runner service’s image environment directly because the historical reference Compose file ignores a standalone `AGENT_RUNNER_SANDBOX_IMAGE` value in the protected file.
 
 ```bash
 set -euo pipefail
@@ -361,15 +361,15 @@ compose exec -T agent-runner node --input-type=module -e \
   'const r=await fetch("http://127.0.0.1:6464/health"); if(!r.ok) process.exit(1); console.log(r.status);'
 ```
 
-The compose up command recreates only the runner. Its health response is still insufficient acceptance: verify a new sandbox, repository cloning, a file larger than 1 MiB, tests and the resulting diff before admitting code agents. Keep RUNNER_FIX_OVERRIDE and RUNNER_FIX_DIR in every operational shell. The historical installer and update helper do not consume this shell override; after either changes or recreates the runner, reapply this Compose command. Include both files and the override in your encrypted backup, and restore their absolute paths before restarting the runner.
+The `compose up` command recreates only the runner. Its health response is still insufficient acceptance: verify a new sandbox, repository cloning, a file larger than 1 MiB, tests and the resulting diff before admitting code agents. Keep `RUNNER_FIX_OVERRIDE` and `RUNNER_FIX_DIR` in every operational shell. The historical installer and update helper do not consume this shell override; after either changes or recreates the runner, reapply this Compose command. Include both files and the override in your encrypted backup, and restore their absolute paths before restarting the runner.
 
-Keep the dedicated worker image configured above. The application image cannot bootstrap a fresh worker because it lacks npm; see the [worker toolchain requirements](#known-runner-limits) before substituting an image.
+Keep the dedicated worker image configured above. The application image cannot bootstrap a fresh worker because it lacks `npm`; see the [worker toolchain requirements](#known-runner-limits) before substituting an image.
 
 ### Start the explicitly adapted full profile {#adapted-start}
 
-The unchanged v0.11.0 installer cannot complete this engineering variant: its image omits the helper, its function pin disagrees with the frozen dependency, and it does not accept the runner overlay above. For this variant, prepare configuration with --skip-start and apply the pinned tooling before the first start. Use the following full-profile sequence instead of rerunning the historical installer without --skip-start. The pin replacement is an explicit modification of the deployment tooling, not an alteration of the published tag. Preserve the original pin with the release evidence.
+The unchanged v0.11.0 installer cannot complete this engineering variant: its image omits the helper, its function pin disagrees with the frozen dependency, and it does not accept the runner overlay above. For this variant, prepare configuration with `--skip-start` and apply the pinned tooling before the first start. Use the following full-profile sequence instead of rerunning the historical installer without `--skip-start`. The pin replacement is an explicit modification of the deployment tooling, not an alteration of the published tag. Preserve the original pin with the release evidence.
 
-If you run this full profile on macOS Docker Desktop, apply the [filesystem Storage volume override](/docs/storage-and-attachments#docker-desktop) before the first start and retain RESTORE_OVERRIDE alongside the runner override. The Linux host bind-mount layout and this named-volume profile require different byte archives; use the matching backup and restoration procedure.
+If you run this full profile on macOS Docker Desktop, apply the [filesystem Storage volume override](/docs/storage-and-attachments#docker-desktop) before the first start and retain `RESTORE_OVERRIDE` alongside the runner override. The Linux host bind-mount layout and this named-volume profile require different byte archives; use the matching backup and restoration procedure.
 
 ```bash
 cd "$CURRENT_RELEASE_DIR"
@@ -417,7 +417,7 @@ pnpm self-host:doctor -- --mode full --env-file "$MINDDY_ENV_FILE" \
   --supabase-compose "$SUPABASE_DIR/docker/docker-compose.yml" --json
 ```
 
-The wrapper reads the protected file as data, derives the private maintenance URLs using the same exported helpers as the installer, and runs the original bootstrap with scheduler prerequisites. Its diagnostic log remains mode 0600; do not attach it to a public report without inspecting and redacting it. An unsuccessful phase must stop the procedure. The doctor must use the same adapted context; it validates services, not code-worker acceptance or delivery by external providers.
+The wrapper reads the protected file as data, derives the private maintenance URLs using the same exported helpers as the installer, and runs the original bootstrap with scheduler prerequisites. Its diagnostic log remains mode `0600`; do not attach it to a public report without inspecting and redacting it. An unsuccessful phase must stop the procedure. The doctor must use the same adapted context; it validates services, not code-worker acceptance or delivery by external providers.
 
 The [storage-helper correction](#known-runner-limits) is also required for the sandbox to execute OpenCode. Retain that helper together with the runner files and dedicated worker image when backing up or restoring this variant.
 
@@ -430,7 +430,7 @@ Managed Supabase describes who operates the backend. It can accompany the offici
 
 ### Install the managed OCI profile {#managed}
 
-From the verified release directory, run the guided command below. IMAGE is the digest [verified in the compatibility section](#verify-release). Values containing ... are examples, not usable credentials. Obtain real values privately and avoid command history or shared logs containing secrets. The installer preserves an existing protected environment, includes its scheduler and runner and keeps optional services off until configured. Configure Auth SMTP and exact redirects separately in your Supabase project.
+From the verified release directory, run the guided command below. `IMAGE` is the digest [verified in the compatibility section](#verify-release). Values containing ... are examples, not usable credentials. Obtain real values privately and avoid command history or shared logs containing secrets. The installer preserves an existing protected environment, includes its scheduler and runner and keeps optional services off until configured. Configure Auth SMTP and exact redirects separately in your Supabase project.
 
 ```bash
 pnpm self-host:install -- --non-interactive --mode managed \
@@ -442,7 +442,7 @@ pnpm self-host:install -- --non-interactive --mode managed \
 
 ### Complete a source deployment {#source}
 
-For source delivery, install frozen dependencies from the tagged checkout, supply the required application and Supabase environment, run bootstrap, build and run the production server behind your reverse proxy. Set runtime MINDDY_PUBLIC_* values before startup. You provide a durable scheduler with the authenticated schedules documented in the [scheduled-work section](/docs/instance-configuration#schedules); a source build alone supplies no running jobs. Verify database migrations and Storage, then exercise Auth, issue creation, file bytes and Realtime. Back up this instance through the logical/provider procedure. Do not test an OCI installation by switching to a source server.
+For source delivery, install frozen dependencies from the tagged checkout, supply the required application and Supabase environment, run bootstrap, build and run the production server behind your reverse proxy. Set runtime `MINDDY_PUBLIC_*` values before startup. You provide a durable scheduler with the authenticated schedules documented in the [scheduled-work section](/docs/instance-configuration#schedules); a source build alone supplies no running jobs. Verify database migrations and Storage, then exercise Auth, issue creation, file bytes and Realtime. Back up this instance through the logical/provider procedure. Do not test an OCI installation by switching to a source server.
 
 ```bash
 pnpm install --frozen-lockfile

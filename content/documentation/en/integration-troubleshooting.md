@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 3,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -39,9 +39,9 @@
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions)",
+    "revision": 4,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
+    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review)",
     "date": "2026-10-09"
   },
   "related": [
@@ -68,7 +68,7 @@ Register the exact displayed callback in the provider OAuth app when existing cl
 
 ## Inspect the outcome before repeating a call {#webhooks}
 
-Remote MCP calls have a 30-second deadline, 1 MiB transport limit and 64 KB result limit. A timeout does not prove a remote mutation failed. Check the destination before retrying. For API 401, verify key kind/instance and revocation without logging the key; wrong kind returns 403. For webhooks, inspect last status, public destination reachability, raw-body HMAC verification and delivery_id deduplication. Best-effort dropped deliveries have no durable retry queue. Preserve controlled codes and times, removing private content and credentials.
+Remote MCP calls have a 30-second deadline, 1 MiB transport limit and 64 KB result limit. A timeout does not prove a remote mutation failed. Check the destination before retrying. For API 401, verify key kind/instance and revocation without logging the key; wrong kind returns 403. For webhooks, inspect last status, public destination reachability, raw-body HMAC verification and `delivery_id` deduplication. Best-effort dropped deliveries have no durable retry queue. Preserve controlled codes and times, removing private content and credentials.
 
 ## Check provider permissions and synchronization {#git}
 

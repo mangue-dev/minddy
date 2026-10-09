@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 3,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -37,9 +37,9 @@
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
+    "revision": 4,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root (inline-code syntax and unchanged-text review)",
     "date": "2026-10-09"
   },
   "related": [],
@@ -53,8 +53,8 @@
       "kind": "screenshot",
       "src": "/documentation/it/repository-skills-workflow.png",
       "alt": "Anteprima di una skill del repository con nome stabile, percorso e istruzioni complete.",
-      "caption": "Leggi la skill prima di allegarla a un messaggio. Questa skill dimostrativa reale richiede npm test e vieta il merge della pull request; l’anteprima non esegue nessuna di queste azioni.",
-      "revision": 3,
+      "caption": "Leggi la skill prima di allegarla a un messaggio. Questa skill dimostrativa reale richiede `npm test` e vieta il merge della pull request; l’anteprima non esegue nessuna di queste azioni.",
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

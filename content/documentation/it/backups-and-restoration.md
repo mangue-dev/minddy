@@ -16,8 +16,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 3,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -38,9 +38,9 @@
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
+    "revision": 4,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root (inline-code syntax and unchanged-text review)",
     "date": "2026-10-09"
   },
   "related": [
@@ -65,7 +65,7 @@
       "src": "/documentation/it/restore-and-roll-back-flow.svg",
       "alt": "Schema: Backup completo esterno verificato. Destinazione vuota isolata e versioni uguali. Ripristinare database, byte e chiavi insieme. Verificare account, contenuti e file prima di aprire.",
       "caption": "Segui le fasi in questo ordine. Backup completo esterno verificato. Destinazione vuota isolata e versioni uguali. Ripristinare database, byte e chiavi insieme. Verificare account, contenuti e file prima di aprire.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -102,11 +102,11 @@ Un backup recuperabile comprende database, byte di Storage, configurazione e chi
 
 ## Eseguire un backup a freddo del profilo full su file {#back-up-the-reference-instance}
 
-Questa procedura Linux riguarda solo il profilo full con lo Storage filesystem della distribuzione Supabase ufficiale fissata dalla matrice. Il ripristino fisico richiede la stessa architettura e l’esatta immagine PostgreSQL. Per managed, S3 e installazioni dai sorgenti usa il percorso logico o del provider. Annuncia l’interruzione delle scritture e ferma anche i worker esterni. Scegli una destinazione cifrata, sufficientemente capiente e fuori dai dati attivi. Non eseguire mai down --volumes sulla fonte. La copia comprende database, Auth, metadati e byte Storage, migrazioni, policy, chiavi Vault, configurazione e identità delle versioni.
+Questa procedura Linux riguarda solo il profilo full con lo Storage filesystem della distribuzione Supabase ufficiale fissata dalla matrice. Il ripristino fisico richiede la stessa architettura e l’esatta immagine PostgreSQL. Per managed, S3 e installazioni dai sorgenti usa il percorso logico o del provider. Annuncia l’interruzione delle scritture e ferma anche i worker esterni. Scegli una destinazione cifrata, sufficientemente capiente e fuori dai dati attivi. Non eseguire mai `down --volumes` sulla fonte. La copia comprende database, Auth, metadati e byte Storage, migrazioni, policy, chiavi Vault, configurazione e identità delle versioni.
 
 ### Impostare il contesto Compose installato {#context}
 
-Sostituisci i percorsi e la release dell’esempio con quelli dell’istanza installata. Imposta MODE=full e conserva l’eventuale override di ripristino in ogni comando Compose. Usare soltanto il Compose upstream omette l’overlay e l’ambiente minddy. Non eseguire il file di ambiente come codice shell e non stamparlo. La sequenza seguente ferma tutti i servizi prima di copiare i file PostgreSQL.
+Sostituisci i percorsi e la release dell’esempio con quelli dell’istanza installata. Imposta `MODE=full` e conserva l’eventuale override di ripristino in ogni comando Compose. Usare soltanto il Compose upstream omette l’overlay e l’ambiente minddy. Non eseguire il file di ambiente come codice shell e non stamparlo. La sequenza seguente ferma tutti i servizi prima di copiare i file PostgreSQL.
 
 ```bash
 set -euo pipefail
@@ -134,7 +134,7 @@ compose ps
 
 ### Completare e verificare il backup {#backup}
 
-Esegui la copia seguente mentre le scritture sono ferme. Registra codice e immagini, archivia i dati e il volume db-config e conserva i file di deployment e l’ambiente protetto. Se non trovi db-config, interrompi la procedura. Conserva gli asset verificati, i digest OCI e l’immagine database per digest. Poiché il backup comprende sia la chiave radice sia i dati cifrati, la sua riservatezza dipende dalla cifratura esterna e dai controlli di accesso.
+Esegui la copia seguente mentre le scritture sono ferme. Registra codice e immagini, archivia i dati e il volume `db-config` e conserva i file di deployment e l’ambiente protetto. Se non trovi `db-config`, interrompi la procedura. Conserva gli asset verificati, i digest OCI e l’immagine database per digest. Poiché il backup comprende sia la chiave radice sia i dati cifrati, la sua riservatezza dipende dalla cifratura esterna e dai controlli di accesso.
 
 ```bash
 export BACKUP_DIR="$BACKUP_ROOT/$(date -u +%Y%m%dT%H%M%SZ)"
@@ -187,24 +187,24 @@ sudo chown "$(id -u):$(id -g)" "$BACKUP_DIR/supabase-docker.tar.gz"
 
 ### Verificare il risultato {#verify}
 
-Copia l’insieme sigillato su un disco o host indipendente e verifica SHA256SUMS sulla destinazione. Una seconda copia sullo stesso host non protegge dalla perdita dell’host. Conserva separatamente i certificati TLS se la tua politica lo richiede. Se stai eseguendo solo un backup, riavvia con compose up -d --wait dopo la verifica. Prima di affidarti alla copia, ripristinala su una destinazione vuota e isolata, accedi con MFA e controlla ticket e allegati con gli stessi SHA-256. Conserva anche le chiavi storiche.
+Copia l’insieme sigillato su un disco o host indipendente e verifica `SHA256SUMS` sulla destinazione. Una seconda copia sullo stesso host non protegge dalla perdita dell’host. Conserva separatamente i certificati TLS se la tua politica lo richiede. Se stai eseguendo solo un backup, riavvia con `compose up -d --wait` dopo la verifica. Prima di affidarti alla copia, ripristinala su una destinazione vuota e isolata, accedi con MFA e controlla ticket e allegati con gli stessi SHA-256. Conserva anche le chiavi storiche.
 
 
-Se l’istanza usa la soluzione fissata per il runner, conserva RUNNER_FIX_OVERRIDE e RUNNER_FIX_DIR insieme all’eventuale override di ripristino. Questi file fanno parte dell’insieme necessario per il recupero. Ripristina i percorsi assoluti oppure adatta esplicitamente entrambi i mount alla nuova posizione prima di avviare il runner.
+Se l’istanza usa la soluzione fissata per il runner, conserva `RUNNER_FIX_OVERRIDE` e `RUNNER_FIX_DIR` insieme all’eventuale override di ripristino. Questi file fanno parte dell’insieme necessario per il recupero. Ripristina i percorsi assoluti oppure adatta esplicitamente entrambi i mount alla nuova posizione prima di avviare il runner.
 
-Il comando di backup a freddo rileva anche un volume con nome per Storage su filesystem e ne archivia i byte separatamente. Un bind mount rimane incluso in supabase-docker.tar.gz. Nessuno dei due casi copre un backend S3 o gestito da un fornitore.
+Il comando di backup a freddo rileva anche un volume con nome per Storage su filesystem e ne archivia i byte separatamente. Un bind mount rimane incluso in `supabase-docker.tar.gz`. Nessuno dei due casi copre un backend S3 o gestito da un fornitore.
 
 ## Creare backup logici o gestiti dal provider {#logical-and-provider-backups}
 
-Per installazioni dai sorgenti, database gestiti e Storage personalizzato, associa comandi di database, byte e proxy alla stessa istanza. self-host:backup, self-host:update e self-host:restore sono controlli preliminari di sola lettura: non eseguono queste operazioni. Un backup completo conserva PostgreSQL con auth, storage e storia delle migrazioni, byte grezzi dei file, configurazione, chiavi e identità esatte di minddy e Supabase allo stesso punto, senza scritture concorrenti.
+Per installazioni dai sorgenti, database gestiti e Storage personalizzato, associa comandi di database, byte e proxy alla stessa istanza. `self-host:backup`, `self-host:update` e `self-host:restore` sono controlli preliminari di sola lettura: non eseguono queste operazioni. Un backup completo conserva PostgreSQL con auth, storage e storia delle migrazioni, byte grezzi dei file, configurazione, chiavi e identità esatte di minddy e Supabase allo stesso punto, senza scritture concorrenti.
 
 ### Supabase gestito da un provider {#provider}
 
-Per Supabase gestito registra progetto, versione database, identificatore del backup o snapshot e punto di recupero. Chiudi minddy, worker e scritture pianificate; usa poi i controlli di coerenza o manutenzione supportati dal provider per le scritture dirette di Auth, PostgREST e Storage. Se non sono disponibili, documenta il limite: fermare soltanto l’applicazione non basta. Usa gli export SQL seguenti solo se ruolo database e provider li supportano, includendo Auth, metadati Storage, storia delle migrazioni e policy gestite. Conserva separatamente i byte grezzi degli oggetti tramite export supportato o snapshot immutabile del backend. Conserva ambiente protetto e chiavi minddy, oltre alle impostazioni Auth/SMTP, URL, proxy e job sotto il tuo controllo. Ruoli di piattaforma e chiavi pgsodium possono appartenere al provider: non presentarli come file locali. I blocchi seguenti con SUPABASE_COMPOSE_DIR, docker compose, supabase.env, pgsodium e tar filesystem riguardano solo un backend controllato dall’operatore. Valida il ripristino completo in un progetto vuoto separato prima di affidarti alla copia. Per questa revisione non è stato eseguito alcun backup o ripristino del provider.
+Per Supabase gestito registra progetto, versione database, identificatore del backup o snapshot e punto di recupero. Chiudi minddy, worker e scritture pianificate; usa poi i controlli di coerenza o manutenzione supportati dal provider per le scritture dirette di Auth, PostgREST e Storage. Se non sono disponibili, documenta il limite: fermare soltanto l’applicazione non basta. Usa gli export SQL seguenti solo se ruolo database e provider li supportano, includendo Auth, metadati Storage, storia delle migrazioni e policy gestite. Conserva separatamente i byte grezzi degli oggetti tramite export supportato o snapshot immutabile del backend. Conserva ambiente protetto e chiavi minddy, oltre alle impostazioni Auth/SMTP, URL, proxy e job sotto il tuo controllo. Ruoli di piattaforma e chiavi `pgsodium` possono appartenere al provider: non presentarli come file locali. I blocchi seguenti con `SUPABASE_COMPOSE_DIR`, `docker compose`, `supabase.env`, `pgsodium` e tar filesystem riguardano solo un backend controllato dall’operatore. Valida il ripristino completo in un progetto vuoto separato prima di affidarti alla copia. Per questa revisione non è stato eseguito alcun backup o ripristino del provider.
 
 ### Bloccare scritture ed esportare SQL {#outage}
 
-Chiudi l’applicazione, i worker, lo scheduler e l’API pubblica. Fermare solo il server web lascia aperte le scritture di PostgREST e Storage. Imposta SUPABASE_DB_URL in privato e scegli una BACKUP_DIR nuova e cifrata. Esporta SQL con gli strumenti della versione installata. Ogni file SQL deve essere non vuoto; data.sql deve contenere le istruzioni COPY per auth.users, storage.objects e le tabelle dell’applicazione. L’export ordinario omette la storia delle migrazioni: servono i due export separati mostrati. Conserva anche le policy gestite di Storage e Realtime.
+Chiudi l’applicazione, i worker, lo scheduler e l’API pubblica. Fermare solo il server web lascia aperte le scritture di PostgREST e Storage. Imposta `SUPABASE_DB_URL` in privato e scegli una `BACKUP_DIR` nuova e cifrata. Esporta SQL con gli strumenti della versione installata. Ogni file SQL deve essere non vuoto; `data.sql` deve contenere le istruzioni `COPY` per `auth.users`, `storage.objects` e le tabelle dell’applicazione. L’export ordinario omette la storia delle migrazioni: servono i due export separati mostrati. Conserva anche le policy gestite di Storage e Realtime.
 
 ```bash
 set -euo pipefail
@@ -259,7 +259,7 @@ psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -Atc "
 
 ### Conservare byte e configurazione {#bytes}
 
-Se gestisci uno Storage filesystem, ferma storage e imgproxy dopo l’export SQL e archivia la directory preservando proprietari numerici, ACL e attributi estesi. Su S3 crea uno snapshot o una versione immutabile dei byte grezzi. Non ripristinare tramite /storage/v1/s3, che crea metadati in conflitto con quelli ripristinati. Il provider controlla ruoli e file di piattaforma: usa la sua procedura supportata e registrane la portata. Copia in privato configurazione minddy e Supabase, proxy, job, template Auth, SMTP ed eventuale chiave radice pgsodium. Includi MINDDY_DATA_ROOT_KEY e gli altri segreti conservati. L’SQL non contiene i byte degli allegati.
+Se gestisci uno Storage filesystem, ferma storage e `imgproxy` dopo l’export SQL e archivia la directory preservando proprietari numerici, ACL e attributi estesi. Su S3 crea uno snapshot o una versione immutabile dei byte grezzi. Non ripristinare tramite `/storage/v1/s3`, che crea metadati in conflitto con quelli ripristinati. Il provider controlla ruoli e file di piattaforma: usa la sua procedura supportata e registrane la portata. Copia in privato configurazione minddy e Supabase, proxy, job, template Auth, SMTP ed eventuale chiave radice `pgsodium`. Includi `MINDDY_DATA_ROOT_KEY` e gli altri segreti conservati. L’SQL non contiene i byte degli allegati.
 
 ```bash
 install -m 0600 "$MINDDY_ENV_FILE" "$BACKUP_DIR/config/minddy.env"
@@ -290,22 +290,22 @@ sha256sum --check SHA256SUMS
 
 ### Verificare il risultato {#logical-and-provider-backups-verify}
 
-Genera e verifica SHA256SUMS sull’insieme completo, cifralo, copialo fuori dall’host e verifica di nuovo. Registra versioni, immagini, conteggi e hash dei campioni. Un export riuscito non prova il ripristino. Esegui una prova su una destinazione vuota con le versioni e la configurazione salvate prima di affidarti al backup; documenta i limiti del provider.
+Genera e verifica `SHA256SUMS` sull’insieme completo, cifralo, copialo fuori dall’host e verifica di nuovo. Registra versioni, immagini, conteggi e hash dei campioni. Un export riuscito non prova il ripristino. Esegui una prova su una destinazione vuota con le versioni e la configurazione salvate prima di affidarti al backup; documenta i limiti del provider.
 
 ## Ripristinare un insieme completo su una destinazione vuota {#restore-and-roll-back}
 
-Il ripristino sostituisce i dati della destinazione e non unisce due istanze. Recupera la copia esterna sigillata, verifica SHA256SUMS e lascia intatta la fonte. Ferma ingressi, scheduler e worker della destinazione. Il ripristino fisico full richiede l’architettura e l’immagine database salvate. Prepara il tag e l’upstream fissato in directory nuove, con dipendenze bloccate. Accertati che non esistano directory database, oggetti Storage o un volume db-config di destinazione. Non avviare il normale installer o bootstrap prima di estrarre il backup fisico.
+Il ripristino sostituisce i dati della destinazione e non unisce due istanze. Recupera la copia esterna sigillata, verifica `SHA256SUMS` e lascia intatta la fonte. Ferma ingressi, scheduler e worker della destinazione. Il ripristino fisico full richiede l’architettura e l’immagine database salvate. Prepara il tag e l’upstream fissato in directory nuove, con dipendenze bloccate. Accertati che non esistano directory database, oggetti Storage o un volume `db-config` di destinazione. Non avviare il normale installer o bootstrap prima di estrarre il backup fisico.
 
 ![Schema: Backup completo esterno verificato. Destinazione vuota isolata e versioni uguali. Ripristinare database, byte e chiavi insieme. Verificare account, contenuti e file prima di aprire.](/documentation/it/restore-and-roll-back-flow.svg)
 
 ### Ripristinare i file del profilo full {#physical}
 
-Prima della sequenza fisica, definisci il contesto Compose della fonte come nell’articolo sul backup a freddo. Usa poi percorsi e volumi di destinazione nuovi. La sequenza rimuove i container della fonte già fermi senza rimuoverne i volumi, ripristina insieme PostgreSQL a freddo e Storage, recupera db-config con l’immagine salvata e confronta l’immagine prima dell’avvio. Nel file protetto cambia solo percorsi, origini e redirect Auth. Conserva JWT, password, chiavi Vault e dell’applicazione e identità di release e immagine. Includi sempre RESTORE_OVERRIDE: ometterlo può selezionare i volumi della fonte. Ricompila la funzione offline, avvia dipendenze, applicazione e runner e verifica in manutenzione prima di aprire gli ingressi.
+Prima della sequenza fisica, definisci il contesto Compose della fonte come nell’articolo sul backup a freddo. Usa poi percorsi e volumi di destinazione nuovi. La sequenza rimuove i container della fonte già fermi senza rimuoverne i volumi, ripristina insieme PostgreSQL a freddo e Storage, recupera `db-config` con l’immagine salvata e confronta l’immagine prima dell’avvio. Nel file protetto cambia solo percorsi, origini e redirect Auth. Conserva JWT, password, chiavi Vault e dell’applicazione e identità di release e immagine. Includi sempre `RESTORE_OVERRIDE`: ometterlo può selezionare i volumi della fonte. Ricompila la funzione offline, avvia dipendenze, applicazione e runner e verifica in manutenzione prima di aprire gli ingressi.
 
 
-Prima del primo compose down, definisci [il contesto Compose installato dell’istanza fonte](/it/documentazione/backups-and-restoration#context), includendo l’override esistente.
+Prima del primo `compose down`, definisci [il contesto Compose installato dell’istanza fonte](/it/documentazione/backups-and-restoration#context), includendo l’override esistente.
 
-Se esiste storage-volume.tar.gz, ripristinalo in un nuovo volume Linux con nome e collega quel volume esatto tramite l’override persistente prima di avviare Storage. Il controllo che la destinazione sia vuota si applica anche a questo volume.
+Se esiste `storage-volume.tar.gz`, ripristinalo in un nuovo volume Linux con nome e collega quel volume esatto tramite l’override persistente prima di avviare Storage. Il controllo che la destinazione sia vuota si applica anche a questo volume.
 
 ```bash
 compose down
@@ -421,7 +421,7 @@ pnpm self-host:doctor -- --mode full --env-file "$MINDDY_ENV_FILE" \
 Per un ripristino logico, prepara uno stack vuoto con versioni, configurazioni e chiavi registrate. Prima di importare SQL, verifica l’identità del database e del backend Storage grezzo di destinazione. Ripristina ruoli, schema e dati in transazione, poi storia delle migrazioni e policy. Ferma Storage e recupera i file o lo snapshot S3 in un backend nuovo e vuoto; non caricarli tramite API. Managed richiede il processo supportato dal provider, non l’estrazione filesystem dell’esempio. Usa il commit minddy salvato e configura chiavi e origini della destinazione isolata.
 
 
-I comandi seguenti per estrazione logica, run.sh e Storage filesystem riguardano solo un backend controllato dall’operatore. Con Supabase gestito ripristina database e byte grezzi su una destinazione vuota del provider con il suo processo supportato, poi configura e avvia minddy con [la procedura dai sorgenti](/it/documentazione/installation#source). Non eseguire Compose locale per un progetto supabase.com.
+I comandi seguenti per estrazione logica, `run.sh` e Storage filesystem riguardano solo un backend controllato dall’operatore. Con Supabase gestito ripristina database e byte grezzi su una destinazione vuota del provider con il suo processo supportato, poi configura e avvia minddy con [la procedura dai sorgenti](/it/documentazione/installation#source). Non eseguire Compose locale per un progetto supabase.com.
 
 ```bash
 export RESTORE_DB_URL='postgresql://postgres:...@restore-db:5432/postgres'
@@ -484,7 +484,7 @@ pnpm verify:supabase --db-url "$RESTORE_DB_URL" \
 ```
 
 
-Dopo il build dai sorgenti e la verifica precedente, avvia l’applicazione recuperata con pnpm start o con il supervisore registrato nella [procedura dai sorgenti](/it/documentazione/installation#source). Mantieni ingressi pubblici e job chiusi fino al superamento dei controlli seguenti.
+Dopo il build dai sorgenti e la verifica precedente, avvia l’applicazione recuperata con `pnpm start` o con il supervisore registrato nella [procedura dai sorgenti](/it/documentazione/installation#source). Mantieni ingressi pubblici e job chiusi fino al superamento dei controlli seguenti.
 
 ### Verificare il risultato {#restore-and-roll-back-verify}
 

@@ -16,8 +16,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 3,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -50,9 +50,9 @@
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
+    "revision": 4,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root (inline-code syntax and unchanged-text review)",
     "date": "2026-10-09"
   },
   "related": [
@@ -75,7 +75,7 @@
       "src": "/documentation/pt-BR/external-minddy-mcp-workflow.png",
       "alt": "Seletor de clientes MCP minddy com Claude, Codex e outros assistentes.",
       "caption": "Selecione seu cliente para exibir o comando ou a configuração de instalação.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -92,7 +92,7 @@
       "src": "/documentation/pt-BR/external-minddy-mcp-install-workflow.png",
       "alt": "Diálogo de instalação do Codex na instância local.",
       "caption": "Diálogo de instalação do Codex. Use a origem da sua instância; o comando exibido não foi executado para esta captura.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -132,19 +132,19 @@ minddy MCP nas configurações da conta lista acessos externos e controles de re
 
 ## Usar o minddy MCP e descobrir as ferramentas atuais {#mcp-tool-reference}
 
-/api/mcp usa Streamable HTTP, ferramentas sem estado e OAuth 2.1. Conecte sua conta pelo consentimento no navegador; as antigas chaves mdyk_ não são aceitas. Use minddy_list_projects para descobrir UUIDs e leia os esquemas do servidor conectado. /llms-full.txt gera os parâmetros exatos a partir dos registros das ferramentas. Não os reconstrua com uma lista antiga. Cada ferramenta de projeto verifica novamente o acesso e retorna códigos de erro estáveis.
+`/api/mcp` usa Streamable HTTP, ferramentas sem estado e OAuth 2.1. Conecte sua conta pelo consentimento no navegador; as antigas chaves `mdyk_` não são aceitas. Use `minddy_list_projects` para descobrir UUIDs e leia os esquemas do servidor conectado. `/llms-full.txt` gera os parâmetros exatos a partir dos registros das ferramentas. Não os reconstrua com uma lista antiga. Cada ferramenta de projeto verifica novamente o acesso e retorna códigos de erro estáveis.
 
 ### Ler antes de alterar os planos {#issue-plans}
 
-minddy_get_issue aceita o UUID de uma issue, um identificador de issue como DEMO-42 ou o número da issue; project_id é informado separadamente. plan_tasks informa task_index a partir de zero. minddy_update_plan_task recebe um array tasks com os estados pending, in_progress, completed ou cancelled; um índice inválido faz o lote inteiro ser rejeitado. minddy_append_to_plan acrescenta conteúdo, enquanto minddy_edit_issue_text substitui old_string por new_string em uma correspondência exata e única. Releia um plano que pode ter mudado: substituí-lo por inteiro pode sobrescrever o progresso de outras pessoas. A seção ## Questions fica fora da contagem de tarefas.
+`minddy_get_issue` aceita o UUID de uma issue, um identificador de issue como `DEMO-42` ou o número da issue; `project_id` é informado separadamente. `plan_tasks` informa `task_index` a partir de zero. `minddy_update_plan_task` recebe um array `tasks` com os estados `pending`, `in_progress`, `completed` ou `cancelled`; um índice inválido faz o lote inteiro ser rejeitado. `minddy_append_to_plan` acrescenta conteúdo, enquanto `minddy_edit_issue_text` substitui `old_string` por `new_string` em uma correspondência exata e única. Releia um plano que pode ter mudado: substituí-lo por inteiro pode sobrescrever o progresso de outras pessoas. A seção `## Questions` fica fora da contagem de tarefas.
 
 ### Respeitar revisões e propriedade {#pages-and-routines}
 
-minddy_list_pages mostra a hierarquia, minddy_search_pages retorna trechos e minddy_get_page retorna Markdown, comentários e valores completos. Prefira edições parciais e use a versão atual ao substituir conteúdo. Preserve as URLs de arquivos e imagens. minddy_create_page com database=true cria um banco de páginas. minddy_update_page_database exige a revisão do esquema, o valor anterior da célula e os tokens preview/apply para conversões. Somente o proprietário pode criar, pausar, reagendar ou remover suas rotinas. Leia antes de criar para evitar duplicatas. minddy_add_resource limita os arquivos a 10 MB; as ferramentas de página não inventam URLs.
+`minddy_list_pages` mostra a hierarquia, `minddy_search_pages` retorna trechos e `minddy_get_page` retorna Markdown, comentários e valores completos. Prefira edições parciais e use a versão atual ao substituir conteúdo. Preserve as URLs de arquivos e imagens. `minddy_create_page` com `database=true` cria um banco de páginas. `minddy_update_page_database` exige a revisão do esquema, o valor anterior da célula e os tokens `preview`/`apply` para conversões. Somente o proprietário pode criar, pausar, reagendar ou remover suas rotinas. Leia antes de criar para evitar duplicatas. `minddy_add_resource` limita os arquivos a 10 MB; as ferramentas de página não inventam URLs.
 
 ### Conferir com um exemplo {#example}
 
-O exemplo altera a primeira tarefa de um plano já lido. Substitua o UUID do projeto e a issue pelos valores encontrados na descoberta e use o índice da última leitura. Depois confira plan_tasks e plan_progress. Para um erro de acesso, verifique conta e projeto; para conflito, releia e aplique apenas a alteração necessária. Não repita uma alteração externa de resultado incerto sem conferir o resultado.
+O exemplo altera a primeira tarefa de um plano já lido. Substitua o UUID do projeto e a issue pelos valores encontrados na descoberta e use o índice da última leitura. Depois confira `plan_tasks` e `plan_progress`. Para um erro de acesso, verifique conta e projeto; para conflito, releia e aplique apenas a alteração necessária. Não repita uma alteração externa de resultado incerto sem conferir o resultado.
 
 ```json
 {

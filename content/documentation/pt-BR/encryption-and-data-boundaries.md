@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 3,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -43,9 +43,9 @@
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root/editorial_it_pt (collection-caption clarity)",
+    "revision": 4,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root/editorial_it_pt (collection-caption clarity); agent:/root (inline-code syntax and unchanged-text review)",
     "date": "2026-10-09"
   },
   "related": [
@@ -64,7 +64,7 @@
       "src": "/documentation/pt-BR/encryption-and-data-boundaries-flow.svg",
       "alt": "Diagrama: Conteúdo cifrado e chaves empacotadas. Raiz na configuração protegida do servidor. Runtime autorizado pode decifrar. Exports e provedores precisam proteção separada.",
       "caption": "A proteção do conteúdo persistente depende das chaves do servidor; exportações e envios a provedores exigem controles separados.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -109,4 +109,4 @@ O Auth mantém o email de login. Identificadores, chaves de projeto e issue, sta
 
 ## Preservar a recuperação {#recovery}
 
-Proteja MINDDY_DATA_ROOT_KEY fora do banco e conserve o material de recuperação necessário aos backups atuais e históricos. Restaure banco, bytes e configuração juntos. Cifre o backup externo que contém tanto dados quanto chaves. Trocar a raiz sem reencapsular as chaves torna os conteúdos ilegíveis; desativar a flag não os devolve ao texto aberto. Antes de ativar a criptografia em uma instância existente, teste a recuperação e verifique a decifragem e os bytes efetivamente retornados.
+Proteja `MINDDY_DATA_ROOT_KEY` fora do banco e conserve o material de recuperação necessário aos backups atuais e históricos. Restaure banco, bytes e configuração juntos. Cifre o backup externo que contém tanto dados quanto chaves. Trocar a raiz sem reencapsular as chaves torna os conteúdos ilegíveis; desativar a flag não os devolve ao texto aberto. Antes de ativar a criptografia em uma instância existente, teste a recuperação e verifique a decifragem e os bytes efetivamente retornados.

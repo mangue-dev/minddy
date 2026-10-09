@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 3,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -42,9 +42,9 @@
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (collection-caption clarity)",
+    "revision": 4,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (collection-caption clarity); agent:/root (inline-code syntax and unchanged-text review)",
     "date": "2026-10-09"
   },
   "related": [
@@ -63,7 +63,7 @@
       "src": "/documentation/pt-BR/architecture-and-data-flows-flow.svg",
       "alt": "Diagrama: Navegador e aplicação autenticada. Supabase: PostgreSQL, Auth, Storage, Realtime. Agendador independente e runner confiável. Provedores opcionais: destinos separados.",
       "caption": "A aplicação coordena os serviços internos e usa os provedores externos quando estão configurados.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -98,7 +98,7 @@
 
 ## Seguir fluxos entre aplicação, banco e provedores {#architecture-and-data-flows}
 
-O Next.js fornece a interface e as APIs autorizadas. O Supabase fornece PostgreSQL, Auth, Storage e Realtime. O PostgreSQL guarda registros da aplicação, contas, dados da plataforma e metadados dos arquivos; o Storage guarda os bytes. A configuração protegida contém chaves e definições de provedores. Os containers podem ser recriados, mas volumes, bytes e chaves precisam persistir. Uma restauração completa reúne esses elementos no mesmo ponto de recuperação.
+O `Next.js` fornece a interface e as APIs autorizadas. O Supabase fornece PostgreSQL, Auth, Storage e Realtime. O PostgreSQL guarda registros da aplicação, contas, dados da plataforma e metadados dos arquivos; o Storage guarda os bytes. A configuração protegida contém chaves e definições de provedores. Os containers podem ser recriados, mas volumes, bytes e chaves precisam persistir. Uma restauração completa reúne esses elementos no mesmo ponto de recuperação.
 
 ![Diagrama: Navegador e aplicação autenticada. Supabase: PostgreSQL, Auth, Storage, Realtime. Agendador independente e runner confiável. Provedores opcionais: destinos separados.](/documentation/pt-BR/architecture-and-data-flows-flow.svg)
 

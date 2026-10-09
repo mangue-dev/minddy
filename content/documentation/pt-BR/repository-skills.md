@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 3,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -37,9 +37,9 @@
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
+    "revision": 4,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root (inline-code syntax and unchanged-text review)",
     "date": "2026-10-09"
   },
   "related": [],
@@ -53,8 +53,8 @@
       "kind": "screenshot",
       "src": "/documentation/pt-BR/repository-skills-workflow.png",
       "alt": "Prévia de uma skill do repositório com nome estável, caminho e instruções completas.",
-      "caption": "Leia a skill antes de anexá-la a uma mensagem. Esta skill real de demonstração solicita npm test e proíbe o merge da pull request; a prévia não executa nenhuma dessas ações.",
-      "revision": 3,
+      "caption": "Leia a skill antes de anexá-la a uma mensagem. Esta skill real de demonstração solicita `npm test` e proíbe o merge da pull request; a prévia não executa nenhuma dessas ações.",
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 3,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -41,9 +41,9 @@
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (collection-caption clarity)",
+    "revision": 4,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (collection-caption clarity); agent:/root (inline-code syntax and unchanged-text review)",
     "date": "2026-10-09"
   },
   "related": [
@@ -60,7 +60,7 @@
       "src": "/documentation/it/storage-and-attachments-flow.svg",
       "alt": "Schema: Accesso file autorizzato. Metadati oggetto PostgreSQL. Byte grezzi su filesystem o S3. Configurazione e chiavi corrispondenti.",
       "caption": "Un file resta recuperabile solo se metadati, byte e chiavi vengono conservati insieme.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -95,7 +95,7 @@
 
 ## Mantenere Storage duraturo e diagnosticare allegati {#storage-and-attachments}
 
-PostgreSQL conserva metadati Storage e riferimenti agli oggetti; il backend Storage conserva i byte. Entrambi devono appartenere alla stessa istanza e allo stesso punto di backup. Il profilo full con backend filesystem persiste i file in docker/volumes/storage della distribuzione upstream fissata. Un backend compatibile S3 richiede uno snapshot grezzo separato. I file effimeri dei container non sono Storage duraturo. Controlla la capacità destinata a database, allegati e backup, tenendo le copie di backup fuori dal disco attivo.
+PostgreSQL conserva metadati Storage e riferimenti agli oggetti; il backend Storage conserva i byte. Entrambi devono appartenere alla stessa istanza e allo stesso punto di backup. Il profilo full con backend filesystem persiste i file in `docker/volumes/storage` della distribuzione upstream fissata. Un backend compatibile S3 richiede uno snapshot grezzo separato. I file effimeri dei container non sono Storage duraturo. Controlla la capacità destinata a database, allegati e backup, tenendo le copie di backup fuori dal disco attivo.
 
 ![Schema: Accesso file autorizzato. Metadati oggetto PostgreSQL. Byte grezzi su filesystem o S3. Configurazione e chiavi corrispondenti.](/documentation/it/storage-and-attachments-flow.svg)
 
@@ -105,7 +105,7 @@ I file privati richiedono autorizzazione prima del download. Pubblicare una pagi
 
 ## Recuperare dopo un errore {#recover}
 
-Esegui la verifica Supabase, controlla che lo stack e la chiave service-role corrispondano e confronta record, byte e chiavi. Correggi servizio, policy o configurazione prima di riprovare. Non cancellare un bucket avatars non vuoto per eliminare un avviso. Ripristinare soltanto SQL non recupera i byte dei file. Su S3 ripristina lo snapshot grezzo, non tramite /storage/v1/s3, che crea metadati in conflitto.
+Esegui la verifica Supabase, controlla che lo stack e la chiave service-role corrispondano e confronta record, byte e chiavi. Correggi servizio, policy o configurazione prima di riprovare. Non cancellare un bucket `avatars` non vuoto per eliminare un avviso. Ripristinare soltanto SQL non recupera i byte dei file. Su S3 ripristina lo snapshot grezzo, non tramite `/storage/v1/s3`, che crea metadati in conflitto.
 
 ```bash
 pnpm verify:supabase --db-url "$SUPABASE_DB_URL" \
@@ -115,7 +115,7 @@ pnpm verify:supabase --db-url "$SUPABASE_DB_URL" \
 
 ## Storage su filesystem con Docker Desktop {#docker-desktop}
 
-Nel profilo macOS con Docker Desktop verificato, un bind mount della cartella host ha restituito ENOTSUP quando Storage ha scritto gli attributi estesi. Un nuovo volume Linux con nome ha evitato l’errore. Per una nuova installazione senza byte di oggetti, l’override persistente seguente sostituisce soltanto il mount di Storage. Conserva RESTORE_OVERRIDE nel contesto Compose installato. Non sostituire un mount già popolato con un volume vuoto e non sovrascrivere un override di ripristino esistente: interrompi le scritture e conserva prima i byte con le procedure di backup e ripristino.
+Nel profilo macOS con Docker Desktop verificato, un bind mount della cartella host ha restituito `ENOTSUP` quando Storage ha scritto gli attributi estesi. Un nuovo volume Linux con nome ha evitato l’errore. Per una nuova installazione senza byte di oggetti, l’override persistente seguente sostituisce soltanto il mount di Storage. Conserva `RESTORE_OVERRIDE` nel contesto Compose installato. Non sostituire un mount già popolato con un volume vuoto e non sovrascrivere un override di ripristino esistente: interrompi le scritture e conserva prima i byte con le procedure di backup e ripristino.
 
 ```bash
 : "${RESTORE_OVERRIDE:=/etc/minddy/storage-volume.yml}"

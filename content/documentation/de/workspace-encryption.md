@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 4,
-  "sourceRevision": 4,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -39,9 +39,9 @@
     ]
   },
   "review": {
-    "revision": 4,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (collection-caption clarity)",
+    "revision": 5,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
+    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (collection-caption clarity); agent:/root (inline-code syntax and unchanged-text review)",
     "date": "2026-10-09"
   },
   "related": [
@@ -59,7 +59,7 @@
       "src": "/documentation/de/workspace-encryption-flow.svg",
       "alt": "Diagramm: Eigener Wurzelschlüssel außerhalb PostgreSQL. Umschlossene Projekt-, Nutzer-, Systemschlüssel. Autorisierte Serverentschlüsselung. Restore: Datenbank + Storage + passende Schlüssel.",
       "caption": "Bewahren Sie die zu den gesicherten Daten passenden Schlüssel auf, damit die wiederhergestellte Instanz ihre Inhalte entschlüsseln kann.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -94,9 +94,9 @@
 
 ## Arbeitsbereich verschlüsseln und Schlüssel erhalten {#workspace-encryption}
 
-Die hier beschriebenen --encryption-Optionen für Installationsprogramm und Bootstrap gehören zu den angegebenen 0.11.1-Kandidatenwerkzeugen. Die veröffentlichten Werkzeuge von v0.11.0 akzeptieren sie nicht. Dessen Anwendungslaufzeit erkennt MINDDY_CONTENT_ENCRYPTION_ENABLED; der Referenz-Compose-Dienst lädt die geschützte Datei über env_file. Nach einer ausdrücklichen Änderung des Schalters müssen Sie daher den Anwendungsdienst mit derselben Umgebung neu erstellen und Schema sowie tatsächliches Verhalten prüfen. Ein erzeugter MINDDY_DATA_ROOT_KEY beweist keine Verschlüsselung der Workspace-Inhalte. Verwenden Sie zusammengehörige, für die gewählte Version ausdrücklich geprüfte Werkzeuge und Konfiguration, bevor Sie Benutzer zulassen oder eine bestehende Instanz ändern.
+Die hier beschriebenen `--encryption`-Optionen für Installationsprogramm und Bootstrap gehören zu den angegebenen 0.11.1-Kandidatenwerkzeugen. Die veröffentlichten Werkzeuge von v0.11.0 akzeptieren sie nicht. Dessen Anwendungslaufzeit erkennt `MINDDY_CONTENT_ENCRYPTION_ENABLED`; der Referenz-Compose-Dienst lädt die geschützte Datei über `env_file`. Nach einer ausdrücklichen Änderung des Schalters müssen Sie daher den Anwendungsdienst mit derselben Umgebung neu erstellen und Schema sowie tatsächliches Verhalten prüfen. Ein erzeugter `MINDDY_DATA_ROOT_KEY` beweist keine Verschlüsselung der Workspace-Inhalte. Verwenden Sie zusammengehörige, für die gewählte Version ausdrücklich geprüfte Werkzeuge und Konfiguration, bevor Sie Benutzer zulassen oder eine bestehende Instanz ändern.
 
-Neue lokale und Serverinstallationen aktivieren Inhaltsverschlüsselung standardmäßig und erzeugen einen eigenen MINDDY_DATA_ROOT_KEY. Für neue Server können Sie --encryption enabled oder --encryption disabled ausdrücklich setzen. Beide erhalten Zugangsdatenverschlüsselung und erzeugen einen unabhängigen Wurzelschlüssel; die Auswahl betrifft Arbeitsbereichsinhalte. Bereiten Sie beim lokalen Desktop-Pfad die Konfiguration mit dem folgenden Befehl vor Öffnen des Klons vor. Der zufällige 32-Byte-Schlüssel besteht aus genau 64 Hexadezimalzeichen und liegt außerhalb PostgreSQL.
+Neue lokale und Serverinstallationen aktivieren Inhaltsverschlüsselung standardmäßig und erzeugen einen eigenen `MINDDY_DATA_ROOT_KEY`. Für neue Server können Sie `--encryption enabled` oder `--encryption disabled` ausdrücklich setzen. Beide erhalten Zugangsdatenverschlüsselung und erzeugen einen unabhängigen Wurzelschlüssel; die Auswahl betrifft Arbeitsbereichsinhalte. Bereiten Sie beim lokalen Desktop-Pfad die Konfiguration mit dem folgenden Befehl vor Öffnen des Klons vor. Der zufällige 32-Byte-Schlüssel besteht aus genau 64 Hexadezimalzeichen und liegt außerhalb PostgreSQL.
 
 ```bash
 pnpm bootstrap:supabase -- --minimal --app-url http://localhost:6463 --encryption enabled

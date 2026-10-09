@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -43,9 +43,9 @@
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions)",
+    "revision": 6,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
+    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review)",
     "date": "2026-10-09"
   },
   "related": [
@@ -68,7 +68,7 @@
       "src": "/documentation/fr/work-view-filters.png",
       "alt": "Filtres manuels d’une vue et menu de classement.",
       "caption": "Filtrez par propriétés du ticket ou choisissez un ordre. Le champ IA est facultatif pour ces commandes manuelles.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -84,7 +84,7 @@
       "src": "/documentation/fr/work-share-view.png",
       "alt": "Dialogue de partage d’une vue avec l’accès privé sélectionné.",
       "caption": "Les accès privé, protégé par mot de passe et public correspondent à trois choix distincts. Cette vue reste privée sur la capture.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -134,6 +134,6 @@ Les cartes partagées exposent leurs titres, descriptions et propriétés affich
 
 Rendez la vue privée depuis le partage pour révoquer sa publication. Ouvrez de nouveau l’ancien lien anonymement et vérifiez le refus d’accès. La révocation ne rappelle pas les copies ou captures déjà conservées.
 
-Les liens secrets de vues utilisent le circuit de publication privé et restent noindex. Cette politique limite la découverte par les moteurs ; ce n’est pas un mot de passe. Gardez le lien confidentiel si le contenu est sensible et utilisez la protection par mot de passe lorsque nécessaire. Distinguez la vue d’un utilisateur de la documentation officielle indexée.
+Les liens secrets de vues utilisent le circuit de publication privé et restent `noindex`. Cette politique limite la découverte par les moteurs ; ce n’est pas un mot de passe. Gardez le lien confidentiel si le contenu est sensible et utilisez la protection par mot de passe lorsque nécessaire. Distinguez la vue d’un utilisateur de la documentation officielle indexée.
 
 Si le résultat anonyme est inattendu, contrôlez la vue enregistrée et le partage avant d’envoyer le lien. Revérifiez le périmètre après une modification des filtres ou contenus liés.

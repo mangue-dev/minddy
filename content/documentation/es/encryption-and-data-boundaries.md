@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 3,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -43,9 +43,9 @@
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (collection-caption clarity)",
+    "revision": 4,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (collection-caption clarity); agent:/root (inline-code syntax and unchanged-text review)",
     "date": "2026-10-09"
   },
   "related": [
@@ -64,7 +64,7 @@
       "src": "/documentation/es/encryption-and-data-boundaries-flow.svg",
       "alt": "Diagrama: Contenido cifrado y claves envueltas. Raíz en configuración protegida del servidor. Runtime autorizado puede descifrar. Exports y proveedores necesitan protección aparte.",
       "caption": "El contenido almacenado está protegido, pero la aplicación autorizada puede descifrarlo y los datos que salen de la instancia necesitan protección propia.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -109,4 +109,4 @@ Auth conserva el email de inicio de sesión. Los identificadores, las claves de 
 
 ## Preservar la recuperación {#recovery}
 
-Proteja MINDDY_DATA_ROOT_KEY fuera de la base de datos y conserve el material de recuperación necesario para las copias actuales e históricas. Restaure juntos la base de datos, los bytes y la configuración. Cifre la copia externa que contiene datos y claves. Cambiar la raíz sin volver a envolver las claves hace ilegible el contenido; desactivar el indicador no lo devuelve a texto claro. Antes de activar el cifrado en una instancia existente, pruebe la recuperación y verifique el descifrado y los bytes realmente devueltos.
+Proteja `MINDDY_DATA_ROOT_KEY` fuera de la base de datos y conserve el material de recuperación necesario para las copias actuales e históricas. Restaure juntos la base de datos, los bytes y la configuración. Cifre la copia externa que contiene datos y claves. Cambiar la raíz sin volver a envolver las claves hace ilegible el contenido; desactivar el indicador no lo devuelve a texto claro. Antes de activar el cifrado en una instancia existente, pruebe la recuperación y verifique el descifrado y los bytes realmente devueltos.

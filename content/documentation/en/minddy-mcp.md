@@ -16,8 +16,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 3,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -50,9 +50,9 @@
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review)",
+    "revision": 4,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
+    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root (inline-code syntax and unchanged-text review)",
     "date": "2026-10-09"
   },
   "related": [
@@ -74,7 +74,7 @@
       "src": "/documentation/en/external-minddy-mcp-workflow.png",
       "alt": "minddy MCP client picker for Claude, Codex and other assistants.",
       "caption": "Select your client to display its installation command or configuration.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -91,7 +91,7 @@
       "src": "/documentation/en/external-minddy-mcp-install-workflow.png",
       "alt": "Codex installation dialog on the local instance.",
       "caption": "Codex installation dialog. Use your own instance origin; the displayed command was not executed for this capture.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -131,19 +131,19 @@ Account settings' minddy MCP section lists external client access and its revoca
 
 ## Use minddy MCP safely and discover its current tools {#mcp-tool-reference}
 
-minddy exposes /api/mcp with Streamable HTTP, stateless tools and OAuth 2.1. Connect as your own account through browser consent; old static mdyk_ keys are not accepted. Start with minddy_list_projects to obtain accessible project UUIDs, then read the connected server tool schemas. /llms-full.txt is generated from those registrations and provides the exact current parameters. Do not guess tools from an old copied list. Project-scoped tools recheck access and return stable error codes.
+minddy exposes `/api/mcp` with Streamable HTTP, stateless tools and OAuth 2.1. Connect as your own account through browser consent; old static `mdyk_` keys are not accepted. Start with `minddy_list_projects` to obtain accessible project UUIDs, then read the connected server tool schemas. `/llms-full.txt` is generated from those registrations and provides the exact current parameters. Do not guess tools from an old copied list. Project-scoped tools recheck access and return stable error codes.
 
 ### Read issues before changing their plans {#issue-plans}
 
-minddy_get_issue accepts an issue UUID, an issue identifier such as DEMO-42, or a bare issue number; project_id is supplied separately. Its plan_tasks provide zero-based task_index values. minddy_update_plan_task accepts a tasks batch with pending, in_progress, completed or cancelled states. The whole batch fails on an invalid index. Use minddy_append_to_plan for additions and minddy_edit_issue_text with a unique exact old_string/new_string for a passage. Re-read if the match is stale; replacing the entire plan can overwrite another person’s progress. Questions under ## Questions do not count as plan tasks.
+`minddy_get_issue` accepts an issue UUID, an issue identifier such as `DEMO-42`, or a bare issue number; `project_id` is supplied separately. Its `plan_tasks` provide zero-based `task_index` values. `minddy_update_plan_task` accepts a `tasks` batch with `pending`, `in_progress`, `completed` or `cancelled` states. The whole batch fails on an invalid index. Use `minddy_append_to_plan` for additions and `minddy_edit_issue_text` with a unique exact `old_string`/`new_string` for a passage. Re-read if the match is stale; replacing the entire plan can overwrite another person’s progress. Questions under `## Questions` do not count as plan tasks.
 
 ### Use revision guards and owner scope {#pages-and-routines}
 
-minddy_list_pages maps hierarchy; minddy_search_pages finds title/body excerpts and minddy_get_page reads the full Markdown, comments and database values. Use append/edit tools for partial changes and current version guards for full replacement. Preserve file/image URLs exactly. minddy_create_page with database=true creates a database; minddy_update_page_database requires database revision for schema edits, previous value for cells and preview/apply tokens for conversions. Owner-only routine tools create, pause, retime or remove scheduled requests. Read existing routines first to avoid duplicates. Resource uploads through minddy_add_resource are capped at 10 MB; page tools do not invent file URLs.
+`minddy_list_pages` maps hierarchy; `minddy_search_pages` finds title/body excerpts and `minddy_get_page` reads the full Markdown, comments and database values. Use append/edit tools for partial changes and current version guards for full replacement. Preserve file/image URLs exactly. `minddy_create_page` with `database=true` creates a database; `minddy_update_page_database` requires database revision for schema edits, previous value for cells and `preview`/`apply` tokens for conversions. Owner-only routine tools create, pause, retime or remove scheduled requests. Read existing routines first to avoid duplicates. Resource uploads through `minddy_add_resource` are capped at 10 MB; page tools do not invent file URLs.
 
 ### Verify the returned state {#example}
 
-The sanitized example updates the first task of an already-read plan. Replace the project UUID and issue with values from discovery; task_index must come from the latest read. Confirm returned plan_tasks and plan_progress. On access errors, check the account/project authorization; on stale conflicts, read again and apply only the intended change. Do not retry an uncertain external mutation before checking its result.
+The sanitized example updates the first task of an already-read plan. Replace the project UUID and issue with values from discovery; `task_index` must come from the latest read. Confirm returned `plan_tasks` and `plan_progress`. On access errors, check the account/project authorization; on stale conflicts, read again and apply only the intended change. Do not retry an uncertain external mutation before checking its result.
 
 ```json
 {

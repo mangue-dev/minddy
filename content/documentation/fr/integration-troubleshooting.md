@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 3,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -39,9 +39,9 @@
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions)",
+    "revision": 4,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
+    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review)",
     "date": "2026-10-09"
   },
   "related": [
@@ -68,7 +68,7 @@ Si des identifiants client existants sont requis, enregistrez le callback exact 
 
 ## Inspecter avant de répéter un appel {#webhooks}
 
-Les appels MCP distants ont un délai de 30 secondes, une limite de transport de 1 Mio et de résultat de 64 Ko. Une expiration ne prouve pas l’échec de mutation : vérifiez la destination avant répétition. Pour API 401, vérifiez instance, type et révocation sans afficher la clé ; un mauvais type retourne 403. Pour webhooks, examinez dernier statut, destination publique, HMAC sur corps brut et déduplication delivery_id. Une livraison abandonnée n’a pas de file persistante. Gardez codes contrôlés et heures, sans contenu privé ni identifiants.
+Les appels MCP distants ont un délai de 30 secondes, une limite de transport de 1 Mio et de résultat de 64 Ko. Une expiration ne prouve pas l’échec de mutation : vérifiez la destination avant répétition. Pour API 401, vérifiez instance, type et révocation sans afficher la clé ; un mauvais type retourne 403. Pour webhooks, examinez dernier statut, destination publique, HMAC sur corps brut et déduplication `delivery_id`. Une livraison abandonnée n’a pas de file persistante. Gardez codes contrôlés et heures, sans contenu privé ni identifiants.
 
 ## Vérifier permissions et synchronisation {#git}
 

@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -43,9 +43,9 @@
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions)",
+    "revision": 6,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review)",
     "date": "2026-10-09"
   },
   "related": [
@@ -69,7 +69,7 @@
       "src": "/documentation/pt-BR/work-view-filters.png",
       "alt": "Filtros manuais de uma visualização e menu de ordenação.",
       "caption": "Filtre pelas propriedades dos tickets ou escolha uma ordem. O campo de IA é opcional para esses controles manuais.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -85,7 +85,7 @@
       "src": "/documentation/pt-BR/work-share-view.png",
       "alt": "Janela de compartilhamento de visualização com acesso privado selecionado.",
       "caption": "Acesso privado, protegido por senha e público são escolhas distintas. A visualização continua privada nesta captura.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -135,6 +135,6 @@ Os cartões compartilhados expõem títulos, descrições e propriedades exibida
 
 Volte aos controles de compartilhamento e torne a visualização privada para revogar a publicação. Abra o link antigo novamente sem autenticação e confira se o acesso foi negado. A revogação não recupera cópias nem capturas já salvas pelo visitante.
 
-Links secretos de visualizações usam o caminho de publicação de links privados e mantêm noindex. Essa política limita a descoberta por mecanismos de busca, mas não equivale a uma senha. Mantenha o link privado se houver conteúdo sensível e use proteção por senha quando apropriado. Não confunda a visualização compartilhada de um usuário com a documentação oficial indexada.
+Links secretos de visualizações usam o caminho de publicação de links privados e mantêm `noindex`. Essa política limita a descoberta por mecanismos de busca, mas não equivale a uma senha. Mantenha o link privado se houver conteúdo sensível e use proteção por senha quando apropriado. Não confunda a visualização compartilhada de um usuário com a documentação oficial indexada.
 
 Se o resultado anônimo for diferente do esperado, confira a visualização salva e a configuração antes de encaminhar o link. Verifique o escopo novamente após alterar filtros ou conteúdo vinculado.

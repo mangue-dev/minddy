@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 3,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -41,9 +41,9 @@
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (collection-caption clarity)",
+    "revision": 4,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
+    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (collection-caption clarity); agent:/root (inline-code syntax and unchanged-text review)",
     "date": "2026-10-09"
   },
   "related": [
@@ -60,7 +60,7 @@
       "src": "/documentation/en/storage-and-attachments-flow.svg",
       "alt": "Diagram: Authorized application file access. PostgreSQL object metadata. Raw filesystem or S3 backend bytes. Matching configuration and recovery keys.",
       "caption": "Restoring a file requires its database record, stored bytes and matching keys together.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -95,7 +95,7 @@
 
 ## Separate object records from file bytes {#storage-and-attachments}
 
-PostgreSQL stores Storage object metadata and application file references. The Storage backend holds the actual bytes. Both belong to the same instance and backup point. The full filesystem profile persists bytes in the pinned upstream docker/volumes/storage directory; a configured S3-compatible backend needs a separate raw backend snapshot. Ephemeral container files are not durable Storage. Watch capacity for database, attachments and backup copies and keep backups off the active Storage disk.
+PostgreSQL stores Storage object metadata and application file references. The Storage backend holds the actual bytes. Both belong to the same instance and backup point. The full filesystem profile persists bytes in the pinned upstream `docker/volumes/storage` directory; a configured S3-compatible backend needs a separate raw backend snapshot. Ephemeral container files are not durable Storage. Watch capacity for database, attachments and backup copies and keep backups off the active Storage disk.
 
 
 ![Diagram: Authorized application file access. PostgreSQL object metadata. Raw filesystem or S3 backend bytes. Matching configuration and recovery keys.](/documentation/en/storage-and-attachments-flow.svg)
@@ -106,7 +106,7 @@ Private page and issue files pass application authorization before the service g
 
 ## Recover a missing or inaccessible file {#recover}
 
-Run the Supabase verifier, check the correct stack and service-role configuration, then compare object records with the raw backend bytes and preserved keys. Correct the Storage service, policy or configuration failure before retrying. Never delete a non-empty avatars bucket to clear a readiness warning. Restoring database records alone cannot restore bytes. For S3 restoration, restore the raw backend snapshot rather than reimporting through /storage/v1/s3, which can create conflicting metadata.
+Run the Supabase verifier, check the correct stack and service-role configuration, then compare object records with the raw backend bytes and preserved keys. Correct the Storage service, policy or configuration failure before retrying. Never delete a non-empty `avatars` bucket to clear a readiness warning. Restoring database records alone cannot restore bytes. For S3 restoration, restore the raw backend snapshot rather than reimporting through `/storage/v1/s3`, which can create conflicting metadata.
 
 ```bash
 pnpm verify:supabase --db-url "$SUPABASE_DB_URL" \
@@ -116,7 +116,7 @@ pnpm verify:supabase --db-url "$SUPABASE_DB_URL" \
 
 ## Docker Desktop filesystem Storage {#docker-desktop}
 
-On the tested macOS Docker Desktop profile, a host bind mount returned ENOTSUP when Storage wrote extended attributes. A new Linux named volume avoided that failure. For a new installation with no object bytes, the following persistent override replaces only the Storage mount. Keep RESTORE_OVERRIDE in the installed Compose context. Do not switch an existing populated mount to an empty volume or overwrite an existing restore override: stop writes and preserve its bytes using the backup and restoration procedures first.
+On the tested macOS Docker Desktop profile, a host bind mount returned `ENOTSUP` when Storage wrote extended attributes. A new Linux named volume avoided that failure. For a new installation with no object bytes, the following persistent override replaces only the Storage mount. Keep `RESTORE_OVERRIDE` in the installed Compose context. Do not switch an existing populated mount to an empty volume or overwrite an existing restore override: stop writes and preserve its bytes using the backup and restoration procedures first.
 
 ```bash
 : "${RESTORE_OVERRIDE:=/etc/minddy/storage-volume.yml}"

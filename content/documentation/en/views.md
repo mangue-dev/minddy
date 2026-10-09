@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -43,9 +43,9 @@
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions)",
+    "revision": 6,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
+    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review)",
     "date": "2026-10-09"
   },
   "related": [
@@ -68,7 +68,7 @@
       "src": "/documentation/en/work-view-filters.png",
       "alt": "Manual view filters and the sorting menu.",
       "caption": "Filter by issue properties or choose a sort order. The AI field is optional for these manual controls.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -84,7 +84,7 @@
       "src": "/documentation/en/work-share-view.png",
       "alt": "View-sharing dialog with private access selected.",
       "caption": "Private, password-protected and public access are distinct choices. This capture keeps the view private.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -134,6 +134,6 @@ Shared cards expose their titles, descriptions and displayed properties, includi
 
 Return to the view's share controls and make it private to revoke publication. Open the old link anonymously again to check that access is denied. Revocation cannot recall copies or screenshots a visitor already saved.
 
-Secret view links use the private-link publication path and remain noindex. That indexing policy limits search-engine discovery but is not a password. Keep the link private if its contents are sensitive, and use password protection when appropriate. Do not confuse a user's shared view with the indexed official documentation.
+Secret view links use the private-link publication path and remain `noindex`. That indexing policy limits search-engine discovery but is not a password. Keep the link private if its contents are sensitive, and use password protection when appropriate. Do not confuse a user's shared view with the indexed official documentation.
 
 If the anonymous result differs from your expectation, inspect the saved view and sharing configuration before forwarding its link. Verify the scope again after changing filters or linked content.

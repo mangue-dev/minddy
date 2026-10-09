@@ -16,8 +16,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 3,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -48,9 +48,9 @@
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root/editorial_it_pt (collection-caption clarity)",
+    "revision": 4,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root/editorial_it_pt (collection-caption clarity); agent:/root (inline-code syntax and unchanged-text review)",
     "date": "2026-10-09"
   },
   "related": [
@@ -75,8 +75,8 @@
       "kind": "diagram",
       "src": "/documentation/pt-BR/self-hosted-compatibility-flow.svg",
       "alt": "Diagrama: Tag de código anotada. Arquivos e SHA256SUMS. Assinatura e digest OCI oficiais. Perfil de compatibilidade escolhido.",
-      "caption": "Siga as etapas nesta ordem. Tag de código anotada. Arquivos e SHA256SUMS. Assinatura e digest OCI oficiais. Perfil de compatibilidade escolhido.",
-      "revision": 3,
+      "caption": "Siga as etapas nesta ordem. Tag de código anotada. Arquivos e `SHA256SUMS`. Assinatura e digest OCI oficiais. Perfil de compatibilidade escolhido.",
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -91,7 +91,7 @@
             "title": "Tag de código anotada"
           },
           {
-            "title": "Arquivos e SHA256SUMS"
+            "title": "Arquivos e `SHA256SUMS`"
           },
           {
             "title": "Assinatura e digest OCI oficiais"
@@ -108,7 +108,7 @@
       "src": "/documentation/pt-BR/install-a-server-flow.svg",
       "alt": "Diagrama: Release verificada e ambiente protegido. Instalador: perfil full de referência. Supabase oficial, app, agendador, runner. Verificação de conta, arquivos e recuperação.",
       "caption": "Siga as etapas nesta ordem. Release verificada e ambiente protegido. Instalador: perfil full de referência. Supabase oficial, app, agendador, runner. Verificação de conta, arquivos e recuperação.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -140,7 +140,7 @@
       "src": "/documentation/pt-BR/install-a-server-wizard.png",
       "alt": "Assistente público de instalação com Supabase no mesmo servidor selecionado.",
       "caption": "O perfil full mantém a aplicação e o Supabase no seu servidor. Neste exemplo, o acesso pela rede privada fica restrito à rede local.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -157,7 +157,7 @@
       "src": "/documentation/pt-BR/managed-or-source-installation-flow.svg",
       "alt": "Diagrama: Seu projeto Supabase gerenciado. PostgreSQL, Auth, Storage, Realtime. Perfil OCI OU aplicação de tag. Tarefas e backup conforme perfil.",
       "caption": "A escolha entre imagem OCI e compilação pelo código-fonte muda a gestão da aplicação, enquanto o provedor gerencia o backend.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -196,7 +196,7 @@ Para instalar o minddy no seu servidor, escolha uma versão verificada e um perf
 
 ## Escolher uma versão e um perfil de instalação compatíveis {#self-hosted-compatibility}
 
-Use uma versão imutável do repositório público mangue-dev/minddy. A linha v0.11.0 aceita servidores Linux amd64 e arm64, Node.js 24, pnpm 10.28.0, Docker Engine a partir de 27.0.0 e plugin Compose a partir de 2.29.0. O perfil full fixa o Supabase oficial self-hosted/v0.7.2 no commit 549db119c44c25167461812041ba198bde2b31a4. Preserve o conjunto completo de imagens. Atualizar um serviço isolado cria uma variante sob responsabilidade do operador.
+Use uma versão imutável do repositório público `mangue-dev/minddy`. A linha v0.11.0 aceita servidores Linux amd64 e arm64, Node.js 24, `pnpm` 10.28.0, Docker Engine a partir de 27.0.0 e plugin Compose a partir de 2.29.0. O perfil full fixa o Supabase oficial `self-hosted/v0.7.2` no commit `549db119c44c25167461812041ba198bde2b31a4`. Preserve o conjunto completo de imagens. Atualizar um serviço isolado cria uma variante sob responsabilidade do operador.
 
 O perfil managed conecta um projeto Supabase em supabase.com. Ele precisa fornecer PostgreSQL, Auth, Storage e Realtime e passar na verificação da versão. PostgreSQL sozinho não basta. A pilha local da Supabase CLI serve para desenvolvimento e avaliação, não para produção pública.
 
@@ -205,7 +205,7 @@ O perfil managed conecta um projeto Supabase em supabase.com. Ele precisa fornec
 
 ### Verificar antes de executar {#verify-release}
 
-Verifique a tag anotada, os arquivos da release, SHA256SUMS e a assinatura OCI oficial antes de instalar dependências ou executar a versão. Os comandos Bash abaixo começam no checkout da tag escolhida e deixam IMAGE com o digest verificado. Pare se qualquer teste falhar. Instale primeiro o Cosign conforme sua documentação oficial. A verificação comprova a identidade do código e da imagem, não o funcionamento da implantação.
+Verifique a tag anotada, os arquivos da release, `SHA256SUMS` e a assinatura OCI oficial antes de instalar dependências ou executar a versão. Os comandos Bash abaixo começam no checkout da tag escolhida e deixam `IMAGE` com o digest verificado. Pare se qualquer teste falhar. Instale primeiro o Cosign conforme sua documentação oficial. A verificação comprova a identidade do código e da imagem, não o funcionamento da implantação.
 
 ```bash
 set -euo pipefail
@@ -251,17 +251,17 @@ Instale uma versão publicada de cada vez. As migrações avançam apenas; um re
 
 ### Limites conhecidos do runner na versão publicada {#known-runner-limits}
 
-O runner publicado na v0.11.0 apresenta outros bloqueios à execução de código: rejeita nomes de sandbox com o sufixo de alocação, escreve blocos base64 grandes demais para um único valor de ambiente do Linux e inicializa como root um armazenamento temporário com UID 10001 e modo 0700 depois de remover todas as capabilities. Esse último comando pode falhar sem que o resultado seja verificado, deixando o diretório de trabalho inexistente. Um endpoint de runner saudável não comprova a clonagem nem a execução de código. O candidato atual corrige esses caminhos; o ensaio isolado usou o runner e seu helper de armazenamento atuais por meio de montagens explícitas somente para leitura sobre a imagem v0.11.0. Isso não cria uma imagem publicada corrigida nem uma nova entrada de compatibilidade suportada. Obtenha uma combinação corrigida de release e ferramentas e verifique o fluxo de trabalho com código antes de habilitar esses agentes para uma equipe.
+O runner publicado na v0.11.0 apresenta outros bloqueios à execução de código: rejeita nomes de sandbox com o sufixo de alocação, escreve blocos base64 grandes demais para um único valor de ambiente do Linux e inicializa como root um armazenamento temporário com UID 10001 e modo `0700` depois de remover todas as capabilities. Esse último comando pode falhar sem que o resultado seja verificado, deixando o diretório de trabalho inexistente. Um endpoint de runner saudável não comprova a clonagem nem a execução de código. O candidato atual corrige esses caminhos; o ensaio isolado usou o runner e seu helper de armazenamento atuais por meio de montagens explícitas somente para leitura sobre a imagem v0.11.0. Isso não cria uma imagem publicada corrigida nem uma nova entrada de compatibilidade suportada. Obtenha uma combinação corrigida de release e ferramentas e verifique o fluxo de trabalho com código antes de habilitar esses agentes para uma equipe.
 
 O relay Git da v0.11.0 também omite o desafio HTTP Basic, impedindo que um cliente Git comum envie suas credenciais. A [solução técnica fixada no commit](/pt-br/documentacao/installation#runner-workaround) fornece os arquivos correspondentes do runner e seus hashes; ela não modifica a imagem publicada nem cria uma versão compatível.
 
-A imagem publicada da aplicação inclui Node.js e Git, mas remove intencionalmente npm, npx e Corepack. O perfil Compose de referência também seleciona essa imagem para os workers por meio de AGENT_RUNNER_SANDBOX_IMAGE=MINDDY_IMAGE. Isso não basta para um novo worker de código: o bootstrap do OpenCode usa npm para instalar seu runtime e plugin fixados, mesmo em um repositório sem dependências de projeto. Sem npm, a execução para no bootstrap; a conversa não permite concluir que um arquivo do projeto foi alterado ou que um teste passou. Use uma imagem dedicada aos workers, criada e verificada pelo operador, com Node.js 24, npm, Git e as ferramentas exigidas pelo projeto, sobrescrevendo AGENT_RUNNER_SANDBOX_IMAGE no serviço runner. Preserve as restrições de isolamento. Verifique o bootstrap, a clonagem, os testes reais e o diff resultante antes de habilitar a delegação de código. Corrigir os arquivos do runner não fornece essas ferramentas ao worker.
+A imagem publicada da aplicação inclui Node.js e Git, mas remove intencionalmente `npm`, `npx` e Corepack. O perfil Compose de referência também seleciona essa imagem para os workers por meio de `AGENT_RUNNER_SANDBOX_IMAGE=MINDDY_IMAGE`. Isso não basta para um novo worker de código: o bootstrap do OpenCode usa `npm` para instalar seu runtime e plugin fixados, mesmo em um repositório sem dependências de projeto. Sem `npm`, a execução para no bootstrap; a conversa não permite concluir que um arquivo do projeto foi alterado ou que um teste passou. Use uma imagem dedicada aos workers, criada e verificada pelo operador, com Node.js 24, `npm`, Git e as ferramentas exigidas pelo projeto, sobrescrevendo `AGENT_RUNNER_SANDBOX_IMAGE` no serviço runner. Preserve as restrições de isolamento. Verifique o bootstrap, a clonagem, os testes reais e o diff resultante antes de habilitar a delegação de código. Corrigir os arquivos do runner não fornece essas ferramentas ao worker.
 
-O helper de armazenamento fixado também permite executar arquivos no diretório de trabalho da sandbox. Caso contrário, o Docker monta esse tmpfs com noexec, impedindo a inicialização do binário nativo do OpenCode e podendo apresentar um erro enganoso do pacote musl usado como alternativa. A correção preserva nosuid, nodev, UID/GID 10001, permissões 0700, sistema de arquivos raiz somente para leitura, capabilities removidas e armazenamento descartável separado para cada sandbox. Ela não torna os dados do host executáveis nem transforma a imagem da aplicação em uma imagem adequada para workers.
+O helper de armazenamento fixado também permite executar arquivos no diretório de trabalho da sandbox. Caso contrário, o Docker monta esse tmpfs com `noexec`, impedindo a inicialização do binário nativo do OpenCode e podendo apresentar um erro enganoso do pacote musl usado como alternativa. A correção preserva `nosuid`, `nodev`, UID/GID 10001, permissões `0700`, sistema de arquivos raiz somente para leitura, capabilities removidas e armazenamento descartável separado para cada sandbox. Ela não torna os dados do host executáveis nem transforma a imagem da aplicação em uma imagem adequada para workers.
 
 ## Instalar o perfil de servidor de referência {#install-a-server}
 
-Comece por uma tag verificada e seu digest imutável. Linux amd64 e arm64 são aceitos. Reserve 4 GB de RAM, dois núcleos e 20 GB de SSD com Supabase gerenciado; 8 GB, quatro núcleos e 60 GB se ele estiver no mesmo servidor. Serviço público exige DNS e HTTPS nas suas próprias origens. HTTP só é aceito em localhost ou IPv4 privada. Restrinja a uma LAN confiável sem encaminhar portas do roteador. Nesse modo, full expõe aplicação na 80 e API na 8000.
+Comece por uma tag verificada e seu digest imutável. Linux amd64 e arm64 são aceitos. Reserve 4 GB de RAM, dois núcleos e 20 GB de SSD com Supabase gerenciado; 8 GB, quatro núcleos e 60 GB se ele estiver no mesmo servidor. Serviço público exige DNS e HTTPS nas suas próprias origens. HTTP só é aceito em `localhost` ou IPv4 privada. Restrinja a uma LAN confiável sem encaminhar portas do roteador. Nesse modo, full expõe aplicação na 80 e API na 8000.
 
 
 ![Diagrama: Release verificada e ambiente protegido. Instalador: perfil full de referência. Supabase oficial, app, agendador, runner. Verificação de conta, arquivos e recuperação.](/documentation/pt-BR/install-a-server-flow.svg)
@@ -271,10 +271,10 @@ Comece por uma tag verificada e seu digest imutável. Linux amd64 e arm64 são a
 
 ### Configurar e executar o instalador {#install}
 
-Execute pnpm self-host:install no diretório da release. Selecione o perfil managed ou full, a origem da aplicação e o endereço do administrador. Para o perfil full, obtenha primeiro o checkout upstream fixado. O instalador grava um arquivo de ambiente com permissões 0600, gera valores distintos para os segredos ausentes, baixa as imagens do perfil selecionado, inicia os serviços e executa o bootstrap idempotente. Ele preserva a referência fixada da imagem e os segredos existentes. O exemplo usa o digest IMAGE verificado no artigo de compatibilidade. Para receber emails reais do Auth, adicione primeiro --skip-start e configure SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_ADMIN_EMAIL e SMTP_SENDER_NAME no arquivo protegido antes de executar a instalação novamente. Mantenha ENABLE_EMAIL_AUTOCONFIRM=false. O valor supabase-mail é um exemplo e não representa uma caixa de email de produção.
+Execute `pnpm self-host:install` no diretório da release. Selecione o perfil managed ou full, a origem da aplicação e o endereço do administrador. Para o perfil full, obtenha primeiro o checkout upstream fixado. O instalador grava um arquivo de ambiente com permissões `0600`, gera valores distintos para os segredos ausentes, baixa as imagens do perfil selecionado, inicia os serviços e executa o bootstrap idempotente. Ele preserva a referência fixada da imagem e os segredos existentes. O exemplo usa o digest `IMAGE` verificado no artigo de compatibilidade. Para receber emails reais do Auth, adicione primeiro `--skip-start` e configure `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_ADMIN_EMAIL` e `SMTP_SENDER_NAME` no arquivo protegido antes de executar a instalação novamente. Mantenha `ENABLE_EMAIL_AUTOCONFIRM=false`. O valor `supabase-mail` é um exemplo e não representa uma caixa de email de produção.
 
 
-Antes de iniciar, compare MINDDY_RELEASE e MINDDY_IMAGE no arquivo protegido com a linha de compatibilidade escolhida e o asset de container verificado. O modelo de v0.11.0 ainda indica 0.10.30. --image altera apenas a referência da imagem; não existe uma opção --release. Em uma instalação nova de v0.11.0 preparada com --skip-start, defina explicitamente MINDDY_RELEASE=0.11.0 e preserve a referência imutável verificada. Não substitua as credenciais geradas nem as chaves de criptografia. A versão do pacote candidato não comprova um perfil 0.11.1 suportado: este snapshot não contém a linha de compatibilidade correspondente.
+Antes de iniciar, compare `MINDDY_RELEASE` e `MINDDY_IMAGE` no arquivo protegido com a linha de compatibilidade escolhida e o asset de container verificado. O modelo de v0.11.0 ainda indica 0.10.30. `--image` altera apenas a referência da imagem; não existe uma opção `--release`. Em uma instalação nova de v0.11.0 preparada com `--skip-start`, defina explicitamente `MINDDY_RELEASE=0.11.0` e preserve a referência imutável verificada. Não substitua as credenciais geradas nem as chaves de criptografia. A versão do pacote candidato não comprova um perfil 0.11.1 suportado: este snapshot não contém a linha de compatibilidade correspondente.
 
 ```bash
 node scripts/fetch-official-supabase.mjs --destination /srv/minddy/supabase
@@ -284,11 +284,11 @@ pnpm self-host:install -- --non-interactive --mode full \
 ```
 
 
-O comando anterior cria deploy/self-hosted/.env no diretório da release escolhida. Edite esse arquivo protegido antes de iniciar. Para a variante técnica v0.11.0 descrita aqui, pare o instalador automático depois da configuração: siga [o procedimento fixado do runner e dos workers](/pt-br/documentacao/installation#runner-workaround) e, em seguida, [a inicialização explícita do perfil full](/pt-br/documentacao/installation#adapted-start). Não execute novamente o instalador histórico sem --skip-start: ele omite o overlay necessário e não consegue concluir esta variante. As origens, a imagem e os segredos existentes permanecem no arquivo protegido.
+O comando anterior cria `deploy/self-hosted/.env` no diretório da release escolhida. Edite esse arquivo protegido antes de iniciar. Para a variante técnica v0.11.0 descrita aqui, pare o instalador automático depois da configuração: siga [o procedimento fixado do runner e dos workers](/pt-br/documentacao/installation#runner-workaround) e, em seguida, [a inicialização explícita do perfil full](/pt-br/documentacao/installation#adapted-start). Não execute novamente o instalador histórico sem `--skip-start`: ele omite o overlay necessário e não consegue concluir esta variante. As origens, a imagem e os segredos existentes permanecem no arquivo protegido.
 
 ### Verificar antes de receber usuários {#accept}
 
-Os perfis de referência incluem o agendador e o runner de sandbox confiável. Não exponha a porta 6464 do runner nem o PostgreSQL à Internet. Execute o doctor com o arquivo de ambiente da instância e o arquivo Compose upstream do perfil full. Verifique a confirmação da conta, o login, a autenticação MFA, a redefinição da senha, a criação de projetos e issues, o envio e o download de anexos e o Realtime em duas sessões. Uma resposta 200 de /api/health comprova apenas que a aplicação está ativa. Se a instalação for interrompida, retome a sequência adaptada explícita com o mesmo contexto Compose e o arquivo de ambiente protegido; não apague os dados. Antes de receber uma equipe, prepare um backup em outro host e verifique a restauração em um destino vazio.
+Os perfis de referência incluem o agendador e o runner de sandbox confiável. Não exponha a porta 6464 do runner nem o PostgreSQL à Internet. Execute o doctor com o arquivo de ambiente da instância e o arquivo Compose upstream do perfil full. Verifique a confirmação da conta, o login, a autenticação MFA, a redefinição da senha, a criação de projetos e issues, o envio e o download de anexos e o Realtime em duas sessões. Uma resposta 200 de `/api/health` comprova apenas que a aplicação está ativa. Se a instalação for interrompida, retome a sequência adaptada explícita com o mesmo contexto Compose e o arquivo de ambiente protegido; não apague os dados. Antes de receber uma equipe, prepare um backup em outro host e verifique a restauração em um destino vazio.
 
 ### Pré-requisitos do runner para o perfil de servidor {#install-a-server-known-runner-limits}
 
@@ -296,11 +296,11 @@ Antes de habilitar o trabalho de código, leia os [limites do runner v0.11.0](#k
 
 ### Aplicar a solução técnica fixada no commit {#runner-workaround}
 
-Para a imagem publicada v0.11.0, esta variante explícita das ferramentas também fornece o desafio Basic necessário para os clientes Git HTTP. Ela está fixada no commit de origem 89ab340cb10ec729948fc6e596fb7ab0326fc470; não é uma nova imagem publicada nem uma nova linha de compatibilidade. Prepare primeiro a configuração básica e aplique esta variante antes de iniciar a pilha full. Os dois arquivos devem permanecer juntos, com os hashes verificados, em armazenamento persistente. Estes comandos não expõem nenhuma porta do runner.
+Para a imagem publicada v0.11.0, esta variante explícita das ferramentas também fornece o desafio Basic necessário para os clientes Git HTTP. Ela está fixada no commit de origem `89ab340cb10ec729948fc6e596fb7ab0326fc470`; não é uma nova imagem publicada nem uma nova linha de compatibilidade. Prepare primeiro a configuração básica e aplique esta variante antes de iniciar a pilha full. Os dois arquivos devem permanecer juntos, com os hashes verificados, em armazenamento persistente. Estes comandos não expõem nenhuma porta do runner.
 
-Primeiro, defina o contexto da instância no [procedimento de backup do perfil de referência](/pt-br/documentacao/backups-and-restoration#context). A função Compose deve incluir RUNNER_FIX_OVERRIDE. Em seguida, baixe e verifique os dois arquivos públicos abaixo. Interrompa o procedimento se algum hash não corresponder.
+Primeiro, defina o contexto da instância no [procedimento de backup do perfil de referência](/pt-br/documentacao/backups-and-restoration#context). A função Compose deve incluir `RUNNER_FIX_OVERRIDE`. Em seguida, baixe e verifique os dois arquivos públicos abaixo. Interrompa o procedimento se algum hash não corresponder.
 
-Este procedimento também cria uma imagem separada para os workers de código. A imagem base é fixada, mas os pacotes Debian são resolvidos durante a construção; obtenha o ID da imagem Docker resultante e preserve essa imagem exata com o backup. Nunca a substitua pela imagem da aplicação depois de uma restauração. A construção exige acesso ao registro da imagem base e aos repositórios Debian; um novo bootstrap do OpenCode também exige o registro npm. A receita fornece as ferramentas do bootstrap, não todas as dependências dos projetos. Outras ferramentas de compilação exigem uma variante mantida explicitamente. O overlay Compose abaixo define diretamente a variável de imagem do serviço runner, pois o arquivo Compose histórico ignora um valor AGENT_RUNNER_SANDBOX_IMAGE isolado no arquivo protegido.
+Este procedimento também cria uma imagem separada para os workers de código. A imagem base é fixada, mas os pacotes Debian são resolvidos durante a construção; obtenha o ID da imagem Docker resultante e preserve essa imagem exata com o backup. Nunca a substitua pela imagem da aplicação depois de uma restauração. A construção exige acesso ao registro da imagem base e aos repositórios Debian; um novo bootstrap do OpenCode também exige o registro `npm`. A receita fornece as ferramentas do bootstrap, não todas as dependências dos projetos. Outras ferramentas de compilação exigem uma variante mantida explicitamente. O overlay Compose abaixo define diretamente a variável de imagem do serviço runner, pois o arquivo Compose histórico ignora um valor `AGENT_RUNNER_SANDBOX_IMAGE` isolado no arquivo protegido.
 
 ```bash
 set -euo pipefail
@@ -361,15 +361,15 @@ compose exec -T agent-runner node --input-type=module -e \
   'const r=await fetch("http://127.0.0.1:6464/health"); if(!r.ok) process.exit(1); console.log(r.status);'
 ```
 
-O comando compose up recria apenas o runner. Sua resposta de saúde ainda não basta para a validação: verifique uma nova sandbox, a clonagem do repositório, um arquivo maior que 1 MiB, os testes e o diff resultante antes de habilitar agentes de código. Mantenha RUNNER_FIX_OVERRIDE e RUNNER_FIX_DIR em cada shell de operação. O instalador histórico e a ferramenta de atualização não utilizam esse override do shell; depois que um deles modificar ou recriar o runner, aplique novamente este comando Compose. Inclua os dois arquivos e o override no backup criptografado e restabeleça os caminhos absolutos antes de reiniciar o runner.
+O comando `compose up` recria apenas o runner. Sua resposta de saúde ainda não basta para a validação: verifique uma nova sandbox, a clonagem do repositório, um arquivo maior que 1 MiB, os testes e o diff resultante antes de habilitar agentes de código. Mantenha `RUNNER_FIX_OVERRIDE` e `RUNNER_FIX_DIR` em cada shell de operação. O instalador histórico e a ferramenta de atualização não utilizam esse override do shell; depois que um deles modificar ou recriar o runner, aplique novamente este comando Compose. Inclua os dois arquivos e o override no backup criptografado e restabeleça os caminhos absolutos antes de reiniciar o runner.
 
-O procedimento exige a imagem dedicada aos workers descrita nos [limites da versão publicada](#known-runner-limits). A imagem da aplicação continua sem npm, npx e Corepack: corrigir os arquivos do runner não basta para o bootstrap do código. Preserve o isolamento e verifique bootstrap, clonagem, testes e diff antes de habilitar a delegação.
+O procedimento exige a imagem dedicada aos workers descrita nos [limites da versão publicada](#known-runner-limits). A imagem da aplicação continua sem `npm`, `npx` e Corepack: corrigir os arquivos do runner não basta para o bootstrap do código. Preserve o isolamento e verifique bootstrap, clonagem, testes e diff antes de habilitar a delegação.
 
 ### Iniciar o perfil full adaptado explicitamente {#adapted-start}
 
-O instalador v0.11.0 sem alterações não consegue concluir esta variante técnica: sua imagem não contém o helper, o pin da função difere da dependência fixada e ele não aceita o overlay do runner acima. Para esta variante, prepare a configuração com --skip-start e aplique as ferramentas fixadas antes da primeira inicialização. Use a sequência full abaixo em vez de executar novamente o instalador histórico sem --skip-start. A substituição do pin altera explicitamente as ferramentas de implantação, não a tag publicada. Preserve o pin original com as provas da release.
+O instalador v0.11.0 sem alterações não consegue concluir esta variante técnica: sua imagem não contém o helper, o pin da função difere da dependência fixada e ele não aceita o overlay do runner acima. Para esta variante, prepare a configuração com `--skip-start` e aplique as ferramentas fixadas antes da primeira inicialização. Use a sequência full abaixo em vez de executar novamente o instalador histórico sem `--skip-start`. A substituição do pin altera explicitamente as ferramentas de implantação, não a tag publicada. Preserve o pin original com as provas da release.
 
-Se você executar este perfil full no macOS com Docker Desktop, aplique o [override de volume para Storage em sistema de arquivos](/pt-br/documentacao/storage-and-attachments#docker-desktop) antes da primeira inicialização e mantenha RESTORE_OVERRIDE junto com o override do runner. A montagem por bind em um host Linux e este perfil com volume nomeado exigem arquivos de bytes diferentes; use o procedimento de backup e restauração correspondente.
+Se você executar este perfil full no macOS com Docker Desktop, aplique o [override de volume para Storage em sistema de arquivos](/pt-br/documentacao/storage-and-attachments#docker-desktop) antes da primeira inicialização e mantenha `RESTORE_OVERRIDE` junto com o override do runner. A montagem por bind em um host Linux e este perfil com volume nomeado exigem arquivos de bytes diferentes; use o procedimento de backup e restauração correspondente.
 
 ```bash
 cd "$CURRENT_RELEASE_DIR"
@@ -417,7 +417,7 @@ pnpm self-host:doctor -- --mode full --env-file "$MINDDY_ENV_FILE" \
   --supabase-compose "$SUPABASE_DIR/docker/docker-compose.yml" --json
 ```
 
-O wrapper lê o arquivo protegido como dados, calcula as URLs privadas de manutenção com os mesmos helpers exportados pelo instalador e executa o bootstrap original com os pré-requisitos do agendador. Seu log de diagnóstico mantém permissões 0600; não o anexe a um relatório público sem revisá-lo e remover dados sensíveis. Uma fase que falhe deve interromper o procedimento. O doctor deve usar o mesmo contexto adaptado; ele verifica os serviços, não a validação do worker de código nem a entrega por provedores externos.
+O wrapper lê o arquivo protegido como dados, calcula as URLs privadas de manutenção com os mesmos helpers exportados pelo instalador e executa o bootstrap original com os pré-requisitos do agendador. Seu log de diagnóstico mantém permissões `0600`; não o anexe a um relatório público sem revisá-lo e remover dados sensíveis. Uma fase que falhe deve interromper o procedimento. O doctor deve usar o mesmo contexto adaptado; ele verifica os serviços, não a validação do worker de código nem a entrega por provedores externos.
 
 A correção do armazenamento preserva o isolamento descrito nos [limites do runner](#known-runner-limits). Mantenha também a imagem dedicada aos workers: corrigir o runner não acrescenta as ferramentas ausentes à imagem da aplicação.
 
@@ -429,7 +429,7 @@ Supabase gerenciado indica quem opera o backend. Pode ser usado com a imagem OCI
 
 ### Configurar Supabase gerenciado {#managed}
 
-Execute o comando abaixo a partir da versão verificada. IMAGE é o digest conferido no artigo de compatibilidade; ... indica valores de exemplo que você deve substituir. Obtenha as credenciais reais em privado e mantenha-as fora do histórico do shell e de logs compartilhados. O instalador conserva o ambiente existente, inclui agendador e runner e não ativa serviços opcionais sem configuração. Configure SMTP Auth e os redirects exatos separadamente no projeto Supabase.
+Execute o comando abaixo a partir da versão verificada. `IMAGE` é o digest conferido no artigo de compatibilidade; ... indica valores de exemplo que você deve substituir. Obtenha as credenciais reais em privado e mantenha-as fora do histórico do shell e de logs compartilhados. O instalador conserva o ambiente existente, inclui agendador e runner e não ativa serviços opcionais sem configuração. Configure SMTP Auth e os redirects exatos separadamente no projeto Supabase.
 
 ```bash
 pnpm self-host:install -- --non-interactive --mode managed \
@@ -441,7 +441,7 @@ pnpm self-host:install -- --non-interactive --mode managed \
 
 ### Concluir implantação pelo código-fonte {#source}
 
-Para instalar a partir do código, instale as dependências fixadas da tag, forneça o ambiente minddy e Supabase, execute bootstrap e build e inicie o servidor de produção atrás de um proxy. Defina MINDDY_PUBLIC_* antes de iniciar. Você precisa fornecer um agendador persistente com as chamadas autenticadas descritas no artigo de rede: um build não executa jobs. Verifique migrações e Storage, depois Auth, issues, bytes dos anexos e Realtime. Use o procedimento lógico ou do provedor para backup. Um servidor de código não valida a instalação OCI.
+Para instalar a partir do código, instale as dependências fixadas da tag, forneça o ambiente minddy e Supabase, execute bootstrap e build e inicie o servidor de produção atrás de um proxy. Defina `MINDDY_PUBLIC_*` antes de iniciar. Você precisa fornecer um agendador persistente com as chamadas autenticadas descritas no artigo de rede: um build não executa jobs. Verifique migrações e Storage, depois Auth, issues, bytes dos anexos e Realtime. Use o procedimento lógico ou do provedor para backup. Um servidor de código não valida a instalação OCI.
 
 ```bash
 pnpm install --frozen-lockfile

@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 3,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -36,9 +36,9 @@
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions)",
+    "revision": 4,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review)",
     "date": "2026-10-09"
   },
   "related": [
@@ -85,4 +85,4 @@ Revise as permissões e os termos sobre dados antes de habilitar uma integraçã
 
 ## Fonte e próximo passo {#next-step}
 
-O repositório oficial é [mangue-dev/minddy](https://github.com/mangue-dev/minddy), sob GNU AGPL v3.0 exclusivamente. Respeite a licença e a política de nomes em instalações modificadas ou hospedadas. Para instalar, abra o guia público de hospedagem própria e seu assistente. Antes de transferir trabalho existente, consulte o guia de transferência entre instâncias: credenciais e assinaturas não são transferidas com os dados da conta.
+O repositório oficial é [`mangue-dev/minddy`](https://github.com/mangue-dev/minddy), sob GNU AGPL v3.0 exclusivamente. Respeite a licença e a política de nomes em instalações modificadas ou hospedadas. Para instalar, abra o guia público de hospedagem própria e seu assistente. Antes de transferir trabalho existente, consulte o guia de transferência entre instâncias: credenciais e assinaturas não são transferidas com os dados da conta.

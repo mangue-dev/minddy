@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -36,9 +36,9 @@
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison)",
+    "revision": 3,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
+    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root (inline-code syntax and unchanged-text review)",
     "date": "2026-10-09"
   },
   "related": [
@@ -55,7 +55,7 @@
       "src": "/documentation/de/update-an-instance-flow.svg",
       "alt": "Diagramm: Schreiben und Jobs stoppen. Vollständiges Vorupdate-Backup versiegeln. Zielmigrationen, danach Zielanwendung. Wiederherstellung prüfen und öffnen.",
       "caption": "Lesen Sie die Schritte in dieser Reihenfolge. Schreiben und Jobs stoppen. Vollständiges Vorupdate-Backup versiegeln. Zielmigrationen, danach Zielanwendung. Wiederherstellung prüfen und öffnen.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -97,9 +97,9 @@ Aktualisieren Sie eine veröffentlichte Version nach der anderen. Lesen Sie Hinw
 
 ## Das full-Profil aktualisieren {#full}
 
-Verwenden Sie den full-Compose-Kontext des Kaltbackup-Artikels. Stoppen Sie öffentliche Zugänge, Schreibzugriffe, Worker und Scheduler und erstellen Sie den vollständigen versiegelten Satz. Kopieren Sie die Umgebung mit Modus 0600 nach TARGET_ENV_FILE und ändern Sie nur MINDDY_RELEASE, MINDDY_IMAGE, MINDDY_DEPLOY_DIR und MINDDY_ENV_FILE für das geprüfte Ziel. Erhalten Sie URLs, Zugangsdaten, Schlüssel und Funktionsauswahl. Die folgende Sequenz im installierten Kontext startet nur Backendabhängigkeiten, migriert mit Zielcode und prüft Anwendung/Runner bei gestopptem Caddy und Scheduler.
+Verwenden Sie den full-Compose-Kontext des Kaltbackup-Artikels. Stoppen Sie öffentliche Zugänge, Schreibzugriffe, Worker und Scheduler und erstellen Sie den vollständigen versiegelten Satz. Kopieren Sie die Umgebung mit Modus `0600` nach `TARGET_ENV_FILE` und ändern Sie nur `MINDDY_RELEASE`, `MINDDY_IMAGE`, `MINDDY_DEPLOY_DIR` und `MINDDY_ENV_FILE` für das geprüfte Ziel. Erhalten Sie URLs, Zugangsdaten, Schlüssel und Funktionsauswahl. Die folgende Sequenz im installierten Kontext startet nur Backendabhängigkeiten, migriert mit Zielcode und prüft Anwendung/Runner bei gestopptem Caddy und Scheduler.
 
-Beim Update von v0.10.30 auf v0.11.0 führt die Zielversion MINDDY_DATA_ROOT_KEY ein. Ergänzen Sie den Schlüssel nur, wenn die vorhandene Konfiguration keinen Root-Schlüssel enthält, und behalten Sie alle bisherigen Geheimnisse zur Verschlüsselung von Zugangsdaten. Der folgende Befehl schreibt einen neuen Root-Schlüssel mit 32 Bytes direkt in die geschützte Zieldatei, ohne ihn anzuzeigen, und ersetzt keinen ungültigen gespeicherten Wert. Der Root-Schlüssel allein aktiviert keine Inhaltsverschlüsselung. Wenden Sie vor dem Start die [festgelegten Anpassungen für Runner und Offline-Funktionen](/de/dokumentation/installation#runner-workaround) an und behalten Sie RUNNER_FIX_OVERRIDE bei jedem Compose-Aufruf bei. Dies ist ein ausdrücklich angepasstes Profil; eine erfolgreiche Installation des unveränderten historischen Tags wird damit nicht belegt.
+Beim Update von v0.10.30 auf v0.11.0 führt die Zielversion `MINDDY_DATA_ROOT_KEY` ein. Ergänzen Sie den Schlüssel nur, wenn die vorhandene Konfiguration keinen Root-Schlüssel enthält, und behalten Sie alle bisherigen Geheimnisse zur Verschlüsselung von Zugangsdaten. Der folgende Befehl schreibt einen neuen Root-Schlüssel mit 32 Bytes direkt in die geschützte Zieldatei, ohne ihn anzuzeigen, und ersetzt keinen ungültigen gespeicherten Wert. Der Root-Schlüssel allein aktiviert keine Inhaltsverschlüsselung. Wenden Sie vor dem Start die [festgelegten Anpassungen für Runner und Offline-Funktionen](/de/dokumentation/installation#runner-workaround) an und behalten Sie `RUNNER_FIX_OVERRIDE` bei jedem Compose-Aufruf bei. Dies ist ein ausdrücklich angepasstes Profil; eine erfolgreiche Installation des unveränderten historischen Tags wird damit nicht belegt.
 
 ```bash
 export TARGET_RELEASE_DIR=/srv/minddy/releases/vX.Y.NEXT
@@ -153,7 +153,7 @@ Managed OCI folgt demselben Zielumgebungs- und Imageablauf mit anbietergesteuert
 Die lokalen Compose-Befehle im folgenden Quellverfahren gelten nur für ein vom Betreiber kontrolliertes Backend. Ersetzen Sie bei verwaltetem Supabase das Anhalten und Starten des Backends sowie den Migrationszugriff durch unterstützte Anbieteroperationen. Bewahren Sie die geschützte minddy-Umgebung und ein vollständiges Anbieter-Backup auf und starten Sie anschließend die geprüfte Zielanwendung.
 
 
-Setzen Sie für das Quellverfahren MINDDY_REPO auf das versionierte Quellrepository, SUPABASE_COMPOSE_DIR auf das betreiberkontrollierte Backend aus [dem logischen Backup-Kontext](/de/dokumentation/backups-and-restoration#outage), TO_TAG auf den tatsächlich nächsten veröffentlichten und geprüften Tag und TARGET_RELEASE_DIR auf dessen separat erstellten Checkout. Stellen Sie die passenden Datenbank- und öffentlichen API-Variablen privat bereit. Starten Sie das Ziel nach Bootstrap und Prüfung mit pnpm start oder Ihrem vorhandenen Prozessmanager hinter der Wartung. Öffnen Sie den Zugang erst nach den folgenden Prüfungen.
+Setzen Sie für das Quellverfahren `MINDDY_REPO` auf das versionierte Quellrepository, `SUPABASE_COMPOSE_DIR` auf das betreiberkontrollierte Backend aus [dem logischen Backup-Kontext](/de/dokumentation/backups-and-restoration#outage), `TO_TAG` auf den tatsächlich nächsten veröffentlichten und geprüften Tag und `TARGET_RELEASE_DIR` auf dessen separat erstellten Checkout. Stellen Sie die passenden Datenbank- und öffentlichen API-Variablen privat bereit. Starten Sie das Ziel nach Bootstrap und Prüfung mit `pnpm start` oder Ihrem vorhandenen Prozessmanager hinter der Wartung. Öffnen Sie den Zugang erst nach den folgenden Prüfungen.
 
 ```bash
 test "$(git -C "$TARGET_RELEASE_DIR" rev-parse HEAD)" = \

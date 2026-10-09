@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 4,
-  "sourceRevision": 4,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -39,9 +39,9 @@
     ]
   },
   "review": {
-    "revision": 4,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root/editorial_it_pt (collection-caption clarity)",
+    "revision": 5,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root/editorial_it_pt (collection-caption clarity); agent:/root (inline-code syntax and unchanged-text review)",
     "date": "2026-10-09"
   },
   "related": [
@@ -59,7 +59,7 @@
       "src": "/documentation/it/workspace-encryption-flow.svg",
       "alt": "Schema: Radice dedicata fuori PostgreSQL. Chiavi progetto, utente e sistema avvolte. Decifratura autorizzata sul server. Restore database + Storage + stesse chiavi.",
       "caption": "Conserva le chiavi radice fuori dal database e ripristina dati e file con le chiavi corrispondenti.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -94,11 +94,11 @@
 
 ## Configurare cifratura e conservare le chiavi {#workspace-encryption}
 
-Le opzioni --encryption del programma di installazione e del bootstrap descritte qui appartengono agli strumenti del candidato 0.11.1 identificato. I programmi pubblicati con v0.11.0 non le accettano.
+Le opzioni `--encryption` del programma di installazione e del bootstrap descritte qui appartengono agli strumenti del candidato 0.11.1 identificato. I programmi pubblicati con v0.11.0 non le accettano.
 
-Il runtime di quella versione riconosce MINDDY_CONTENT_ENCRYPTION_ENABLED; il servizio Compose di riferimento carica il file protetto tramite env_file. Dopo una modifica esplicita del flag devi quindi ricreare il servizio dell’applicazione con lo stesso ambiente e verificare lo schema e il comportamento effettivo. Una chiave MINDDY_DATA_ROOT_KEY generata non dimostra che il contenuto dello spazio sia cifrato. Usa strumenti e configurazione corrispondenti, verificati esplicitamente per la versione scelta, prima di accogliere utenti o modificare un’istanza esistente.
+Il runtime di quella versione riconosce `MINDDY_CONTENT_ENCRYPTION_ENABLED`; il servizio Compose di riferimento carica il file protetto tramite `env_file`. Dopo una modifica esplicita del flag devi quindi ricreare il servizio dell’applicazione con lo stesso ambiente e verificare lo schema e il comportamento effettivo. Una chiave `MINDDY_DATA_ROOT_KEY` generata non dimostra che il contenuto dello spazio sia cifrato. Usa strumenti e configurazione corrispondenti, verificati esplicitamente per la versione scelta, prima di accogliere utenti o modificare un’istanza esistente.
 
-Le nuove installazioni locali e server attivano la cifratura per impostazione predefinita e generano una MINDDY_DATA_ROOT_KEY dedicata. Un server nuovo può scegliere --encryption enabled o --encryption disabled. Entrambe le scelte conservano la cifratura delle credenziali e generano una radice indipendente: l’opzione riguarda i contenuti. Per il desktop locale, prepara la configurazione con il comando seguente prima di aprire il clone. La radice casuale di 32 byte è rappresentata da esattamente 64 caratteri esadecimali e resta fuori da PostgreSQL.
+Le nuove installazioni locali e server attivano la cifratura per impostazione predefinita e generano una `MINDDY_DATA_ROOT_KEY` dedicata. Un server nuovo può scegliere `--encryption enabled` o `--encryption disabled`. Entrambe le scelte conservano la cifratura delle credenziali e generano una radice indipendente: l’opzione riguarda i contenuti. Per il desktop locale, prepara la configurazione con il comando seguente prima di aprire il clone. La radice casuale di 32 byte è rappresentata da esattamente 64 caratteri esadecimali e resta fuori da PostgreSQL.
 
 ```bash
 pnpm bootstrap:supabase -- --minimal --app-url http://localhost:6463 --encryption enabled

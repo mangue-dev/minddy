@@ -20,8 +20,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 4,
-  "sourceRevision": 4,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -59,9 +59,9 @@
     ]
   },
   "review": {
-    "revision": 4,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions)",
+    "revision": 5,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review)",
     "date": "2026-10-09"
   },
   "related": [
@@ -88,7 +88,7 @@
       "src": "/documentation/es/publish-a-feedback-board-workflow.png",
       "alt": "Tablero público de feedback activado, con identidad SSO local configurada y URL oculta.",
       "caption": "El propietario activa el tablero y elige cómo se identifican los visitantes. Este ejemplo usa un firmante SSO local; la URL y el secreto de firma están ocultos.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -104,7 +104,7 @@
       "src": "/documentation/es/submit-and-follow-feedback-workflow.png",
       "alt": "Formulario de una solicitud de feedback con título, descripción y visibilidad pública activada.",
       "caption": "Un visitante identificado envía una solicitud y elige su visibilidad. El ejemplo se envió realmente con la revisión automática desactivada.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -120,7 +120,7 @@
       "src": "/documentation/es/moderate-feedback-workflow.png",
       "alt": "Detalle de una solicitud de feedback con una respuesta pública del equipo y una nota interna.",
       "caption": "La etiqueta Público identifica la respuesta visible para los visitantes; la nota interna queda en el equipo. No se muestra ningún resultado de moderación con IA.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -135,8 +135,8 @@
       "kind": "screenshot",
       "src": "/documentation/es/feedback-pages-and-views-workflow.png",
       "alt": "Guía de feedback publicada y seleccionada en la navegación del tablero, legible sin iniciar sesión.",
-      "caption": "Publique una página, active las pestañas de páginas y selecciónela para el tablero. Esta página de demostración se abrió de forma anónima; su URL opaca conserva noindex.",
-      "revision": 4,
+      "caption": "Publique una página, active las pestañas de páginas y selecciónela para el tablero. Esta página de demostración se abrió de forma anónima; su URL opaca conserva `noindex`.",
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -206,9 +206,9 @@ Como miembro del proyecto, abra la solicitud y elija unirla a una solicitud can�
 
 ### Crear o vincular trabajo {#work}
 
-Convierta la solicitud en una nueva incidencia si el trabajo aún no está registrado. Revise los campos de creación antes de confirmar; sin campos proporcionados, la promoción crea por defecto trabajo en el backlog. Si ya existe una incidencia, use la acción de vincular. Una solicitud ya vinculada no puede volver a convertirse. Desvincular conserva el último estado público y detiene la relación con la incidencia.
+Convierta la solicitud en una nueva incidencia si el trabajo aún no está registrado. Revise los campos de creación antes de confirmar; sin campos proporcionados, la promoción crea por defecto trabajo en el `backlog`. Si ya existe una incidencia, use la acción de vincular. Una solicitud ya vinculada no puede volver a convertirse. Desvincular conserva el último estado público y detiene la relación con la incidencia.
 
-El estado vinculado sigue a la incidencia: triage/backlog/duplicate → open; todo → planned; in_progress/in_review → in_progress; done → shipped; canceled → declined. Devolver el trabajo al backlog también reabre el estado de feedback. Tras cambiar un estado, compruebe la incidencia vinculada y la solicitud sin sesión.
+El estado vinculado sigue a la incidencia: `triage`/`backlog`/`duplicate` → `open`; `todo` → `planned`; `in_progress`/`in_review` → `in_progress`; `done` → `shipped`; `canceled` → `declined`. Devolver el trabajo al `backlog` también reabre el estado de feedback. Tras cambiar un estado, compruebe la incidencia vinculada y la solicitud sin sesión.
 
 Las notificaciones al equipo por nuevo feedback dependen de su origen y de la transición de revisión. No prometa al votante un email automático por cada unión o actualización de incidencia; puede consultar el estado público y las respuestas en Mis sugerencias. El vínculo muestra el avance sin exponer la incidencia privada.
 

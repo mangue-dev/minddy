@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 3,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -36,9 +36,9 @@
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions)",
+    "revision": 4,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
+    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review)",
     "date": "2026-10-09"
   },
   "related": [
@@ -85,4 +85,4 @@ Prüfe vor dem Aktivieren einer Integration die Berechtigungen und Datenbedingun
 
 ## Quelle und nächster Schritt {#next-step}
 
-Der maßgebliche Quellcode liegt in [mangue-dev/minddy](https://github.com/mangue-dev/minddy) und steht ausschließlich unter GNU AGPL v3.0. Beachte Lizenz und Namensregeln bei veränderten oder gehosteten Bereitstellungen. Öffne für die Installation die öffentliche Selbsthosting-Anleitung und ihren Assistenten. Prüfe vor dem Übertragen vorhandener Arbeit die Anleitung zum Instanzwechsel: Zugangsdaten und Abonnements werden nicht mit den Kontodaten übertragen.
+Der maßgebliche Quellcode liegt in [`mangue-dev/minddy`](https://github.com/mangue-dev/minddy) und steht ausschließlich unter GNU AGPL v3.0. Beachte Lizenz und Namensregeln bei veränderten oder gehosteten Bereitstellungen. Öffne für die Installation die öffentliche Selbsthosting-Anleitung und ihren Assistenten. Prüfe vor dem Übertragen vorhandener Arbeit die Anleitung zum Instanzwechsel: Zugangsdaten und Abonnements werden nicht mit den Kontodaten übertragen.

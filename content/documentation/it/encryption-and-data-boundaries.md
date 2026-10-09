@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 3,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -43,9 +43,9 @@
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (collection-caption clarity)",
+    "revision": 4,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (collection-caption clarity); agent:/root (inline-code syntax and unchanged-text review)",
     "date": "2026-10-09"
   },
   "related": [
@@ -64,7 +64,7 @@
       "src": "/documentation/it/encryption-and-data-boundaries-flow.svg",
       "alt": "Schema: Contenuto cifrato e chiavi avvolte. Radice nella configurazione server protetta. Runtime autorizzato può decifrare. Export e provider richiedono protezione separata.",
       "caption": "La protezione dei contenuti persistenti dipende dalle chiavi del server; esportazioni e invii ai provider richiedono controlli separati.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -109,4 +109,4 @@ Auth conserva l’indirizzo email di login. Gli identificatori, le chiavi di pro
 
 ## Preservare il recupero {#recovery}
 
-Proteggi MINDDY_DATA_ROOT_KEY fuori dal database e conserva il materiale di recupero necessario ai backup attuali e storici. Ripristina insieme database, byte dei file e configurazione. Cifra il backup esterno che contiene sia dati sia chiavi. Cambiare la radice senza riavvolgere le chiavi rende i contenuti illeggibili; disattivare il flag non li riporta in chiaro. Prima di attivare la cifratura su un’istanza esistente, prova il recupero e verifica la decifratura e i byte effettivamente restituiti.
+Proteggi `MINDDY_DATA_ROOT_KEY` fuori dal database e conserva il materiale di recupero necessario ai backup attuali e storici. Ripristina insieme database, byte dei file e configurazione. Cifra il backup esterno che contiene sia dati sia chiavi. Cambiare la radice senza riavvolgere le chiavi rende i contenuti illeggibili; disattivare il flag non li riporta in chiaro. Prima di attivare la cifratura su un’istanza esistente, prova il recupero e verifica la decifratura e i byte effettivamente restituiti.

@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 3,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -44,9 +44,9 @@
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (collection-caption clarity)",
+    "revision": 4,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
+    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (collection-caption clarity); agent:/root (inline-code syntax and unchanged-text review)",
     "date": "2026-10-09"
   },
   "related": [
@@ -65,7 +65,7 @@
       "src": "/documentation/de/permissions-and-public-links-flow.svg",
       "alt": "Diagramm: Konto- und Projektberechtigungen. Privates Objekt oder bewusste Veröffentlichung. Nur veröffentlichter Satz; signierte Dateien. Link widerrufen; Dateilinks laufen später ab.",
       "caption": "Eine Freigabe betrifft nur ausgewählte Inhalte; bereits ausgestellte Dateilinks können nach dem Widerruf der Freigabe noch gültig bleiben.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -111,4 +111,4 @@ Veröffentlichte Seiten und geteilte Ansichten verwenden einen undurchsichtigen 
 
 ## Freigabe und Widerruf prüfen {#revocation}
 
-Öffnen Sie das Ergebnis in einer eigenen abgemeldeten Sitzung und prüfen Sie Inhalte, Dateien und unzugängliche ausgeschlossene Objekte. Widerrufen Sie und testen Sie erneut. Kopierte Daten lassen sich nicht zurückholen; bereits signierte Dateilinks können bis Ablauf gültig bleiben, bei Seitendateien 24 Stunden. Geheime Nutzerlinks bleiben noindex, anders als indexierbare offizielle Dokumentation. noindex steuert Crawler, nicht Zugriff. Teilen Sie private Zugriffslinks nie in öffentlichen Berichten oder Beispielen.
+Öffnen Sie das Ergebnis in einer eigenen abgemeldeten Sitzung und prüfen Sie Inhalte, Dateien und unzugängliche ausgeschlossene Objekte. Widerrufen Sie und testen Sie erneut. Kopierte Daten lassen sich nicht zurückholen; bereits signierte Dateilinks können bis Ablauf gültig bleiben, bei Seitendateien 24 Stunden. Geheime Nutzerlinks bleiben `noindex`, anders als indexierbare offizielle Dokumentation. `noindex` steuert Crawler, nicht Zugriff. Teilen Sie private Zugriffslinks nie in öffentlichen Berichten oder Beispielen.

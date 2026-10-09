@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -43,9 +43,9 @@
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions)",
+    "revision": 6,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
+    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review)",
     "date": "2026-10-09"
   },
   "related": [
@@ -68,7 +68,7 @@
       "src": "/documentation/de/work-view-filters.png",
       "alt": "Manuelle Ansichtsfilter und Sortiermenü.",
       "caption": "Filtere nach Ticketeigenschaften oder wähle eine Reihenfolge. Für diese manuellen Bedienelemente ist das KI-Feld optional.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -84,7 +84,7 @@
       "src": "/documentation/de/work-share-view.png",
       "alt": "Freigabedialog einer Ansicht mit ausgewähltem privatem Zugriff.",
       "caption": "Privater, passwortgeschützter und öffentlicher Zugriff sind unterschiedliche Optionen. Die Ansicht bleibt hier privat.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -134,6 +134,6 @@ Geteilte Karten zeigen Titel, Beschreibungen und eingeblendete Eigenschaften, da
 
 Kehre zu den Freigabesteuerungen der Ansicht zurück und stelle sie auf privat, um die Veröffentlichung zu widerrufen. Öffne den alten Link erneut anonym und prüfe, ob der Zugriff verweigert wird. Der Widerruf kann gespeicherte Kopien oder Screenshots der Besucher nicht zurückholen.
 
-Geheime Ansichtslinks verwenden den Veröffentlichungsweg für private Links und bleiben noindex. Diese Indexierungsregel begrenzt die Auffindbarkeit durch Suchmaschinen, ersetzt aber kein Passwort. Halte den Link bei sensiblen Inhalten privat und verwende gegebenenfalls Passwortschutz. Verwechsle die geteilte Ansicht eines Benutzers nicht mit der indexierten offiziellen Dokumentation.
+Geheime Ansichtslinks verwenden den Veröffentlichungsweg für private Links und bleiben `noindex`. Diese Indexierungsregel begrenzt die Auffindbarkeit durch Suchmaschinen, ersetzt aber kein Passwort. Halte den Link bei sensiblen Inhalten privat und verwende gegebenenfalls Passwortschutz. Verwechsle die geteilte Ansicht eines Benutzers nicht mit der indexierten offiziellen Dokumentation.
 
 Weicht das anonyme Ergebnis von deiner Erwartung ab, prüfe die gespeicherte Ansicht und Freigabekonfiguration, bevor du den Link weitergibst. Kontrolliere den Umfang nach Änderungen an Filtern oder verknüpften Inhalten erneut.

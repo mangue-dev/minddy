@@ -16,6 +16,7 @@ import { DocumentationIcon } from "./documentation-icon";
 import { DocumentationImage } from "./documentation-image";
 import { DocumentationDiagram } from "./documentation-diagram";
 import { DocumentationTable } from "./documentation-table";
+import { documentationInlineCodeClassName } from "./documentation-inline-text";
 
 const articleNavigationClassName = "group flex min-w-0 flex-col gap-3 rounded-lg border border-current/10 p-4 transition-colors hover:border-current/25 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
 
@@ -41,7 +42,7 @@ export async function DocumentationArticleView({ article, articles }: { article:
             p: ({ node, children }) => node?.children.length === 1 && node.children[0].type === "element" && node.children[0].tagName === "img"
               ? <div>{children}</div> : <p>{children}</p>,
             a: ({ href, children }) => <a href={localizeDocumentationLink(href, article.locale)}>{children}</a>,
-            code: ({ children }) => <code className="break-words rounded bg-muted px-1 text-[.9em]">{children}</code>,
+            code: ({ children }) => <code className={documentationInlineCodeClassName}>{children}</code>,
             pre: ({ node, children }) => {
               const block = extractCodeBlock(node);
               return block ? <ReadOnlyCodeBlock code={block.code} language={block.language || undefined} className="my-5 text-sm" />
