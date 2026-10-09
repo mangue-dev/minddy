@@ -4,6 +4,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { isPrimaryHost, normalizeHost } from "@/lib/public-hosts";
 import { documentationPath, resolveDocumentationPath } from "@/lib/documentation-core.mjs";
+import { documentationMarkdownPath, prefersDocumentationMarkdown, resolveDocumentationDelivery } from "@/lib/documentation-delivery";
 import { detectFromAcceptLanguage } from "@/lib/accept-language";
 import {
   PUBLIC_ROUTE_PATHS,
@@ -215,6 +216,18 @@ function serveLocalizedPublicRoute(request: NextRequest, pathname: string): Next
     ...(route ? { [ROUTE_HEADER]: route.key } : {}),
   };
 
+  if (documentation) {
+    const markdown = documentationMarkdownPath(documentation.id, documentation.locale);
+    const response = prefersDocumentationMarkdown(request.headers.get("accept"))
+      ? NextResponse.rewrite(rewriteTo(request, "/md/documentation"), withRequestHeaders(request, headers))
+      : pathname !== englishPath
+        ? NextResponse.rewrite(rewriteTo(request, englishPath), withRequestHeaders(request, headers))
+        : NextResponse.next(withRequestHeaders(request, headers));
+    response.headers.append("Vary", "Accept");
+    response.headers.append("Link", `<${markdown}>; rel="alternate"; type="text/markdown", <${documentationPath(null, documentation.locale)}/llms.txt>; rel="describedby"`);
+    return response;
+  }
+
   const markdownPath = route && !documentation ? `/md?route=${route.key}&locale=${locale}` : null;
 
   // Content negotiation (MIN-88). An agent who explicitly requests
@@ -325,9 +338,14 @@ async function routeRequest(request: NextRequest) {
   const supabaseUrl = process.env.MINDDY_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.MINDDY_PUBLIC_SUPABASE_ANON_KEY;
 
+  const delivery = resolveDocumentationDelivery(pathname);
+  if (delivery && delivery.format !== "html") {
+    return NextResponse.rewrite(rewriteTo(request, "/md/documentation"), withRequestHeaders(request));
+  }
+
   // Official documentation is independent of sessions and backend availability.
   if (resolveDocumentationPath(pathname)) {
-    if (pathname === "/docs") {
+    if (pathname === "/docs" && !prefersDocumentationMarkdown(request.headers.get("accept"))) {
       const preferred = supportedLocaleForTag(request.cookies.get("NEXT_LOCALE")?.value)
         ?? detectFromAcceptLanguage(request.headers.get("accept-language"));
       if (preferred && preferred !== "en") {

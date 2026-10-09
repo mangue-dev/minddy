@@ -6,28 +6,7 @@ import {
 import { EXPORT_HEADERS } from "@/lib/export/issues-csv";
 import { MCP_ENDPOINT, SITE_URL } from "@/lib/site";
 
-/**
- * `/llms.txt` (MIN-88) — and it talks about the MCP SERVER, not the product.
- *
- * Google published an optimization guide for AI on May 15, 2026 which says
- * explicitly that `llms.txt`, “AI” markup and Markdown versions do not
- * are of no use for AI Overviews or AI Mode: it is the same index and the same
- * classification than traditional search. A marketing `llms.txt` would therefore be a
- * file that nobody reads.
- *
- * The format, on the other hand, has proven itself for a specific use, that for
- * which Stripe, Vercel, Cloudflare and Anthropic publish it: allowing a
- * code wizard to write an integration RIGHT the first time. It is
- * exactly what Minddy needs — the agent we want to connect is the same
- * kind of agent as the one reading this file.
- *
- * It therefore only contains what is used for this: the endpoint, the mode
- * authentication, the hierarchy of objects, and the list of tools. THE
- * Parameter details live in `/llms-full.txt`.
- *
- * Everything is DERIVED from `lib/server/mcp/`: this file cannot describe an API
- * that the server no longer exposes.
- */
+/** Public documentation entry points and the generated MCP integration overview. */
 export function GET(): Response {
   const tools = mcpToolCatalog();
   const webhook = integrationWebhookDoc();
@@ -40,8 +19,21 @@ export function GET(): Response {
 > plan whose markdown checkboxes are trackable tasks. Agents read and write
 > minddy over MCP, as the user who authorised them.
 
-This file is written for coding assistants wiring an agent to minddy. For the
-product itself, see ${SITE_URL}.
+Start with the documentation index for product tasks, prerequisites, permissions,
+edition differences, and operational procedures. The integration overview below
+is generated from the MCP server's registrations.
+
+## Documentation
+
+- [Documentation index](${SITE_URL}/docs/llms.txt): Published guides grouped by topic, with Markdown links and indexes for all six languages.
+- [Searchable Markdown index](${SITE_URL}/docs/index.md): Append \`?q=<URL-encoded terms>\` to find matching articles and sections.
+- [Documentation in a browser](${SITE_URL}/docs): Browse and search the official documentation.
+- [Full MCP reference](${SITE_URL}/llms-full.txt): Tool schemas, authentication, webhooks, and CSV contracts.
+
+Articles can be fetched by appending \`.md\` to their documentation URL or sending
+\`Accept: text/markdown\`. Reading public documentation needs no account or MCP
+connection. Check each article's documented version and applicability before
+acting, and cite its canonical HTML URL with the relevant section fragment.
 
 ## Connecting
 

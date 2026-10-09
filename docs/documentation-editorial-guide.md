@@ -140,6 +140,27 @@ Use ordinary prose for general technical concepts and product names, and
 preserve UI labels as UI labels. Inline code identifies a technical reference;
 it is not a substitute for emphasis throughout a sentence.
 
+## Keep articles useful to agents and text readers
+
+The public Markdown representation comes from the same published article as
+the HTML page. Do not create a separate simplified copy for agents. Keep
+prerequisites, permissions, exact UI entry points, expected results, limits,
+recovery steps, and release or edition differences in the prose beside the
+action they govern. A screenshot must not be the only source of a necessary
+instruction. Give figures meaningful alternative text and captions; structured
+diagram items and tables are also included in the Markdown response.
+
+Keep stable section IDs and descriptive cross-links. Each procedure should make
+sense when retrieved on its own; replace ambiguous references such as "do the
+same thing above" with the action or a precise section link. Article metadata
+must identify the verified version, editions, profiles, audiences, and update
+date. Internal evidence paths and review records stay out of public exports.
+
+The generated `llms.txt` index lists only the reviewed publication set, and the
+Markdown index reuses the documentation search. See
+[documentation access for agents](documentation-agent-access.md) for endpoints,
+retrieval examples, publication boundaries, and maintenance checks.
+
 ## Examples of substantive edits
 
 These examples illustrate editorial decisions using facts identified in the
