@@ -63,9 +63,6 @@ export async function DocumentationArticleView({ article, articles }: { article:
         </Button>
       </li>)}</ul>
     </section>}
-    <DocumentationErrorReport subject={`${t("articleLabel")}: ${article.id} (${article.locale})`}
-      body={`${t("articleLabel")}: ${article.id}\n${t("localeLabel")}: ${article.locale}\n${t("revisionLabel")}: ${article.revision}\n\n`}
-      label={t("report")} />
     {(previous || next) && <nav aria-label={t("articleNavigation")} className="mt-8 grid grid-cols-1 gap-3 border-t border-border pt-6 sm:grid-cols-2">
       {previous && <Link href={documentationPath(previous.id, article.locale)} prefetch={false} rel="prev"
         className={cn(articleNavigationClassName, CARD_TONES.sky)}>
@@ -78,5 +75,8 @@ export async function DocumentationArticleView({ article, articles }: { article:
         <span className="flex items-start gap-2 text-sm font-medium"><DocumentationIcon articleId={next.id} className="mt-0.5 size-4 shrink-0" /><span>{next.title}</span></span>
       </Link>}
     </nav>}
+    <DocumentationErrorReport subject={`${t("articleLabel")}: ${article.id} (${article.locale})`}
+      body={`${t("articleLabel")}: ${article.id}\n${t("localeLabel")}: ${article.locale}\n${t("revisionLabel")}: ${article.revision}\n\n`}
+      label={t("report")} />
   </DocumentationShell>;
 }
