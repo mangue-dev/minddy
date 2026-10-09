@@ -20,12 +20,13 @@
     "W07",
     "W09",
     "W04",
-    "A06"
+    "A06",
+    "A11"
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
-  "sourceRevision": 6,
+  "revision": 7,
+  "sourceRevision": 7,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -79,13 +80,19 @@
       "lib/import/types.ts",
       "lib/server/import-issues.ts",
       "content/documentation/reviews/csv-preview-capture-candidates.json",
-      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json"
+      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json",
+      "components/export-issues-dialog.tsx",
+      "components/app-shell-chrome.tsx",
+      "app/api/me/issues/export/route.ts",
+      "lib/export/issues-csv.ts",
+      "lib/export-api.ts",
+      "content/documentation/reviews/pr397-review-fixes-2026-10-09.md"
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions)",
+    "revision": 7,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (PR #397 source review of voice/export additions; existing procedures and figures retained, no operational rerun)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (PR #397 localized additions and equivalent meaning review; no independent or human review claimed)",
     "date": "2026-10-09"
   },
   "related": [
@@ -131,7 +138,7 @@
       "src": "/documentation/it/new-issue.png",
       "alt": "Bozza non inviata con titolo, descrizione e proprietà selezionabili manualmente.",
       "caption": "Descrivi il risultato atteso e scegli le proprietà utili prima di creare il ticket.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -147,7 +154,7 @@
       "src": "/documentation/it/triage-incoming.png",
       "alt": "Ticket dimostrativo DOC-11 in arrivo con segnalazione, proprietà e comandi per duplicato, Rifiuta e Accetta.",
       "caption": "Leggi la segnalazione ricevuta prima di accettarla, rifiutarla o collegare un duplicato.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -163,7 +170,7 @@
       "src": "/documentation/it/issue-statuses.png",
       "alt": "Gli otto stati del ticket nel selettore, con Backlog selezionato.",
       "caption": "La spunta indica lo stato attuale. Scegli quello che rispecchia lo stato effettivo del lavoro.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -179,7 +186,7 @@
       "src": "/documentation/it/work-resources.png",
       "alt": "Finestra di aggiunta di un link con un indirizzo di contatto d’esempio.",
       "caption": "Controlla la destinazione prima di aggiungere la risorsa. Questo link d’esempio non è stato inviato.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -195,7 +202,7 @@
       "src": "/documentation/it/work-dependencies.png",
       "alt": "Ricerca di un ticket bloccante tramite identificativo.",
       "caption": "Scegli la direzione della relazione prima della destinazione. Il selettore è mostrato senza inviare la relazione.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -211,7 +218,7 @@
       "src": "/documentation/it/work-sub-issues.png",
       "alt": "Campo per creare un sotto-ticket in un ticket principale dimostrativo.",
       "caption": "Il campo crea un figlio di questo ticket; ogni figlio conserva stato e discussione propri.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -227,7 +234,7 @@
       "src": "/documentation/it/work-implementation-plan.png",
       "alt": "Piano dimostrativo con due attività di lavoro completate su sei.",
       "caption": "Il piano salvato distingue passaggi completati, attivi e in attesa. L’avanzamento non dimostra l’esecuzione dell’attività di codice fittizia.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -243,7 +250,7 @@
       "src": "/documentation/it/issue-date-recurrence.png",
       "alt": "Selettore di scadenza ricorrente con anteprima settimanale la domenica e orario facoltativo.",
       "caption": "La modalità ricorrente mostra la cadenza settimanale. Conferma la prima scadenza prima di creare il ticket.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -259,7 +266,7 @@
       "src": "/documentation/it/work-bulk-actions.png",
       "alt": "Menu delle azioni per due ticket dimostrativi selezionati.",
       "caption": "Il menu agisce sui ticket selezionati. In questa schermata non è stata inviata alcuna modifica collettiva.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -275,7 +282,7 @@
       "src": "/documentation/it/import-issues-preview-workflow.png",
       "alt": "Anteprima CSV di due righe dimostrative tradotte e delle colonne rilevate.",
       "caption": "Anteprima CSV di due righe dimostrative tradotte e delle colonne rilevate. L’importazione non è stata inviata; la pianificazione IA facoltativa è stata bloccata per la cattura.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -478,3 +485,15 @@ Una proposta IA viene richiesta soltanto per le associazioni mancanti. Puoi modi
 Dopo ogni modifica delle associazioni, leggi il numero di ticket, la distribuzione degli stati e gli avvisi. Correggi le righe ignorate o non valide prima di confermare. L’importazione crea nuovi ticket: non presumere che caricare nuovamente il file aggiorni quelli esistenti eliminando i duplicati. Dopo il successo, verifica un campione di ticket, assegnazioni, date e collegamenti ai padri. Se la risposta va persa, controlla il progetto prima di ripetere l’intero file, per evitare lavoro duplicato.
 
 ![Anteprima CSV di due righe dimostrative tradotte e delle colonne rilevate.](/documentation/it/import-issues-preview-workflow.png)
+
+## Esportare i ticket in CSV {#export-issues}
+
+Come membro autenticato di un progetto, apri la palette con Command+K su macOS o Ctrl+K sugli altri sistemi e cerca «Ticket di esportazione come CSV». Scegli il comando, seleziona un progetto o tutti i progetti accessibili e controlla le caselle degli stati. La pagina del progetto corrente preseleziona quel progetto. I ticket completati, annullati e duplicati sono esclusi per impostazione predefinita; includili per ottenere l’intera cronologia. Deve restare selezionato almeno uno stato. I filtri della board e le schede selezionate non definiscono questa esportazione.
+
+Scegli Esporta e controlla la conferma del download e il numero di ticket indicato. Il CSV UTF-8 contiene identificativi, titoli, descrizioni Markdown, stati, priorità, impegno, categorie, assegnatari, obiettivi, nomi dei progetti, date e identificativi dei ticket padre. L’accesso è limitato ai tuoi progetti accessibili. Un file con sole intestazioni può indicare che non esistono ticket accessibili corrispondenti. Quando lo condividi, considera descrizioni e nomi come dati del progetto.
+
+### Verificare la completezza e reimportare {#export-issues-limits}
+
+L’esportazione è limitata a 20.000 ticket. Un avviso di troncamento indica che il file potrebbe essere incompleto. Riduci l’ambito per progetto e stato, esporta gruppi separati e confronta i conteggi. Ripetere lo stesso ambito non scarica una pagina successiva. Se il download fallisce, controlla l’errore, la sessione e l’accesso al progetto prima di riprovare.
+
+Il formato può essere [importato in minddy](#import-issues), con l’autorizzazione del proprietario di destinazione e dopo aver verificato la mappatura. L’importazione crea nuovi ticket; non ripristina gli identificativi originali né aggiorna i ticket esistenti. Mantieni le righe padre nello stesso lotto di importazione. Il CSV contiene dati dei ticket, non un backup di allegati, commenti, impostazioni dell’account o credenziali. Per trasferire un account, usa la [guida al trasferimento tra istanze](/docs/transfer-between-instances).

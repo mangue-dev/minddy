@@ -1278,5 +1278,33 @@
     "illustration": "New redacted reconnect/error controls",
     "requiresFigures": false,
     "section": "integration-troubleshooting"
+  },
+  {
+    "workflow": "A10",
+    "article": "ai-settings-and-usage",
+    "outcome": "Record and transcribe voice, review dictated drafts and apply issue edits",
+    "audiences": [
+      "member"
+    ],
+    "type": "guide",
+    "source": "`components/ai-elements/dictate-button.tsx`; `app/api/transcribe/route.ts`; `lib/use-issue-dictation.ts`; `components/routines/routine-prompt-field.tsx`",
+    "gaps": "Microphone permissions, entry points, draft versus immediate edits, provider/budget attribution, audio/request limits and recovery",
+    "illustration": "Text: ordered gestures and recovery checks are sufficient",
+    "requiresFigures": false,
+    "section": "voice-dictation"
+  },
+  {
+    "workflow": "A11",
+    "article": "issues",
+    "outcome": "Export accessible issues as CSV and verify scope and completeness before re-import",
+    "audiences": [
+      "member"
+    ],
+    "type": "guide",
+    "source": "`components/export-issues-dialog.tsx`; `components/app-shell-chrome.tsx`; `app/api/me/issues/export/route.ts`; `lib/export/issues-csv.ts`",
+    "gaps": "Command entry point, project/status scope, default exclusions, 20000-row cap, truncation, data privacy and re-import limitations",
+    "illustration": "Text: explicit scope and status instructions are sufficient",
+    "requiresFigures": false,
+    "section": "export-issues"
   }
 ]

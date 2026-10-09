@@ -54,7 +54,7 @@ function renderFigure(figure: DocumentationFigure, original: string): string {
     lines.push(`\n**${column.title}**`, ...column.items.map((item, index) => `${index + 1}. ${item}`));
   }
   if (diagram.headers && diagram.rows) {
-    const cell = (value: string) => value.replace(/\|/g, "\\|").replace(/\n/g, " ");
+    const cell = (value: string) => value.replace(/\\/g, "\\\\").replace(/\|/g, "\\|").replace(/\r\n?|\n/g, " ");
     lines.push(`| ${diagram.headers.map(cell).join(" | ")} |`,
       `| ${diagram.headers.map(() => "---").join(" | ")} |`,
       ...diagram.rows.map(row => `| ${row.map(cell).join(" | ")} |`));

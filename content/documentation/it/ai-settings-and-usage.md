@@ -11,12 +11,13 @@
   ],
   "workflows": [
     "A04",
-    "A08"
+    "A08",
+    "A10"
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
-  "sourceRevision": 6,
+  "revision": 7,
+  "sourceRevision": 7,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -43,13 +44,23 @@
       "app/(app)/billing/page.tsx",
       "app/(marketing)/pricing/page.tsx",
       "lib/billing-plans.ts",
-      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json"
+      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json",
+      "components/ai-elements/dictate-button.tsx",
+      "app/api/transcribe/route.ts",
+      "lib/use-issue-dictation.ts",
+      "components/issue-side-panel.tsx",
+      "lib/use-objective-dictation.ts",
+      "lib/use-feedback-dictation.ts",
+      "components/issue-timeline.tsx",
+      "components/assistant/chat-input.tsx",
+      "components/routines/routine-prompt-field.tsx",
+      "content/documentation/reviews/pr397-review-fixes-2026-10-09.md"
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions)",
+    "revision": 7,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (PR #397 source review of voice/export additions; existing procedures and figures retained, no operational rerun)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (PR #397 localized additions and equivalent meaning review; no independent or human review claimed)",
     "date": "2026-10-09"
   },
   "related": [
@@ -72,7 +83,7 @@
       "src": "/documentation/it/ai-keys-and-models-workflow.png",
       "alt": "Scheda del fornitore IA con minddy Cloud selezionato.",
       "caption": "Il fornitore Cloud selezionato usa il piano dell’account. Il selettore permette di configurare fornitori personali.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -89,7 +100,7 @@
       "src": "/documentation/it/ai-keys-and-models-defaults-workflow.png",
       "alt": "Modello di codice e ragionamento predefiniti.",
       "caption": "Modello di codice e ragionamento predefiniti. I nuovi worker usano questi valori; quelli già in esecuzione mantengono le impostazioni fissate.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -106,7 +117,7 @@
       "src": "/documentation/it/plans-and-ai-usage-workflow.png",
       "alt": "Pagina di utilizzo IA dell’account dimostrativo.",
       "caption": "Pagina di utilizzo IA dell’account dimostrativo. Budget, categorie e cronologia provengono dall’account; non sono stati avviati acquisti né esecuzioni a pagamento.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -169,3 +180,23 @@ Questi valori predefiniti descrivono la versione candidata 0.11.1 identificata. 
 | Pro | Illimitati | Illimitati | Illimitati | 100 GiB | 15 |
 
 ![Pagina di utilizzo IA dell’account dimostrativo.](/documentation/it/plans-and-ai-usage-workflow.png)
+
+## Dettare testo e modifiche {#voice-dictation}
+
+Usa il microfono accanto a un campo compatibile per dettare un ticket, un obiettivo, un commento, un messaggio Numo, un feedback o un’istruzione per una routine. Servono il permesso di scrivere in quel punto, un microfono funzionante e un browser compatibile con la registrazione. Autorizza il microfono per il sito nel browser e nel sistema operativo. Usa HTTPS per un’istanza remota. Nel Cloud deve essere disponibile il budget IA; le istanze self-hosted richiedono anche fornitori di trascrizione e dettatura funzionanti. Le chiavi personali per la voce e i modelli si configurano [più sopra](#ai-keys-and-models).
+
+1. Apri il modulo o il ticket interessato e scegli il suo microfono. In un ticket aperto, Command+Maiusc+D su macOS o Ctrl+Maiusc+D sugli altri sistemi avvia o interrompe la modifica vocale. Verifica che compaiano il timer e la forma d’onda.
+2. Parla nella lingua dell’interfaccia, che guida la trascrizione. Per modificare un ticket, indica chiaramente l’azione, ad esempio «Imposta la priorità su alta». Ferma la registrazione con il comando quadrato e attendi la fine della trascrizione e dell’elaborazione Numo prima di chiudere il modulo.
+3. Controlla il risultato. Messaggi Numo, commenti e istruzioni delle routine ricevono testo modificabile; rileggilo prima di inviarlo o salvarlo. I moduli di creazione ricevono campi di bozza ancora da confermare. La modifica vocale di un ticket esistente applica subito i cambiamenti: verifica i campi e correggi eventuali errori con i normali comandi. La dettatura non concede permessi aggiuntivi.
+
+### Consumo e limiti di registrazione {#voice-limits}
+
+L’audio viene inviato al servizio di trascrizione configurato, poi può essere corretto o interpretato da un modello IA. Il consumo segue le regole del fornitore e del budget dell’account; registrazione e interpretazione possono generare consumi separati. Il feedback pubblico ha regole proprie di disponibilità e addebito, descritte nella [guida al feedback](/docs/feedback). La demo della pagina iniziale ha un limite separato e non costituisce una quota di dettatura dell’account.
+
+Il servizio di trascrizione per utenti autenticati accetta fino a 10 MiB di audio e 30 richieste per account all’ora. Il registratore condiviso si ferma dopo 20 minuti come precauzione. Preferisci registrazioni brevi per controllare ogni risultato. Conserva il testo esistente fino alla verifica; il registratore non è un backup dell’audio.
+
+### Riprendere dopo un errore {#voice-recovery}
+
+Se l’accesso è negato, abilita il microfono per il sito e per il browser o l’app desktop nel sistema operativo. Se non viene trovato un dispositivo, collega o seleziona un microfono; se è occupato, chiudi l’applicazione che lo usa. Se la registrazione non è supportata, usa un browser compatibile o scrivi il testo.
+
+In caso di silenzio o risultato vuoto, controlla il dispositivo di ingresso e fai una breve registrazione udibile. Dividi le registrazioni troppo grandi. Il messaggio sul limite di richieste indica quanto attendere; aspetta prima di riprovare. Per errori di budget o del fornitore, controlla il consumo IA, le assegnazioni vocali e la configurazione dell’istanza. Se la correzione fallisce ma viene restituita la trascrizione, rileggi e modifica quel testo. Prima di ripetere una modifica fallita, controlla i campi correnti per non applicarla due volte.

@@ -4,6 +4,7 @@ import { documentationMarkdownPath } from "@/lib/documentation-delivery";
 import { getDocumentationDrafts, getPublishedDocumentation } from "./documentation";
 import { documentationMarkdownResponse, renderDocumentationArticle } from "./documentation-markdown";
 import { SITE_URL } from "@/lib/site";
+import MarkdownIt from "markdown-it";
 
 const origin = SITE_URL;
 
@@ -99,5 +100,20 @@ describe("public documentation Markdown", () => {
         for (const match of block.content.matchAll(/^(`{3,}|~{3,})[^\n]*\n[\s\S]*?^\1\s*$/gm)) expect(exported).toContain(match[0]);
       }
     }
+  });
+
+  it("preserves backslashes and table boundaries in diagram headers and cells", () => {
+    const article = getPublishedDocumentation("en").find(item => item.id === "issues")!;
+    const figure = { ...article.figures[0], kind: "diagram" as const, src: "/diagram.svg", diagram: {
+      layout: "matrix" as const, headers: [String.raw`Path\|name`, "Result"],
+      rows: [["C:\\folder\\", String.raw`one\|two`], ["line\r\nbreak", "last\rcell"]],
+    } };
+    const body = renderDocumentationArticle({ ...article, figures: [figure], content: "## Example {#example}\n\n![Flow](/diagram.svg)" }, [article]);
+    const tokens = new MarkdownIt().parse(body, {});
+    const table = tokens.slice(tokens.findIndex(token => token.type === "table_open"), tokens.findIndex(token => token.type === "table_close"));
+    expect(table.filter(token => token.type === "th_open")).toHaveLength(2);
+    expect(table.filter(token => token.type === "td_open")).toHaveLength(4);
+    expect(table.filter(token => token.type === "inline").map(token => token.children?.map(child => child.content).join("")))
+      .toEqual([String.raw`Path\|name`, "Result", "C:\\folder\\", String.raw`one\|two`, "line break", "last cell"]);
   });
 });

@@ -20,12 +20,13 @@
     "W07",
     "W09",
     "W04",
-    "A06"
+    "A06",
+    "A11"
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
-  "sourceRevision": 6,
+  "revision": 7,
+  "sourceRevision": 7,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -79,13 +80,19 @@
       "lib/import/types.ts",
       "lib/server/import-issues.ts",
       "content/documentation/reviews/csv-preview-capture-candidates.json",
-      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json"
+      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json",
+      "components/export-issues-dialog.tsx",
+      "components/app-shell-chrome.tsx",
+      "app/api/me/issues/export/route.ts",
+      "lib/export/issues-csv.ts",
+      "lib/export-api.ts",
+      "content/documentation/reviews/pr397-review-fixes-2026-10-09.md"
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions)",
+    "revision": 7,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (PR #397 source review of voice/export additions; existing procedures and figures retained, no operational rerun)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (PR #397 localized additions and equivalent meaning review; no independent or human review claimed)",
     "date": "2026-10-09"
   },
   "related": [
@@ -131,7 +138,7 @@
       "src": "/documentation/es/new-issue.png",
       "alt": "Borrador sin enviar con título, descripción y propiedades que se pueden elegir manualmente.",
       "caption": "Describe el resultado esperado y elige las propiedades útiles antes de crear el ticket.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -147,7 +154,7 @@
       "src": "/documentation/es/triage-incoming.png",
       "alt": "Incidencia entrante de demostración DOC-11 con informe, propiedades y controles de duplicado, Rechazar y Aceptar.",
       "caption": "Lee el informe recibido antes de aceptarlo, rechazarlo o enlazar un duplicado.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -163,7 +170,7 @@
       "src": "/documentation/es/issue-statuses.png",
       "alt": "Los ocho estados del ticket en el selector, con el estado de backlog seleccionado.",
       "caption": "La marca indica el estado actual. Elige el que corresponda al estado real del trabajo.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -179,7 +186,7 @@
       "src": "/documentation/es/work-resources.png",
       "alt": "Diálogo para añadir un enlace con una dirección de contacto de ejemplo.",
       "caption": "Revisa el destino antes de añadir el recurso. Este enlace de ejemplo no se ha enviado.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -195,7 +202,7 @@
       "src": "/documentation/es/work-dependencies.png",
       "alt": "Búsqueda de una incidencia bloqueante por identificador.",
       "caption": "Elige el sentido de la relación antes de su destino. El selector se muestra sin enviar la relación.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -211,7 +218,7 @@
       "src": "/documentation/es/work-sub-issues.png",
       "alt": "Campo para crear una subincidencia en una incidencia principal de demostración.",
       "caption": "El campo crea una hija de esta incidencia; cada hija conserva su estado y conversación.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -227,7 +234,7 @@
       "src": "/documentation/es/work-implementation-plan.png",
       "alt": "Plan de demostración con dos tareas de trabajo completadas de seis.",
       "caption": "El plan guardado distingue pasos completados, activos y pendientes. Su progreso no demuestra que se ejecutara la tarea de código ficticia.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -243,7 +250,7 @@
       "src": "/documentation/es/issue-date-recurrence.png",
       "alt": "Selector de fecha en modo recurrente con vista previa semanal los domingos y hora opcional.",
       "caption": "El modo recurrente muestra la frecuencia semanal. Confirma la primera fecha antes de crear el ticket.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -259,7 +266,7 @@
       "src": "/documentation/es/work-bulk-actions.png",
       "alt": "Menú de acciones para dos incidencias de demostración seleccionadas.",
       "caption": "El menú actúa sobre las incidencias seleccionadas. En esta captura no se envió ningún cambio conjunto.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -275,7 +282,7 @@
       "src": "/documentation/es/import-issues-preview-workflow.png",
       "alt": "Vista previa CSV de dos filas de demostración traducidas y las columnas detectadas.",
       "caption": "Vista previa CSV de dos filas de demostración traducidas y las columnas detectadas. No se envió la importación; la planificación opcional con IA se bloqueó para la captura.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -474,3 +481,15 @@ Solo se solicita una propuesta de IA para los huecos del mapeo. Puede editarla; 
 Tras cada cambio de mapeo, lea las cantidades de incidencias, la distribución de estados y los avisos. Corrija las filas omitidas o inválidas antes de confirmar. La importación crea incidencias nuevas; no suponga que reenviar el archivo sea una actualización que elimina duplicados. Después del éxito, compruebe incidencias representativas, responsables, fechas y vínculos con padres. Si se pierde la respuesta, revise el proyecto antes de reenviar el archivo completo para evitar trabajo duplicado.
 
 ![Vista previa CSV de dos filas de demostración traducidas y las columnas detectadas.](/documentation/es/import-issues-preview-workflow.png)
+
+## Exportar incidencias a CSV {#export-issues}
+
+Como miembro conectado de un proyecto, abre la paleta con Command+K en macOS o Ctrl+K en otros sistemas y busca «Exportar incidencias como CSV». Elige el comando, selecciona un proyecto o todos los proyectos accesibles y revisa las casillas de estado. La página del proyecto actual preselecciona ese proyecto. Las incidencias completadas, canceladas y duplicadas se excluyen por defecto; inclúyelas si necesitas todo el historial. Debe quedar al menos un estado seleccionado. Los filtros del tablero y las tarjetas seleccionadas no definen este exportado.
+
+Elige Exportar y comprueba la confirmación de descarga y la cantidad indicada. El CSV UTF-8 contiene identificadores, títulos, descripciones Markdown, estados, prioridades, esfuerzo, categorías, responsables, objetivos, nombres de proyectos, fechas e identificadores de incidencias padre. El acceso se limita a tus proyectos accesibles. Un archivo con solo encabezados puede indicar que no hay incidencias accesibles coincidentes. Al compartirlo, ten en cuenta que las descripciones y los nombres son datos del proyecto.
+
+### Verificar la integridad y volver a importar {#export-issues-limits}
+
+El exportado tiene un máximo de 20.000 incidencias. Una advertencia de truncamiento indica que el archivo puede estar incompleto. Reduce el alcance por proyecto y estado, exporta grupos separados y compara las cantidades. Repetir el mismo alcance no descarga una página siguiente. Si falla la descarga, comprueba el error, la sesión y los permisos del proyecto antes de reintentar.
+
+El formato se puede [importar en minddy](#import-issues), con permiso del propietario de destino y tras revisar el mapeo de campos. La importación crea incidencias nuevas; no restaura los identificadores originales ni actualiza las existentes. Mantén las filas padre en el mismo lote de importación. El CSV transporta datos de incidencias, no una copia de adjuntos, comentarios, ajustes de cuenta o credenciales. Para transferir una cuenta, usa la [guía de transferencia entre instancias](/docs/transfer-between-instances).

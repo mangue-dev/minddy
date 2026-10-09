@@ -71,7 +71,7 @@ to each source.
 | `docs/self-hosting-operations.md`, logical operations and knowledge operations | Backups, upgrades, restore, rollback | Separate installed reference Compose procedures from source/managed logical procedures. Do not splice their commands together. |
 | Knowledge `core-tracker` and `productivity` | Cycles, views and triage concepts | Shared concept articles plus separate task guides; avoid repeating normative definitions. |
 | Knowledge `agents-and-mcp`, `plans-and-agents`, `repository-skills`, `integrations` | Numo, code workers, Git and agent integrations | Distinguish conversation setup, delegated work, routine occurrences, external Minddy MCP clients, and personal MCP servers used by Numo. |
-| Knowledge `desktop-and-speed`, download pages and desktop docs | Installation, updating, dictation and CSV import | Split platform setup, voice capture and import tasks. Historical local-agent designs are not current product instructions. |
+| Knowledge `desktop-and-speed`, download pages and desktop docs | Installation, updating, dictation and CSV import | Platform setup and import map to their feature guides; voice capture is retained explicitly as A10 in `ai-settings-and-usage#voice-dictation`. Issue CSV export is retained as A11 in `issues#export-issues`, separately from account transfer. Historical local-agent designs are not current product instructions. |
 | Knowledge `plans-and-billing`, public pricing and plan configuration | Plans, limits and AI consumption | Use the current pricing/plan definitions for numeric limits. Article revisions must identify the applicable edition and release. |
 
 ### Facts that prevent misleading instructions

@@ -34,16 +34,14 @@ describe("documentation sharing images", () => {
     vi.restoreAllMocks();
   });
 
-  it("links every published localized article to its own large sharing card", async () => {
-    for (const locale of locales) {
-      state.locale = locale;
-      for (const article of documentation.getPublishedDocumentation(locale)) {
-        const metadata = await generateMetadata({ params: Promise.resolve({ slug: [article.id] }) });
-        const image = documentationOgImageUrl(article.id, locale);
-        expect(metadata.openGraph).toMatchObject({ title: article.title,
-          images: [{ url: image, width: 1200, height: 630, alt: article.title }] });
-        expect(metadata.twitter).toMatchObject({ card: "summary_large_image", images: [image] });
-      }
+  it.each(locales)("links every published %s article to its own large sharing card", async locale => {
+    state.locale = locale;
+    for (const article of documentation.getPublishedDocumentation(locale)) {
+      const metadata = await generateMetadata({ params: Promise.resolve({ slug: [article.id] }) });
+      const image = documentationOgImageUrl(article.id, locale);
+      expect(metadata.openGraph).toMatchObject({ title: article.title,
+        images: [{ url: image, width: 1200, height: 630, alt: article.title }] });
+      expect(metadata.twitter).toMatchObject({ card: "summary_large_image", images: [image] });
     }
   });
 

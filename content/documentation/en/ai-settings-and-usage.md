@@ -11,12 +11,13 @@
   ],
   "workflows": [
     "A04",
-    "A08"
+    "A08",
+    "A10"
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
-  "sourceRevision": 6,
+  "revision": 7,
+  "sourceRevision": 7,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -43,13 +44,23 @@
       "app/(app)/billing/page.tsx",
       "app/(marketing)/pricing/page.tsx",
       "lib/billing-plans.ts",
-      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json"
+      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json",
+      "components/ai-elements/dictate-button.tsx",
+      "app/api/transcribe/route.ts",
+      "lib/use-issue-dictation.ts",
+      "components/issue-side-panel.tsx",
+      "lib/use-objective-dictation.ts",
+      "lib/use-feedback-dictation.ts",
+      "components/issue-timeline.tsx",
+      "components/assistant/chat-input.tsx",
+      "components/routines/routine-prompt-field.tsx",
+      "content/documentation/reviews/pr397-review-fixes-2026-10-09.md"
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions)",
+    "revision": 7,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (PR #397 source review of voice/export additions; existing procedures and figures retained, no operational rerun)",
+    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (PR #397 localized additions and equivalent meaning review; no independent or human review claimed)",
     "date": "2026-10-09"
   },
   "related": [
@@ -71,7 +82,7 @@
       "src": "/documentation/en/ai-keys-and-models-workflow.png",
       "alt": "AI provider card with minddy Cloud selected.",
       "caption": "The selected Cloud provider uses the account plan. Personal providers are configured in this selector.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -88,7 +99,7 @@
       "src": "/documentation/en/ai-keys-and-models-defaults-workflow.png",
       "alt": "Code model and reasoning defaults.",
       "caption": "Code model and reasoning defaults. New code workers use these defaults; running workers retain their frozen settings.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -105,7 +116,7 @@
       "src": "/documentation/en/plans-and-ai-usage-workflow.png",
       "alt": "AI usage page for the demonstration account.",
       "caption": "AI usage page for the demonstration account. The current budget, usage categories and history are read from the account; no purchase or paid run was triggered.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -168,3 +179,23 @@ These defaults describe the identified 0.11.1 candidate. Verify the live pricing
 | Pro | Unlimited | Unlimited | Unlimited | 100 GiB | 15 |
 
 ![AI usage page for the demonstration account.](/documentation/en/plans-and-ai-usage-workflow.png)
+
+## Dictate text and edits {#voice-dictation}
+
+Use the microphone beside a supported field to dictate an issue, objective, comment, Numo message, feedback or routine instruction. You need permission to write there, a working microphone and a browser that supports recording. Allow microphone access for this site in the browser and operating system. Use HTTPS for a remote instance. Cloud needs available AI usage; self-hosted instances also need working transcription and dictation providers. Personal voice keys and model assignments are configured [above](#ai-keys-and-models).
+
+1. Open the intended form or issue and choose its microphone control. In an open issue, Command+Shift+D on macOS or Ctrl+Shift+D elsewhere toggles voice editing. Check that the recording timer and waveform appear.
+2. Speak in the interface language, which guides transcription. For an issue edit, name the intended change clearly, for example “Set the priority to high”. Stop with the square control and wait for transcription and any Numo processing to finish before closing the form.
+3. Inspect the result. Numo messages, comments and routine instructions receive editable text; review it before sending or saving. Creation forms receive draft fields that still need confirmation. Voice editing of an existing issue applies field changes immediately: inspect the issue afterward and correct an unintended change through its normal controls. Dictation does not grant additional permissions.
+
+### Usage and recording limits {#voice-limits}
+
+Audio is sent to the configured transcription service, then may be cleaned up or interpreted by an AI model. Usage follows the account's provider and budget rules; a recording and its subsequent interpretation can incur separate usage. Public feedback has its own availability and charging rules, described in the [feedback guide](/docs/feedback). The public landing-page demo uses a separate limit and is not an account dictation allowance.
+
+The signed-in transcription endpoint accepts up to 10 MiB of audio and 30 requests per account per hour. The shared recorder stops after 20 minutes as a safeguard. Prefer shorter takes so you can inspect each result. Keep existing text until the result is verified; the recorder is not an audio backup.
+
+### Recover a failed dictation {#voice-recovery}
+
+If access is denied, enable the site's microphone permission and the browser or desktop app's operating-system permission, then try again. If no device is found, connect or select a microphone; if it is busy, close the application using it. An unsupported recorder requires a compatible browser, or you can type instead.
+
+For silence or an empty result, check the input device and record a short audible take. For an oversized recording, split it into shorter takes. A rate-limit message gives a wait time; wait before retrying. For budget or provider failures, check AI usage, voice assignments and instance configuration. If cleanup fails but recognized text is returned, review and edit that text. Before repeating a failed issue edit, inspect the current fields to avoid applying the same change twice.

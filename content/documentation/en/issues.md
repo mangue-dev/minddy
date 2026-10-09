@@ -20,12 +20,13 @@
     "W07",
     "W09",
     "W04",
-    "A06"
+    "A06",
+    "A11"
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
-  "sourceRevision": 6,
+  "revision": 7,
+  "sourceRevision": 7,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -79,13 +80,19 @@
       "lib/import/types.ts",
       "lib/server/import-issues.ts",
       "content/documentation/reviews/csv-preview-capture-candidates.json",
-      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json"
+      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json",
+      "components/export-issues-dialog.tsx",
+      "components/app-shell-chrome.tsx",
+      "app/api/me/issues/export/route.ts",
+      "lib/export/issues-csv.ts",
+      "lib/export-api.ts",
+      "content/documentation/reviews/pr397-review-fixes-2026-10-09.md"
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions)",
+    "revision": 7,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (PR #397 source review of voice/export additions; existing procedures and figures retained, no operational rerun)",
+    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (PR #397 localized additions and equivalent meaning review; no independent or human review claimed)",
     "date": "2026-10-09"
   },
   "related": [
@@ -131,7 +138,7 @@
       "src": "/documentation/en/new-issue.png",
       "alt": "Unsent issue draft with a localized title and description and manually available properties.",
       "caption": "Describe the expected result, then choose the useful properties before creating the issue.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -147,7 +154,7 @@
       "src": "/documentation/en/triage-incoming.png",
       "alt": "Incoming demonstration issue DOC-11 with its report, properties and duplicate, Decline and Accept controls.",
       "caption": "Read the incoming report before accepting it, declining it or linking a duplicate.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -163,7 +170,7 @@
       "src": "/documentation/en/issue-statuses.png",
       "alt": "Eight issue statuses in the picker, with backlog currently selected.",
       "caption": "The check marks the current status. Choose the status that reflects the work’s actual state.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -179,7 +186,7 @@
       "src": "/documentation/en/work-resources.png",
       "alt": "Add-link dialog with an example contact URL.",
       "caption": "Review the destination before adding a resource. This example link has not been submitted.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -195,7 +202,7 @@
       "src": "/documentation/en/work-dependencies.png",
       "alt": "Search for a blocker by issue identifier.",
       "caption": "Choose the relation direction before selecting its endpoint. The picker is shown without submitting a relation.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -211,7 +218,7 @@
       "src": "/documentation/en/work-sub-issues.png",
       "alt": "Sub-issue creation field in a demonstration parent issue.",
       "caption": "The inline field creates a child under this parent; a child keeps its own status and discussion.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -227,7 +234,7 @@
       "src": "/documentation/en/work-implementation-plan.png",
       "alt": "Demonstration plan showing two of six work tasks complete.",
       "caption": "The saved demonstration plan separates completed, active and pending steps. Its progress does not prove the fictional code task was executed.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -243,7 +250,7 @@
       "src": "/documentation/en/issue-date-recurrence.png",
       "alt": "Due-date picker in recurring mode with a weekly Sunday preview and optional time.",
       "caption": "Recurring mode previews the weekly cadence. Confirm the first due date before creating the issue.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -259,7 +266,7 @@
       "src": "/documentation/en/work-bulk-actions.png",
       "alt": "Action menu for two selected demonstration issues.",
       "caption": "The menu applies an action to the selected issues. No grouped change was submitted in this capture.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -275,7 +282,7 @@
       "src": "/documentation/en/import-issues-preview-workflow.png",
       "alt": "CSV preview with two localized demonstration rows and detected column mappings.",
       "caption": "CSV preview with two localized demonstration rows and detected column mappings. No import was submitted; optional AI planning was blocked for the capture.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -481,3 +488,15 @@ An AI proposal is requested only for mapping gaps. It is editable and a failed o
 Read the issue counts, status distribution and warnings after each mapping change. Correct skipped or invalid rows before committing. Import creates new issues; do not assume reuploading is a deduplicating update. After success, inspect representative issues, assignments, dates and parent links. If the response is lost, inspect the project before retrying the whole file to avoid duplicate work.
 
 ![CSV preview with two localized demonstration rows and detected column mappings.](/documentation/en/import-issues-preview-workflow.png)
+
+## Export issues as CSV {#export-issues}
+
+As a signed-in project member, open the command palette with Command+K on macOS or Ctrl+K elsewhere and search for “Export issues as CSV”. Choose that command, select one project or all accessible projects, and review the status checkboxes. The current project's page preselects that project. Done, canceled and duplicate issues are excluded by default; include them when you need the full history. At least one status must remain selected. Board filters and card selection do not define this export.
+
+Choose Export and check the download confirmation and reported issue count. The UTF-8 CSV contains issue identifiers, titles, Markdown descriptions, statuses, priorities, effort, categories, assignees, objectives, project names, dates and parent identifiers. Access is restricted to your accessible projects. A header-only file can mean there are no matching accessible issues. Treat the downloaded descriptions and names as project data when sharing the file.
+
+### Check completeness and re-import {#export-issues-limits}
+
+The export is capped at 20,000 issues. A truncation warning means the file may be incomplete; narrow the project and status scope, export separate groups and compare counts. Retrying the same scope does not fetch a later page. If the download fails, check the error, your session and project access before retrying.
+
+The format can be [imported into minddy](#import-issues), with the destination owner's permission and a review of field mapping. Import creates new issues; it does not restore the original identifiers or update existing issues. Keep parent rows in the same import batch. CSV is an issue-data format, not a backup of attached files, comments, account settings or credentials. For an account transfer, use the [instance-transfer guide](/docs/transfer-between-instances).

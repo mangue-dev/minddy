@@ -17,7 +17,7 @@ editorial requirements remain in force.
 
 **Status of every retained row, 2026-10-08:** complete articles published in all
 six locales, with independent agent language/factual reviews and approved
-illustrations. `check:documentation:release` verifies 90/90 workflows. Actual
+illustrations. The original release check verified 90/90 workflows. Actual
 representative reader and operational executions, qualifications and final
 browser checks are in the [delivery ledger](min-664-delivery.md). No human
 acceptance or production deployment is claimed. The
@@ -29,6 +29,15 @@ Every retained row also requires the
 verified content, proportionate detail, natural prose, and complete meaning
 reviewed in each language. An article's existence or length does not satisfy a
 row; its reader outcome and necessary information must pass review.
+
+On 2026-10-09 PR #397 review identified two omissions from the original scope.
+A10 explicitly retains the shared voice-dictation workflow; A11 retains issue CSV
+export separately from account transfer and CSV import. Both map to complete
+sections in the existing feature guides in all six locales. The current ledger
+contains 92 outcomes and keeps every original ID. These additions use text because
+the ordered controls, scope choices and recovery checks are unambiguous without
+another capture. Review evidence is in
+[the correction record](../../content/documentation/reviews/pr397-review-fixes-2026-10-09.md).
 
 ## How to read the matrix
 
@@ -147,6 +156,8 @@ row; its reader outcome and necessary information must pass review.
 | A07 `transfer-between-instances` | Export account data and restore it on another instance | Member; Guide | K/settings-and-data; `components/settings/account-data-section.tsx`; `lib/server/account-import.ts` | Additive transfer, ID conflicts/report, memberships, exclusions/credentials/billing, file handling and privacy | New export/import/result controls | 6T + 6I |
 | A08 `ai-settings-and-usage` | Choose a Cloud plan and understand budget consumption | Member; Explanation and Guide | K/plans-and-billing; `app/(app)/billing/page.tsx`; `app/(marketing)/pricing/page.tsx` | Current capacities, checkout/portal actions, included calls/compute, caps/no overage, BYOK and self-host costs | New billing/usage with demo amounts | 6T + 6I |
 | A09 `accounts` | Manage analytics consent and understand data/deletion choices | Member; Guide | `components/settings/account-analytics-section.tsx`; `components/settings/account-data-section.tsx`; `app/api/account/deletion-preview/route.ts` | Consent effects, data destinations, deletion preview/consequences, export-before-delete and operator policies | New consent/deletion preview without executing deletion | 6T + 6I |
+| A10 `ai-settings-and-usage` | Record and transcribe voice, review dictated drafts and apply issue edits | Member; Guide | `components/ai-elements/dictate-button.tsx`; `app/api/transcribe/route.ts`; `lib/use-issue-dictation.ts`; `components/routines/routine-prompt-field.tsx` | Microphone permissions, entry points, draft versus immediate edits, provider/budget attribution, audio/request limits and recovery | Text: ordered gestures and recovery checks are sufficient | 6T |
+| A11 `issues` | Export accessible issues as CSV and verify scope and completeness before re-import | Member; Guide | `components/export-issues-dialog.tsx`; `components/app-shell-chrome.tsx`; `app/api/me/issues/export/route.ts`; `lib/export/issues-csv.ts` | Command entry point, project/status scope, default exclusions, 20000-row cap, truncation, data privacy and re-import limitations | Text: explicit scope and status instructions are sufficient | 6T |
 | A10 `applications` | Use browser and mobile layouts to finish core tasks | Member; Guide | `components/mobile-sidebar-reveal.tsx`; `components/issue-side-panel.tsx`; `components/assistant-panel.tsx` | Touch navigation/panels, keyboard alternatives, viewport-dependent controls, connectivity limitations | New current mobile issue/page/Numo entry points | 6T + 6I |
 | A11 `applications` | Install and use the PWA on supported mobile browsers | Member; Guide and Troubleshooting | `components/marketing/mobile-pwa-install-guide.tsx`; `components/marketing/mobile-install-guide-copy.ts`; `public/sw.js` | Browser/platform requirements, iOS/Android steps, offline/cache promise, updates and push prerequisites | New localized OS/browser install steps | 6T + 6I |
 | A12 `applications` | Install desktop choose an instance use tabs and update it | Member and Operator; Guide | K/desktop-and-speed; `app/(marketing)/download/page.tsx`; `components/settings/account-desktop-section.tsx`; D/linux-desktop | Cloud/server/local picker, OAuth return, app/OS shortcuts, tabs/window close versus quit, OS-specific update paths | New current localized native controls | 6T + 6I |

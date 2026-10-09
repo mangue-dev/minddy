@@ -43,7 +43,8 @@ flag has no effect in production. Preview checks do not establish published
 coverage. Cross-language links use document navigation to refresh the root
 translation provider while preserving semantic section IDs.
 
-`coverage.json` mirrors the 90 accepted matrix rows. Each row names the article
+`coverage.json` mirrors the 90 original matrix rows and the two PR-review
+additions for voice dictation and issue CSV export (92 outcomes). Each row names the article
 and stable section containing its outcome. The checker rejects ledger drift.
 It also reports pending release coverage even when draft validation passes.
 Do not treat a passing draft check as completion of the ticket.
