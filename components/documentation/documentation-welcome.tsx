@@ -16,6 +16,7 @@ export async function DocumentationWelcome({ articles, locale, query = "", previ
   articles: DocumentationArticle[]; locale: Locale; query?: string; preview?: boolean;
 }) {
   const t = await getTranslations({ locale, namespace: "Documentation" });
+  const installHref = localizedHref("/self-hosting/install", locale);
   const guides = [
     { id: "use", title: t("use"), intro: t("welcomeUse"), tones: [CARD_TONES.sky, CARD_TONES.sage, CARD_TONES.butter], articles: [
       "choose-an-instance", "first-project", "navigation",
@@ -40,25 +41,32 @@ export async function DocumentationWelcome({ articles, locale, query = "", previ
       <ul className="mt-6 grid grid-cols-1 gap-4 @min-[26rem]:grid-cols-2 @min-[42rem]:grid-cols-3">
         {guide.articles.map((id, index) => {
           const article = articles.find(article => article.id === id);
+          const installation = id === "installation";
           return article && <li key={article.id} className="min-w-0">
-            <Link href={documentationPath(article.id, locale)} prefetch={false} aria-labelledby={`guide-${article.id}`}
+            <Link href={installation ? installHref : documentationPath(article.id, locale)} prefetch={false} aria-labelledby={`guide-${article.id}`}
               className="group block h-full rounded-lg focus-visible:outline-2 focus-visible:outline-ring">
               <Card className={cn("h-full gap-0 rounded-lg py-0 ring-current/10 group-hover:ring-current/25 group-focus-visible:ring-ring", guide.tones[index])}>
                 <div className="flex h-28 shrink-0 items-start border-b border-current/10 p-5">
                   <DocumentationIcon articleId={article.id} className="size-5 opacity-80" />
                 </div>
                 <CardContent className="space-y-2 p-5">
-                  <h3 id={`guide-${article.id}`} className="text-sm font-medium leading-5">{article.title}</h3>
-                  <p className="text-[13px] leading-5 opacity-80">{article.summary}</p>
+                  <h3 id={`guide-${article.id}`} className="text-sm font-medium leading-5">{installation ? t("installWizardTitle") : article.title}</h3>
+                  <p className="text-[13px] leading-5 opacity-80">{installation ? t("installWizardSummary") : article.summary}</p>
                 </CardContent>
               </Card>
             </Link>
           </li>;
         })}
       </ul>
-      {guide.id === "operate" && <Link href={localizedHref("/self-hosting", locale)} className="mt-5 inline-flex items-center gap-2 rounded text-sm text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring">
-        {t("selfHosting")}<HugeiconsIcon icon={ArrowRight01Icon} className="size-4" aria-hidden />
-      </Link>}
+      {guide.id === "operate" && <div className="mt-5 flex flex-wrap gap-x-6 gap-y-2">
+        {articles.some(article => article.id === "installation") && <Link href={documentationPath("installation", locale)} prefetch={false}
+          className="inline-flex min-h-11 items-center gap-2 rounded text-sm text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring">
+          {t("installReference")}<HugeiconsIcon icon={ArrowRight01Icon} className="size-4" aria-hidden />
+        </Link>}
+        <Link href={localizedHref("/self-hosting", locale)} className="inline-flex min-h-11 items-center gap-2 rounded text-sm text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring">
+          {t("selfHosting")}<HugeiconsIcon icon={ArrowRight01Icon} className="size-4" aria-hidden />
+        </Link>
+      </div>}
     </section>)}
   </DocumentationShell>;
 }

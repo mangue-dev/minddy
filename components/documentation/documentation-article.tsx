@@ -17,6 +17,7 @@ import { DocumentationImage } from "./documentation-image";
 import { DocumentationDiagram } from "./documentation-diagram";
 import { DocumentationTable } from "./documentation-table";
 import { documentationInlineCodeClassName } from "./documentation-inline-text";
+import { localizedHref } from "@/lib/locale-href";
 
 const articleNavigationClassName = "group flex min-w-0 flex-col gap-3 rounded-lg border border-current/10 p-4 transition-colors hover:border-current/25 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
 
@@ -29,11 +30,20 @@ export async function DocumentationArticleView({ article, articles }: { article:
   const articleIndex = topicArticles.findIndex(item => item.id === article.id);
   const previous = articleIndex > 0 ? topicArticles[articleIndex - 1] : undefined;
   const next = articleIndex >= 0 ? topicArticles[articleIndex + 1] : undefined;
+  const installRoute = article.id === "installation" ? "team" : article.id === "install-locally" ? "local" : null;
   return <DocumentationShell articles={articles} locale={article.locale} currentId={article.id}
     title={article.title} topic={article.topic} sections={article.sections}>
     <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">{article.title}</h1>
     <p className="mt-4 text-lg leading-relaxed text-muted-foreground">{article.summary}</p>
     {article.status === "draft" && <p className="mt-4 rounded-lg border border-border bg-muted p-3 text-sm" role="status">{t("draftPreview")}</p>}
+    {installRoute && <div className={cn("mt-6 rounded-lg p-5", CARD_TONES.sky)}>
+      <p className="text-sm leading-6">{t("installReferenceIntro")}</p>
+      <Button asChild className="mt-4 h-auto min-h-11 max-w-full whitespace-normal text-left">
+        <Link href={`${localizedHref("/self-hosting/install", article.locale)}?route=${installRoute}`} prefetch={false}>
+          {t("installWizardAction")}<HugeiconsIcon icon={ArrowRight01Icon} className="size-4 shrink-0" aria-hidden />
+        </Link>
+      </Button>
+    </div>}
     <div className="text-base leading-7 break-words [&_p]:my-4 [&_ul]:my-4 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:my-4 [&_ol]:list-decimal [&_ol]:pl-6 [&_li]:my-2 [&_a]:underline [&_a]:underline-offset-4 [&_blockquote]:border-l-4 [&_blockquote]:border-border [&_blockquote]:pl-4">
       {chunks.map((chunk, index) => {
         return <section key={chunk.id ?? index} id={chunk.id ?? undefined} tabIndex={-1} className="scroll-mt-40 sm:scroll-mt-32 xl:scroll-mt-24">

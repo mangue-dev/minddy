@@ -33,6 +33,7 @@ function validDiagram(diagram) {
 }
 const markdown = new MarkdownIt({ html: false });
 const publicPaths = new Set(["/self-hosting", "/self-hosting/install", "/pricing", "/mcp", "/feedback", "/login", "/signup"]);
+for (const installerPath of ["/fr/auto-hebergement/installer", "/de/selbst-hosten/installieren", "/es/autoalojamiento/instalar", "/it/hosting-autonomo/installa", "/pt-br/auto-hospedagem/instalar"]) publicPaths.add(installerPath);
 function markdownTargets(content) {
   const targets = [];
   const visit = tokens => tokens.forEach(token => {

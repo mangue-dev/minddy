@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 4,
-  "sourceRevision": 4,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -32,13 +32,15 @@
     "evidence": [
       "docs/editions.md",
       "content/knowledge/open-source.md",
-      "docs/self-hosting-distribution.md"
+      "docs/self-hosting-distribution.md",
+      "app/(marketing)/self-hosting/install/page.tsx",
+      "lib/public-routes.ts"
     ]
   },
   "review": {
-    "revision": 4,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
-    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review)",
+    "revision": 5,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (primary installation path verified against the localized self-hosting wizard routes; technical references retained)",
+    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root (fr wizard-first installation guidance review)",
     "date": "2026-10-09"
   },
   "related": [
@@ -85,4 +87,4 @@ Examinez les permissions et les conditions de traitement des données avant d’
 
 ## Sources et prochaine étape {#next-step}
 
-Le dépôt de référence est [`mangue-dev/minddy`](https://github.com/mangue-dev/minddy), sous GNU AGPL v3.0 uniquement. Respectez la licence et les règles de nommage pour les versions modifiées ou hébergées. Pour installer une instance, ouvrez le [guide d’installation auto-hébergée](/fr/documentation/installation) et son assistant. Avant de transférer votre travail, consultez le [guide de transfert entre instances](/fr/documentation/transfer-between-instances) : les identifiants et les abonnements ne sont pas transférés avec les données du compte.
+Le dépôt de référence est [`mangue-dev/minddy`](https://github.com/mangue-dev/minddy), sous GNU AGPL v3.0 uniquement. Respectez la licence et les règles de nommage pour les versions modifiées ou hébergées. Pour installer une instance, commencez par l’[assistant d’installation auto-hébergée pas à pas](/fr/auto-hebergement/installer). Consultez la [référence d’installation](/fr/documentation/installation) pour les détails techniques et les vérifications complémentaires. Avant de transférer votre travail, consultez le [guide de transfert entre instances](/fr/documentation/transfer-between-instances) : les identifiants et les abonnements ne sont pas transférés avec les données du compte.

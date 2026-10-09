@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 4,
-  "sourceRevision": 4,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -32,13 +32,15 @@
     "evidence": [
       "docs/editions.md",
       "content/knowledge/open-source.md",
-      "docs/self-hosting-distribution.md"
+      "docs/self-hosting-distribution.md",
+      "app/(marketing)/self-hosting/install/page.tsx",
+      "lib/public-routes.ts"
     ]
   },
   "review": {
-    "revision": 4,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review)",
+    "revision": 5,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (primary installation path verified against the localized self-hosting wizard routes; technical references retained)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root (es wizard-first installation guidance review)",
     "date": "2026-10-09"
   },
   "related": [
@@ -85,4 +87,4 @@ Revisa los permisos y las condiciones sobre datos del proveedor antes de activar
 
 ## Fuente y siguiente paso {#next-step}
 
-El repositorio de referencia es [`mangue-dev/minddy`](https://github.com/mangue-dev/minddy), bajo GNU AGPL v3.0 exclusivamente. Respeta la licencia y las reglas de nombres en despliegues modificados o alojados. Para instalar, abre la guía pública de autoalojamiento y su asistente. Antes de trasladar trabajo existente, consulta la guía de transferencia entre instancias: las credenciales y suscripciones no se transfieren con los datos de la cuenta.
+El repositorio de referencia es [`mangue-dev/minddy`](https://github.com/mangue-dev/minddy), bajo GNU AGPL v3.0 exclusivamente. Respeta la licencia y las reglas de nombres en despliegues modificados o alojados. Para instalar, empieza con el [asistente de autoalojamiento paso a paso](/es/autoalojamiento/instalar). Consulta la [referencia de instalación](/es/documentacion/installation) para los detalles técnicos y las comprobaciones adicionales. Antes de trasladar trabajo existente, consulta la guía de transferencia entre instancias: las credenciales y suscripciones no se transfieren con los datos de la cuenta.
