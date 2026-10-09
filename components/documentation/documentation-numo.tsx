@@ -39,7 +39,7 @@ export function DocumentationNumo({ open, onClose, articleId, sections, locale }
   const input = useRef<HTMLTextAreaElement>(null);
   const busy = ["streaming", "executing_tool", "generating_server"].includes(state.status);
   useEffect(() => {
-    if (open && !mobile) input.current?.focus();
+    if (open && !mobile) input.current?.focus({ preventScroll: true });
   }, [open, mobile]);
   useEffect(() => {
     if (!open) return;
@@ -94,5 +94,8 @@ export function DocumentationNumo({ open, onClose, articleId, sections, locale }
       <SheetTitle className="sr-only">{t("numoHelp")}</SheetTitle>{content}
     </MobileSheetContent>
   </Sheet>;
-  return <aside id="documentation-numo" aria-label={t("numoHelp")} hidden={!open} className="fixed bottom-0 right-0 top-16 z-20 w-[24rem] border-l border-border bg-background">{content}</aside>;
+  return <div className="pointer-events-none fixed bottom-0 right-0 top-16 z-20 w-[24rem] overflow-clip">
+    <aside id="documentation-numo" aria-label={t("numoHelp")} aria-hidden={!open} inert={!open}
+      data-state={open ? "open" : "closed"} className="documentation-numo-panel h-full border-l border-border bg-background">{content}</aside>
+  </div>;
 }
