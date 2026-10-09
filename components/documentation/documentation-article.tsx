@@ -13,11 +13,13 @@ import { extractCodeBlock } from "@/lib/markdown-code";
 import { DocumentationShell } from "./documentation-shell";
 import { DocumentationErrorReport } from "./report-error";
 import { DocumentationIcon } from "./documentation-icon";
+import { DocumentationImage } from "./documentation-image";
 
 const articleNavigationClassName = "group flex min-w-0 flex-col gap-3 rounded-lg border border-current/10 p-4 transition-colors hover:border-current/25 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
 
 export async function DocumentationArticleView({ article, articles }: { article: DocumentationArticle; articles: DocumentationArticle[] }) {
   const t = await getTranslations({ locale: article.locale, namespace: "Documentation" });
+  const tPages = await getTranslations({ locale: article.locale, namespace: "Pages" });
   const chunks = documentationBlocks(article.content);
   const related = articles.filter(item => article.related.includes(item.id));
   const topicArticles = articles.filter(item => item.topic === article.topic);
@@ -44,7 +46,8 @@ export async function DocumentationArticleView({ article, articles }: { article:
             table: ({ children }) => <div className="my-5 max-w-full overflow-x-auto rounded border border-border"><table className="w-full text-left text-sm [&_td]:border-t [&_td]:border-border [&_td]:p-3 [&_th]:bg-muted [&_th]:p-3">{children}</table></div>,
             img: ({ src, alt }) => {
               const figure = article.figures.find(item => item.src === src);
-              return typeof src === "string" ? <span className="my-5 block"><a href={src} target="_blank" rel="noreferrer"><img src={src} alt={figure?.alt ?? alt ?? ""} loading="lazy" width={figure?.viewport[0]} height={figure?.viewport[1]} className="h-auto max-w-full rounded-lg border border-border" /></a>{figure && <span className="mt-2 block text-sm text-muted-foreground">{figure.caption}</span>}</span> : null;
+              return typeof src === "string" ? <DocumentationImage src={src} alt={figure?.alt ?? alt ?? ""}
+                width={figure?.viewport[0]} height={figure?.viewport[1]} caption={figure?.caption} openLabel={tPages("imageOpen")} /> : null;
             },
           }}>{chunk.content}</ReactMarkdown>
         </section>;
