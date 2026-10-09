@@ -16,8 +16,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -40,13 +40,17 @@
       "docs/self-hosting.md",
       "scripts/self-hosting-install.mjs",
       "deploy/self-hosted/compose.full.yml",
-      "deploy/self-hosted/compose.managed.yml"
+      "deploy/self-hosted/compose.managed.yml",
+      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json",
+      "content/documentation/reviews/editorial-clarity-en-fr-2026-10-09.md",
+      "content/documentation/reviews/editorial-clarity-de-es-2026-10-09.md",
+      "content/documentation/reviews/editorial-clarity-it-pt-BR-2026-10-09.md"
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
+    "revision": 3,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root/editorial_it_pt (collection-caption clarity)",
     "date": "2026-10-09"
   },
   "related": [
@@ -72,7 +76,7 @@
       "src": "/documentation/pt-BR/self-hosted-compatibility-flow.svg",
       "alt": "Diagrama: Tag de código anotada. Arquivos e SHA256SUMS. Assinatura e digest OCI oficiais. Perfil de compatibilidade escolhido.",
       "caption": "Siga as etapas nesta ordem. Tag de código anotada. Arquivos e SHA256SUMS. Assinatura e digest OCI oficiais. Perfil de compatibilidade escolhido.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -104,7 +108,7 @@
       "src": "/documentation/pt-BR/install-a-server-flow.svg",
       "alt": "Diagrama: Release verificada e ambiente protegido. Instalador: perfil full de referência. Supabase oficial, app, agendador, runner. Verificação de conta, arquivos e recuperação.",
       "caption": "Siga as etapas nesta ordem. Release verificada e ambiente protegido. Instalador: perfil full de referência. Supabase oficial, app, agendador, runner. Verificação de conta, arquivos e recuperação.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -136,23 +140,24 @@
       "src": "/documentation/pt-BR/install-a-server-wizard.png",
       "alt": "Assistente público de instalação com Supabase no mesmo servidor selecionado.",
       "caption": "O perfil full mantém a aplicação e o Supabase no seu servidor. Neste exemplo, o acesso pela rede privada fica restrito à rede local.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         944,
-        1044
+        1051
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "managed-or-source-installation-flow",
       "kind": "diagram",
       "src": "/documentation/pt-BR/managed-or-source-installation-flow.svg",
       "alt": "Diagrama: Seu projeto Supabase gerenciado. PostgreSQL, Auth, Storage, Realtime. Perfil OCI OU aplicação de tag. Tarefas e backup conforme perfil.",
-      "caption": "Estes componentes têm responsabilidades distintas. Seu projeto Supabase gerenciado. PostgreSQL, Auth, Storage, Realtime. Perfil OCI OU aplicação de tag. Tarefas e backup conforme perfil.",
-      "revision": 2,
+      "caption": "A escolha entre imagem OCI e compilação pelo código-fonte muda a gestão da aplicação, enquanto o provedor gerencia o backend.",
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -414,7 +419,7 @@ pnpm self-host:doctor -- --mode full --env-file "$MINDDY_ENV_FILE" \
 
 O wrapper lê o arquivo protegido como dados, calcula as URLs privadas de manutenção com os mesmos helpers exportados pelo instalador e executa o bootstrap original com os pré-requisitos do agendador. Seu log de diagnóstico mantém permissões 0600; não o anexe a um relatório público sem revisá-lo e remover dados sensíveis. Uma fase que falhe deve interromper o procedimento. O doctor deve usar o mesmo contexto adaptado; ele verifica os serviços, não a validação do worker de código nem a entrega por provedores externos.
 
-O helper de armazenamento fixado também permite executar arquivos no diretório de trabalho da sandbox. Caso contrário, o Docker monta esse tmpfs com noexec, impedindo a inicialização do binário nativo do OpenCode e podendo apresentar um erro enganoso do pacote musl usado como alternativa. A correção preserva nosuid, nodev, UID/GID 10001, permissões 0700, sistema de arquivos raiz somente para leitura, capabilities removidas e armazenamento descartável separado para cada sandbox. Ela não torna os dados do host executáveis nem transforma a imagem da aplicação em uma imagem adequada para workers.
+A correção do armazenamento preserva o isolamento descrito nos [limites do runner](#known-runner-limits). Mantenha também a imagem dedicada aos workers: corrigir o runner não acrescenta as ferramentas ausentes à imagem da aplicação.
 
 ## Instalar com Supabase gerenciado ou pelo código-fonte {#managed-or-source-installation}
 

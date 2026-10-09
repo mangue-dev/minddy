@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -37,8 +37,8 @@
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
+    "revision": 6,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
     "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison)",
     "date": "2026-10-09"
   },
@@ -58,7 +58,7 @@
       "src": "/documentation/es/work-inbox.png",
       "alt": "Bandeja de entrada con menciones, asignaciones y comentarios de demostración, leídos y no leídos.",
       "caption": "La actividad de ejemplo muestra el autor, el ticket y el estado de lectura. Todos incluye notificaciones leídas y no leídas.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [

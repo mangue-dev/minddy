@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -36,9 +36,9 @@
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review)",
+    "revision": 3,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -66,7 +66,13 @@ pnpm self-host:doctor -- --mode full --env-file "$MINDDY_ENV_FILE" \
 
 ## Map the symptom to a safe check {#symptoms}
 
-For broad 401 responses after restoration, verify JWT, anon and service-role keys belong to the same stack. For failed uploads or 404 files, compare Storage policies, object records, raw bytes and keys. For missing relations, preserve the first migration error, check disk, locks and the target URL and rerun release bootstrap only after resolving the cause. Never mark failed migrations applied by hand. For Realtime, check publication, JWT, WebSocket proxy and service logs. For idle cron or 401 jobs, verify scheduler state, canonical origin and CRON_SECRET privately.
+| Symptom | Check |
+| --- | --- |
+| Broad 401 responses after restoration | Verify that JWT, anon and service-role keys belong to the same stack. |
+| Failed uploads or 404 files | Compare Storage policies, object records, raw bytes and keys. |
+| Missing database relations | Preserve the first migration error and check disk, locks and the target URL. Rerun release bootstrap only after resolving the cause; never mark failed migrations applied by hand. |
+| Realtime failures | Check publication, JWT, the WebSocket proxy and service logs. |
+| Idle cron or 401 jobs | Verify scheduler state, canonical origin and CRON_SECRET privately. |
 
 ## Retain evidence and retry deliberately {#recovery}
 

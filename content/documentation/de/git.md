@@ -17,8 +17,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -43,9 +43,9 @@
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison)",
+    "revision": 3,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -67,7 +67,7 @@
       "src": "/documentation/de/git-connection-flow.svg",
       "alt": "Die Verbindung des persönlichen Kontos und die Verknüpfung eines Projekt-Repositories sind getrennte Schritte.",
       "caption": "Autorisieren Sie zuerst das Konto und verknüpfen Sie dann als Projektinhaber ein Repository.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -100,7 +100,7 @@
       "src": "/documentation/de/forge-issue-sync-mapping.svg",
       "alt": "GitHub-Synchronisierung mit Einrichtung, Ereignisprüfung, Import und Statusabgleich.",
       "caption": "GitHub-Ereignisse bewahren neuere Änderungen und verhindern doppelte Zustellungen. GitLab-Zuordnungen sind separat zu prüfen.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -138,7 +138,7 @@
       "src": "/documentation/de/forge-issue-sync-workflow.png",
       "alt": "Verknüpftes GitHub-Demonstrationsrepository mit deaktivierter Issue-Synchronisierung.",
       "caption": "Das Demonstrationsrepository ist mit GitHub verknüpft. Die Issue-Synchronisierung ist noch ausgeschaltet. Prüfen Sie den Umfang und den vorhandenen Backlog vor der Aktivierung. Diese Aufnahme belegt keinen synchronisierten Import.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -157,7 +157,7 @@
 }
 ---
 
-Eine Git-Verbindung ermöglicht Repositoryzugriff und Code-Arbeit. Die Repositoryverknüpfung des Projekts und die Synchronisierung von Problemen sind getrennte Einstellungen. Dieser Leitfaden erklärt ihre Einrichtung und die Grenzen bei Rechten, übertragenen Daten und gleichzeitigen Änderungen.
+Ein persönliches Git-Konto zu verbinden, ein Projekt-Repository zu verknüpfen und Forge-Tickets zu synchronisieren sind getrennte Aktionen. Autorisieren Sie zuerst das Konto. Danach wählt der Projekteigentümer das Repository und kann die Synchronisierung mit den erforderlichen Anbieterrechten aktivieren.
 
 ## Git verbinden und ein Repository verknüpfen {#git-accounts-and-repositories}
 

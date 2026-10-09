@@ -21,8 +21,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -51,13 +51,14 @@
       "components/settings/account-mcp-clients.tsx",
       "content/documentation/reviews/remaining-account-capture-candidates.json",
       "components/assistant/usage-exhausted-card.tsx",
-      "components/assistant/ask-user-card.tsx"
+      "components/assistant/ask-user-card.tsx",
+      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json"
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison)",
+    "revision": 3,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -88,15 +89,16 @@
       "src": "/documentation/de/work-with-numo-workflow.png",
       "alt": "Numo-Demonstrationsgespräch mit Seitenkontext, Prioritätsänderung und gespeicherter Antwort.",
       "caption": "Vorhandener Demonstrationsverlauf, für die Anzeige übersetzt. Die gespeicherte Antwort nennt AUR-11 und AUR-7. Die Aufnahme belegt keine neue Ausführung.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         498,
         648
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "numo-permissions-and-approvals-workflow",
@@ -104,7 +106,7 @@
       "src": "/documentation/de/numo-permissions-and-approvals-workflow.svg",
       "alt": "Numo-Berechtigungsmatrix für Projektaktionen, persönliche Verbindungen und Routinen.",
       "caption": "Projektzugriff und ausdrückliche Aufträge begrenzen Numo-Aktionen. Externe Inhalte können keine Berechtigung erteilen.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -165,7 +167,7 @@
       "src": "/documentation/de/numo-execution-model-flow.svg",
       "alt": "Diagramm: Absicht, Nachricht und UUID speichern. Turn beanspruchen, Werkzeuge und Ergebnisse sichern. Bei Bedarf aktuellen Codeworker abwarten. Ereignisse wiedergeben; unklare Writes klären.",
       "caption": "Lesen Sie die Schritte in dieser Reihenfolge. Absicht, Nachricht und UUID speichern. Turn beanspruchen, Werkzeuge und Ergebnisse sichern. Bei Bedarf aktuellen Codeworker abwarten. Ereignisse wiedergeben; unklare Writes klären.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -197,15 +199,16 @@
       "src": "/documentation/de/numo-mcp-connections-workflow.png",
       "alt": "Persönliche MCP-Einstellungen mit leerer Liste und Schaltfläche zum Hinzufügen eines Servers.",
       "caption": "Numo-Verbindungen sind persönlich. Projektroutinen verwenden die Verbindungen des Projektinhabers.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         816,
         1314
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "numo-mcp-connections-config-workflow",
@@ -213,7 +216,7 @@
       "src": "/documentation/de/numo-mcp-connections-config-workflow.png",
       "alt": "Formular für einen eigenen MCP-Server mit erweiterten Einstellungen für Authentifizierung, Transport und Header.",
       "caption": "Formular für einen eigenen MCP-Server mit erweiterten Einstellungen für Authentifizierung, Transport und Header. Es wurden keine Zugangsdaten eingegeben und kein Server kontaktiert.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -221,23 +224,8 @@
         940
       ],
       "theme": "light",
-      "padding": 24
-    },
-    {
-      "id": "recover-numo-work-workflow",
-      "kind": "screenshot",
-      "src": "/documentation/de/recover-numo-work-workflow.png",
-      "alt": "Numo-Antwort mit lokalem Code und Tests, fehlgeschlagenem Branch-Push und noch nicht erstelltem Pull Request.",
-      "caption": "Anfängliches Teilergebnis eines tatsächlich ausgeführten Demonstrationslaufs, für die Anzeige lokalisiert. Zu diesem Zeitpunkt schlug der Push fehl und es gab noch keinen PR. Prüfen Sie gespeicherten Branch und externe Dienste vor der Fortsetzung; später wurde die Arbeit im Gespräch wiederaufgenommen und der PR korrigiert.",
-      "revision": 2,
-      "reviewed": true,
-      "capturedAt": "2026-10-08",
-      "viewport": [
-        912,
-        422
-      ],
-      "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     }
   ],
   "requiredFigures": [
@@ -245,13 +233,12 @@
     "numo-permissions-and-approvals-workflow",
     "numo-execution-model-flow",
     "numo-mcp-connections-workflow",
-    "numo-mcp-connections-config-workflow",
-    "recover-numo-work-workflow"
+    "numo-mcp-connections-config-workflow"
   ]
 }
 ---
 
-Numo arbeitet mit dem Kontext einer Unterhaltung und den verfügbaren Berechtigungen. Dieser Leitfaden erklärt Aufgaben, Freigaben, Ausführung und persönliche MCP-Verbindungen sowie das Fortsetzen wartender oder unterbrochener Arbeit. Prüfen Sie Änderungen am betroffenen Objekt, bevor Sie die Aufgabe als erledigt betrachten.
+Numo arbeitet mit dem Kontext Ihrer Unterhaltung und den Berechtigungen Ihres Kontos. Formulieren Sie einen begrenzten Auftrag und prüfen Sie das Ergebnis. Die Abschnitte zu Freigaben und Ausführung erklären delegierte oder geplante Arbeit. Prüfen Sie bei wartenden oder fehlgeschlagenen Schritten den gespeicherten Zustand, bevor Sie einen Auftrag wiederholen.
 
 ## Eine Projektaufgabe mit Numo erledigen {#work-with-numo}
 
@@ -330,5 +317,3 @@ Beantworten Sie auf einer aktiven Fragekarte alle erforderlichen Fragen und send
 Die Kontolimit-Karte zeigt gegebenenfalls das Rücksetzdatum sowie Tarif- oder Schlüsseloptionen. Die Routinenkarte führt zur Verwaltung; prüfen Sie das Limit pro Durchlauf. Eine Operationszuteilung betrifft diese Operation. Wiederholen hebt das Limit nicht auf. Eigene Modellschlüssel machen Sandbox-Rechenleistung nicht kostenlos.
 
 Ein fehlgeschlagener Lauf kann nur mit einem erhaltenen Checkpoint fortgesetzt werden. Prüfen Sie Ticketänderungen, Branch, PR und externe Dienste vor dem Wiederholen: Eine Schreibaktion kann trotz verlorener Antwort erfolgreich gewesen sein. Beschreiben Sie den Rest und bitten Sie um Fortsetzung. Ohne nutzbaren Checkpoint übergeben Sie den geprüften Zustand in einem neuen Auftrag. Melden Sie anhaltende Fehler mit Gesprächsbezug, aber ohne Zugangsdaten.
-
-![Numo-Antwort mit lokalem Code und Tests, fehlgeschlagenem Branch-Push und noch nicht erstelltem Pull Request.](/documentation/de/recover-numo-work-workflow.png)

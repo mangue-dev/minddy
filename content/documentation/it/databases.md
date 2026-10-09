@@ -17,8 +17,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -45,9 +45,9 @@
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
+    "revision": 6,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -72,7 +72,7 @@
       "src": "/documentation/it/database-property-types.png",
       "alt": "Selettore del tipo di colonna con testo, numero, selezioni, date, persone e casella di controllo.",
       "caption": "Scegli un tipo adatto ai valori da conservare.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -88,7 +88,7 @@
       "src": "/documentation/it/database-entry.png",
       "alt": "Voce dimostrativa con descrizione, durata 2.5, casella selezionata e selezione vuota.",
       "caption": "Apri una voce per leggere il testo completo e modificare i valori in base al tipo.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -104,7 +104,7 @@
       "src": "/documentation/it/database-conversion-warning.png",
       "alt": "Avviso di conversione: il passaggio da Testo a Numero svuota una cella incompatibile, con pulsanti per annullare o confermare.",
       "caption": "Controlla il numero effettivo di celle incompatibili prima di confermare. Annulla conserva i valori attuali.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -120,7 +120,7 @@
       "src": "/documentation/it/database-import-review.png",
       "alt": "Verifica di un CSV locale: due pagine di voci e due colonne, con il pulsante Importa database.",
       "caption": "Controlla le voci analizzate e il numero di colonne prima di importare nel database vuoto.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -140,7 +140,7 @@
 }
 ---
 
-Un database organizza pagine come voci con proprietà strutturate. Puoi definirne le colonne, modificare valori e contenuti e adattare lo schema. Le conversioni richiedono di controllare l’anteprima; l’importazione di un archivio completo parte da un database nuovo e vuoto.
+Un database combina una tabella di proprietà strutturate con una pagina completa per ogni voce. Puoi creare colonne e modificare le voci manualmente oppure importare un database in una destinazione nuova e vuota. Prima di convertire una proprietà o eliminare una colonna, controlla quali valori saranno sostituiti o persi.
 
 ## Creare un database e le sue colonne {#create-a-database}
 

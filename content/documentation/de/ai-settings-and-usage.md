@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -42,13 +42,14 @@
       "lib/server/agent/execute.ts",
       "app/(app)/billing/page.tsx",
       "app/(marketing)/pricing/page.tsx",
-      "lib/billing-plans.ts"
+      "lib/billing-plans.ts",
+      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json"
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison)",
+    "revision": 6,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -70,15 +71,16 @@
       "src": "/documentation/de/ai-keys-and-models-workflow.png",
       "alt": "KI-Anbieterauswahl mit ausgewähltem minddy Cloud.",
       "caption": "Der ausgewählte Cloud-Anbieter nutzt den Kontotarif. Persönliche Anbieter richtest du über diese Auswahl ein.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         816,
         212
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "ai-keys-and-models-defaults-workflow",
@@ -86,15 +88,16 @@
       "src": "/documentation/de/ai-keys-and-models-defaults-workflow.png",
       "alt": "Standardmodell und Denkstufe für Codearbeit.",
       "caption": "Standardmodell und Denkstufe für Codearbeit. Neue Code-Worker verwenden diese Vorgaben; laufende Worker behalten ihre festgelegten Einstellungen.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         816,
         217
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "plans-and-ai-usage-workflow",
@@ -102,15 +105,16 @@
       "src": "/documentation/de/plans-and-ai-usage-workflow.png",
       "alt": "KI-Nutzungsseite des Demonstrationskontos.",
       "caption": "KI-Nutzungsseite des Demonstrationskontos. Budget, Nutzungskategorien und Verlauf werden aus dem Konto gelesen; kein Kauf oder kostenpflichtiger Lauf wurde ausgelöst.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         1154,
-        1766
+        1016
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     }
   ],
   "requiredFigures": [
@@ -121,7 +125,7 @@
 }
 ---
 
-Persönliche KI-Schlüssel, Standardmodelle und Cloud-Kontingente bestimmen, wie KI-Arbeit ausgeführt und abgerechnet wird. Die folgenden Abschnitte erklären Anbieter und Ausführungsort sowie Tarifkapazität und Budgetverbrauch; prüfen Sie die verfügbaren Einstellungen und den aktuellen Verbrauch in Ihrem Konto.
+Die KI-Kontoeinstellungen legen Anbieter, persönliche Schlüssel und Standardwerte für die unterstützten Funktionen fest. Prüfen Sie vor Arbeitsbeginn die Modellzuordnung. Unterscheiden Sie beim Cloud-Verbrauch zwischen Anbieterabrechnung, enthaltenem KI-Kontingent, Sandbox-Rechenleistung und Routinenlimits.
 
 ## Eigene KI-Schlüssel und Modelle konfigurieren {#ai-keys-and-models}
 

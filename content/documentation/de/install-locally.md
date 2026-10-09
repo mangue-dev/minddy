@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -32,13 +32,17 @@
     "evidence": [
       "docs/self-hosting.md",
       "scripts/self-hosting-local.mjs",
-      "content/knowledge/self-hosting.md"
+      "content/knowledge/self-hosting.md",
+      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json",
+      "content/documentation/reviews/editorial-clarity-en-fr-2026-10-09.md",
+      "content/documentation/reviews/editorial-clarity-de-es-2026-10-09.md",
+      "content/documentation/reviews/editorial-clarity-it-pt-BR-2026-10-09.md"
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison)",
+    "revision": 3,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (collection-caption clarity)",
     "date": "2026-10-09"
   },
   "related": [
@@ -55,8 +59,8 @@
       "kind": "diagram",
       "src": "/documentation/de/install-locally-flow.svg",
       "alt": "Diagramm: Desktop-App wählt den Klon. Loopback-Anwendung: Port 6463. Minimales Supabase und dauerhafte Daten. Beenden stoppt App und Backend.",
-      "caption": "Diese Komponenten haben unterschiedliche Aufgaben. Desktop-App wählt den Klon. Loopback-Anwendung: Port 6463. Minimales Supabase und dauerhafte Daten. Beenden stoppt App und Backend.",
-      "revision": 2,
+      "caption": "Die Desktop-App steuert die lokalen Dienste des gewählten Klons, während ihre Daten dauerhaft gespeichert bleiben.",
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -88,15 +92,16 @@
       "src": "/documentation/de/install-locally-wizard.png",
       "alt": "Öffentlicher Installationsassistent mit ausgewähltem Profil für diesen Computer.",
       "caption": "Wählen Sie die persönliche Installation, wenn die Desktop-App die lokalen Dienste verwalten soll.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         944,
-        606
+        614
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     }
   ],
   "requiredFigures": [

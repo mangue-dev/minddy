@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -39,9 +39,9 @@
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review)",
+    "revision": 3,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -59,23 +59,7 @@
       "src": "/documentation/en/instance-administration-overview.png",
       "alt": "Administrator overview with aggregate account, onboarding and content metrics.",
       "caption": "Overview shows aggregate instance indicators. Finances is absent on this demonstration profile because no managed OpenRouter key is configured.",
-      "revision": 2,
-      "reviewed": true,
-      "capturedAt": "2026-10-08",
-      "viewport": [
-        1488,
-        1148
-      ],
-      "theme": "light",
-      "padding": 24
-    },
-    {
-      "id": "instance-administration-users",
-      "kind": "screenshot",
-      "src": "/documentation/en/instance-administration-users.png",
-      "alt": "Account support panel with exact email lookup and no directory of user content.",
-      "caption": "Users opens a specific account for support or billing; the initial screen does not list private activity or personal content.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -91,7 +75,7 @@
       "src": "/documentation/en/instance-administration-models.png",
       "alt": "Instance AI model and reasoning settings.",
       "caption": "Models configures defaults and dedicated uses. This capture shows the existing configuration; no model or provider setting was changed.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -114,8 +98,6 @@ Instance administration is separate from project ownership. Set ADMIN_EMAILS to 
 
 
 ![Administrator overview with aggregate account, onboarding and content metrics.](/documentation/en/instance-administration-overview.png)
-
-![Account support panel with exact email lookup and no directory of user content.](/documentation/en/instance-administration-users.png)
 
 ![Instance AI model and reasoning settings.](/documentation/en/instance-administration-models.png)
 

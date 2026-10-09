@@ -16,8 +16,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -40,13 +40,16 @@
       "docs/self-hosting-distribution.md",
       "vercel.json",
       "deploy/self-hosted/compose.full.yml",
-      "deploy/self-hosted/scheduler.mjs"
+      "deploy/self-hosted/scheduler.mjs",
+      "content/documentation/reviews/editorial-clarity-en-fr-2026-10-09.md",
+      "content/documentation/reviews/editorial-clarity-de-es-2026-10-09.md",
+      "content/documentation/reviews/editorial-clarity-it-pt-BR-2026-10-09.md"
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun)",
-    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review)",
+    "revision": 3,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (collection-caption clarity)",
     "date": "2026-10-09"
   },
   "related": [
@@ -71,8 +74,8 @@
       "kind": "diagram",
       "src": "/documentation/fr/optional-providers-flow.svg",
       "alt": "Schéma: L’opérateur choisit une capacité optionnelle. Identifiants complets et conditions fournisseur. Destination externe explicitement choisie. Vérifier le comportement et suivre les coûts.",
-      "caption": "Ces composants ont des responsabilités distinctes. L’opérateur choisit une capacité optionnelle. Identifiants complets et conditions fournisseur. Destination externe explicitement choisie. Vérifier le comportement et suivre les coûts.",
-      "revision": 2,
+      "caption": "Activer un service optionnel ajoute ses propres identifiants, destinations de données et coûts d’utilisation.",
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -103,8 +106,8 @@
       "kind": "diagram",
       "src": "/documentation/fr/proxy-network-and-jobs-flow.svg",
       "alt": "Schéma: Proxy HTTPS public. Origines application et Supabase public. Runner, base et ports internes privés. Jobs authentifiés, arrêtés en maintenance.",
-      "caption": "Ces composants ont des responsabilités distinctes. Proxy HTTPS public. Origines application et Supabase public. Runner, base et ports internes privés. Jobs authentifiés, arrêtés en maintenance.",
-      "revision": 2,
+      "caption": "L’accès public utilise HTTPS, tandis que les services internes restent privés et les tâches planifiées sont arrêtées pendant la maintenance.",
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

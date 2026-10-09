@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 3,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -40,8 +40,8 @@
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
+    "revision": 4,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
     "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison)",
     "date": "2026-10-09"
   },
@@ -61,7 +61,7 @@
       "src": "/documentation/de/reader-statistics.png",
       "alt": "Persönliche Statistik mit Jahresraster, Aufschlüsselungen, Arbeitsrhythmus und Gesamtzahlen.",
       "caption": "Das Demokonto zeigt ein abgeschlossenes und elf erstellte Tickets. Die angezeigten Statistiken sind echt; Projekt- und Zielnamen wurden für die Darstellung übersetzt.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

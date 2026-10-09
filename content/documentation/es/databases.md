@@ -17,8 +17,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -45,9 +45,9 @@
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison)",
+    "revision": 6,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -72,7 +72,7 @@
       "src": "/documentation/es/database-property-types.png",
       "alt": "Selector de tipo de columna con texto, número, selecciones, fechas, personas y casilla de verificación.",
       "caption": "Elige un tipo que corresponda a los valores que deseas guardar.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -88,7 +88,7 @@
       "src": "/documentation/es/database-entry.png",
       "alt": "Entrada de demostración con descripción, duración 2.5, casilla marcada y selección vacía.",
       "caption": "Abre una entrada para leer el texto completo y editar los valores según su tipo.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -104,7 +104,7 @@
       "src": "/documentation/es/database-conversion-warning.png",
       "alt": "Advertencia de conversión: cambiar de Texto a Número borra una celda incompatible, con botones para cancelar o confirmar.",
       "caption": "Revisa el número real de celdas incompatibles antes de confirmar. Cancelar conserva los valores actuales.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -120,7 +120,7 @@
       "src": "/documentation/es/database-import-review.png",
       "alt": "Revisión de un CSV local: dos páginas de entradas y dos columnas, con el botón Importar base de datos.",
       "caption": "Revisa las entradas analizadas y el número de columnas antes de importar a la base vacía.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -140,7 +140,7 @@
 }
 ---
 
-Las bases de datos combinan una tabla con las páginas de sus entradas. Esta guía explica la configuración, la edición y los cambios de esquema, además de la importación en una base vacía. Antes de convertir propiedades o importar, revisa los límites y las posibles pérdidas de datos descritos en cada apartado.
+Una base de datos combina una tabla de propiedades tipadas con una página completa por entrada. Puedes crear columnas y editar entradas manualmente o importar una base existente en un destino vacío. Antes de cambiar el tipo de una propiedad o eliminar una columna, revisa qué valores se sustituirán o perderán.
 
 ## Crear una base de datos y sus columnas {#create-a-database}
 

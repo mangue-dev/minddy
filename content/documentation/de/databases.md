@@ -17,8 +17,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -45,9 +45,9 @@
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison)",
+    "revision": 6,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -72,7 +72,7 @@
       "src": "/documentation/de/database-property-types.png",
       "alt": "Auswahl des Spaltentyps mit Text, Zahl, Auswahl, Datum, Personen und Kontrollkästchen.",
       "caption": "Wähle einen Typ, der zu den gespeicherten Werten passt.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -88,7 +88,7 @@
       "src": "/documentation/de/database-entry.png",
       "alt": "Demoeintrag mit Beschreibung, Dauer 2.5, aktiviertem Kontrollkästchen und leerer Auswahl.",
       "caption": "Öffne einen Eintrag, um den vollständigen Text zu lesen und typisierte Werte zu bearbeiten.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -104,7 +104,7 @@
       "src": "/documentation/de/database-conversion-warning.png",
       "alt": "Umwandlungswarnung: Der Wechsel von Text zu Zahl leert eine inkompatible Zelle; Abbrechen und Bestätigen sind verfügbar.",
       "caption": "Prüfe die tatsächliche Zahl inkompatibler Zellen vor der Bestätigung. Abbrechen erhält die bisherigen Werte.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -120,7 +120,7 @@
       "src": "/documentation/de/database-import-review.png",
       "alt": "Importprüfung einer lokalen CSV-Datei: zwei Eintragsseiten und zwei Eigenschaftsspalten mit der Importschaltfläche.",
       "caption": "Prüfe die eingelesenen Einträge und die Spaltenzahl vor dem Import in die leere Datenbank.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -140,7 +140,7 @@
 }
 ---
 
-Datenbanken verbinden eine Tabelle mit den Seiten ihrer Einträge. Dieser Leitfaden führt durch Einrichtung, Bearbeitung und Schemaänderungen sowie den Import in eine leere Datenbank. Prüfe vor Umwandlungen oder Importen die beschriebenen Grenzen und möglichen Datenverluste.
+Eine Datenbank verbindet eine Tabelle mit typisierten Eigenschaften und einer vollständigen Seite je Eintrag. Du kannst Spalten und Einträge selbst anlegen oder eine vorhandene Datenbank in ein leeres Ziel importieren. Prüfe vor einer Typänderung oder dem Löschen einer Spalte, welche gespeicherten Werte ersetzt werden oder verloren gehen.
 
 ## Eine Datenbank und ihre Spalten erstellen {#create-a-database}
 

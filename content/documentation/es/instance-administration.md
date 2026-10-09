@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -39,9 +39,9 @@
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison)",
+    "revision": 3,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -59,23 +59,7 @@
       "src": "/documentation/es/instance-administration-overview.png",
       "alt": "Resumen de administración con métricas agregadas de cuentas, incorporación y contenido.",
       "caption": "Resumen muestra indicadores agregados de la instancia. Finanzas no aparece en este perfil de demostración porque no hay una clave gestionada de OpenRouter configurada.",
-      "revision": 2,
-      "reviewed": true,
-      "capturedAt": "2026-10-08",
-      "viewport": [
-        1488,
-        1148
-      ],
-      "theme": "light",
-      "padding": 24
-    },
-    {
-      "id": "instance-administration-users",
-      "kind": "screenshot",
-      "src": "/documentation/es/instance-administration-users.png",
-      "alt": "Asistencia de cuentas con búsqueda por correo exacto, sin directorio de contenido personal.",
-      "caption": "Usuarios abre una cuenta concreta para asistencia o facturación; la pantalla inicial no enumera actividad privada ni contenido personal.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -91,7 +75,7 @@
       "src": "/documentation/es/instance-administration-models.png",
       "alt": "Configuración de modelos de IA y razonamiento de la instancia.",
       "caption": "Modelos configura valores predeterminados y usos específicos. La captura muestra la configuración existente; no se cambió ningún modelo ni proveedor.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -116,8 +100,6 @@ Administrar la instancia es distinto de ser propietario de un proyecto. ADMIN_EM
 
 
 ![Resumen de administración con métricas agregadas de cuentas, incorporación y contenido.](/documentation/es/instance-administration-overview.png)
-
-![Asistencia de cuentas con búsqueda por correo exacto, sin directorio de contenido personal.](/documentation/es/instance-administration-users.png)
 
 ![Configuración de modelos de IA y razonamiento de la instancia.](/documentation/es/instance-administration-models.png)
 

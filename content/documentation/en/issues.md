@@ -24,8 +24,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -78,13 +78,14 @@
       "lib/use-csv-import.ts",
       "lib/import/types.ts",
       "lib/server/import-issues.ts",
-      "content/documentation/reviews/csv-preview-capture-candidates.json"
+      "content/documentation/reviews/csv-preview-capture-candidates.json",
+      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json"
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review)",
+    "revision": 6,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -130,7 +131,7 @@
       "src": "/documentation/en/new-issue.png",
       "alt": "Unsent issue draft with a localized title and description and manually available properties.",
       "caption": "Describe the expected result, then choose the useful properties before creating the issue.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -146,7 +147,7 @@
       "src": "/documentation/en/triage-incoming.png",
       "alt": "Incoming demonstration issue DOC-11 with its report, properties and duplicate, Decline and Accept controls.",
       "caption": "Read the incoming report before accepting it, declining it or linking a duplicate.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -162,7 +163,7 @@
       "src": "/documentation/en/issue-statuses.png",
       "alt": "Eight issue statuses in the picker, with backlog currently selected.",
       "caption": "The check marks the current status. Choose the status that reflects the work’s actual state.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -178,7 +179,7 @@
       "src": "/documentation/en/work-resources.png",
       "alt": "Add-link dialog with an example contact URL.",
       "caption": "Review the destination before adding a resource. This example link has not been submitted.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -194,7 +195,7 @@
       "src": "/documentation/en/work-dependencies.png",
       "alt": "Search for a blocker by issue identifier.",
       "caption": "Choose the relation direction before selecting its endpoint. The picker is shown without submitting a relation.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -210,7 +211,7 @@
       "src": "/documentation/en/work-sub-issues.png",
       "alt": "Sub-issue creation field in a demonstration parent issue.",
       "caption": "The inline field creates a child under this parent; a child keeps its own status and discussion.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -226,7 +227,7 @@
       "src": "/documentation/en/work-implementation-plan.png",
       "alt": "Demonstration plan showing two of six work tasks complete.",
       "caption": "The saved demonstration plan separates completed, active and pending steps. Its progress does not prove the fictional code task was executed.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -242,7 +243,7 @@
       "src": "/documentation/en/issue-date-recurrence.png",
       "alt": "Due-date picker in recurring mode with a weekly Sunday preview and optional time.",
       "caption": "Recurring mode previews the weekly cadence. Confirm the first due date before creating the issue.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -258,7 +259,7 @@
       "src": "/documentation/en/work-bulk-actions.png",
       "alt": "Action menu for two selected demonstration issues.",
       "caption": "The menu applies an action to the selected issues. No grouped change was submitted in this capture.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -274,15 +275,16 @@
       "src": "/documentation/en/import-issues-preview-workflow.png",
       "alt": "CSV preview with two localized demonstration rows and detected column mappings.",
       "caption": "CSV preview with two localized demonstration rows and detected column mappings. No import was submitted; optional AI planning was blocked for the capture.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         816,
         977
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     }
   ],
   "requiredFigures": [
@@ -331,7 +333,14 @@ Choose Accept and confirm to move a retained issue to backlog. Choose Decline an
 
 Smart Triage uses deterministic sorting rules.
 
-Within each status column, the rules first put open issues blocking other open work ahead of unblocked issues. Issues blocked by open work go last, even when they also block other issues. Closed endpoints no longer create that priority. Within a tier, higher priority, smaller effort and overdue or imminent due dates bring work forward. Within the same blocking tier, issues sharing an objective stay together, ordered by the best-ranked issue in their group. Ties use due date, then oldest creation date, then manual position, with the identifier as a final stable tie-break. A related link does not affect this ordering. It is not an experimental AI triage mode. The ordering helps decide which items to inspect first; it does not establish the truth of a description, resolve duplicates automatically or grant permissions.
+Within each status column:
+
+- Open issues blocking other open work come first, followed by unblocked issues. Issues blocked by open work come last, even if they also block others. Closed endpoints no longer affect this priority.
+- Within a blocking tier, higher priority, smaller effort and overdue or imminent due dates bring work forward.
+- Issues sharing an objective stay together within that tier, ordered by the best-ranked issue in the group.
+- Ties use due date, then oldest creation date, manual position and finally the identifier.
+
+A related link does not affect ordering. Smart Triage is not an experimental AI mode: its ranking helps you choose what to inspect first, but does not validate descriptions, resolve duplicates or grant permissions.
 
 If the expected item is missing, check the active project, status and filters, then search its identifier. Imported or externally synchronized work may enter triage; inspect the original source and the integration's mapping before changing mirrored fields. A request linked from feedback is still a distinct feedback object with its own public discussion.
 

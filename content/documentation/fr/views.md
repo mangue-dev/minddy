@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 4,
-  "sourceRevision": 4,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -43,9 +43,9 @@
     ]
   },
   "review": {
-    "revision": 4,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun)",
-    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review)",
+    "revision": 5,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -68,7 +68,7 @@
       "src": "/documentation/fr/work-view-filters.png",
       "alt": "Filtres manuels d’une vue et menu de classement.",
       "caption": "Filtrez par propriétés du ticket ou choisissez un ordre. Le champ IA est facultatif pour ces commandes manuelles.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -84,7 +84,7 @@
       "src": "/documentation/fr/work-share-view.png",
       "alt": "Dialogue de partage d’une vue avec l’accès privé sélectionné.",
       "caption": "Les accès privé, protégé par mot de passe et public correspondent à trois choix distincts. Cette vue reste privée sur la capture.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -110,7 +110,7 @@ Partez du tableau d’un projet ou d’une surface personnelle transversale. Uti
 
 Filtrez selon les propriétés disponibles, comme état, responsable, priorité, catégories ou objectif. Classez les résultats pour clarifier la prochaine action. En kanban, les tickets restent regroupés par état ; modifier la vue ne modifie ni leurs états ni leurs affectations.
 
-Enregistrez un nom qui décrit l’usage, sélectionnez de nouveau la vue dans la navigation et vérifiez ses filtres. Modifiez ou supprimez la vue lorsque son usage change. Le partage est une publication séparée, avec permissions et révocation propres.
+Enregistrez la vue avec un nom qui décrit son usage, sélectionnez-la de nouveau dans la navigation et vérifiez ses filtres. Modifiez-la ou supprimez-la lorsque son usage change. Pour les permissions de publication et la révocation, consultez le [partage d’une vue](#share-a-view).
 
 ![Filtres manuels d’une vue et menu de classement.](/documentation/fr/work-view-filters.png)
 

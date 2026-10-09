@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -37,8 +37,8 @@
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun)",
+    "revision": 6,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
     "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review)",
     "date": "2026-10-09"
   },
@@ -58,7 +58,7 @@
       "src": "/documentation/en/work-inbox.png",
       "alt": "Inbox with demonstration mentions, assignments and comments, including read and unread items.",
       "caption": "Demonstration activity shows the author, issue and read state. All includes read and unread notifications.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [

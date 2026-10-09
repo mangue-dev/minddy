@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -37,13 +37,16 @@
       "lib/server/page-publication.ts",
       "lib/server/mcp/auth.ts",
       "proxy.ts",
-      "content/knowledge/settings-and-data.md"
+      "content/knowledge/settings-and-data.md",
+      "content/documentation/reviews/editorial-clarity-en-fr-2026-10-09.md",
+      "content/documentation/reviews/editorial-clarity-de-es-2026-10-09.md",
+      "content/documentation/reviews/editorial-clarity-it-pt-BR-2026-10-09.md"
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison)",
+    "revision": 3,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (collection-caption clarity)",
     "date": "2026-10-09"
   },
   "related": [
@@ -61,8 +64,8 @@
       "kind": "diagram",
       "src": "/documentation/es/permissions-and-public-links-flow.svg",
       "alt": "Diagrama: Permisos de cuenta y proyecto. Objeto privado o publicación explícita. Solo conjunto publicado y archivos firmados. Revocar enlace; archivos caducan después.",
-      "caption": "Estos componentes tienen responsabilidades distintas. Permisos de cuenta y proyecto. Objeto privado o publicación explícita. Solo conjunto publicado y archivos firmados. Revocar enlace; archivos caducan después.",
-      "revision": 2,
+      "caption": "Compartir da acceso solo al contenido seleccionado; los enlaces de archivo ya emitidos pueden seguir siendo válidos después de revocar el acceso compartido.",
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

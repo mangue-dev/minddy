@@ -16,8 +16,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -41,9 +41,9 @@
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison)",
+    "revision": 6,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -68,7 +68,7 @@
       "src": "/documentation/de/project-general.png",
       "alt": "Allgemeine Projekteinstellungen mit Name, Schlüssel, Symbol und eigener Papierkorbaktion.",
       "caption": "Prüfe Namen und Schlüssel vor dem Speichern. Das Verschieben in den Papierkorb ist eine eigene Aktion.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -84,7 +84,7 @@
       "src": "/documentation/de/project-members.png",
       "alt": "E-Mail-Einladung und drei Demomitglieder mit Kennzeichnung des Eigentümers.",
       "caption": "Lade Mitglieder über ihre Konto-E-Mail ein und prüfe den Eigentümer, bevor du einen Zugang entfernst.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -102,7 +102,7 @@
 }
 ---
 
-Ein Projekt verbindet gemeinsame Arbeit mit dem Zugriff seiner Mitglieder. Die folgenden Abschnitte behandeln Einstellungen und Einladungen und unterscheiden die Funktionen des Projekteigentümers von denen der Mitglieder.
+Ein Projekt verbindet Probleme, Ziele, Seiten und Mitglieder. Sein Eigentümer verwaltet Einstellungen und Einladungen. Mitglieder bearbeiten Inhalte und können das Projekt verlassen. Wähle den passenden Abschnitt, um das Projekt einzurichten oder ein Einladungsproblem zu lösen.
 
 ## Ein Projekt einrichten {#project-settings}
 

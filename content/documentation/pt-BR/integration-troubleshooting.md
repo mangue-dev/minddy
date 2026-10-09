@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -39,9 +39,9 @@
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
+    "revision": 3,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -52,27 +52,8 @@
   "tags": [
     "Recuperar falhas OAuth, MCP, webhook ou Git"
   ],
-  "figures": [
-    {
-      "id": "integration-troubleshooting-flow",
-      "kind": "screenshot",
-      "src": "/documentation/pt-BR/integration-troubleshooting-error.png",
-      "alt": "Erro ao carregar conexões MCP com o botão Tentar novamente.",
-      "caption": "Tentar novamente recarrega as conexões quando a rede volta a estar disponível.",
-      "revision": 2,
-      "reviewed": true,
-      "capturedAt": "2026-10-08",
-      "viewport": [
-        782,
-        108
-      ],
-      "theme": "light",
-      "padding": 24
-    }
-  ],
-  "requiredFigures": [
-    "integration-troubleshooting-flow"
-  ]
+  "figures": [],
+  "requiredFigures": []
 }
 ---
 
@@ -80,8 +61,6 @@
 
 O minddy MCP conecta um assistente externo ao minddy; o MCP pessoal permite que o Numo chame um servidor externo. Eles usam abas e credenciais diferentes. Confira o estado nas configurações, teste a conexão e reconecte quando necessário. Há suporte a descoberta, registro dinâmico, PKCE e renovação de tokens, mas uma entrada no catálogo não elimina exigências de aprovação, prévia ou cadastro da aplicação pelo provedor. Verifique os pré-requisitos atuais do provedor antes de apontar um defeito.
 
-
-![Erro ao carregar conexões MCP com o botão Tentar novamente.](/documentation/pt-BR/integration-troubleshooting-error.png)
 
 ## Reconectar com o escopo correto {#oauth}
 

@@ -21,8 +21,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -60,9 +60,9 @@
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison)",
+    "revision": 6,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -98,7 +98,7 @@
       "src": "/documentation/es/page-create-menu.png",
       "alt": "Menú de creación con Nueva página y Nueva base de datos.",
       "caption": "Utiliza los controles de páginas del proyecto para elegir un documento o una base de datos.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -114,7 +114,7 @@
       "src": "/documentation/es/page-editor.png",
       "alt": "Página de demostración con títulos, párrafos, casillas de tareas y una mención a un ticket.",
       "caption": "Los títulos, las tareas y la mención AUR-2 estructuran la página. El contenido es un ejemplo de demostración.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -130,7 +130,7 @@
       "src": "/documentation/es/page-comments.png",
       "alt": "Actividad de la página con una edición de demostración y el campo de comentario vacío.",
       "caption": "Consulta la actividad y escribe un comentario en el campo. En este ejemplo no se ha enviado ninguno.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -146,7 +146,7 @@
       "src": "/documentation/es/page-file-states.png",
       "alt": "Página de demostración con una carga incompleta y un archivo guardado de 67 bytes que ofrece Descargar.",
       "caption": "Comprueba el estado real del archivo: el segundo adjunto está disponible y la primera carga incompleta no.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -162,7 +162,7 @@
       "src": "/documentation/es/page-history-preview.png",
       "alt": "Pestaña Versiones con un estado anterior desplegado, su autor, Restaurar y el aviso de conservación durante 30 días.",
       "caption": "Previsualiza un estado guardado y compáralo con la página actual antes de restaurarlo.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -178,7 +178,7 @@
       "src": "/documentation/es/page-publish.png",
       "alt": "Diálogo de publicación con Privado seleccionado y opciones de contraseña o enlace.",
       "caption": "Privado mantiene la página dentro del proyecto. Revisa quién debe verla antes de cambiar la publicación.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -194,7 +194,7 @@
       "src": "/documentation/es/page-export.png",
       "alt": "Menú de exportación del documento con Markdown (.md) e Imprimir / PDF.",
       "caption": "Elige Markdown para descargar el documento o Imprimir / PDF para abrir la vista de impresión.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -217,7 +217,7 @@
 }
 ---
 
-Las páginas conservan el conocimiento del proyecto en documentos y subpáginas. Aquí encontrarás organización, edición, colaboración, adjuntos, historial, publicación y exportación. El menú de la página no permite importar documentos de forma general; las importaciones compatibles comienzan en una base de datos vacía.
+Las páginas forman el wiki de un proyecto, con documentos, subpáginas y entradas de bases de datos. Puedes organizar y editar el contenido, colaborar, gestionar archivos y versiones, publicar una rama o exportarla. Las importaciones comienzan en una base de datos vacía; sigue la [guía de bases de datos](/es/documentacion/databases#import-a-database).
 
 ## Crear una wiki del proyecto {#create-and-organize-pages}
 

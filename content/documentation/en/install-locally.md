@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -32,13 +32,17 @@
     "evidence": [
       "docs/self-hosting.md",
       "scripts/self-hosting-local.mjs",
-      "content/knowledge/self-hosting.md"
+      "content/knowledge/self-hosting.md",
+      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json",
+      "content/documentation/reviews/editorial-clarity-en-fr-2026-10-09.md",
+      "content/documentation/reviews/editorial-clarity-de-es-2026-10-09.md",
+      "content/documentation/reviews/editorial-clarity-it-pt-BR-2026-10-09.md"
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review)",
+    "revision": 3,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (collection-caption clarity)",
     "date": "2026-10-09"
   },
   "related": [
@@ -55,8 +59,8 @@
       "kind": "diagram",
       "src": "/documentation/en/install-locally-flow.svg",
       "alt": "Diagram: Desktop app selects the clone. Loopback application: port 6463. Minimal Supabase and durable data. Quitting stops app and backend.",
-      "caption": "These components have distinct responsibilities. Desktop app selects the clone. Loopback application: port 6463. Minimal Supabase and durable data. Quitting stops app and backend.",
-      "revision": 2,
+      "caption": "The desktop app manages startup and shutdown of local services while preserving their stored data.",
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -88,15 +92,16 @@
       "src": "/documentation/en/install-locally-wizard.png",
       "alt": "Public installation wizard with the local computer profile selected.",
       "caption": "Choose the personal installation when the desktop app will manage the local services.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         944,
-        500
+        504
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     }
   ],
   "requiredFigures": [

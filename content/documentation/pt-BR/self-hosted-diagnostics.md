@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -36,9 +36,9 @@
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
+    "revision": 3,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -74,7 +74,9 @@ Corrija Docker, CLI ou valores API e repita o instalador idempotente preservando
 
 
 
-Se o primeiro download parar com um log longo de progresso e sem erro do registro de imagens, o instalador v0.11.0 pode ter excedido o buffer de saída do subprocesso. No contexto Compose exato da instalação, compose pull --quiet funcionou no teste descartável. Depois repita o mesmo instalador com --skip-pull para usar as imagens locais, preservando o ambiente. Isso não corrige erros do registro nem assinaturas inválidas. Se a compilação offline indicar uma versão jose diferente após instalar dependências fixadas, pare: a versão exige 6.2.3, mas sua dependência direta fixada resolve 6.2.12. Obtenha uma combinação corrigida de versão e ferramentas antes de aceitar a instalação padrão; não afrouxe silenciosamente a verificação de identidade.
+Se o primeiro download parar com um log longo de progresso e sem erro do registro de imagens, o instalador v0.11.0 pode ter excedido o buffer de saída do subprocesso. No contexto Compose exato da instalação, compose pull --quiet funcionou no teste descartável. Depois repita o mesmo instalador com --skip-pull para usar as imagens locais, preservando o ambiente. Isso não corrige erros do registro nem assinaturas inválidas.
+
+Se a compilação offline indicar uma versão jose diferente após instalar dependências fixadas, pare: a versão exige 6.2.3, mas sua dependência direta fixada resolve 6.2.12. Obtenha uma combinação corrigida de versão e ferramentas antes de aceitar a instalação padrão; não afrouxe silenciosamente a verificação de identidade.
 
 
 O runner OCI de v0.11.0 também não inicia: agent-runner-storage.mjs falta na imagem de execução. O Dockerfile atual já inclui essa dependência. O ensaio de engenharia descartável forneceu o arquivo da mesma tag por montagem somente leitura; esse perfil modificado não valida a imagem assinada intacta. Não publique a porta do runner nem retire seu isolamento para contornar falhas de início.

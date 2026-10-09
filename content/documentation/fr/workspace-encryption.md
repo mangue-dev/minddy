@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 3,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -32,13 +32,16 @@
     "evidence": [
       "docs/self-hosting.md",
       "scripts/self-hosting-encryption.mjs",
-      "lib/server/encryption/data-policy.json"
+      "lib/server/encryption/data-policy.json",
+      "content/documentation/reviews/editorial-clarity-en-fr-2026-10-09.md",
+      "content/documentation/reviews/editorial-clarity-de-es-2026-10-09.md",
+      "content/documentation/reviews/editorial-clarity-it-pt-BR-2026-10-09.md"
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun)",
-    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review)",
+    "revision": 4,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (collection-caption clarity)",
     "date": "2026-10-09"
   },
   "related": [
@@ -55,8 +58,8 @@
       "kind": "diagram",
       "src": "/documentation/fr/workspace-encryption-flow.svg",
       "alt": "Schéma: Racine dédiée hors de PostgreSQL. Clés projet, utilisateur et système enveloppées. Déchiffrement autorisé sur le serveur. Restauration base + Storage + mêmes clés.",
-      "caption": "Ces composants ont des responsabilités distinctes. Racine dédiée hors de PostgreSQL. Clés projet, utilisateur et système enveloppées. Déchiffrement autorisé sur le serveur. Restauration base + Storage + mêmes clés.",
-      "revision": 3,
+      "caption": "Restaurer du contenu chiffré exige les données et les clés correspondantes, dont la racine conservée hors de la base.",
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

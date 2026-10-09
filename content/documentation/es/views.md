@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 4,
-  "sourceRevision": 4,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -43,9 +43,9 @@
     ]
   },
   "review": {
-    "revision": 4,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison)",
+    "revision": 5,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -68,7 +68,7 @@
       "src": "/documentation/es/work-view-filters.png",
       "alt": "Filtros manuales de una vista y menú de ordenación.",
       "caption": "Filtra por propiedades de las incidencias o elige un orden. El campo de IA es opcional para estos controles manuales.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -84,7 +84,7 @@
       "src": "/documentation/es/work-share-view.png",
       "alt": "Diálogo para compartir una vista con acceso privado seleccionado.",
       "caption": "El acceso privado, protegido por contraseña y público son opciones distintas. La vista permanece privada en esta captura.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -102,7 +102,7 @@
 }
 ---
 
-Las vistas muestran el trabajo seleccionado mediante filtros y ordenación. Los siguientes apartados explican cómo guardarlas y compartir públicamente las vistas de proyecto compatibles. Las vistas globales que abarcan varios proyectos no se pueden compartir.
+Una vista guarda los filtros y la presentación de las incidencias sin copiarlas ni modificarlas. Configura primero la vista para tu trabajo. Compartir una vista de proyecto compatible es un paso separado que ofrece a los visitantes acceso de solo lectura al contenido publicado. Las vistas globales que abarcan varios proyectos no se pueden compartir.
 
 ## Guardar una vista de tu trabajo {#views-and-filters}
 

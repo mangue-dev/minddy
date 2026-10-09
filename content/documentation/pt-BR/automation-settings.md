@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 4,
-  "sourceRevision": 4,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -36,12 +36,13 @@
       "content/documentation/reviews/remaining-account-capture-candidates.json",
       "lib/server/agent/quota.ts",
       "lib/server/usage.ts",
-      "lib/server/agent/execute.ts"
+      "lib/server/agent/execute.ts",
+      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json"
     ]
   },
   "review": {
-    "revision": 4,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun)",
+    "revision": 5,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
     "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
     "date": "2026-10-09"
   },
@@ -57,15 +58,16 @@
       "src": "/documentation/pt-BR/automation-settings-workflow.png",
       "alt": "Predefinição de automação sem opção selecionada.",
       "caption": "Sem predefinição selecionada, esta conta não inicia trabalho automático.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         816,
         221
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "automation-settings-projects-workflow",
@@ -73,15 +75,16 @@
       "src": "/documentation/pt-BR/automation-settings-projects-workflow.png",
       "alt": "Seleção de projetos para as automações da conta.",
       "caption": "Seleção de projetos para as automações da conta. Os dois projetos de demonstração estão desativados; nenhuma automação é iniciada.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         816,
         176
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     }
   ],
   "requiredFigures": [

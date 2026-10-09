@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -42,9 +42,9 @@
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
+    "revision": 6,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -66,7 +66,7 @@
       "src": "/documentation/it/reader-objectives.png",
       "alt": "Finestra di creazione obiettivo non inviata con un nome di risultato d’esempio.",
       "caption": "Definisci il risultato prima di scegliere responsabile, data limite e stato. Questa finestra non ha creato un secondo obiettivo.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -82,7 +82,7 @@
       "src": "/documentation/it/reader-objective-momentum.png",
       "alt": "Ritmo dell’obiettivo dopo un ticket dimostrativo realmente completato.",
       "caption": "Leggi il ritmo insieme al lavoro collegato. La cronologia disponibile non è ancora sufficiente per mostrare una data stimata di conclusione.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -126,6 +126,10 @@ Una relazione di blocco può collegare un ticket o un altro obiettivo a questo o
 
 L’andamento riassume il lavoro completato di recente. Può essere in accelerazione, costante, in rallentamento o fermo, con stati separati per obiettivi non iniziati, completati e annullati. Usalo per individuare un risultato che richiede attenzione, poi leggi i ticket e l’attività sottostanti.
 
-La data di fine stimata richiede almeno due completamenti, una settimana intera osservata, impegno consegnato positivo e lavoro rimanente. Contribuiscono solo i ticket attualmente collegati; un completamento precedente alla creazione dell’obiettivo non produce un andamento recente artificiale. Con una data obiettivo valida, lo storico va dalla creazione a quella data e il ritmo di consegna usa il tempo osservato dalla creazione, compreso il tempo dopo una scadenza non rispettata. Senza una data obiettivo valida, il calcolo usa uno storico mobile di otto settimane e una finestra di previsione di 28 giorni. Poco storico o un recente cambio di ambito ne riducono l’utilità. La stima non è una scadenza promessa e non comprende il lavoro invisibile che non hai collegato. Confronta data obiettivo, lavoro rimanente e vincoli reali prima di cambiare gli impegni.
+La data di fine stimata richiede almeno due completamenti, una settimana intera osservata, impegno consegnato positivo e lavoro rimanente. Contribuiscono solo i ticket attualmente collegati; un completamento precedente alla creazione dell’obiettivo non produce un andamento recente artificiale.
+
+Con una data obiettivo valida, lo storico va dalla creazione a quella data e il ritmo di consegna usa il tempo osservato dalla creazione, compreso il tempo dopo una scadenza non rispettata. Senza una data obiettivo valida, il calcolo usa uno storico mobile di otto settimane e una finestra di previsione di 28 giorni.
+
+Poco storico o un recente cambio di ambito ne riducono l’utilità. La stima non è una scadenza promessa e non comprende il lavoro invisibile che non hai collegato. Confronta data obiettivo, lavoro rimanente e vincoli reali prima di cambiare gli impegni.
 
 ![Ritmo dell’obiettivo dopo un ticket dimostrativo realmente completato.](/documentation/it/reader-objective-momentum.png)

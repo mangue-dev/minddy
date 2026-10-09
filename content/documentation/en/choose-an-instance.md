@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -36,9 +36,9 @@
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review)",
+    "revision": 3,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -52,40 +52,8 @@
   "tags": [
     "Choose Cloud or your own instance"
   ],
-  "figures": [
-    {
-      "id": "responsibilities",
-      "kind": "diagram",
-      "src": "/documentation/en/responsibilities.svg",
-      "alt": "Operating responsibility: Operated by minddy, Operated by you.",
-      "caption": "The same core services need an operator in either model. Optional providers remain separate services.",
-      "revision": 2,
-      "reviewed": true,
-      "capturedAt": "2026-10-08",
-      "viewport": [
-        360,
-        520
-      ],
-      "theme": "neutral",
-      "diagram": {
-        "layout": "collection",
-        "items": [
-          {
-            "title": "minddy Cloud",
-            "detail": "Operated by minddy · Application · Database · Storage · Scheduler"
-          },
-          {
-            "title": "Your own instance",
-            "detail": "Operated by you · Application · Database · Storage · Scheduler"
-          }
-        ],
-        "title": "Operating responsibility"
-      }
-    }
-  ],
-  "requiredFigures": [
-    "responsibilities"
-  ]
+  "figures": [],
+  "requiredFigures": []
 }
 ---
 
@@ -95,7 +63,6 @@ minddy Cloud and self-hosted minddy run the same public core. Choose Cloud if yo
 
 A Cloud account belongs to Cloud. On a self-hosted instance, create an account on that instance; a minddy Cloud account is not a prerequisite. Check the address before signing in or inviting someone. Accounts and credentials do not become shared merely because two instances run minddy.
 
-![Operating responsibility: Operated by minddy, Operated by you.](/documentation/en/responsibilities.svg)
 
 ## Responsibilities and costs {#responsibilities}
 

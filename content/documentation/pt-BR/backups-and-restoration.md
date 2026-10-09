@@ -16,8 +16,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -38,8 +38,8 @@
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun)",
+    "revision": 3,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
     "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
     "date": "2026-10-09"
   },
@@ -65,7 +65,7 @@
       "src": "/documentation/pt-BR/restore-and-roll-back-flow.svg",
       "alt": "Diagrama: Backup externo completo verificado. Alvo vazio isolado com versões iguais. Restaurar banco, bytes e chaves juntos. Verificar conta, conteúdo e arquivos antes de abrir.",
       "caption": "Siga as etapas nesta ordem. Backup externo completo verificado. Alvo vazio isolado com versões iguais. Restaurar banco, bytes e chaves juntos. Verificar conta, conteúdo e arquivos antes de abrir.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

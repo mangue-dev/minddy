@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -36,9 +36,9 @@
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
+    "revision": 3,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -52,40 +52,8 @@
   "tags": [
     "Scegliere Cloud o una propria istanza"
   ],
-  "figures": [
-    {
-      "id": "responsibilities",
-      "kind": "diagram",
-      "src": "/documentation/it/responsibilities.svg",
-      "alt": "Responsabilità di gestione: Gestito da minddy, Gestito da te.",
-      "caption": "Gli stessi servizi del nucleo richiedono un operatore in entrambi i modelli. I fornitori opzionali restano servizi separati.",
-      "revision": 2,
-      "reviewed": true,
-      "capturedAt": "2026-10-08",
-      "viewport": [
-        360,
-        520
-      ],
-      "theme": "neutral",
-      "diagram": {
-        "layout": "collection",
-        "items": [
-          {
-            "title": "minddy Cloud",
-            "detail": "Gestito da minddy · Applicazione · Database · Storage · Pianificazione"
-          },
-          {
-            "title": "La tua istanza",
-            "detail": "Gestito da te · Applicazione · Database · Storage · Pianificazione"
-          }
-        ],
-        "title": "Responsabilità di gestione"
-      }
-    }
-  ],
-  "requiredFigures": [
-    "responsibilities"
-  ]
+  "figures": [],
+  "requiredFigures": []
 }
 ---
 
@@ -95,7 +63,6 @@ minddy Cloud e minddy ospitato autonomamente eseguono lo stesso nucleo pubblico.
 
 Un account Cloud appartiene a Cloud. Per un’istanza autonoma, crea un account su quell’istanza; non serve un account minddy Cloud. Controlla l’indirizzo prima di accedere o invitare qualcuno. Due istanze minddy non condividono automaticamente account o credenziali.
 
-![Responsabilità di gestione: Gestito da minddy, Gestito da te.](/documentation/it/responsibilities.svg)
 
 ## Responsabilità e costi {#responsibilities}
 

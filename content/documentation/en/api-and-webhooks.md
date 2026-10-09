@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 3,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -45,9 +45,9 @@
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review)",
+    "revision": 4,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -69,7 +69,7 @@
       "src": "/documentation/en/integration-api-and-webhooks-flow.svg",
       "alt": "Diagram: Server keeps the project integration key. POST issues or feedback with correct key kind. Owner selects an issues webhook destination. Receiver verifies raw-body HMAC and delivery UUID.",
       "caption": "Read the stages in order. Server keeps the project integration key. POST issues or feedback with correct key kind. Owner selects an issues webhook destination. Receiver verifies raw-body HMAC and delivery UUID.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -101,7 +101,7 @@
       "src": "/documentation/en/feedback-ingestion-and-sso-workflow.svg",
       "alt": "Separate backend-ingestion and browser-SSO sequences with distinct secrets.",
       "caption": "The ingestion key authenticates server requests. The board SSO secret signs a short-lived, single-use visitor token.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -153,7 +153,15 @@ The project owner creates an integration in project settings. Choose issues for 
 
 ### Send input with the correct fields {#send}
 
-Use GET /api/v1/issues/options for project category IDs and priority/effort values, then POST /api/v1/issues with a non-empty title, optional Markdown description, priority, effort and categories. Created work always enters triage; status, assignee and parent are not externally settable. Titles allow 500 characters, descriptions 65,536 and categories at most 50 IDs. A 201 response gives id, number, identifier and status. For feedback, POST /api/v1/feedback needs title and user.external_id and/or user.email; user.name and body are optional. analyze is a boolean defaulting to true. false disables moderation, categorization and duplicate merging together and publishes as-is; the string "false" is rejected. Inspect review_state and keep user identity verified by your server.
+Use GET /api/v1/issues/options for project category IDs and priority/effort values. Then POST /api/v1/issues with a non-empty title and optional Markdown description, priority, effort and categories.
+
+| Field | Limit |
+| --- | --- |
+| Title | 500 characters |
+| Description | 65,536 characters |
+| Categories | 50 IDs |
+
+Created work always enters triage; status, assignee and parent are not externally settable. A 201 response gives id, number, identifier and status. For feedback fields, identity checks and moderation, use the [feedback ingestion procedure](#feedback-ingestion-and-sso).
 
 ```bash
 curl --fail-with-body --request POST "$MINDDY_ORIGIN/api/v1/issues" \
@@ -168,7 +176,7 @@ An issues integration can send issue.created, issue.status_changed and issue.upd
 
 ### Handle failed requests and delivery limits {#limits}
 
-Delivery is best effort: a five-second timeout and one immediate retry on network errors or 5xx, then permanent drop. Duplicates and reordering are possible. Persist the verified payload, return 2xx promptly and process afterward. issue.updated batches changes; description/plan changes identify the field without values. Check the last delivery status in settings. HTTP 429 requires honoring Retry-After. Validation errors are 422; a reached issue quota is a definitive 403 issue_limit_reached. A timed-out creation can have succeeded, so inspect its outcome before retrying. Feedback voting uses POST `/api/v1/feedback/<post_id>/vote` and is idempotent per identity.
+Delivery is best effort: a five-second timeout and one immediate retry on network errors or 5xx, then permanent drop. Duplicates and reordering are possible. Persist the verified payload, return 2xx promptly and process afterward. issue.updated batches changes; description/plan changes identify the field without values. Check the last delivery status in settings. HTTP 429 requires honoring Retry-After. Validation errors are 422; a reached issue quota is a definitive 403 issue_limit_reached. A timed-out creation can have succeeded, so inspect its outcome before retrying. Feedback voting has its [own endpoint and limits](#errors).
 
 ## Connect feedback ingestion and visitor SSO {#feedback-ingestion-and-sso}
 
@@ -178,7 +186,7 @@ The project owner creates a feedback integration key in project settings. Save t
 curl -i "$MINDDY_ORIGIN/api/v1/feedback"   -H "Authorization: Bearer $MINDDY_FEEDBACK_KEY"   -H 'Content-Type: application/json'   --data '{"title":"Show the delivery date","body":"Our support team needs the planned date.","user":{"external_id":"demo-user-1","name":"Demo reader"}}'
 ```
 
-Supply a non-empty title (200 characters maximum), optional body (10,000), and `user.external_id` and/or `user.email`. Limits are 255 characters for external ID, 254 for email and 200 for name. Your backend vouches for identity; anonymous ingestion is rejected. Success is HTTP 201 with post `id`, `status`, `review_state`, votes and pseudonym. The board need not be enabled for ingestion. `analyze` defaults to true; false bypasses moderation, categorization and merging for that post and sets its review state to `published` without waiting. That review state does not enable the board or bypass post visibility rules or spam status. The API creates public posts by default and does not accept a private-visibility parameter.
+Supply a non-empty title (200 characters maximum), optional body (10,000), and `user.external_id` and/or `user.email`. `user.name` is optional. Limits are 255 characters for external ID, 254 for email and 200 for name. Your backend vouches for identity; anonymous ingestion is rejected. Success is HTTP 201 with post `id`, `status`, `review_state`, votes and pseudonym. The board need not be enabled for ingestion. `analyze` is a boolean defaulting to true; the string "false" is rejected. Set it to false to bypass moderation, categorization and duplicate merging for that post and give it the review state `published` without waiting. That review state does not enable the board or bypass post visibility rules or spam status. The API creates public posts by default and does not accept a private-visibility parameter.
 
 ### Votes, failures and webhooks {#errors}
 

@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 4,
-  "sourceRevision": 4,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -43,9 +43,9 @@
     ]
   },
   "review": {
-    "revision": 4,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
+    "revision": 5,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -68,7 +68,7 @@
       "src": "/documentation/it/work-view-filters.png",
       "alt": "Filtri manuali di una vista e menu di ordinamento.",
       "caption": "Filtra per proprietà dei ticket o scegli un ordine. Il campo IA è facoltativo per questi comandi manuali.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -84,7 +84,7 @@
       "src": "/documentation/it/work-share-view.png",
       "alt": "Finestra di condivisione di una vista con accesso privato selezionato.",
       "caption": "Accesso privato, protetto da password e pubblico sono scelte distinte. In questa schermata la vista rimane privata.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -106,7 +106,7 @@ Una vista salva filtri e ordinamento del lavoro a cui hai accesso, senza creare 
 
 ## Salvare una vista del proprio lavoro {#views-and-filters}
 
-Parti da un tabellone di progetto o da una superficie personale di ticket tra progetti. Usa filtri, ordinamento e controlli di visualizzazione per scegliere il lavoro necessario. Controlla l’ambito prima di salvare: una vista personale e una vista di progetto non hanno lo stesso confine di accesso.
+Parti dal tabellone di un progetto o da un elenco personale di ticket tra progetti. Usa filtri, ordinamento e controlli di visualizzazione per scegliere il lavoro necessario. Controlla l’ambito prima di salvare: una vista personale e una vista di progetto non hanno lo stesso confine di accesso.
 
 Filtra per proprietà supportate, come stato, assegnatario, priorità, categorie o obiettivo. Ordina il risultato per rendere chiara la prossima azione. Nel kanban, i ticket restano raggruppati per stato; cambiare una vista non ne modifica stato o assegnazione.
 

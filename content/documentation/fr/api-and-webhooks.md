@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 3,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -45,9 +45,9 @@
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun)",
-    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review)",
+    "revision": 4,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -69,7 +69,7 @@
       "src": "/documentation/fr/integration-api-and-webhooks-flow.svg",
       "alt": "Schéma: Le serveur garde la clé d’intégration projet. POST tickets ou feedback avec le bon type. Le propriétaire choisit la destination webhook. Réception : HMAC brut et UUID de livraison.",
       "caption": "Lisez les étapes dans cet ordre. Le serveur garde la clé d’intégration projet. POST tickets ou feedback avec le bon type. Le propriétaire choisit la destination webhook. Réception : HMAC brut et UUID de livraison.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -101,7 +101,7 @@
       "src": "/documentation/fr/feedback-ingestion-and-sso-workflow.svg",
       "alt": "Séquences distinctes d’ingestion backend et de SSO navigateur, avec deux secrets.",
       "caption": "La clé d’ingestion authentifie les appels serveur. Le secret SSO du tableau signe un jeton visiteur court, à usage unique.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -153,7 +153,15 @@ Le propriétaire crée une intégration dans les paramètres du projet. Choisiss
 
 ### Envoyer les champs corrects {#send}
 
-GET /api/v1/issues/options donne catégories et valeurs priorité/effort ; POST /api/v1/issues reçoit titre non vide, description Markdown, priorité, effort et catégories optionnels. Le résultat entre toujours en triage ; statut, responsable et parent ne sont pas réglables de l’extérieur. Les limites sont 500 caractères de titre, 65 536 de description et 50 catégories. La réponse 201 contient id, number, identifier et status. POST /api/v1/feedback exige title et user.external_id et/ou user.email ; user.name et body sont optionnels. analyze est un booléen, true par défaut. false désactive ensemble modération, catégorisation et fusion des doublons, et publie tel quel ; la chaîne "false" est refusée. Examinez review_state et faites garantir l’identité par votre serveur.
+Utilisez GET /api/v1/issues/options pour obtenir les identifiants des catégories du projet et les valeurs de priorité et d’effort. Envoyez ensuite POST /api/v1/issues avec un titre non vide et, si nécessaire, une description Markdown, une priorité, un effort et des catégories.
+
+| Champ | Limite |
+| --- | --- |
+| Titre | 500 caractères |
+| Description | 65 536 caractères |
+| Catégories | 50 identifiants |
+
+Le ticket créé entre toujours en triage ; son statut, son responsable et son parent ne sont pas réglables de l’extérieur. La réponse 201 contient id, number, identifier et status. Pour les champs des retours, les contrôles d’identité et la modération, suivez la [procédure d’ingestion des retours](#feedback-ingestion-and-sso).
 
 ```bash
 curl --fail-with-body --request POST "$MINDDY_ORIGIN/api/v1/issues" \
@@ -168,7 +176,7 @@ Une intégration issues envoie issue.created, issue.status_changed et issue.upda
 
 ### Traiter les échecs et limites {#limits}
 
-La livraison est sans garantie : délai de cinq secondes et une tentative immédiate après erreur réseau ou 5xx, puis abandon définitif. Doublons et désordre sont possibles. Persistez le contenu vérifié, retournez 2xx rapidement et traitez après. issue.updated regroupe les changements ; description et plan indiquent le champ sans sa valeur. Vérifiez le dernier statut dans les paramètres. Pour 429, respectez Retry-After. Les erreurs de validation sont 422 ; un quota atteint est un 403 issue_limit_reached définitif. Une création expirée peut avoir abouti : contrôlez avant répétition. Le vote feedback utilise POST `/api/v1/feedback/<post_id>/vote`, idempotent par identité.
+La livraison est sans garantie : délai de cinq secondes et une tentative immédiate après erreur réseau ou 5xx, puis abandon définitif. Doublons et désordre sont possibles. Persistez le contenu vérifié, retournez 2xx rapidement et traitez après. issue.updated regroupe les changements ; description et plan indiquent le champ sans sa valeur. Vérifiez le dernier statut dans les paramètres. Pour 429, respectez Retry-After. Les erreurs de validation sont 422 ; un quota atteint est un 403 issue_limit_reached définitif. Une création dont la réponse a expiré peut avoir abouti : contrôlez le résultat avant de réessayer. Le vote sur les retours possède son [point d’accès et ses limites](#errors).
 
 ## Connecter ingestion des retours et SSO visiteurs {#feedback-ingestion-and-sso}
 
@@ -178,7 +186,7 @@ Le propriétaire du projet crée une clé d’intégration feedback dans les ré
 curl -i "$MINDDY_ORIGIN/api/v1/feedback"   -H "Authorization: Bearer $MINDDY_FEEDBACK_KEY"   -H 'Content-Type: application/json'   --data '{"title":"Afficher la date de livraison","body":"Le support a besoin de la date prévue.","user":{"external_id":"demo-user-1","name":"Lecteur de démonstration"}}'
 ```
 
-Fournissez un titre non vide de 200 caractères maximum, un corps facultatif de 10 000 caractères maximum et `user.external_id` et/ou `user.email`. L’identifiant externe accepte 255 caractères, l’email 254 et le nom 200. Votre backend garantit l’identité transmise ; l’ingestion anonyme est refusée. Le succès renvoie HTTP 201 avec `id`, `status`, `review_state`, les votes et le pseudonyme. Le board n’a pas besoin d’être activé pour l’ingestion. `analyze` vaut true par défaut ; false ignore modération, catégorisation et fusion pour ce retour et lui donne l’état de revue `published` sans attente. Cet état de revue n’active pas le board et ne contourne pas les règles de visibilité du retour ou son statut spam. L’API crée les retours publics par défaut et n’accepte pas de paramètre de visibilité privée.
+Fournissez un titre non vide de 200 caractères maximum, un corps facultatif de 10 000 caractères maximum et `user.external_id` et/ou `user.email`. `user.name` est facultatif. L’identifiant externe accepte 255 caractères, l’email 254 et le nom 200. Votre backend garantit l’identité transmise ; l’ingestion anonyme est refusée. Le succès renvoie HTTP 201 avec `id`, `status`, `review_state`, les votes et le pseudonyme. Le board n’a pas besoin d’être activé pour l’ingestion. `analyze` est un booléen qui vaut true par défaut ; la chaîne "false" est refusée. Définissez-le sur false pour ignorer la modération, la catégorisation et la fusion des doublons de ce retour et lui donner l’état de revue `published` sans attente. Cet état de revue n’active pas le board et ne contourne pas les règles de visibilité du retour ou son statut spam. L’API crée les retours publics par défaut et n’accepte pas de paramètre de visibilité privée.
 
 ### Votes, erreurs et webhooks {#errors}
 

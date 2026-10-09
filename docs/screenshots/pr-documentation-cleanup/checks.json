@@ -1,0 +1,31 @@
+{
+  "date": "2026-10-09",
+  "method": "Actual shared React renderers and explicitly scoped Tailwind sources; static preview rather than a complete app navigation.",
+  "article": "choose-an-instance",
+  "checks": [
+    {
+      "name": "desktop-light",
+      "overflow": false,
+      "tables": 2,
+      "captions": 2,
+      "invalidNesting": 0,
+      "horizontalScroll": false
+    },
+    {
+      "name": "mobile-light",
+      "overflow": false,
+      "tables": 2,
+      "captions": 2,
+      "invalidNesting": 0,
+      "horizontalScroll": true
+    },
+    {
+      "name": "desktop-dark",
+      "overflow": false,
+      "tables": 2,
+      "captions": 2,
+      "invalidNesting": 0,
+      "horizontalScroll": false
+    }
+  ]
+}

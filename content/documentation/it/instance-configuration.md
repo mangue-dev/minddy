@@ -16,8 +16,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -40,13 +40,16 @@
       "docs/self-hosting-distribution.md",
       "vercel.json",
       "deploy/self-hosted/compose.full.yml",
-      "deploy/self-hosted/scheduler.mjs"
+      "deploy/self-hosted/scheduler.mjs",
+      "content/documentation/reviews/editorial-clarity-en-fr-2026-10-09.md",
+      "content/documentation/reviews/editorial-clarity-de-es-2026-10-09.md",
+      "content/documentation/reviews/editorial-clarity-it-pt-BR-2026-10-09.md"
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
+    "revision": 3,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (collection-caption clarity)",
     "date": "2026-10-09"
   },
   "related": [
@@ -71,8 +74,8 @@
       "kind": "diagram",
       "src": "/documentation/it/optional-providers-flow.svg",
       "alt": "Schema: Operatore sceglie capacità opzionale. Credenziali complete e condizioni. Destinazione dati esterna esplicita. Verificare comportamento e costi.",
-      "caption": "Questi componenti hanno responsabilità distinte. Operatore sceglie capacità opzionale. Credenziali complete e condizioni. Destinazione dati esterna esplicita. Verificare comportamento e costi.",
-      "revision": 2,
+      "caption": "Prima di attivare un’integrazione, verifica le credenziali, le condizioni e la destinazione dei dati.",
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -103,8 +106,8 @@
       "kind": "diagram",
       "src": "/documentation/it/proxy-network-and-jobs-flow.svg",
       "alt": "Schema: Proxy HTTPS pubblico. Origini app e Supabase pubbliche. Runner, database e porte private. Job autenticati; fermi in manutenzione.",
-      "caption": "Questi componenti hanno responsabilità distinte. Proxy HTTPS pubblico. Origini app e Supabase pubbliche. Runner, database e porte private. Job autenticati; fermi in manutenzione.",
-      "revision": 2,
+      "caption": "Il proxy espone le origini pubbliche e mantiene privati i servizi interni; durante la manutenzione ferma anche i job.",
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

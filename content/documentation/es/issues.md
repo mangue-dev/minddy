@@ -24,8 +24,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -78,13 +78,14 @@
       "lib/use-csv-import.ts",
       "lib/import/types.ts",
       "lib/server/import-issues.ts",
-      "content/documentation/reviews/csv-preview-capture-candidates.json"
+      "content/documentation/reviews/csv-preview-capture-candidates.json",
+      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json"
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison)",
+    "revision": 6,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -130,7 +131,7 @@
       "src": "/documentation/es/new-issue.png",
       "alt": "Borrador sin enviar con título, descripción y propiedades que se pueden elegir manualmente.",
       "caption": "Describe el resultado esperado y elige las propiedades útiles antes de crear el ticket.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -146,7 +147,7 @@
       "src": "/documentation/es/triage-incoming.png",
       "alt": "Incidencia entrante de demostración DOC-11 con informe, propiedades y controles de duplicado, Rechazar y Aceptar.",
       "caption": "Lee el informe recibido antes de aceptarlo, rechazarlo o enlazar un duplicado.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -162,7 +163,7 @@
       "src": "/documentation/es/issue-statuses.png",
       "alt": "Los ocho estados del ticket en el selector, con el estado de backlog seleccionado.",
       "caption": "La marca indica el estado actual. Elige el que corresponda al estado real del trabajo.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -178,7 +179,7 @@
       "src": "/documentation/es/work-resources.png",
       "alt": "Diálogo para añadir un enlace con una dirección de contacto de ejemplo.",
       "caption": "Revisa el destino antes de añadir el recurso. Este enlace de ejemplo no se ha enviado.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -194,7 +195,7 @@
       "src": "/documentation/es/work-dependencies.png",
       "alt": "Búsqueda de una incidencia bloqueante por identificador.",
       "caption": "Elige el sentido de la relación antes de su destino. El selector se muestra sin enviar la relación.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -210,7 +211,7 @@
       "src": "/documentation/es/work-sub-issues.png",
       "alt": "Campo para crear una subincidencia en una incidencia principal de demostración.",
       "caption": "El campo crea una hija de esta incidencia; cada hija conserva su estado y conversación.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -226,7 +227,7 @@
       "src": "/documentation/es/work-implementation-plan.png",
       "alt": "Plan de demostración con dos tareas de trabajo completadas de seis.",
       "caption": "El plan guardado distingue pasos completados, activos y pendientes. Su progreso no demuestra que se ejecutara la tarea de código ficticia.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -242,7 +243,7 @@
       "src": "/documentation/es/issue-date-recurrence.png",
       "alt": "Selector de fecha en modo recurrente con vista previa semanal los domingos y hora opcional.",
       "caption": "El modo recurrente muestra la frecuencia semanal. Confirma la primera fecha antes de crear el ticket.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -258,7 +259,7 @@
       "src": "/documentation/es/work-bulk-actions.png",
       "alt": "Menú de acciones para dos incidencias de demostración seleccionadas.",
       "caption": "El menú actúa sobre las incidencias seleccionadas. En esta captura no se envió ningún cambio conjunto.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -274,15 +275,16 @@
       "src": "/documentation/es/import-issues-preview-workflow.png",
       "alt": "Vista previa CSV de dos filas de demostración traducidas y las columnas detectadas.",
       "caption": "Vista previa CSV de dos filas de demostración traducidas y las columnas detectadas. No se envió la importación; la planificación opcional con IA se bloqueó para la captura.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         816,
         977
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     }
   ],
   "requiredFigures": [
@@ -300,7 +302,7 @@
 }
 ---
 
-Las incidencias registran el trabajo de un proyecto, desde la solicitud inicial hasta su cierre. Aquí encontrarás creación, clasificación, estados, conversaciones y recursos, relaciones, subincidencias, planes, recurrencias, acciones en bloque e importación CSV. La importación está reservada al propietario del proyecto.
+Una incidencia registra una unidad de trabajo del proyecto, desde la solicitud inicial hasta su cierre. Empieza por la creación, la clasificación y los estados. Para trabajo en curso, consulta las conversaciones, las dependencias, las subincidencias y los planes. Antes de aplicar recurrencias, acciones en bloque o una importación CSV, revisa sus requisitos; solo el propietario del proyecto puede importar.
 
 ## Crear y editar una incidencia {#create-an-issue}
 

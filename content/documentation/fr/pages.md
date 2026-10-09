@@ -21,8 +21,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -60,8 +60,8 @@
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun)",
+    "revision": 6,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
     "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review)",
     "date": "2026-10-09"
   },
@@ -98,7 +98,7 @@
       "src": "/documentation/fr/page-create-menu.png",
       "alt": "Menu de création proposant Nouvelle page et Nouvelle base de données.",
       "caption": "Les contrôles des pages du projet permettent de choisir un document ou une base de données.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -114,7 +114,7 @@
       "src": "/documentation/fr/page-editor.png",
       "alt": "Page de démonstration avec titres, paragraphes, cases de tâches et mention d’un ticket.",
       "caption": "Les titres, blocs de tâches et la mention AUR-2 structurent la page. Ce contenu est un exemple de démonstration.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -130,7 +130,7 @@
       "src": "/documentation/fr/page-comments.png",
       "alt": "Fenêtre d’activité de la page avec modification de démonstration et champ de commentaire vide.",
       "caption": "Lisez l’activité et rédigez un commentaire dans le champ. Aucun commentaire n’a été envoyé dans cet exemple.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -146,7 +146,7 @@
       "src": "/documentation/fr/page-file-states.png",
       "alt": "Page de démonstration avec un envoi inachevé et un fichier enregistré de 67 octets proposant Télécharger.",
       "caption": "Vérifiez l’état réel du fichier : la seconde pièce jointe est disponible, contrairement au premier envoi inachevé.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -162,7 +162,7 @@
       "src": "/documentation/fr/page-history-preview.png",
       "alt": "Onglet Versions avec un état antérieur déplié, son auteur, Restaurer et l’indication de conservation pendant 30 jours.",
       "caption": "Prévisualisez un état enregistré et comparez-le à la page actuelle avant de le restaurer.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -178,7 +178,7 @@
       "src": "/documentation/fr/page-publish.png",
       "alt": "Fenêtre de publication avec Privée sélectionné et options par mot de passe ou lien.",
       "caption": "Privée conserve la page dans le projet. Vérifiez le public souhaité avant de modifier la publication.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -194,7 +194,7 @@
       "src": "/documentation/fr/page-export.png",
       "alt": "Menu d’export du document avec Markdown (.md) et Imprimer / PDF.",
       "caption": "Choisissez Markdown pour télécharger le document, ou Imprimer / PDF pour ouvrir la vue imprimable.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [

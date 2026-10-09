@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -42,9 +42,9 @@
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review)",
+    "revision": 6,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -66,7 +66,7 @@
       "src": "/documentation/en/reader-objectives.png",
       "alt": "Unsubmitted objective-creation dialog with a demonstration result name.",
       "caption": "Name the result before choosing the lead, target date and status. This dialog has not created a second objective.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -82,7 +82,7 @@
       "src": "/documentation/en/reader-objective-momentum.png",
       "alt": "Objective momentum after an actual demonstration completion.",
       "caption": "Read momentum alongside the linked work. This history is insufficient to show an estimated finish date.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -126,6 +126,11 @@ A blocking relation may connect an issue or another objective to this objective,
 
 Momentum summarizes recently completed work. It can be accelerating, steady, slowing or stalled, with separate states for not-started, complete and canceled objectives. Use it to identify an outcome needing attention, then read the underlying issues and activity.
 
-An estimated finish date requires at least two completions, a full observed week, positive delivered effort and remaining work. Only currently linked issues contribute; a completion predating objective creation does not manufacture recent momentum. With a valid target, history spans creation to that date and throughput uses observed time since creation, including time after a missed target. Without a valid target, the calculation uses a rolling eight-week history and a 28-day forecast window. Sparse history or a recent scope change reduces its usefulness. The estimate is not a promised deadline and does not include unseen work you have not attached. Compare the target date, remaining work and actual constraints before changing commitments.
+An estimated finish date requires at least two completions, a full observed week, positive delivered effort and remaining work. Only currently linked issues contribute; completions before objective creation do not count as recent momentum.
+
+- With a valid target, history spans creation to that date. Throughput uses observed time since creation, including time after a missed target.
+- Without a valid target, the calculation uses a rolling eight-week history and a 28-day forecast window.
+
+Sparse history or a recent scope change makes the estimate less useful. It is not a promised deadline and excludes work you have not attached. Compare the target date, remaining work and actual constraints before changing commitments.
 
 ![Objective momentum after an actual demonstration completion.](/documentation/en/reader-objective-momentum.png)

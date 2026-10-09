@@ -100,3 +100,26 @@ test("legacy task routes require a declared alias and complete target sections i
   writeFileSync(filename, JSON.stringify({ "undeclared-task": { article: "guide", section: "start", sections: { recovery: "start" } } }));
   assert.match(check(root).output, /not a declared article alias/);
 });
+
+test("screenshot publication rejects dark themes and falsely declared native density", () => {
+  function screenshotFixture(theme, density = 2, width = 400) {
+    const root = fixture(article => ({ ...article, figures: [{ id: "control", kind: "screenshot",
+      src: `/documentation/${article.locale}/control.png`, alt: "Account controls.", caption: "Visible controls only.",
+      revision: 1, reviewed: true, capturedAt: "2026-10-09", theme, viewport: [200, 100], deviceScaleFactor: density }] }));
+    for (const locale of documentationLocales) {
+      const directory = path.join(root, "public/documentation", locale);
+      mkdirSync(directory, { recursive: true });
+      // Only the PNG signature and dimensions are read by this metadata check.
+      const header = Buffer.alloc(24); Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]).copy(header);
+      header.writeUInt32BE(width, 16); header.writeUInt32BE(200, 20);
+      writeFileSync(path.join(directory, "control.png"), header);
+      const filename = path.join(root, "content/documentation", locale, "guide.md");
+      writeFileSync(filename, readFileSync(filename, "utf8") + `\n![Controls](/documentation/${locale}/control.png)\n`);
+    }
+    return root;
+  }
+  assert.equal(check(screenshotFixture("light")).status, 0);
+  assert.match(check(screenshotFixture("dark")).output, /screenshots must use light mode/);
+  assert.match(check(screenshotFixture("light", 1)).output, /native density of at least 2/);
+  assert.match(check(screenshotFixture("light", 2, 200)).output, /pixels do not match declared density/);
+});

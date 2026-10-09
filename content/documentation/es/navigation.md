@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 4,
-  "sourceRevision": 4,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -43,9 +43,9 @@
     ]
   },
   "review": {
-    "revision": 4,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison)",
+    "revision": 5,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -67,7 +67,7 @@
       "src": "/documentation/es/work-navigation.png",
       "alt": "Navegación del proyecto junto al tablero de incidencias de demostración.",
       "caption": "La barra del proyecto da acceso a incidencias, objetivos, páginas y clasificación de entradas.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -83,7 +83,7 @@
       "src": "/documentation/es/work-search.png",
       "alt": "Resultados de búsqueda del identificador de una incidencia de demostración.",
       "caption": "La paleta encuentra la incidencia por identificador junto a las páginas del proyecto; abrir un resultado conserva sus reglas de acceso.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -101,13 +101,13 @@
 }
 ---
 
-La navegación conecta el trabajo personal con los proyectos y sus distintas áreas. Esta guía explica los paneles, la navegación móvil y las pestañas de escritorio, además de la búsqueda y los atajos para encontrar contenido al que tu cuenta tiene acceso.
+La navegación permite acceder a tu trabajo personal o a un proyecto. La paleta de comandos encuentra una incidencia o acción concreta. Los paneles, la navegación móvil y las pestañas de escritorio ofrecen distintas formas de llegar. Antes de hacer cambios, comprueba el proyecto y la instancia seleccionados.
 
 ## Encontrar trabajo personal y cambiar de proyecto {#navigation}
 
 La navegación principal da acceso a tu trabajo personal y a tus proyectos. Selecciona un proyecto para ver sus incidencias y destinos secundarios, como clasificación, objetivos, páginas y ajustes del proyecto. La fila de regreso sube un nivel de navegación; puede cambiar el contenido de la barra lateral mientras la página principal permanece abierta. Selecciona un destino para abrirlo.
 
-Los ciclos personales y las vistas entre proyectos abarcan los proyectos a los que tienes acceso. Los objetivos, la wiki y los comentarios de un proyecto pertenecen a un único proyecto. Comprueba el proyecto activo antes de crear trabajo o modificar ajustes.
+Los ciclos personales y las vistas entre proyectos abarcan los proyectos a los que tienes acceso. Los objetivos, la wiki y las sugerencias de un proyecto pertenecen a un único proyecto. Comprueba el proyecto activo antes de crear trabajo o modificar ajustes.
 
 ![Navegación del proyecto junto al tablero de incidencias de demostración.](/documentation/es/work-navigation.png)
 

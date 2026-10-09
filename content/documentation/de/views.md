@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 4,
-  "sourceRevision": 4,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -43,9 +43,9 @@
     ]
   },
   "review": {
-    "revision": 4,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison)",
+    "revision": 5,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -68,7 +68,7 @@
       "src": "/documentation/de/work-view-filters.png",
       "alt": "Manuelle Ansichtsfilter und Sortiermenü.",
       "caption": "Filtere nach Ticketeigenschaften oder wähle eine Reihenfolge. Für diese manuellen Bedienelemente ist das KI-Feld optional.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -84,7 +84,7 @@
       "src": "/documentation/de/work-share-view.png",
       "alt": "Freigabedialog einer Ansicht mit ausgewähltem privatem Zugriff.",
       "caption": "Privater, passwortgeschützter und öffentlicher Zugriff sind unterschiedliche Optionen. Die Ansicht bleibt hier privat.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -102,7 +102,7 @@
 }
 ---
 
-Ansichten stellen ausgewählte Arbeit mit Filtern und Sortierung dar. Die folgenden Abschnitte erklären das Speichern und die öffentliche Freigabe geeigneter Projektansichten; globale projektübergreifende Ansichten lassen sich nicht teilen.
+Eine Ansicht speichert Filter und Darstellung von Problemen, ohne diese zu kopieren oder zu ändern. Richte zuerst die Ansicht für deine Arbeit ein. Das Teilen einer geeigneten Projektansicht ist ein separater Schritt und gibt Besuchern nur lesenden Zugriff auf die veröffentlichten Inhalte. Globale projektübergreifende Ansichten lassen sich nicht teilen.
 
 ## Eine Ansicht deiner Arbeit speichern {#views-and-filters}
 

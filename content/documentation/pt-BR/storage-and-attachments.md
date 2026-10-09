@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -34,13 +34,16 @@
       "docs/self-hosting-operations.md",
       "docs/self-hosting-logical-operations.md",
       "lib/server/page-files.ts",
-      "lib/server/page-publication.ts"
+      "lib/server/page-publication.ts",
+      "content/documentation/reviews/editorial-clarity-en-fr-2026-10-09.md",
+      "content/documentation/reviews/editorial-clarity-de-es-2026-10-09.md",
+      "content/documentation/reviews/editorial-clarity-it-pt-BR-2026-10-09.md"
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
+    "revision": 3,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (collection-caption clarity)",
     "date": "2026-10-09"
   },
   "related": [
@@ -56,8 +59,8 @@
       "kind": "diagram",
       "src": "/documentation/pt-BR/storage-and-attachments-flow.svg",
       "alt": "Diagrama: Acesso autorizado ao arquivo. Metadados PostgreSQL do objeto. Bytes brutos em arquivos ou S3. Configuração e chaves correspondentes.",
-      "caption": "Estes componentes têm responsabilidades distintas. Acesso autorizado ao arquivo. Metadados PostgreSQL do objeto. Bytes brutos em arquivos ou S3. Configuração e chaves correspondentes.",
-      "revision": 2,
+      "caption": "Um arquivo só pode ser recuperado se seus metadados, bytes e chaves forem preservados juntos.",
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

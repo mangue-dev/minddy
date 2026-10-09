@@ -18,8 +18,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
-  "sourceRevision": 6,
+  "revision": 7,
+  "sourceRevision": 7,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -56,13 +56,14 @@
       "components/settings/account-analytics-section.tsx",
       "components/settings/account-data-section.tsx",
       "app/api/account/deletion-preview/route.ts",
-      "app/api/account/route.ts"
+      "app/api/account/route.ts",
+      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json"
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review)",
+    "revision": 7,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -90,84 +91,21 @@
   ],
   "figures": [
     {
-      "id": "account-access-steps",
-      "kind": "screenshot",
-      "src": "/documentation/en/auth-signup.png",
-      "alt": "Email signup, with provider buttons and the first step of the three-step wizard.",
-      "caption": "Start on the intended instance. The email path continues to identity and password; this capture shows no submitted registration.",
-      "revision": 6,
-      "reviewed": true,
-      "capturedAt": "2026-10-08",
-      "viewport": [
-        428,
-        502
-      ],
-      "theme": "light",
-      "padding": 24
-    },
-    {
-      "id": "account-access-login",
-      "kind": "screenshot",
-      "src": "/documentation/en/auth-login.png",
-      "alt": "Sign-in form with password recovery beneath the password field.",
-      "caption": "Use recovery on the same instance as the account. The form is shown without any submitted credentials.",
-      "revision": 6,
-      "reviewed": true,
-      "capturedAt": "2026-10-08",
-      "viewport": [
-        428,
-        588
-      ],
-      "theme": "light",
-      "padding": 24
-    },
-    {
       "id": "account-security-workflow",
       "kind": "screenshot",
       "src": "/documentation/en/account-security-workflow.png",
       "alt": "Two-factor authentication card with the Turn on button.",
       "caption": "Start enrollment here, then verify the authenticator and store recovery codes privately.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         816,
         227
       ],
       "theme": "light",
-      "padding": 24
-    },
-    {
-      "id": "account-security-enrollment-workflow",
-      "kind": "screenshot",
-      "src": "/documentation/en/account-security-enrollment-workflow.png",
-      "alt": "Authenticator enrollment before code verification.",
-      "caption": "Authenticator enrollment before code verification. The real QR code and manual secret are masked; this temporary unverified factor was cancelled and removed.",
-      "revision": 6,
-      "reviewed": true,
-      "capturedAt": "2026-10-08",
-      "viewport": [
-        816,
-        498
-      ],
-      "theme": "light",
-      "padding": 24
-    },
-    {
-      "id": "account-recovery-steps",
-      "kind": "screenshot",
-      "src": "/documentation/en/auth-recovery.png",
-      "alt": "Password recovery form with a demonstration address and the send-link button.",
-      "caption": "Enter your account email here. The demonstration address was not submitted; this image does not establish delivery or successful recovery.",
-      "revision": 6,
-      "reviewed": true,
-      "capturedAt": "2026-10-08",
-      "viewport": [
-        428,
-        326
-      ],
-      "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "profile-and-preferences-workflow",
@@ -175,15 +113,16 @@
       "src": "/documentation/en/profile-and-preferences-workflow.png",
       "alt": "Profile controls for avatar, username and read-only email.",
       "caption": "Save profile edits after validation; the email address remains read-only.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         816,
         416
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "profile-and-preferences-preferences-workflow",
@@ -191,15 +130,16 @@
       "src": "/documentation/en/profile-and-preferences-preferences-workflow.png",
       "alt": "Language selector and light, dark and system theme controls.",
       "caption": "Account appearance preferences are separate from the public website language.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         816,
         212
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "privacy-and-account-deletion-workflow",
@@ -207,22 +147,20 @@
       "src": "/documentation/en/privacy-and-account-deletion-workflow.png",
       "alt": "Deletion preview listing owned projects, issues and members who lose access.",
       "caption": "Read the preview and export wanted data before opening the deletion confirmation.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         816,
         231
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     }
   ],
   "requiredFigures": [
-    "account-access-steps",
     "account-security-workflow",
-    "account-security-enrollment-workflow",
-    "account-recovery-steps",
     "profile-and-preferences-workflow",
     "profile-and-preferences-preferences-workflow",
     "privacy-and-account-deletion-workflow"
@@ -236,20 +174,23 @@ Your account belongs to the instance where you signed up. Manage sign-in, two-fa
 
 Open the login or signup screen on the instance you intend to use. Cloud and another self-hosted instance have separate accounts. Available sign-in methods and signup access depend on the instance's authentication configuration.
 
-For email signup, enter your address and continue to the identity step. Enter a nonempty full name; you can also choose an avatar. Continue to the password step, enter a password of at least eight characters with a lowercase letter (a–z), an uppercase letter (A–Z) and a digit, and repeat it in the confirmation field. Submit this last step to create the account. Leaving the earlier steps does not create an account. When email confirmation is required, open the message sent by that instance. Follow its link and activate the confirmation button on the confirmation page. Merely opening the link does not complete the confirmation: minddy requires that deliberate action before consuming the email token.
+For email signup:
+
+1. Enter your address and continue to the identity step.
+2. Enter a nonempty full name and optionally choose an avatar.
+3. Continue to the password step. Enter at least eight characters with a lowercase letter (a–z), an uppercase letter (A–Z) and a digit, then repeat the password in the confirmation field.
+4. Submit this last step to create the account. Leaving the earlier steps does not create an account.
+5. If email confirmation is required, open the message sent by this instance. Follow its link and activate the confirmation button on the page. Opening the link alone does not confirm the account or consume the email token.
 
 Return to the intended application and sign in. A newly authenticated account can create its own project or accept a project invitation. Knowing a project URL does not grant membership.
 
 
-![Email signup, with provider buttons and the first step of the three-step wizard.](/documentation/en/auth-signup.png)
-
 ### Sign out and handle missing mail {#session-and-mail}
 
-Open the account menu, choose sign out and confirm. In the desktop app, closing a tab or window is not the same action as signing out. Use the account menu if your purpose is to end the session.
+Open the account menu, choose sign out and confirm. In the desktop app, closing a tab or window leaves your session active.
 
 If mail does not arrive, check the address, spam folder and instance identity. A self-hosted operator must have configured working Auth email delivery; optional application notification email and Auth confirmation are separate concerns. An expired confirmation page provides a route back to login to request a new link. Do not forward confirmation or recovery links as diagnostic evidence: they authorize account access.
 
-![Sign-in form with password recovery beneath the password field.](/documentation/en/auth-login.png)
 
 ## Protect your account with two-factor authentication {#account-security}
 
@@ -267,7 +208,6 @@ Activation refreshes the current session and attempts to sign out other sessions
 
 Without the phone, use a saved recovery code during sign-in. Using a recovery code turns off two-factor authentication and invalidates the remaining codes. Once signed in, enroll your authenticator again and save the new recovery codes. This flow does not promise account restoration by human support. Replacing recovery codes invalidates the previous set; replacement and deliberate disablement require the server’s fresh authentication checks. Read the confirmation: disabling means the additional factor is no longer requested, including when signing in through Google or GitHub.
 
-![Authenticator enrollment before code verification.](/documentation/en/account-security-enrollment-workflow.png)
 
 ## Recover account access {#account-recovery}
 
@@ -275,8 +215,6 @@ On the login screen of the correct instance, use password recovery and enter the
 
 A reset link can expire or no longer have an active session. The reset screen identifies that condition and lets you request another link. Start from a fresh message instead of retrying an old bookmark. Do not send the link, cookies or password to support.
 
-
-![Password recovery form with a demonstration address and the send-link button.](/documentation/en/auth-recovery.png)
 
 ### MFA and unresolved access {#mfa-recovery}
 

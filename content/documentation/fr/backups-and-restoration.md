@@ -16,8 +16,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -38,8 +38,8 @@
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun)",
+    "revision": 3,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
     "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review)",
     "date": "2026-10-09"
   },
@@ -64,7 +64,7 @@
       "src": "/documentation/fr/restore-and-roll-back-flow.svg",
       "alt": "Schéma: Sauvegarde complète hors serveur vérifiée. Cible vierge isolée et versions correspondantes. Restaurer ensemble base, octets et clés. Vérifier compte, contenu et fichiers avant ouverture.",
       "caption": "Lisez les étapes dans cet ordre. Sauvegarde complète hors serveur vérifiée. Cible vierge isolée et versions correspondantes. Restaurer ensemble base, octets et clés. Vérifier compte, contenu et fichiers avant ouverture.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

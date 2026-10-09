@@ -20,8 +20,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 3,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -59,9 +59,9 @@
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review)",
+    "revision": 4,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -88,7 +88,7 @@
       "src": "/documentation/en/publish-a-feedback-board-workflow.png",
       "alt": "Enabled public feedback board with local SSO identity configured and its URL concealed.",
       "caption": "The owner enables the board and chooses visitor identity. This demo uses a local SSO signer; the URL and signing secret are concealed.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -104,7 +104,7 @@
       "src": "/documentation/en/submit-and-follow-feedback-workflow.png",
       "alt": "Visitor feedback form with a title, description and public visibility enabled.",
       "caption": "A signed-in visitor submits a need and chooses whether it appears publicly. The example was actually submitted with automatic review disabled.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -120,23 +120,7 @@
       "src": "/documentation/en/moderate-feedback-workflow.png",
       "alt": "Feedback detail showing a public team reply and an internal note.",
       "caption": "The Public badge identifies the reply visible to visitors; the internal note stays with the team. No AI moderation result is shown.",
-      "revision": 3,
-      "reviewed": true,
-      "capturedAt": "2026-10-08",
-      "viewport": [
-        816,
-        874
-      ],
-      "theme": "light",
-      "padding": 24
-    },
-    {
-      "id": "feedback-to-issue-workflow",
-      "kind": "screenshot",
-      "src": "/documentation/en/feedback-to-issue-workflow.png",
-      "alt": "Feedback linked to a newly created issue with Planned status.",
-      "caption": "Promoting this example created a linked issue in Todo. The public feedback status changed automatically to Planned.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -152,7 +136,7 @@
       "src": "/documentation/en/feedback-pages-and-views-workflow.png",
       "alt": "Published feedback guide selected in the board navigation and readable without sign-in.",
       "caption": "Publish a page, enable page tabs and select it for the board. This demonstration page was opened anonymously; the opaque URL keeps noindex.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -167,7 +151,6 @@
     "publish-a-feedback-board-workflow",
     "submit-and-follow-feedback-workflow",
     "moderate-feedback-workflow",
-    "feedback-to-issue-workflow",
     "feedback-pages-and-views-workflow"
   ]
 }
@@ -229,7 +212,6 @@ Linked status follows the issue: triage/backlog/duplicate → open; todo → pla
 
 Team notifications on incoming feedback depend on its source and review transition. Do not promise a voter an automatic email for every merge or issue update; check public status and replies in My feedback. A link makes progress visible without exposing the private issue itself.
 
-![Feedback linked to a newly created issue with Planned status.](/documentation/en/feedback-to-issue-workflow.png)
 
 ## Add public pages and views to a feedback board {#feedback-pages-and-views}
 

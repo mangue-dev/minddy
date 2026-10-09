@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -39,9 +39,9 @@
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review)",
+    "revision": 3,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -52,27 +52,8 @@
   "tags": [
     "Recover an OAuth, MCP, webhook or Git connection failure"
   ],
-  "figures": [
-    {
-      "id": "integration-troubleshooting-flow",
-      "kind": "screenshot",
-      "src": "/documentation/en/integration-troubleshooting-error.png",
-      "alt": "MCP connection loading error with the Try again button.",
-      "caption": "Try again reloads the connections after the network becomes available.",
-      "revision": 2,
-      "reviewed": true,
-      "capturedAt": "2026-10-08",
-      "viewport": [
-        782,
-        108
-      ],
-      "theme": "light",
-      "padding": 24
-    }
-  ],
-  "requiredFigures": [
-    "integration-troubleshooting-flow"
-  ]
+  "figures": [],
+  "requiredFigures": []
 }
 ---
 
@@ -80,8 +61,6 @@
 
 minddy MCP connects an external assistant to minddy; personal MCP connections let Numo call another server. They have different account tabs and credentials. For personal MCP, inspect the connection status in account settings and use its test/reconnect action. OAuth discovery, dynamic registration, PKCE and refresh are supported, but a catalog entry does not bypass provider approval, developer preview or registered-app requirements. Confirm current provider requirements before assuming a minddy defect.
 
-
-![MCP connection loading error with the Try again button.](/documentation/en/integration-troubleshooting-error.png)
 
 ## Reconnect without losing the access boundary {#oauth}
 

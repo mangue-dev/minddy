@@ -16,8 +16,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -40,13 +40,17 @@
       "docs/self-hosting.md",
       "scripts/self-hosting-install.mjs",
       "deploy/self-hosted/compose.full.yml",
-      "deploy/self-hosted/compose.managed.yml"
+      "deploy/self-hosted/compose.managed.yml",
+      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json",
+      "content/documentation/reviews/editorial-clarity-en-fr-2026-10-09.md",
+      "content/documentation/reviews/editorial-clarity-de-es-2026-10-09.md",
+      "content/documentation/reviews/editorial-clarity-it-pt-BR-2026-10-09.md"
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review)",
+    "revision": 3,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (collection-caption clarity)",
     "date": "2026-10-09"
   },
   "related": [
@@ -72,7 +76,7 @@
       "src": "/documentation/en/self-hosted-compatibility-flow.svg",
       "alt": "Diagram: Annotated source tag. Assets and SHA256SUMS. Official OCI signature and digest. Selected compatibility profile.",
       "caption": "Read the stages in order. Annotated source tag. Assets and SHA256SUMS. Official OCI signature and digest. Selected compatibility profile.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -104,7 +108,7 @@
       "src": "/documentation/en/install-a-server-flow.svg",
       "alt": "Diagram: Verified release and protected environment. Installer: full reference profile. Official Supabase, app, scheduler, runner. Account, file and recovery acceptance.",
       "caption": "Read the stages in order. Verified release and protected environment. Installer: full reference profile. Official Supabase, app, scheduler, runner. Account, file and recovery acceptance.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -136,23 +140,24 @@
       "src": "/documentation/en/install-a-server-wizard.png",
       "alt": "Public installation wizard with Supabase on the same server selected.",
       "caption": "The full profile keeps the application and Supabase on your server. In this example, their private network access is restricted to the LAN.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         944,
-        1044
+        1051
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "managed-or-source-installation-flow",
       "kind": "diagram",
       "src": "/documentation/en/managed-or-source-installation-flow.svg",
       "alt": "Diagram: Your managed Supabase project. PostgreSQL, Auth, Storage, Realtime. OCI profile OR tagged source application. Profile-specific jobs and backup procedure.",
-      "caption": "These components have distinct responsibilities. Your managed Supabase project. PostgreSQL, Auth, Storage, Realtime. OCI profile OR tagged source application. Profile-specific jobs and backup procedure.",
-      "revision": 2,
+      "caption": "A managed backend can serve either deployment method, with scheduling and backups configured for the chosen profile.",
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

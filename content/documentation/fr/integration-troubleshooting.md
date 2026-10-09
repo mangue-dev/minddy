@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -39,9 +39,9 @@
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun)",
-    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review)",
+    "revision": 3,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -52,27 +52,8 @@
   "tags": [
     "Récupérer une connexion OAuth, MCP, webhook ou Git"
   ],
-  "figures": [
-    {
-      "id": "integration-troubleshooting-flow",
-      "kind": "screenshot",
-      "src": "/documentation/fr/integration-troubleshooting-error.png",
-      "alt": "Erreur de chargement des connexions MCP avec le bouton Réessayer.",
-      "caption": "Réessayer recharge les connexions après le rétablissement du réseau.",
-      "revision": 2,
-      "reviewed": true,
-      "capturedAt": "2026-10-08",
-      "viewport": [
-        782,
-        108
-      ],
-      "theme": "light",
-      "padding": 24
-    }
-  ],
-  "requiredFigures": [
-    "integration-troubleshooting-flow"
-  ]
+  "figures": [],
+  "requiredFigures": []
 }
 ---
 
@@ -80,8 +61,6 @@
 
 MCP minddy connecte un assistant externe à minddy ; les connexions MCP personnelles permettent à Numo d’appeler d’autres serveurs. Onglets du compte et identifiants sont distincts. Pour MCP personnel, examinez l’état dans les paramètres et utilisez test/reconnexion. Découverte OAuth, inscription dynamique, PKCE et refresh sont disponibles, mais une entrée de catalogue ne contourne ni approbation, ni aperçu développeur, ni application enregistrée. Vérifiez les prérequis actuels du fournisseur avant de conclure à un défaut minddy.
 
-
-![Erreur de chargement des connexions MCP avec le bouton Réessayer.](/documentation/fr/integration-troubleshooting-error.png)
 
 ## Reconnecter avec le bon périmètre {#oauth}
 

@@ -96,7 +96,7 @@
     "source": "D/editions; K/open-source; `app/(marketing)/self-hosting/page.tsx`",
     "gaps": "Same core versus configured capabilities, account/host responsibility, provider costs and support boundary",
     "illustration": "Diagram of responsibility split",
-    "requiresFigures": true,
+    "requiresFigures": false,
     "section": "choose-an-instance"
   },
   {
@@ -1276,7 +1276,7 @@
     "source": "K/agents-and-mcp; D/github-issue-sync; `lib/server/integration-auth.ts`; `lib/mcp-authorization.ts`",
     "gaps": "Missing/expired scopes, provider prerequisites, diagnostics, outcome-before-retry, callback and unsupported-network errors",
     "illustration": "New redacted reconnect/error controls",
-    "requiresFigures": true,
+    "requiresFigures": false,
     "section": "integration-troubleshooting"
   }
 ]

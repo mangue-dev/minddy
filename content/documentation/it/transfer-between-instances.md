@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 4,
-  "sourceRevision": 4,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -34,12 +34,13 @@
       "components/settings/account-data-section.tsx",
       "lib/server/account-import.ts",
       "content/documentation/reviews/remaining-account-capture-candidates.json",
-      "content/documentation/reviews/account-transfer-execution.json"
+      "content/documentation/reviews/account-transfer-execution.json",
+      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json"
     ]
   },
   "review": {
-    "revision": 4,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun)",
+    "revision": 5,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
     "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
     "date": "2026-10-09"
   },
@@ -55,15 +56,16 @@
       "src": "/documentation/it/transfer-between-instances-workflow.png",
       "alt": "Impostazioni di trasferimento con pulsante per importare un file.",
       "caption": "Scegli il JSON integro esportato dall’account di origine; controlla il risultato prima di chiudere.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         816,
         148
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "transfer-between-instances-export-workflow",
@@ -71,15 +73,16 @@
       "src": "/documentation/it/transfer-between-instances-export-workflow.png",
       "alt": "Controllo di esportazione dell’account.",
       "caption": "Controllo di esportazione dell’account. Il file esclude chiavi e token; la cattura mostra il pulsante prima del download.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         816,
         148
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     }
   ],
   "requiredFigures": [

@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 3,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -45,9 +45,9 @@
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison)",
+    "revision": 4,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -69,7 +69,7 @@
       "src": "/documentation/de/integration-api-and-webhooks-flow.svg",
       "alt": "Diagramm: Server hält Projektintegrationsschlüssel. POST Tickets oder Feedback mit passender Art. Eigentümer wählt Webhookziel für Tickets. Empfänger prüft Rohkörper-HMAC und Zustell-UUID.",
       "caption": "Lesen Sie die Schritte in dieser Reihenfolge. Server hält Projektintegrationsschlüssel. POST Tickets oder Feedback mit passender Art. Eigentümer wählt Webhookziel für Tickets. Empfänger prüft Rohkörper-HMAC und Zustell-UUID.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -101,7 +101,7 @@
       "src": "/documentation/de/feedback-ingestion-and-sso-workflow.svg",
       "alt": "Getrennte Abläufe für Backend-Erfassung und Browser-SSO mit unterschiedlichen Geheimnissen.",
       "caption": "Der Erfassungsschlüssel authentifiziert Serveraufrufe. Das Board-SSO-Geheimnis signiert ein kurzlebiges, einmaliges Besuchertoken.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -142,7 +142,7 @@
 }
 ---
 
-Die Integrations-API nimmt interne Arbeit oder Feedback über projektgebundene Schlüssel entgegen. Dieser Leitfaden erklärt Schlüsselarten, Anfragen und signierte Webhooks sowie die getrennte Einrichtung von Feedback-Erfassung und Besucher-SSO. Schlüssel und SSO-Geheimnisse bleiben auf dem Server.
+Die Integrations-API nimmt Tickets oder Feedback über projektgebundene Schlüssel von Ihrem Server entgegen. Ticketintegrationen können signierte Webhooks senden; Besucher-SSO verwendet ein separates Board-Geheimnis. Prüfen Sie Endpunkt, Identität und Zustellung. Schlüssel bleiben auf dem Server, SSO-Weiterleitungstokens gehören nicht in geteilte Logs.
 
 ## Tickets oder Feedback erstellen und signierte Webhooks empfangen {#integration-api-and-webhooks}
 
@@ -153,7 +153,15 @@ Eigentümer erstellen Integrationen in Projekteinstellungen. issues erzeugt inte
 
 ### Korrekte Felder senden {#send}
 
-GET /api/v1/issues/options liefert Kategorien und Prioritäts-/Aufwandswerte. POST /api/v1/issues nimmt nicht leeren Titel, optional Markdownbeschreibung, Priorität, Aufwand und Kategorien an. Neue Arbeit landet immer in Triage; Status, Zuständiger und Parent sind extern nicht setzbar. Grenzen: Titel 500 Zeichen, Beschreibung 65.536, höchstens 50 Kategorie-IDs. 201 liefert id, number, identifier und status. POST /api/v1/feedback benötigt title und user.external_id und/oder user.email; user.name und body sind optional. analyze ist boolean mit Standard true. false deaktiviert Moderation, Kategorisierung und Duplikatzusammenführung gemeinsam und veröffentlicht unverändert; die Zeichenfolge "false" wird abgelehnt. Prüfen Sie review_state und gewährleisten Sie Identität durch Ihren Server.
+GET /api/v1/issues/options liefert Kategorie-IDs und Prioritäts-/Aufwandswerte. Senden Sie anschließend POST /api/v1/issues mit einem nicht leeren Titel und optionaler Markdownbeschreibung, Priorität, Aufwand und Kategorien.
+
+| Feld | Grenze |
+| --- | --- |
+| Titel | 500 Zeichen |
+| Beschreibung | 65.536 Zeichen |
+| Kategorien | 50 IDs |
+
+Neue Arbeit landet immer in Triage; Status, Zuständiger und Parent sind extern nicht setzbar. 201 liefert id, number, identifier und status. Für Feedback-Felder, Identitätsprüfung und Moderation folgen Sie dem [Verfahren zur Feedback-Erfassung](#feedback-ingestion-and-sso).
 
 ```bash
 curl --fail-with-body --request POST "$MINDDY_ORIGIN/api/v1/issues" \
@@ -178,7 +186,7 @@ Der Projektinhaber erstellt einen Feedback-Integrationsschlüssel in den Projekt
 curl -i "$MINDDY_ORIGIN/api/v1/feedback"   -H "Authorization: Bearer $MINDDY_FEEDBACK_KEY"   -H 'Content-Type: application/json'   --data '{"title":"Lieferdatum anzeigen","body":"Unser Support braucht das geplante Datum.","user":{"external_id":"demo-user-1","name":"Demo-Leser"}}'
 ```
 
-Geben Sie einen nicht leeren Titel mit höchstens 200 Zeichen, einen optionalen Text mit höchstens 10.000 Zeichen sowie `user.external_id` und/oder `user.email` an. Die externe ID erlaubt 255 Zeichen, die E-Mail-Adresse 254 und der Name 200. Ihr Backend bestätigt die Identität; anonyme Erfassung wird abgelehnt. Ein Erfolg liefert HTTP 201 mit `id`, `status`, `review_state`, Stimmen und Pseudonym. Das Board muss für die Erfassung nicht aktiviert sein. `analyze` ist standardmäßig true. false überspringt Moderation, Kategorisierung und Zusammenführung für diesen Beitrag und setzt den Prüfstatus ohne Wartezeit auf `published`. Dieser Prüfstatus aktiviert das Board nicht und umgeht weder Sichtbarkeitsregeln noch den Spamstatus. Die API erstellt Beiträge standardmäßig öffentlich und akzeptiert keinen Parameter für private Sichtbarkeit.
+Geben Sie einen nicht leeren Titel mit höchstens 200 Zeichen, einen optionalen Text mit höchstens 10.000 Zeichen sowie `user.external_id` und/oder `user.email` an. `user.name` ist optional. Die externe ID erlaubt 255 Zeichen, die E-Mail-Adresse 254 und der Name 200. Ihr Backend bestätigt die Identität; anonyme Erfassung wird abgelehnt. Ein Erfolg liefert HTTP 201 mit `id`, `status`, `review_state`, Stimmen und Pseudonym. Das Board muss für die Erfassung nicht aktiviert sein. `analyze` ist ein boolescher Wert mit Standard true; die Zeichenfolge "false" wird abgelehnt. false überspringt Moderation, Kategorisierung und Duplikatzusammenführung für diesen Beitrag und setzt den Prüfstatus ohne Wartezeit auf `published`. Dieser Prüfstatus aktiviert das Board nicht und umgeht weder Sichtbarkeitsregeln noch den Spamstatus. Die API erstellt Beiträge standardmäßig öffentlich und akzeptiert keinen Parameter für private Sichtbarkeit.
 
 ### Stimmen, Fehler und Webhooks {#errors}
 

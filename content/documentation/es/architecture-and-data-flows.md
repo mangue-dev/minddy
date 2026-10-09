@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -35,13 +35,16 @@
     "evidence": [
       "docs/editions.md",
       "docs/self-hosting-distribution.md",
-      "lib/server/capabilities.ts"
+      "lib/server/capabilities.ts",
+      "content/documentation/reviews/editorial-clarity-en-fr-2026-10-09.md",
+      "content/documentation/reviews/editorial-clarity-de-es-2026-10-09.md",
+      "content/documentation/reviews/editorial-clarity-it-pt-BR-2026-10-09.md"
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison)",
+    "revision": 3,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (collection-caption clarity)",
     "date": "2026-10-09"
   },
   "related": [
@@ -59,8 +62,8 @@
       "kind": "diagram",
       "src": "/documentation/es/architecture-and-data-flows-flow.svg",
       "alt": "Diagrama: Navegador y aplicación autenticada. Supabase: PostgreSQL, Auth, Storage, Realtime. Planificador independiente y runner fiable. Proveedores opcionales: destinos separados.",
-      "caption": "Estos componentes tienen responsabilidades distintas. Navegador y aplicación autenticada. Supabase: PostgreSQL, Auth, Storage, Realtime. Planificador independiente y runner fiable. Proveedores opcionales: destinos separados.",
-      "revision": 2,
+      "caption": "La infraestructura separa las solicitudes interactivas, el trabajo programado y los destinos externos de datos.",
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

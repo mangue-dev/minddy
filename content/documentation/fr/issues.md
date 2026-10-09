@@ -24,8 +24,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -78,13 +78,14 @@
       "lib/use-csv-import.ts",
       "lib/import/types.ts",
       "lib/server/import-issues.ts",
-      "content/documentation/reviews/csv-preview-capture-candidates.json"
+      "content/documentation/reviews/csv-preview-capture-candidates.json",
+      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json"
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun)",
-    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review)",
+    "revision": 6,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -130,7 +131,7 @@
       "src": "/documentation/fr/new-issue.png",
       "alt": "Brouillon de ticket non envoyé avec titre, description et propriétés manuelles.",
       "caption": "Décrivez le résultat attendu, puis choisissez les propriétés utiles avant de créer le ticket.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -146,7 +147,7 @@
       "src": "/documentation/fr/triage-incoming.png",
       "alt": "Ticket de démonstration DOC-11 reçu dans le triage, avec son signalement, ses propriétés et les commandes Doublon, Refuser et Accepter.",
       "caption": "Lisez le signalement reçu avant de l’accepter, de le refuser ou de le relier à un doublon.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -162,7 +163,7 @@
       "src": "/documentation/fr/issue-statuses.png",
       "alt": "Les huit statuts du ticket dans le sélecteur, avec Backlog sélectionné.",
       "caption": "La coche indique le statut actuel. Choisissez celui qui reflète l’état réel du travail.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -178,7 +179,7 @@
       "src": "/documentation/fr/work-resources.png",
       "alt": "Dialogue d’ajout de lien avec une adresse de contact d’exemple.",
       "caption": "Vérifiez la destination avant d’ajouter la ressource. Ce lien d’exemple n’a pas été envoyé.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -194,7 +195,7 @@
       "src": "/documentation/fr/work-dependencies.png",
       "alt": "Recherche d’un préalable par identifiant de ticket.",
       "caption": "Choisissez le sens de la relation avant sa destination. Aucune relation n’a été envoyée dans ce sélecteur.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -210,7 +211,7 @@
       "src": "/documentation/fr/work-sub-issues.png",
       "alt": "Champ de création d’un sous-ticket dans un parent de démonstration.",
       "caption": "Ce champ crée un enfant sous le parent ; chaque enfant conserve son état et sa discussion.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -226,7 +227,7 @@
       "src": "/documentation/fr/work-implementation-plan.png",
       "alt": "Plan de démonstration avec deux tâches de travail terminées sur six.",
       "caption": "Le plan enregistré distingue les étapes terminées, actives et en attente. Sa progression ne prouve pas l’exécution de la tâche de code fictive.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -242,7 +243,7 @@
       "src": "/documentation/fr/issue-date-recurrence.png",
       "alt": "Sélecteur d’échéance en mode récurrent avec aperçu hebdomadaire le dimanche et heure optionnelle.",
       "caption": "Le mode récurrent prévisualise la cadence hebdomadaire. Confirmez la première échéance avant de créer le ticket.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -258,7 +259,7 @@
       "src": "/documentation/fr/work-bulk-actions.png",
       "alt": "Menu d’actions pour deux tickets de démonstration sélectionnés.",
       "caption": "Le menu agit sur les tickets sélectionnés. Aucune modification groupée n’a été envoyée sur cette capture.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -274,15 +275,16 @@
       "src": "/documentation/fr/import-issues-preview-workflow.png",
       "alt": "Aperçu CSV de deux lignes de démonstration localisées et des colonnes détectées.",
       "caption": "Aperçu CSV de deux lignes de démonstration localisées et des colonnes détectées. Aucun import n’a été lancé ; la préparation IA optionnelle a été bloquée pour la capture.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         816,
         977
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     }
   ],
   "requiredFigures": [
@@ -331,7 +333,14 @@ Choisissez Accepter et confirmez pour déplacer un ticket retenu vers le backlog
 
 Smart Triage utilise des règles de classement déterministes.
 
-Dans chaque colonne d’état, les règles placent d’abord les tickets ouverts qui bloquent du travail ouvert, puis les tickets sans blocage. Les tickets bloqués par du travail ouvert passent en dernier, même s’ils en bloquent d’autres. Une extrémité clôturée ne crée plus cette priorité. Dans chaque groupe, une priorité élevée, un effort plus petit et une échéance dépassée ou proche font remonter le travail. À l’intérieur d’un même niveau de blocage, les tickets d’un objectif restent ensemble, avec un ordre fondé sur le ticket le mieux classé du groupe. Les égalités sont départagées par l’échéance, puis l’ancienneté de création, la position manuelle et enfin l’identifiant. Une relation associée ne modifie pas ce classement. Ce n’est pas un mode de triage IA expérimental. L’ordre aide à décider quoi examiner d’abord ; il ne valide pas la description, ne résout pas automatiquement les doublons et n’accorde aucune permission.
+Dans chaque colonne d’état :
+
+- Les tickets ouverts qui bloquent du travail ouvert passent en premier, suivis des tickets sans blocage. Ceux bloqués par du travail ouvert passent en dernier, même s’ils en bloquent d’autres. Les extrémités clôturées n’influencent plus cette priorité.
+- Dans un même niveau de blocage, une priorité élevée, un effort plus petit et une échéance dépassée ou proche font remonter le travail.
+- Les tickets d’un même objectif restent groupés dans ce niveau, avec un ordre fondé sur le ticket le mieux classé du groupe.
+- Les égalités sont départagées par l’échéance, l’ancienneté de création, la position manuelle et enfin l’identifiant.
+
+Une relation associée ne modifie pas ce classement. Smart Triage n’est pas un mode IA expérimental : son classement aide à choisir quoi examiner d’abord, mais ne valide pas les descriptions, ne résout pas les doublons et n’accorde aucune permission.
 
 Si une entrée manque, vérifiez projet, état et filtres, puis recherchez son identifiant. Du travail importé ou synchronisé peut arriver dans le triage ; inspectez sa source et la correspondance de l’intégration avant de modifier des champs répliqués. Une demande liée depuis les retours reste un objet feedback distinct, avec sa discussion publique.
 

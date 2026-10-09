@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -34,13 +34,16 @@
       "docs/self-hosting-operations.md",
       "docs/self-hosting-logical-operations.md",
       "lib/server/page-files.ts",
-      "lib/server/page-publication.ts"
+      "lib/server/page-publication.ts",
+      "content/documentation/reviews/editorial-clarity-en-fr-2026-10-09.md",
+      "content/documentation/reviews/editorial-clarity-de-es-2026-10-09.md",
+      "content/documentation/reviews/editorial-clarity-it-pt-BR-2026-10-09.md"
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison)",
+    "revision": 3,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (collection-caption clarity)",
     "date": "2026-10-09"
   },
   "related": [
@@ -56,8 +59,8 @@
       "kind": "diagram",
       "src": "/documentation/es/storage-and-attachments-flow.svg",
       "alt": "Diagrama: Acceso a archivo autorizado. Metadatos PostgreSQL del objeto. Bytes brutos en archivos o S3. Configuración y claves correspondientes.",
-      "caption": "Estos componentes tienen responsabilidades distintas. Acceso a archivo autorizado. Metadatos PostgreSQL del objeto. Bytes brutos en archivos o S3. Configuración y claves correspondientes.",
-      "revision": 2,
+      "caption": "Una restauración necesita los metadatos, los archivos y la configuración protegida que correspondan al mismo conjunto.",
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

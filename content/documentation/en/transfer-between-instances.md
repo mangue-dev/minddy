@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 4,
-  "sourceRevision": 4,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -34,12 +34,13 @@
       "components/settings/account-data-section.tsx",
       "lib/server/account-import.ts",
       "content/documentation/reviews/remaining-account-capture-candidates.json",
-      "content/documentation/reviews/account-transfer-execution.json"
+      "content/documentation/reviews/account-transfer-execution.json",
+      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json"
     ]
   },
   "review": {
-    "revision": 4,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun)",
+    "revision": 5,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
     "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review)",
     "date": "2026-10-09"
   },
@@ -55,15 +56,16 @@
       "src": "/documentation/en/transfer-between-instances-workflow.png",
       "alt": "Data transfer settings with the import-file button.",
       "caption": "Choose the intact JSON export from the source account; review the import result before closing.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         816,
         148
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "transfer-between-instances-export-workflow",
@@ -71,15 +73,16 @@
       "src": "/documentation/en/transfer-between-instances-export-workflow.png",
       "alt": "Account export control.",
       "caption": "Account export control. The export excludes keys and tokens; this capture shows the control before a download.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         816,
         148
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     }
   ],
   "requiredFigures": [

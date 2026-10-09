@@ -16,8 +16,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -41,9 +41,9 @@
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
+    "revision": 6,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -68,7 +68,7 @@
       "src": "/documentation/pt-BR/project-general.png",
       "alt": "Configurações gerais do projeto com nome, chave, ícone e ação separada para a lixeira.",
       "caption": "Confira o nome e a chave antes de salvar. Mover o projeto para a lixeira é uma ação separada.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -84,7 +84,7 @@
       "src": "/documentation/pt-BR/project-members.png",
       "alt": "Convite por email e três membros de demonstração, com o proprietário identificado.",
       "caption": "Convide pelo email da conta e identifique o proprietário antes de remover o acesso de um membro.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -102,13 +102,13 @@
 }
 ---
 
-Um projeto reúne trabalho e conhecimento compartilhados. O proprietário configura suas opções e convida colaboradores; os membros trabalham no conteúdo dentro das permissões que possuem. As seções a seguir distinguem configuração, convites, remoção de membros e saída do projeto.
+Um projeto reúne problemas, objetivos, páginas e membros. O proprietário gerencia as configurações administrativas e os convites; os membros trabalham no conteúdo e podem sair do projeto.
 
 ## Configurar um projeto {#project-settings}
 
 Abra o projeto e depois suas configurações. A propriedade do projeto determina o acesso às configurações administrativas. Os membros podem consultar a seção geral e sair do projeto, mas não recebem os controles de edição do proprietário.
 
-Como proprietário, informe um nome não vazio e uma chave de projeto válida, depois salve. A chave é normalizada para maiúsculas e usa de 2 a 5 letras ou dígitos. Revise os identificadores resultantes depois de alterá-la. Use os controles de ícone e aparência para distinguir o projeto na navegação; essas escolhas visuais não mudam a participação no projeto.
+Como proprietário, informe um nome não vazio e uma chave de projeto válida, depois salve. A chave é normalizada para maiúsculas e usa de 2 a 5 letras ASCII. Revise os identificadores resultantes depois de alterá-la. Use os controles de ícone e aparência para distinguir o projeto na navegação; essas escolhas visuais não mudam a participação no projeto.
 
 As outras seções gerenciam colaboradores, problemas recorrentes, Git, importação, integrações, automação e feedback. Siga o guia correspondente antes de habilitar um provedor ou trabalho automático. As preferências da conta, como o idioma da interface, são separadas da configuração do projeto.
 
@@ -135,7 +135,7 @@ A pessoa convidada entra com essa conta e abre a caixa de entrada. Aceite o conv
 | Pessoa | Acesso habitual ao projeto |
 | --- | --- |
 | Membro | Trabalhar com problemas, páginas e espaços de colaboração do projeto; gerenciar as próprias preferências da conta. |
-| Proprietário | Os percursos de membro mais configurações do projeto, convites e configurações de integração ou automação exclusivas do proprietário. |
+| Proprietário | As atividades dos membros, mais configurações do projeto, convites e configurações de integração ou automação exclusivas do proprietário. |
 | Visitante de link público | Somente o conteúdo publicado explicitamente pelo link; sem participação no projeto. |
 
 Revise a lista de membros antes de remover alguém. A linha do proprietário não oferece uma ação de remoção, e esses controles não transferem a propriedade do projeto. O proprietário pode cancelar um convite pendente antes da aceitação; o estado pendente não revela se aquele endereço já tem uma conta. A remoção encerra o acesso como membro; ela não recupera exportações, capturas de tela ou cópias já recebidas. As credenciais pessoais de Git, IA e MCP continuam pertencendo à conta e não são transferidas apenas porque a propriedade do projeto mudou.

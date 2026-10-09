@@ -16,8 +16,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -45,12 +45,13 @@
       "lib/server/mcp/tools.ts",
       "lib/server/mcp/page-tools.ts",
       "lib/server/mcp/auth.ts",
-      "app/llms-full.txt/route.ts"
+      "app/llms-full.txt/route.ts",
+      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json"
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun)",
+    "revision": 3,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
     "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
     "date": "2026-10-09"
   },
@@ -74,7 +75,7 @@
       "src": "/documentation/pt-BR/external-minddy-mcp-workflow.png",
       "alt": "Seletor de clientes MCP minddy com Claude, Codex e outros assistentes.",
       "caption": "Selecione seu cliente para exibir o comando ou a configuração de instalação.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -82,23 +83,25 @@
         252
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "external-minddy-mcp-install-workflow",
       "kind": "screenshot",
       "src": "/documentation/pt-BR/external-minddy-mcp-install-workflow.png",
       "alt": "Diálogo de instalação do Codex na instância local.",
-      "caption": "Diálogo de instalação do Codex na instância local. Use a origem da sua instância; o comando exibido não foi executado para esta captura.",
-      "revision": 2,
+      "caption": "Diálogo de instalação do Codex. Use a origem da sua instância; o comando exibido não foi executado para esta captura.",
+      "revision": 3,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         560,
         364
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     }
   ],
   "requiredFigures": [

@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -39,9 +39,9 @@
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
+    "revision": 3,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -59,23 +59,7 @@
       "src": "/documentation/it/instance-administration-overview.png",
       "alt": "Panoramica amministratore con indicatori aggregati di account, introduzione e contenuti.",
       "caption": "Panoramica mostra gli indicatori aggregati dell’istanza. Finanze non compare in questo profilo dimostrativo perché non è configurata una chiave OpenRouter gestita.",
-      "revision": 2,
-      "reviewed": true,
-      "capturedAt": "2026-10-08",
-      "viewport": [
-        1488,
-        1148
-      ],
-      "theme": "light",
-      "padding": 24
-    },
-    {
-      "id": "instance-administration-users",
-      "kind": "screenshot",
-      "src": "/documentation/it/instance-administration-users.png",
-      "alt": "Assistenza account con ricerca per indirizzo email esatto, senza elenco di contenuti personali.",
-      "caption": "Utenti apre un account specifico per assistenza o fatturazione; la schermata iniziale non elenca attività private né contenuti personali.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -91,7 +75,7 @@
       "src": "/documentation/it/instance-administration-models.png",
       "alt": "Impostazioni dei modelli IA e del ragionamento dell’istanza.",
       "caption": "Modelli configura valori predefiniti e usi specifici. La schermata mostra la configurazione esistente; nessun modello o provider è stato modificato.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -114,8 +98,6 @@ Amministrare l’istanza è diverso da possedere un progetto. ADMIN_EMAILS elenc
 
 
 ![Panoramica amministratore con indicatori aggregati di account, introduzione e contenuti.](/documentation/it/instance-administration-overview.png)
-
-![Assistenza account con ricerca per indirizzo email esatto, senza elenco di contenuti personali.](/documentation/it/instance-administration-users.png)
 
 ![Impostazioni dei modelli IA e del ragionamento dell’istanza.](/documentation/it/instance-administration-models.png)
 

@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -35,13 +35,16 @@
     "evidence": [
       "docs/editions.md",
       "docs/self-hosting-distribution.md",
-      "lib/server/capabilities.ts"
+      "lib/server/capabilities.ts",
+      "content/documentation/reviews/editorial-clarity-en-fr-2026-10-09.md",
+      "content/documentation/reviews/editorial-clarity-de-es-2026-10-09.md",
+      "content/documentation/reviews/editorial-clarity-it-pt-BR-2026-10-09.md"
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
+    "revision": 3,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (collection-caption clarity)",
     "date": "2026-10-09"
   },
   "related": [
@@ -59,8 +62,8 @@
       "kind": "diagram",
       "src": "/documentation/pt-BR/architecture-and-data-flows-flow.svg",
       "alt": "Diagrama: Navegador e aplicação autenticada. Supabase: PostgreSQL, Auth, Storage, Realtime. Agendador independente e runner confiável. Provedores opcionais: destinos separados.",
-      "caption": "Estes componentes têm responsabilidades distintas. Navegador e aplicação autenticada. Supabase: PostgreSQL, Auth, Storage, Realtime. Agendador independente e runner confiável. Provedores opcionais: destinos separados.",
-      "revision": 2,
+      "caption": "A aplicação coordena os serviços internos e usa os provedores externos quando estão configurados.",
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

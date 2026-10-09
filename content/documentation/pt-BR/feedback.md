@@ -20,8 +20,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 3,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -59,9 +59,9 @@
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
+    "revision": 4,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -88,7 +88,7 @@
       "src": "/documentation/pt-BR/publish-a-feedback-board-workflow.png",
       "alt": "Mural público de feedback ativado, com identidade SSO local configurada e URL oculta.",
       "caption": "O proprietário ativa o mural e escolhe a identidade dos visitantes. Este exemplo usa um assinador SSO local; a URL e o segredo de assinatura estão ocultos.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -104,7 +104,7 @@
       "src": "/documentation/pt-BR/submit-and-follow-feedback-workflow.png",
       "alt": "Formulário de feedback do visitante com título, descrição e visibilidade pública ativada.",
       "caption": "Um visitante identificado envia uma necessidade e escolhe sua visibilidade. O exemplo foi realmente enviado com a revisão automática desativada.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -120,23 +120,7 @@
       "src": "/documentation/pt-BR/moderate-feedback-workflow.png",
       "alt": "Detalhe de feedback com resposta pública da equipe e nota interna.",
       "caption": "O selo Público identifica a resposta visível aos visitantes; a nota interna fica com a equipe. Nenhum resultado de moderação por IA é mostrado.",
-      "revision": 3,
-      "reviewed": true,
-      "capturedAt": "2026-10-08",
-      "viewport": [
-        816,
-        874
-      ],
-      "theme": "light",
-      "padding": 24
-    },
-    {
-      "id": "feedback-to-issue-workflow",
-      "kind": "screenshot",
-      "src": "/documentation/pt-BR/feedback-to-issue-workflow.png",
-      "alt": "Feedback vinculado a uma tarefa recém-criada, com status Planejado.",
-      "caption": "A promoção deste exemplo criou uma tarefa vinculada com status A fazer. O status do feedback público mudou automaticamente para Planejado.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -152,7 +136,7 @@
       "src": "/documentation/pt-BR/feedback-pages-and-views-workflow.png",
       "alt": "Guia de feedback publicado e selecionado na navegação do mural, legível sem entrar na conta.",
       "caption": "Publique uma página, ative as guias de páginas e selecione-a para o mural. Esta página de demonstração foi aberta anonimamente; seu URL opaco mantém noindex.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -167,13 +151,12 @@
     "publish-a-feedback-board-workflow",
     "submit-and-follow-feedback-workflow",
     "moderate-feedback-workflow",
-    "feedback-to-issue-workflow",
     "feedback-pages-and-views-workflow"
   ]
 }
 ---
 
-O quadro de feedback reúne solicitações e votos com status público, separados da discussão interna do projeto. O proprietário configura a publicação; as seções a seguir descrevem envio, moderação, vínculo com problemas e inclusão de páginas ou visualizações públicas.
+O feedback conecta as solicitações dos visitantes ao trabalho de revisão e entrega da equipe. O proprietário configura o mural público; os visitantes enviam e acompanham solicitações, enquanto os membros as moderam ou vinculam a problemas. Gerencie separadamente respostas públicas, notas internas e compartilhamentos de páginas ou visualizações.
 
 ## Publicar um quadro de feedback {#publish-a-feedback-board}
 
@@ -229,7 +212,6 @@ O status vinculado acompanha a tarefa: triage/backlog/duplicate → open; todo �
 
 As notificações à equipe por novo feedback dependem da origem e da transição de revisão. Não prometa ao votante um email automático a cada união ou atualização de tarefa; ele pode consultar o status público e as respostas em Meus comentários. O vínculo mostra o progresso sem expor a tarefa privada.
 
-![Feedback vinculado a uma tarefa recém-criada, com status Planejado.](/documentation/pt-BR/feedback-to-issue-workflow.png)
 
 ## Adicionar páginas e visualizações públicas ao quadro {#feedback-pages-and-views}
 

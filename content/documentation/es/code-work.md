@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -39,9 +39,9 @@
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison)",
+    "revision": 3,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -64,7 +64,7 @@
       "src": "/documentation/es/delegate-code-work-workflow.png",
       "alt": "Tarjeta del agente completado con modelo, razonamiento bajo, dos archivos modificados, rama, PR n.º 1 y commit corregido.",
       "caption": "Tarjeta de la corrección real de la PR existente, con el commit actualizado y su enlace. Revise las diferencias y las comprobaciones antes de fusionar; el estado completado por sí solo no acredita los criterios de aceptación.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -80,7 +80,7 @@
       "src": "/documentation/es/review-pull-requests-workflow.png",
       "alt": "Pestaña Cambios de la PR de demostración abierta, con las diferencias de greeting y un aviso de autorización de GitHub no disponible.",
       "caption": "La PR real corregida sigue abierta, sin fusionar. Las diferencias eliminan los espacios alrededor del nombre y usan World para un valor vacío. Esta instancia no puede solicitar autorización de usuario de GitHub; la indicación de disponibilidad no concede permisos para fusionar ni demuestra que la CI del proveedor haya pasado.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -98,7 +98,7 @@
 }
 ---
 
-El agente de código implementa el trabajo solicitado en el repositorio vinculado, dentro de una sandbox en el servidor. Los siguientes apartados explican la delegación y la continuación del trabajo, además de la revisión de la pull request vinculada antes de aprobarla o fusionarla.
+El trabajo de código parte del repositorio vinculado al proyecto y se ejecuta en una sandbox del servidor. Prepare la incidencia y delegue la implementación al agente de código de Numo. Antes de fusionar, revise la pull request vinculada y las comprobaciones del proveedor Git.
 
 ## Delegar una incidencia al agente de código {#delegate-code-work}
 

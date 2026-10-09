@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -39,8 +39,8 @@
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun)",
+    "revision": 3,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
     "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review)",
     "date": "2026-10-09"
   },
@@ -64,7 +64,7 @@
       "src": "/documentation/en/delegate-code-work-workflow.png",
       "alt": "Completed code-worker card with model, light reasoning, two changed files, branch, PR #1 and corrected commit.",
       "caption": "Card from the real correction of the existing PR, showing its updated commit and link. Inspect the diff and checks before merging; the completion badge alone does not establish acceptance.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -80,7 +80,7 @@
       "src": "/documentation/en/review-pull-requests-workflow.png",
       "alt": "Changes tab of the open demonstration PR, with the greeting function diff and an unavailable GitHub authorization notice.",
       "caption": "The real corrected PR remains open and unmerged. Its diff trims the name and uses World for an empty value. This instance cannot request user GitHub authorization; the readiness label does not grant merge permission or prove successful provider CI.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

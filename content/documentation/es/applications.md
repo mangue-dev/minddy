@@ -18,8 +18,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 4,
-  "sourceRevision": 4,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -50,13 +50,14 @@
       "content/documentation/reviews/desktop-capture-candidates.json",
       "components/settings/account-push-devices-section.tsx",
       "lib/desktop/notification-capabilities.ts",
-      "content/documentation/reviews/push-registration-capture-candidates.json"
+      "content/documentation/reviews/push-registration-capture-candidates.json",
+      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json"
     ]
   },
   "review": {
-    "revision": 4,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison)",
+    "revision": 5,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -82,15 +83,16 @@
       "src": "/documentation/es/web-and-mobile-workflow.png",
       "alt": "Panel móvil de una incidencia con título, descripción, propiedades y campo de comentario.",
       "caption": "En una pantalla estrecha, los detalles de la incidencia ocupan un panel adaptable. Use el botón de cierre para volver al proyecto; Numo sigue disponible mediante su botón flotante.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         438,
-        892
+        968
       ],
-      "theme": "dark",
-      "padding": 24
+      "theme": "light",
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "install-the-pwa-workflow",
@@ -98,15 +100,16 @@
       "src": "/documentation/es/install-the-pwa-workflow.png",
       "alt": "Guía ilustrada de instalación en Safari de minddy: Compartir, Añadir a pantalla de inicio y confirmar.",
       "caption": "La guía pública ilustra los tres pasos de Safari y la opción Abrir como app web que debe permanecer activada. Son ilustraciones didácticas mostradas por minddy, no capturas de una instalación de iOS realizada.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
-        1288,
+        1488,
         736
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "desktop-app-workflow",
@@ -114,7 +117,7 @@
       "src": "/documentation/es/desktop-app-workflow.png",
       "alt": "Ajustes de escritorio en la aplicación real de desarrollo Electron para macOS, versión 0.11.1, conectada al servidor local con un perfil aislado.",
       "caption": "Ajustes de escritorio en la aplicación real de desarrollo Electron para macOS, versión 0.11.1, conectada al servidor local con un perfil aislado. Esta captura no valida las versiones firmadas ni otros sistemas.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -130,15 +133,16 @@
       "src": "/documentation/es/devices-and-notifications-workflow.png",
       "alt": "Ajustes push con permiso bloqueado en el navegador y ningún dispositivo registrado.",
       "caption": "Este navegador bloquea las notificaciones. Restablezca el permiso del sitio antes de registrar este dispositivo.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         816,
         196
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "devices-and-notifications-registered-workflow",
@@ -146,7 +150,7 @@
       "src": "/documentation/es/devices-and-notifications-registered.png",
       "alt": "Dispositivo de navegador registrado y activo en la cuenta, con la fecha real del último envío.",
       "caption": "La cuenta tiene un dispositivo de navegador registrado y activo. La lista muestra las fechas de registro y del último envío. La aparición de una notificación sigue dependiendo del permiso del navegador y de los ajustes del sistema operativo.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -167,7 +171,7 @@
 }
 ---
 
-minddy se puede usar en el navegador, como aplicación web instalada y como aplicación de escritorio. Los siguientes apartados explican los puntos de entrada, la instalación y las actualizaciones, además de los requisitos de las notificaciones en cada plataforma.
+Puede acceder a la misma instancia desde el navegador, una aplicación web instalada o la aplicación de escritorio. Siga los pasos de instalación de su dispositivo y compruebe después la conexión, las actualizaciones y los permisos de notificación de esa plataforma.
 
 ## Trabajar en navegador y móvil {#web-and-mobile}
 

@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -36,9 +36,9 @@
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison)",
+    "revision": 3,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -52,40 +52,8 @@
   "tags": [
     "Cloud oder eine eigene Instanz wählen"
   ],
-  "figures": [
-    {
-      "id": "responsibilities",
-      "kind": "diagram",
-      "src": "/documentation/de/responsibilities.svg",
-      "alt": "Betriebsverantwortung: Von minddy betrieben, Von dir betrieben.",
-      "caption": "In beiden Modellen müssen dieselben Kerndienste betrieben werden. Optionale Anbieter bleiben separate Dienste.",
-      "revision": 2,
-      "reviewed": true,
-      "capturedAt": "2026-10-08",
-      "viewport": [
-        360,
-        520
-      ],
-      "theme": "neutral",
-      "diagram": {
-        "layout": "collection",
-        "items": [
-          {
-            "title": "minddy Cloud",
-            "detail": "Von minddy betrieben · Anwendung · Datenbank · Storage · Scheduler"
-          },
-          {
-            "title": "Deine eigene Instanz",
-            "detail": "Von dir betrieben · Anwendung · Datenbank · Storage · Scheduler"
-          }
-        ],
-        "title": "Betriebsverantwortung"
-      }
-    }
-  ],
-  "requiredFigures": [
-    "responsibilities"
-  ]
+  "figures": [],
+  "requiredFigures": []
 }
 ---
 
@@ -95,7 +63,6 @@ minddy Cloud und selbst gehostetes minddy nutzen denselben öffentlichen Kern. W
 
 Ein Cloud-Konto gehört zur Cloud. Erstelle für eine selbst gehostete Instanz ein Konto auf dieser Instanz; ein minddy-Cloud-Konto ist dafür nicht erforderlich. Prüfe die Adresse vor der Anmeldung oder einer Einladung. Zwei minddy-Instanzen teilen Konten und Zugangsdaten nicht automatisch.
 
-![Betriebsverantwortung: Von minddy betrieben, Von dir betrieben.](/documentation/de/responsibilities.svg)
 
 ## Verantwortung und Kosten {#responsibilities}
 

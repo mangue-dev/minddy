@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -36,13 +36,16 @@
       "content/knowledge/core-tracker.md",
       "content/knowledge/productivity.md",
       "content/knowledge/pages.md",
-      "content/knowledge/feedback.md"
+      "content/knowledge/feedback.md",
+      "content/documentation/reviews/editorial-clarity-en-fr-2026-10-09.md",
+      "content/documentation/reviews/editorial-clarity-de-es-2026-10-09.md",
+      "content/documentation/reviews/editorial-clarity-it-pt-BR-2026-10-09.md"
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison)",
+    "revision": 3,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root/editorial_de_es (collection-caption clarity)",
     "date": "2026-10-09"
   },
   "related": [
@@ -59,8 +62,8 @@
       "kind": "diagram",
       "src": "/documentation/de/glossary-and-data-model-flow.svg",
       "alt": "Diagramm: Projekt: gemeinsame Arbeit und Wissen. Ticket: Arbeit; Ziel: Ergebnis. Persönlicher Zyklus: projektübergreifende Arbeit. Seite: dauerhafter Kontext; Feedback: Bedarf.",
-      "caption": "Diese Komponenten haben unterschiedliche Aufgaben. Projekt: gemeinsame Arbeit und Wissen. Ticket: Arbeit; Ziel: Ergebnis. Persönlicher Zyklus: projektübergreifende Arbeit. Seite: dauerhafter Kontext; Feedback: Bedarf.",
-      "revision": 2,
+      "caption": "Die Objekte verbinden Aufgaben, Ergebnisse und dauerhaften Kontext, während der persönliche Zyklus die eigene Arbeit über Projekte hinweg ordnet.",
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -95,8 +98,12 @@
 
 ## Projekte, Tickets, Ziele und persönliche Arbeit verstehen {#glossary-and-data-model}
 
-Ein Projekt ist der gemeinsame Bereich für Mitglieder, Tickets, Kategorien, gespeicherte Ansichten, Seiten, Integrationen und Feedbackboard. Ein Ticket ist eine Arbeitseinheit mit Status, Zuständigkeit und optional Plan, Frist, Ziel, Kategorien, Beziehungen, Kommentaren und Ressourcen. Ein Ziel bündelt Projekttickets um ein Ergebnis und verfolgt Fortschritt. Ein persönlicher Zyklus wählt wöchentliche oder zweiwöchentliche Arbeit eines Nutzers projektübergreifend. Er ist weder gemeinsamer Sprint noch Projektziel.
-
+| Begriff | Bedeutung |
+| --- | --- |
+| Projekt | Gemeinsamer Bereich für Mitglieder, Tickets, Kategorien, gespeicherte Ansichten, Seiten, Integrationen und das Feedbackboard. |
+| Ticket | Arbeitseinheit mit Status und Zuständigkeit. Optional gehören Plan, Frist, Ziel, Kategorien, Beziehungen, Kommentare und Ressourcen dazu. |
+| Ziel | Bündelt Projekttickets um ein Ergebnis und verfolgt dessen Fortschritt. |
+| Persönlicher Zyklus | Wählt die Arbeit eines Nutzers für eine oder zwei Wochen aus, auch über mehrere Projekte hinweg. Er ist weder ein gemeinsamer Sprint noch ein Projektziel. |
 
 ![Diagramm: Projekt: gemeinsame Arbeit und Wissen. Ticket: Arbeit; Ziel: Ergebnis. Persönlicher Zyklus: projektübergreifende Arbeit. Seite: dauerhafter Kontext; Feedback: Bedarf.](/documentation/de/glossary-and-data-model-flow.svg)
 
@@ -106,4 +113,4 @@ Eine Seite bewahrt dauerhaft Kontext wie Spezifikation, Entscheidung oder Ablauf
 
 ## Mit einem Beispiel überprüfen {#example}
 
-Legen Sie für eine Release ein Projektziel an, dokumentieren Sie die Entscheidung auf einer Seite und hängen Sie diese an Umsetzungstickets. Mitglieder können ausgewählte Tickets in ihren persönlichen Zyklus aufnehmen. Kundenfeedback kann verknüpft werden, ohne private Ticketdiskussion zu veröffentlichen. Eine Routine startet eine neue geplante Numo-Konversation mit Projektkontext, kein wiederkehrendes Ticket und keinen Auslöser bei jeder Projektänderung. Bewahren Sie bei Integrationen IDs und Eigentum: verwandter Kontext bedeutet nicht gleiche Zugriffsrechte.
+Legen Sie für eine Veröffentlichung ein Projektziel an, dokumentieren Sie die Entscheidung auf einer Seite und hängen Sie diese an Umsetzungstickets. Mitglieder können ausgewählte Tickets in ihren persönlichen Zyklus aufnehmen. Kundenfeedback kann verknüpft werden, ohne private Ticketdiskussion zu veröffentlichen. Eine Routine startet eine neue geplante Numo-Konversation mit Projektkontext. Sie erstellt kein wiederkehrendes Ticket und wird nicht bei jeder Projektänderung ausgelöst. Bewahren Sie bei Integrationen IDs und Eigentum: verwandter Kontext bedeutet nicht gleiche Zugriffsrechte.

@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -42,13 +42,14 @@
       "lib/server/agent/execute.ts",
       "app/(app)/billing/page.tsx",
       "app/(marketing)/pricing/page.tsx",
-      "lib/billing-plans.ts"
+      "lib/billing-plans.ts",
+      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json"
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review)",
+    "revision": 6,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -70,15 +71,16 @@
       "src": "/documentation/en/ai-keys-and-models-workflow.png",
       "alt": "AI provider card with minddy Cloud selected.",
       "caption": "The selected Cloud provider uses the account plan. Personal providers are configured in this selector.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         816,
         212
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "ai-keys-and-models-defaults-workflow",
@@ -86,15 +88,16 @@
       "src": "/documentation/en/ai-keys-and-models-defaults-workflow.png",
       "alt": "Code model and reasoning defaults.",
       "caption": "Code model and reasoning defaults. New code workers use these defaults; running workers retain their frozen settings.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         816,
         217
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "plans-and-ai-usage-workflow",
@@ -102,15 +105,16 @@
       "src": "/documentation/en/plans-and-ai-usage-workflow.png",
       "alt": "AI usage page for the demonstration account.",
       "caption": "AI usage page for the demonstration account. The current budget, usage categories and history are read from the account; no purchase or paid run was triggered.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         1154,
-        1766
+        1016
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     }
   ],
   "requiredFigures": [
@@ -127,13 +131,14 @@ Account AI settings choose the providers, personal keys and defaults used by sup
 
 Open account AI settings, add a compatible provider and enter its key and any required base URL. Save and inspect the confirmation state. For AI calls with managed fallback available, an unconfirmed or unreachable key leaves usage on minddy. This depends on configured managed AI; code workers have the provider-bound model rules below. Never paste the key into a conversation or screenshot.
 
-Assign text, transcription and embedding model families to compatible keys or keep them on minddy. For each key, choose its enabled surfaces: Numo conversation, code work, automations, voice and feedback. A surface or model family without a usable assignment stays on minddy usage. Your provider bills calls made with its key. Server-sandbox compute still has a real cost and is recorded in usage. This recording is separate from applying an account limit: a worker using validated BYOK bypasses the plan quota and compute cap, while minddy-funded work remains subject to its included allowance.
+Assign text, transcription and embedding model families to compatible keys or keep them on minddy. For each key, choose its enabled surfaces: Numo conversation, code work, automations, voice and feedback. A surface or model family without a usable assignment stays on minddy usage. Your provider bills calls made with its key. Sandbox compute is recorded separately; validated personal keys (BYOK) and minddy-funded work follow the [budget rules below](#consumption).
 
 ![AI provider card with minddy Cloud selected.](/documentation/en/ai-keys-and-models-workflow.png)
 
 ### Models and execution location {#models}
 
 Code-model choices are tied to their provider. After changing, disabling or losing a personal key, the previous choice may no longer match the active provider. A new worker then refuses to start until you choose a compatible code model in account AI settings; it does not silently select a cheaper model or a platform default. An already frozen BYOK run does not switch payer when its key becomes unavailable.
+
 Set the default code model and reasoning for new workers here. Existing workers keep their frozen reasoning level. Choose sandbox region and size for new sandboxes separately. These defaults do not replace the model selected in a conversation.
 
 Local Ollama or OpenAI-compatible endpoints can serve conversations through the desktop bridge when configured. They cannot serve delegated code work or routines running in the server sandbox. Use a server-reachable provider for those surfaces. Remove a provider with its confirmation control when no longer needed and check the resulting routing before the next run.

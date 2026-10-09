@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 4,
-  "sourceRevision": 4,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -34,12 +34,13 @@
       "components/settings/account-data-section.tsx",
       "lib/server/account-import.ts",
       "content/documentation/reviews/remaining-account-capture-candidates.json",
-      "content/documentation/reviews/account-transfer-execution.json"
+      "content/documentation/reviews/account-transfer-execution.json",
+      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json"
     ]
   },
   "review": {
-    "revision": 4,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
+    "revision": 5,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
     "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison)",
     "date": "2026-10-09"
   },
@@ -55,15 +56,16 @@
       "src": "/documentation/de/transfer-between-instances-workflow.png",
       "alt": "Datenübertragung mit Schaltfläche zum Import einer Datei.",
       "caption": "Wähle die unveränderte JSON-Exportdatei des Quellkontos. Prüfe das Importergebnis vor dem Schließen.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         816,
         148
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "transfer-between-instances-export-workflow",
@@ -71,15 +73,16 @@
       "src": "/documentation/de/transfer-between-instances-export-workflow.png",
       "alt": "Exportfunktion des Kontos.",
       "caption": "Exportfunktion des Kontos. Der Export enthält keine Schlüssel oder Tokens; die Aufnahme zeigt die Schaltfläche vor dem Download.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         816,
         148
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     }
   ],
   "requiredFigures": [

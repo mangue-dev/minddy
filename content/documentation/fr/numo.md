@@ -21,8 +21,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -51,13 +51,14 @@
       "components/settings/account-mcp-clients.tsx",
       "content/documentation/reviews/remaining-account-capture-candidates.json",
       "components/assistant/usage-exhausted-card.tsx",
-      "components/assistant/ask-user-card.tsx"
+      "components/assistant/ask-user-card.tsx",
+      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json"
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun)",
-    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review)",
+    "revision": 3,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -88,15 +89,16 @@
       "src": "/documentation/fr/work-with-numo-workflow.png",
       "alt": "Conversation de démonstration Numo avec contexte, demande de changement de priorité et réponse enregistrée.",
       "caption": "Fil de démonstration existant, localisé pour l’affichage. La réponse enregistrée cite AUR-11 et AUR-7 ; la capture ne prouve pas une nouvelle exécution.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         498,
         648
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "numo-permissions-and-approvals-workflow",
@@ -104,7 +106,7 @@
       "src": "/documentation/fr/numo-permissions-and-approvals-workflow.svg",
       "alt": "Matrice des permissions Numo pour les actions du projet, connexions personnelles et routines.",
       "caption": "Les accès du projet et les demandes explicites bornent les actions de Numo ; un contenu externe ne donne pas de permission.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -165,7 +167,7 @@
       "src": "/documentation/fr/numo-execution-model-flow.svg",
       "alt": "Schéma: Persister intention, message et UUID. Prendre le tour, enregistrer outils et résultats. Attendre le worker courant si nécessaire. Relire les événements ; réconcilier les écritures.",
       "caption": "Lisez les étapes dans cet ordre. Persister intention, message et UUID. Prendre le tour, enregistrer outils et résultats. Attendre le worker courant si nécessaire. Relire les événements ; réconcilier les écritures.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -197,15 +199,16 @@
       "src": "/documentation/fr/numo-mcp-connections-workflow.png",
       "alt": "Réglages MCP personnels, liste vide et commande Ajouter un autre serveur MCP.",
       "caption": "Les connexions de Numo sont personnelles ; les routines utilisent celles du propriétaire du projet.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         816,
         1314
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "numo-mcp-connections-config-workflow",
@@ -213,7 +216,7 @@
       "src": "/documentation/fr/numo-mcp-connections-config-workflow.png",
       "alt": "Formulaire d’un serveur MCP personnalisé avec les réglages avancés d’authentification, de transport et d’en-têtes.",
       "caption": "Formulaire d’un serveur MCP personnalisé avec les réglages avancés d’authentification, de transport et d’en-têtes. Aucun identifiant n’a été saisi et aucun serveur n’a été contacté.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -221,23 +224,8 @@
         920
       ],
       "theme": "light",
-      "padding": 24
-    },
-    {
-      "id": "recover-numo-work-workflow",
-      "kind": "screenshot",
-      "src": "/documentation/fr/recover-numo-work-workflow.png",
-      "alt": "Réponse de Numo indiquant du code et des tests locaux, un envoi de branche échoué et aucune pull request à ce stade.",
-      "caption": "Résultat initial partiel d’une véritable exécution de démonstration. À ce stade, l’envoi a échoué et aucune PR n’existait. Vérifiez la branche sauvegardée et les services externes avant de continuer ; la conversation a ensuite repris et la PR a été corrigée.",
-      "revision": 2,
-      "reviewed": true,
-      "capturedAt": "2026-10-08",
-      "viewport": [
-        912,
-        400
-      ],
-      "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     }
   ],
   "requiredFigures": [
@@ -245,8 +233,7 @@
     "numo-permissions-and-approvals-workflow",
     "numo-execution-model-flow",
     "numo-mcp-connections-workflow",
-    "numo-mcp-connections-config-workflow",
-    "recover-numo-work-workflow"
+    "numo-mcp-connections-config-workflow"
   ]
 }
 ---
@@ -288,7 +275,7 @@ Une conversation ne peut pas emprunter les connexions MCP d’un autre membre. L
 
 ![Matrice des permissions Numo pour les actions du projet, connexions personnelles et routines.](/documentation/fr/numo-permissions-and-approvals-workflow.svg)
 
-## Comprendre les tours durables Numo et le travail délégué {#numo-execution-model}
+## Comprendre l’exécution Numo et le travail délégué {#numo-execution-model}
 
 Messages interactifs, actions contextuelles et routines entrent dans les conversations Numo. Modèle et raisonnement conversationnels se choisissent dans le composeur ; le travail sur le code délégué utilise les valeurs par défaut du modèle de code et du niveau de raisonnement du compte. Les outils minddy directs peuvent agir sans dépôt. Le code ouvre une sandbox serveur pour le dépôt lié uniquement si nécessaire. Une routine crée une nouvelle conversation avec instruction enregistrée et contexte propriétaire/projet. Il n’est pas nécessaire de garder une session de l’application de bureau ouverte.
 
@@ -297,11 +284,11 @@ Messages interactifs, actions contextuelles et routines entrent dans les convers
 
 ### Distinguer exécution et affichage {#state}
 
-L’intention est enregistrée comme tour durable avec UUID de requête et message. L’état passe de queued à running, puis completed, waiting_input ou waiting_work ; stopping/stopped et retryable/failed décrivent arrêt et échec. SSE affiche l’activité persistée sans posséder l’exécution. La reconnexion lit messages et événements après sa séquence. La fin d’un worker relance uniquement le parent attendant l’exécution courante ; événements dupliqués ou anciens ne créent aucune deuxième tâche. Le contexte projet est distinct de l’accès : un chat privé reste privé.
+Chaque demande est enregistrée comme une exécution durable avec son UUID de requête et son message. L’état passe de queued à running, puis à completed, waiting_input ou waiting_work ; stopping/stopped et retryable/failed décrivent l’interruption et l’échec. SSE affiche l’activité enregistrée sans piloter l’exécution. À la reconnexion, l’affichage reprend les messages et événements après la dernière séquence reçue. La fin d’un worker relance le parent en attente uniquement pour l’exécution courante ; les événements dupliqués ou anciens ne créent pas de deuxième tâche. Le contexte projet reste distinct de l’accès : une conversation réservée au propriétaire reste privée.
 
 ### Traiter les mutations incertaines {#mutations}
 
-Avant mutation, le système enregistre opération et checkpoint. Les résultats terminés sont réutilisés. Une lecture interrompue peut être répétée ; une mutation dont le résultat est inconnu entre en reconciling sans répétition automatique. Inspectez la destination avant de répéter une écriture externe. Connexions et budget des routines restent soumis au propriétaire et aux protections de coût ; un autre membre ne peut emprunter les identifiants MCP personnels antérieurs. Arrêter le parent interrompt le travail délégué actif, mais une action externe déjà envoyée peut encore aboutir.
+Avant une modification, le système enregistre l’opération et son point de reprise. Les résultats terminés sont réutilisés. Une lecture interrompue peut être répétée ; une modification dont le résultat est inconnu passe à l’état reconciling, sans répétition automatique. Inspectez la destination avant de répéter une écriture externe. Les connexions et le budget des routines restent soumis aux règles de propriété et de coût ; un autre membre ne peut pas utiliser les identifiants MCP personnels de l’ancien propriétaire. Arrêter le parent interrompt le travail délégué actif, mais une action externe déjà envoyée peut encore aboutir.
 
 ## Connecter un service MCP personnel à Numo {#numo-mcp-connections}
 
@@ -330,5 +317,3 @@ Dans une carte de questions active, répondez à toutes les questions requises p
 La carte de limite du compte affiche la date de réinitialisation lorsqu’elle est connue et peut proposer un forfait ou une clé personnelle. Celle d’une routine mène à sa gestion : vérifiez le plafond par exécution. L’allocation d’opération concerne cette opération. Répéter la demande ne supprime pas la limite. Une clé personnelle ne rend pas le calcul du sandbox gratuit.
 
 Une exécution échouée reprend depuis un point sauvegardé seulement s’il subsiste. Vérifiez tickets, branche, PR et services externes avant de relancer : une écriture peut avoir réussi malgré une réponse perdue. Précisez le travail restant et demandez de continuer. Sans point récupérable, transmettez l’état vérifié dans une nouvelle demande. Pour signaler une erreur persistante, indiquez la conversation concernée sans identifiants secrets.
-
-![Réponse de Numo indiquant du code et des tests locaux, un envoi de branche échoué et aucune pull request à ce stade.](/documentation/fr/recover-numo-work-workflow.png)

@@ -16,6 +16,7 @@ export interface DocumentationFigure {
   kind?: "screenshot" | "diagram";
   diagram?: DocumentationDiagram;
   padding?: number;
+  deviceScaleFactor?: number;
   src: string;
   alt: string;
   caption: string;

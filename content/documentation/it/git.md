@@ -17,8 +17,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -43,8 +43,8 @@
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun)",
+    "revision": 3,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
     "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
     "date": "2026-10-09"
   },
@@ -67,7 +67,7 @@
       "src": "/documentation/it/git-connection-flow.svg",
       "alt": "Il collegamento dell’account personale e quello del repository al progetto sono due passaggi distinti.",
       "caption": "Autorizza prima l’account, poi collega un repository come proprietario del progetto.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -100,7 +100,7 @@
       "src": "/documentation/it/forge-issue-sync-mapping.svg",
       "alt": "Flusso di sincronizzazione GitHub con configurazione, controllo eventi, importazione e stati.",
       "caption": "Gli eventi GitHub preservano le modifiche recenti ed evitano consegne duplicate. Le corrispondenze GitLab richiedono una verifica separata.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -138,7 +138,7 @@
       "src": "/documentation/it/forge-issue-sync-workflow.png",
       "alt": "Repository dimostrativo GitHub collegato, con la sincronizzazione delle issue disattivata.",
       "caption": "Il repository dimostrativo è collegato a GitHub. La sincronizzazione delle issue è ancora disattivata: controlla l’ambito e il backlog esistente prima di attivarla. Questa schermata non dimostra un’importazione sincronizzata.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

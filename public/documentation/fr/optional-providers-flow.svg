@@ -3,23 +3,15 @@
 <desc id="desc">Schéma: L’opérateur choisit une capacité optionnelle. Identifiants complets et conditions fournisseur. Destination externe explicitement choisie. Vérifier le comportement et suivre les coûts.</desc>
 <rect width="720" height="640" rx="20" fill="#fafaf9" />
 <rect x="24" y="24" width="672" height="128" rx="16" fill="#e6edf5" stroke="#293d56" stroke-width="1" stroke-opacity="0.12" />
-<circle cx="60" cy="88" r="20" fill="#60706b" />
-<circle cx="60" cy="88" r="5" fill="#ffffff" />
-<text x="98" y="81" font-family="Arial, sans-serif" font-size="29" fill="#293d56">L’opérateur choisit une capacité</text>
-<text x="98" y="115" font-family="Arial, sans-serif" font-size="29" fill="#293d56">optionnelle</text>
+<text x="48" y="81" font-family="Arial, sans-serif" font-size="29" fill="#293d56">L’opérateur choisit une capacité</text>
+<text x="48" y="115" font-family="Arial, sans-serif" font-size="29" fill="#293d56">optionnelle</text>
 <rect x="24" y="178" width="672" height="128" rx="16" fill="#e0efe8" stroke="#1e4436" stroke-width="1" stroke-opacity="0.12" />
-<circle cx="60" cy="242" r="20" fill="#60706b" />
-<circle cx="60" cy="242" r="5" fill="#ffffff" />
-<text x="98" y="235" font-family="Arial, sans-serif" font-size="29" fill="#293d56">Identifiants complets et conditions</text>
-<text x="98" y="269" font-family="Arial, sans-serif" font-size="29" fill="#293d56">fournisseur</text>
+<text x="48" y="235" font-family="Arial, sans-serif" font-size="29" fill="#293d56">Identifiants complets et conditions</text>
+<text x="48" y="269" font-family="Arial, sans-serif" font-size="29" fill="#293d56">fournisseur</text>
 <rect x="24" y="332" width="672" height="128" rx="16" fill="#f0ecf6" stroke="#433352" stroke-width="1" stroke-opacity="0.12" />
-<circle cx="60" cy="396" r="20" fill="#60706b" />
-<circle cx="60" cy="396" r="5" fill="#ffffff" />
-<text x="98" y="389" font-family="Arial, sans-serif" font-size="29" fill="#293d56">Destination externe explicitement</text>
-<text x="98" y="423" font-family="Arial, sans-serif" font-size="29" fill="#293d56">choisie</text>
+<text x="48" y="389" font-family="Arial, sans-serif" font-size="29" fill="#293d56">Destination externe explicitement</text>
+<text x="48" y="423" font-family="Arial, sans-serif" font-size="29" fill="#293d56">choisie</text>
 <rect x="24" y="486" width="672" height="128" rx="16" fill="#f7ecdf" stroke="#573e28" stroke-width="1" stroke-opacity="0.12" />
-<circle cx="60" cy="550" r="20" fill="#60706b" />
-<circle cx="60" cy="550" r="5" fill="#ffffff" />
-<text x="98" y="543" font-family="Arial, sans-serif" font-size="29" fill="#293d56">Vérifier le comportement et suivre les</text>
-<text x="98" y="577" font-family="Arial, sans-serif" font-size="29" fill="#293d56">coûts</text>
+<text x="48" y="543" font-family="Arial, sans-serif" font-size="29" fill="#293d56">Vérifier le comportement et suivre les</text>
+<text x="48" y="577" font-family="Arial, sans-serif" font-size="29" fill="#293d56">coûts</text>
 </svg>

@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -32,13 +32,17 @@
     "evidence": [
       "docs/self-hosting.md",
       "scripts/self-hosting-local.mjs",
-      "content/knowledge/self-hosting.md"
+      "content/knowledge/self-hosting.md",
+      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json",
+      "content/documentation/reviews/editorial-clarity-en-fr-2026-10-09.md",
+      "content/documentation/reviews/editorial-clarity-de-es-2026-10-09.md",
+      "content/documentation/reviews/editorial-clarity-it-pt-BR-2026-10-09.md"
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
+    "revision": 3,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root/editorial_it_pt (collection-caption clarity)",
     "date": "2026-10-09"
   },
   "related": [
@@ -55,8 +59,8 @@
       "kind": "diagram",
       "src": "/documentation/pt-BR/install-locally-flow.svg",
       "alt": "Diagrama: Aplicativo desktop seleciona clone. Aplicação loopback: porta 6463. Supabase mínimo e dados duráveis. Sair para aplicativo e backend.",
-      "caption": "Estes componentes têm responsabilidades distintas. Aplicativo desktop seleciona clone. Aplicação loopback: porta 6463. Supabase mínimo e dados duráveis. Sair para aplicativo e backend.",
-      "revision": 2,
+      "caption": "O aplicativo desktop controla o início e o encerramento da instância local; os dados precisam ser preservados entre as execuções.",
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -88,15 +92,16 @@
       "src": "/documentation/pt-BR/install-locally-wizard.png",
       "alt": "Assistente público de instalação com o perfil deste computador selecionado.",
       "caption": "Escolha a instalação pessoal quando o aplicativo de desktop for gerenciar os serviços locais.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         944,
-        500
+        504
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     }
   ],
   "requiredFigures": [
@@ -130,4 +135,8 @@ Abra o menu nativo minddy. No Windows e Linux, Alt mostra a barra; no macOS, use
 
 ## Recuperar após uma falha {#recover}
 
-Fechar uma janela mantém o aplicativo desktop ativo; use o comando para sair do aplicativo para parar também os serviços locais. Se não iniciar, copie o relatório pelo menu nativo de ajuda. Confira Docker, CLI, espaço e outros processos na 6463. pnpm self-host:local é uma alternativa de diagnóstico no terminal. Pare com Ctrl+C antes de devolver o controle ao aplicativo, que não assume processos alheios. Sair do aplicativo normalmente também para Supabase; --keep-backend muda isso explicitamente. Nunca use supabase db reset --local para recuperar dados: ele apaga os dados de avaliação. Teste conta nova, projeto, issue e anexo antes de confiar na instância.
+Fechar uma janela mantém o aplicativo desktop ativo; use o comando para sair do aplicativo para parar também os serviços locais. Se não iniciar, copie o relatório pelo menu nativo de ajuda. Confira Docker, CLI, espaço e outros processos na 6463.
+
+pnpm self-host:local é uma alternativa de diagnóstico no terminal. Pare com Ctrl+C antes de devolver o controle ao aplicativo, que não assume processos alheios. Sair do aplicativo normalmente também para Supabase; --keep-backend muda isso explicitamente.
+
+Nunca use supabase db reset --local para recuperar dados: ele apaga os dados de avaliação. Teste conta nova, projeto, issue e anexo antes de confiar na instância.

@@ -17,8 +17,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -45,9 +45,9 @@
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
+    "revision": 6,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -72,7 +72,7 @@
       "src": "/documentation/pt-BR/database-property-types.png",
       "alt": "Seletor de tipo de coluna com texto, número, seleções, datas, pessoas e caixa de seleção.",
       "caption": "Escolha um tipo adequado aos valores que serão armazenados.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -88,7 +88,7 @@
       "src": "/documentation/pt-BR/database-entry.png",
       "alt": "Registro de demonstração com descrição, duração 2.5, caixa marcada e seleção vazia.",
       "caption": "Abra um registro para ler o texto completo e editar os valores conforme o tipo.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -104,7 +104,7 @@
       "src": "/documentation/pt-BR/database-conversion-warning.png",
       "alt": "Aviso de conversão: mudar de Texto para Número limpa uma célula incompatível, com botões para cancelar ou confirmar.",
       "caption": "Confira o número real de células incompatíveis antes de confirmar. Cancelar preserva os valores atuais.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -120,7 +120,7 @@
       "src": "/documentation/pt-BR/database-import-review.png",
       "alt": "Revisão de um CSV local: duas páginas de registros e duas colunas, com o botão Importar banco de dados.",
       "caption": "Confira os registros analisados e o número de colunas antes de importar para o banco vazio.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -140,7 +140,7 @@
 }
 ---
 
-Um banco de dados organiza páginas como entradas com propriedades estruturadas. Você pode definir colunas, editar valores e conteúdo e ajustar o esquema. As conversões exigem conferir a prévia; a importação de um arquivo completo começa em um banco novo e vazio.
+Um banco de dados combina uma tabela de propriedades estruturadas com uma página completa para cada entrada. Você pode criar colunas e editar entradas manualmente ou importar um banco em um destino novo e vazio. Antes de converter uma propriedade ou excluir uma coluna, confira quais valores serão substituídos ou perdidos.
 
 ## Criar um banco de dados e suas colunas {#create-a-database}
 

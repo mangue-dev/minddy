@@ -17,8 +17,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -45,8 +45,8 @@
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun)",
+    "revision": 6,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
     "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review)",
     "date": "2026-10-09"
   },
@@ -72,7 +72,7 @@
       "src": "/documentation/fr/database-property-types.png",
       "alt": "Sélecteur de type de colonne : texte, nombre, sélections, dates, personnes et case à cocher.",
       "caption": "Choisissez un type adapté aux valeurs à conserver.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -88,7 +88,7 @@
       "src": "/documentation/fr/database-entry.png",
       "alt": "Entrée de démonstration avec description, durée 2.5, case cochée et sélection vide.",
       "caption": "Ouvrez une entrée pour lire son texte complet et modifier les valeurs typées.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -104,7 +104,7 @@
       "src": "/documentation/fr/database-conversion-warning.png",
       "alt": "Avertissement de conversion : passer de Texte à Nombre efface une cellule incompatible, avec boutons Annuler et confirmation.",
       "caption": "Vérifiez le nombre réel de cellules incompatibles avant de confirmer. Annuler conserve les valeurs actuelles.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -120,7 +120,7 @@
       "src": "/documentation/fr/database-import-review.png",
       "alt": "Vérification d’un CSV local : deux pages d’entrées et deux colonnes, avec le bouton Importer la base.",
       "caption": "Vérifiez les entrées analysées et le nombre de colonnes avant l’import dans la base vide.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

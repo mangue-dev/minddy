@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 4,
-  "sourceRevision": 4,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -43,9 +43,9 @@
     ]
   },
   "review": {
-    "revision": 4,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison)",
+    "revision": 5,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -67,7 +67,7 @@
       "src": "/documentation/de/work-navigation.png",
       "alt": "Projektnavigation neben dem Demo-Ticketboard.",
       "caption": "Über die Projektseitenleiste erreichst du Tickets, Ziele, Seiten und Triage.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -83,7 +83,7 @@
       "src": "/documentation/de/work-search.png",
       "alt": "Suchergebnisse für die Kennung eines Demo-Tickets.",
       "caption": "Die Palette findet das Ticket über seine Kennung neben Projektseiten; beim Öffnen bleiben die Zugriffsregeln bestehen.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -101,7 +101,7 @@
 }
 ---
 
-Die Navigation verbindet persönliche Arbeit, Projekte und deren einzelne Bereiche. Dieser Leitfaden erklärt Panels, mobile Navigation und Desktop-Tabs sowie Suche und Tastaturaktionen für Inhalte, auf die dein Konto Zugriff hat.
+Über die Navigation erreichst du deine persönliche Arbeit oder ein Projekt. Mit der Befehlspalette findest du ein bestimmtes Problem oder eine Aktion. Panels, mobile Navigation und Desktop-Tabs bieten unterschiedliche Zugänge. Prüfe vor Änderungen das ausgewählte Projekt und die Instanz.
 
 ## Persönliche Arbeit finden und Projekte wechseln {#navigation}
 

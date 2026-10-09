@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -36,9 +36,9 @@
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun)",
-    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review)",
+    "revision": 3,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -52,40 +52,8 @@
   "tags": [
     "Choisir le Cloud ou votre propre instance"
   ],
-  "figures": [
-    {
-      "id": "responsibilities",
-      "kind": "diagram",
-      "src": "/documentation/fr/responsibilities.svg",
-      "alt": "Responsabilité d’exploitation: Exploité par minddy, Exploité par vous.",
-      "caption": "Les mêmes services du cœur nécessitent un opérateur dans les deux modèles. Les fournisseurs optionnels restent des services distincts.",
-      "revision": 2,
-      "reviewed": true,
-      "capturedAt": "2026-10-08",
-      "viewport": [
-        360,
-        520
-      ],
-      "theme": "neutral",
-      "diagram": {
-        "layout": "collection",
-        "items": [
-          {
-            "title": "minddy Cloud",
-            "detail": "Exploité par minddy · Application · Base de données · Storage · Planificateur"
-          },
-          {
-            "title": "Votre propre instance",
-            "detail": "Exploité par vous · Application · Base de données · Storage · Planificateur"
-          }
-        ],
-        "title": "Responsabilité d’exploitation"
-      }
-    }
-  ],
-  "requiredFigures": [
-    "responsibilities"
-  ]
+  "figures": [],
+  "requiredFigures": []
 }
 ---
 
@@ -95,7 +63,6 @@ minddy Cloud et minddy auto-hébergé utilisent le même cœur public. Choisisse
 
 Un compte Cloud appartient au Cloud. Sur une instance auto-hébergée, créez un compte sur cette instance ; aucun compte minddy Cloud n’est nécessaire. Vérifiez l’adresse avant de vous connecter ou d’inviter quelqu’un. Deux instances utilisant minddy ne partagent pas automatiquement leurs comptes ni leurs identifiants.
 
-![Responsabilité d’exploitation: Exploité par minddy, Exploité par vous.](/documentation/fr/responsibilities.svg)
 
 ## Responsabilités et coûts {#responsibilities}
 

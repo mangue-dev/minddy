@@ -27,6 +27,30 @@ make the exception obvious from its surrounding code or fixture path.
   changes.
 - Review `git diff --check` and confirm that excluded paths are untouched.
 
+## Local machine resource limits
+
+The 2026-10-09 documentation capture session made the owner's Mac unresponsive.
+Apply these constraints to local tooling and temporary candidate checkouts:
+
+- Never set a compiler, bundler, CSS scanner, or file watcher root to `/` or
+  another directory above the repository to bypass dependency resolution errors.
+  Preserve the repository's bounded `turbopack.root`. Fix the dependency layout
+  within that boundary instead.
+- Run one heavy local workflow at a time. Do not overlap Docker startup or image
+  pulls, a second development server, builds, type checks, and browser capture
+  batches. Reuse an existing suitable server. Keep capture work to one browser
+  context and one page, with small batches and a resource check between batches.
+- After a failed or stopped server, inspect its child processes and stop only
+  the task's remaining workers before trying another backend or compiler. A
+  terminated parent does not prove that PostCSS or browser workers have exited.
+- If commands slow unexpectedly, workers remain CPU-bound after termination,
+  or applications stop responding, stop task-owned heavy work immediately.
+  Inspect process and memory snapshots using lightweight commands. Do not retry
+  builds, broaden filesystem scans, or start additional services as a workaround.
+- Do not automatically restart Docker or the capture environment following this
+  incident. Resume documentation work with file edits and lightweight checks;
+  arrange any later resource-intensive verification as a separate, bounded run.
+
 ## Git workflow (this repository only)
 
 Apply these rules only when the `origin` remote is `mangue-dev/minddy`. Never

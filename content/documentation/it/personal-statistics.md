@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 3,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -40,9 +40,9 @@
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
+    "revision": 4,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -61,7 +61,7 @@
       "src": "/documentation/it/reader-statistics.png",
       "alt": "Statistiche personali con griglia annuale, ripartizioni, ritmo di lavoro e totali complessivi.",
       "caption": "Questo account dimostrativo ha un ticket completato e undici creati. Le statistiche mostrate sono reali; i nomi del progetto e dell’obiettivo sono stati tradotti per l’illustrazione.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -84,7 +84,9 @@ Apri Statistiche dalla navigazione del tuo account. Consulta la griglia annuale 
 
 Usa il numero di ticket completati, il ritmo, i giorni attivi, le serie e le misurazioni del tempo per esaminare la tua attività. La griglia delle attività conta gli eventi di completamento dei ticket e delle attività del taccuino, raggruppati per giorni di calendario nel tuo fuso orario. Un giorno attivo ha almeno uno di questi eventi; la serie attuale tollera che oggi sia ancora vuoto, ma termina al successivo giorno vuoto. I totali complessivi dei ticket completati contano una sola volta ciascun identificativo, quindi il numero di eventi e il totale di ticket distinti rispondono a domande diverse.
 
-Il tempo per impegno è la mediana del tempo trascorso dal primo passaggio registrato di un ticket a In corso fino al completamento. Si considerano ticket idonei nello stato Fatto, assegnati a te, con un impegno ed entrambi i timestamp. Comprende il tempo di attesa; non è un cronometro delle ore lavorate. La vista della quantità mostra la dimensione del campione utilizzato. Una mediana assente può indicare che non ci sono misurazioni idonee, non una durata pari a zero. Prima di confrontare i valori, leggi l'unità e il periodo indicati in ogni sezione.
+Il tempo per impegno è la mediana del tempo trascorso dal primo passaggio registrato di un ticket a In corso fino al completamento. Si considerano ticket idonei nello stato Fatto, assegnati a te, con un impegno ed entrambi i timestamp. Comprende il tempo di attesa; non è un cronometro delle ore lavorate. La vista della quantità mostra la dimensione del campione utilizzato. Una mediana assente può indicare che non ci sono misurazioni idonee, non una durata pari a zero.
+
+Prima di confrontare i valori, leggi l'unità e il periodo indicati in ogni sezione.
 
 ## Interpretare dati scarsi o cambiamenti {#statistics-limits}
 

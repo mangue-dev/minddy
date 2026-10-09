@@ -18,8 +18,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
-  "sourceRevision": 6,
+  "revision": 7,
+  "sourceRevision": 7,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -56,13 +56,14 @@
       "components/settings/account-analytics-section.tsx",
       "components/settings/account-data-section.tsx",
       "app/api/account/deletion-preview/route.ts",
-      "app/api/account/route.ts"
+      "app/api/account/route.ts",
+      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json"
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
+    "revision": 7,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -90,84 +91,21 @@
   ],
   "figures": [
     {
-      "id": "account-access-steps",
-      "kind": "screenshot",
-      "src": "/documentation/it/auth-signup.png",
-      "alt": "Registrazione tramite email, con i pulsanti dei provider e il primo passaggio della procedura in tre passaggi.",
-      "caption": "Inizia sull’istanza corretta. Dopo l’email vengono l’identità e la password; in questa schermata non è stata inviata alcuna registrazione.",
-      "revision": 6,
-      "reviewed": true,
-      "capturedAt": "2026-10-08",
-      "viewport": [
-        428,
-        502
-      ],
-      "theme": "light",
-      "padding": 24
-    },
-    {
-      "id": "account-access-login",
-      "kind": "screenshot",
-      "src": "/documentation/it/auth-login.png",
-      "alt": "Modulo di accesso con il collegamento al recupero sotto il campo della password.",
-      "caption": "Avvia il recupero sull’istanza del tuo account. Il modulo è mostrato senza credenziali inviate.",
-      "revision": 6,
-      "reviewed": true,
-      "capturedAt": "2026-10-08",
-      "viewport": [
-        428,
-        588
-      ],
-      "theme": "light",
-      "padding": 24
-    },
-    {
       "id": "account-security-workflow",
       "kind": "screenshot",
       "src": "/documentation/it/account-security-workflow.png",
       "alt": "Scheda di autenticazione a due fattori con pulsante di attivazione.",
       "caption": "Inizia qui, poi verifica l’autenticatore e conserva privatamente i codici di recupero.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         816,
         227
       ],
       "theme": "light",
-      "padding": 24
-    },
-    {
-      "id": "account-security-enrollment-workflow",
-      "kind": "screenshot",
-      "src": "/documentation/it/account-security-enrollment-workflow.png",
-      "alt": "Configurazione dell’autenticatore prima della verifica del codice.",
-      "caption": "Configurazione dell’autenticatore prima della verifica del codice. Il QR reale e il segreto manuale sono oscurati; questo fattore temporaneo non verificato è stato annullato e rimosso.",
-      "revision": 6,
-      "reviewed": true,
-      "capturedAt": "2026-10-08",
-      "viewport": [
-        816,
-        498
-      ],
-      "theme": "light",
-      "padding": 24
-    },
-    {
-      "id": "account-recovery-steps",
-      "kind": "screenshot",
-      "src": "/documentation/it/auth-recovery.png",
-      "alt": "Modulo di recupero della password con un indirizzo di esempio e il pulsante per inviare il collegamento.",
-      "caption": "Inserisci qui l’email del tuo account. L’indirizzo di esempio non è stato inviato; l’immagine non dimostra la consegna del messaggio né un recupero riuscito.",
-      "revision": 6,
-      "reviewed": true,
-      "capturedAt": "2026-10-08",
-      "viewport": [
-        428,
-        326
-      ],
-      "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "profile-and-preferences-workflow",
@@ -175,15 +113,16 @@
       "src": "/documentation/it/profile-and-preferences-workflow.png",
       "alt": "Controlli del profilo per avatar, nome utente ed email di sola lettura.",
       "caption": "Salva le modifiche al profilo dopo la validazione; l’indirizzo email rimane di sola lettura.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         816,
         416
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "profile-and-preferences-preferences-workflow",
@@ -191,15 +130,16 @@
       "src": "/documentation/it/profile-and-preferences-preferences-workflow.png",
       "alt": "Selettore della lingua e controlli del tema chiaro, scuro e di sistema.",
       "caption": "La lingua dell’account e quella del sito pubblico si impostano separatamente.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         816,
         212
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "privacy-and-account-deletion-workflow",
@@ -207,22 +147,20 @@
       "src": "/documentation/it/privacy-and-account-deletion-workflow.png",
       "alt": "Anteprima di eliminazione con progetti posseduti, ticket e membri che perderanno l’accesso.",
       "caption": "Leggi l’anteprima ed esporta i dati da conservare prima di aprire la conferma.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         816,
         231
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     }
   ],
   "requiredFigures": [
-    "account-access-steps",
     "account-security-workflow",
-    "account-security-enrollment-workflow",
-    "account-recovery-steps",
     "profile-and-preferences-workflow",
     "profile-and-preferences-preferences-workflow",
     "privacy-and-account-deletion-workflow"
@@ -230,18 +168,18 @@
 }
 ---
 
-L’account appartiene all’istanza su cui ti registri. Qui trovi accesso e recupero, autenticazione a due fattori, profilo, preferenze e cancellazione; prima di eliminare l’account, controlla anche le conseguenze sui progetti di cui sei proprietario.
+L’account appartiene all’istanza su cui ti registri. Puoi gestire accesso, recupero, autenticazione a due fattori e preferenze personali. Prima di eliminarlo, esporta i dati da conservare e controlla le conseguenze sui progetti di cui sei proprietario.
 
 ## Creare un account e accedere {#account-access}
 
 Apri la schermata di accesso o registrazione sull’istanza che vuoi usare. Cloud e un’altra istanza autonoma hanno account separati. I metodi di accesso disponibili e la possibilità di registrarsi dipendono dalla configurazione di autenticazione dell’istanza.
 
-Per registrarti via email, inserisci il tuo indirizzo e prosegui al passaggio dedicato all’identità. Inserisci il nome completo; non può essere vuoto né contenere soltanto spazi. Puoi anche scegliere un avatar. Prosegui al passaggio della password e inseriscine una di almeno otto caratteri con una lettera minuscola (a–z), una maiuscola (A–Z) e una cifra. Ripetila nel campo di conferma. Invia quest’ultimo passaggio per creare l’account. Se abbandoni i passaggi precedenti, l’account non viene creato. Quando è richiesta la conferma dell’email, apri il messaggio inviato dall’istanza. Segui il collegamento e premi il pulsante di conferma nella pagina. Aprire il collegamento non basta: minddy richiede questa azione esplicita prima di consumare il token email.
+Per registrarti via email, inserisci il tuo indirizzo e prosegui al passaggio dedicato all’identità. Inserisci il nome completo; non può essere vuoto né contenere soltanto spazi. Puoi anche scegliere un avatar. Prosegui al passaggio della password e inseriscine una di almeno otto caratteri con una lettera minuscola (a–z), una maiuscola (A–Z) e una cifra. Ripetila nel campo di conferma. Invia quest’ultimo passaggio per creare l’account. Se abbandoni i passaggi precedenti, l’account non viene creato.
+
+Quando è richiesta la conferma dell’email, apri il messaggio inviato dall’istanza. Segui il collegamento e premi il pulsante di conferma nella pagina. Aprire il collegamento non basta: minddy richiede questa azione esplicita prima di consumare il token email.
 
 Torna all’applicazione prevista e accedi. Un account appena autenticato può creare il proprio progetto o accettare un invito a un progetto. Conoscere l’URL di un progetto non ne conferisce l’appartenenza.
 
-
-![Registrazione tramite email, con i pulsanti dei provider e il primo passaggio della procedura in tre passaggi.](/documentation/it/auth-signup.png)
 
 ### Uscire e controllare le email mancanti {#session-and-mail}
 
@@ -249,7 +187,6 @@ Apri il menu dell’account, scegli di uscire e conferma. Nell’app desktop, ch
 
 Se l’email non arriva, controlla indirizzo, cartella dello spam e identità dell’istanza. L’operatore di un’istanza autonoma deve aver configurato un invio email funzionante per Auth; le notifiche email opzionali dell’applicazione e la conferma di Auth sono funzioni distinte. Una pagina di conferma scaduta permette di tornare all’accesso per richiedere un nuovo collegamento. Non inoltrare collegamenti di conferma o recupero come prova diagnostica: autorizzano l’accesso all’account.
 
-![Modulo di accesso con il collegamento al recupero sotto il campo della password.](/documentation/it/auth-login.png)
 
 ## Proteggere l’account con un secondo fattore {#account-security}
 
@@ -269,7 +206,6 @@ Durante l’accesso, se non hai il telefono, usa uno dei codici di recupero che 
 
 La sostituzione dei codici di recupero invalida l’elenco precedente. Sia la sostituzione sia la disattivazione volontaria richiedono i controlli di autenticazione recente del server. Leggi la conferma: disattivando la funzione, il fattore aggiuntivo non verrà più richiesto, neppure negli accessi tramite Google o GitHub.
 
-![Configurazione dell’autenticatore prima della verifica del codice.](/documentation/it/account-security-enrollment-workflow.png)
 
 ## Recuperare l’accesso all’account {#account-recovery}
 
@@ -277,8 +213,6 @@ Nella schermata di accesso dell’istanza corretta, usa il recupero della passwo
 
 Un collegamento può scadere o non avere più una sessione attiva. La schermata di reimpostazione identifica questa condizione e permette di richiedere un altro collegamento. Riparti da un nuovo messaggio invece di riprovare un vecchio segnalibro. Non inviare collegamento, cookie o password all’assistenza.
 
-
-![Modulo di recupero della password con un indirizzo di esempio e il pulsante per inviare il collegamento.](/documentation/it/auth-recovery.png)
 
 ### MFA e accesso ancora irrisolto {#mfa-recovery}
 

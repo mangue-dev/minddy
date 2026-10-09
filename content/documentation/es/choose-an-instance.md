@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -36,9 +36,9 @@
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison)",
+    "revision": 3,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -52,40 +52,8 @@
   "tags": [
     "Elegir Cloud o tu propia instancia"
   ],
-  "figures": [
-    {
-      "id": "responsibilities",
-      "kind": "diagram",
-      "src": "/documentation/es/responsibilities.svg",
-      "alt": "Responsabilidad de gestión: Gestionado por minddy, Gestionado por ti.",
-      "caption": "Los mismos servicios del núcleo necesitan un operador en ambos modelos. Los proveedores opcionales siguen siendo servicios separados.",
-      "revision": 2,
-      "reviewed": true,
-      "capturedAt": "2026-10-08",
-      "viewport": [
-        360,
-        520
-      ],
-      "theme": "neutral",
-      "diagram": {
-        "layout": "collection",
-        "items": [
-          {
-            "title": "minddy Cloud",
-            "detail": "Gestionado por minddy · Aplicación · Base de datos · Storage · Planificador"
-          },
-          {
-            "title": "Tu propia instancia",
-            "detail": "Gestionado por ti · Aplicación · Base de datos · Storage · Planificador"
-          }
-        ],
-        "title": "Responsabilidad de gestión"
-      }
-    }
-  ],
-  "requiredFigures": [
-    "responsibilities"
-  ]
+  "figures": [],
+  "requiredFigures": []
 }
 ---
 
@@ -95,7 +63,6 @@ minddy Cloud y minddy autoalojado ejecutan el mismo núcleo público. Elige Clou
 
 Una cuenta Cloud pertenece a Cloud. Para una instancia autoalojada, crea una cuenta en esa instancia; no necesitas una cuenta de minddy Cloud. Comprueba la dirección antes de iniciar sesión o invitar a alguien. Dos instancias de minddy no comparten automáticamente cuentas ni credenciales.
 
-![Responsabilidad de gestión: Gestionado por minddy, Gestionado por ti.](/documentation/es/responsibilities.svg)
 
 ## Responsabilidades y costes {#responsibilities}
 

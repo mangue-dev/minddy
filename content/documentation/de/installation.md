@@ -16,8 +16,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -40,13 +40,17 @@
       "docs/self-hosting.md",
       "scripts/self-hosting-install.mjs",
       "deploy/self-hosted/compose.full.yml",
-      "deploy/self-hosted/compose.managed.yml"
+      "deploy/self-hosted/compose.managed.yml",
+      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json",
+      "content/documentation/reviews/editorial-clarity-en-fr-2026-10-09.md",
+      "content/documentation/reviews/editorial-clarity-de-es-2026-10-09.md",
+      "content/documentation/reviews/editorial-clarity-it-pt-BR-2026-10-09.md"
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison)",
+    "revision": 3,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root/editorial_de_es (collection-caption clarity)",
     "date": "2026-10-09"
   },
   "related": [
@@ -72,7 +76,7 @@
       "src": "/documentation/de/self-hosted-compatibility-flow.svg",
       "alt": "Diagramm: Annotierter Quelltag. Dateien und SHA256SUMS. Offizielle OCI-Signatur und Digest. Gewähltes Kompatibilitätsprofil.",
       "caption": "Lesen Sie die Schritte in dieser Reihenfolge. Annotierter Quelltag. Dateien und SHA256SUMS. Offizielle OCI-Signatur und Digest. Gewähltes Kompatibilitätsprofil.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -104,7 +108,7 @@
       "src": "/documentation/de/install-a-server-flow.svg",
       "alt": "Diagramm: Geprüfte Release und geschützte Umgebung. Installer: full-Referenzprofil. Offizielles Supabase, App, Scheduler, Runner. Konto-, Datei- und Wiederherstellungsprüfung.",
       "caption": "Lesen Sie die Schritte in dieser Reihenfolge. Geprüfte Release und geschützte Umgebung. Installer: full-Referenzprofil. Offizielles Supabase, App, Scheduler, Runner. Konto-, Datei- und Wiederherstellungsprüfung.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -136,23 +140,24 @@
       "src": "/documentation/de/install-a-server-wizard.png",
       "alt": "Öffentlicher Installationsassistent mit ausgewähltem Supabase auf demselben Server.",
       "caption": "Das Profil full betreibt Anwendung und Supabase auf Ihrem Server. In diesem Beispiel bleibt der private Netzwerkzugang auf das LAN beschränkt.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         944,
-        1044
+        1051
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "managed-or-source-installation-flow",
       "kind": "diagram",
       "src": "/documentation/de/managed-or-source-installation-flow.svg",
       "alt": "Diagramm: Ihr verwaltetes Supabase-Projekt. PostgreSQL, Auth, Storage, Realtime. OCI-Profil ODER Anwendung aus Quelltag. Jobs und Sicherung passend zum Profil.",
-      "caption": "Diese Komponenten haben unterschiedliche Aufgaben. Ihr verwaltetes Supabase-Projekt. PostgreSQL, Auth, Storage, Realtime. OCI-Profil ODER Anwendung aus Quelltag. Jobs und Sicherung passend zum Profil.",
-      "revision": 2,
+      "caption": "Anwendung und Backend müssen zum gewählten Profil passen, einschließlich Zeitplänen und Sicherungsverfahren.",
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -187,7 +192,7 @@
 }
 ---
 
-Die Installation hängt von Release, Plattform und gewähltem Profil ab. Dieser Leitfaden verbindet Kompatibilitätsprüfung, das vollständige Referenzprofil sowie verwaltetes Supabase und die Bereitstellung aus Quellcode. Beachten Sie vor dem Start die bekannten Runner-Grenzen und die Bedingungen der ausdrücklich angepassten Werkzeugvariante.
+Installieren Sie Ihre Instanz aus einer geprüften Version mit dem passenden Profil: full, verwaltetes Supabase oder Quellcode. Prüfen Sie zuerst Kompatibilität und bekannte Runner-Grenzen. Folgen Sie dann dem gewählten Verfahren und den Abnahmeprüfungen, bevor Sie Benutzer zulassen. Die dokumentierte technische Anpassung für v0.11.0 ist eine ausdrückliche Werkzeugvariante, keine korrigierte veröffentlichte Version.
 
 ## Unterstützte Version und Installationsprofil auswählen {#self-hosted-compatibility}
 

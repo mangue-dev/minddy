@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -36,13 +36,16 @@
       "docs/self-hosting.md",
       "lib/server/encryption/data-policy.json",
       "lib/server/encryption.ts",
-      "docs/editions.md"
+      "docs/editions.md",
+      "content/documentation/reviews/editorial-clarity-en-fr-2026-10-09.md",
+      "content/documentation/reviews/editorial-clarity-de-es-2026-10-09.md",
+      "content/documentation/reviews/editorial-clarity-it-pt-BR-2026-10-09.md"
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison)",
+    "revision": 3,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (collection-caption clarity)",
     "date": "2026-10-09"
   },
   "related": [
@@ -60,8 +63,8 @@
       "kind": "diagram",
       "src": "/documentation/es/encryption-and-data-boundaries-flow.svg",
       "alt": "Diagrama: Contenido cifrado y claves envueltas. Raíz en configuración protegida del servidor. Runtime autorizado puede descifrar. Exports y proveedores necesitan protección aparte.",
-      "caption": "Estos componentes tienen responsabilidades distintas. Contenido cifrado y claves envueltas. Raíz en configuración protegida del servidor. Runtime autorizado puede descifrar. Exports y proveedores necesitan protección aparte.",
-      "revision": 2,
+      "caption": "El contenido almacenado está protegido, pero la aplicación autorizada puede descifrarlo y los datos que salen de la instancia necesitan protección propia.",
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

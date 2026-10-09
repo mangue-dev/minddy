@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 3,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -45,9 +45,9 @@
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
+    "revision": 4,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -70,7 +70,7 @@
       "src": "/documentation/it/integration-api-and-webhooks-flow.svg",
       "alt": "Schema: Server conserva chiave integrazione. POST ticket o feedback con tipo corretto. Proprietario sceglie destinazione webhook. Ricevente verifica HMAC grezzo e UUID.",
       "caption": "Segui le fasi in questo ordine. Server conserva chiave integrazione. POST ticket o feedback con tipo corretto. Proprietario sceglie destinazione webhook. Ricevente verifica HMAC grezzo e UUID.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -102,7 +102,7 @@
       "src": "/documentation/it/feedback-ingestion-and-sso-workflow.svg",
       "alt": "Sequenze distinte di acquisizione backend e SSO browser con segreti diversi.",
       "caption": "La chiave di acquisizione autentica le chiamate server. Il segreto SSO della bacheca firma un token visitatore breve e monouso.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -153,7 +153,15 @@ Il proprietario crea un’integrazione dalle impostazioni del progetto. Un’int
 
 ### Inviare i campi corretti {#send}
 
-GET /api/v1/issues/options restituisce categorie, priorità ed effort disponibili. POST /api/v1/issues richiede un titolo non vuoto e accetta descrizione Markdown, priorità, effort e categorie opzionali. Il ticket entra sempre nel triage; dall’esterno non puoi scegliere stato, assegnatario o parent. I limiti sono 500 caratteri per il titolo, 65.536 per la descrizione e 50 identificatori di categoria. La risposta 201 contiene id, number, identifier e status. POST /api/v1/feedback richiede title e user.external_id e/o user.email; user.name e body sono opzionali. analyze è un booleano, true per impostazione predefinita. false disattiva insieme moderazione, assegnazione delle categorie e fusione, pubblicando il testo invariato. La stringa "false" viene rifiutata. Controlla review_state e valida l’identità dell’autore sul server.
+GET /api/v1/issues/options restituisce categorie, priorità ed effort disponibili. POST /api/v1/issues richiede un titolo non vuoto e accetta descrizione Markdown, priorità, effort e categorie opzionali.
+
+| Campo | Limite |
+| --- | --- |
+| Titolo | 500 caratteri |
+| Descrizione | 65.536 caratteri |
+| Categorie | 50 identificatori |
+
+Il ticket entra sempre nel triage; dall’esterno non puoi scegliere stato, assegnatario o parent. La risposta 201 contiene id, number, identifier e status. Per i campi del feedback, l’identità dell’autore e la moderazione, segui la [procedura di raccolta dei feedback](#feedback-ingestion-and-sso).
 
 ```bash
 curl --fail-with-body --request POST "$MINDDY_ORIGIN/api/v1/issues" \
@@ -164,11 +172,13 @@ curl --fail-with-body --request POST "$MINDDY_ORIGIN/api/v1/issues" \
 
 ### Verificare e deduplicare eventi {#receive}
 
-Le integrazioni issues possono inviare issue.created, issue.status_changed e issue.updated. Una nuova destinazione webhook deve essere scelta dal proprietario. Gli agenti possono regolare eventi e ambito di una destinazione esistente o disattivarla; non possono aprire un nuovo canale di uscita. L’ambito integration include solo i ticket creati con quella chiave; all include l’intero progetto. X-minddy-Signature contiene il prefisso sha256= e un HMAC-SHA256 calcolato sui byte originali. La chiave HMAC è il digest SHA-256 della chiave API, rappresentato come stringa esadecimale minuscola. Confronta la firma in tempo costante prima di fidarti del payload, senza analizzarlo e riserializzarlo. X-minddy-Delivery corrisponde a delivery_id: usa questo UUID per eliminare i duplicati.
+Le integrazioni issues possono inviare issue.created, issue.status_changed e issue.updated. Una nuova destinazione webhook deve essere scelta dal proprietario. Gli agenti possono regolare eventi e ambito di una destinazione esistente o disattivarla; non possono aprire un nuovo canale di uscita. L’ambito integration include solo i ticket creati con quella chiave; all include l’intero progetto.
+
+X-minddy-Signature contiene il prefisso sha256= e un HMAC-SHA256 calcolato sui byte originali. La chiave HMAC è il digest SHA-256 della chiave API, rappresentato come stringa esadecimale minuscola. Confronta la firma in tempo costante prima di fidarti del payload, senza analizzarlo e riserializzarlo. X-minddy-Delivery corrisponde a delivery_id: usa questo UUID per eliminare i duplicati.
 
 ### Gestire errori e limiti {#limits}
 
-La consegna è best effort: il timeout è di cinque secondi, seguito da un solo nuovo tentativo immediato per errori di rete o risposte 5xx. Dopo il secondo fallimento l’evento viene scartato. Sono possibili duplicati e consegne fuori ordine. Salva il payload verificato, rispondi subito con 2xx e poi elaboralo. issue.updated raggruppa le modifiche; per description e plan riporta solo il nome del campo. Controlla quindi lo stato corrente. Per 429 rispetta Retry-After; gli errori di validazione restituiscono 422 e la quota definitiva restituisce 403 issue_limit_reached. Un timeout di creazione non prova un fallimento: verifica prima di riprovare. POST `/api/v1/feedback/<post_id>/vote` è idempotente per l’identità del votante.
+La consegna è best effort: il timeout è di cinque secondi, seguito da un solo nuovo tentativo immediato per errori di rete o risposte 5xx. Dopo il secondo fallimento l’evento viene scartato. Sono possibili duplicati e consegne fuori ordine. Salva il payload verificato, rispondi subito con 2xx e poi elaboralo. issue.updated raggruppa le modifiche; per description e plan riporta solo il nome del campo. Controlla quindi lo stato corrente. Per 429 rispetta Retry-After; gli errori di validazione restituiscono 422 e la quota definitiva restituisce 403 issue_limit_reached. Un timeout di creazione non prova un fallimento: verifica prima di riprovare. La votazione dei feedback ha un [endpoint e limiti propri](#errors).
 
 ## Collegare la raccolta di feedback e il SSO {#feedback-ingestion-and-sso}
 
@@ -178,7 +188,7 @@ Il proprietario crea una chiave di integrazione feedback nelle impostazioni del 
 curl -i "$MINDDY_ORIGIN/api/v1/feedback"   -H "Authorization: Bearer $MINDDY_FEEDBACK_KEY"   -H 'Content-Type: application/json'   --data '{"title":"Mostrare data di consegna","body":"Il supporto ha bisogno della data prevista.","user":{"external_id":"demo-user-1","name":"Lettore demo"}}'
 ```
 
-Fornisci un titolo non vuoto di massimo 200 caratteri, un corpo facoltativo di massimo 10.000 e `user.external_id` e/o `user.email`. L’ID esterno ammette 255 caratteri, l’email 254 e il nome 200. Il backend garantisce l’identità; l’acquisizione anonima viene rifiutata. Il successo restituisce HTTP 201 con `id`, `status`, `review_state`, voti e pseudonimo. La bacheca non deve essere attiva per ricevere feedback. `analyze` è true per impostazione predefinita; false salta moderazione, categorizzazione e unione per quel feedback e imposta lo stato di revisione `published` senza attesa. Questo stato non attiva la bacheca e non supera le regole di visibilità o lo stato di spam. L’API crea feedback pubblici per impostazione predefinita e non accetta un parametro di visibilità privata.
+Fornisci un titolo non vuoto di massimo 200 caratteri, un corpo facoltativo di massimo 10.000 e `user.external_id` e/o `user.email`. L’ID esterno ammette 255 caratteri, l’email 254 e il nome 200. Il backend garantisce l’identità; l’acquisizione anonima viene rifiutata. Il successo restituisce HTTP 201 con `id`, `status`, `review_state`, voti e pseudonimo. La bacheca non deve essere attiva per ricevere feedback. `user.name` è facoltativo. `analyze` è un booleano, true per impostazione predefinita; la stringa "false" viene rifiutata. false salta moderazione, categorizzazione e unione per quel feedback, pubblica il testo invariato e imposta lo stato di revisione `published` senza attesa. Controlla `review_state` e valida l’identità dell’autore sul server. Questo stato non attiva la bacheca e non supera le regole di visibilità o lo stato di spam. L’API crea feedback pubblici per impostazione predefinita e non accetta un parametro di visibilità privata.
 
 ### Voti, errori e webhook {#errors}
 

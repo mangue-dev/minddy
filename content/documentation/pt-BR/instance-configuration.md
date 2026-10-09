@@ -16,8 +16,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -40,13 +40,16 @@
       "docs/self-hosting-distribution.md",
       "vercel.json",
       "deploy/self-hosted/compose.full.yml",
-      "deploy/self-hosted/scheduler.mjs"
+      "deploy/self-hosted/scheduler.mjs",
+      "content/documentation/reviews/editorial-clarity-en-fr-2026-10-09.md",
+      "content/documentation/reviews/editorial-clarity-de-es-2026-10-09.md",
+      "content/documentation/reviews/editorial-clarity-it-pt-BR-2026-10-09.md"
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
+    "revision": 3,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (collection-caption clarity)",
     "date": "2026-10-09"
   },
   "related": [
@@ -71,8 +74,8 @@
       "kind": "diagram",
       "src": "/documentation/pt-BR/optional-providers-flow.svg",
       "alt": "Diagrama: Operador escolhe capacidade opcional. Credenciais completas e condições. Destino externo explícito dos dados. Verificar comportamento e acompanhar custos.",
-      "caption": "Estes componentes têm responsabilidades distintas. Operador escolhe capacidade opcional. Credenciais completas e condições. Destino externo explícito dos dados. Verificar comportamento e acompanhar custos.",
-      "revision": 2,
+      "caption": "Antes de ativar uma integração, confira as credenciais, as condições e o destino dos dados.",
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -103,8 +106,8 @@
       "kind": "diagram",
       "src": "/documentation/pt-BR/proxy-network-and-jobs-flow.svg",
       "alt": "Diagrama: Proxy HTTPS público. Origens app e Supabase públicas. Runner, banco e portas privadas. Tarefas autenticadas; paradas em manutenção.",
-      "caption": "Estes componentes têm responsabilidades distintas. Proxy HTTPS público. Origens app e Supabase públicas. Runner, banco e portas privadas. Tarefas autenticadas; paradas em manutenção.",
-      "revision": 2,
+      "caption": "O proxy expõe as origens públicas e mantém os serviços internos privados; durante a manutenção, pare também as tarefas agendadas.",
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

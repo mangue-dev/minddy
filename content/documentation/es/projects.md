@@ -16,8 +16,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -41,9 +41,9 @@
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison)",
+    "revision": 6,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -68,7 +68,7 @@
       "src": "/documentation/es/project-general.png",
       "alt": "Configuración general del proyecto con nombre, clave, icono y una acción separada para la papelera.",
       "caption": "Comprueba el nombre y la clave antes de guardar. Mover el proyecto a la papelera es una acción separada.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -84,7 +84,7 @@
       "src": "/documentation/es/project-members.png",
       "alt": "Invitación por correo y tres miembros de demostración, con la persona propietaria identificada.",
       "caption": "Invita con el correo de la cuenta e identifica al propietario antes de retirar el acceso de un miembro.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -102,7 +102,7 @@
 }
 ---
 
-Un proyecto reúne el trabajo compartido y el acceso de sus miembros. Esta guía explica los ajustes y las invitaciones, y distingue las funciones del propietario de las que tienen los miembros.
+Un proyecto reúne incidencias, objetivos, páginas y miembros. Su propietario gestiona los ajustes administrativos y las invitaciones. Los miembros trabajan con el contenido y pueden abandonar el proyecto. Consulta el apartado correspondiente para configurar el proyecto o resolver un problema de invitación.
 
 ## Configurar un proyecto {#project-settings}
 
@@ -110,7 +110,7 @@ Abre el proyecto y después sus ajustes. La propiedad del proyecto determina el 
 
 Como propietario, introduce un nombre que no esté vacío y una clave de proyecto válida, y guarda. La clave se normaliza a mayúsculas y utiliza de 2 a 5 letras o dígitos. Revisa los identificadores resultantes después de cambiarla. Usa los controles de icono y apariencia para distinguir el proyecto en la navegación; estas elecciones visuales no modifican la pertenencia al proyecto.
 
-Otras secciones gestionan colaboradores, incidencias recurrentes, Git, importación, integraciones, automatización y comentarios. Sigue la guía correspondiente antes de activar un proveedor o trabajo automático. Las preferencias de la cuenta, como el idioma de la interfaz, son independientes de la configuración del proyecto.
+Otras secciones gestionan colaboradores, incidencias recurrentes, Git, importación, integraciones, automatización y sugerencias. Sigue la guía correspondiente antes de activar un proveedor o trabajo automático. Las preferencias de la cuenta, como el idioma de la interfaz, son independientes de la configuración del proyecto.
 
 
 ![Configuración general del proyecto con nombre, clave, icono y una acción separada para la papelera.](/documentation/es/project-general.png)

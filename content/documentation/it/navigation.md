@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 4,
-  "sourceRevision": 4,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -43,9 +43,9 @@
     ]
   },
   "review": {
-    "revision": 4,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
+    "revision": 5,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -67,7 +67,7 @@
       "src": "/documentation/it/work-navigation.png",
       "alt": "Navigazione del progetto accanto alla bacheca dei ticket dimostrativi.",
       "caption": "La barra del progetto permette di aprire ticket, obiettivi, pagine e triage.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -83,7 +83,7 @@
       "src": "/documentation/it/work-search.png",
       "alt": "Risultati della ricerca dell’identificativo di un ticket dimostrativo.",
       "caption": "La palette trova il ticket tramite identificativo insieme alle pagine del progetto; aprire un risultato conserva le sue regole di accesso.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -119,7 +119,7 @@ Sul telefono, apri il menu laterale di navigazione per scegliere le stesse desti
 
 ### Schede desktop {#tabs}
 
-L’app desktop aggiunge schede native e un selettore di server intorno all’applicazione. Una scheda è una superficie di navigazione, non un diverso account né una diversa appartenenza al progetto. Verifica l’istanza selezionata quando cambi server. Consulta la guida desktop per installazione, scorciatoie native e aggiornamenti; i permessi su pagine e ticket continuano ad applicarsi.
+L’app desktop aggiunge schede native e un selettore di server intorno all’applicazione. Una scheda permette di navigare nell’applicazione; non crea un altro account né cambia l’appartenenza al progetto. Verifica l’istanza selezionata quando cambi server. Consulta la guida desktop per installazione, scorciatoie native e aggiornamenti; i permessi su pagine e ticket continuano ad applicarsi.
 
 ## Trovare lavoro e usare azioni da tastiera {#search-and-shortcuts}
 

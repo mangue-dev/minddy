@@ -18,8 +18,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
-  "sourceRevision": 6,
+  "revision": 7,
+  "sourceRevision": 7,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -56,13 +56,14 @@
       "components/settings/account-analytics-section.tsx",
       "components/settings/account-data-section.tsx",
       "app/api/account/deletion-preview/route.ts",
-      "app/api/account/route.ts"
+      "app/api/account/route.ts",
+      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json"
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun)",
-    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review)",
+    "revision": 7,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -90,84 +91,21 @@
   ],
   "figures": [
     {
-      "id": "account-access-steps",
-      "kind": "screenshot",
-      "src": "/documentation/fr/auth-signup.png",
-      "alt": "Inscription par e-mail, avec les boutons des fournisseurs et la première étape du parcours en trois étapes.",
-      "caption": "Commencez sur la bonne instance. Le parcours par e-mail se poursuit avec l’identité et le mot de passe ; aucune inscription n’a été envoyée sur cette capture.",
-      "revision": 6,
-      "reviewed": true,
-      "capturedAt": "2026-10-08",
-      "viewport": [
-        428,
-        522
-      ],
-      "theme": "light",
-      "padding": 24
-    },
-    {
-      "id": "account-access-login",
-      "kind": "screenshot",
-      "src": "/documentation/fr/auth-login.png",
-      "alt": "Formulaire de connexion avec le lien de récupération sous le champ du mot de passe.",
-      "caption": "Utilisez la récupération sur l’instance du compte. Le formulaire est montré sans identifiants envoyés.",
-      "revision": 6,
-      "reviewed": true,
-      "capturedAt": "2026-10-08",
-      "viewport": [
-        428,
-        588
-      ],
-      "theme": "light",
-      "padding": 24
-    },
-    {
       "id": "account-security-workflow",
       "kind": "screenshot",
       "src": "/documentation/fr/account-security-workflow.png",
       "alt": "Carte de double authentification avec le bouton Activer.",
       "caption": "Commencez ici, puis vérifiez l’authentificateur et conservez les codes de récupération à l’abri.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         816,
         227
       ],
       "theme": "light",
-      "padding": 24
-    },
-    {
-      "id": "account-security-enrollment-workflow",
-      "kind": "screenshot",
-      "src": "/documentation/fr/account-security-enrollment-workflow.png",
-      "alt": "Inscription de l’authentificateur avant vérification du code.",
-      "caption": "Inscription de l’authentificateur avant vérification du code. Le véritable QR code et le secret manuel sont masqués ; ce facteur temporaire non vérifié a été annulé et supprimé.",
-      "revision": 6,
-      "reviewed": true,
-      "capturedAt": "2026-10-08",
-      "viewport": [
-        816,
-        498
-      ],
-      "theme": "light",
-      "padding": 24
-    },
-    {
-      "id": "account-recovery-steps",
-      "kind": "screenshot",
-      "src": "/documentation/fr/auth-recovery.png",
-      "alt": "Formulaire de récupération du mot de passe avec une adresse de démonstration et le bouton d’envoi du lien.",
-      "caption": "Saisissez ici l’e-mail de votre compte. L’adresse de démonstration n’a pas été envoyée ; cette image ne prouve ni la réception du message ni une récupération réussie.",
-      "revision": 6,
-      "reviewed": true,
-      "capturedAt": "2026-10-08",
-      "viewport": [
-        428,
-        326
-      ],
-      "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "profile-and-preferences-workflow",
@@ -175,15 +113,16 @@
       "src": "/documentation/fr/profile-and-preferences-workflow.png",
       "alt": "Réglages du profil : avatar, nom d’utilisateur et adresse email en lecture seule.",
       "caption": "Enregistrez les changements du profil après validation ; l’adresse email reste en lecture seule.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         816,
         416
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "profile-and-preferences-preferences-workflow",
@@ -191,15 +130,16 @@
       "src": "/documentation/fr/profile-and-preferences-preferences-workflow.png",
       "alt": "Sélecteur de langue et commandes des thèmes clair, sombre et système.",
       "caption": "La langue du compte et celle du site public se règlent séparément.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         816,
         212
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "privacy-and-account-deletion-workflow",
@@ -207,22 +147,20 @@
       "src": "/documentation/fr/privacy-and-account-deletion-workflow.png",
       "alt": "Aperçu de suppression listant les projets possédés, les tickets et les membres privés d’accès.",
       "caption": "Lisez l’aperçu et exportez les données à conserver avant d’ouvrir la confirmation de suppression.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         816,
         231
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     }
   ],
   "requiredFigures": [
-    "account-access-steps",
     "account-security-workflow",
-    "account-security-enrollment-workflow",
-    "account-recovery-steps",
     "profile-and-preferences-workflow",
     "profile-and-preferences-preferences-workflow",
     "privacy-and-account-deletion-workflow"
@@ -236,20 +174,23 @@ Votre compte appartient à l’instance sur laquelle vous vous êtes inscrit. Re
 
 Ouvrez la connexion ou l’inscription de l’instance que vous voulez utiliser. Le Cloud et une instance auto-hébergée ont des comptes distincts. Les méthodes de connexion et l’ouverture des inscriptions dépendent de la configuration d’authentification de l’instance.
 
-Pour vous inscrire par e-mail, saisissez votre adresse et passez à l’étape d’identité. Indiquez un nom complet non vide ; vous pouvez aussi choisir un avatar. Passez à l’étape du mot de passe, saisissez au moins huit caractères avec une minuscule (a–z), une majuscule (A–Z) et un chiffre, puis répétez le mot de passe dans le champ de confirmation. Validez cette dernière étape pour créer le compte. Quitter les étapes précédentes ne crée pas de compte. Si une confirmation est demandée, ouvrez le message envoyé par cette instance. Suivez son lien, puis activez le bouton de confirmation sur la page affichée. Ouvrir le lien ne suffit pas : minddy attend cette action volontaire avant de consommer le jeton du message.
+Pour vous inscrire par e-mail :
+
+1. Saisissez votre adresse et passez à l’étape d’identité.
+2. Indiquez un nom complet non vide et choisissez un avatar si vous le souhaitez.
+3. Passez à l’étape du mot de passe. Saisissez au moins huit caractères avec une minuscule (a–z), une majuscule (A–Z) et un chiffre, puis répétez le mot de passe dans le champ de confirmation.
+4. Validez cette dernière étape pour créer le compte. Quitter les étapes précédentes ne crée pas de compte.
+5. Si une confirmation est demandée, ouvrez le message envoyé par cette instance. Suivez son lien, puis activez le bouton de confirmation sur la page. Ouvrir le lien seul ne confirme pas le compte et ne consomme pas le jeton du message.
 
 Revenez dans l’application souhaitée et connectez-vous. Le compte peut créer son projet ou accepter une invitation. Connaître l’URL d’un projet ne donne pas accès au projet.
 
 
-![Inscription par e-mail, avec les boutons des fournisseurs et la première étape du parcours en trois étapes.](/documentation/fr/auth-signup.png)
-
 ### Déconnexion et e-mail absent {#session-and-mail}
 
-Ouvrez le menu du compte, choisissez la déconnexion et confirmez. Dans l’application desktop, fermer une fenêtre ou un onglet ne revient pas à se déconnecter. Utilisez le menu du compte pour terminer la session.
+Ouvrez le menu du compte, choisissez la déconnexion et confirmez. Dans l’application desktop, fermer une fenêtre ou un onglet laisse votre session active.
 
 Si le message n’arrive pas, vérifiez l’adresse, les indésirables et l’instance. En auto-hébergement, l’opérateur doit configurer l’envoi des messages Auth ; les notifications optionnelles de l’application sont un service distinct. Une confirmation expirée propose de revenir à la connexion pour demander un nouveau lien. Ne transmettez pas de lien de confirmation ou de récupération dans un diagnostic : il autorise l’accès au compte.
 
-![Formulaire de connexion avec le lien de récupération sous le champ du mot de passe.](/documentation/fr/auth-login.png)
 
 ## Protéger son compte avec un second facteur {#account-security}
 
@@ -269,7 +210,6 @@ Pendant la connexion, si vous n’avez pas votre téléphone, utilisez un code d
 
 Remplacer les codes de récupération invalide la liste précédente. Leur remplacement et la désactivation volontaire exigent les contrôles d’authentification récente du serveur. Lisez la confirmation : désactiver cette fonction signifie que le facteur supplémentaire ne sera plus demandé, y compris lors d’une connexion par Google ou GitHub.
 
-![Inscription de l’authentificateur avant vérification du code.](/documentation/fr/account-security-enrollment-workflow.png)
 
 ## Récupérer l’accès à votre compte {#account-recovery}
 
@@ -277,8 +217,6 @@ Sur la connexion de la bonne instance, choisissez la récupération du mot de pa
 
 Le lien peut expirer ou ne plus disposer d’une session active. L’écran de réinitialisation indique cette situation et permet de demander un nouveau lien. Utilisez un message récent plutôt qu’un ancien favori. N’envoyez ni lien, ni cookie, ni mot de passe au support.
 
-
-![Formulaire de récupération du mot de passe avec une adresse de démonstration et le bouton d’envoi du lien.](/documentation/fr/auth-recovery.png)
 
 ### Second facteur et accès non résolu {#mfa-recovery}
 

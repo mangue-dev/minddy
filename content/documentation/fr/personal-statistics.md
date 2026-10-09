@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 3,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -40,8 +40,8 @@
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun)",
+    "revision": 4,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
     "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review)",
     "date": "2026-10-09"
   },
@@ -61,7 +61,7 @@
       "src": "/documentation/fr/reader-statistics.png",
       "alt": "Statistiques personnelles avec grille annuelle, répartitions, rythme de travail et totaux depuis le début.",
       "caption": "Ce compte de démonstration compte un ticket terminé et onze tickets créés. Les statistiques affichées sont réelles ; les noms du projet et de l’objectif ont été localisés pour l’illustration.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

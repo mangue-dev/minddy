@@ -16,8 +16,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -45,12 +45,13 @@
       "lib/server/mcp/tools.ts",
       "lib/server/mcp/page-tools.ts",
       "lib/server/mcp/auth.ts",
-      "app/llms-full.txt/route.ts"
+      "app/llms-full.txt/route.ts",
+      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json"
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun)",
+    "revision": 3,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
     "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review)",
     "date": "2026-10-09"
   },
@@ -73,7 +74,7 @@
       "src": "/documentation/fr/external-minddy-mcp-workflow.png",
       "alt": "Choix du client MCP minddy : Claude, Codex et autres assistants.",
       "caption": "Choisissez votre client pour afficher sa commande ou sa configuration d’installation.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -81,23 +82,25 @@
         252
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "external-minddy-mcp-install-workflow",
       "kind": "screenshot",
       "src": "/documentation/fr/external-minddy-mcp-install-workflow.png",
       "alt": "Dialogue d’installation de Codex sur l’instance locale.",
-      "caption": "Dialogue d’installation de Codex sur l’instance locale. Utilisez l’origine de votre instance ; la commande affichée n’a pas été exécutée pour cette capture.",
-      "revision": 2,
+      "caption": "Dialogue d’installation de Codex. Utilisez l’origine de votre instance ; la commande affichée n’a pas été exécutée pour cette capture.",
+      "revision": 3,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         560,
         380
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     }
   ],
   "requiredFigures": [

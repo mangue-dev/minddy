@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -42,13 +42,14 @@
       "lib/server/agent/execute.ts",
       "app/(app)/billing/page.tsx",
       "app/(marketing)/pricing/page.tsx",
-      "lib/billing-plans.ts"
+      "lib/billing-plans.ts",
+      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json"
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison)",
+    "revision": 6,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -70,15 +71,16 @@
       "src": "/documentation/es/ai-keys-and-models-workflow.png",
       "alt": "Tarjeta del proveedor de IA con minddy Cloud seleccionado.",
       "caption": "El proveedor Cloud seleccionado utiliza el plan de la cuenta. El selector permite configurar proveedores personales.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         816,
         212
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "ai-keys-and-models-defaults-workflow",
@@ -86,15 +88,16 @@
       "src": "/documentation/es/ai-keys-and-models-defaults-workflow.png",
       "alt": "Modelo de código y razonamiento predeterminados.",
       "caption": "Modelo de código y razonamiento predeterminados. Los nuevos workers usan estos valores; los que están en ejecución conservan sus ajustes fijados.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         816,
         217
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "plans-and-ai-usage-workflow",
@@ -102,15 +105,16 @@
       "src": "/documentation/es/plans-and-ai-usage-workflow.png",
       "alt": "Página de uso de IA de la cuenta de demostración.",
       "caption": "Página de uso de IA de la cuenta de demostración. El presupuesto, las categorías y el historial se leen de la cuenta; no se inició ninguna compra ni ejecución de pago.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         1154,
-        1766
+        1016
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     }
   ],
   "requiredFigures": [
@@ -121,7 +125,7 @@
 }
 ---
 
-Las claves personales de IA, los modelos predeterminados y los presupuestos Cloud determinan cómo se ejecuta y factura el trabajo con IA. Los siguientes apartados explican los proveedores y el lugar de ejecución, además de la capacidad de los planes y el consumo; consulte los ajustes disponibles y el uso actual en su cuenta.
+Los ajustes de IA de la cuenta determinan los proveedores, las claves personales y los valores predeterminados de las funciones compatibles. Antes de empezar, compruebe la asignación de modelos. En el consumo Cloud, distinga la facturación del proveedor, la cuota de IA incluida, el cómputo de la sandbox y los límites de las rutinas.
 
 ## Configurar claves personales de IA y modelos {#ai-keys-and-models}
 

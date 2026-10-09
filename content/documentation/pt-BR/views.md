@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 4,
-  "sourceRevision": 4,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -43,9 +43,9 @@
     ]
   },
   "review": {
-    "revision": 4,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
+    "revision": 5,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -69,7 +69,7 @@
       "src": "/documentation/pt-BR/work-view-filters.png",
       "alt": "Filtros manuais de uma visualização e menu de ordenação.",
       "caption": "Filtre pelas propriedades dos tickets ou escolha uma ordem. O campo de IA é opcional para esses controles manuais.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -85,7 +85,7 @@
       "src": "/documentation/pt-BR/work-share-view.png",
       "alt": "Janela de compartilhamento de visualização com acesso privado selecionado.",
       "caption": "Acesso privado, protegido por senha e público são escolhas distintas. A visualização continua privada nesta captura.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -107,7 +107,7 @@ Uma visualização salva filtros e ordenação do trabalho ao qual você tem ace
 
 ## Salvar uma visualização do seu trabalho {#views-and-filters}
 
-Comece em um quadro de projeto ou uma superfície pessoal de problemas entre projetos. Use filtros, ordenação e controles de exibição para escolher o trabalho necessário. Confira o escopo antes de salvar: uma visualização pessoal e uma de projeto não representam o mesmo limite de acesso.
+Comece no quadro de um projeto ou em uma lista pessoal de problemas entre projetos. Use filtros, ordenação e controles de exibição para escolher o trabalho necessário. Confira o escopo antes de salvar: uma visualização pessoal e uma de projeto não representam o mesmo limite de acesso.
 
 Filtre por propriedades disponíveis, como estado, responsável, prioridade, categorias ou objetivo. Ordene o resultado para deixar clara a próxima ação. No kanban, os problemas continuam agrupados por estado; mudar uma visualização não altera estado nem atribuição.
 

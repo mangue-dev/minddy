@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 4,
-  "sourceRevision": 4,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -36,12 +36,13 @@
       "content/documentation/reviews/remaining-account-capture-candidates.json",
       "lib/server/agent/quota.ts",
       "lib/server/usage.ts",
-      "lib/server/agent/execute.ts"
+      "lib/server/agent/execute.ts",
+      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json"
     ]
   },
   "review": {
-    "revision": 4,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun)",
+    "revision": 5,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
     "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review)",
     "date": "2026-10-09"
   },
@@ -57,15 +58,16 @@
       "src": "/documentation/fr/automation-settings-workflow.png",
       "alt": "Préréglage d’automatisation sur Aucun.",
       "caption": "Aucun préréglage n’est sélectionné : ce compte ne démarre pas de travail automatique.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         816,
         221
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "automation-settings-projects-workflow",
@@ -73,15 +75,16 @@
       "src": "/documentation/fr/automation-settings-projects-workflow.png",
       "alt": "Choix des projets pour les automatisations du compte.",
       "caption": "Choix des projets pour les automatisations du compte. Les deux projets de démonstration sont désactivés ici ; aucune automatisation ne démarre.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         816,
         176
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     }
   ],
   "requiredFigures": [

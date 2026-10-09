@@ -16,8 +16,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -45,13 +45,14 @@
       "lib/server/mcp/tools.ts",
       "lib/server/mcp/page-tools.ts",
       "lib/server/mcp/auth.ts",
-      "app/llms-full.txt/route.ts"
+      "app/llms-full.txt/route.ts",
+      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json"
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison)",
+    "revision": 3,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -73,7 +74,7 @@
       "src": "/documentation/es/external-minddy-mcp-workflow.png",
       "alt": "Selector de clientes MCP de minddy con Claude, Codex y otros asistentes.",
       "caption": "Selecciona tu cliente para ver su comando o configuración de instalación.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -81,23 +82,25 @@
         252
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "external-minddy-mcp-install-workflow",
       "kind": "screenshot",
       "src": "/documentation/es/external-minddy-mcp-install-workflow.png",
       "alt": "Diálogo de instalación de Codex en la instancia local.",
-      "caption": "Diálogo de instalación de Codex en la instancia local. Usa el origen de tu instancia; el comando mostrado no se ejecutó para esta captura.",
-      "revision": 2,
+      "caption": "Diálogo de instalación de Codex. Usa el origen de tu instancia; el comando mostrado no se ejecutó para esta captura.",
+      "revision": 3,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         560,
         380
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     }
   ],
   "requiredFigures": [
@@ -107,7 +110,7 @@
 }
 ---
 
-El MCP de minddy da acceso a un asistente externo como su cuenta de minddy, dentro de sus permisos existentes. Esta guía explica la conexión y su revocación, cómo descubrir los esquemas actuales de las herramientas y cómo cambiar planes, páginas y rutinas después de consultar su estado actual.
+El MCP de minddy permite a un asistente externo utilizar herramientas con los permisos de su cuenta. Conéctelo mediante la configuración de su instancia y revise o revoque su acceso en los ajustes de la cuenta. Antes de cambiar incidencias, páginas o rutinas, consulte los esquemas actuales de las herramientas.
 
 ## Conectar un asistente externo al MCP de minddy {#external-minddy-mcp}
 

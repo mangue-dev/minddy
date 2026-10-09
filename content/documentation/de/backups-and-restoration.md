@@ -16,8 +16,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -38,9 +38,9 @@
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison)",
+    "revision": 3,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -64,7 +64,7 @@
       "src": "/documentation/de/restore-and-roll-back-flow.svg",
       "alt": "Diagramm: Geprüftes vollständiges externes Backup. Leeres isoliertes Ziel mit passenden Versionen. Datenbank, Bytes und Schlüssel gemeinsam. Konto, Inhalte und Bytes vor Öffnung prüfen.",
       "caption": "Lesen Sie die Schritte in dieser Reihenfolge. Geprüftes vollständiges externes Backup. Leeres isoliertes Ziel mit passenden Versionen. Datenbank, Bytes und Schlüssel gemeinsam. Konto, Inhalte und Bytes vor Öffnung prüfen.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -97,7 +97,7 @@
 }
 ---
 
-Eine vollständige Sicherung hält Datenbank, Storage-Dateidaten, Konfiguration und benötigte Schlüssel zusammen. Dieser Leitfaden unterscheidet die kalte Sicherung des full-Dateisystemprofils von logischen und anbietergeführten Verfahren und erklärt die Wiederherstellung auf einem leeren Ziel. Wählen Sie vor Beginn das Verfahren, das zur tatsächlich installierten Architektur und zum Storage-Profil passt.
+Eine wiederherstellbare Sicherung hält Datenbank, Storage-Dateidaten, Konfiguration, Verschlüsselungsschlüssel und Anwendungsversion zusammen. Wählen Sie das Dateisystem-, logische oder Anbieterverfahren für Ihr installiertes Profil. Bewahren Sie den zusammengehörigen Satz außerhalb des Hosts auf und erproben Sie die Wiederherstellung auf einem leeren Ziel. Dabei können Schreibvorgänge seit dem Sicherungszeitpunkt verloren gehen.
 
 ## Das full-Dateisystemprofil kalt sichern {#back-up-the-reference-instance}
 

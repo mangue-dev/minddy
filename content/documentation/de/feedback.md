@@ -20,8 +20,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 3,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -59,9 +59,9 @@
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison)",
+    "revision": 4,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -88,7 +88,7 @@
       "src": "/documentation/de/publish-a-feedback-board-workflow.png",
       "alt": "Aktiviertes öffentliches Feedback-Board mit lokaler SSO-Identität und ausgeblendeter URL.",
       "caption": "Der Eigentümer aktiviert das Board und wählt die Besucheridentität. Dieses Beispiel verwendet einen lokalen SSO-Signierer; URL und Signaturgeheimnis sind ausgeblendet.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -104,7 +104,7 @@
       "src": "/documentation/de/submit-and-follow-feedback-workflow.png",
       "alt": "Feedback-Formular für Besucher mit Titel, Beschreibung und aktivierter öffentlicher Sichtbarkeit.",
       "caption": "Ein angemeldeter Besucher reicht einen Bedarf ein und bestimmt die Sichtbarkeit. Das Beispiel wurde tatsächlich bei deaktivierter automatischer Prüfung eingereicht.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -120,23 +120,7 @@
       "src": "/documentation/de/moderate-feedback-workflow.png",
       "alt": "Feedback-Detail mit öffentlicher Teamantwort und interner Notiz.",
       "caption": "Das Kennzeichen Öffentlich markiert die für Besucher sichtbare Antwort; die interne Notiz bleibt beim Team. Kein Ergebnis einer KI-Moderation wird gezeigt.",
-      "revision": 3,
-      "reviewed": true,
-      "capturedAt": "2026-10-08",
-      "viewport": [
-        816,
-        874
-      ],
-      "theme": "light",
-      "padding": 24
-    },
-    {
-      "id": "feedback-to-issue-workflow",
-      "kind": "screenshot",
-      "src": "/documentation/de/feedback-to-issue-workflow.png",
-      "alt": "Feedback mit einem neu erstellten verknüpften Issue und dem Status Geplant.",
-      "caption": "Die Umwandlung dieses Beispiels erstellte ein verknüpftes Issue im Status Todo. Der öffentliche Feedback-Status wechselte automatisch zu Geplant.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -152,7 +136,7 @@
       "src": "/documentation/de/feedback-pages-and-views-workflow.png",
       "alt": "Veröffentlichter Feedback-Leitfaden als ausgewählter Board-Tab, ohne Anmeldung lesbar.",
       "caption": "Veröffentlichen Sie eine Seite, aktivieren Sie Seitentabs und wählen Sie die Seite für das Board aus. Die Demoseite wurde anonym geöffnet; ihre undurchsichtige URL behält noindex.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -167,13 +151,12 @@
     "publish-a-feedback-board-workflow",
     "submit-and-follow-feedback-workflow",
     "moderate-feedback-workflow",
-    "feedback-to-issue-workflow",
     "feedback-pages-and-views-workflow"
   ]
 }
 ---
 
-Ein Feedback-Board verbindet öffentliche Besucheranfragen mit der internen Bearbeitung im Projekt. Die folgenden Abschnitte behandeln Veröffentlichung durch den Eigentümer, Einreichen und Verfolgen durch Besucher, Moderation und Verknüpfung mit Projektarbeit durch Mitglieder sowie ausgewählte öffentliche Seiten und Ansichten.
+Feedback verbindet Besucheranfragen mit der Prüfung und Umsetzung durch das Projektteam. Eigentümer konfigurieren das öffentliche Board, Besucher reichen Anfragen ein und verfolgen sie, Mitglieder moderieren oder verknüpfen sie mit Tickets. Unterscheiden Sie bei der Zugriffsverwaltung öffentliche Antworten, interne Notizen und separat veröffentlichte Seiten oder Ansichten.
 
 ## Ein Feedback-Board veröffentlichen {#publish-a-feedback-board}
 
@@ -229,7 +212,6 @@ Der verknüpfte Status folgt dem Issue: triage/backlog/duplicate → open; todo 
 
 Teambenachrichtigungen bei neuem Feedback hängen von dessen Quelle und Prüfstatuswechsel ab. Versprechen Sie einem Abstimmenden keine automatische E-Mail zu jeder Zusammenführung oder Issue-Aktualisierung. Öffentlicher Status und Antworten stehen in Mein Feedback. Eine Verknüpfung macht den Fortschritt sichtbar, ohne das private Issue selbst offenzulegen.
 
-![Feedback mit einem neu erstellten verknüpften Issue und dem Status Geplant.](/documentation/de/feedback-to-issue-workflow.png)
 
 ## Öffentliche Seiten und Ansichten zum Board hinzufügen {#feedback-pages-and-views}
 

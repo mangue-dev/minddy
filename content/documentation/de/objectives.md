@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -42,9 +42,9 @@
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison)",
+    "revision": 6,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -66,7 +66,7 @@
       "src": "/documentation/de/reader-objectives.png",
       "alt": "Noch nicht gesendeter Zieldialog mit einem Beispielnamen.",
       "caption": "Benenne das Ergebnis, bevor du Verantwortung, Zieldatum und Status festlegst. Dieser Dialog hat kein zweites Ziel erstellt.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -82,7 +82,7 @@
       "src": "/documentation/de/reader-objective-momentum.png",
       "alt": "Zieldynamik nach einem tatsächlich abgeschlossenen Demo-Ticket.",
       "caption": "Lies die Dynamik zusammen mit der verknüpften Arbeit. Die verfügbare Historie reicht für ein geschätztes Abschlussdatum noch nicht aus.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -100,7 +100,7 @@
 }
 ---
 
-Ein Ziel beschreibt ein Ergebnis innerhalb eines Projekts und bündelt die zugehörige Arbeit. Dieser Leitfaden erklärt seine Einrichtung, Fortschrittsprüfung und Abhängigkeiten sowie die Bedeutung und Grenzen des Momentum-Signals.
+Ein Ziel bündelt die Probleme eines Projekts um ein Ergebnis. Erstelle es und ordne die zugehörige Arbeit zu. Prüfe anschließend Fortschritt, blockierende Abhängigkeiten und Momentum, bevor du das Ziel anpasst oder abschließt.
 
 ## Ein Ergebnis mit einem Ziel verfolgen {#objectives}
 

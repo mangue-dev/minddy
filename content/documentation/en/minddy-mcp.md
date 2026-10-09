@@ -16,8 +16,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -45,12 +45,13 @@
       "lib/server/mcp/tools.ts",
       "lib/server/mcp/page-tools.ts",
       "lib/server/mcp/auth.ts",
-      "app/llms-full.txt/route.ts"
+      "app/llms-full.txt/route.ts",
+      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json"
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun)",
+    "revision": 3,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
     "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review)",
     "date": "2026-10-09"
   },
@@ -73,7 +74,7 @@
       "src": "/documentation/en/external-minddy-mcp-workflow.png",
       "alt": "minddy MCP client picker for Claude, Codex and other assistants.",
       "caption": "Select your client to display its installation command or configuration.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -81,23 +82,25 @@
         252
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "external-minddy-mcp-install-workflow",
       "kind": "screenshot",
       "src": "/documentation/en/external-minddy-mcp-install-workflow.png",
       "alt": "Codex installation dialog on the local instance.",
-      "caption": "Codex installation dialog on the local instance. Use your own instance origin; the displayed command was not executed for this capture.",
-      "revision": 2,
+      "caption": "Codex installation dialog. Use your own instance origin; the displayed command was not executed for this capture.",
+      "revision": 3,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         560,
         364
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     }
   ],
   "requiredFigures": [

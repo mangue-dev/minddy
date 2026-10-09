@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -39,9 +39,9 @@
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison)",
+    "revision": 3,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -52,27 +52,8 @@
   "tags": [
     "Recuperar fallos OAuth, MCP, webhook o Git"
   ],
-  "figures": [
-    {
-      "id": "integration-troubleshooting-flow",
-      "kind": "screenshot",
-      "src": "/documentation/es/integration-troubleshooting-error.png",
-      "alt": "Error al cargar las conexiones MCP con el botón Reintentar.",
-      "caption": "Reintentar vuelve a cargar las conexiones cuando se restablece la red.",
-      "revision": 2,
-      "reviewed": true,
-      "capturedAt": "2026-10-08",
-      "viewport": [
-        782,
-        108
-      ],
-      "theme": "light",
-      "padding": 24
-    }
-  ],
-  "requiredFigures": [
-    "integration-troubleshooting-flow"
-  ]
+  "figures": [],
+  "requiredFigures": []
 }
 ---
 
@@ -82,8 +63,6 @@ minddy MCP conecta un asistente externo con minddy; las conexiones MCP personale
 
 
 
-
-![Error al cargar las conexiones MCP con el botón Reintentar.](/documentation/es/integration-troubleshooting-error.png)
 
 ## Reconectar con el alcance correcto {#oauth}
 

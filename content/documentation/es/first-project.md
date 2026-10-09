@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -42,9 +42,9 @@
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison)",
+    "revision": 6,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -65,7 +65,7 @@
       "src": "/documentation/es/reader-first-project.png",
       "alt": "Incidencia de demostración completada con su descripción y comentario guardado.",
       "caption": "El estado completado registra la comprobación del recorrido de la aplicación. No afirma que se probara el enlace de correo del sitio de ejemplo.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -86,11 +86,15 @@
 
 Usa una cuenta de la instancia que quieres utilizar. En este ejemplo, crea un proyecto de demostración para un sitio web y una incidencia para comprobar su enlace de contacto. Puedes seguir la misma secuencia en Cloud o en una instancia autoalojada configurada; no necesitas IA.
 
-1. Abre Inicio después de iniciar sesión. Para empezar un trabajo nuevo, elige la acción para crear un proyecto en la navegación. Selecciona un proyecto completamente nuevo en el asistente, introduce un nombre y una clave de dos a cinco letras y continúa por los pasos del icono y el repositorio. Para este ejemplo manual, conserva el icono predeterminado y no elijas ningún repositorio. Puedes dejar vacía la descripción inicial. En el último paso, revisa Smart Assign y la asignación automática; deja esta última desactivada si quieres asignar tú el ticket de demostración. Elige la acción para finalizar, espera a que se cree el proyecto y ábrelo. Si tu equipo ya tiene un proyecto, comunica al propietario el correo de tu cuenta y acepta la invitación en la bandeja de entrada en lugar de crear un proyecto duplicado.
-2. Abre el proyecto y crea una incidencia. Ponle un título concreto, como «Comprobar el enlace de contacto del sitio web». Describe la página, el destino esperado y cómo verificarás el resultado. Si el botón Rellenado inteligente aparece y está activado, desactívalo para este ejemplo manual antes de crear la incidencia. Controla el rellenado de esta incidencia y es independiente de los interruptores de automatización y Smart Assign del proyecto.
-3. Elige una persona responsable, una prioridad y un esfuerzo si ayudan a planificar la tarea. Confirma la creación, abre la incidencia creada y comprueba su proyecto e identificador.
-4. Cambia el estado a «En curso» cuando empiece el trabajo. Realiza la comprobación y registra el resultado en un comentario. Usa «En examen» si otra persona todavía tiene que revisarlo.
-5. Cambia el estado a «Hecho» después de comprobar el resultado esperado. Busca la incidencia entre el trabajo completado del proyecto o por su identificador para confirmar el cambio.
+Si tu equipo ya tiene un proyecto, comunica al propietario el correo de tu cuenta y acepta la invitación en la bandeja de entrada en lugar de crear un proyecto duplicado.
+
+1. Abre Inicio después de iniciar sesión. Para empezar un trabajo nuevo, elige la acción para crear un proyecto en la navegación. Selecciona un proyecto completamente nuevo en el asistente, introduce un nombre y una clave de dos a cinco letras.
+2. Continúa por los pasos del icono y el repositorio. Para este ejemplo manual, conserva el icono predeterminado y no elijas ningún repositorio. Puedes dejar vacía la descripción inicial.
+3. En el último paso, revisa Smart Assign y la asignación automática; deja esta última desactivada si quieres asignar tú el ticket de demostración. Elige la acción para finalizar, espera a que se cree el proyecto y ábrelo.
+4. Abre el proyecto y crea una incidencia. Ponle un título concreto, como «Comprobar el enlace de contacto del sitio web». Describe la página, el destino esperado y cómo verificarás el resultado. Si el botón Rellenado inteligente aparece y está activado, desactívalo para este ejemplo manual antes de crear la incidencia. Controla el rellenado de esta incidencia y es independiente de los interruptores de automatización y Smart Assign del proyecto.
+5. Elige una persona responsable, una prioridad y un esfuerzo si ayudan a planificar la tarea. Confirma la creación, abre la incidencia creada y comprueba su proyecto e identificador.
+6. Cambia el estado a «En curso» cuando empiece el trabajo. Realiza la comprobación y registra el resultado en un comentario. Usa «En examen» si otra persona todavía tiene que revisarlo.
+7. Cambia el estado a «Hecho» después de comprobar el resultado esperado. Busca la incidencia entre el trabajo completado del proyecto o por su identificador para confirmar el cambio.
 
 ![Incidencia de demostración completada con su descripción y comentario guardado.](/documentation/es/reader-first-project.png)
 

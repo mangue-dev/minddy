@@ -20,8 +20,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 3,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -59,9 +59,9 @@
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun)",
-    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review)",
+    "revision": 4,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -88,7 +88,7 @@
       "src": "/documentation/fr/publish-a-feedback-board-workflow.png",
       "alt": "Board public de retours activé, avec identité SSO locale configurée et URL masquée.",
       "caption": "Le propriétaire active le board et choisit l’identité des visiteurs. Cet exemple utilise une signature SSO locale ; l’URL et le secret de signature sont masqués.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -104,7 +104,7 @@
       "src": "/documentation/fr/submit-and-follow-feedback-workflow.png",
       "alt": "Formulaire visiteur avec titre, description et visibilité publique activée.",
       "caption": "Un visiteur identifié soumet un besoin et choisit sa visibilité. L’exemple a été réellement envoyé avec la revue automatique désactivée.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -120,23 +120,7 @@
       "src": "/documentation/fr/moderate-feedback-workflow.png",
       "alt": "Détail d’un retour avec réponse publique de l’équipe et note interne.",
       "caption": "Le badge Public distingue la réponse visible aux visiteurs ; la note interne reste accessible à l’équipe. Aucun résultat de modération IA n’est présenté.",
-      "revision": 3,
-      "reviewed": true,
-      "capturedAt": "2026-10-08",
-      "viewport": [
-        816,
-        874
-      ],
-      "theme": "light",
-      "padding": 24
-    },
-    {
-      "id": "feedback-to-issue-workflow",
-      "kind": "screenshot",
-      "src": "/documentation/fr/feedback-to-issue-workflow.png",
-      "alt": "Retour lié à un ticket créé, avec le statut Prévu.",
-      "caption": "La promotion de cet exemple a créé un ticket lié en statut À faire. Le retour public est automatiquement passé à Prévu.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -152,7 +136,7 @@
       "src": "/documentation/fr/feedback-pages-and-views-workflow.png",
       "alt": "Guide des retours publié, sélectionné dans la navigation du board et lisible sans connexion.",
       "caption": "Publiez une page, activez les onglets de pages et sélectionnez-la pour le board. Cette page de démonstration a été ouverte anonymement ; son URL opaque conserve noindex.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -167,7 +151,6 @@
     "publish-a-feedback-board-workflow",
     "submit-and-follow-feedback-workflow",
     "moderate-feedback-workflow",
-    "feedback-to-issue-workflow",
     "feedback-pages-and-views-workflow"
   ]
 }
@@ -229,7 +212,6 @@ Le statut lié suit celui du ticket : triage/backlog/duplicate → open ; todo �
 
 Les notifications de l’équipe à l’arrivée d’un retour dépendent de sa source et de sa transition de revue. Ne promettez pas à un votant un email automatique pour chaque fusion ou mise à jour de ticket ; il peut consulter le statut public et les réponses dans Mes retours. La liaison rend l’avancement visible sans exposer le ticket privé lui-même.
 
-![Retour lié à un ticket créé, avec le statut Prévu.](/documentation/fr/feedback-to-issue-workflow.png)
 
 ## Ajouter pages et vues publiques au tableau {#feedback-pages-and-views}
 

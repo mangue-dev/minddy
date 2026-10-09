@@ -1,0 +1,4707 @@
+[
+  {
+    "locale": "fr",
+    "screen": "web-and-mobile-workflow",
+    "src": "/documentation/fr/web-and-mobile-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8?issue=85d2381a-ef32-44d6-bc1f-b825b62dd626",
+    "viewport": [
+      438,
+      1032
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "beforeBackgroundFramingSha256": "2bfc14ca61dbc9b32e377cbaf68a3c872a1c0761b1ae38c2831508f51275b9ca",
+    "backgroundFraming": "Restored the inherited white light-mode page surface inside the captured control, preserving dimensions and opaque pixels; transparent outer margins retained. No resampling.",
+    "frameVersion": 2,
+    "runtime": "http://localhost:3000",
+    "sha256": "e7f6e25bac9f594d96fdea9cc9745c500078f4aeb715ca031c6e23543f9ae707"
+  },
+  {
+    "locale": "en",
+    "screen": "web-and-mobile-workflow",
+    "src": "/documentation/en/web-and-mobile-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8?issue=85d2381a-ef32-44d6-bc1f-b825b62dd626",
+    "viewport": [
+      438,
+      1032
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "beforeBackgroundFramingSha256": "7e94dfd9074b8c9eccb9c8ef1d1d5ec3772042adae52360835c7eb9e2d8674a0",
+    "backgroundFraming": "Restored the inherited white light-mode page surface inside the captured control, preserving dimensions and opaque pixels; transparent outer margins retained. No resampling.",
+    "frameVersion": 2,
+    "runtime": "http://localhost:3000",
+    "sha256": "f0e93254234f55a882fdbcffce33b4b6ffd7f4a4a8b2998075f93aab1482f27d"
+  },
+  {
+    "locale": "es",
+    "screen": "web-and-mobile-workflow",
+    "src": "/documentation/es/web-and-mobile-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8?issue=85d2381a-ef32-44d6-bc1f-b825b62dd626",
+    "viewport": [
+      438,
+      968
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "beforeBackgroundFramingSha256": "466b9fc8fa17984cea5377755b8ee0370391b0a1ecbb7dcc8195e463a3fb53f6",
+    "backgroundFraming": "Restored the inherited white light-mode page surface inside the captured control, preserving dimensions and opaque pixels; transparent outer margins retained. No resampling.",
+    "frameVersion": 2,
+    "sha256": "3708c2921d6fd97dbebc51d69eead072179b82df445f1fe8c5ecdbcb12d5fdc7"
+  },
+  {
+    "locale": "it",
+    "screen": "web-and-mobile-workflow",
+    "src": "/documentation/it/web-and-mobile-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8?issue=85d2381a-ef32-44d6-bc1f-b825b62dd626",
+    "viewport": [
+      438,
+      968
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "beforeBackgroundFramingSha256": "487726ac20292d0ee8b1faec22ad881a147d37bc898121d52c03ba9b3c019903",
+    "backgroundFraming": "Restored the inherited white light-mode page surface inside the captured control, preserving dimensions and opaque pixels; transparent outer margins retained. No resampling.",
+    "frameVersion": 2,
+    "sha256": "47badbba93d1bdd3ee6f842347bc965bc55b00c849958f4d56700036d63ec60c"
+  },
+  {
+    "locale": "de",
+    "screen": "web-and-mobile-workflow",
+    "src": "/documentation/de/web-and-mobile-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8?issue=85d2381a-ef32-44d6-bc1f-b825b62dd626",
+    "viewport": [
+      438,
+      968
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "beforeBackgroundFramingSha256": "5a5d920058fb14d50bd063fa93ef2371d4ceb9b9daae1f6422424461b1662f93",
+    "backgroundFraming": "Restored the inherited white light-mode page surface inside the captured control, preserving dimensions and opaque pixels; transparent outer margins retained. No resampling.",
+    "frameVersion": 2,
+    "sha256": "7c98491c1f79e8413378e9ea895d8baa637a6d90caae98532a22a0c5f3f999e6"
+  },
+  {
+    "locale": "en",
+    "screen": "install-the-pwa-workflow",
+    "src": "/documentation/en/install-the-pwa-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "route": "/download/mobile-pwa",
+    "viewport": [
+      1488,
+      713
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "beforeBackgroundFramingSha256": "c975b9480c4f543f248fc65ac0f3b37272301dba22ea3c246c205eb2f300d2c2",
+    "backgroundFraming": "Restored the inherited white light-mode page surface inside the captured control, preserving dimensions and opaque pixels; transparent outer margins retained. No resampling.",
+    "frameVersion": 2,
+    "sha256": "5d8c7c0f95cbef17f01f69e483e0955823c3a5019927f0581d88d7980c3c08b7"
+  },
+  {
+    "locale": "en",
+    "screen": "install-locally-wizard",
+    "src": "/documentation/en/install-locally-wizard.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "route": "/self-hosting/install?route=local",
+    "viewport": [
+      944,
+      504
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "beforeBackgroundFramingSha256": "7ddfca2ea5d5eda21e0c217d70e72b6851245f6095d12e78125db6f617899882",
+    "backgroundFraming": "Restored the inherited white light-mode page surface inside the captured control, preserving dimensions and opaque pixels; transparent outer margins retained. No resampling.",
+    "frameVersion": 2,
+    "sha256": "286c4b9e2fb24403e2632a0ba56030b3ec340888d4ad7cb97802d0485c2f0acd"
+  },
+  {
+    "locale": "en",
+    "screen": "install-a-server-wizard",
+    "src": "/documentation/en/install-a-server-wizard.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "route": "/self-hosting/install?route=team",
+    "viewport": [
+      944,
+      1051
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "beforeBackgroundFramingSha256": "54a17715a87551cde55845b98f9af29d868dd983febdde14ccae340616966a5b",
+    "backgroundFraming": "Restored the inherited white light-mode page surface inside the captured control, preserving dimensions and opaque pixels; transparent outer margins retained. No resampling.",
+    "frameVersion": 2,
+    "sha256": "94ec2b62dab88f3460829f0845951265d6ee90892926c200c5c37867dd9276ca"
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "web-and-mobile-workflow",
+    "src": "/documentation/pt-BR/web-and-mobile-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8?issue=85d2381a-ef32-44d6-bc1f-b825b62dd626",
+    "viewport": [
+      438,
+      968
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/numo/conversations/91dc61a7-4449-48c7-a65b-abfed8f72710"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/numo/conversations/c307cbc4-5e55-4eb6-9cc7-f9361f2dee24"
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/assistant/active-conversation"
+      },
+      {
+        "method": "PUT",
+        "path": "/api/assistant/active-conversation"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages",
+      "/api/assistant/conversations",
+      "/api/numo/conversations/91dc61a7-4449-48c7-a65b-abfed8f72710",
+      "/api/numo/conversations/c307cbc4-5e55-4eb6-9cc7-f9361f2dee24",
+      "/api/routines"
+    ],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "beforeBackgroundFramingSha256": "e17be780d0801ed8c0b29599ae7b7d58f9c80ab5803d6a63ff9439480123d474",
+    "backgroundFraming": "Restored the inherited white light-mode page surface inside the captured control, preserving dimensions and opaque pixels; transparent outer margins retained. No resampling.",
+    "frameVersion": 2,
+    "sha256": "782792ed7a28b478ef71979d62024d695f86116edeeb58886a2ddfd9183a9d08"
+  },
+  {
+    "locale": "es",
+    "screen": "install-the-pwa-workflow",
+    "src": "/documentation/es/install-the-pwa-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "route": "/es/descargar/pwa-movil",
+    "viewport": [
+      1488,
+      736
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "beforeBackgroundFramingSha256": "7848522e9a6fbdbbc4c18c0bc79e983f1f385a3e33f71aafef36ee94f0621d38",
+    "backgroundFraming": "Restored the inherited white light-mode page surface inside the captured control, preserving dimensions and opaque pixels; transparent outer margins retained. No resampling.",
+    "frameVersion": 2,
+    "sha256": "362cd4f3b7e18eaec0ed3fda27ccade56a6deee3f1194bd696c5f8b8696f9307"
+  },
+  {
+    "locale": "es",
+    "screen": "install-locally-wizard",
+    "src": "/documentation/es/install-locally-wizard.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "route": "/es/autoalojamiento/instalar?route=local",
+    "viewport": [
+      944,
+      504
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "beforeBackgroundFramingSha256": "2ba3b9e64292c75228f30508db1582065546ad11c5c2b21e8b99365dea50b19e",
+    "backgroundFraming": "Restored the inherited white light-mode page surface inside the captured control, preserving dimensions and opaque pixels; transparent outer margins retained. No resampling.",
+    "frameVersion": 2,
+    "sha256": "f76c325ce9d351a5f33122b47104fa4c1c01bc00920af6ad2a1544853a654d4f"
+  },
+  {
+    "locale": "es",
+    "screen": "install-a-server-wizard",
+    "src": "/documentation/es/install-a-server-wizard.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "route": "/es/autoalojamiento/instalar?route=team",
+    "viewport": [
+      944,
+      1075
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "beforeBackgroundFramingSha256": "f0ffc4d0c3e6597987b856d7afabef245050871ef81c2e2927b8860f9d9fc971",
+    "backgroundFraming": "Restored the inherited white light-mode page surface inside the captured control, preserving dimensions and opaque pixels; transparent outer margins retained. No resampling.",
+    "frameVersion": 2,
+    "sha256": "771b5282f42f3799b5af389ab6cefb28b0da0b4563c6fe1510648bab6d974ce0"
+  },
+  {
+    "locale": "it",
+    "screen": "install-the-pwa-workflow",
+    "src": "/documentation/it/install-the-pwa-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/it/scarica/pwa-mobile",
+    "viewport": [
+      1488,
+      736
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [
+      "/api/routines",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/routines/0db167ae-55df-4ce8-9544-6b35dbe5021d/runs",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "cd66689f5f8cf9e378f834eb4908d4227f62b029f9d43cbaa1dc4a4da997c74e"
+  },
+  {
+    "locale": "it",
+    "screen": "install-locally-wizard",
+    "src": "/documentation/it/install-locally-wizard.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/it/hosting-autonomo/installa?route=local",
+    "viewport": [
+      944,
+      504
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [
+      "/api/routines",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/routines/0db167ae-55df-4ce8-9544-6b35dbe5021d/runs",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "1394ba2a40c7e915bee9b42b8c64dfc8108808e90926df6a8f4ecac1615af67c"
+  },
+  {
+    "locale": "it",
+    "screen": "install-a-server-wizard",
+    "src": "/documentation/it/install-a-server-wizard.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/it/hosting-autonomo/installa?route=team",
+    "viewport": [
+      944,
+      1029
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "c18d116035537b43bdb89f8b3c5fa976711ac4e79082bdbaad6617774e4c7076"
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "install-the-pwa-workflow",
+    "src": "/documentation/pt-BR/install-the-pwa-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/pt-br/baixar/pwa-movel",
+    "viewport": [
+      1488,
+      736
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "2ea062927895fd2673455f41dc11d50e5607b98bb7c328bf08b4b6818c2f9e5d"
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "install-locally-wizard",
+    "src": "/documentation/pt-BR/install-locally-wizard.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/pt-br/auto-hospedagem/instalar?route=local",
+    "viewport": [
+      944,
+      504
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "84003387581b76ec71f0481e9edaa3dfbfe07b32b750d0f3e0609e7aa4f56d60"
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "install-a-server-wizard",
+    "src": "/documentation/pt-BR/install-a-server-wizard.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/pt-br/auto-hospedagem/instalar?route=team",
+    "viewport": [
+      944,
+      1051
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "7d2f7a26df124cee93ab379e069396c11a4504efa59122f7b7ff817042b9588d"
+  },
+  {
+    "locale": "fr",
+    "screen": "install-the-pwa-workflow",
+    "src": "/documentation/fr/install-the-pwa-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/fr/telecharger/pwa-mobile",
+    "viewport": [
+      1488,
+      762
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [
+      "/api/routines",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages",
+      "/api/routines/0db167ae-55df-4ce8-9544-6b35dbe5021d/runs"
+    ],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "9fcd0d3e9e63881f4cf42b205c1f65da535f18fd91c2a252b8ca769afeb8ce94"
+  },
+  {
+    "locale": "fr",
+    "screen": "install-locally-wizard",
+    "src": "/documentation/fr/install-locally-wizard.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/fr/auto-hebergement/installer?route=local",
+    "viewport": [
+      944,
+      557
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [
+      "/api/routines",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages",
+      "/api/routines/0db167ae-55df-4ce8-9544-6b35dbe5021d/runs"
+    ],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "58d6d98588b512b6d82e2e340050297716704707b0f3450bfea2fc8059770e88"
+  },
+  {
+    "locale": "fr",
+    "screen": "install-a-server-wizard",
+    "src": "/documentation/fr/install-a-server-wizard.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/fr/auto-hebergement/installer?route=team",
+    "viewport": [
+      944,
+      1051
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "f0b7af279b1e956674d507860bb255e3f699df14961536d71d73f29510c0f9af"
+  },
+  {
+    "locale": "de",
+    "screen": "install-the-pwa-workflow",
+    "src": "/documentation/de/install-the-pwa-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/de/herunterladen/mobile-pwa",
+    "viewport": [
+      1488,
+      762
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [
+      "/api/routines",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages",
+      "/api/routines/0db167ae-55df-4ce8-9544-6b35dbe5021d/runs"
+    ],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "a9c53d5611d7ac0d2486e100f40385f69c8cfaa0e7608d3c49d6953e2aed80b3"
+  },
+  {
+    "locale": "de",
+    "screen": "install-locally-wizard",
+    "src": "/documentation/de/install-locally-wizard.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/de/selbst-hosten/installieren?route=local",
+    "viewport": [
+      944,
+      614
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [
+      "/api/routines",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages",
+      "/api/routines/0db167ae-55df-4ce8-9544-6b35dbe5021d/runs"
+    ],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "5aaf891f565adcc84c9a089b880435028fe7da21b398ad1e739a999d642463d8"
+  },
+  {
+    "locale": "de",
+    "screen": "install-a-server-wizard",
+    "src": "/documentation/de/install-a-server-wizard.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/de/selbst-hosten/installieren?route=team",
+    "viewport": [
+      944,
+      1051
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "a5f188a0bee647222893d17d9efb86d07e73d68272cafbe130c44a90052e57dc"
+  },
+  {
+    "locale": "es",
+    "screen": "plans-and-ai-usage-workflow",
+    "src": "/documentation/es/plans-and-ai-usage-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/billing",
+    "viewport": [
+      1154,
+      1016
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "ab31e086578298e7527c051794dd63686ffb8267e7162c453b30736a00d575b2"
+  },
+  {
+    "locale": "en",
+    "screen": "plans-and-ai-usage-workflow",
+    "src": "/documentation/en/plans-and-ai-usage-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/billing",
+    "viewport": [
+      1154,
+      1016
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "f090f4a05e50cb80fa483d8601139c462019772286660c950716914a47033bc2"
+  },
+  {
+    "locale": "fr",
+    "screen": "plans-and-ai-usage-workflow",
+    "src": "/documentation/fr/plans-and-ai-usage-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/billing",
+    "viewport": [
+      1154,
+      1016
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "4e5de5058e97e2dbfb45c261f5b126077677bfa015f734c9e30b53d73ed8548e"
+  },
+  {
+    "locale": "de",
+    "screen": "plans-and-ai-usage-workflow",
+    "src": "/documentation/de/plans-and-ai-usage-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/billing",
+    "viewport": [
+      1154,
+      1016
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "bbc2e76f03ab4b28f05885004d4573bbe38aa252c1d6167a26aca15c9b3e35b9"
+  },
+  {
+    "locale": "it",
+    "screen": "plans-and-ai-usage-workflow",
+    "src": "/documentation/it/plans-and-ai-usage-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/billing",
+    "viewport": [
+      1154,
+      1016
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "8f3c811204188524d3b120abe3e3f423b0c677ae9c445bc09b5abed65233adb2"
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "plans-and-ai-usage-workflow",
+    "src": "/documentation/pt-BR/plans-and-ai-usage-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/billing",
+    "viewport": [
+      1154,
+      1016
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "ef246b11cf2caf7355cf23de97c0363efa30d0f21f92c61dd40672bdc8dbadf7"
+  },
+  {
+    "locale": "en",
+    "screen": "profile-and-preferences-workflow",
+    "src": "/documentation/en/profile-and-preferences-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/settings?tab=profile&section=account-profile",
+    "viewport": [
+      816,
+      416
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "d5a6f22a1904838401960b945c5935bb4d5f0bf50cad10b2c2b85fa6cfe63dcd"
+  },
+  {
+    "locale": "en",
+    "screen": "profile-and-preferences-preferences-workflow",
+    "src": "/documentation/en/profile-and-preferences-preferences-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/settings?tab=preferences&section=account-appearance",
+    "viewport": [
+      816,
+      212
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "46258e47da42f41aca117ef72d09c987283fbf0abea27f5ccc7a8674a499f26a"
+  },
+  {
+    "locale": "en",
+    "screen": "account-security-workflow",
+    "src": "/documentation/en/account-security-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/settings?tab=security&section=account-security",
+    "viewport": [
+      816,
+      227
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "64d1c1282d18f796cfa52bbd573f5d65b9c2e311b17d7be11e0f15f15a4cde2b"
+  },
+  {
+    "locale": "en",
+    "screen": "devices-and-notifications-workflow",
+    "src": "/documentation/en/devices-and-notifications-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/settings?tab=inbox&section=account-push-devices",
+    "viewport": [
+      816,
+      196
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "2d2fe7e42614db71a1a92982b464c8e0dc1c52e6f23f8ea2a47e397e9c5830e8"
+  },
+  {
+    "locale": "en",
+    "screen": "ai-keys-and-models-workflow",
+    "src": "/documentation/en/ai-keys-and-models-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/settings?tab=agent&section=account-ai-provider",
+    "viewport": [
+      816,
+      212
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "cf6fdba7bbcb65417ce864086635a768cc2708ab605fa4e964e812c83a5adc39"
+  },
+  {
+    "locale": "en",
+    "screen": "ai-keys-and-models-defaults-workflow",
+    "src": "/documentation/en/ai-keys-and-models-defaults-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/settings?tab=agent&section=account-agent",
+    "viewport": [
+      816,
+      217
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "205603257202cf87695b8bc1c4416520cfff62b74d1a7eec3bb7aa49fbd6d153"
+  },
+  {
+    "locale": "en",
+    "screen": "automation-settings-workflow",
+    "src": "/documentation/en/automation-settings-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/settings?tab=automations&section=account-automations",
+    "viewport": [
+      816,
+      201
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "239c3420c3df1e91a6cd084378278b4b4a0c9a50d8a09a1853289ce58ad957eb"
+  },
+  {
+    "locale": "en",
+    "screen": "automation-settings-projects-workflow",
+    "src": "/documentation/en/automation-settings-projects-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/settings?tab=automations&section=account-automations-projects",
+    "viewport": [
+      816,
+      176
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "750571e6fe30c9b7ae2893a92750dbfcec654122450401cf6904a0011535cff6"
+  },
+  {
+    "locale": "en",
+    "screen": "transfer-between-instances-workflow",
+    "src": "/documentation/en/transfer-between-instances-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/settings?tab=data&section=account-data-import",
+    "viewport": [
+      816,
+      148
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "244546445d735f401e64197fd55209c5b688ab9c800a5aace2ef5fa535f353df"
+  },
+  {
+    "locale": "en",
+    "screen": "transfer-between-instances-export-workflow",
+    "src": "/documentation/en/transfer-between-instances-export-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/settings?tab=data&section=account-data-export",
+    "viewport": [
+      816,
+      148
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "2f9934e390d452727a12847fb8c8407e240a69854c8a142a36b23876b16ea5b8"
+  },
+  {
+    "locale": "en",
+    "screen": "privacy-and-account-deletion-workflow",
+    "src": "/documentation/en/privacy-and-account-deletion-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/settings?tab=data&section=account-data-delete",
+    "viewport": [
+      816,
+      231
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "906e52db87032ddf85a6d20539968379ed40e045e41e8177031226059312253e"
+  },
+  {
+    "locale": "en",
+    "screen": "numo-mcp-connections-workflow",
+    "src": "/documentation/en/numo-mcp-connections-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/settings?tab=mcp-clients&section=account-mcp-clients",
+    "viewport": [
+      816,
+      1314
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "59ec353576225eb6fad9c602c6389c9534814f53b5401b2990284f4defe4f3e7"
+  },
+  {
+    "locale": "en",
+    "screen": "external-minddy-mcp-workflow",
+    "src": "/documentation/en/external-minddy-mcp-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/settings?tab=mcp&section=account-mcp",
+    "viewport": [
+      816,
+      252
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "2470c019fac35502e0cef30dfdcb21d26aa74ad85d10d00e054784ccc330791c"
+  },
+  {
+    "locale": "en",
+    "screen": "import-issues-workflow",
+    "src": "/documentation/en/import-issues-preview-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/settings?tab=import&section=project-import",
+    "viewport": [
+      816,
+      977
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "04cc549eff5ed735336ff6a71488a6141b00126c66fc69d6385e629221338213"
+  },
+  {
+    "locale": "en",
+    "screen": "scheduled-routines-workflow",
+    "src": "/documentation/en/scheduled-routines-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/routines",
+    "viewport": [
+      1154,
+      1016
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "8442f292dfe4fd5b83dd6d7cee2e96dd3d7c5b4dae3f6be50bde545dbed4bae7"
+  },
+  {
+    "locale": "fr",
+    "screen": "profile-and-preferences-workflow",
+    "src": "/documentation/fr/profile-and-preferences-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/settings?tab=profile&section=account-profile",
+    "viewport": [
+      816,
+      416
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "b7e311058eb9802242f43a5c35d26f0a5e9106988f50381199340ab2234c962f"
+  },
+  {
+    "locale": "fr",
+    "screen": "profile-and-preferences-preferences-workflow",
+    "src": "/documentation/fr/profile-and-preferences-preferences-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/settings?tab=preferences&section=account-appearance",
+    "viewport": [
+      816,
+      212
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "377c7d492958d96f5591690a43cf59f759ea0340614294ca320645faa2f02fdf"
+  },
+  {
+    "locale": "fr",
+    "screen": "account-security-workflow",
+    "src": "/documentation/fr/account-security-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/settings?tab=security&section=account-security",
+    "viewport": [
+      816,
+      227
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "1a8f5d4822937a69e45835676c82043f7d989e24e8ec464ff8d4929901a96229"
+  },
+  {
+    "locale": "fr",
+    "screen": "devices-and-notifications-workflow",
+    "src": "/documentation/fr/devices-and-notifications-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/settings?tab=inbox&section=account-push-devices",
+    "viewport": [
+      816,
+      196
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "cbea78d185cd3d104af6dc0a219981f83fdce49aa961f37185cda9c22a164a6c"
+  },
+  {
+    "locale": "fr",
+    "screen": "ai-keys-and-models-workflow",
+    "src": "/documentation/fr/ai-keys-and-models-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/settings?tab=agent&section=account-ai-provider",
+    "viewport": [
+      816,
+      212
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "bf73cba1bc29c66cdeb8339738f59774a2492e513804bb2c241d886b499ca550"
+  },
+  {
+    "locale": "fr",
+    "screen": "ai-keys-and-models-defaults-workflow",
+    "src": "/documentation/fr/ai-keys-and-models-defaults-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/settings?tab=agent&section=account-agent",
+    "viewport": [
+      816,
+      217
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "f01f6e563ded8f5f5ca488e1636fc29298f2c3bd214b4afc74cc283002815872"
+  },
+  {
+    "locale": "fr",
+    "screen": "automation-settings-workflow",
+    "src": "/documentation/fr/automation-settings-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/settings?tab=automations&section=account-automations",
+    "viewport": [
+      816,
+      221
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "53e88570d1ad6fff837f3cb324fa1fea42886e07606838e6f09a635ec8a13dc8"
+  },
+  {
+    "locale": "fr",
+    "screen": "automation-settings-projects-workflow",
+    "src": "/documentation/fr/automation-settings-projects-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/settings?tab=automations&section=account-automations-projects",
+    "viewport": [
+      816,
+      176
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "4d77228932455eaa6a1ea327eca404f1862c669e0c4f61cb436ad6a065629eb7"
+  },
+  {
+    "locale": "fr",
+    "screen": "transfer-between-instances-workflow",
+    "src": "/documentation/fr/transfer-between-instances-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/settings?tab=data&section=account-data-import",
+    "viewport": [
+      816,
+      148
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "bf80b6a572998e9699b349c16098ca0d86dc0714cedeb46575e8cd1aa1f5d9ac"
+  },
+  {
+    "locale": "fr",
+    "screen": "transfer-between-instances-export-workflow",
+    "src": "/documentation/fr/transfer-between-instances-export-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/settings?tab=data&section=account-data-export",
+    "viewport": [
+      816,
+      148
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "e32388b58c0d8f615c6d151bb2dfb0b661425b31cc8fc096e5ad745ca7f80d79"
+  },
+  {
+    "locale": "fr",
+    "screen": "privacy-and-account-deletion-workflow",
+    "src": "/documentation/fr/privacy-and-account-deletion-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/settings?tab=data&section=account-data-delete",
+    "viewport": [
+      816,
+      231
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "78db500206ebc35c374dff473a2e1813d449f63eca5cb8de0db80e6add639449"
+  },
+  {
+    "locale": "fr",
+    "screen": "numo-mcp-connections-workflow",
+    "src": "/documentation/fr/numo-mcp-connections-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/settings?tab=mcp-clients&section=account-mcp-clients",
+    "viewport": [
+      816,
+      1314
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "78d5a6fbb8b60fa56e9e0548f75eb3dd421921bb94cc8a7255729938b9f7f159"
+  },
+  {
+    "locale": "fr",
+    "screen": "external-minddy-mcp-workflow",
+    "src": "/documentation/fr/external-minddy-mcp-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/settings?tab=mcp&section=account-mcp",
+    "viewport": [
+      816,
+      252
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "d07caabea47174b6ed87ab2c847f8db9ca0a562d6196c2aaf8773025c4e63ac0"
+  },
+  {
+    "locale": "fr",
+    "screen": "import-issues-workflow",
+    "src": "/documentation/fr/import-issues-preview-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/settings?tab=import&section=project-import",
+    "viewport": [
+      816,
+      977
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "25d2f65afc1b245870edf8124989e15e003db20bd550f8281e020491c963e6b4"
+  },
+  {
+    "locale": "fr",
+    "screen": "scheduled-routines-workflow",
+    "src": "/documentation/fr/scheduled-routines-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/routines",
+    "viewport": [
+      1154,
+      1016
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [
+      "/api/routines",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages",
+      "/api/routines/0db167ae-55df-4ce8-9544-6b35dbe5021d/runs"
+    ],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "5c13722e26c4fa1032c4a7baf8a70f9c335ee02951ffe5751668dfcbfaf2845a"
+  },
+  {
+    "locale": "de",
+    "screen": "profile-and-preferences-workflow",
+    "src": "/documentation/de/profile-and-preferences-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/settings?tab=profile&section=account-profile",
+    "viewport": [
+      816,
+      416
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "1229daca1a5c84e8f0a97f6408919f3ac67fc1a519ab9379e9ec5ff95ee7f4b1"
+  },
+  {
+    "locale": "de",
+    "screen": "profile-and-preferences-preferences-workflow",
+    "src": "/documentation/de/profile-and-preferences-preferences-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/settings?tab=preferences&section=account-appearance",
+    "viewport": [
+      816,
+      212
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "eb56b10671a42b1b2f67440c771e663c2469fd30a4de2871e3d66d18acfc6edb"
+  },
+  {
+    "locale": "de",
+    "screen": "account-security-workflow",
+    "src": "/documentation/de/account-security-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/settings?tab=security&section=account-security",
+    "viewport": [
+      816,
+      227
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "6b9ec32ffa0cb3ed9ed0c3fbb07d2849943ddaa8d10094d21a392c1a9cc762c6"
+  },
+  {
+    "locale": "de",
+    "screen": "devices-and-notifications-workflow",
+    "src": "/documentation/de/devices-and-notifications-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/settings?tab=inbox&section=account-push-devices",
+    "viewport": [
+      816,
+      196
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "a19e2ab5e95291bf8a202551e4a3c7fe5b083bf9755d5118bdcff75a217bb579"
+  },
+  {
+    "locale": "de",
+    "screen": "ai-keys-and-models-workflow",
+    "src": "/documentation/de/ai-keys-and-models-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/settings?tab=agent&section=account-ai-provider",
+    "viewport": [
+      816,
+      212
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "f4b984416403aba1e67f42c70fc0e47503d1c2322dca5da3d1d142cc3b02f568"
+  },
+  {
+    "locale": "de",
+    "screen": "ai-keys-and-models-defaults-workflow",
+    "src": "/documentation/de/ai-keys-and-models-defaults-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/settings?tab=agent&section=account-agent",
+    "viewport": [
+      816,
+      217
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "bbc866b7c2b77fd8e9873f3b1c6df9f4953312819a989d18ee8147abd335b6b6"
+  },
+  {
+    "locale": "de",
+    "screen": "automation-settings-workflow",
+    "src": "/documentation/de/automation-settings-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/settings?tab=automations&section=account-automations",
+    "viewport": [
+      816,
+      201
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "a6d13de1bb5e3f1458d4ae852c4ca108de8b3ed9613e42cdbd275073ba0630e4"
+  },
+  {
+    "locale": "de",
+    "screen": "automation-settings-projects-workflow",
+    "src": "/documentation/de/automation-settings-projects-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/settings?tab=automations&section=account-automations-projects",
+    "viewport": [
+      816,
+      176
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "97c20af4d2a60b78fb8c8592ba41c0152a37afc7b5e1d002b9bb461da1ad8532"
+  },
+  {
+    "locale": "de",
+    "screen": "transfer-between-instances-workflow",
+    "src": "/documentation/de/transfer-between-instances-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/settings?tab=data&section=account-data-import",
+    "viewport": [
+      816,
+      148
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "252769ac7cb5db189b243a1f257be79779d9b6061780374d881ebe7a24f5a0a1"
+  },
+  {
+    "locale": "de",
+    "screen": "transfer-between-instances-export-workflow",
+    "src": "/documentation/de/transfer-between-instances-export-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/settings?tab=data&section=account-data-export",
+    "viewport": [
+      816,
+      148
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "691fa2bc12928b6a568edd3172a534a4ebcb2e8c6710115d6802691565c7e42c"
+  },
+  {
+    "locale": "de",
+    "screen": "privacy-and-account-deletion-workflow",
+    "src": "/documentation/de/privacy-and-account-deletion-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/settings?tab=data&section=account-data-delete",
+    "viewport": [
+      816,
+      231
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "b818e6a8c2932f3c7eba7ef8e188e1241155ff2c4795ceb12395830a0b9443c4"
+  },
+  {
+    "locale": "de",
+    "screen": "numo-mcp-connections-workflow",
+    "src": "/documentation/de/numo-mcp-connections-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/settings?tab=mcp-clients&section=account-mcp-clients",
+    "viewport": [
+      816,
+      1314
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "3e553a6b6ad73bd58b50f4426c43a3adbead65741f9fb1f51340e01247a3566a"
+  },
+  {
+    "locale": "de",
+    "screen": "external-minddy-mcp-workflow",
+    "src": "/documentation/de/external-minddy-mcp-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/settings?tab=mcp&section=account-mcp",
+    "viewport": [
+      816,
+      252
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "9c0b175abf31ff20dfc6b1600eb13b56020a6eefc43abafbad789637982cdba6"
+  },
+  {
+    "locale": "de",
+    "screen": "import-issues-workflow",
+    "src": "/documentation/de/import-issues-preview-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/settings?tab=import&section=project-import",
+    "viewport": [
+      816,
+      977
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "dd688a9bd3084ac0b24b9d45d98da487c61f5a441e940a997747076d0db6c412"
+  },
+  {
+    "locale": "de",
+    "screen": "scheduled-routines-workflow",
+    "src": "/documentation/de/scheduled-routines-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/routines",
+    "viewport": [
+      1154,
+      1016
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [
+      "/api/routines",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/routines/0db167ae-55df-4ce8-9544-6b35dbe5021d/runs"
+    ],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "eebd61bdf8ec2a64efcdaad02e26ef6f08077717fef81a9da6e81320745a2820"
+  },
+  {
+    "locale": "es",
+    "screen": "profile-and-preferences-workflow",
+    "src": "/documentation/es/profile-and-preferences-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/settings?tab=profile&section=account-profile",
+    "viewport": [
+      816,
+      416
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "bb3fcc331cc67d46820f891d0e99a54e77b821bc55620279a5cdcb8da1863bef"
+  },
+  {
+    "locale": "es",
+    "screen": "profile-and-preferences-preferences-workflow",
+    "src": "/documentation/es/profile-and-preferences-preferences-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/settings?tab=preferences&section=account-appearance",
+    "viewport": [
+      816,
+      212
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "b450fa04b4b619df6076e10babb4219093ab05d4ad795b9ca2399d80a9666a0a"
+  },
+  {
+    "locale": "es",
+    "screen": "account-security-workflow",
+    "src": "/documentation/es/account-security-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/settings?tab=security&section=account-security",
+    "viewport": [
+      816,
+      227
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "3acb5c9c226a767fbc998e52945107be7a966fb6ba9f05f353065cc7fcd62ace"
+  },
+  {
+    "locale": "es",
+    "screen": "devices-and-notifications-workflow",
+    "src": "/documentation/es/devices-and-notifications-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/settings?tab=inbox&section=account-push-devices",
+    "viewport": [
+      816,
+      196
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "d860f2def22051500ba6788545af97008b2f91085967283e58b568e3f58505cc"
+  },
+  {
+    "locale": "es",
+    "screen": "ai-keys-and-models-workflow",
+    "src": "/documentation/es/ai-keys-and-models-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/settings?tab=agent&section=account-ai-provider",
+    "viewport": [
+      816,
+      212
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "1bdd5153b2de0a3e74ccb178a49ed9767b0758fe625706d15c48b55c5c6bd140"
+  },
+  {
+    "locale": "es",
+    "screen": "ai-keys-and-models-defaults-workflow",
+    "src": "/documentation/es/ai-keys-and-models-defaults-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/settings?tab=agent&section=account-agent",
+    "viewport": [
+      816,
+      217
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "9f21f0e1f82d9b3a19ce4d9c8304eb6b5cc5cac4e24ca430a7812f1a1de2c32f"
+  },
+  {
+    "locale": "es",
+    "screen": "automation-settings-workflow",
+    "src": "/documentation/es/automation-settings-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/settings?tab=automations&section=account-automations",
+    "viewport": [
+      816,
+      221
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "ee589b56c311b7ecf1657f27790f1646f79c034d5caf71b3a008f684269d0438"
+  },
+  {
+    "locale": "es",
+    "screen": "automation-settings-projects-workflow",
+    "src": "/documentation/es/automation-settings-projects-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/settings?tab=automations&section=account-automations-projects",
+    "viewport": [
+      816,
+      176
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "6dcd6905ff2f5638688b1e255dd500ced0e593220fffe35fd08a0f5620bef241"
+  },
+  {
+    "locale": "es",
+    "screen": "transfer-between-instances-workflow",
+    "src": "/documentation/es/transfer-between-instances-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/settings?tab=data&section=account-data-import",
+    "viewport": [
+      816,
+      148
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "c83c41237b81e43d0bfe1227041d09cad39837553a7336353efb157f19aa96d1"
+  },
+  {
+    "locale": "es",
+    "screen": "transfer-between-instances-export-workflow",
+    "src": "/documentation/es/transfer-between-instances-export-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/settings?tab=data&section=account-data-export",
+    "viewport": [
+      816,
+      148
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "acbda54aad70eb38cacf2b3499cc6691376a959a0f2a4d8d070fb7732a935f32"
+  },
+  {
+    "locale": "es",
+    "screen": "privacy-and-account-deletion-workflow",
+    "src": "/documentation/es/privacy-and-account-deletion-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/settings?tab=data&section=account-data-delete",
+    "viewport": [
+      816,
+      231
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "9fd9e53862b447bd2aa2c8f898a8802b75cc037e6fb398d6ee9c0b0c88bc222c"
+  },
+  {
+    "locale": "es",
+    "screen": "numo-mcp-connections-workflow",
+    "src": "/documentation/es/numo-mcp-connections-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/settings?tab=mcp-clients&section=account-mcp-clients",
+    "viewport": [
+      816,
+      1314
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "65c4b1265986dcb5640a588f5e5c9dc44161195d343c1d7a359c9e72a7375ef0"
+  },
+  {
+    "locale": "es",
+    "screen": "external-minddy-mcp-workflow",
+    "src": "/documentation/es/external-minddy-mcp-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/settings?tab=mcp&section=account-mcp",
+    "viewport": [
+      816,
+      252
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "03a70630f1920c31f7a7754c7d7b7e30d988429896ae004682bb348b630d01fe"
+  },
+  {
+    "locale": "es",
+    "screen": "import-issues-workflow",
+    "src": "/documentation/es/import-issues-preview-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/settings?tab=import&section=project-import",
+    "viewport": [
+      816,
+      977
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "cbeebf7342acff4977e75558d7cdfcac0560b4b5eb4af4fce81a23aebc2fced0"
+  },
+  {
+    "locale": "es",
+    "screen": "scheduled-routines-workflow",
+    "src": "/documentation/es/scheduled-routines-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/routines",
+    "viewport": [
+      1154,
+      1016
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [
+      "/api/routines",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages",
+      "/api/routines/0db167ae-55df-4ce8-9544-6b35dbe5021d/runs"
+    ],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "11d33086729d35b9adf3761a59c9349fc2de5dd2f73bdca1fbf4a05924f29eec"
+  },
+  {
+    "locale": "it",
+    "screen": "profile-and-preferences-workflow",
+    "src": "/documentation/it/profile-and-preferences-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/settings?tab=profile&section=account-profile",
+    "viewport": [
+      816,
+      416
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "d8370f51ae938173968936ac41eaf376d663930b119bf0587f8271fca55d0f0b"
+  },
+  {
+    "locale": "it",
+    "screen": "profile-and-preferences-preferences-workflow",
+    "src": "/documentation/it/profile-and-preferences-preferences-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/settings?tab=preferences&section=account-appearance",
+    "viewport": [
+      816,
+      212
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "3dedd5eac068ffc83b53bad60e73a6c764d65fa92ca4a34f79dc20fada10a31b"
+  },
+  {
+    "locale": "it",
+    "screen": "account-security-workflow",
+    "src": "/documentation/it/account-security-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/settings?tab=security&section=account-security",
+    "viewport": [
+      816,
+      227
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "67f2b97c1efd337ffd555fd3c68949a9994fb256b0ca3cddb2e58d57508547b3"
+  },
+  {
+    "locale": "it",
+    "screen": "devices-and-notifications-workflow",
+    "src": "/documentation/it/devices-and-notifications-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/settings?tab=inbox&section=account-push-devices",
+    "viewport": [
+      816,
+      196
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "dbdc2b1167a5436c446978ed57e45cbae369f47a4b43675c380c868d2cf2c633"
+  },
+  {
+    "locale": "it",
+    "screen": "ai-keys-and-models-workflow",
+    "src": "/documentation/it/ai-keys-and-models-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/settings?tab=agent&section=account-ai-provider",
+    "viewport": [
+      816,
+      212
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "e9765dc351e257e059cf4d114f8ef955e204032968674f3a1aceb212944df8ac"
+  },
+  {
+    "locale": "it",
+    "screen": "ai-keys-and-models-defaults-workflow",
+    "src": "/documentation/it/ai-keys-and-models-defaults-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "route": "/settings?tab=agent&section=account-agent",
+    "viewport": [
+      816,
+      217
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "2d19b78693bd9163d25fd73aa56dc2bede5622b1c1428a476370283612815426"
+  },
+  {
+    "locale": "it",
+    "screen": "automation-settings-workflow",
+    "src": "/documentation/it/automation-settings-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/settings?tab=automations&section=account-automations",
+    "viewport": [
+      816,
+      201
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "f36fd256755635c7a54d370581c135d73c698c84b9675f458b04490b8dd92878"
+  },
+  {
+    "locale": "it",
+    "screen": "automation-settings-projects-workflow",
+    "src": "/documentation/it/automation-settings-projects-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/settings?tab=automations&section=account-automations-projects",
+    "viewport": [
+      816,
+      176
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "ef26d25911eeb8edb5f61af1c5f04ce755ff17df7bd7d155cec72cd894cc0c3f"
+  },
+  {
+    "locale": "it",
+    "screen": "transfer-between-instances-workflow",
+    "src": "/documentation/it/transfer-between-instances-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/settings?tab=data&section=account-data-import",
+    "viewport": [
+      816,
+      148
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "644f42beda6f1493b52ce26e48f9791b3e1b6d486c07fa267b0ffde78e0591bc"
+  },
+  {
+    "locale": "it",
+    "screen": "transfer-between-instances-export-workflow",
+    "src": "/documentation/it/transfer-between-instances-export-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/settings?tab=data&section=account-data-export",
+    "viewport": [
+      816,
+      148
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "7423b93b136f399c423d7b1fae7633c7b32db41dcf675b3a15bdee19dacff409"
+  },
+  {
+    "locale": "it",
+    "screen": "privacy-and-account-deletion-workflow",
+    "src": "/documentation/it/privacy-and-account-deletion-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/settings?tab=data&section=account-data-delete",
+    "viewport": [
+      816,
+      231
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "cc74603f10046325acdd52dfd3affbe984724090f0390a46531ef0b9a43dddbc"
+  },
+  {
+    "locale": "it",
+    "screen": "numo-mcp-connections-workflow",
+    "src": "/documentation/it/numo-mcp-connections-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/settings?tab=mcp-clients&section=account-mcp-clients",
+    "viewport": [
+      816,
+      1314
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "705e015dbddfac335c2404ff1908c4b217779d03008b30a2f1b15d6bca0bfbde"
+  },
+  {
+    "locale": "it",
+    "screen": "external-minddy-mcp-workflow",
+    "src": "/documentation/it/external-minddy-mcp-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/settings?tab=mcp&section=account-mcp",
+    "viewport": [
+      816,
+      252
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "330d0cf1e88a7c7d58fcc8db671b3630f953bded07ab4f862156c2cc1a58a4df"
+  },
+  {
+    "locale": "it",
+    "screen": "import-issues-workflow",
+    "src": "/documentation/it/import-issues-preview-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/settings?tab=import&section=project-import",
+    "viewport": [
+      816,
+      977
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "fc28e8c5e5d98ec855fd7df48a2e2e75af75b2edd815e0cdce69f269e36d3128"
+  },
+  {
+    "locale": "it",
+    "screen": "scheduled-routines-workflow",
+    "src": "/documentation/it/scheduled-routines-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/routines",
+    "viewport": [
+      1154,
+      1016
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [
+      "/api/routines",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/routines/0db167ae-55df-4ce8-9544-6b35dbe5021d/runs"
+    ],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "c2c8f285a74c7671dfeef60dc5e5afeb4bff62665a8b5b5fbfd8c1080398c37d"
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "profile-and-preferences-workflow",
+    "src": "/documentation/pt-BR/profile-and-preferences-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/settings?tab=profile&section=account-profile",
+    "viewport": [
+      816,
+      416
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "100c3dcdf19cc882b5ff2157d8909b7a4d02478da25eef269618913cb75f09bb"
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "profile-and-preferences-preferences-workflow",
+    "src": "/documentation/pt-BR/profile-and-preferences-preferences-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/settings?tab=preferences&section=account-appearance",
+    "viewport": [
+      816,
+      212
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "3e59af4e3d525fc7e3f9d8e76a4faeb63500dc79897ccb16db83c09f234270ea"
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "account-security-workflow",
+    "src": "/documentation/pt-BR/account-security-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/settings?tab=security&section=account-security",
+    "viewport": [
+      816,
+      227
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "4cc757afb4995b1b495aba67461dce7d9bb9f1052b16f45ec5f252276b3ca551"
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "devices-and-notifications-workflow",
+    "src": "/documentation/pt-BR/devices-and-notifications-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/settings?tab=inbox&section=account-push-devices",
+    "viewport": [
+      816,
+      196
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "c937a44ed56a662945df980ed3458a11398e196d19a4a2add9a0b91c36bf3b21"
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "ai-keys-and-models-workflow",
+    "src": "/documentation/pt-BR/ai-keys-and-models-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/settings?tab=agent&section=account-ai-provider",
+    "viewport": [
+      816,
+      212
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "3937eb008f7d3528db511843a057655c5abfa95802016ba6f1e5e826cd41cc85"
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "ai-keys-and-models-defaults-workflow",
+    "src": "/documentation/pt-BR/ai-keys-and-models-defaults-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/settings?tab=agent&section=account-agent",
+    "viewport": [
+      816,
+      217
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "d9b9dff8161b9ad9fc670ef5eb710a3c69fe5822699c6b050c4b3c09a9e9872a"
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "automation-settings-workflow",
+    "src": "/documentation/pt-BR/automation-settings-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/settings?tab=automations&section=account-automations",
+    "viewport": [
+      816,
+      221
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "7ccd2375fe8d73030f58e963d2473e49ab30d38b19073e69401ecfb1bf441b53"
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "automation-settings-projects-workflow",
+    "src": "/documentation/pt-BR/automation-settings-projects-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/settings?tab=automations&section=account-automations-projects",
+    "viewport": [
+      816,
+      176
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "dfec071f535bcffc2002adab6e3f5ba84362e73ba8a1d199b5fd0f4b3e1c1aa9"
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "transfer-between-instances-workflow",
+    "src": "/documentation/pt-BR/transfer-between-instances-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/settings?tab=data&section=account-data-import",
+    "viewport": [
+      816,
+      148
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "5a48561a7203b6da9c4ec7b66108943e5fdd755bdec68fffaf4f4708d67deae7"
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "transfer-between-instances-export-workflow",
+    "src": "/documentation/pt-BR/transfer-between-instances-export-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/settings?tab=data&section=account-data-export",
+    "viewport": [
+      816,
+      148
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "14bd38c9c0c12d2514d9199c97bb94eadb2a38e843a0e5e9fcd06d6301220909"
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "privacy-and-account-deletion-workflow",
+    "src": "/documentation/pt-BR/privacy-and-account-deletion-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/settings?tab=data&section=account-data-delete",
+    "viewport": [
+      816,
+      231
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "64ed21a514d5fab67f9f7a8adbb8b735c89143b1bdf111dd76a09b7fb4b7f57c"
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "numo-mcp-connections-workflow",
+    "src": "/documentation/pt-BR/numo-mcp-connections-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/settings?tab=mcp-clients&section=account-mcp-clients",
+    "viewport": [
+      816,
+      1314
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "96fda63c4855e08062256a9bd62e8d16fe190a2ffbbc76d9d15621e2dcfa9828"
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "external-minddy-mcp-workflow",
+    "src": "/documentation/pt-BR/external-minddy-mcp-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/settings?tab=mcp&section=account-mcp",
+    "viewport": [
+      816,
+      252
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "9cdf54d2b3db3c355adab0a5d0bf9d93b29699c07f8f738b3b61ea9d8659b560"
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "import-issues-workflow",
+    "src": "/documentation/pt-BR/import-issues-preview-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/settings?tab=import&section=project-import",
+    "viewport": [
+      816,
+      977
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "7c93ec03341b77d7f46c31bf078db55c7e47e3f8652895b7be1f7952da15b246"
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "scheduled-routines-workflow",
+    "src": "/documentation/pt-BR/scheduled-routines-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/routines",
+    "viewport": [
+      1154,
+      1016
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [
+      "/api/routines",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/routines/0db167ae-55df-4ce8-9544-6b35dbe5021d/runs"
+    ],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "930d5b14550c30a2e4fc573ce57fbe449465ec6fff39f01fb33405f538951380"
+  },
+  {
+    "locale": "en",
+    "screen": "external-minddy-mcp-install-workflow",
+    "src": "/documentation/en/external-minddy-mcp-install-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/settings?tab=mcp",
+    "viewport": [
+      560,
+      364
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "a08cf8ec6bbe588a57e47e56c97bff05987b35c5c0d949b3e73c9b73ea405e2b"
+  },
+  {
+    "locale": "en",
+    "screen": "numo-mcp-connections-config-workflow",
+    "src": "/documentation/en/numo-mcp-connections-config-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/settings?tab=mcp-clients",
+    "viewport": [
+      560,
+      920
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "4972b8f99d949186dda97ed17d6ef734d75ba6b65a5f50ea074fcae2d868c3eb"
+  },
+  {
+    "locale": "en",
+    "screen": "work-with-numo-workflow",
+    "src": "/documentation/en/work-with-numo-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "viewport": [
+      498,
+      648
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/numo/conversations/91dc61a7-4449-48c7-a65b-abfed8f72710"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/numo/conversations/c307cbc4-5e55-4eb6-9cc7-f9361f2dee24"
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/assistant/active-conversation"
+      },
+      {
+        "method": "PUT",
+        "path": "/api/assistant/active-conversation"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "bb0d1bd36932a4dc1b1f5bb64b898ecc582653c914b1418ba402d10fe408c07a"
+  },
+  {
+    "locale": "fr",
+    "screen": "external-minddy-mcp-install-workflow",
+    "src": "/documentation/fr/external-minddy-mcp-install-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/settings?tab=mcp",
+    "viewport": [
+      560,
+      380
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "5445e0c2bbdedf9a83fb15102164c16d3fa394862aa38e176f60917b6e93c9c3"
+  },
+  {
+    "locale": "fr",
+    "screen": "numo-mcp-connections-config-workflow",
+    "src": "/documentation/fr/numo-mcp-connections-config-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/settings?tab=mcp-clients",
+    "viewport": [
+      560,
+      920
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "0e9802d45d2ef5289b8e4d50c7d9552bafed0eff7019ce4e04e8d6c9811fda4f"
+  },
+  {
+    "locale": "fr",
+    "screen": "work-with-numo-workflow",
+    "src": "/documentation/fr/work-with-numo-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "viewport": [
+      498,
+      648
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/numo/conversations/91dc61a7-4449-48c7-a65b-abfed8f72710"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/numo/conversations/c307cbc4-5e55-4eb6-9cc7-f9361f2dee24"
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/assistant/active-conversation"
+      },
+      {
+        "method": "PUT",
+        "path": "/api/assistant/active-conversation"
+      }
+    ],
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages",
+      "/api/assistant/conversations",
+      "/api/numo/conversations/91dc61a7-4449-48c7-a65b-abfed8f72710",
+      "/api/numo/conversations/c307cbc4-5e55-4eb6-9cc7-f9361f2dee24"
+    ],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "b4c80a39effd81f90f6a78bffe3c75a3cd9a7ef9c0e2133bf22de0b9bb6a1a02"
+  },
+  {
+    "locale": "de",
+    "screen": "external-minddy-mcp-install-workflow",
+    "src": "/documentation/de/external-minddy-mcp-install-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/settings?tab=mcp",
+    "viewport": [
+      560,
+      380
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "bf72c15aa413792186467629247fbbebea6ea142b966111f10cbf320b1627439"
+  },
+  {
+    "locale": "de",
+    "screen": "numo-mcp-connections-config-workflow",
+    "src": "/documentation/de/numo-mcp-connections-config-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/settings?tab=mcp-clients",
+    "viewport": [
+      560,
+      940
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "2bcd294423a905fdff1d722bb311944200061c28a49a35c2e80ce473a1e12398"
+  },
+  {
+    "locale": "de",
+    "screen": "work-with-numo-workflow",
+    "src": "/documentation/de/work-with-numo-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "viewport": [
+      498,
+      648
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/numo/conversations/91dc61a7-4449-48c7-a65b-abfed8f72710"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/numo/conversations/c307cbc4-5e55-4eb6-9cc7-f9361f2dee24"
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/assistant/active-conversation"
+      },
+      {
+        "method": "PUT",
+        "path": "/api/assistant/active-conversation"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages",
+      "/api/assistant/conversations",
+      "/api/numo/conversations/91dc61a7-4449-48c7-a65b-abfed8f72710",
+      "/api/numo/conversations/c307cbc4-5e55-4eb6-9cc7-f9361f2dee24"
+    ],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "d829c5842bf77ab16f282c79ec4ac442151ba92ddf25759be26c323133509ac2"
+  },
+  {
+    "locale": "es",
+    "screen": "external-minddy-mcp-install-workflow",
+    "src": "/documentation/es/external-minddy-mcp-install-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/settings?tab=mcp",
+    "viewport": [
+      560,
+      380
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "411ba5b8dff015a43f2d5b2b66fc784efc0e4f9ef05e2d99b355bd0bcfc63b22"
+  },
+  {
+    "locale": "es",
+    "screen": "numo-mcp-connections-config-workflow",
+    "src": "/documentation/es/numo-mcp-connections-config-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/settings?tab=mcp-clients",
+    "viewport": [
+      560,
+      920
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "ac375548b12af2d4ace16a9950fe1b288675de872aa33bfe22a8a330b17ca0a3"
+  },
+  {
+    "locale": "es",
+    "screen": "work-with-numo-workflow",
+    "src": "/documentation/es/work-with-numo-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "viewport": [
+      498,
+      648
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/numo/conversations/c307cbc4-5e55-4eb6-9cc7-f9361f2dee24"
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/assistant/active-conversation"
+      },
+      {
+        "method": "PUT",
+        "path": "/api/assistant/active-conversation"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages",
+      "/api/assistant/conversations",
+      "/api/numo/conversations/c307cbc4-5e55-4eb6-9cc7-f9361f2dee24"
+    ],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "065f03efa6ad6bff6876eeedd4a0a09f4caa30e6a879f7604253deeca5eab4e1"
+  },
+  {
+    "locale": "it",
+    "screen": "external-minddy-mcp-install-workflow",
+    "src": "/documentation/it/external-minddy-mcp-install-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/settings?tab=mcp",
+    "viewport": [
+      560,
+      364
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "ec2c2096e3a89527b275ca2ef9f0b16e6f102bcd566f03e6ba0af6eac211437d"
+  },
+  {
+    "locale": "it",
+    "screen": "numo-mcp-connections-config-workflow",
+    "src": "/documentation/it/numo-mcp-connections-config-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/settings?tab=mcp-clients",
+    "viewport": [
+      560,
+      920
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "25590b225cdd21e674aefdad6de04c8932d3128685634828bdaa970745974b2f"
+  },
+  {
+    "locale": "it",
+    "screen": "work-with-numo-workflow",
+    "src": "/documentation/it/work-with-numo-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "viewport": [
+      498,
+      648
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/numo/conversations/91dc61a7-4449-48c7-a65b-abfed8f72710"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/numo/conversations/c307cbc4-5e55-4eb6-9cc7-f9361f2dee24"
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/assistant/active-conversation"
+      },
+      {
+        "method": "PUT",
+        "path": "/api/assistant/active-conversation"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages",
+      "/api/assistant/conversations",
+      "/api/numo/conversations/91dc61a7-4449-48c7-a65b-abfed8f72710",
+      "/api/numo/conversations/c307cbc4-5e55-4eb6-9cc7-f9361f2dee24"
+    ],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "49a223799aebcf0ee910beb21af338d35ef0bd809a9843f40afee6a1c27fd7c8"
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "external-minddy-mcp-install-workflow",
+    "src": "/documentation/pt-BR/external-minddy-mcp-install-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/settings?tab=mcp",
+    "viewport": [
+      560,
+      364
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "1c640ef2834f8a638e4276a893a57b9758fe95b6b533471d506edd0d27bb2f10"
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "numo-mcp-connections-config-workflow",
+    "src": "/documentation/pt-BR/numo-mcp-connections-config-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/settings?tab=mcp-clients",
+    "viewport": [
+      560,
+      920
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "25d819ec1d195edf6095f79fab7f91ed87253bfdb18d438cd30acea41789e56d"
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "work-with-numo-workflow",
+    "src": "/documentation/pt-BR/work-with-numo-workflow.png",
+    "date": "2026-10-09",
+    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
+    "workingTreeChanges": true,
+    "runtime": "https://www.minddy.app",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "viewport": [
+      498,
+      648
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/numo/conversations/91dc61a7-4449-48c7-a65b-abfed8f72710"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/numo/conversations/c307cbc4-5e55-4eb6-9cc7-f9361f2dee24"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "PUT",
+        "path": "/api/assistant/active-conversation"
+      }
+    ],
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages",
+      "/api/assistant/conversations",
+      "/api/numo/conversations/c307cbc4-5e55-4eb6-9cc7-f9361f2dee24",
+      "/api/numo/conversations/91dc61a7-4449-48c7-a65b-abfed8f72710"
+    ],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
+    "sha256": "560165b9e397264ddc4bb608acbe11f203716a0940d02164a8f168480f245bd5"
+  }
+]

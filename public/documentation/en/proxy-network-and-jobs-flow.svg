@@ -3,22 +3,14 @@
 <desc id="desc">Diagram: Public HTTPS reverse proxy. Application and public Supabase origins. Private runner, database and internal ports. Authenticated scheduler; stopped in maintenance.</desc>
 <rect width="720" height="640" rx="20" fill="#fafaf9" />
 <rect x="24" y="24" width="672" height="128" rx="16" fill="#e6edf5" stroke="#293d56" stroke-width="1" stroke-opacity="0.12" />
-<circle cx="60" cy="88" r="20" fill="#60706b" />
-<circle cx="60" cy="88" r="5" fill="#ffffff" />
-<text x="98" y="98" font-family="Arial, sans-serif" font-size="29" fill="#293d56">Public HTTPS reverse proxy</text>
+<text x="48" y="98" font-family="Arial, sans-serif" font-size="29" fill="#293d56">Public HTTPS reverse proxy</text>
 <rect x="24" y="178" width="672" height="128" rx="16" fill="#e0efe8" stroke="#1e4436" stroke-width="1" stroke-opacity="0.12" />
-<circle cx="60" cy="242" r="20" fill="#60706b" />
-<circle cx="60" cy="242" r="5" fill="#ffffff" />
-<text x="98" y="235" font-family="Arial, sans-serif" font-size="29" fill="#293d56">Application and public Supabase</text>
-<text x="98" y="269" font-family="Arial, sans-serif" font-size="29" fill="#293d56">origins</text>
+<text x="48" y="235" font-family="Arial, sans-serif" font-size="29" fill="#293d56">Application and public Supabase</text>
+<text x="48" y="269" font-family="Arial, sans-serif" font-size="29" fill="#293d56">origins</text>
 <rect x="24" y="332" width="672" height="128" rx="16" fill="#f0ecf6" stroke="#433352" stroke-width="1" stroke-opacity="0.12" />
-<circle cx="60" cy="396" r="20" fill="#60706b" />
-<circle cx="60" cy="396" r="5" fill="#ffffff" />
-<text x="98" y="389" font-family="Arial, sans-serif" font-size="29" fill="#293d56">Private runner, database and internal</text>
-<text x="98" y="423" font-family="Arial, sans-serif" font-size="29" fill="#293d56">ports</text>
+<text x="48" y="389" font-family="Arial, sans-serif" font-size="29" fill="#293d56">Private runner, database and internal</text>
+<text x="48" y="423" font-family="Arial, sans-serif" font-size="29" fill="#293d56">ports</text>
 <rect x="24" y="486" width="672" height="128" rx="16" fill="#f7ecdf" stroke="#573e28" stroke-width="1" stroke-opacity="0.12" />
-<circle cx="60" cy="550" r="20" fill="#60706b" />
-<circle cx="60" cy="550" r="5" fill="#ffffff" />
-<text x="98" y="543" font-family="Arial, sans-serif" font-size="29" fill="#293d56">Authenticated scheduler; stopped in</text>
-<text x="98" y="577" font-family="Arial, sans-serif" font-size="29" fill="#293d56">maintenance</text>
+<text x="48" y="543" font-family="Arial, sans-serif" font-size="29" fill="#293d56">Authenticated scheduler; stopped in</text>
+<text x="48" y="577" font-family="Arial, sans-serif" font-size="29" fill="#293d56">maintenance</text>
 </svg>

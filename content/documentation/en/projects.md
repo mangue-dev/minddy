@@ -16,8 +16,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -41,8 +41,8 @@
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun)",
+    "revision": 6,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
     "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review)",
     "date": "2026-10-09"
   },
@@ -68,7 +68,7 @@
       "src": "/documentation/en/project-general.png",
       "alt": "General project settings with name, key, icon and a separate trash action.",
       "caption": "Check the project name and key before saving. Moving the project to trash is a separate action.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -84,7 +84,7 @@
       "src": "/documentation/en/project-members.png",
       "alt": "Email invitation form and three demonstration members, with the owner identified.",
       "caption": "Invite by account email and check who owns the project before removing another member’s access.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

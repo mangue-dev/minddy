@@ -24,8 +24,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -78,13 +78,14 @@
       "lib/use-csv-import.ts",
       "lib/import/types.ts",
       "lib/server/import-issues.ts",
-      "content/documentation/reviews/csv-preview-capture-candidates.json"
+      "content/documentation/reviews/csv-preview-capture-candidates.json",
+      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json"
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
+    "revision": 6,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -131,7 +132,7 @@
       "src": "/documentation/pt-BR/new-issue.png",
       "alt": "Rascunho não enviado com título, descrição e propriedades que podem ser escolhidas manualmente.",
       "caption": "Descreva o resultado esperado e escolha as propriedades úteis antes de criar o ticket.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -147,7 +148,7 @@
       "src": "/documentation/pt-BR/triage-incoming.png",
       "alt": "Problema recebido de demonstração DOC-11 com relato, propriedades e controles de duplicado, Recusar e Aceitar.",
       "caption": "Leia o relato recebido antes de aceitar, recusar ou vincular um duplicado.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -163,7 +164,7 @@
       "src": "/documentation/pt-BR/issue-statuses.png",
       "alt": "Os oito estados do ticket no seletor, com Backlog selecionado.",
       "caption": "A marca indica o estado atual. Escolha o que representa a situação real do trabalho.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -179,7 +180,7 @@
       "src": "/documentation/pt-BR/work-resources.png",
       "alt": "Janela para adicionar um link com um endereço de contato de exemplo.",
       "caption": "Confira o destino antes de adicionar o recurso. Este link de exemplo não foi enviado.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -195,7 +196,7 @@
       "src": "/documentation/pt-BR/work-dependencies.png",
       "alt": "Busca de um ticket bloqueador pelo identificador.",
       "caption": "Escolha o sentido da relação antes do destino. O seletor é mostrado sem enviar a relação.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -211,7 +212,7 @@
       "src": "/documentation/pt-BR/work-sub-issues.png",
       "alt": "Campo de criação de um subticket em um ticket pai de demonstração.",
       "caption": "O campo cria um filho deste ticket; cada filho mantém seu próprio status e discussão.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -227,7 +228,7 @@
       "src": "/documentation/pt-BR/work-implementation-plan.png",
       "alt": "Plano de demonstração com duas tarefas de trabalho concluídas de seis.",
       "caption": "O plano salvo distingue etapas concluídas, ativas e pendentes. O progresso não comprova a execução da tarefa fictícia de código.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -243,7 +244,7 @@
       "src": "/documentation/pt-BR/issue-date-recurrence.png",
       "alt": "Seletor de prazo no modo recorrente com prévia semanal aos domingos e horário opcional.",
       "caption": "O modo recorrente mostra a frequência semanal. Confirme o primeiro prazo antes de criar o ticket.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -259,7 +260,7 @@
       "src": "/documentation/pt-BR/work-bulk-actions.png",
       "alt": "Menu de ações para dois tickets de demonstração selecionados.",
       "caption": "O menu atua nos tickets selecionados. Nenhuma alteração em grupo foi enviada nesta captura.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -275,15 +276,16 @@
       "src": "/documentation/pt-BR/import-issues-preview-workflow.png",
       "alt": "Prévia CSV de duas linhas de demonstração traduzidas e das colunas detectadas.",
       "caption": "Prévia CSV de duas linhas de demonstração traduzidas e das colunas detectadas. A importação não foi enviada; o planejamento opcional com IA foi bloqueado para a captura.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         816,
         977
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     }
   ],
   "requiredFigures": [
@@ -332,7 +334,11 @@ Escolha Aceitar e confirme para mover ao Backlog um problema que pretende manter
 
 O Smart Triage usa regras de ordenação determinísticas.
 
-Dentro de cada coluna de estado, os problemas abertos que bloqueiam outro trabalho aberto ficam primeiro, antes dos problemas sem bloqueio. Problemas bloqueados por trabalho aberto ficam por último, mesmo que também bloqueiem outros. Pontas encerradas da relação deixam de gerar essa prioridade. Dentro de cada nível, prioridade maior, esforço menor e prazos vencidos ou próximos adiantam o trabalho. No mesmo nível de bloqueio, os problemas de um objetivo permanecem juntos, e o grupo é ordenado pelo seu problema mais bem posicionado. Os empates são resolvidos pelo prazo, pela data de criação mais antiga, pela posição manual e, por fim, pelo identificador, que mantém a ordem estável. Uma relação de vínculo não afeta essa ordenação. Ele não é um modo experimental de triagem com IA. A ordem ajuda a decidir quais itens analisar primeiro; ela não comprova a veracidade de uma descrição, não resolve duplicatas automaticamente nem concede permissões.
+Dentro de cada coluna de estado, os problemas abertos que bloqueiam outro trabalho aberto ficam primeiro, antes dos problemas sem bloqueio. Problemas bloqueados por trabalho aberto ficam por último, mesmo que também bloqueiem outros. Pontas encerradas da relação deixam de gerar essa prioridade.
+
+Dentro de cada nível, prioridade maior, esforço menor e prazos vencidos ou próximos adiantam o trabalho. No mesmo nível de bloqueio, os problemas de um objetivo permanecem juntos, e o grupo é ordenado pelo seu problema mais bem posicionado. Os empates são resolvidos pelo prazo, pela data de criação mais antiga, pela posição manual e, por fim, pelo identificador, que mantém a ordem estável. Uma relação de vínculo não afeta essa ordenação.
+
+O Smart Triage não é um modo experimental de triagem com IA. A ordem ajuda a decidir quais itens analisar primeiro; ela não comprova a veracidade de uma descrição, não resolve duplicatas automaticamente nem concede permissões.
 
 Se o item esperado não aparecer, confira projeto ativo, estado e filtros, depois pesquise seu identificador. Trabalho importado ou sincronizado externamente pode entrar na triagem; inspecione a origem e o mapeamento da integração antes de alterar campos sincronizados. Uma solicitação vinculada pelo feedback continua sendo um objeto de feedback distinto com sua própria discussão pública.
 

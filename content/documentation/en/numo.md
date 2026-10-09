@@ -21,8 +21,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -51,13 +51,14 @@
       "components/settings/account-mcp-clients.tsx",
       "content/documentation/reviews/remaining-account-capture-candidates.json",
       "components/assistant/usage-exhausted-card.tsx",
-      "components/assistant/ask-user-card.tsx"
+      "components/assistant/ask-user-card.tsx",
+      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json"
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review)",
+    "revision": 3,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -88,15 +89,16 @@
       "src": "/documentation/en/work-with-numo-workflow.png",
       "alt": "Numo demonstration conversation with page context, a priority-change request and its saved answer.",
       "caption": "Existing demonstration thread, localized for display. The saved answer names AUR-11 and AUR-7; this capture does not prove a new execution.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         498,
         648
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "numo-permissions-and-approvals-workflow",
@@ -104,7 +106,7 @@
       "src": "/documentation/en/numo-permissions-and-approvals-workflow.svg",
       "alt": "Permission matrix for Numo project actions, personal connections and routines.",
       "caption": "Project access and explicit instructions limit Numo actions; external content cannot grant permission.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -165,7 +167,7 @@
       "src": "/documentation/en/numo-execution-model-flow.svg",
       "alt": "Diagram: Persist the intent, message and request UUID. Claim turn, checkpoint tools and their outcomes. Wait for current code worker when needed. Replay durable events; reconcile uncertain writes.",
       "caption": "Read the stages in order. Persist the intent, message and request UUID. Claim turn, checkpoint tools and their outcomes. Wait for current code worker when needed. Replay durable events; reconcile uncertain writes.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -197,15 +199,16 @@
       "src": "/documentation/en/numo-mcp-connections-workflow.png",
       "alt": "Personal MCP settings, empty connection list and Add another MCP server control.",
       "caption": "Numo connections are personal; project routines use the project owner’s connections.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         816,
         1314
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "numo-mcp-connections-config-workflow",
@@ -213,7 +216,7 @@
       "src": "/documentation/en/numo-mcp-connections-config-workflow.png",
       "alt": "Custom MCP server form with advanced authentication, transport and header settings.",
       "caption": "Custom MCP server form with advanced authentication, transport and header settings. No credentials were entered and no server was contacted.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -221,23 +224,8 @@
         920
       ],
       "theme": "light",
-      "padding": 24
-    },
-    {
-      "id": "recover-numo-work-workflow",
-      "kind": "screenshot",
-      "src": "/documentation/en/recover-numo-work-workflow.png",
-      "alt": "Numo response reporting local code and tests, a failed branch push and no pull request at that stage.",
-      "caption": "Initial partial result from a real demonstration run. At this stage the push failed and no PR existed. Verify the saved branch and external state before continuing; the conversation later recovered and the PR was corrected.",
-      "revision": 2,
-      "reviewed": true,
-      "capturedAt": "2026-10-08",
-      "viewport": [
-        912,
-        399
-      ],
-      "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     }
   ],
   "requiredFigures": [
@@ -245,8 +233,7 @@
     "numo-permissions-and-approvals-workflow",
     "numo-execution-model-flow",
     "numo-mcp-connections-workflow",
-    "numo-mcp-connections-config-workflow",
-    "recover-numo-work-workflow"
+    "numo-mcp-connections-config-workflow"
   ]
 }
 ---
@@ -330,5 +317,3 @@ For a live question card, answer every required question and submit the set. Pas
 An account-limit card shows the reset date when known and may offer plan or personal-key options. A routine-limit card links to routine management; inspect the per-run cap. An operation-allocation card concerns that operation's allocation. Repeating the same request does not remove the limit. Personal model keys do not make sandbox compute free.
 
 A failed turn can continue from a saved checkpoint only when that checkpoint survived. Inspect issue changes, branch, pull request and external services before retrying: a write may have succeeded even when its response was lost. State what remains and ask to continue the existing work. If no recoverable checkpoint exists, provide that verified state in a new request. Record the error and affected conversation when reporting a persistent failure; exclude credentials.
-
-![Numo response reporting local code and tests, a failed branch push and no pull request at that stage.](/documentation/en/recover-numo-work-workflow.png)

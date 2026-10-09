@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 4,
-  "sourceRevision": 4,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -43,9 +43,9 @@
     ]
   },
   "review": {
-    "revision": 4,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review)",
+    "revision": 5,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -68,7 +68,7 @@
       "src": "/documentation/en/work-view-filters.png",
       "alt": "Manual view filters and the sorting menu.",
       "caption": "Filter by issue properties or choose a sort order. The AI field is optional for these manual controls.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -84,7 +84,7 @@
       "src": "/documentation/en/work-share-view.png",
       "alt": "View-sharing dialog with private access selected.",
       "caption": "Private, password-protected and public access are distinct choices. This capture keeps the view private.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -110,7 +110,7 @@ Start from a project board or a personal cross-project issue surface. Use its fi
 
 Filter on supported properties such as status, assignee, priority, categories or objective. Sort the result to make the next action clear. In kanban, issues remain grouped by status; changing a view does not edit their status or assignment.
 
-Save the view with a name describing its purpose, then select it again from navigation and verify its filters. Edit or remove the saved view when its purpose changes. Sharing a view is a separate publication operation and has its own permission and revocation rules.
+Save the view with a name describing its purpose, then select it again from navigation and verify its filters. Edit or remove it when its purpose changes. For publication permissions and revocation, see [sharing a view](#share-a-view).
 
 ![Manual view filters and the sorting menu.](/documentation/en/work-view-filters.png)
 

@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -42,9 +42,9 @@
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison)",
+    "revision": 6,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -66,7 +66,7 @@
       "src": "/documentation/es/reader-objectives.png",
       "alt": "Diálogo de creación de objetivo sin enviar con un nombre de resultado de ejemplo.",
       "caption": "Nombra el resultado antes de elegir responsable, fecha objetivo y estado. Este diálogo no ha creado un segundo objetivo.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -82,7 +82,7 @@
       "src": "/documentation/es/reader-objective-momentum.png",
       "alt": "Ritmo del objetivo tras completar realmente una incidencia de demostración.",
       "caption": "Lee el ritmo junto al trabajo vinculado. El historial disponible aún no permite mostrar una fecha estimada de finalización.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -100,7 +100,7 @@
 }
 ---
 
-Un objetivo define un resultado dentro de un proyecto y agrupa el trabajo correspondiente. Esta guía explica su configuración, la lectura del progreso y las dependencias, además del significado y los límites de la señal de ritmo.
+Un objetivo agrupa las incidencias de un proyecto en torno a un resultado. Créalo y vincula el trabajo correspondiente. Revisa después el progreso, las dependencias bloqueantes y la señal de ritmo antes de ajustar o cerrar el objetivo.
 
 ## Seguir un resultado con un objetivo {#objectives}
 

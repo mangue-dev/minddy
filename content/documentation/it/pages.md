@@ -21,8 +21,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -60,9 +60,9 @@
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
+    "revision": 6,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -100,7 +100,7 @@
       "src": "/documentation/it/page-create-menu.png",
       "alt": "Menu di creazione con Nuova pagina e Nuovo database.",
       "caption": "Usa i controlli delle pagine del progetto per scegliere un documento o un database.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -116,7 +116,7 @@
       "src": "/documentation/it/page-editor.png",
       "alt": "Pagina dimostrativa con titoli, paragrafi, caselle delle attività e una menzione a un ticket.",
       "caption": "Titoli, blocchi di attività e la menzione AUR-2 organizzano la pagina. Il contenuto è un esempio dimostrativo.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -132,7 +132,7 @@
       "src": "/documentation/it/page-comments.png",
       "alt": "Attività della pagina con una modifica dimostrativa e campo del commento vuoto.",
       "caption": "Leggi l’attività e scrivi un commento nel campo. In questo esempio non è stato inviato alcun commento.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -148,7 +148,7 @@
       "src": "/documentation/it/page-file-states.png",
       "alt": "Pagina dimostrativa con un caricamento incompleto e un file salvato di 67 byte con il comando Scarica.",
       "caption": "Controlla lo stato effettivo del file: il secondo allegato è disponibile, il primo caricamento incompleto no.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -164,7 +164,7 @@
       "src": "/documentation/it/page-history-preview.png",
       "alt": "Scheda Versioni con uno stato precedente espanso, autore, Ripristina e avviso di conservazione per 30 giorni.",
       "caption": "Esamina l’anteprima di uno stato salvato e confrontalo con la pagina attuale prima di ripristinarlo.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -180,7 +180,7 @@
       "src": "/documentation/it/page-publish.png",
       "alt": "Finestra di pubblicazione con Privato selezionato e opzioni con password o link.",
       "caption": "Privato mantiene la pagina nel progetto. Controlla chi deve leggerla prima di cambiare la pubblicazione.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -196,7 +196,7 @@
       "src": "/documentation/it/page-export.png",
       "alt": "Menu di esportazione del documento con Markdown (.md) e Stampa / PDF.",
       "caption": "Scegli Markdown per scaricare il documento oppure Stampa / PDF per aprire la vista di stampa.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -219,7 +219,7 @@
 }
 ---
 
-Le pagine conservano documenti, file e discussioni del progetto. Qui trovi organizzazione, editor, collaborazione, cronologia, pubblicazione ed esportazione. Il menu del documento non offre un’importazione generica: un archivio di database si importa in un database nuovo e vuoto, come descritto nella guida ai database.
+Le pagine formano la wiki del progetto, con documenti, sottopagine, file e discussioni. Puoi organizzare e modificare i contenuti, collaborare, gestire la cronologia, pubblicare o esportare un ramo. Il menu del documento non offre un’importazione generica: importa un archivio in un database nuovo e vuoto seguendo la [guida ai database](/it/documentazione/databases#import-a-database).
 
 ## Costruire un wiki di progetto {#create-and-organize-pages}
 
@@ -321,7 +321,7 @@ I collegamenti delle pagine degli utenti restano noindex e sono separati dal man
 
 Apri il menu del documento della pagina e scegli Esporta. Seleziona Markdown per una pagina (.md) o un ramo (.zip), PDF per aprire la vista di stampa oppure l’archivio di database se la pagina è un database. Controlla l’ambito proposto prima di confermare: una pagina, il suo ramo e un archivio di database contengono elementi diversi.
 
-Apri l’esportazione e verifica i titoli, i riquadri di avviso, i collegamenti e gli allegati necessari al lettore. L’azione PDF apre una vista di stampa leggibile senza tutta la navigazione dell’applicazione. Usa i controlli di stampa del browser per stampare o salvare un PDF. Nel menu del documento non c’è un’azione di importazione generica. Le importazioni supportate si avviano da un database vuoto, come descritto nella guida all’importazione dei database.
+Apri l’esportazione e verifica i titoli, i riquadri di avviso, i collegamenti e gli allegati necessari al lettore. L’azione PDF apre una vista di stampa leggibile senza tutta la navigazione dell’applicazione. Usa i controlli di stampa del browser per stampare o salvare un PDF. Nel menu del documento non c’è un’azione di importazione generica. Le importazioni supportate si avviano da un database vuoto, come descritto nella [guida all’importazione dei database](/it/documentazione/databases#import-a-database).
 
 
 ![Menu di esportazione del documento con Markdown (.md) e Stampa / PDF.](/documentation/it/page-export.png)

@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -36,9 +36,9 @@
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
+    "revision": 3,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -74,7 +74,9 @@ Correggi Docker, CLI o valori API e ripeti l’installer idempotente mantenendo 
 
 
 
-Se il primo download si interrompe con un lungo log di avanzamento e senza errori del registro, l’installer v0.11.0 può aver superato il buffer di output del sottoprocesso. Nel contesto Compose esatto dell’installazione, compose pull --quiet ha funzionato nella prova usa e getta. Ripeti poi lo stesso installer con --skip-pull per usare le immagini locali, conservando l’ambiente. Questo non risolve errori del registro né firme non valide. Se la compilazione offline segnala una versione jose diversa dopo l’installazione bloccata, fermati: la release richiede 6.2.3, mentre la dipendenza diretta bloccata risolve 6.2.12. Ottieni una combinazione corretta di release e strumenti prima di accettare l’installazione standard; non allentare silenziosamente il controllo d’identità.
+Se il primo download si interrompe con un lungo log di avanzamento e senza errori del registro, l’installer v0.11.0 può aver superato il buffer di output del sottoprocesso. Nel contesto Compose esatto dell’installazione, compose pull --quiet ha funzionato nella prova usa e getta. Ripeti poi lo stesso installer con --skip-pull per usare le immagini locali, conservando l’ambiente. Questo non risolve errori del registro né firme non valide.
+
+Se la compilazione offline segnala una versione jose diversa dopo l’installazione bloccata, fermati: la release richiede 6.2.3, mentre la dipendenza diretta bloccata risolve 6.2.12. Ottieni una combinazione corretta di release e strumenti prima di accettare l’installazione standard; non allentare silenziosamente il controllo d’identità.
 
 
 Anche il runner OCI v0.11.0 non si avvia: agent-runner-storage.mjs manca dall’immagine runtime. Il Dockerfile corrente ora include questa dipendenza. La prova di ingegneria usa e getta ha fornito il file dello stesso tag con un mount di sola lettura. È un profilo esplicitamente modificato, non l’accettazione dell’immagine firmata invariata. Non pubblicare la porta del runner né rimuoverne l’isolamento per aggirare un errore di avvio.

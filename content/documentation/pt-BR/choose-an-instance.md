@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -36,9 +36,9 @@
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
+    "revision": 3,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -52,40 +52,8 @@
   "tags": [
     "Escolher o Cloud ou sua própria instância"
   ],
-  "figures": [
-    {
-      "id": "responsibilities",
-      "kind": "diagram",
-      "src": "/documentation/pt-BR/responsibilities.svg",
-      "alt": "Responsabilidade de operação: Operado pelo minddy, Operado por você.",
-      "caption": "Os mesmos serviços do núcleo precisam de um operador nos dois modelos. Provedores opcionais continuam sendo serviços separados.",
-      "revision": 2,
-      "reviewed": true,
-      "capturedAt": "2026-10-08",
-      "viewport": [
-        360,
-        520
-      ],
-      "theme": "neutral",
-      "diagram": {
-        "layout": "collection",
-        "items": [
-          {
-            "title": "minddy Cloud",
-            "detail": "Operado pelo minddy · Aplicação · Banco de dados · Storage · Agendador"
-          },
-          {
-            "title": "Sua própria instância",
-            "detail": "Operado por você · Aplicação · Banco de dados · Storage · Agendador"
-          }
-        ],
-        "title": "Responsabilidade de operação"
-      }
-    }
-  ],
-  "requiredFigures": [
-    "responsibilities"
-  ]
+  "figures": [],
+  "requiredFigures": []
 }
 ---
 
@@ -95,7 +63,6 @@ O minddy Cloud e o minddy auto-hospedado executam o mesmo núcleo público. Esco
 
 Uma conta Cloud pertence ao Cloud. Em uma instância auto-hospedada, crie uma conta nessa instância; uma conta do minddy Cloud não é necessária. Confira o endereço antes de entrar ou convidar alguém. Duas instâncias do minddy não compartilham contas nem credenciais automaticamente.
 
-![Responsabilidade de operação: Operado pelo minddy, Operado por você.](/documentation/pt-BR/responsibilities.svg)
 
 ## Responsabilidades e custos {#responsibilities}
 

@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 3,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -41,9 +41,9 @@
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun)",
-    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review)",
+    "revision": 4,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -62,7 +62,7 @@
       "src": "/documentation/fr/work-task-notebook.png",
       "alt": "Tâches personnelles de démonstration localisées dans le carnet.",
       "caption": "Le carnet suit des étapes personnelles hors de la hiérarchie des tickets du projet. Les états des tâches d’exemple restent inchangés.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -89,6 +89,11 @@ Le carnet est privé, contrairement au wiki d’un projet. Choisissez une page p
 
 ## Promouvoir une tâche {#promote-note}
 
-Ouvrez le menu de la tâche et choisissez sa promotion lorsqu’elle doit devenir du travail de projet. Le carnet se ferme et Numo s’ouvre avec une demande préparée contenant la tâche et ses sous-tâches. Le projet courant est utilisé si vous en consultez un ; depuis un écran global, précisez le projet de destination dans la conversation. Relisez la demande avant de l’envoyer. Ce parcours nécessite un budget IA disponible ou une clé personnelle compatible ; l’ouvrir ne crée pas encore de ticket. Après que Numo a annoncé la création, ouvrez le ticket pour vérifier son identifiant, son périmètre et ses propriétés. La promotion doit garder le contexte nécessaire ; ajoutez les conditions de réalisation manquantes.
+La promotion utilise Numo et nécessite un budget IA disponible ou une clé personnelle compatible.
+
+1. Ouvrez le menu de la tâche et choisissez sa promotion. Le carnet se ferme et Numo s’ouvre avec une demande préparée contenant la tâche et ses sous-tâches.
+2. Vérifiez le projet de destination. Le projet courant est utilisé si vous en consultez un ; depuis un écran global, précisez-le dans la conversation.
+3. Relisez et envoyez la demande. Ouvrir la conversation seul ne crée pas de ticket.
+4. Après que Numo a annoncé la création, ouvrez le ticket et vérifiez son identifiant, son périmètre et ses propriétés. Vérifiez que le contexte de la tâche a été conservé et ajoutez les conditions de réalisation manquantes.
 
 Après un échec ou un résultat réseau incertain, cherchez le ticket avant une nouvelle promotion. Gardez les autres sections intactes lorsque vous demandez une modification à Numo et vérifiez qu’il a modifié la bonne case plutôt que remplacé tout le carnet.

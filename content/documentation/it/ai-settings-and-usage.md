@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -42,13 +42,14 @@
       "lib/server/agent/execute.ts",
       "app/(app)/billing/page.tsx",
       "app/(marketing)/pricing/page.tsx",
-      "lib/billing-plans.ts"
+      "lib/billing-plans.ts",
+      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json"
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
+    "revision": 6,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -71,15 +72,16 @@
       "src": "/documentation/it/ai-keys-and-models-workflow.png",
       "alt": "Scheda del fornitore IA con minddy Cloud selezionato.",
       "caption": "Il fornitore Cloud selezionato usa il piano dell’account. Il selettore permette di configurare fornitori personali.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         816,
         212
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "ai-keys-and-models-defaults-workflow",
@@ -87,15 +89,16 @@
       "src": "/documentation/it/ai-keys-and-models-defaults-workflow.png",
       "alt": "Modello di codice e ragionamento predefiniti.",
       "caption": "Modello di codice e ragionamento predefiniti. I nuovi worker usano questi valori; quelli già in esecuzione mantengono le impostazioni fissate.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         816,
         217
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "plans-and-ai-usage-workflow",
@@ -103,15 +106,16 @@
       "src": "/documentation/it/plans-and-ai-usage-workflow.png",
       "alt": "Pagina di utilizzo IA dell’account dimostrativo.",
       "caption": "Pagina di utilizzo IA dell’account dimostrativo. Budget, categorie e cronologia provengono dall’account; non sono stati avviati acquisti né esecuzioni a pagamento.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         1154,
-        1766
+        1016
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     }
   ],
   "requiredFigures": [
@@ -122,7 +126,7 @@
 }
 ---
 
-Le impostazioni IA dell’account definiscono chiavi personali, ambiti e modelli predefiniti. Su Cloud, la fatturazione mostra piano e utilizzo incluso; chiamate con chiavi personali e calcolo nella sandbox seguono le distinzioni descritte sotto. In self-hosted, disponibilità e costi dipendono dalla configurazione dell’istanza.
+Le impostazioni IA dell’account definiscono chiavi personali, ambiti e modelli predefiniti. Controlla l’instradamento dei modelli prima di avviare il lavoro. Su Cloud, usa la fatturazione per distinguere utilizzo incluso, chiamate con chiavi personali, calcolo nella sandbox e limiti delle routine. In self-hosted, disponibilità e costi dipendono dalla configurazione dell’istanza.
 
 ## Configurare chiavi IA personali e modelli {#ai-keys-and-models}
 

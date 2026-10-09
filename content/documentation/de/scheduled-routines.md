@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -33,12 +33,13 @@
       "content/knowledge/productivity.md",
       "components/routines/create-routine-wizard.tsx",
       "components/routines/routine-detail.tsx",
-      "content/documentation/reviews/routine-localized-capture-candidates.json"
+      "content/documentation/reviews/routine-localized-capture-candidates.json",
+      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json"
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
+    "revision": 3,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
     "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison)",
     "date": "2026-10-09"
   },
@@ -54,15 +55,16 @@
       "src": "/documentation/de/scheduled-routines-workflow.png",
       "alt": "Editor einer vorhandenen pausierten Demonstrationsroutine mit für die Anzeige übersetzter Anweisung.",
       "caption": "Editor einer vorhandenen pausierten Demonstrationsroutine mit für die Anzeige übersetzter Anweisung. Zeitplan und Ausgabenlimit bleiben unverändert; nichts wurde gespeichert oder ausgeführt.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
-        1161,
-        1051
+        1154,
+        1016
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     }
   ],
   "requiredFigures": [

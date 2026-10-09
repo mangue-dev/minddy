@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 4,
-  "sourceRevision": 4,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -36,9 +36,9 @@
     ]
   },
   "review": {
-    "revision": 4,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison)",
+    "revision": 5,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -57,7 +57,7 @@
       "src": "/documentation/es/reader-trash.png",
       "alt": "Incidencia de demostración recuperable con treinta días restantes en la papelera.",
       "caption": "Las acciones de la fila permiten restaurarla. Vaciar la papelera es una operación permanente independiente.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -76,9 +76,9 @@
 
 ## Encontrar y restaurar un elemento {#trash-and-recovery}
 
-Abre la papelera desde el menú de la cuenta. Contiene trabajo eliminado recuperable, incluidas incidencias, objetivos, comentarios, rutinas, proyectos y páginas compatibles. Comprueba el tipo, la fecha de eliminación y la retención restante mostrada antes de restaurar.
+Abre la papelera desde el menú de la cuenta. Contiene trabajo eliminado recuperable, incluidas incidencias, objetivos, sugerencias, rutinas, proyectos y páginas compatibles. Comprueba el tipo, la fecha de eliminación y la retención restante mostrada antes de restaurar.
 
-Restaura primero la principal o el contenedor requerido cuando el elemento dependa de él. Por ejemplo, restaura una base de datos eliminada antes de una entrada eliminada por separado. Abre el destino restaurado e inspecciona contenido y propiedades. Los elementos eliminados se pueden recuperar durante 30 días antes de que la retención los retire definitivamente. Solo el propietario puede restaurar o eliminar permanentemente un proyecto o una rutina. Los miembros pueden restaurar o retirar los demás objetos compatibles del proyecto mientras conserven acceso.
+Restaura primero el objeto principal o el contenedor requerido cuando el elemento dependa de él. Por ejemplo, restaura una base de datos eliminada antes de una entrada eliminada por separado. Abre el destino restaurado e inspecciona contenido y propiedades. Los elementos eliminados se pueden recuperar durante 30 días antes de que la retención los retire definitivamente. Solo el propietario puede restaurar o eliminar permanentemente un proyecto o una rutina. Los miembros pueden restaurar o retirar los demás objetos compatibles del proyecto mientras conserven acceso.
 
 ![Incidencia de demostración recuperable con treinta días restantes en la papelera.](/documentation/es/reader-trash.png)
 

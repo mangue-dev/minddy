@@ -21,8 +21,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -60,9 +60,9 @@
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
+    "revision": 6,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -99,7 +99,7 @@
       "src": "/documentation/pt-BR/page-create-menu.png",
       "alt": "Menu de criação com Nova página e Novo banco de dados.",
       "caption": "Use os controles de páginas do projeto para escolher um documento ou um banco de dados.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -115,7 +115,7 @@
       "src": "/documentation/pt-BR/page-editor.png",
       "alt": "Página de demonstração com títulos, parágrafos, caixas de tarefas e menção a um ticket.",
       "caption": "Os títulos, os blocos de tarefas e a menção AUR-2 organizam a página. O conteúdo é um exemplo de demonstração.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -131,7 +131,7 @@
       "src": "/documentation/pt-BR/page-comments.png",
       "alt": "Atividade da página com uma edição de demonstração e campo de comentário vazio.",
       "caption": "Leia a atividade e escreva um comentário no campo. Nenhum comentário foi enviado neste exemplo.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -147,7 +147,7 @@
       "src": "/documentation/pt-BR/page-file-states.png",
       "alt": "Página de demonstração com um upload incompleto e um arquivo salvo de 67 bytes com a opção Baixar.",
       "caption": "Confira o estado real do arquivo: o segundo anexo está disponível, mas o primeiro upload incompleto não.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -163,7 +163,7 @@
       "src": "/documentation/pt-BR/page-history-preview.png",
       "alt": "Aba Versões com um estado anterior expandido, autor, Restaurar e aviso de retenção por 30 dias.",
       "caption": "Confira a prévia de um estado salvo e compare com a página atual antes de restaurá-lo.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -179,7 +179,7 @@
       "src": "/documentation/pt-BR/page-publish.png",
       "alt": "Janela de publicação com Privado selecionado e opções de senha ou link.",
       "caption": "Privado mantém a página no projeto. Confira quem deve ler o conteúdo antes de mudar a publicação.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -195,7 +195,7 @@
       "src": "/documentation/pt-BR/page-export.png",
       "alt": "Menu de exportação do documento com Markdown (.md) e Imprimir / PDF.",
       "caption": "Escolha Markdown para baixar o documento ou Imprimir / PDF para abrir a visualização de impressão.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -218,7 +218,7 @@
 }
 ---
 
-As páginas guardam documentos, arquivos e discussões do projeto. Aqui você encontra organização, editor, colaboração, histórico, publicação e exportação. O menu do documento não oferece importação genérica: um arquivo de banco de dados é importado em um banco novo e vazio, conforme a orientação do guia de bancos de dados.
+As páginas formam a wiki do projeto, com documentos, subpáginas, arquivos e discussões. Você pode organizar e editar conteúdo, colaborar, gerenciar o histórico, publicar ou exportar um ramo. O menu do documento não oferece importação genérica: importe um arquivo em um banco novo e vazio seguindo o [guia de bancos de dados](/pt-br/documentacao/databases#import-a-database).
 
 ## Criar uma wiki do projeto {#create-and-organize-pages}
 
@@ -279,7 +279,7 @@ Confira se o arquivo aparece na página e abra ou baixe. Os bytes ficam no Stora
 
 Um arquivo referenciado em uma página publicada pode ficar disponível para seus visitantes. Arquivos de páginas fora da ramificação publicada não ganham acesso apenas porque outra página contém uma referência. Revise a página e os descendentes incluídos na publicação antes de compartilhar.
 
-Se o upload falhar, confira tamanho, cota e mensagem de erro. Um operador de instância auto-hospedada também deve verificar configuração e políticas do Storage. Para um arquivo ausente após restauração, recupere os bytes brutos do Storage e os metadados correspondentes; restaurar apenas o banco de dados não recria o arquivo. As URLs de arquivos publicados são assinadas por até 24 horas quando a página é renderizada. Revogar um compartilhamento impede novas visitas autorizadas à página, mas não invalida imediatamente URLs de arquivos já entregues; elas podem continuar utilizáveis até expirar. Cópias baixadas não podem ser recuperadas.
+Se o upload falhar, confira tamanho, cota e mensagem de erro. Um operador de instância auto-hospedada também deve verificar configuração e políticas do Storage. Para um arquivo ausente após restauração, recupere os bytes brutos do Storage e os metadados correspondentes; restaurar apenas o banco de dados não recria o arquivo. As URLs de arquivos publicados são assinadas por até 24 horas quando a página é renderizada. Revogar um compartilhamento impede novas visitas autorizadas à página, mas não invalida imediatamente URLs de arquivos já entregues; elas podem continuar utilizáveis até expirar. Você não pode retirar cópias já baixadas pelos visitantes.
 
 
 ![Página de demonstração com um upload incompleto e um arquivo salvo de 67 bytes com a opção Baixar.](/documentation/pt-BR/page-file-states.png)
@@ -312,7 +312,7 @@ Abra o link em uma sessão separada do navegador sem sua conta. Teste a senha se
 
 ### Revogar e verificar {#revoke-page}
 
-Volte aos controles de publicação e escolha privado. Depois da revogação bem-sucedida, abra o link antigo anonimamente e confira se o acesso é negado. Cópias ou capturas já recebidas não podem ser recuperadas. As URLs de download de arquivos já entregues por uma página publicada são assinadas por até 24 horas. A revogação impede novas visitas à página, mas essas URLs de arquivos já emitidas podem permanecer válidas até expirar.
+Volte aos controles de publicação e escolha privado. Depois da revogação bem-sucedida, abra o link antigo anonimamente e confira se o acesso é negado. Você não pode retirar cópias ou capturas já recebidas pelos visitantes. As URLs de download de arquivos já entregues por uma página publicada são assinadas por até 24 horas. A revogação impede novas visitas à página, mas essas URLs de arquivos já emitidas podem permanecer válidas até expirar.
 
 Links de páginas de usuários continuam noindex e são separados do manual oficial indexado. Noindex é uma política de descoberta, não uma senha de acesso. Se um descendente ou arquivo puder ser lido inesperadamente, revogue primeiro, inspecione a ramificação publicada e teste novamente antes de encaminhar um link corrigido. Arquivos de páginas não publicadas não ganham acesso por uma referência interna.
 
@@ -320,7 +320,7 @@ Links de páginas de usuários continuam noindex e são separados do manual ofic
 
 Abra o menu do documento da página e escolha Exportar. Selecione Markdown para uma página (.md) ou um ramo (.zip), PDF para abrir a visualização de impressão ou o arquivo de banco de dados quando a página for um banco de dados. Confira o escopo oferecido antes de confirmar: uma página, seu ramo e um arquivo de banco de dados contêm elementos diferentes.
 
-Abra a exportação e confira os títulos, os blocos de aviso, os links e os anexos necessários para quem vai ler. A ação PDF abre uma visualização de impressão legível sem toda a navegação do aplicativo. Use os controles de impressão do navegador para imprimir ou salvar um PDF. O menu do documento não oferece uma ação de importação geral. As importações aceitas começam em um banco vazio, conforme a guia de importação de bancos de dados.
+Abra a exportação e confira os títulos, os blocos de aviso, os links e os anexos necessários para quem vai ler. A ação PDF abre uma visualização de impressão legível sem toda a navegação do aplicativo. Use os controles de impressão do navegador para imprimir ou salvar um PDF. O menu do documento não oferece uma ação de importação geral. As importações aceitas começam em um banco vazio, conforme o [guia de importação de bancos de dados](/pt-br/documentacao/databases#import-a-database).
 
 
 ![Menu de exportação do documento com Markdown (.md) e Imprimir / PDF.](/documentation/pt-BR/page-export.png)

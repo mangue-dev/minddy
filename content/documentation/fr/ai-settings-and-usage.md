@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -42,13 +42,14 @@
       "lib/server/agent/execute.ts",
       "app/(app)/billing/page.tsx",
       "app/(marketing)/pricing/page.tsx",
-      "lib/billing-plans.ts"
+      "lib/billing-plans.ts",
+      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json"
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun)",
-    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review)",
+    "revision": 6,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -70,15 +71,16 @@
       "src": "/documentation/fr/ai-keys-and-models-workflow.png",
       "alt": "Carte du fournisseur IA avec minddy Cloud sélectionné.",
       "caption": "Le fournisseur Cloud sélectionné utilise le forfait du compte. Le sélecteur permet de configurer un fournisseur personnel.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         816,
         212
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "ai-keys-and-models-defaults-workflow",
@@ -86,15 +88,16 @@
       "src": "/documentation/fr/ai-keys-and-models-defaults-workflow.png",
       "alt": "Modèle de code et niveau de raisonnement par défaut.",
       "caption": "Modèle de code et niveau de raisonnement par défaut. Les nouveaux workers utilisent ces réglages ; les workers en cours conservent leurs paramètres figés.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         816,
         217
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "plans-and-ai-usage-workflow",
@@ -102,15 +105,16 @@
       "src": "/documentation/fr/plans-and-ai-usage-workflow.png",
       "alt": "Page d’usage IA du compte de démonstration.",
       "caption": "Page d’usage IA du compte de démonstration. Le budget actuel, les catégories et l’historique proviennent du compte ; aucun achat ni travail facturé n’a été déclenché.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         1154,
-        1766
+        1016
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     }
   ],
   "requiredFigures": [
@@ -127,7 +131,7 @@ Les réglages IA du compte définissent les fournisseurs, les clés personnelles
 
 Ouvrez les réglages IA du compte, ajoutez un fournisseur compatible et saisissez sa clé ainsi que l’URL de base éventuellement requise. Enregistrez et vérifiez l’état de confirmation. Pour les appels IA disposant d’un recours géré, une clé non confirmée ou injoignable laisse l’utilisation sur minddy. Ce recours exige une IA gérée configurée ; les workers de code suivent les règles de modèle lié au fournisseur ci-dessous. Ne collez jamais la clé dans une conversation ou une capture.
 
-Attribuez les familles de modèles de texte, transcription et embeddings à des clés compatibles ou laissez-les sur minddy. Pour chaque clé, choisissez les usages activés : conversations Numo, travail sur le code, automatisations, voix et retours. Un usage ou une famille sans attribution utilisable reste comptabilisé sur minddy. Votre fournisseur facture les appels réalisés avec sa clé. Le calcul de la sandbox serveur conserve un coût réel et reste comptabilisé dans l’utilisation. Cette comptabilisation est distincte de l’application d’une limite du compte : un worker utilisant une clé BYOK validée contourne le quota du forfait et le plafond de calcul, tandis que le travail financé par minddy reste soumis à son allocation incluse.
+Attribuez les familles de modèles de texte, transcription et embeddings à des clés compatibles ou laissez-les sur minddy. Pour chaque clé, choisissez les usages activés : conversations Numo, travail sur le code, automatisations, voix et retours. Un usage ou une famille sans attribution utilisable reste comptabilisé sur minddy. Votre fournisseur facture les appels réalisés avec sa clé. Le calcul de la sandbox est comptabilisé séparément ; les clés personnelles validées (BYOK) et le travail financé par minddy suivent les [règles de budget ci-dessous](#consumption).
 
 ![Carte du fournisseur IA avec minddy Cloud sélectionné.](/documentation/fr/ai-keys-and-models-workflow.png)
 

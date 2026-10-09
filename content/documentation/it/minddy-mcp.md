@@ -16,8 +16,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -45,13 +45,14 @@
       "lib/server/mcp/tools.ts",
       "lib/server/mcp/page-tools.ts",
       "lib/server/mcp/auth.ts",
-      "app/llms-full.txt/route.ts"
+      "app/llms-full.txt/route.ts",
+      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json"
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
+    "revision": 3,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -75,7 +76,7 @@
       "src": "/documentation/it/external-minddy-mcp-workflow.png",
       "alt": "Selettore dei client MCP minddy con Claude, Codex e altri assistenti.",
       "caption": "Scegli il client per visualizzare il comando o la configurazione di installazione.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -83,23 +84,25 @@
         252
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "external-minddy-mcp-install-workflow",
       "kind": "screenshot",
       "src": "/documentation/it/external-minddy-mcp-install-workflow.png",
-      "alt": "Finestra di installazione di Codex nell’istanza locale.",
-      "caption": "Finestra di installazione di Codex nell’istanza locale. Usa l’origine della tua istanza; il comando mostrato non è stato eseguito per questa cattura.",
-      "revision": 2,
+      "alt": "Finestra di installazione di Codex.",
+      "caption": "Finestra di installazione di Codex. Usa l’origine della tua istanza; il comando mostrato non è stato eseguito per questa cattura.",
+      "revision": 3,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         560,
         364
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     }
   ],
   "requiredFigures": [
@@ -125,7 +128,7 @@ I client esterni usano gli strumenti disponibili per ticket, piani, commenti, pa
 
 minddy MCP nelle impostazioni dell’account elenca accessi esterni e controlli di revoca. Revoca client inutilizzati o non più affidabili. MCP per Numo è distinto: collega Numo ad altri servizi. Non incollare token in ticket, feedback pubblici o screenshot.
 
-![Finestra di installazione di Codex nell’istanza locale.](/documentation/it/external-minddy-mcp-install-workflow.png)
+![Finestra di installazione di Codex.](/documentation/it/external-minddy-mcp-install-workflow.png)
 
 
 ## Usare minddy MCP e scoprire gli strumenti attuali {#mcp-tool-reference}

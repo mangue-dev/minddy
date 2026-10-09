@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 3,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -40,9 +40,9 @@
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
+    "revision": 4,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -61,7 +61,7 @@
       "src": "/documentation/pt-BR/reader-statistics.png",
       "alt": "Estatísticas pessoais com grade anual, distribuições, ritmo de trabalho e totais históricos.",
       "caption": "Esta conta de demonstração tem uma tarefa concluída e onze criadas. As estatísticas exibidas são reais; os nomes do projeto e do objetivo foram traduzidos para a ilustração.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -84,7 +84,9 @@ Abra Estatísticas pela navegação da sua conta. Consulte a grade anual de ativ
 
 Use a quantidade de tickets concluídos, o ritmo, os dias ativos, as sequências e as medições de tempo para examinar sua própria atividade. A grade de atividade conta eventos de conclusão de problemas e de tarefas do caderno, agrupados em dias de calendário no seu fuso horário. Um dia ativo tem pelo menos um desses eventos; a sequência atual permite que hoje ainda esteja vazio, mas termina no próximo dia vazio. Os totais de problemas concluídos de todo o período contam cada identificador apenas uma vez; portanto, a contagem de eventos e o total de problemas distintos respondem a perguntas diferentes.
 
-O tempo por esforço é a mediana do tempo decorrido entre a primeira mudança registrada de um problema para Em andamento e sua conclusão. São considerados problemas elegíveis em Concluído, atribuídos a você, com esforço e ambos os horários registrados. Esse tempo inclui a espera; não é um cronômetro de horas trabalhadas. A visualização de quantidade mostra o tamanho da amostra usada. Uma mediana ausente pode indicar que não há medições elegíveis, não uma duração zero. Leia a unidade e o período de cada seção antes de comparar os valores.
+O tempo por esforço é a mediana do tempo decorrido entre a primeira mudança registrada de um problema para Em andamento e sua conclusão. São considerados problemas elegíveis em Concluído, atribuídos a você, com esforço e ambos os horários registrados. Esse tempo inclui a espera; não é um cronômetro de horas trabalhadas. A visualização de quantidade mostra o tamanho da amostra usada. Uma mediana ausente pode indicar que não há medições elegíveis, não uma duração zero.
+
+Leia a unidade e o período de cada seção antes de comparar os valores.
 
 ## Interpretar dados escassos ou mudanças {#statistics-limits}
 

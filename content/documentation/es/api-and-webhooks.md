@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 3,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -45,9 +45,9 @@
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison)",
+    "revision": 4,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -69,7 +69,7 @@
       "src": "/documentation/es/integration-api-and-webhooks-flow.svg",
       "alt": "Diagrama: Servidor guarda clave de integración. POST incidencias o feedback con tipo correcto. Propietario elige destino webhook issues. Receptor verifica HMAC bruto y UUID.",
       "caption": "Siga las etapas en este orden. Servidor guarda clave de integración. POST incidencias o feedback con tipo correcto. Propietario elige destino webhook issues. Receptor verifica HMAC bruto y UUID.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -101,7 +101,7 @@
       "src": "/documentation/es/feedback-ingestion-and-sso-workflow.svg",
       "alt": "Secuencias separadas de recogida desde el backend y SSO del navegador con secretos distintos.",
       "caption": "La clave de recogida autentica llamadas del servidor. El secreto SSO del tablero firma un token de visitante breve y de un solo uso.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -142,7 +142,7 @@
 }
 ---
 
-La API de integración recibe trabajo interno o sugerencias mediante claves vinculadas a un proyecto. Esta guía explica los tipos de clave, las solicitudes y los webhooks firmados, además de la configuración separada de la recepción de sugerencias y el SSO de visitantes. Las claves y los secretos SSO se conservan en el servidor.
+La API de integración recibe incidencias o sugerencias desde su servidor mediante claves vinculadas a un proyecto. Las integraciones de incidencias pueden enviar webhooks firmados; el SSO de visitantes utiliza un secreto separado del tablero. Compruebe el endpoint, la identidad y la entrega. Las claves permanecen en el servidor y los tokens de redirección SSO no deben aparecer en registros compartidos.
 
 ## Crear incidencias o feedback y recibir webhooks firmados {#integration-api-and-webhooks}
 
@@ -152,9 +152,15 @@ El propietario crea una integración en la configuración del proyecto. Elija is
 
 ### Enviar los campos correctos {#send}
 
-GET /api/v1/issues/options proporciona los identificadores de categorías y los valores de prioridad y esfuerzo. POST /api/v1/issues exige un título no vacío y admite descripción Markdown, prioridad, esfuerzo y categorías opcionales. La incidencia siempre entra en triage; desde el exterior no se pueden definir estado, responsable o incidencia padre. Los límites son 500 caracteres de título, 65.536 de descripción y 50 identificadores de categoría. Una respuesta 201 contiene id, number, identifier y status.
+GET /api/v1/issues/options proporciona los identificadores de categorías y los valores de prioridad y esfuerzo. Envíe después POST /api/v1/issues con un título no vacío y, opcionalmente, una descripción Markdown, prioridad, esfuerzo y categorías.
 
-POST /api/v1/feedback exige title y user.external_id y/o user.email; user.name y body son opcionales. analyze es un booleano con true por defecto. false desactiva conjuntamente moderación, categorización y fusión de duplicados y publica el texto tal cual; la cadena "false" se rechaza. Examine review_state y verifique la identidad del usuario en su servidor.
+| Campo | Límite |
+| --- | --- |
+| Título | 500 caracteres |
+| Descripción | 65.536 caracteres |
+| Categorías | 50 identificadores |
+
+La incidencia siempre entra en triage; desde el exterior no se pueden definir estado, responsable o incidencia padre. Una respuesta 201 contiene id, number, identifier y status. Para los campos de sugerencias, la verificación de identidad y la moderación, siga el [procedimiento de recepción de sugerencias](#feedback-ingestion-and-sso).
 
 ```bash
 curl --fail-with-body --request POST "$MINDDY_ORIGIN/api/v1/issues" \
@@ -181,7 +187,7 @@ El propietario crea una clave de integración de feedback en la configuración d
 curl -i "$MINDDY_ORIGIN/api/v1/feedback"   -H "Authorization: Bearer $MINDDY_FEEDBACK_KEY"   -H 'Content-Type: application/json'   --data '{"title":"Mostrar fecha de entrega","body":"Soporte necesita la fecha prevista.","user":{"external_id":"demo-user-1","name":"Lector de demostración"}}'
 ```
 
-Proporcione un título no vacío de hasta 200 caracteres, un cuerpo opcional de hasta 10.000 y `user.external_id` y/o `user.email`. El ID externo admite 255 caracteres, el email 254 y el nombre 200. El backend responde por la identidad; la recepción anónima se rechaza. El éxito devuelve HTTP 201 con `id`, `status`, `review_state`, votos y pseudónimo. El tablero no tiene que estar activado para recibir solicitudes. `analyze` es true por defecto; false omite moderación, categorización y unión para esa solicitud y establece el estado de revisión `published` sin espera. Ese estado de revisión no activa el tablero ni evita las reglas de visibilidad o el estado de spam. La API crea solicitudes públicas por defecto y no acepta un parámetro de visibilidad privada.
+Proporcione un título no vacío de hasta 200 caracteres, un cuerpo opcional de hasta 10.000 y `user.external_id` y/o `user.email`. `user.name` es opcional. El ID externo admite 255 caracteres, el email 254 y el nombre 200. El backend responde por la identidad; la recepción anónima se rechaza. El éxito devuelve HTTP 201 con `id`, `status`, `review_state`, votos y pseudónimo. El tablero no tiene que estar activado para recibir solicitudes. `analyze` es un booleano con true por defecto; la cadena "false" se rechaza. false omite moderación, categorización y fusión de duplicados para esa solicitud y establece el estado de revisión `published` sin espera. Ese estado de revisión no activa el tablero ni evita las reglas de visibilidad o el estado de spam. La API crea solicitudes públicas por defecto y no acepta un parámetro de visibilidad privada.
 
 ### Votos, errores y webhooks {#errors}
 

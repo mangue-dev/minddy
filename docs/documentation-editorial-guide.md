@@ -165,6 +165,12 @@ Responsive diagrams use `DocumentationDiagram` and the landing's shared
 and preserve the reading order and meaning in every language. Use sequence
 arrows only for ordered steps. Keep the SVG Markdown fallback consistent with
 the code illustration. Do not rasterize a diagram or a permissions table.
+Collections have no circle or dot marker; ordered steps use a numbered marker.
+When a table already explains responsibilities or permissions clearly, retain
+the table without adding a second illustration of the same information.
+Documentation tables share the pricing table's pastel column surfaces, rounded
+panel and subtle separators. Preserve native headers, rich cell contents and
+keyboard-accessible horizontal scrolling for reference tables too.
 
 Capture the complete component, including its footer and rounded corners.
 Isolate it from unrelated page content before capturing a dialog or popover.
@@ -175,6 +181,13 @@ are the cropped image's display dimensions in CSS pixels, not the browser
 window dimensions or the pixel dimensions of a capture taken at twice the
 device scale. A small popover must stay at its natural size instead of filling
 the article width. Keep the image viewer available for larger captures.
+Every documentation screenshot uses light mode. New captures require native
+device pixels at a scale of at least two, PNG output, loaded fonts and an sRGB
+color profile with grayscale text antialiasing. Do not resize a low-resolution
+capture to simulate higher density. Preserve the control's page background
+when isolating it; only the surrounding margin should become transparent.
+Record `deviceScaleFactor` with the display dimensions so the publication
+checker can verify the PNG geometry.
 
 Use populated, localized demonstration data when it helps readers recognize
 the result. Capture an empty state only when that state is itself being
@@ -182,6 +195,15 @@ explained; omit redundant empty illustrations. Response-only demo fixtures
 must be recorded as examples and must not imply a completed import, delivered
 notification, or other real operation. Inspect representative desktop and
 phone layouts in light and dark mode after changing the shared renderer.
+Ordinary login, signup and password-recovery forms rarely need a screenshot;
+keep the steps and relevant requirements in text.
+
+Use bounded capture batches: one browser, one context, one page, one locale and
+at most three screens. Stop on the first failure and close the browser. Follow
+the repository's local resource limits; never start Docker, another development
+server or a compiler alongside a capture batch. The canonical hosted demo is
+an option for reading visible controls without starting a local stack. Keep
+its business writes blocked and record the runtime actually photographed.
 
 ## Review and publication checklist
 

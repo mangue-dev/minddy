@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -39,9 +39,9 @@
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison)",
+    "revision": 3,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -64,7 +64,7 @@
       "src": "/documentation/de/delegate-code-work-workflow.png",
       "alt": "Abgeschlossene Worker-Karte mit Modell, geringer Denkintensität, zwei geänderten Dateien, Branch, PR Nr. 1 und korrigiertem Commit.",
       "caption": "Karte der tatsächlichen Korrektur am bestehenden PR mit aktualisiertem Commit und Link. Prüfen Sie Diff und Tests vor dem Merge; der Abschlussstatus allein belegt nicht, dass die Abnahmekriterien erfüllt sind.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -80,7 +80,7 @@
       "src": "/documentation/de/review-pull-requests-workflow.png",
       "alt": "Änderungsansicht des offenen Demonstrations-PR mit Diff der Funktion greeting und Hinweis auf fehlende GitHub-Autorisierung.",
       "caption": "Der tatsächlich korrigierte PR bleibt offen und wurde nicht gemergt. Der Diff entfernt Leerzeichen um den Namen und verwendet World bei leerem Wert. Diese Instanz kann keine GitHub-Benutzerautorisierung anfordern; der Bereitschaftsstatus verleiht keine Merge-Rechte und belegt keine erfolgreiche Anbieter-CI.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -98,7 +98,7 @@
 }
 ---
 
-Der Code-Worker setzt angeforderte Arbeit am verknüpften Repository in einer Sandbox auf dem Server um. Die folgenden Abschnitte erklären Delegation und Fortsetzung sowie die Prüfung des verknüpften Pull Requests vor einer Freigabe oder einem Merge.
+Codearbeit beginnt mit dem verknüpften Repository eines Projekts und läuft in einer Serversandbox. Bereiten Sie das Ticket vor und delegieren Sie die Umsetzung an Numos Code-Worker. Prüfen Sie vor dem Merge den verknüpften Pull Request und die Prüfungen des Git-Anbieters.
 
 ## Ein Ticket an den Code-Worker delegieren {#delegate-code-work}
 

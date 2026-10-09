@@ -18,8 +18,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
-  "sourceRevision": 6,
+  "revision": 7,
+  "sourceRevision": 7,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -56,13 +56,14 @@
       "components/settings/account-analytics-section.tsx",
       "components/settings/account-data-section.tsx",
       "app/api/account/deletion-preview/route.ts",
-      "app/api/account/route.ts"
+      "app/api/account/route.ts",
+      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json"
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
+    "revision": 7,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -90,84 +91,21 @@
   ],
   "figures": [
     {
-      "id": "account-access-steps",
-      "kind": "screenshot",
-      "src": "/documentation/pt-BR/auth-signup.png",
-      "alt": "Cadastro por e-mail, com os botões dos provedores e a primeira etapa do assistente de três etapas.",
-      "caption": "Comece na instância correta. Após o e-mail vêm a identidade e a senha; nenhum cadastro foi enviado nesta captura.",
-      "revision": 6,
-      "reviewed": true,
-      "capturedAt": "2026-10-08",
-      "viewport": [
-        428,
-        502
-      ],
-      "theme": "light",
-      "padding": 24
-    },
-    {
-      "id": "account-access-login",
-      "kind": "screenshot",
-      "src": "/documentation/pt-BR/auth-login.png",
-      "alt": "Formulário de login com o link de recuperação abaixo do campo de senha.",
-      "caption": "Inicie a recuperação na instância da sua conta. O formulário aparece sem credenciais enviadas.",
-      "revision": 6,
-      "reviewed": true,
-      "capturedAt": "2026-10-08",
-      "viewport": [
-        428,
-        588
-      ],
-      "theme": "light",
-      "padding": 24
-    },
-    {
       "id": "account-security-workflow",
       "kind": "screenshot",
       "src": "/documentation/pt-BR/account-security-workflow.png",
       "alt": "Cartão de autenticação de dois fatores com botão de ativação.",
       "caption": "Comece aqui, depois verifique o autenticador e guarde os códigos de recuperação em local protegido.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         816,
         227
       ],
       "theme": "light",
-      "padding": 24
-    },
-    {
-      "id": "account-security-enrollment-workflow",
-      "kind": "screenshot",
-      "src": "/documentation/pt-BR/account-security-enrollment-workflow.png",
-      "alt": "Configuração do autenticador antes da verificação do código.",
-      "caption": "Configuração do autenticador antes da verificação do código. O QR real e o segredo manual estão ocultos; esse fator temporário não verificado foi cancelado e removido.",
-      "revision": 6,
-      "reviewed": true,
-      "capturedAt": "2026-10-08",
-      "viewport": [
-        816,
-        498
-      ],
-      "theme": "light",
-      "padding": 24
-    },
-    {
-      "id": "account-recovery-steps",
-      "kind": "screenshot",
-      "src": "/documentation/pt-BR/auth-recovery.png",
-      "alt": "Formulário de recuperação de senha com um endereço de exemplo e o botão para enviar o link.",
-      "caption": "Digite aqui o e-mail da sua conta. O endereço de exemplo não foi enviado; a imagem não comprova o recebimento da mensagem nem uma recuperação concluída.",
-      "revision": 6,
-      "reviewed": true,
-      "capturedAt": "2026-10-08",
-      "viewport": [
-        428,
-        326
-      ],
-      "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "profile-and-preferences-workflow",
@@ -175,15 +113,16 @@
       "src": "/documentation/pt-BR/profile-and-preferences-workflow.png",
       "alt": "Controles do perfil para avatar, nome de usuário e email somente leitura.",
       "caption": "Salve as alterações do perfil após a validação; o endereço de email permanece somente leitura.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         816,
         416
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "profile-and-preferences-preferences-workflow",
@@ -191,15 +130,16 @@
       "src": "/documentation/pt-BR/profile-and-preferences-preferences-workflow.png",
       "alt": "Seletor de idioma e controles de tema claro, escuro e do sistema.",
       "caption": "O idioma da conta e o do site público são configurados separadamente.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         816,
         212
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "privacy-and-account-deletion-workflow",
@@ -207,22 +147,20 @@
       "src": "/documentation/pt-BR/privacy-and-account-deletion-workflow.png",
       "alt": "Prévia de exclusão com projetos próprios, tickets e membros que perderão acesso.",
       "caption": "Leia a prévia e exporte os dados que deseja manter antes de abrir a confirmação.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         816,
         231
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     }
   ],
   "requiredFigures": [
-    "account-access-steps",
     "account-security-workflow",
-    "account-security-enrollment-workflow",
-    "account-recovery-steps",
     "profile-and-preferences-workflow",
     "profile-and-preferences-preferences-workflow",
     "privacy-and-account-deletion-workflow"
@@ -230,18 +168,18 @@
 }
 ---
 
-Sua conta pertence à instância em que você se cadastra. Aqui você encontra acesso e recuperação, autenticação de dois fatores, perfil, preferências e exclusão; antes de excluir a conta, confira também as consequências para os projetos que você possui.
+Sua conta pertence à instância em que você se cadastra. Você pode gerenciar acesso, recuperação, autenticação de dois fatores e preferências pessoais. Antes de excluí-la, exporte os dados que precisa conservar e confira as consequências para os projetos que possui.
 
 ## Criar uma conta e entrar {#account-access}
 
 Abra a tela de entrada ou cadastro na instância que pretende usar. O Cloud e outra instância auto-hospedada têm contas separadas. Os métodos de entrada disponíveis e a possibilidade de cadastro dependem da configuração de autenticação da instância.
 
-Para se cadastrar por email, informe seu endereço e avance para a etapa de identidade. Informe seu nome completo; ele não pode estar vazio nem conter apenas espaços. Você também pode escolher um avatar. Avance para a etapa de senha, informe uma senha com pelo menos oito caracteres, uma letra minúscula (a–z), uma maiúscula (A–Z) e um dígito, e repita-a no campo de confirmação. Envie essa última etapa para criar a conta. Abandonar as etapas anteriores não cria uma conta. Quando a confirmação de email for necessária, abra a mensagem enviada pela instância. Siga o link e acione o botão de confirmação na página. Abrir o link não é suficiente: o minddy exige essa ação deliberada antes de consumir o token de email.
+Para se cadastrar por email, informe seu endereço e avance para a etapa de identidade. Informe seu nome completo; ele não pode estar vazio nem conter apenas espaços. Você também pode escolher um avatar. Avance para a etapa de senha, informe uma senha com pelo menos oito caracteres, uma letra minúscula (a–z), uma maiúscula (A–Z) e um dígito, e repita-a no campo de confirmação. Envie essa última etapa para criar a conta. Abandonar as etapas anteriores não cria uma conta.
+
+Quando a confirmação de email for necessária, abra a mensagem enviada pela instância. Siga o link e acione o botão de confirmação na página. Abrir o link não é suficiente: o minddy exige essa ação deliberada antes de consumir o token de email.
 
 Volte à aplicação desejada e entre. Uma conta recém-autenticada pode criar seu próprio projeto ou aceitar um convite. Saber a URL de um projeto não concede participação nele.
 
-
-![Cadastro por e-mail, com os botões dos provedores e a primeira etapa do assistente de três etapas.](/documentation/pt-BR/auth-signup.png)
 
 ### Sair e verificar mensagens que não chegaram {#session-and-mail}
 
@@ -249,7 +187,6 @@ Abra o menu da conta, escolha sair e confirme. No aplicativo desktop, fechar uma
 
 Se a mensagem não chegar, confira o endereço, a pasta de spam e a identidade da instância. O operador de uma instância auto-hospedada precisa ter configurado um envio de e-mail funcional para o Auth; os e-mails opcionais de notificação da aplicação e a confirmação do Auth são funções distintas. Uma página de confirmação expirada permite voltar à entrada para solicitar um novo link. Não encaminhe links de confirmação ou recuperação como evidência para diagnóstico: eles autorizam acesso à conta.
 
-![Formulário de login com o link de recuperação abaixo do campo de senha.](/documentation/pt-BR/auth-login.png)
 
 ## Proteger a conta com dois fatores {#account-security}
 
@@ -269,7 +206,6 @@ Durante o login, se estiver sem o telefone, use um dos códigos de recuperação
 
 Substituir os códigos de recuperação invalida a lista anterior. Tanto a substituição quanto a desativação voluntária exigem as verificações de autenticação recente do servidor. Leia a confirmação: ao desativar a função, o fator adicional deixa de ser exigido, inclusive ao entrar pelo Google ou GitHub.
 
-![Configuração do autenticador antes da verificação do código.](/documentation/pt-BR/account-security-enrollment-workflow.png)
 
 ## Recuperar o acesso à conta {#account-recovery}
 
@@ -277,8 +213,6 @@ Na tela de entrada da instância correta, use a recuperação de senha e informe
 
 Um link pode expirar ou deixar de ter uma sessão ativa. A tela de redefinição identifica essa situação e permite solicitar outro link. Comece por uma mensagem nova, em vez de tentar novamente um favorito antigo. Não envie o link, os cookies ou a senha ao suporte.
 
-
-![Formulário de recuperação de senha com um endereço de exemplo e o botão para enviar o link.](/documentation/pt-BR/auth-recovery.png)
 
 ### MFA e acesso ainda não resolvido {#mfa-recovery}
 
@@ -290,7 +224,7 @@ Se não tiver nem o segundo fator nem um código de recuperação, contate o ope
 
 Abra as configurações no menu da conta. No perfil, informe um nome não vazio e salve. O email é somente leitura. Gere outro avatar ou envie uma imagem pelos controles próprios. Aguarde o resultado e confira o avatar em um comentário ou na lista de membros; ele acompanha a conta entre projetos e conversas. Se o arquivo for rejeitado, siga a mensagem de validação em vez de reenviar repetidamente.
 
-A imagem fonte não pode passar de 10 MiB. O servidor verifica bytes legíveis, aplica a orientação e recorta no centro como avatar WebP de 256 × 256.
+A imagem original não pode exceder 10 MiB. O servidor verifica se consegue ler os bytes, aplica a orientação e recorta o centro para gerar um avatar WebP de 256 × 256.
 
 ![Controles do perfil para avatar, nome de usuário e email somente leitura.](/documentation/pt-BR/profile-and-preferences-workflow.png)
 

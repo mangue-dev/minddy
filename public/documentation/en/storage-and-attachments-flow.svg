@@ -3,20 +3,12 @@
 <desc id="desc">Diagram: Authorized application file access. PostgreSQL object metadata. Raw filesystem or S3 backend bytes. Matching configuration and recovery keys.</desc>
 <rect width="720" height="640" rx="20" fill="#fafaf9" />
 <rect x="24" y="24" width="672" height="128" rx="16" fill="#e6edf5" stroke="#293d56" stroke-width="1" stroke-opacity="0.12" />
-<circle cx="60" cy="88" r="20" fill="#60706b" />
-<circle cx="60" cy="88" r="5" fill="#ffffff" />
-<text x="98" y="98" font-family="Arial, sans-serif" font-size="29" fill="#293d56">Authorized application file access</text>
+<text x="48" y="98" font-family="Arial, sans-serif" font-size="29" fill="#293d56">Authorized application file access</text>
 <rect x="24" y="178" width="672" height="128" rx="16" fill="#e0efe8" stroke="#1e4436" stroke-width="1" stroke-opacity="0.12" />
-<circle cx="60" cy="242" r="20" fill="#60706b" />
-<circle cx="60" cy="242" r="5" fill="#ffffff" />
-<text x="98" y="252" font-family="Arial, sans-serif" font-size="29" fill="#293d56">PostgreSQL object metadata</text>
+<text x="48" y="252" font-family="Arial, sans-serif" font-size="29" fill="#293d56">PostgreSQL object metadata</text>
 <rect x="24" y="332" width="672" height="128" rx="16" fill="#f0ecf6" stroke="#433352" stroke-width="1" stroke-opacity="0.12" />
-<circle cx="60" cy="396" r="20" fill="#60706b" />
-<circle cx="60" cy="396" r="5" fill="#ffffff" />
-<text x="98" y="406" font-family="Arial, sans-serif" font-size="29" fill="#293d56">Raw filesystem or S3 backend bytes</text>
+<text x="48" y="406" font-family="Arial, sans-serif" font-size="29" fill="#293d56">Raw filesystem or S3 backend bytes</text>
 <rect x="24" y="486" width="672" height="128" rx="16" fill="#f7ecdf" stroke="#573e28" stroke-width="1" stroke-opacity="0.12" />
-<circle cx="60" cy="550" r="20" fill="#60706b" />
-<circle cx="60" cy="550" r="5" fill="#ffffff" />
-<text x="98" y="543" font-family="Arial, sans-serif" font-size="29" fill="#293d56">Matching configuration and recovery</text>
-<text x="98" y="577" font-family="Arial, sans-serif" font-size="29" fill="#293d56">keys</text>
+<text x="48" y="543" font-family="Arial, sans-serif" font-size="29" fill="#293d56">Matching configuration and recovery</text>
+<text x="48" y="577" font-family="Arial, sans-serif" font-size="29" fill="#293d56">keys</text>
 </svg>

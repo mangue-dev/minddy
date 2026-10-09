@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -39,9 +39,9 @@
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison)",
+    "revision": 3,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -52,27 +52,8 @@
   "tags": [
     "OAuth-, MCP-, Webhook- oder Git-Verbindung wiederherstellen"
   ],
-  "figures": [
-    {
-      "id": "integration-troubleshooting-flow",
-      "kind": "screenshot",
-      "src": "/documentation/de/integration-troubleshooting-error.png",
-      "alt": "Ladefehler der MCP-Verbindungen mit der Schaltfläche Erneut versuchen.",
-      "caption": "Erneut versuchen lädt die Verbindungen neu, sobald das Netzwerk wieder verfügbar ist.",
-      "revision": 2,
-      "reviewed": true,
-      "capturedAt": "2026-10-08",
-      "viewport": [
-        782,
-        108
-      ],
-      "theme": "light",
-      "padding": 24
-    }
-  ],
-  "requiredFigures": [
-    "integration-troubleshooting-flow"
-  ]
+  "figures": [],
+  "requiredFigures": []
 }
 ---
 
@@ -80,8 +61,6 @@
 
 minddy MCP verbindet externe Assistenten mit minddy; persönliche MCP-Verbindungen lassen Numo fremde Server aufrufen. Kontotabs und Zugangsdaten unterscheiden sich. Prüfen Sie persönliche Verbindungen in Einstellungen und verwenden Sie Test/Neuverbindung. OAuth-Discovery, dynamische Registrierung, PKCE und Refresh sind möglich, aber Katalogeinträge umgehen weder Anbieterfreigabe, Entwicklervorschau noch registrierte Apps. Prüfen Sie aktuelle Voraussetzungen, bevor Sie einen minddy-Fehler annehmen.
 
-
-![Ladefehler der MCP-Verbindungen mit der Schaltfläche Erneut versuchen.](/documentation/de/integration-troubleshooting-error.png)
 
 ## Mit passenden Rechten neu verbinden {#oauth}
 

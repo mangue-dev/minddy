@@ -17,8 +17,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -43,8 +43,8 @@
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun)",
+    "revision": 3,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
     "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review)",
     "date": "2026-10-09"
   },
@@ -67,7 +67,7 @@
       "src": "/documentation/fr/git-connection-flow.svg",
       "alt": "La connexion du compte personnel et le lien du dépôt au projet sont deux étapes distinctes.",
       "caption": "Autorisez d’abord le compte, puis reliez un dépôt en tant que propriétaire du projet.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -100,7 +100,7 @@
       "src": "/documentation/fr/forge-issue-sync-mapping.svg",
       "alt": "Parcours de synchronisation GitHub : configuration, contrôle des événements, import et états.",
       "caption": "Les événements GitHub préservent les modifications récentes et évitent les doublons de livraison. Les correspondances GitLab se vérifient séparément.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -138,7 +138,7 @@
       "src": "/documentation/fr/forge-issue-sync-workflow.png",
       "alt": "Dépôt GitHub de démonstration lié, avec la synchronisation des issues désactivée.",
       "caption": "Le dépôt de démonstration est lié à GitHub. La synchronisation des issues reste désactivée ; vérifiez la portée et le backlog existant avant de l’activer. Cette capture ne démontre pas un import synchronisé.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

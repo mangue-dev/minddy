@@ -16,8 +16,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -41,9 +41,9 @@
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
+    "revision": 6,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -68,7 +68,7 @@
       "src": "/documentation/it/project-general.png",
       "alt": "Impostazioni generali del progetto con nome, chiave, icona e azione separata per il cestino.",
       "caption": "Controlla nome e chiave prima di salvare. Spostare il progetto nel cestino è un’azione separata.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -84,7 +84,7 @@
       "src": "/documentation/it/project-members.png",
       "alt": "Invito via email e tre membri dimostrativi, con il proprietario identificato.",
       "caption": "Invita con l’email dell’account e identifica il proprietario prima di rimuovere l’accesso di un membro.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -102,13 +102,13 @@
 }
 ---
 
-Un progetto raccoglie lavoro e conoscenze condivisi. Il proprietario ne configura le impostazioni e invita i collaboratori; i membri lavorano sui contenuti entro i propri permessi. Le sezioni seguenti distinguono configurazione, inviti, rimozione dei membri e uscita dal progetto.
+Un progetto raccoglie ticket, obiettivi, pagine e membri. Il proprietario gestisce le impostazioni amministrative e gli inviti; i membri lavorano sui contenuti e possono lasciare il progetto.
 
 ## Configurare un progetto {#project-settings}
 
 Apri il progetto e poi le sue impostazioni. La proprietà del progetto determina l’accesso alle impostazioni amministrative. I membri possono consultare la sezione generale e lasciare il progetto, ma non ottengono i controlli di modifica del proprietario.
 
-Come proprietario, inserisci un nome non vuoto e una chiave di progetto valida, quindi salva. La chiave viene convertita in maiuscolo e usa da 2 a 5 lettere o cifre. Dopo averla cambiata, controlla gli identificativi risultanti. Usa i controlli di icona e aspetto per distinguere il progetto nella navigazione; queste scelte visive non cambiano l’appartenenza al progetto.
+Come proprietario, inserisci un nome non vuoto e una chiave di progetto valida, quindi salva. La chiave viene convertita in maiuscolo e usa da 2 a 5 lettere ASCII. Dopo averla cambiata, controlla gli identificativi risultanti. Usa i controlli di icona e aspetto per distinguere il progetto nella navigazione; queste scelte visive non cambiano l’appartenenza al progetto.
 
 Le altre sezioni gestiscono collaboratori, ticket ricorrenti, Git, importazione, integrazioni, automazione e feedback. Segui la guida dell’attività corrispondente prima di abilitare un fornitore o lavoro automatico. Le preferenze dell’account, come la lingua dell’interfaccia, sono separate dalla configurazione del progetto.
 

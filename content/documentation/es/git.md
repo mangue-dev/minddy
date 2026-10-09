@@ -17,8 +17,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -43,9 +43,9 @@
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison)",
+    "revision": 3,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -67,7 +67,7 @@
       "src": "/documentation/es/git-connection-flow.svg",
       "alt": "Conectar la cuenta personal y vincular un repositorio al proyecto son pasos distintos.",
       "caption": "Autoriza primero la cuenta y después vincula un repositorio como propietario del proyecto.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -100,7 +100,7 @@
       "src": "/documentation/es/forge-issue-sync-mapping.svg",
       "alt": "Flujo de sincronización de GitHub con configuración, validación de eventos, importación y estados.",
       "caption": "Los eventos de GitHub conservan los cambios recientes y evitan entregas duplicadas. Las correspondencias de GitLab se verifican por separado.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -138,7 +138,7 @@
       "src": "/documentation/es/forge-issue-sync-workflow.png",
       "alt": "Repositorio de demostración de GitHub vinculado, con la sincronización de incidencias desactivada.",
       "caption": "El repositorio de demostración está vinculado a GitHub. La sincronización de incidencias sigue desactivada; compruebe el alcance y el backlog existente antes de activarla. Esta captura no demuestra una importación sincronizada.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -157,7 +157,7 @@
 }
 ---
 
-La conexión Git permite acceder al repositorio y realizar trabajo con código. El vínculo del repositorio y la sincronización de incidencias son ajustes separados. Esta guía explica cómo configurarlos y qué límites afectan a los permisos, los datos transferidos y los cambios simultáneos.
+Conectar una cuenta Git personal, vincular un repositorio al proyecto y sincronizar las incidencias del proveedor son acciones separadas. Autorice primero la cuenta. El propietario del proyecto elige después el repositorio y puede activar la sincronización con los permisos necesarios del proveedor.
 
 ## Conectar Git y vincular un repositorio {#git-accounts-and-repositories}
 

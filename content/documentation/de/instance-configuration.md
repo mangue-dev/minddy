@@ -16,8 +16,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -40,13 +40,16 @@
       "docs/self-hosting-distribution.md",
       "vercel.json",
       "deploy/self-hosted/compose.full.yml",
-      "deploy/self-hosted/scheduler.mjs"
+      "deploy/self-hosted/scheduler.mjs",
+      "content/documentation/reviews/editorial-clarity-en-fr-2026-10-09.md",
+      "content/documentation/reviews/editorial-clarity-de-es-2026-10-09.md",
+      "content/documentation/reviews/editorial-clarity-it-pt-BR-2026-10-09.md"
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison)",
+    "revision": 3,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root/editorial_de_es (collection-caption clarity)",
     "date": "2026-10-09"
   },
   "related": [
@@ -71,8 +74,8 @@
       "kind": "diagram",
       "src": "/documentation/de/optional-providers-flow.svg",
       "alt": "Diagramm: Betreiber wählt optionale Funktion. Vollständige Zugangsdaten und Bedingungen. Ausdrückliches externes Datenziel. Verhalten prüfen und Kosten beobachten.",
-      "caption": "Diese Komponenten haben unterschiedliche Aufgaben. Betreiber wählt optionale Funktion. Vollständige Zugangsdaten und Bedingungen. Ausdrückliches externes Datenziel. Verhalten prüfen und Kosten beobachten.",
-      "revision": 2,
+      "caption": "Prüfen Sie vor der Aktivierung einer Integration, wohin sie Daten sendet und welche laufenden Kosten sie verursacht.",
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -103,8 +106,8 @@
       "kind": "diagram",
       "src": "/documentation/de/proxy-network-and-jobs-flow.svg",
       "alt": "Diagramm: Öffentlicher HTTPS-Proxy. App und öffentlicher Supabase-Origin. Private Runner-, Datenbank- und interne Ports. Authentifizierte Jobs; Wartungsstopp.",
-      "caption": "Diese Komponenten haben unterschiedliche Aufgaben. Öffentlicher HTTPS-Proxy. App und öffentlicher Supabase-Origin. Private Runner-, Datenbank- und interne Ports. Authentifizierte Jobs; Wartungsstopp.",
-      "revision": 2,
+      "caption": "Öffentlicher Zugriff und interne Dienste bleiben getrennt; geplante Arbeit wird authentifiziert und während der Wartung gestoppt.",
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -138,7 +141,7 @@
 }
 ---
 
-Die Instanzkonfiguration verbindet öffentliche Origins, geschützte Geheimnisse und optionale Anbieter mit Netzwerk und geplanten Jobs. Die folgenden Abschnitte erklären die Voraussetzungen und Prüfungen für diese Einstellungen sowie den Wartungsstopp der Jobs.
+Die Instanzkonfiguration legt öffentliche Origins, Geheimnisse und verfügbare Dienste fest. Sichern Sie vorhandene Zugangsdaten, bevor Sie die geschützte Umgebung ändern. Konfigurieren Sie jeden optionalen Anbieter vollständig und prüfen Sie danach die Netzwerkfreigaben und authentifizierten geplanten Jobs.
 
 ## Origins, Geheimnisse und Funktionen der Instanz konfigurieren {#instance-configuration}
 

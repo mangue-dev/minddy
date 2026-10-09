@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -35,13 +35,16 @@
     "evidence": [
       "docs/editions.md",
       "docs/self-hosting-distribution.md",
-      "lib/server/capabilities.ts"
+      "lib/server/capabilities.ts",
+      "content/documentation/reviews/editorial-clarity-en-fr-2026-10-09.md",
+      "content/documentation/reviews/editorial-clarity-de-es-2026-10-09.md",
+      "content/documentation/reviews/editorial-clarity-it-pt-BR-2026-10-09.md"
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun)",
-    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review)",
+    "revision": 3,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions); agent:/root/editorial_en_fr (collection-caption clarity)",
     "date": "2026-10-09"
   },
   "related": [
@@ -59,8 +62,8 @@
       "kind": "diagram",
       "src": "/documentation/fr/architecture-and-data-flows-flow.svg",
       "alt": "Schéma: Navigateur et application authentifiée. Supabase : PostgreSQL, Auth, Storage, Realtime. Planificateur indépendant et runner de confiance. Fournisseurs optionnels : destinations séparées.",
-      "caption": "Ces composants ont des responsabilités distinctes. Navigateur et application authentifiée. Supabase : PostgreSQL, Auth, Storage, Realtime. Planificateur indépendant et runner de confiance. Fournisseurs optionnels : destinations séparées.",
-      "revision": 2,
+      "caption": "L’application coordonne l’accès aux données persistantes et le travail en arrière-plan, avec des destinations distinctes pour les intégrations externes.",
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -95,15 +98,15 @@
 
 ## Suivre les flux entre application, base et fournisseurs {#architecture-and-data-flows}
 
-L’application Next.js sert l’interface et les APIs autorisées. Supabase fournit PostgreSQL, Auth, Storage et Realtime. PostgreSQL conserve enregistrements applicatifs, état des comptes et de la plateforme et métadonnées Storage ; le backend Storage conserve les octets. La configuration serveur protégée contient clés et identifiants fournisseurs. Les conteneurs applicatifs peuvent être recréés ; volumes de base, Storage brut et clés correspondantes doivent persister. La restauration complète les réunit.
+L’application Next.js sert l’interface et les API autorisées. Supabase fournit PostgreSQL, Auth, Storage et Realtime. PostgreSQL conserve les enregistrements applicatifs, l’état des comptes et de la plateforme ainsi que les métadonnées Storage. Le backend Storage conserve les octets des fichiers. La configuration serveur protégée contient les clés et les identifiants des fournisseurs. Les conteneurs applicatifs peuvent être recréés, mais les volumes de la base, les fichiers Storage et les clés correspondantes doivent être conservés ensemble pour permettre une restauration complète.
 
 
 ![Schéma: Navigateur et application authentifiée. Supabase : PostgreSQL, Auth, Storage, Realtime. Planificateur indépendant et runner de confiance. Fournisseurs optionnels : destinations séparées.](/documentation/fr/architecture-and-data-flows-flow.svg)
 
 ## Suivre une requête {#requests}
 
-Le navigateur utilise les origines publiques de l’application et de Supabase. Auth établit la session ; les endpoints serveur vérifient acteur et objet avant lecture ou modification. Realtime projette les mises à jour vers les sessions connectées. En full, les appels serveur passent par Kong interne sans changer les origines navigateur ni l’identité des liens de compte. Le planificateur appelle les jobs HTTP authentifiés indépendamment du navigateur. Le runner de confiance ouvre des sandboxes restreintes seulement quand Numo a besoin de code ; elles ne reçoivent ni secrets d’instance ni socket Docker.
+Le navigateur utilise les origines publiques de l’application et de Supabase. Auth établit la session ; les points d’accès serveur vérifient l’identité de l’utilisateur et son accès à l’objet avant toute lecture ou modification. Realtime transmet les mises à jour aux sessions connectées. Dans le profil full, les appels serveur passent par Kong en interne, sans changer les origines du navigateur ni l’identité des liens de compte. Le planificateur appelle les tâches HTTP authentifiées indépendamment du navigateur. Le runner de confiance ouvre des sandboxes restreintes lorsque Numo doit travailler sur le code ; elles ne reçoivent ni les secrets de l’instance ni le socket Docker.
 
 ## Identifier les destinations externes {#providers}
 
-Modèles IA, email, Git, MCP distant, push, analytique et stockage externe sont des destinations séparées quand activées. Héberger l’application ne les rend pas locaux. Supabase géré exploite votre backend choisi ; le profil full place la pile épinglée sous votre contrôle. Cloud exploite le service et ses fournisseurs ; en self-hosted, vous fournissez comptes et choix. Examinez permissions, coûts et conditions des données de chaque intégration. N’inférez jamais un fournisseur ni l’édition Cloud d’un nom d’hôte ou d’une plateforme.
+Les modèles IA, les e-mails, Git, les serveurs MCP distants, les notifications push, les statistiques d’usage et le stockage externe ont leurs propres destinations lorsqu’ils sont activés. Héberger l’application ne rend pas ces services locaux. Avec Supabase géré, le fournisseur exploite le backend choisi ; le profil full place la pile épinglée sous votre contrôle. En Cloud, minddy exploite le service avec ses fournisseurs. En auto-hébergement, vous choisissez les services et fournissez les comptes nécessaires. Examinez les permissions, les coûts et les conditions de traitement des données de chaque intégration. Ne déduisez jamais un fournisseur ou l’édition Cloud d’un nom d’hôte ou d’une plateforme de déploiement.

@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -42,9 +42,9 @@
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
+    "revision": 6,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -66,7 +66,7 @@
       "src": "/documentation/pt-BR/reader-objectives.png",
       "alt": "Janela de criação de objetivo não enviada com um nome de resultado de exemplo.",
       "caption": "Defina o resultado antes de escolher responsável, data prevista e status. Essa janela não criou um segundo objetivo.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -82,7 +82,7 @@
       "src": "/documentation/pt-BR/reader-objective-momentum.png",
       "alt": "Ritmo do objetivo após a conclusão real de um ticket de demonstração.",
       "caption": "Leia o ritmo junto ao trabalho vinculado. O histórico disponível ainda não é suficiente para mostrar uma data estimada de conclusão.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -126,6 +126,10 @@ Uma relação de bloqueio pode conectar um problema ou outro objetivo a este obj
 
 O ritmo resume trabalho concluído recentemente. Ele pode estar acelerando, estável, desacelerando ou parado, com estados separados para objetivos não iniciados, concluídos e cancelados. Use-o para identificar um resultado que precisa de atenção, depois leia os problemas e a atividade subjacentes.
 
-A data estimada de conclusão exige pelo menos duas conclusões, uma semana inteira observada, esforço entregue positivo e trabalho restante. Apenas os problemas atualmente vinculados contribuem; uma conclusão anterior à criação do objetivo não produz um ritmo recente artificial. Com uma data-alvo válida, o histórico vai da criação até essa data e o ritmo de entrega usa o tempo observado desde a criação, incluindo o período depois de um prazo não cumprido. Sem uma data-alvo válida, o cálculo usa um histórico móvel de oito semanas e uma janela de previsão de 28 dias. Histórico escasso ou mudança recente de escopo reduzem sua utilidade. A estimativa não é um prazo prometido e não inclui trabalho invisível que você não vinculou. Compare a data-alvo, o trabalho restante e as restrições reais antes de mudar compromissos.
+A data estimada de conclusão exige pelo menos duas conclusões, uma semana inteira observada, esforço entregue positivo e trabalho restante. Apenas os problemas atualmente vinculados contribuem; uma conclusão anterior à criação do objetivo não produz um ritmo recente artificial.
+
+Com uma data-alvo válida, o histórico vai da criação até essa data e o ritmo de entrega usa o tempo observado desde a criação, incluindo o período depois de um prazo não cumprido. Sem uma data-alvo válida, o cálculo usa um histórico móvel de oito semanas e uma janela de previsão de 28 dias.
+
+Histórico escasso ou mudança recente de escopo reduzem sua utilidade. A estimativa não é um prazo prometido e não inclui trabalho invisível que você não vinculou. Compare a data-alvo, o trabalho restante e as restrições reais antes de mudar compromissos.
 
 ![Ritmo do objetivo após a conclusão real de um ticket de demonstração.](/documentation/pt-BR/reader-objective-momentum.png)

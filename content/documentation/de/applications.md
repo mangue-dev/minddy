@@ -18,8 +18,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 4,
-  "sourceRevision": 4,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -50,13 +50,14 @@
       "content/documentation/reviews/desktop-capture-candidates.json",
       "components/settings/account-push-devices-section.tsx",
       "lib/desktop/notification-capabilities.ts",
-      "content/documentation/reviews/push-registration-capture-candidates.json"
+      "content/documentation/reviews/push-registration-capture-candidates.json",
+      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json"
     ]
   },
   "review": {
-    "revision": 4,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison)",
+    "revision": 5,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -82,15 +83,16 @@
       "src": "/documentation/de/web-and-mobile-workflow.png",
       "alt": "Mobiles Ticketpanel mit lokalisiertem Titel, Beschreibung, Eigenschaften und Kommentarfeld.",
       "caption": "Auf einem schmalen Bildschirm erscheinen Ticketdetails in einem angepassten Panel. Schließen Sie es über die Schaltfläche, um zum Projekt zurückzukehren; Numo bleibt über seine schwebende Schaltfläche erreichbar.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         438,
-        892
+        968
       ],
-      "theme": "dark",
-      "padding": 24
+      "theme": "light",
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "install-the-pwa-workflow",
@@ -98,15 +100,16 @@
       "src": "/documentation/de/install-the-pwa-workflow.png",
       "alt": "Illustrierte Safari-Installationsanleitung von minddy: Teilen, zum Home-Bildschirm hinzufügen und bestätigen.",
       "caption": "Die öffentliche Anleitung illustriert die drei Safari-Schritte und die aktivierte Option Als Web-App öffnen. Die Abbildungen sind von minddy dargestellte Anleitungen und keine Aufnahmen einer abgeschlossenen iOS-Installation.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
-        1288,
+        1488,
         762
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "desktop-app-workflow",
@@ -114,7 +117,7 @@
       "src": "/documentation/de/desktop-app-workflow.png",
       "alt": "Desktop-Einstellungen in der echten macOS-Electron-Entwicklungsapp, Version 0.11.1, mit lokalem Server und isoliertem Profil.",
       "caption": "Desktop-Einstellungen in der echten macOS-Electron-Entwicklungsapp, Version 0.11.1, mit lokalem Server und isoliertem Profil. Die Aufnahme bestätigt keine signierten Releases oder anderen Betriebssysteme.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -130,15 +133,16 @@
       "src": "/documentation/de/devices-and-notifications-workflow.png",
       "alt": "Push-Einstellungen mit gesperrter Browserberechtigung und ohne registriertes Gerät.",
       "caption": "Dieser Browser blockiert Benachrichtigungen. Erlauben Sie sie in den Website-Einstellungen, bevor Sie das Gerät registrieren.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         816,
         196
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "devices-and-notifications-registered-workflow",
@@ -146,7 +150,7 @@
       "src": "/documentation/de/devices-and-notifications-registered.png",
       "alt": "Aktives, für das Konto registriertes Browser-Gerät mit dem tatsächlichen Datum des letzten Versands.",
       "caption": "Für das Konto ist ein aktives Browser-Gerät registriert. Die Liste zeigt das Registrierungsdatum und den letzten Versand. Ob ein Banner erscheint, hängt weiterhin von der Browserberechtigung und den Betriebssystemeinstellungen ab.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -167,7 +171,7 @@
 }
 ---
 
-minddy ist im Browser, als installierte Web-App und als Desktop-App zugänglich. Die folgenden Abschnitte erklären die Einstiegspunkte, Installations- und Updatewege sowie die Voraussetzungen für Gerätebenachrichtigungen auf den jeweiligen Plattformen.
+Sie können dieselbe Instanz im Browser, als installierte Web-App oder als Desktop-App öffnen. Folgen Sie der Installationsanleitung für Ihr Gerät und prüfen Sie anschließend Verbindung, Updates und Benachrichtigungsberechtigungen der Plattform.
 
 ## Im Browser und auf kleinen Bildschirmen arbeiten {#web-and-mobile}
 

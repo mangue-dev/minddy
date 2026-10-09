@@ -16,8 +16,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -40,13 +40,16 @@
       "docs/self-hosting-distribution.md",
       "vercel.json",
       "deploy/self-hosted/compose.full.yml",
-      "deploy/self-hosted/scheduler.mjs"
+      "deploy/self-hosted/scheduler.mjs",
+      "content/documentation/reviews/editorial-clarity-en-fr-2026-10-09.md",
+      "content/documentation/reviews/editorial-clarity-de-es-2026-10-09.md",
+      "content/documentation/reviews/editorial-clarity-it-pt-BR-2026-10-09.md"
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison)",
+    "revision": 3,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root/editorial_de_es (collection-caption clarity)",
     "date": "2026-10-09"
   },
   "related": [
@@ -71,8 +74,8 @@
       "kind": "diagram",
       "src": "/documentation/es/optional-providers-flow.svg",
       "alt": "Diagrama: Operador elige capacidad opcional. Credenciales completas y condiciones. Destino de datos externo explícito. Verificar conducta y controlar costes.",
-      "caption": "Estos componentes tienen responsabilidades distintas. Operador elige capacidad opcional. Credenciales completas y condiciones. Destino de datos externo explícito. Verificar conducta y controlar costes.",
-      "revision": 2,
+      "caption": "Antes de activar una integración, compruebe adónde envía los datos y qué costes continuados genera.",
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -103,8 +106,8 @@
       "kind": "diagram",
       "src": "/documentation/es/proxy-network-and-jobs-flow.svg",
       "alt": "Diagrama: Proxy HTTPS público. Orígenes públicos de la aplicación y Supabase. Runner, base y puertos privados. Tareas autenticadas; paradas en mantenimiento.",
-      "caption": "Estos componentes tienen responsabilidades distintas. Proxy HTTPS público. Orígenes públicos de la aplicación y Supabase. Runner, base y puertos privados. Tareas autenticadas; paradas en mantenimiento.",
-      "revision": 2,
+      "caption": "El acceso público queda separado de los servicios internos; el trabajo programado se autentica y se detiene durante el mantenimiento.",
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -138,7 +141,7 @@
 }
 ---
 
-La configuración de la instancia conecta los orígenes públicos, los secretos protegidos y los proveedores opcionales con la red y las tareas programadas. Los siguientes apartados explican los requisitos y las comprobaciones de estos ajustes, además de la interrupción de las tareas durante el mantenimiento.
+La configuración de la instancia determina los orígenes públicos, los secretos y los servicios disponibles. Conserve las credenciales existentes antes de cambiar el entorno protegido. Configure cada proveedor opcional por completo y compruebe después la exposición de la red y las tareas programadas autenticadas.
 
 ## Configurar orígenes, secretos y capacidades de la instancia {#instance-configuration}
 

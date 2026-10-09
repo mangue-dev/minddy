@@ -21,8 +21,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -51,13 +51,14 @@
       "components/settings/account-mcp-clients.tsx",
       "content/documentation/reviews/remaining-account-capture-candidates.json",
       "components/assistant/usage-exhausted-card.tsx",
-      "components/assistant/ask-user-card.tsx"
+      "components/assistant/ask-user-card.tsx",
+      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json"
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
+    "revision": 3,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -89,15 +90,16 @@
       "src": "/documentation/pt-BR/work-with-numo-workflow.png",
       "alt": "Conversa de demonstração Numo com contexto, mudança de prioridade e resposta salva.",
       "caption": "Conversa de demonstração existente, traduzida para exibição. A resposta salva cita AUR-11 e AUR-7; a captura não comprova uma nova execução.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         498,
         648
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "numo-permissions-and-approvals-workflow",
@@ -105,7 +107,7 @@
       "src": "/documentation/pt-BR/numo-permissions-and-approvals-workflow.svg",
       "alt": "Matriz de permissões do Numo para ações do projeto, conexões pessoais e rotinas.",
       "caption": "O acesso ao projeto e os pedidos explícitos limitam as ações do Numo; conteúdo externo não concede permissões.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -166,7 +168,7 @@
       "src": "/documentation/pt-BR/numo-execution-model-flow.svg",
       "alt": "Diagrama: Persistir intenção, mensagem e UUID. Assumir turno, gravar ferramentas e resultados. Aguardar worker atual se necessário. Rever eventos e reconciliar escritas incertas.",
       "caption": "Siga as etapas nesta ordem. Persistir intenção, mensagem e UUID. Assumir turno, gravar ferramentas e resultados. Aguardar worker atual se necessário. Rever eventos e reconciliar escritas incertas.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -198,15 +200,16 @@
       "src": "/documentation/pt-BR/numo-mcp-connections-workflow.png",
       "alt": "Configurações MCP pessoais, lista vazia e botão para adicionar outro servidor.",
       "caption": "As conexões de Numo são pessoais; as rotinas usam as do proprietário do projeto.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         816,
         1314
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "numo-mcp-connections-config-workflow",
@@ -214,7 +217,7 @@
       "src": "/documentation/pt-BR/numo-mcp-connections-config-workflow.png",
       "alt": "Formulário de servidor MCP personalizado com configurações avançadas de autenticação, transporte e cabeçalhos.",
       "caption": "Formulário de servidor MCP personalizado com configurações avançadas de autenticação, transporte e cabeçalhos. Nenhuma credencial foi inserida e nenhum servidor foi contatado.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -222,23 +225,8 @@
         920
       ],
       "theme": "light",
-      "padding": 24
-    },
-    {
-      "id": "recover-numo-work-workflow",
-      "kind": "screenshot",
-      "src": "/documentation/pt-BR/recover-numo-work-workflow.png",
-      "alt": "Resposta do Numo informando código e testes locais, falha no envio do branch e nenhum pull request naquele momento.",
-      "caption": "Resultado parcial inicial de uma execução real de demonstração, localizado para leitura. Naquele momento o envio falhou e não existia PR. Confira o branch salvo e os serviços externos antes de continuar; depois a conversa foi retomada e o PR foi corrigido.",
-      "revision": 2,
-      "reviewed": true,
-      "capturedAt": "2026-10-08",
-      "viewport": [
-        912,
-        400
-      ],
-      "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     }
   ],
   "requiredFigures": [
@@ -246,13 +234,12 @@
     "numo-permissions-and-approvals-workflow",
     "numo-execution-model-flow",
     "numo-mcp-connections-workflow",
-    "numo-mcp-connections-config-workflow",
-    "recover-numo-work-workflow"
+    "numo-mcp-connections-config-workflow"
   ]
 }
 ---
 
-O Numo trabalha no contexto da sua conta e dos projetos acessíveis. Aqui você encontra conversas, autorizações, execução persistente, conexões MCP pessoais e retomada do trabalho. O trabalho de código delegado usa uma sandbox no servidor; as rotinas usam as conexões e o orçamento do proprietário.
+O Numo usa o contexto da conversa e as permissões da sua conta. Comece com uma solicitação delimitada e confira o resultado. O trabalho de código delegado usa uma sandbox no servidor; as rotinas usam as conexões e o orçamento do proprietário. Se um turno ficar em espera ou falhar, confira o estado salvo antes de repetir a solicitação.
 
 ## Concluir uma tarefa do projeto com o Numo {#work-with-numo}
 
@@ -330,5 +317,3 @@ Em um cartão ativo, responda todas as perguntas obrigatórias e envie o conjunt
 O cartão de limite da conta mostra a data de redefinição do limite, quando conhecida, e pode oferecer plano ou chave pessoal. O da rotina leva à gestão: confira o teto por execução. A alocação corresponde àquela operação. Repetir o pedido não elimina o limite. Chaves pessoais não tornam gratuito o processamento da sandbox.
 
 Só é possível retomar de um checkpoint se ele tiver sido preservado. Confira tarefas, branch, PR e serviços externos antes de repetir: uma gravação pode ter funcionado mesmo com a resposta perdida. Informe o que falta e peça para continuar. Sem checkpoint recuperável, forneça o estado verificado em um novo pedido. Ao relatar falhas persistentes, identifique a conversa sem incluir credenciais.
-
-![Resposta do Numo informando código e testes locais, falha no envio do branch e nenhum pull request naquele momento.](/documentation/pt-BR/recover-numo-work-workflow.png)

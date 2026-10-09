@@ -24,8 +24,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -78,13 +78,14 @@
       "lib/use-csv-import.ts",
       "lib/import/types.ts",
       "lib/server/import-issues.ts",
-      "content/documentation/reviews/csv-preview-capture-candidates.json"
+      "content/documentation/reviews/csv-preview-capture-candidates.json",
+      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json"
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison)",
+    "revision": 6,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -130,7 +131,7 @@
       "src": "/documentation/de/new-issue.png",
       "alt": "Noch nicht abgesendeter Ticketentwurf mit Titel, Beschreibung und manuell wählbaren Eigenschaften.",
       "caption": "Beschreibe das erwartete Ergebnis und wähle vor der Erstellung die passenden Eigenschaften.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -146,7 +147,7 @@
       "src": "/documentation/de/triage-incoming.png",
       "alt": "Eingegangenes Demoproblem DOC-11 mit Bericht, Eigenschaften und Funktionen für Duplikat, Ablehnen und Akzeptieren.",
       "caption": "Lies den eingegangenen Bericht, bevor du ihn akzeptierst, ablehnst oder mit einem Duplikat verknüpfst.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -162,7 +163,7 @@
       "src": "/documentation/de/issue-statuses.png",
       "alt": "Die acht Ticketstatus im Auswahlmenü, mit ausgewähltem Backlog-Status.",
       "caption": "Das Häkchen zeigt den aktuellen Status. Wähle den Status, der dem tatsächlichen Arbeitsstand entspricht.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -178,7 +179,7 @@
       "src": "/documentation/de/work-resources.png",
       "alt": "Dialog zum Hinzufügen eines Links mit einer Beispiel-Kontaktadresse.",
       "caption": "Prüfe das Ziel, bevor du die Ressource hinzufügst. Dieser Beispiellink wurde nicht gesendet.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -194,7 +195,7 @@
       "src": "/documentation/de/work-dependencies.png",
       "alt": "Suche nach einem blockierenden Ticket anhand seiner Kennung.",
       "caption": "Wähle zuerst die Richtung der Beziehung und dann ihr Ziel. Hier wurde keine Beziehung gespeichert.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -210,7 +211,7 @@
       "src": "/documentation/de/work-sub-issues.png",
       "alt": "Eingabefeld für ein Unterticket in einem Demo-Elternticket.",
       "caption": "Das Feld erstellt ein Kind dieses Elterntickets; jedes Kind behält seinen eigenen Status und Diskussionsverlauf.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -226,7 +227,7 @@
       "src": "/documentation/de/work-implementation-plan.png",
       "alt": "Demo-Plan mit zwei von sechs abgeschlossenen Arbeitsschritten.",
       "caption": "Der gespeicherte Demo-Plan unterscheidet abgeschlossene, laufende und ausstehende Schritte. Der Fortschritt belegt nicht, dass die fiktive Codeaufgabe ausgeführt wurde.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -242,7 +243,7 @@
       "src": "/documentation/de/issue-date-recurrence.png",
       "alt": "Fälligkeitsauswahl im wiederkehrenden Modus mit Sonntagsvorschau und optionaler Uhrzeit.",
       "caption": "Der wiederkehrende Modus zeigt die wöchentliche Folge. Bestätige die erste Fälligkeit vor der Ticketerstellung.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -258,7 +259,7 @@
       "src": "/documentation/de/work-bulk-actions.png",
       "alt": "Aktionsmenü für zwei ausgewählte Demo-Tickets.",
       "caption": "Das Menü wirkt auf die ausgewählten Tickets. In dieser Aufnahme wurde keine Sammeländerung gesendet.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -274,15 +275,16 @@
       "src": "/documentation/de/import-issues-preview-workflow.png",
       "alt": "CSV-Vorschau mit zwei übersetzten Demonstrationszeilen und erkannten Spaltenzuordnungen.",
       "caption": "CSV-Vorschau mit zwei übersetzten Demonstrationszeilen und erkannten Spaltenzuordnungen. Es wurde nichts importiert; die optionale KI-Planung war für die Aufnahme gesperrt.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         816,
         977
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     }
   ],
   "requiredFigures": [
@@ -300,7 +302,7 @@
 }
 ---
 
-Probleme erfassen die Arbeit eines Projekts, von der ersten Anfrage bis zum Abschluss. Hier findest du Erstellung, Triage, Status, Diskussionen und Ressourcen, Beziehungen, Unterprobleme, Umsetzungspläne, Wiederholungen, Sammelaktionen und CSV-Import. Der Import ist dem Projekteigentümer vorbehalten.
+Ein Problem erfasst eine Arbeitseinheit im Projekt, von der ersten Anfrage bis zum Abschluss. Beginne mit Erstellung, Triage und Status. Für laufende Arbeit findest du Abschnitte zu Diskussionen, Abhängigkeiten, Unterproblemen und Plänen. Prüfe vor Wiederholungen, Sammelaktionen oder CSV-Import die jeweiligen Voraussetzungen; der Import ist dem Projekteigentümer vorbehalten.
 
 ## Ein Problem erstellen und bearbeiten {#create-an-issue}
 

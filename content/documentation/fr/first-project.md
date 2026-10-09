@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -42,9 +42,9 @@
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun)",
-    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review)",
+    "revision": 6,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -65,7 +65,7 @@
       "src": "/documentation/fr/reader-first-project.png",
       "alt": "Ticket de démonstration terminé, avec description et commentaire enregistré.",
       "caption": "L’état terminé correspond au contrôle du parcours applicatif. Il ne signifie pas que le lien e-mail du site d’exemple a été testé.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -86,11 +86,14 @@
 
 Utilisez un compte sur l’instance souhaitée. Dans cet exemple, créez un projet de démonstration pour un site web et un ticket pour vérifier son lien de contact. Le parcours est identique dans le Cloud et sur une instance auto-hébergée configurée ; l’IA n’est pas nécessaire.
 
-1. Après connexion, ouvrez l’accueil. Pour un nouveau travail, choisissez Nouveau projet dans la navigation. Dans l’assistant, choisissez un projet entièrement nouveau, indiquez un nom et une clé de 2 à 5 lettres, puis passez aux étapes de l’icône et du dépôt. Gardez l’icône par défaut et aucun dépôt pour cet exemple manuel. Vous pouvez laisser le brief initial vide. À la dernière étape, examinez Smart Assign et l’attribution automatique ; laissez-les désactivés si vous voulez attribuer vous-même le ticket de démonstration. Choisissez Terminer, attendez la création et ouvrez le projet obtenu. Si votre équipe possède déjà un projet, donnez votre e-mail au propriétaire et acceptez son invitation dans la boîte de réception plutôt que de créer un doublon.
-2. Ouvrez le projet et créez un ticket. Choisissez un titre concret, par exemple « Vérifier le lien de contact du site ». Décrivez la page, la destination attendue et la vérification à effectuer. Si le bouton Smart-fill est affiché et activé, désactivez-le pour cet exemple manuel avant de créer le ticket. Il contrôle le remplissage de ce ticket et reste indépendant des réglages d’automatisation et de Smart Assign du projet.
-3. Ajoutez un responsable, une priorité et un effort si ces propriétés facilitent la planification. Confirmez la création, puis ouvrez le ticket obtenu pour vérifier son projet et son identifiant.
-4. Passez le ticket en cours lorsque le travail commence. Effectuez la vérification, puis notez le résultat dans un commentaire. Utilisez l’état de revue si quelqu’un doit encore l’inspecter.
-5. Passez le ticket à terminé après avoir vérifié le résultat attendu. Retrouvez-le dans le travail terminé du projet ou par son identifiant pour confirmer le changement.
+Si votre équipe possède déjà un projet, donnez votre e-mail au propriétaire et acceptez son invitation dans la boîte de réception plutôt que de créer un doublon.
+
+1. Après connexion, ouvrez l’accueil et choisissez Nouveau projet dans la navigation. Dans l’assistant, choisissez un projet entièrement nouveau, puis indiquez un nom et une clé de 2 à 5 lettres. Gardez l’icône par défaut et aucun dépôt pour cet exemple manuel. Vous pouvez laisser le brief initial vide.
+2. À la dernière étape, examinez Smart Assign et l’attribution automatique. Laissez l’attribution automatique désactivée si vous voulez attribuer vous-même le ticket de démonstration. Choisissez Terminer, attendez la création et ouvrez le projet obtenu.
+3. Ouvrez le projet et créez un ticket. Choisissez un titre concret, par exemple « Vérifier le lien de contact du site ». Décrivez la page, la destination attendue et la vérification à effectuer. Si le bouton Smart-fill est affiché et activé, désactivez-le pour cet exemple manuel avant de créer le ticket. Il contrôle le remplissage de ce ticket et reste indépendant des réglages d’automatisation et de Smart Assign du projet.
+4. Ajoutez un responsable, une priorité et un effort si ces propriétés facilitent la planification. Confirmez la création, puis ouvrez le ticket obtenu pour vérifier son projet et son identifiant.
+5. Passez le ticket en cours lorsque le travail commence. Effectuez la vérification, puis notez le résultat dans un commentaire. Utilisez l’état de revue si quelqu’un doit encore l’inspecter.
+6. Passez le ticket à terminé après avoir vérifié le résultat attendu. Retrouvez-le dans le travail terminé du projet ou par son identifiant pour confirmer le changement.
 
 ![Ticket de démonstration terminé, avec description et commentaire enregistré.](/documentation/fr/reader-first-project.png)
 

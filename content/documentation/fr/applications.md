@@ -18,8 +18,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 4,
-  "sourceRevision": 4,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -50,12 +50,13 @@
       "content/documentation/reviews/desktop-capture-candidates.json",
       "components/settings/account-push-devices-section.tsx",
       "lib/desktop/notification-capabilities.ts",
-      "content/documentation/reviews/push-registration-capture-candidates.json"
+      "content/documentation/reviews/push-registration-capture-candidates.json",
+      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json"
     ]
   },
   "review": {
-    "revision": 4,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun)",
+    "revision": 5,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
     "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review)",
     "date": "2026-10-09"
   },
@@ -82,15 +83,16 @@
       "src": "/documentation/fr/web-and-mobile-workflow.png",
       "alt": "Panneau mobile d’un ticket avec titre, description, propriétés et zone de commentaire.",
       "caption": "Sur un écran étroit, les détails du ticket occupent un panneau adaptatif. Utilisez le bouton de fermeture pour revenir au projet ; Numo reste accessible par son bouton flottant.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         438,
-        892
+        1032
       ],
-      "theme": "dark",
-      "padding": 24
+      "theme": "light",
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "install-the-pwa-workflow",
@@ -98,15 +100,16 @@
       "src": "/documentation/fr/install-the-pwa-workflow.png",
       "alt": "Guide Safari illustré de minddy : Partager, Sur l’écran d’accueil puis confirmer.",
       "caption": "Le guide public illustre les trois étapes Safari et le maintien de l’option Ouvrir comme app web. Il s’agit d’illustrations pédagogiques affichées par minddy, pas de captures d’une installation iOS effectuée.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
-        1288,
+        1488,
         762
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "desktop-app-workflow",
@@ -114,7 +117,7 @@
       "src": "/documentation/fr/desktop-app-workflow.png",
       "alt": "Réglages Bureau dans la véritable application Electron de développement sur macOS, version 0.11.1, connectée au serveur local avec un profil isolé.",
       "caption": "Réglages Bureau dans la véritable application Electron de développement sur macOS, version 0.11.1, connectée au serveur local avec un profil isolé. Cette capture ne valide ni les releases signées ni les autres systèmes.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -130,15 +133,16 @@
       "src": "/documentation/fr/devices-and-notifications-workflow.png",
       "alt": "Réglages push indiquant un blocage du navigateur et aucun appareil inscrit.",
       "caption": "Ce navigateur bloque les notifications. Rétablissez l’autorisation du site avant d’inscrire cet appareil.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         816,
         196
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "devices-and-notifications-registered-workflow",
@@ -146,7 +150,7 @@
       "src": "/documentation/fr/devices-and-notifications-registered.png",
       "alt": "Appareil navigateur enregistré et actif sur le compte, avec la date réelle du dernier envoi.",
       "caption": "Le compte possède un appareil navigateur enregistré et actif. La liste indique les dates d’inscription et du dernier envoi. La permission du navigateur et les réglages du système restent nécessaires pour afficher une bannière.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [

@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -39,9 +39,9 @@
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
+    "revision": 3,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -59,23 +59,7 @@
       "src": "/documentation/pt-BR/instance-administration-overview.png",
       "alt": "Visão geral administrativa com indicadores agregados de contas, integração inicial e conteúdo.",
       "caption": "Visão geral mostra os indicadores agregados da instância. Finanças não aparece neste perfil de demonstração porque não há chave gerenciada do OpenRouter configurada.",
-      "revision": 2,
-      "reviewed": true,
-      "capturedAt": "2026-10-08",
-      "viewport": [
-        1488,
-        1148
-      ],
-      "theme": "light",
-      "padding": 24
-    },
-    {
-      "id": "instance-administration-users",
-      "kind": "screenshot",
-      "src": "/documentation/pt-BR/instance-administration-users.png",
-      "alt": "Suporte a contas com busca pelo endereço de email exato, sem diretório de conteúdo pessoal.",
-      "caption": "Usuários abre uma conta específica para suporte ou cobrança; a tela inicial não lista atividade privada nem conteúdo pessoal.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -91,7 +75,7 @@
       "src": "/documentation/pt-BR/instance-administration-models.png",
       "alt": "Configurações de modelos de IA e raciocínio da instância.",
       "caption": "Modelos configura padrões e usos específicos. A captura mostra a configuração existente; nenhum modelo ou provedor foi alterado.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -114,8 +98,6 @@ Administrar a instância é diferente de ser proprietário de um projeto. ADMIN_
 
 
 ![Visão geral administrativa com indicadores agregados de contas, integração inicial e conteúdo.](/documentation/pt-BR/instance-administration-overview.png)
-
-![Suporte a contas com busca pelo endereço de email exato, sem diretório de conteúdo pessoal.](/documentation/pt-BR/instance-administration-users.png)
 
 ![Configurações de modelos de IA e raciocínio da instância.](/documentation/pt-BR/instance-administration-models.png)
 

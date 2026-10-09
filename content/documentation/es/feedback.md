@@ -20,8 +20,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 3,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -59,9 +59,9 @@
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison)",
+    "revision": 4,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -88,7 +88,7 @@
       "src": "/documentation/es/publish-a-feedback-board-workflow.png",
       "alt": "Tablero público de feedback activado, con identidad SSO local configurada y URL oculta.",
       "caption": "El propietario activa el tablero y elige cómo se identifican los visitantes. Este ejemplo usa un firmante SSO local; la URL y el secreto de firma están ocultos.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -104,7 +104,7 @@
       "src": "/documentation/es/submit-and-follow-feedback-workflow.png",
       "alt": "Formulario de una solicitud de feedback con título, descripción y visibilidad pública activada.",
       "caption": "Un visitante identificado envía una solicitud y elige su visibilidad. El ejemplo se envió realmente con la revisión automática desactivada.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -120,23 +120,7 @@
       "src": "/documentation/es/moderate-feedback-workflow.png",
       "alt": "Detalle de una solicitud de feedback con una respuesta pública del equipo y una nota interna.",
       "caption": "La etiqueta Público identifica la respuesta visible para los visitantes; la nota interna queda en el equipo. No se muestra ningún resultado de moderación con IA.",
-      "revision": 3,
-      "reviewed": true,
-      "capturedAt": "2026-10-08",
-      "viewport": [
-        816,
-        874
-      ],
-      "theme": "light",
-      "padding": 24
-    },
-    {
-      "id": "feedback-to-issue-workflow",
-      "kind": "screenshot",
-      "src": "/documentation/es/feedback-to-issue-workflow.png",
-      "alt": "Solicitud de feedback vinculada a una incidencia recién creada, con estado Planeado.",
-      "caption": "La promoción de este ejemplo creó una incidencia vinculada en estado Pendiente. El estado público de la solicitud de feedback cambió automáticamente a Planeado.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -152,7 +136,7 @@
       "src": "/documentation/es/feedback-pages-and-views-workflow.png",
       "alt": "Guía de feedback publicada y seleccionada en la navegación del tablero, legible sin iniciar sesión.",
       "caption": "Publique una página, active las pestañas de páginas y selecciónela para el tablero. Esta página de demostración se abrió de forma anónima; su URL opaca conserva noindex.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -167,13 +151,12 @@
     "publish-a-feedback-board-workflow",
     "submit-and-follow-feedback-workflow",
     "moderate-feedback-workflow",
-    "feedback-to-issue-workflow",
     "feedback-pages-and-views-workflow"
   ]
 }
 ---
 
-El tablero de sugerencias conecta las solicitudes de los visitantes con su gestión interna en el proyecto. Los siguientes apartados explican la publicación por el propietario, el envío y seguimiento por los visitantes, la moderación y vinculación con el trabajo por los miembros, y la selección de páginas y vistas públicas.
+Las sugerencias conectan las solicitudes de los visitantes con la revisión y el trabajo del equipo. Los propietarios configuran el tablero público, los visitantes envían y siguen solicitudes, y los miembros las moderan o vinculan a incidencias. Al gestionar el acceso, distinga las respuestas públicas, las notas internas y las páginas o vistas publicadas por separado.
 
 ## Publicar un tablero de feedback {#publish-a-feedback-board}
 
@@ -229,7 +212,6 @@ El estado vinculado sigue a la incidencia: triage/backlog/duplicate → open; to
 
 Las notificaciones al equipo por nuevo feedback dependen de su origen y de la transición de revisión. No prometa al votante un email automático por cada unión o actualización de incidencia; puede consultar el estado público y las respuestas en Mis sugerencias. El vínculo muestra el avance sin exponer la incidencia privada.
 
-![Solicitud de feedback vinculada a una incidencia recién creada, con estado Planeado.](/documentation/es/feedback-to-issue-workflow.png)
 
 ## Añadir páginas y vistas públicas al tablero {#feedback-pages-and-views}
 

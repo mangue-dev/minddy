@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -39,9 +39,9 @@
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison)",
+    "revision": 3,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -59,23 +59,7 @@
       "src": "/documentation/de/instance-administration-overview.png",
       "alt": "Admin-Übersicht mit zusammengefassten Konto-, Einführungs- und Inhaltskennzahlen.",
       "caption": "Übersicht zeigt zusammengefasste Kennzahlen der Instanz. Finanzen fehlt in diesem Demoprofil, weil kein verwalteter OpenRouter-Schlüssel eingerichtet ist.",
-      "revision": 2,
-      "reviewed": true,
-      "capturedAt": "2026-10-08",
-      "viewport": [
-        1488,
-        1148
-      ],
-      "theme": "light",
-      "padding": 24
-    },
-    {
-      "id": "instance-administration-users",
-      "kind": "screenshot",
-      "src": "/documentation/de/instance-administration-users.png",
-      "alt": "Kontosupport mit Suche nach der genauen E-Mail-Adresse ohne Verzeichnis privater Inhalte.",
-      "caption": "Benutzer öffnet ein bestimmtes Konto für Support oder Abrechnung; die Startansicht listet weder private Aktivitäten noch persönliche Inhalte auf.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -91,7 +75,7 @@
       "src": "/documentation/de/instance-administration-models.png",
       "alt": "KI-Modell- und Reasoning-Einstellungen der Instanz.",
       "caption": "Modelle legt Standardwerte und besondere Verwendungszwecke fest. Die Aufnahme zeigt die vorhandene Konfiguration; keine Modell- oder Anbietereinstellung wurde geändert.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -114,8 +98,6 @@ Instanzadministration ist von Projekteigentum getrennt. ADMIN_EMAILS im Server e
 
 
 ![Admin-Übersicht mit zusammengefassten Konto-, Einführungs- und Inhaltskennzahlen.](/documentation/de/instance-administration-overview.png)
-
-![Kontosupport mit Suche nach der genauen E-Mail-Adresse ohne Verzeichnis privater Inhalte.](/documentation/de/instance-administration-users.png)
 
 ![KI-Modell- und Reasoning-Einstellungen der Instanz.](/documentation/de/instance-administration-models.png)
 

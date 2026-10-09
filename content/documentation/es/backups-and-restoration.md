@@ -16,8 +16,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -38,9 +38,9 @@
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison)",
+    "revision": 3,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -64,7 +64,7 @@
       "src": "/documentation/es/restore-and-roll-back-flow.svg",
       "alt": "Diagrama: Copia completa externa verificada. Destino vacío aislado y versiones iguales. Restaurar base, bytes y claves juntos. Verificar cuenta, contenido y archivos antes de abrir.",
       "caption": "Siga las etapas en este orden. Copia completa externa verificada. Destino vacío aislado y versiones iguales. Restaurar base, bytes y claves juntos. Verificar cuenta, contenido y archivos antes de abrir.",
-      "revision": 2,
+      "revision": 3,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -97,7 +97,7 @@
 }
 ---
 
-Una copia completa conserva juntos la base de datos, los bytes de Storage, la configuración y las claves necesarias. Esta guía distingue la copia en frío del perfil full con sistema de archivos de los métodos lógicos y del proveedor, y explica la restauración en un destino vacío. Antes de empezar, elija el procedimiento adecuado para la arquitectura y el perfil Storage realmente instalados.
+Una copia recuperable conserva juntos la base de datos, los archivos de Storage, la configuración, las claves de cifrado y la versión de la aplicación. Elija el procedimiento de sistema de archivos, lógico o del proveedor para el perfil instalado. Guarde el conjunto correspondiente fuera del servidor y ensaye la restauración en un destino vacío. Al restaurar la copia pueden perderse las escrituras posteriores a su creación.
 
 ## Crear una copia en frío del perfil full con archivos {#back-up-the-reference-instance}
 

@@ -20,8 +20,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 3,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -59,9 +59,9 @@
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
+    "revision": 4,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -88,7 +88,7 @@
       "src": "/documentation/it/publish-a-feedback-board-workflow.png",
       "alt": "Bacheca pubblica dei feedback attiva, con identità SSO locale configurata e URL nascosto.",
       "caption": "Il proprietario attiva la bacheca e sceglie l’identità dei visitatori. Questo esempio usa un firmatario SSO locale; l’URL e il segreto di firma sono nascosti.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -104,7 +104,7 @@
       "src": "/documentation/it/submit-and-follow-feedback-workflow.png",
       "alt": "Modulo di feedback del visitatore con titolo, descrizione e visibilità pubblica attivata.",
       "caption": "Un visitatore identificato invia un’esigenza e ne sceglie la visibilità. L’esempio è stato realmente inviato con la revisione automatica disattivata.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -120,23 +120,7 @@
       "src": "/documentation/it/moderate-feedback-workflow.png",
       "alt": "Dettaglio di un feedback con risposta pubblica del team e nota interna.",
       "caption": "L’etichetta Pubblico distingue la risposta visibile ai visitatori; la nota interna resta al team. Non viene mostrato alcun risultato di moderazione IA.",
-      "revision": 3,
-      "reviewed": true,
-      "capturedAt": "2026-10-08",
-      "viewport": [
-        816,
-        874
-      ],
-      "theme": "light",
-      "padding": 24
-    },
-    {
-      "id": "feedback-to-issue-workflow",
-      "kind": "screenshot",
-      "src": "/documentation/it/feedback-to-issue-workflow.png",
-      "alt": "Feedback collegato a una nuova issue con stato Pianificato.",
-      "caption": "La promozione di questo esempio ha creato una issue collegata con stato Da fare. Il feedback pubblico è passato automaticamente a Pianificato.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -152,7 +136,7 @@
       "src": "/documentation/it/feedback-pages-and-views-workflow.png",
       "alt": "Guida ai feedback pubblicata e selezionata nella navigazione della bacheca, leggibile senza accesso.",
       "caption": "Pubblica una pagina, attiva le schede delle pagine e selezionala per la bacheca. Questa pagina dimostrativa è stata aperta anonimamente; il suo URL opaco mantiene noindex.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -167,13 +151,12 @@
     "publish-a-feedback-board-workflow",
     "submit-and-follow-feedback-workflow",
     "moderate-feedback-workflow",
-    "feedback-to-issue-workflow",
     "feedback-pages-and-views-workflow"
   ]
 }
 ---
 
-La bacheca di feedback raccoglie richieste e voti con uno stato pubblico, separati dalla discussione interna del progetto. Il proprietario configura la pubblicazione; le sezioni seguenti descrivono invio, moderazione, collegamento ai ticket e pagine o viste pubbliche da includere.
+Il feedback collega le richieste dei visitatori al lavoro di revisione e consegna del team. Il proprietario configura la bacheca pubblica; i visitatori inviano e seguono le richieste, mentre i membri le moderano o le collegano ai ticket. Gestisci separatamente risposte pubbliche, note interne e condivisioni di pagine o viste.
 
 ## Pubblicare una bacheca feedback {#publish-a-feedback-board}
 
@@ -229,7 +212,6 @@ Lo stato collegato segue quello della issue: triage/backlog/duplicate → open; 
 
 Le notifiche al team per nuovo feedback dipendono dalla fonte e dal passaggio di revisione. Non promettere a chi vota un’email automatica per ogni unione o aggiornamento della issue; può consultare stato pubblico e risposte in Il mio feedback. Il collegamento mostra l’avanzamento senza esporre la issue privata.
 
-![Feedback collegato a una nuova issue con stato Pianificato.](/documentation/it/feedback-to-issue-workflow.png)
 
 ## Aggiungere pagine e viste pubbliche alla bacheca {#feedback-pages-and-views}
 

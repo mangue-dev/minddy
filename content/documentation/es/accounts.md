@@ -18,8 +18,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
-  "sourceRevision": 6,
+  "revision": 7,
+  "sourceRevision": 7,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -56,13 +56,14 @@
       "components/settings/account-analytics-section.tsx",
       "components/settings/account-data-section.tsx",
       "app/api/account/deletion-preview/route.ts",
-      "app/api/account/route.ts"
+      "app/api/account/route.ts",
+      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json"
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison)",
+    "revision": 7,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -90,84 +91,21 @@
   ],
   "figures": [
     {
-      "id": "account-access-steps",
-      "kind": "screenshot",
-      "src": "/documentation/es/auth-signup.png",
-      "alt": "Registro por correo electrónico, con los botones de proveedores y el primer paso del asistente de tres pasos.",
-      "caption": "Empieza en la instancia correcta. Después del correo vienen la identidad y la contraseña; en esta captura no se envió ningún registro.",
-      "revision": 6,
-      "reviewed": true,
-      "capturedAt": "2026-10-08",
-      "viewport": [
-        428,
-        522
-      ],
-      "theme": "light",
-      "padding": 24
-    },
-    {
-      "id": "account-access-login",
-      "kind": "screenshot",
-      "src": "/documentation/es/auth-login.png",
-      "alt": "Formulario de inicio de sesión con el enlace de recuperación debajo del campo de contraseña.",
-      "caption": "Inicia la recuperación en la instancia de tu cuenta. El formulario se muestra sin haber enviado credenciales.",
-      "revision": 6,
-      "reviewed": true,
-      "capturedAt": "2026-10-08",
-      "viewport": [
-        428,
-        588
-      ],
-      "theme": "light",
-      "padding": 24
-    },
-    {
       "id": "account-security-workflow",
       "kind": "screenshot",
       "src": "/documentation/es/account-security-workflow.png",
       "alt": "Tarjeta de autenticación de dos factores con botón de activación.",
       "caption": "Empieza aquí, verifica después el autenticador y guarda los códigos de recuperación de forma privada.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         816,
         227
       ],
       "theme": "light",
-      "padding": 24
-    },
-    {
-      "id": "account-security-enrollment-workflow",
-      "kind": "screenshot",
-      "src": "/documentation/es/account-security-enrollment-workflow.png",
-      "alt": "Configuración del autenticador antes de verificar el código.",
-      "caption": "Configuración del autenticador antes de verificar el código. El QR real y el secreto manual están ocultos; este factor temporal sin verificar se canceló y eliminó.",
-      "revision": 6,
-      "reviewed": true,
-      "capturedAt": "2026-10-08",
-      "viewport": [
-        816,
-        498
-      ],
-      "theme": "light",
-      "padding": 24
-    },
-    {
-      "id": "account-recovery-steps",
-      "kind": "screenshot",
-      "src": "/documentation/es/auth-recovery.png",
-      "alt": "Formulario de recuperación de contraseña con una dirección de ejemplo y el botón para enviar el enlace.",
-      "caption": "Introduce aquí el correo de tu cuenta. La dirección de ejemplo no se envió; esta imagen no acredita la entrega del mensaje ni una recuperación completada.",
-      "revision": 6,
-      "reviewed": true,
-      "capturedAt": "2026-10-08",
-      "viewport": [
-        428,
-        326
-      ],
-      "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "profile-and-preferences-workflow",
@@ -175,15 +113,16 @@
       "src": "/documentation/es/profile-and-preferences-workflow.png",
       "alt": "Controles del perfil para avatar, nombre de usuario y correo de solo lectura.",
       "caption": "Guarda los cambios del perfil tras validarlos; el correo sigue siendo de solo lectura.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         816,
         416
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "profile-and-preferences-preferences-workflow",
@@ -191,15 +130,16 @@
       "src": "/documentation/es/profile-and-preferences-preferences-workflow.png",
       "alt": "Selector de idioma y controles de tema claro, oscuro y del sistema.",
       "caption": "El idioma de la cuenta se configura por separado del idioma del sitio público.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         816,
         212
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "privacy-and-account-deletion-workflow",
@@ -207,22 +147,20 @@
       "src": "/documentation/es/privacy-and-account-deletion-workflow.png",
       "alt": "Vista previa de eliminación con proyectos propios, tickets y miembros que perderán acceso.",
       "caption": "Lee la vista previa y exporta los datos que quieras conservar antes de abrir la confirmación.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
         816,
         231
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     }
   ],
   "requiredFigures": [
-    "account-access-steps",
     "account-security-workflow",
-    "account-security-enrollment-workflow",
-    "account-recovery-steps",
     "profile-and-preferences-workflow",
     "profile-and-preferences-preferences-workflow",
     "privacy-and-account-deletion-workflow"
@@ -230,7 +168,7 @@
 }
 ---
 
-Cada cuenta pertenece a la instancia en la que se creó. Esta guía reúne el acceso, el segundo factor, la recuperación, el perfil y las preferencias, además de las consecuencias de eliminar la cuenta.
+Cada cuenta pertenece a la instancia en la que te registraste. Aquí puedes gestionar el acceso, la autenticación de dos factores, la recuperación y tus preferencias. Antes de eliminarla, revisa la exportación de datos y las consecuencias para tus proyectos.
 
 ## Crear una cuenta e iniciar sesión {#account-access}
 
@@ -241,35 +179,31 @@ Para registrarte por email, introduce tu dirección y continúa al paso de ident
 Vuelve a la aplicación que quieres utilizar e inicia sesión. Una cuenta recién autenticada puede crear su propio proyecto o aceptar una invitación. Conocer la URL de un proyecto no concede la condición de miembro.
 
 
-![Registro por correo electrónico, con los botones de proveedores y el primer paso del asistente de tres pasos.](/documentation/es/auth-signup.png)
-
 ### Cerrar sesión y comprobar el correo que falta {#session-and-mail}
 
 Abre el menú de la cuenta, elige cerrar sesión y confirma. En la aplicación de escritorio, cerrar una pestaña o ventana no equivale a cerrar sesión. Utiliza el menú de la cuenta si quieres terminar la sesión.
 
 Si el correo no llega, comprueba la dirección, la carpeta de spam y la identidad de la instancia. El operador de una instancia autoalojada debe haber configurado un envío de correo de Auth que funcione; el correo opcional de notificaciones de la aplicación y la confirmación de Auth son funciones distintas. Una página de confirmación caducada permite volver al inicio de sesión para solicitar un enlace nuevo. No reenvíes enlaces de confirmación o recuperación como prueba para diagnosticar un problema: autorizan el acceso a la cuenta.
 
-![Formulario de inicio de sesión con el enlace de recuperación debajo del campo de contraseña.](/documentation/es/auth-login.png)
 
 ## Proteger la cuenta con un segundo factor {#account-security}
 
-Abra la sección Seguridad en la configuración de la cuenta y active la autenticación de dos factores. El segundo factor también se aplica al iniciar sesión mediante Google o GitHub; la autenticación del proveedor no lo sustituye.
+Abre la sección Seguridad en la configuración de la cuenta y activa la autenticación de dos factores. El segundo factor también se aplica al iniciar sesión mediante Google o GitHub; la autenticación del proveedor no lo sustituye.
 
-1. Escanee el código QR con un autenticador TOTP o introduzca manualmente la clave de configuración mostrada. Nunca incluya ni el código QR ni la clave en una captura.
-2. Introduzca el código actual de seis dígitos y confirme. Si ha caducado, pruebe el siguiente; después de demasiados intentos, espere antes de volver a intentarlo.
-3. Guarde los códigos de recuperación en un lugar protegido al que pueda acceder sin el teléfono. Cada código funciona una sola vez y la lista solo se muestra una vez. Confirme que los ha guardado antes de terminar.
+1. Escanea el código QR con un autenticador TOTP o introduce manualmente la clave de configuración mostrada. Nunca incluyas ni el código QR ni la clave en una captura.
+2. Introduce el código actual de seis dígitos y confirma. Si ha caducado, prueba el siguiente. Después de demasiados intentos, espera antes de volver a intentarlo.
+3. Guarda los códigos de recuperación en un lugar protegido al que puedas acceder sin el teléfono. Cada código funciona una sola vez y la lista solo se muestra una vez. Confirma que los has guardado antes de terminar.
 
-La activación actualiza la sesión actual e intenta cerrar las demás sesiones. Si se solicita una nueva autenticación después de aceptar el código, vuelva a iniciar sesión y siga las indicaciones mostradas.
+La activación actualiza la sesión actual e intenta cerrar las demás sesiones. Si se solicita una nueva autenticación después de aceptar el código, vuelve a iniciar sesión y sigue las indicaciones mostradas.
 
 ![Tarjeta de autenticación de dos factores con botón de activación.](/documentation/es/account-security-workflow.png)
 
 ### Recuperación y cambios {#recovery}
 
-Durante el inicio de sesión, si no tiene el teléfono, use uno de los códigos de recuperación que guardó. Usarlo desactiva la autenticación de dos factores e invalida los códigos restantes. Una vez dentro, configure de nuevo el autenticador y guarde los nuevos códigos de recuperación. Este proceso no garantiza que el soporte humano pueda restaurar la cuenta.
+Si no tienes el teléfono, utiliza al iniciar sesión uno de los códigos de recuperación que guardaste. Usarlo desactiva la autenticación de dos factores e invalida los códigos restantes. Una vez dentro, configura de nuevo el autenticador y guarda los nuevos códigos de recuperación. Este proceso no garantiza que el soporte humano pueda restaurar la cuenta.
 
-Sustituir los códigos de recuperación invalida la lista anterior. Tanto la sustitución como la desactivación voluntaria requieren las comprobaciones de autenticación reciente del servidor. Lea la confirmación: al desactivar la función, el factor adicional deja de solicitarse, incluso al entrar por Google o GitHub.
+Sustituir los códigos de recuperación invalida la lista anterior. Tanto la sustitución como la desactivación voluntaria requieren las comprobaciones de autenticación reciente del servidor. Lee la confirmación: al desactivar la función, el factor adicional deja de solicitarse, incluso al entrar por Google o GitHub.
 
-![Configuración del autenticador antes de verificar el código.](/documentation/es/account-security-enrollment-workflow.png)
 
 ## Recuperar el acceso a tu cuenta {#account-recovery}
 
@@ -277,8 +211,6 @@ En la pantalla de acceso de la instancia correcta, utiliza la recuperación de c
 
 Un enlace puede caducar o dejar de tener una sesión activa. La pantalla de restablecimiento identifica esa situación y permite solicitar otro enlace. Empieza desde un mensaje nuevo en lugar de volver a intentar un marcador antiguo. No envíes el enlace, las cookies ni la contraseña al servicio de asistencia.
 
-
-![Formulario de recuperación de contraseña con una dirección de ejemplo y el botón para enviar el enlace.](/documentation/es/auth-recovery.png)
 
 ### MFA y acceso sin resolver {#mfa-recovery}
 
@@ -288,17 +220,17 @@ Si no dispones ni del segundo factor ni de un código de recuperación, contacta
 
 ## Cambiar perfil y preferencias {#profile-and-preferences}
 
-Abra los ajustes desde el menú de cuenta. En el perfil, escriba un nombre no vacío y guárdelo. El correo es de solo lectura. Genere otro avatar o suba una imagen con los controles correspondientes. Espere el resultado y compruebe el avatar en comentarios o miembros; es el mismo en proyectos y conversaciones. Si se rechaza un archivo, siga el mensaje de validación en vez de subirlo repetidamente.
+Abre los ajustes desde el menú de la cuenta. En el perfil, escribe un nombre que no esté vacío y guárdalo. El correo es de solo lectura. Genera otro avatar o sube una imagen con los controles correspondientes. Espera el resultado y comprueba el avatar en un comentario o en la lista de miembros; es el mismo en todos los proyectos y conversaciones. Si se rechaza un archivo, sigue el mensaje de validación en vez de subirlo repetidamente.
 
-La imagen fuente no debe superar 10 MiB. El servidor verifica bytes de imagen legibles, aplica orientación y recorta al centro como avatar WebP de 256 × 256.
+La imagen fuente no debe superar 10 MiB. El servidor comprueba que la imagen pueda leerse, aplica su orientación y la recorta por el centro para crear un avatar WebP de 256 × 256 píxeles.
 
 ![Controles del perfil para avatar, nombre de usuario y correo de solo lectura.](/documentation/es/profile-and-preferences-workflow.png)
 
 ### Elegir el comportamiento {#preferences}
 
-Seleccione idioma y tema en preferencias y compruebe otra página. El idioma de cuenta gobierna el producto autenticado; el sitio público tiene su propio selector. El tema se guarda en la cuenta entre dispositivos.
+Selecciona idioma y tema en preferencias y comprueba otra página. El idioma de cuenta gobierna el producto autenticado; el sitio público tiene su propio selector. El tema se guarda en la cuenta entre dispositivos.
 
-Elija el atajo de envío en teclado. Se aplica a comentarios y Numo. Use el botón de enviar si la plataforma intercepta el atajo; las teclas modificadoras varían según el sistema. Preferencias como asignación automática y estado de incidencias creadas por Numo también pertenecen a la cuenta y no cambian los ajustes de otros miembros.
+Elige el atajo de envío en los ajustes de teclado. Se aplica a comentarios y Numo. Usa el botón de enviar si la plataforma intercepta el atajo; las teclas modificadoras varían según el sistema. Preferencias como asignación automática y estado de incidencias creadas por Numo también pertenecen a la cuenta y no cambian los ajustes de otros miembros.
 
 ![Selector de idioma y controles de tema claro, oscuro y del sistema.](/documentation/es/profile-and-preferences-preferences-workflow.png)
 
@@ -306,13 +238,13 @@ Elija el atajo de envío en teclado. Se aplica a comentarios y Numo. Use el bot�
 
 Cuando hay un servicio de analítica configurado, los ajustes de la cuenta muestran su interruptor de consentimiento y un enlace a la política de cookies. Desactivarlo cambia inmediatamente el consentimiento de medición en este dispositivo y guarda la elección en la cuenta. En otro dispositivo puede seguir aplicándose una elección local ya existente. Si no se ha configurado ningún servicio de analítica, esta sección no aparece.
 
-El consentimiento para analítica se distingue de los datos necesarios para utilizar la cuenta. Consulte la política de privacidad de la instancia y los proveedores externos que haya activado. En una instalación self-hosted, la configuración y las políticas del operador determinan los destinos de los servicios; desactivar la analítica no elimina las integraciones de IA ni de Git.
+El consentimiento para analítica se distingue de los datos necesarios para utilizar la cuenta. Consulta la política de privacidad de la instancia y los proveedores externos que hayas activado. En una instalación self-hosted, la configuración y las políticas del operador determinan los destinos de los servicios; desactivar la analítica no elimina las integraciones de IA ni de Git.
 
 
 ![Vista previa de eliminación con proyectos propios, tickets y miembros que perderán acceso.](/documentation/es/privacy-and-account-deletion-workflow.png)
 
 ### Revisar la eliminación antes de confirmar {#deletion}
 
-Antes de eliminar la cuenta, exporte los datos que necesite conservar desde su sección de datos. Lea la vista previa de los proyectos de los que es propietario, los miembros afectados, los tickets, los comentarios y la suscripción activa. Las consecuencias para esos proyectos afectan a otras personas; resuélvalas antes de confirmar.
+Antes de eliminar la cuenta, exporta los datos que necesites conservar desde la sección de datos. Lee la vista previa de tus proyectos, los miembros afectados, los tickets, los comentarios y la suscripción activa. Resuelve antes de confirmar las consecuencias para otras personas que participan en tus proyectos.
 
-Abra la confirmación de eliminación solo cuando esté preparado. Escriba el correo de su cuenta y, si tiene una cuenta con contraseña, introduzca también esa contraseña. Las cuentas sin contraseña necesitan un inicio de sesión reciente. Si se exige volver a autenticarse, siga esa indicación en lugar de repetir la solicitud a ciegas. Una eliminación completada cierra la sesión y vuelve al sitio público. Esta acción no envía la cuenta a una papelera recuperable. Mantenga las exportaciones privadas y resuelva cualquier cuestión pendiente de suscripción o proveedores desde sus controles de facturación y de servicio.
+Abre la confirmación de eliminación solo cuando estés preparado. Escribe el correo de tu cuenta y, si tienes una cuenta con contraseña, introduce también esa contraseña. Las cuentas sin contraseña necesitan un inicio de sesión reciente. Si se exige volver a autenticarte, sigue esa indicación antes de repetir la solicitud. Una eliminación completada cierra la sesión y vuelve al sitio público. Esta acción no envía la cuenta a una papelera recuperable. Mantén las exportaciones privadas y resuelve cualquier cuestión pendiente de suscripción o proveedores desde los controles de facturación y de servicio.

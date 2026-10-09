@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -36,9 +36,9 @@
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun)",
-    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review)",
+    "revision": 3,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -66,7 +66,13 @@ pnpm self-host:doctor -- --mode full --env-file "$MINDDY_ENV_FILE" \
 
 ## Relier le symptôme au contrôle {#symptoms}
 
-Pour des 401 généralisés après restauration, vérifiez que JWT, clés anon et service-role appartiennent à la même pile. Pour uploads échoués ou fichiers 404, comparez politiques, objets, octets et clés Storage. Pour relations absentes, conservez la première erreur de migration, vérifiez disque, verrous et URL cible puis relancez bootstrap de la version après correction. Ne marquez jamais une migration échouée comme appliquée à la main. Pour Realtime, vérifiez publication, JWT, proxy WebSocket et journaux. Pour cron inactif ou 401, vérifiez état du planificateur, origine et CRON_SECRET en privé.
+| Symptôme | Contrôle |
+| --- | --- |
+| Réponses 401 généralisées après restauration | Vérifiez que JWT, clés anon et service-role appartiennent à la même pile. |
+| Envois de fichiers échoués ou erreurs 404 | Comparez les politiques, les enregistrements d’objets, les octets et les clés Storage. |
+| Relations absentes dans la base | Conservez la première erreur de migration et vérifiez le disque, les verrous et l’URL cible. Relancez le bootstrap de la version uniquement après correction ; ne marquez jamais une migration échouée comme appliquée à la main. |
+| Échecs Realtime | Vérifiez la publication, JWT, le proxy WebSocket et les journaux des services. |
+| Cron inactif ou tâches en erreur 401 | Vérifiez l’état du planificateur, l’origine canonique et CRON_SECRET en privé. |
 
 ## Préserver la récupération {#recovery}
 

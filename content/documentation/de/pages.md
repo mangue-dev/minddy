@@ -21,8 +21,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -60,9 +60,9 @@
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison)",
+    "revision": 6,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -98,7 +98,7 @@
       "src": "/documentation/de/page-create-menu.png",
       "alt": "Erstellungsmenü mit Neue Seite und Neue Datenbank.",
       "caption": "Wähle über die Seitenfunktionen des Projekts ein Dokument oder eine Datenbank.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -114,7 +114,7 @@
       "src": "/documentation/de/page-editor.png",
       "alt": "Demoseite mit Überschriften, Absätzen, Aufgaben mit Kontrollkästchen und einer Ticketreferenz.",
       "caption": "Überschriften, Aufgabenblöcke und die Referenz AUR-2 gliedern die Seite. Der Inhalt dient als Demobeispiel.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -130,7 +130,7 @@
       "src": "/documentation/de/page-comments.png",
       "alt": "Seitenaktivität mit einer Demoänderung und einem leeren Kommentarfeld.",
       "caption": "Lies die Seitenaktivität und verfasse einen Kommentar im Eingabefeld. In diesem Beispiel wurde keiner abgesendet.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -146,7 +146,7 @@
       "src": "/documentation/de/page-file-states.png",
       "alt": "Demoseite mit einem unvollständigen Upload und einer gespeicherten Datei von 67 Byte mit Downloadfunktion.",
       "caption": "Prüfe den tatsächlichen Dateizustand: Der zweite Anhang ist verfügbar, der erste unvollständige Upload nicht.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -162,7 +162,7 @@
       "src": "/documentation/de/page-history-preview.png",
       "alt": "Versionen-Tab mit aufgeklapptem früherem Zustand, Autor, Wiederherstellen und Hinweis auf 30 Tage Aufbewahrung.",
       "caption": "Prüfe einen gespeicherten Zustand in der Vorschau und vergleiche ihn vor dem Wiederherstellen mit der aktuellen Seite.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -178,7 +178,7 @@
       "src": "/documentation/de/page-publish.png",
       "alt": "Veröffentlichungsdialog mit ausgewähltem Privat und Alternativen für Passwort oder Link.",
       "caption": "Privat hält die Seite im Projekt. Prüfe die vorgesehene Zielgruppe vor einer Änderung der Freigabe.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -194,7 +194,7 @@
       "src": "/documentation/de/page-export.png",
       "alt": "Exportmenü des Dokuments mit Markdown (.md) und Drucken / PDF.",
       "caption": "Wähle Markdown zum Herunterladen oder Drucken / PDF für die Druckansicht.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -217,7 +217,7 @@
 }
 ---
 
-Seiten enthalten das Wissen eines Projekts als Dokumente und Unterseiten. Hier findest du Organisation, Bearbeitung, Zusammenarbeit, Anhänge, Versionsverlauf, Veröffentlichung und Export. Einen allgemeinen Dokumentimport bietet das Seitenmenü nicht; unterstützte Importe beginnen in einer leeren Datenbank.
+Seiten bilden das Wiki eines Projekts mit Dokumenten, Unterseiten und Datenbankeinträgen. Du kannst Inhalte organisieren und bearbeiten, zusammenarbeiten, Dateien und Versionen verwalten und einen Zweig veröffentlichen oder exportieren. Importe beginnen in einer leeren Datenbank; folge dafür der [Datenbankanleitung](/de/dokumentation/databases#import-a-database).
 
 ## Ein Projektwiki aufbauen {#create-and-organize-pages}
 
@@ -229,7 +229,7 @@ Erstelle Unterseiten für zusammengehörige Dokumente und verschiebe oder ordne 
 
 Markiere eine Seite als Favorit, damit sie oben im Seitenbaum des Projekts erscheint. Diese Favoriten werden im Projekt geteilt, anders als eine private Notiz im Aufgabenheft. Verknüpfe eine Seite mit einem Ticket, wenn das aktuelle Dokument den Aufgabenkontext liefert; der Ressourcentitel folgt einer Umbenennung der Seite.
 
-Das Löschen verschiebt Seiten, für die eine Wiederherstellung vorgesehen ist in den Papierkorb. Prüfe den ausgewählten Zweig vor dem Löschen und verwende die Wiederherstellung statt einer Neuerstellung, wenn der Inhalt einer verlorenen Seite erhalten bleiben soll. Einträge mit gespeicherten Datenbankwerten lassen sich innerhalb ihrer Datenbank umordnen, aber nicht aus ihr heraus verschieben. Prüfe bei einem abgewiesenen Verschieben Hierarchie und Eintragstyp, statt es wiederholt zu erzwingen.
+Das Löschen verschiebt Seiten, für die eine Wiederherstellung vorgesehen ist, in den Papierkorb. Prüfe den ausgewählten Zweig vor dem Löschen und verwende die Wiederherstellung statt einer Neuerstellung, wenn der Inhalt einer verlorenen Seite erhalten bleiben soll. Einträge mit gespeicherten Datenbankwerten lassen sich innerhalb ihrer Datenbank umordnen, aber nicht aus ihr heraus verschieben. Prüfe bei einem abgewiesenen Verschieben Hierarchie und Eintragstyp, statt es wiederholt zu erzwingen.
 
 
 ![Erstellungsmenü mit Neue Seite und Neue Datenbank.](/documentation/de/page-create-menu.png)

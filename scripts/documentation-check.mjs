@@ -79,6 +79,20 @@ for (const locale of documentationLocales) {
         if (!figure.viewport?.every(value => Number.isInteger(value) && value > 0)) fail(`${context}: invalid figure viewport`);
         if (figure.diagram !== undefined && (figure.kind !== "diagram" || !validDiagram(figure.diagram))) fail(`${context}: invalid responsive diagram ${figure.id}`);
         if (figure.padding !== undefined && (!Number.isInteger(figure.padding) || figure.padding < 0)) fail(`${context}: invalid screenshot padding ${figure.id}`);
+        if (figure.kind === "screenshot" && figure.theme !== "light") fail(`${context}: screenshots must use light mode: ${figure.id}`);
+        if (figure.deviceScaleFactor !== undefined) {
+          if (figure.kind !== "screenshot" || !Number.isInteger(figure.deviceScaleFactor) || figure.deviceScaleFactor < 2) {
+            fail(`${context}: screenshots require native density of at least 2: ${figure.id}`);
+          } else if (figure.src && fs.existsSync(path.join(root, "public", figure.src))) {
+            const descriptor = fs.openSync(path.join(root, "public", figure.src), "r");
+            const header = Buffer.alloc(24);
+            try { fs.readSync(descriptor, header, 0, 24, 0); } finally { fs.closeSync(descriptor); }
+            const png = header.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
+            if (!png || figure.viewport.some((dimension, index) => Math.abs(header.readUInt32BE(16 + index * 4) - dimension * figure.deviceScaleFactor) > figure.deviceScaleFactor)) {
+              fail(`${context}: screenshot pixels do not match declared density: ${figure.id}`);
+            }
+          }
+        }
       }
       if (new Set(article.figures.map(figure => figure.id)).size !== article.figures.length) fail(`${context}: repeated figure IDs`);
       const prose = article.content.replace(/```[\s\S]*?```/g, "").replace(/`[^`]+`/g, "");

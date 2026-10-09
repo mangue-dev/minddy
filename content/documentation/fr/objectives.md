@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -42,9 +42,9 @@
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun)",
-    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review)",
+    "revision": 6,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -66,7 +66,7 @@
       "src": "/documentation/fr/reader-objectives.png",
       "alt": "Dialogue de création d’objectif non envoyé avec un nom de résultat d’exemple.",
       "caption": "Nommez le résultat avant de choisir le responsable, la date cible et l’état. Ce dialogue n’a pas créé un deuxième objectif.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -82,7 +82,7 @@
       "src": "/documentation/fr/reader-objective-momentum.png",
       "alt": "Élan d’un objectif après la clôture réelle d’un ticket de démonstration.",
       "caption": "Consultez l’élan avec le travail associé. L’historique disponible ne suffit pas à afficher une date de fin estimée.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -126,6 +126,11 @@ Une relation de blocage peut relier un ticket ou un autre objectif à cet object
 
 La dynamique résume le travail récemment terminé. Elle peut accélérer, rester stable, ralentir ou stagner, avec des états distincts pour les objectifs non démarrés, terminés et annulés. Utilisez ce signal pour repérer un résultat qui mérite votre attention, puis consultez tickets et activité.
 
-Une estimation de fin exige au moins deux réalisations, une semaine complète d’observation, un effort réalisé positif et du travail restant. Seuls les tickets actuellement associés contribuent ; une réalisation antérieure à la création de l’objectif ne fabrique pas une dynamique récente. Avec une date cible valide, l’historique va de la création à cette date et le débit utilise le temps observé depuis la création, y compris après une échéance dépassée. Sans date cible valide, le calcul utilise huit semaines d’historique glissant et une fenêtre de prévision de 28 jours. Un historique limité ou un changement récent de périmètre la rend moins utile. Ce n’est pas une date promise, et elle ne comprend pas le travail non associé. Comparez date cible, tâches restantes et contraintes réelles avant de changer vos engagements.
+Une estimation de fin exige au moins deux réalisations, une semaine complète d’observation, un effort réalisé positif et du travail restant. Seuls les tickets actuellement associés contribuent ; les réalisations antérieures à la création de l’objectif ne comptent pas dans la dynamique récente.
+
+- Avec une date cible valide, l’historique va de la création à cette date. Le débit utilise le temps observé depuis la création, y compris après une échéance dépassée.
+- Sans date cible valide, le calcul utilise huit semaines d’historique glissant et une fenêtre de prévision de 28 jours.
+
+Un historique limité ou un changement récent de périmètre rend l’estimation moins utile. Ce n’est pas une date promise, et elle exclut le travail non associé. Comparez la date cible, les tâches restantes et les contraintes réelles avant de changer vos engagements.
 
 ![Élan d’un objectif après la clôture réelle d’un ticket de démonstration.](/documentation/fr/reader-objective-momentum.png)

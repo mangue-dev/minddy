@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 2,
-  "sourceRevision": 2,
+  "revision": 3,
+  "sourceRevision": 3,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -39,9 +39,9 @@
     ]
   },
   "review": {
-    "revision": 2,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
+    "revision": 3,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions)",
     "date": "2026-10-09"
   },
   "related": [
@@ -52,27 +52,8 @@
   "tags": [
     "Recuperare errori OAuth, MCP, webhook o Git"
   ],
-  "figures": [
-    {
-      "id": "integration-troubleshooting-flow",
-      "kind": "screenshot",
-      "src": "/documentation/it/integration-troubleshooting-error.png",
-      "alt": "Errore di caricamento delle connessioni MCP con il pulsante Riprova.",
-      "caption": "Riprova ricarica le connessioni quando la rete torna disponibile.",
-      "revision": 2,
-      "reviewed": true,
-      "capturedAt": "2026-10-08",
-      "viewport": [
-        782,
-        108
-      ],
-      "theme": "light",
-      "padding": 24
-    }
-  ],
-  "requiredFigures": [
-    "integration-troubleshooting-flow"
-  ]
+  "figures": [],
+  "requiredFigures": []
 }
 ---
 
@@ -80,8 +61,6 @@
 
 minddy MCP collega un assistente esterno a minddy; il MCP personale permette a Numo di chiamare un server esterno. Usano schede e credenziali distinte. Controlla lo stato nelle impostazioni, prova la connessione e riconnettila quando necessario. Sono disponibili discovery, registrazione dinamica, PKCE e refresh, ma una voce di catalogo non supera i requisiti di approvazione, anteprima o registrazione dell’app del provider. Controlla i prerequisiti attuali del provider prima di segnalare un difetto.
 
-
-![Errore di caricamento delle connessioni MCP con il pulsante Riprova.](/documentation/it/integration-troubleshooting-error.png)
 
 ## Riconnettere con i permessi corretti {#oauth}
 
