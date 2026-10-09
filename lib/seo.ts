@@ -135,6 +135,11 @@ export function ogImageUrl(routeKey: PublicRouteKey, locale: Locale): string {
   return `${SITE_URL}/og?route=${routeKey}&locale=${locale}`;
 }
 
+/** Article thumbnails use stable IDs; their titles come from the localized corpus. */
+export function documentationOgImageUrl(articleId: string, locale: Locale): string {
+  return `${SITE_URL}/og/documentation?${new URLSearchParams({ article: articleId, locale })}`;
+}
+
 export async function publicPageMetadata({
   routeKey,
   locale,

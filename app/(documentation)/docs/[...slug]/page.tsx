@@ -4,7 +4,7 @@ import { getLocale } from "next-intl/server";
 import { locales, type Locale } from "@/i18n/config";
 import { documentationPath } from "@/lib/documentation-core.mjs";
 import { getVisibleDocumentation, getLegacyDocumentationRoute, isDocumentationPreview } from "@/lib/server/documentation";
-import { socialMetadata } from "@/lib/seo";
+import { documentationOgImageUrl, socialMetadata } from "@/lib/seo";
 import { DocumentationArticleView } from "@/components/documentation/documentation-article";
 import { DocumentationLegacyLocation } from "@/components/documentation/documentation-legacy-location";
 
@@ -26,7 +26,8 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   return { title: article.title, description: article.summary,
     alternates: { canonical, languages: { ...Object.fromEntries(locales.map(locale => [locale, documentationPath(article.id, locale)])), "x-default": documentationPath(article.id, "en") } },
     robots: { index: !isDocumentationPreview() && legacyId === article.id, follow: !isDocumentationPreview() },
-    ...socialMetadata({ title: article.title, description: article.summary, url: canonical, locale: article.locale }),
+    ...socialMetadata({ title: article.title, description: article.summary, url: canonical, locale: article.locale,
+      image: documentationOgImageUrl(article.id, article.locale) }),
   };
 }
 
