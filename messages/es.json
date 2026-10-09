@@ -1945,7 +1945,7 @@
     "errorTitle": "Solicitud de autorización rechazada",
     "unknownClient": "minddy no conoce esta aplicación. Reconectala de tu agente, luego intentalo de nuevo.",
     "invalidRedirect": "La dirección de redirección de esta aplicación no está registrada. minddy detuvo la autorización como precaución.",
-    "invalidProtocol": "Esta solicitud de autorización está malformada. minddy se detiene aquí en lugar de enviar cualquier cosa de vuelta a la aplicación — iniciar la conexión de nuevo desde su agente.",
+    "invalidProtocol": "Esta solicitud de autorización está malformada. minddy se detiene aquí en lugar de enviar cualquier cosa de vuelta a la aplicación: reinicia la conexión desde tu agente.",
     "invalidScope": "Esta aplicación solicita un acceso que minddy no concede. El único ámbito disponible es «minddy».",
     "invalidResource": "Esta aplicación apunta a algo distinto del servidor minddy de MCP. La autorización se detiene aquí.",
     "successTitle": "¡Conectado!",
@@ -2342,7 +2342,7 @@
     "emailLabel": "Correo electrónico",
     "emailHint": "Tu dirección no puede ser cambiada.",
     "themeTitle": "Tema",
-    "themeSyncHint": "Guardado en su cuenta — el mismo tema en cada dispositivo.",
+    "themeSyncHint": "Guardado en tu cuenta: el mismo tema en cada dispositivo.",
     "autoAssignLabel": "Asigna incidencias que me crean",
     "autoAssignStartDesc": "Solo se aplica a incidencias sin persona asignada.",
     "autoAssignStartLabel": "Asignarme la incidencia cuando empiece a trabajar en ella",
@@ -2423,7 +2423,7 @@
     "aiProviderTitle": "Proveedor de IA",
     "aiProviderDesc": "Las funciones de IA utilizan la cuota de minddy, su propio proveedor o un modelo local en la aplicación de escritorio.",
     "aiProviderCloudGroup": "Proveedores de nube",
-    "aiProviderLocalGroup": "IA local — en este Mac",
+    "aiProviderLocalGroup": "IA local (en este Mac)",
     "aiProviderLocalDesktopHint": "En la aplicación de escritorio puedes configurar un modelo local (Ollama o un endpoint compatible con OpenAI).",
     "aiProviderMinddy": "minddy Cloud",
     "aiProviderMinddyHint": "Usa tu plan de minddy Cloud. No necesitas una clave API.",
@@ -2524,7 +2524,7 @@
     "confirmButton": "Eliminar permanentemente",
     "confirmPasswordLabel": "Su contraseña",
     "confirmPasswordPlaceholder": "Introduce tu contraseña",
-    "confirmRecentSignInHint": "¿Ingresa con Google o GitHub? Inicia sesión y vuelve primero — esto pide una reciente sesión."
+    "confirmRecentSignInHint": "¿Ingresaste con Google o GitHub? Cierra la sesión y vuelve a entrar primero: esto pide una sesión reciente."
   },
   "AccountSecurity": {
     "title": "Autenticación de dos factores",
@@ -3194,12 +3194,12 @@
     "importQuitConfirm": "Desechar",
     "importValueToPlace": "No corresponde todavía",
     "localRepoTitle": "Carpeta local",
-    "localRepoDesc": "La carpeta que el agente abre cuando una conversación se ejecuta en este Mac — con o sin un repositorio enlazado.",
+    "localRepoDesc": "La carpeta que el agente abre cuando una conversación se ejecuta en este Mac, con o sin un repositorio enlazado.",
     "localRepoEmpty": "No hay carpeta adjunta todavía.",
     "localRepoAttach": "Adjuntar una carpeta",
     "localRepoChange": "Cambio",
     "localRepoDetach": "Desmontaje",
-    "localRepoWarning": "Un agente que se ejecute aquí leerá y escribirá en esta carpeta con tu propia cuenta. Lo que haga en ella —sus comandos, los archivos que toque y fragmentos de lo que lea— se enviará a minddy, se conservará durante 30 días y podrá verlo cualquier miembro del proyecto. Lo que lea fuera de esta carpeta no se enviará: permanecerá en este Mac. La carpeta solo se vincula aquí y ningún otro miembro del proyecto puede verla."
+    "localRepoWarning": "Un agente que se ejecute aquí leerá y escribirá en esta carpeta con tu propia cuenta. Lo que haga en ella (sus comandos, los archivos que toque y fragmentos de lo que lea) se enviará a minddy, se conservará durante 30 días y podrá verlo cualquier miembro del proyecto. Lo que lea fuera de esta carpeta no se enviará: permanecerá en este Mac. La carpeta solo se vincula aquí y ningún otro miembro del proyecto puede verla."
   },
   "Seed": {
     "emptyBoardCta": "Habla con Numo",
@@ -3646,7 +3646,7 @@
     "editingPageText": "Corregir la página...",
     "pageTextEdited": "Página corregida",
     "editPageTextFailed": "Página no corregida",
-    "secretShownOnce": "Credencial — mostrado una vez, aquí sólo",
+    "secretShownOnce": "Credencial: mostrada una vez, solo aquí",
     "secretStoreServerSide": "Copialo ahora en el entorno de tu servidor. No se mantiene en esta conversación y no se mostrará de nuevo.",
     "secretReveal": "Mostrar credenciales",
     "secretHide": "Ocultar credenciales",
@@ -4705,7 +4705,7 @@
     "dataUsage": "Datos de uso",
     "dataUsageDesc": "páginas visitadas, métricas de rendimiento y acciones realizadas en la aplicación, medidas con PostHog. La sección «Medición del uso» explica cómo tu elección de cookies afecta a la recopilación",
     "dataPush": "Notificaciones push",
-    "dataPushDesc": "si los habilita, almacenamos la suscripción push de su navegador o de la aplicación de escritorio: una dirección emitida por su servicio push, y las claves usadas para cifrar lo que enviamos. La entrega pasa a través del servicio push del proveedor de su navegador (Google, Apple o Mozilla dependiendo del dispositivo), que ve esa dirección pero no el contenido — la carga útil está cifrada de extremo a extremo y sólo puede ser leído por el dispositivo que se suscribe",
+    "dataPushDesc": "si los habilita, almacenamos la suscripción push de su navegador o de la aplicación de escritorio: una dirección emitida por su servicio push, y las claves usadas para cifrar lo que enviamos. La entrega pasa a través del servicio push del proveedor de su navegador (Google, Apple o Mozilla dependiendo del dispositivo), que ve esa dirección pero no el contenido: la carga útil está cifrada de extremo a extremo y sólo puede ser leído por el dispositivo que se suscribe",
     "dataAI": "Datos presentados a Amnistía Internacional",
     "dataAIDesc": "el contenido enviado a Numo, al dictado y al trabajo de código delegado, incluido el código del repositorio necesario, se transmite al proveedor de modelos configurado",
     "dataGit": "Conexiones Git",
@@ -5393,7 +5393,7 @@
     "progressTitle": "Tu instalación",
     "stepProgress": "Paso {current} de {total}",
     "copyContentLabel": "Texto para copiar",
-    "metaTitle": "Instalar minddy — asistente auto-hosting guiado",
+    "metaTitle": "Instalar minddy: asistente auto-hosting guiado",
     "metaDescription": "Instala la aplicación de escritorio y sigue la guía para usar minddy en tu ordenador o en un servidor.",
     "backToGuide": "Volver a la guía",
     "restart": "Empieza de nuevo",
@@ -5847,7 +5847,7 @@
     "verdictSubtitle": "Elige el flujo que encaja con tu equipo."
   },
   "DownloadMacos": {
-    "metaTitle": "minddy para macOS — gestor nativo y open source",
+    "metaTitle": "minddy para macOS: gestor nativo y open source",
     "metaDescription": "Descarga la aplicación nativa y firmada de minddy para macOS. Usa el gestor open source en su propia ventana en Macs Apple silicon o Intel.",
     "eyebrow": "Aplicación nativa para macOS",
     "heroTitle": "Descarga minddy para macOS",
@@ -5866,7 +5866,7 @@
     "openSourceBody": "El código, el proceso de publicación y la licencia GNU AGPL v3.0 de minddy son públicos. Revisa el repositorio, contribuye o autoaloja el mismo núcleo."
   },
   "DownloadLinux": {
-    "metaTitle": "minddy para Linux — gestor nativo y open source",
+    "metaTitle": "minddy para Linux: gestor nativo y open source",
     "metaDescription": "Descarga la aplicación nativa de minddy para Linux como AppImage, DEB o RPM. Versiones x64 y ARM64 del gestor de incidencias open source.",
     "eyebrow": "Aplicación nativa para Linux",
     "heroTitle": "Descarga minddy para Linux",
@@ -5885,7 +5885,7 @@
     "openSourceBody": "El código, el proceso de publicación y la licencia GNU AGPL v3.0 de minddy son públicos. Revisa el repositorio, contribuye o autoaloja el mismo núcleo."
   },
   "DownloadWindows": {
-    "metaTitle": "minddy para Windows — gestor nativo y open source",
+    "metaTitle": "minddy para Windows: gestor nativo y open source",
     "metaDescription": "Instala la aplicación nativa de minddy para Windows desde Microsoft Store. Usa el gestor open source en una aplicación firmada y actualizada.",
     "eyebrow": "Aplicación nativa para Windows",
     "heroTitle": "Instala minddy para Windows",
@@ -6011,7 +6011,7 @@
   },
   "Automations": {
     "title": "Automatizaciones",
-    "description": "Encadena los cuatro pasos de Numo —planificar, revisar el plan, implementar y verificar— en lugar de iniciar cada uno. Los pasos dependen del esfuerzo de la incidencia.",
+    "description": "Encadena los cuatro pasos de Numo (planificar, revisar el plan, implementar y verificar) en lugar de iniciar cada uno. Los pasos dependen del esfuerzo de la incidencia.",
     "enabledToast": "Las automatizaciones están activas para {name}.",
     "disabledToast": "Las automatizaciones están desactivadas para {name}.",
     "presetTitle": "Automatización preestablecida",
