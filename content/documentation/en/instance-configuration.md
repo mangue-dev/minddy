@@ -79,7 +79,24 @@
         720,
         640
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "collection",
+        "items": [
+          {
+            "title": "Operator selects an optional capability"
+          },
+          {
+            "title": "Complete credentials and provider conditions"
+          },
+          {
+            "title": "Explicit outbound provider data path"
+          },
+          {
+            "title": "Verify behavior and monitor usage costs"
+          }
+        ]
+      }
     },
     {
       "id": "proxy-network-and-jobs-flow",
@@ -94,7 +111,24 @@
         720,
         640
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "collection",
+        "items": [
+          {
+            "title": "Public HTTPS reverse proxy"
+          },
+          {
+            "title": "Application and public Supabase origins"
+          },
+          {
+            "title": "Private runner, database and internal ports"
+          },
+          {
+            "title": "Authenticated scheduler; stopped in maintenance"
+          }
+        ]
+      }
     }
   ],
   "requiredFigures": [

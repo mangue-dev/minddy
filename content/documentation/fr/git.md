@@ -63,38 +63,41 @@
   "figures": [
     {
       "id": "git-accounts-and-repositories-workflow",
-      "kind": "screenshot",
-      "src": "/documentation/fr/git-accounts-and-repositories-workflow.png",
-      "alt": "Comptes GitHub et GitLab déconnectés avec leurs boutons d’autorisation.",
-      "caption": "Autorisez d’abord votre compte Git. Le propriétaire relie ensuite le repository au projet.",
+      "kind": "diagram",
+      "src": "/documentation/fr/git-connection-flow.svg",
+      "alt": "La connexion du compte personnel et le lien du dépôt au projet sont deux étapes distinctes.",
+      "caption": "Autorisez d’abord le compte, puis reliez un dépôt en tant que propriétaire du projet.",
       "revision": 2,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
-        1440,
-        1800
+        720,
+        580
       ],
-      "theme": "light"
-    },
-    {
-      "id": "git-accounts-and-repositories-project-workflow",
-      "kind": "screenshot",
-      "src": "/documentation/fr/git-accounts-and-repositories-project-workflow.png",
-      "alt": "Réglages Git d’un projet sans repository lié.",
-      "caption": "Réglages Git d’un projet sans repository lié. Autorisez GitHub ou GitLab avant de choisir un repository.",
-      "revision": 2,
-      "reviewed": true,
-      "capturedAt": "2026-10-08",
-      "viewport": [
-        1440,
-        1800
-      ],
-      "theme": "light"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "sequence",
+        "title": "Connecter un compte, puis relier un dépôt",
+        "items": [
+          {
+            "title": "Compte Git personnel",
+            "detail": "Autorisez GitHub ou GitLab pour les dépôts dont vous avez besoin."
+          },
+          {
+            "title": "Propriétaire du projet",
+            "detail": "Choisissez un dépôt disponible dans les réglages Git du projet."
+          },
+          {
+            "title": "Dépôt lié",
+            "detail": "Aurora → aurora/web. La synchronisation des tickets est un choix distinct."
+          }
+        ]
+      }
     },
     {
       "id": "forge-issue-sync-mapping",
       "kind": "diagram",
-      "src": "/documentation/fr/forge-issue-sync-mapping.png",
+      "src": "/documentation/fr/forge-issue-sync-mapping.svg",
       "alt": "Parcours de synchronisation GitHub : configuration, contrôle des événements, import et états.",
       "caption": "Les événements GitHub préservent les modifications récentes et évitent les doublons de livraison. Les correspondances GitLab se vérifient séparément.",
       "revision": 2,
@@ -104,7 +107,30 @@
         1100,
         720
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "sequence",
+        "title": "Synchronisation des tickets GitHub",
+        "items": [
+          {
+            "title": "Configuration du propriétaire",
+            "detail": "Relier le repository, autoriser la lecture/écriture Issues et activer la synchronisation."
+          },
+          {
+            "title": "Événements entrants",
+            "detail": "Dédupliquer les identifiants de livraison ; rejeter les données plus anciennes que les modifications locales."
+          },
+          {
+            "title": "Import et correspondances",
+            "detail": "Les tickets importés entrent au triage. Titre/corps deviennent titre/description ; les labels donnent catégories, priorité et effort reconnus."
+          },
+          {
+            "title": "États synchronisés",
+            "detail": "Les états ouvert et fermé se synchronisent dans les deux sens. Comparer les horodatages en cas de modifications concurrentes."
+          }
+        ],
+        "note": "Les commentaires gardent l’identité distante sans duplication. Les correspondances GitLab peuvent différer."
+      }
     },
     {
       "id": "forge-issue-sync-workflow",
@@ -116,15 +142,15 @@
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
-        1400,
-        1000
+        816,
+        278
       ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     }
   ],
   "requiredFigures": [
     "git-accounts-and-repositories-workflow",
-    "git-accounts-and-repositories-project-workflow",
     "forge-issue-sync-workflow",
     "forge-issue-sync-mapping"
   ]
@@ -139,7 +165,7 @@ Dans les paramètres Git du compte, connectez GitHub ou GitLab et terminez l’a
 
 Le propriétaire ouvre la section Git des paramètres du projet, sélectionne un dépôt disponible et confirme. Vérifiez fournisseur, nom complet du dépôt et compte d’action affiché. Les membres ne peuvent pas remplacer ce lien réservé au propriétaire. Il fournit le contexte du dépôt et le travail de code côté serveur ; la synchronisation des tickets a un interrupteur distinct.
 
-![Comptes GitHub et GitLab déconnectés avec leurs boutons d’autorisation.](/documentation/fr/git-accounts-and-repositories-workflow.png)
+![La connexion du compte personnel et le lien du dépôt au projet sont deux étapes distinctes.](/documentation/fr/git-connection-flow.svg)
 
 ### Dépôt absent ou accès expiré {#recovery}
 
@@ -147,7 +173,6 @@ Si la liste est vide, vérifiez les permissions et l’autorisation de l’organ
 
 Une instance self-hosted peut utiliser le relais géré configuré ou les applications propres à l’opérateur. La connexion au relais est explicite et ne rend pas le fournisseur local. La disponibilité dépend de la configuration. Vérifiez la politique de l’opérateur avant d’autoriser.
 
-![Réglages Git d’un projet sans repository lié.](/documentation/fr/git-accounts-and-repositories-project-workflow.png)
 
 ## Synchroniser les tickets du fournisseur Git {#forge-issue-sync}
 
@@ -161,6 +186,6 @@ La GitHub App nécessite Issues en lecture/écriture et les abonnements Issues, 
 
 Un événement GitHub daté plus ancien ne remplace pas une modification locale récente. Les identifiants de livraison et de commentaires évitent les effets en doublon. Comparez les dates, puis les événements fournisseur et journaux opérateur si le rattrapage manque. Désactivez dans le même réglage réservé au propriétaire ; examinez séparément le travail déjà importé.
 
-![Parcours de synchronisation GitHub : configuration, contrôle des événements, import et états.](/documentation/fr/forge-issue-sync-mapping.png)
+![Parcours de synchronisation GitHub : configuration, contrôle des événements, import et états.](/documentation/fr/forge-issue-sync-mapping.svg)
 
 ![Dépôt GitHub de démonstration lié, avec la synchronisation des issues désactivée.](/documentation/fr/forge-issue-sync-workflow.png)

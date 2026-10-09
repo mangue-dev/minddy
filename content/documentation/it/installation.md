@@ -79,7 +79,24 @@
         720,
         640
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "sequence",
+        "items": [
+          {
+            "title": "Tag sorgente annotato"
+          },
+          {
+            "title": "Asset e SHA256SUMS"
+          },
+          {
+            "title": "Firma e digest OCI ufficiali"
+          },
+          {
+            "title": "Profilo di compatibilità scelto"
+          }
+        ]
+      }
     },
     {
       "id": "install-a-server-flow",
@@ -94,7 +111,24 @@
         720,
         640
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "sequence",
+        "items": [
+          {
+            "title": "Release verificata e ambiente protetto"
+          },
+          {
+            "title": "Installer: profilo full di riferimento"
+          },
+          {
+            "title": "Supabase ufficiale, app, scheduler, runner"
+          },
+          {
+            "title": "Verifica account, file e recupero"
+          }
+        ]
+      }
     },
     {
       "id": "install-a-server-wizard",
@@ -106,10 +140,11 @@
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
-        1280,
-        1100
+        944,
+        1021
       ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     },
     {
       "id": "managed-or-source-installation-flow",
@@ -124,7 +159,24 @@
         720,
         640
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "collection",
+        "items": [
+          {
+            "title": "Il tuo progetto Supabase gestito"
+          },
+          {
+            "title": "PostgreSQL, Auth, Storage, Realtime"
+          },
+          {
+            "title": "Profilo OCI O applicazione dal tag"
+          },
+          {
+            "title": "Job e backup specifici del profilo"
+          }
+        ]
+      }
     }
   ],
   "requiredFigures": [

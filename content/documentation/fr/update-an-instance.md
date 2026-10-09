@@ -62,7 +62,24 @@
         720,
         640
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "sequence",
+        "items": [
+          {
+            "title": "Arrêter écritures et jobs"
+          },
+          {
+            "title": "Sceller la sauvegarde complète avant update"
+          },
+          {
+            "title": "Migrations cibles, puis application cible"
+          },
+          {
+            "title": "Vérifier récupération et rouvrir"
+          }
+        ]
+      }
     }
   ],
   "requiredFigures": [

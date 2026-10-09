@@ -62,7 +62,24 @@
         720,
         640
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "sequence",
+        "items": [
+          {
+            "title": "Stop writes and scheduled work"
+          },
+          {
+            "title": "Seal a complete pre-update backup"
+          },
+          {
+            "title": "Target migrations, then target application"
+          },
+          {
+            "title": "Verify recovery and reopen access"
+          }
+        ]
+      }
     }
   ],
   "requiredFigures": [

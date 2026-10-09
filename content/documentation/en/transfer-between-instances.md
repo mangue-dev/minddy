@@ -59,10 +59,11 @@
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
-        1440,
-        1800
+        816,
+        148
       ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     },
     {
       "id": "transfer-between-instances-export-workflow",
@@ -74,31 +75,16 @@
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
-        1440,
-        1800
+        816,
+        148
       ],
-      "theme": "light"
-    },
-    {
-      "id": "transfer-between-instances-result-workflow",
-      "kind": "screenshot",
-      "src": "/documentation/en/transfer-between-instances-result.png",
-      "alt": "Import result showing zero remapped IDs and zero skipped memberships.",
-      "caption": "This real personal-data import reports no ID conflicts and no skipped memberships. Review the counts, then use Reload account or close the dialog to reload.",
-      "revision": 4,
-      "reviewed": true,
-      "capturedAt": "2026-10-08",
-      "viewport": [
-        1240,
-        860
-      ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     }
   ],
   "requiredFigures": [
     "transfer-between-instances-workflow",
-    "transfer-between-instances-export-workflow",
-    "transfer-between-instances-result-workflow"
+    "transfer-between-instances-export-workflow"
   ]
 }
 ---
@@ -120,5 +106,3 @@ Keep the original instance until the transferred work has been checked. If impor
 ![Account export control.](/documentation/en/transfer-between-instances-export-workflow.png)
 
 The result remains open until you choose Reload account or close the dialog. Both actions reload the account after you have reviewed the counts.
-
-![Import result showing zero remapped IDs and zero skipped memberships.](/documentation/en/transfer-between-instances-result.png)

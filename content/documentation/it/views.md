@@ -70,12 +70,13 @@
       "caption": "Filtra per proprietà dei ticket o scegli un ordine. Il campo IA è facoltativo per questi comandi manuali.",
       "revision": 4,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
-        1440,
-        1080
+        288,
+        393
       ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     },
     {
       "id": "share-a-view-steps",
@@ -85,12 +86,13 @@
       "caption": "Accesso privato, protetto da password e pubblico sono scelte distinte. In questa schermata la vista rimane privata.",
       "revision": 4,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
-        1440,
-        1080
+        496,
+        230
       ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     }
   ],
   "requiredFigures": [

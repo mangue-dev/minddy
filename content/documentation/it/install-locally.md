@@ -63,7 +63,24 @@
         720,
         640
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "collection",
+        "items": [
+          {
+            "title": "App desktop seleziona il clone"
+          },
+          {
+            "title": "Applicazione loopback: porta 6463"
+          },
+          {
+            "title": "Supabase minimo e dati duraturi"
+          },
+          {
+            "title": "Uscire ferma app e backend"
+          }
+        ]
+      }
     },
     {
       "id": "install-locally-wizard",
@@ -75,10 +92,11 @@
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
-        1280,
-        1100
+        944,
+        500
       ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     }
   ],
   "requiredFigures": [

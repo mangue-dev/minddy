@@ -79,7 +79,24 @@
         720,
         640
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "sequence",
+        "items": [
+          {
+            "title": "Tag de código anotada"
+          },
+          {
+            "title": "Arquivos e SHA256SUMS"
+          },
+          {
+            "title": "Assinatura e digest OCI oficiais"
+          },
+          {
+            "title": "Perfil de compatibilidade escolhido"
+          }
+        ]
+      }
     },
     {
       "id": "install-a-server-flow",
@@ -94,7 +111,24 @@
         720,
         640
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "sequence",
+        "items": [
+          {
+            "title": "Release verificada e ambiente protegido"
+          },
+          {
+            "title": "Instalador: perfil full de referência"
+          },
+          {
+            "title": "Supabase oficial, app, agendador, runner"
+          },
+          {
+            "title": "Verificação de conta, arquivos e recuperação"
+          }
+        ]
+      }
     },
     {
       "id": "install-a-server-wizard",
@@ -106,10 +140,11 @@
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
-        1280,
-        1100
+        944,
+        1044
       ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     },
     {
       "id": "managed-or-source-installation-flow",
@@ -124,7 +159,24 @@
         720,
         640
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "collection",
+        "items": [
+          {
+            "title": "Seu projeto Supabase gerenciado"
+          },
+          {
+            "title": "PostgreSQL, Auth, Storage, Realtime"
+          },
+          {
+            "title": "Perfil OCI OU aplicação de tag"
+          },
+          {
+            "title": "Tarefas e backup conforme perfil"
+          }
+        ]
+      }
     }
   ],
   "requiredFigures": [

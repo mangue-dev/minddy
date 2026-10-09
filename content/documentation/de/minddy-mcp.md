@@ -77,10 +77,11 @@
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
-        1440,
-        1800
+        816,
+        252
       ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     },
     {
       "id": "external-minddy-mcp-install-workflow",
@@ -92,31 +93,16 @@
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
-        1440,
-        1800
+        560,
+        380
       ],
-      "theme": "light"
-    },
-    {
-      "id": "external-minddy-mcp-accesses-workflow",
-      "kind": "screenshot",
-      "src": "/documentation/de/external-minddy-mcp-accesses-workflow.png",
-      "alt": "Liste verbundener Anwendungen ohne aktive Freigabe.",
-      "caption": "Prüfe hier die autorisierten Anwendungen. Das Demonstrationskonto hat keine aktive Freigabe; keine Autorisierung oder Widerruf wurde ausgeführt.",
-      "revision": 2,
-      "reviewed": true,
-      "capturedAt": "2026-10-08",
-      "viewport": [
-        1440,
-        1800
-      ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     }
   ],
   "requiredFigures": [
     "external-minddy-mcp-workflow",
-    "external-minddy-mcp-install-workflow",
-    "external-minddy-mcp-accesses-workflow"
+    "external-minddy-mcp-install-workflow"
   ]
 }
 ---
@@ -139,7 +125,6 @@ Der Bereich minddy MCP in den Kontoeinstellungen zeigt externe Zugriffe und Wide
 
 ![Codex-Installationsdialog auf der lokalen Instanz.](/documentation/de/external-minddy-mcp-install-workflow.png)
 
-![Liste verbundener Anwendungen ohne aktive Freigabe.](/documentation/de/external-minddy-mcp-accesses-workflow.png)
 
 ## minddy MCP nutzen und aktuelle Werkzeuge entdecken {#mcp-tool-reference}
 

@@ -69,7 +69,24 @@
         720,
         640
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "collection",
+        "items": [
+          {
+            "title": "Konto- und Projektberechtigungen"
+          },
+          {
+            "title": "Privates Objekt oder bewusste Veröffentlichung"
+          },
+          {
+            "title": "Nur veröffentlichter Satz; signierte Dateien"
+          },
+          {
+            "title": "Link widerrufen; Dateilinks laufen später ab"
+          }
+        ]
+      }
     }
   ],
   "requiredFigures": [

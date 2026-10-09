@@ -62,7 +62,24 @@
         720,
         640
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "sequence",
+        "items": [
+          {
+            "title": "Schreiben und Jobs stoppen"
+          },
+          {
+            "title": "Vollständiges Vorupdate-Backup versiegeln"
+          },
+          {
+            "title": "Zielmigrationen, danach Zielanwendung"
+          },
+          {
+            "title": "Wiederherstellung prüfen und öffnen"
+          }
+        ]
+      }
     }
   ],
   "requiredFigures": [

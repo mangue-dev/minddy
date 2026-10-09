@@ -1,7 +1,8 @@
 /** Actual candidate controls, with exact seeded demo prose localized in read responses. */
 import { writeFile, mkdir, readFile } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
-import { openPage, settle, shoot, CAPTURE, CAPTURE_LOCALES } from '../../lib/browser.mjs';
+import { openPage, CAPTURE, CAPTURE_LOCALES } from '../../lib/browser.mjs';
+import { captureDocumentationControl, settleDocumentationPage } from '../../lib/documentation-frame.mjs';
 import { catalog } from '../../lib/messages.mjs';
 import { pageDemoFixture as fixture, translateDemoPageValues } from './localize.mjs';
 const project = fixture.projectId;
@@ -9,7 +10,8 @@ const doc = fixture.pageId;
 const origin = new URL(CAPTURE.baseUrl);
 if (!['localhost', '127.0.0.1'].includes(origin.hostname)) throw new Error('Product documentation captures require a local candidate instance.');
 const sourceCommit = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
-const recordPath = `content/documentation/reviews/product-captures-${process.env.CAPTURE_LOCALES ?? 'all'}-2026-10-08.json`;
+const captureDate = new Date().toISOString().slice(0, 10);
+const recordPath = `content/documentation/reviews/product-captures-${process.env.CAPTURE_LOCALES ?? 'all'}-${captureDate}.json`;
 let evidence = [];
 try { evidence = JSON.parse(await readFile(recordPath, 'utf8')); }
 catch (error) { if (error.code !== 'ENOENT') throw error; }
@@ -26,6 +28,7 @@ const issueDrafts = {
  'pt-BR': ['Adicionar atalhos à paleta de comandos', 'Mostrar o atalho ao lado de cada comando e disponibilizá-lo em todo o aplicativo.'],
 };
 async function captureControl(locale, screen, path, action, anchor, target = 'main') {
+ if (process.env.DOC_CAPTURE_RESUME === "1" && evidence.some(record => record.locale === locale && record.screen === screen && record.padding === 24 && record.src)) return;
  const messages = await catalog(locale);
  const { browser, context, page } = await openPage({ locale, theme: 'light', viewport: { width: 1440, height: screen === 'page-comments' ? 600 : 1080 } });
  const changedResponses = [];
@@ -52,30 +55,17 @@ async function captureControl(locale, screen, path, action, anchor, target = 'ma
   });
   await page.goto(CAPTURE.baseUrl + path, { waitUntil: 'load' });
   if (anchor) await anchor(page, messages);
-  await settle(page);
+  await settleDocumentationPage(page, locale);
   if (action) await action(page, messages, locale);
   if (screen !== 'page-export') await page.mouse.move(8, 8);
   await page.waitForTimeout(550);
-  await settle(page);
+  await settleDocumentationPage(page, locale);
   const control = typeof target === 'function' ? target(page, messages) : page.locator(target);
   await control.first().waitFor({ state: 'visible', timeout: 15000 });
-  const bounds = await control.first().evaluate(el => {
-   const root = el.getBoundingClientRect();
-   const visible = [...el.querySelectorAll('*')].filter(child => {
-    const b = child.getBoundingClientRect();
-    return b.width > 0 && b.height > 0 && b.bottom > 0 && b.top < innerHeight &&
-      (child.children.length === 0 && child.textContent.trim() || child.matches('input,textarea,button,[role="tablist"]'));
-   }).map(child => child.getBoundingClientRect());
-   const bottom = Math.min(root.bottom, Math.max(root.top + 50, ...visible.map(b => b.bottom)) + 16);
-   return { x: root.x, y: root.y, width: root.width, height: bottom - root.y };
-  });
-  if (!bounds || bounds.width < 100 || bounds.height < 50) throw new Error(`Missing capture control ${screen}`);
   const viewport = page.viewportSize();
-  const x = Math.max(0, Math.floor(bounds.x - 12)); const y = Math.max(0, Math.floor(bounds.y - 12));
-  const clip = { x, y, width: Math.min(viewport.width - x, Math.ceil(bounds.width + 24)), height: Math.min(viewport.height - y, Math.ceil(bounds.height + 24)) };
   const out = `public/documentation/${locale}/${screen}.png`;
-  await shoot(page, out, { clip });
-  recordCapture({ locale, screen, src: out.slice('public'.length), sourceCommit, candidateVersion: '0.11.1', date: '2026-10-08', workingTreeChanges: true, route: path, theme: 'light', browserViewport: [viewport.width, viewport.height], viewport: [clip.width, clip.height], language: await page.locator('html').getAttribute('lang'), submitted: false, displayAdaptation: changedResponses, blockedWrites, navigationWrites, reviewed: false, limitation: 'Visible controls only. No completed save, share, restore, import or release outcome is claimed.' });
+  const framed = await captureDocumentationControl(page, control.first(), out);
+  recordCapture({ locale, screen, src: out.slice('public'.length), sourceCommit, candidateVersion: '0.11.1', date: captureDate, workingTreeChanges: true, route: path, theme: 'light', initialBrowserViewport: [viewport.width, viewport.height], viewport: framed.viewport, padding: framed.padding, language: await page.locator('html').getAttribute('lang'), submitted: false, displayAdaptation: changedResponses, blockedWrites, navigationWrites, reviewed: false, limitation: 'Visible controls only. No completed save, share, restore, import or release outcome is claimed.' });
   console.log(`${locale}/${screen}: captured`);
  } catch (error) {
   recordCapture({ locale, screen, route: path, error: error.message, submitted: false, reviewed: false });

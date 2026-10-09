@@ -1,0 +1,1711 @@
+[
+  {
+    "locale": "en",
+    "screen": "page-export",
+    "src": "/documentation/en/page-export.png",
+    "sourceCommit": "f87681046f6a25fd156831cbf02d8fbf0c3a8acc",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-09",
+    "workingTreeChanges": true,
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages/cd3ee91e-ad73-423c-bb99-9f81722f8912",
+    "theme": "light",
+    "viewport": [
+      211,
+      128
+    ],
+    "padding": 24,
+    "language": "en",
+    "submitted": false,
+    "displayAdaptation": [],
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "route": "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages/cd3ee91e-ad73-423c-bb99-9f81722f8912/watch"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "route": "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages/cd3ee91e-ad73-423c-bb99-9f81722f8912/watch"
+      }
+    ],
+    "navigationWrites": [
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      }
+    ],
+    "reviewed": true,
+    "limitation": "Visible controls only. No completed save, share, restore, import or release outcome is claimed.",
+    "reviewer": "Codex",
+    "reviewDate": "2026-10-09",
+    "initialBrowserViewport": [
+      1440,
+      1080
+    ],
+    "framing": "Complete real control with 24 CSS pixels of transparent margin. The browser height may expand to preserve the bottom margin."
+  },
+  {
+    "locale": "en",
+    "screen": "new-issue",
+    "src": "/documentation/en/new-issue.png",
+    "sourceCommit": "f87681046f6a25fd156831cbf02d8fbf0c3a8acc",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-09",
+    "workingTreeChanges": true,
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "viewport": [
+      720,
+      368
+    ],
+    "padding": 24,
+    "language": "en",
+    "submitted": false,
+    "displayAdaptation": [],
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      }
+    ],
+    "navigationWrites": [
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "PATCH",
+        "route": "/api/me/app-tabs/215aa07a-206c-4f7a-aa94-0965955abaaa"
+      }
+    ],
+    "reviewed": true,
+    "limitation": "Visible controls only. No completed save, share, restore, import or release outcome is claimed.",
+    "reviewer": "Codex",
+    "reviewDate": "2026-10-09",
+    "initialBrowserViewport": [
+      1440,
+      1080
+    ],
+    "framing": "Complete real control with 24 CSS pixels of transparent margin. The browser height may expand to preserve the bottom margin."
+  },
+  {
+    "locale": "en",
+    "screen": "page-publish",
+    "src": "/documentation/en/page-publish.png",
+    "sourceCommit": "f87681046f6a25fd156831cbf02d8fbf0c3a8acc",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-09",
+    "workingTreeChanges": true,
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages/cd3ee91e-ad73-423c-bb99-9f81722f8912",
+    "theme": "light",
+    "viewport": [
+      496,
+      230
+    ],
+    "padding": 24,
+    "language": "en",
+    "submitted": false,
+    "displayAdaptation": [],
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "route": "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages/cd3ee91e-ad73-423c-bb99-9f81722f8912/watch"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "route": "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages/cd3ee91e-ad73-423c-bb99-9f81722f8912/watch"
+      }
+    ],
+    "navigationWrites": [
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      }
+    ],
+    "reviewed": true,
+    "limitation": "Visible controls only. No completed save, share, restore, import or release outcome is claimed.",
+    "reviewer": "Codex",
+    "reviewDate": "2026-10-09",
+    "initialBrowserViewport": [
+      1440,
+      1080
+    ],
+    "framing": "Complete real control with 24 CSS pixels of transparent margin. The browser height may expand to preserve the bottom margin."
+  },
+  {
+    "locale": "fr",
+    "screen": "page-export",
+    "src": "/documentation/fr/page-export.png",
+    "sourceCommit": "f87681046f6a25fd156831cbf02d8fbf0c3a8acc",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-09",
+    "workingTreeChanges": true,
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages/cd3ee91e-ad73-423c-bb99-9f81722f8912",
+    "theme": "light",
+    "viewport": [
+      211,
+      128
+    ],
+    "padding": 24,
+    "language": "fr",
+    "submitted": false,
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages/cd3ee91e-ad73-423c-bb99-9f81722f8912",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "route": "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages/cd3ee91e-ad73-423c-bb99-9f81722f8912/watch"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "route": "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages/cd3ee91e-ad73-423c-bb99-9f81722f8912/watch"
+      }
+    ],
+    "navigationWrites": [
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      }
+    ],
+    "reviewed": true,
+    "limitation": "Visible controls only. No completed save, share, restore, import or release outcome is claimed.",
+    "reviewer": "Codex",
+    "reviewDate": "2026-10-09",
+    "initialBrowserViewport": [
+      1440,
+      1080
+    ],
+    "framing": "Complete real control with 24 CSS pixels of transparent margin. The browser height may expand to preserve the bottom margin."
+  },
+  {
+    "locale": "fr",
+    "screen": "new-issue",
+    "src": "/documentation/fr/new-issue.png",
+    "sourceCommit": "f87681046f6a25fd156831cbf02d8fbf0c3a8acc",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-09",
+    "workingTreeChanges": true,
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "viewport": [
+      720,
+      330
+    ],
+    "padding": 24,
+    "language": "fr",
+    "submitted": false,
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      }
+    ],
+    "navigationWrites": [
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs"
+      },
+      {
+        "method": "PATCH",
+        "route": "/api/me/app-tabs/fdd88837-8139-4c9b-a0a9-8e6c93154429"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      }
+    ],
+    "reviewed": true,
+    "limitation": "Visible controls only. No completed save, share, restore, import or release outcome is claimed.",
+    "reviewer": "Codex",
+    "reviewDate": "2026-10-09",
+    "initialBrowserViewport": [
+      1440,
+      1080
+    ],
+    "framing": "Complete real control with 24 CSS pixels of transparent margin. The browser height may expand to preserve the bottom margin."
+  },
+  {
+    "locale": "fr",
+    "screen": "page-publish",
+    "src": "/documentation/fr/page-publish.png",
+    "sourceCommit": "f87681046f6a25fd156831cbf02d8fbf0c3a8acc",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-09",
+    "workingTreeChanges": true,
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages/cd3ee91e-ad73-423c-bb99-9f81722f8912",
+    "theme": "light",
+    "viewport": [
+      496,
+      230
+    ],
+    "padding": 24,
+    "language": "fr",
+    "submitted": false,
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages/cd3ee91e-ad73-423c-bb99-9f81722f8912",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "route": "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages/cd3ee91e-ad73-423c-bb99-9f81722f8912/watch"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "route": "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages/cd3ee91e-ad73-423c-bb99-9f81722f8912/watch"
+      }
+    ],
+    "navigationWrites": [
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      }
+    ],
+    "reviewed": true,
+    "limitation": "Visible controls only. No completed save, share, restore, import or release outcome is claimed.",
+    "reviewer": "Codex",
+    "reviewDate": "2026-10-09",
+    "initialBrowserViewport": [
+      1440,
+      1080
+    ],
+    "framing": "Complete real control with 24 CSS pixels of transparent margin. The browser height may expand to preserve the bottom margin."
+  },
+  {
+    "locale": "de",
+    "screen": "page-export",
+    "src": "/documentation/de/page-export.png",
+    "sourceCommit": "f87681046f6a25fd156831cbf02d8fbf0c3a8acc",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-09",
+    "workingTreeChanges": true,
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages/cd3ee91e-ad73-423c-bb99-9f81722f8912",
+    "theme": "light",
+    "viewport": [
+      211,
+      128
+    ],
+    "padding": 24,
+    "language": "de",
+    "submitted": false,
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages/cd3ee91e-ad73-423c-bb99-9f81722f8912"
+    ],
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "route": "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages/cd3ee91e-ad73-423c-bb99-9f81722f8912/watch"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "route": "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages/cd3ee91e-ad73-423c-bb99-9f81722f8912/watch"
+      }
+    ],
+    "navigationWrites": [
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      }
+    ],
+    "reviewed": true,
+    "limitation": "Visible controls only. No completed save, share, restore, import or release outcome is claimed.",
+    "reviewer": "Codex",
+    "reviewDate": "2026-10-09",
+    "initialBrowserViewport": [
+      1440,
+      1080
+    ],
+    "framing": "Complete real control with 24 CSS pixels of transparent margin. The browser height may expand to preserve the bottom margin."
+  },
+  {
+    "locale": "de",
+    "screen": "new-issue",
+    "src": "/documentation/de/new-issue.png",
+    "sourceCommit": "f87681046f6a25fd156831cbf02d8fbf0c3a8acc",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-09",
+    "workingTreeChanges": true,
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "viewport": [
+      720,
+      368
+    ],
+    "padding": 24,
+    "language": "de",
+    "submitted": false,
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      }
+    ],
+    "navigationWrites": [
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs"
+      },
+      {
+        "method": "PATCH",
+        "route": "/api/me/app-tabs/2c0c5f84-9612-4e3c-851c-3a485a329691"
+      }
+    ],
+    "reviewed": true,
+    "limitation": "Visible controls only. No completed save, share, restore, import or release outcome is claimed.",
+    "reviewer": "Codex",
+    "reviewDate": "2026-10-09",
+    "initialBrowserViewport": [
+      1440,
+      1080
+    ],
+    "framing": "Complete real control with 24 CSS pixels of transparent margin. The browser height may expand to preserve the bottom margin."
+  },
+  {
+    "locale": "de",
+    "screen": "page-publish",
+    "src": "/documentation/de/page-publish.png",
+    "sourceCommit": "f87681046f6a25fd156831cbf02d8fbf0c3a8acc",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-09",
+    "workingTreeChanges": true,
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages/cd3ee91e-ad73-423c-bb99-9f81722f8912",
+    "theme": "light",
+    "viewport": [
+      496,
+      230
+    ],
+    "padding": 24,
+    "language": "de",
+    "submitted": false,
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages/cd3ee91e-ad73-423c-bb99-9f81722f8912",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "route": "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages/cd3ee91e-ad73-423c-bb99-9f81722f8912/watch"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      }
+    ],
+    "navigationWrites": [
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      }
+    ],
+    "reviewed": true,
+    "limitation": "Visible controls only. No completed save, share, restore, import or release outcome is claimed.",
+    "reviewer": "Codex",
+    "reviewDate": "2026-10-09",
+    "initialBrowserViewport": [
+      1440,
+      1080
+    ],
+    "framing": "Complete real control with 24 CSS pixels of transparent margin. The browser height may expand to preserve the bottom margin."
+  },
+  {
+    "locale": "es",
+    "screen": "page-export",
+    "src": "/documentation/es/page-export.png",
+    "sourceCommit": "f87681046f6a25fd156831cbf02d8fbf0c3a8acc",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-09",
+    "workingTreeChanges": true,
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages/cd3ee91e-ad73-423c-bb99-9f81722f8912",
+    "theme": "light",
+    "viewport": [
+      211,
+      128
+    ],
+    "padding": 24,
+    "language": "es",
+    "submitted": false,
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages/cd3ee91e-ad73-423c-bb99-9f81722f8912",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "route": "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages/cd3ee91e-ad73-423c-bb99-9f81722f8912/watch"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      }
+    ],
+    "navigationWrites": [
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      }
+    ],
+    "reviewed": true,
+    "limitation": "Visible controls only. No completed save, share, restore, import or release outcome is claimed.",
+    "reviewer": "Codex",
+    "reviewDate": "2026-10-09",
+    "initialBrowserViewport": [
+      1440,
+      1080
+    ],
+    "framing": "Complete real control with 24 CSS pixels of transparent margin. The browser height may expand to preserve the bottom margin."
+  },
+  {
+    "locale": "es",
+    "screen": "new-issue",
+    "src": "/documentation/es/new-issue.png",
+    "sourceCommit": "f87681046f6a25fd156831cbf02d8fbf0c3a8acc",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-09",
+    "workingTreeChanges": true,
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "viewport": [
+      720,
+      368
+    ],
+    "padding": 24,
+    "language": "es",
+    "submitted": false,
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      }
+    ],
+    "navigationWrites": [
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs"
+      },
+      {
+        "method": "PATCH",
+        "route": "/api/me/app-tabs/0407ba9b-b961-4fc1-a201-4d3767c048a1"
+      }
+    ],
+    "reviewed": true,
+    "limitation": "Visible controls only. No completed save, share, restore, import or release outcome is claimed.",
+    "reviewer": "Codex",
+    "reviewDate": "2026-10-09",
+    "initialBrowserViewport": [
+      1440,
+      1080
+    ],
+    "framing": "Complete real control with 24 CSS pixels of transparent margin. The browser height may expand to preserve the bottom margin."
+  },
+  {
+    "locale": "es",
+    "screen": "page-publish",
+    "src": "/documentation/es/page-publish.png",
+    "sourceCommit": "f87681046f6a25fd156831cbf02d8fbf0c3a8acc",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-09",
+    "workingTreeChanges": true,
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages/cd3ee91e-ad73-423c-bb99-9f81722f8912",
+    "theme": "light",
+    "viewport": [
+      496,
+      230
+    ],
+    "padding": 24,
+    "language": "es",
+    "submitted": false,
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages/cd3ee91e-ad73-423c-bb99-9f81722f8912",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "route": "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages/cd3ee91e-ad73-423c-bb99-9f81722f8912/watch"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      }
+    ],
+    "navigationWrites": [
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      }
+    ],
+    "reviewed": true,
+    "limitation": "Visible controls only. No completed save, share, restore, import or release outcome is claimed.",
+    "reviewer": "Codex",
+    "reviewDate": "2026-10-09",
+    "initialBrowserViewport": [
+      1440,
+      1080
+    ],
+    "framing": "Complete real control with 24 CSS pixels of transparent margin. The browser height may expand to preserve the bottom margin."
+  },
+  {
+    "locale": "it",
+    "screen": "page-export",
+    "src": "/documentation/it/page-export.png",
+    "sourceCommit": "f87681046f6a25fd156831cbf02d8fbf0c3a8acc",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-09",
+    "workingTreeChanges": true,
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages/cd3ee91e-ad73-423c-bb99-9f81722f8912",
+    "theme": "light",
+    "viewport": [
+      211,
+      128
+    ],
+    "padding": 24,
+    "language": "it",
+    "submitted": false,
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages/cd3ee91e-ad73-423c-bb99-9f81722f8912",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "route": "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages/cd3ee91e-ad73-423c-bb99-9f81722f8912/watch"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      }
+    ],
+    "navigationWrites": [
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      }
+    ],
+    "reviewed": true,
+    "limitation": "Visible controls only. No completed save, share, restore, import or release outcome is claimed.",
+    "reviewer": "Codex",
+    "reviewDate": "2026-10-09",
+    "initialBrowserViewport": [
+      1440,
+      1080
+    ],
+    "framing": "Complete real control with 24 CSS pixels of transparent margin. The browser height may expand to preserve the bottom margin."
+  },
+  {
+    "locale": "it",
+    "screen": "new-issue",
+    "src": "/documentation/it/new-issue.png",
+    "sourceCommit": "f87681046f6a25fd156831cbf02d8fbf0c3a8acc",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-09",
+    "workingTreeChanges": true,
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "viewport": [
+      720,
+      368
+    ],
+    "padding": 24,
+    "language": "it",
+    "submitted": false,
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      }
+    ],
+    "navigationWrites": [
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs"
+      },
+      {
+        "method": "PATCH",
+        "route": "/api/me/app-tabs/125d1ccc-cfcb-4db0-a75c-99ef49a7f514"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      }
+    ],
+    "reviewed": true,
+    "limitation": "Visible controls only. No completed save, share, restore, import or release outcome is claimed.",
+    "reviewer": "Codex",
+    "reviewDate": "2026-10-09",
+    "initialBrowserViewport": [
+      1440,
+      1080
+    ],
+    "framing": "Complete real control with 24 CSS pixels of transparent margin. The browser height may expand to preserve the bottom margin."
+  },
+  {
+    "locale": "it",
+    "screen": "page-publish",
+    "src": "/documentation/it/page-publish.png",
+    "sourceCommit": "f87681046f6a25fd156831cbf02d8fbf0c3a8acc",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-09",
+    "workingTreeChanges": true,
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages/cd3ee91e-ad73-423c-bb99-9f81722f8912",
+    "theme": "light",
+    "viewport": [
+      496,
+      230
+    ],
+    "padding": 24,
+    "language": "it",
+    "submitted": false,
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages/cd3ee91e-ad73-423c-bb99-9f81722f8912",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "route": "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages/cd3ee91e-ad73-423c-bb99-9f81722f8912/watch"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      }
+    ],
+    "navigationWrites": [
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      }
+    ],
+    "reviewed": true,
+    "limitation": "Visible controls only. No completed save, share, restore, import or release outcome is claimed.",
+    "reviewer": "Codex",
+    "reviewDate": "2026-10-09",
+    "initialBrowserViewport": [
+      1440,
+      1080
+    ],
+    "framing": "Complete real control with 24 CSS pixels of transparent margin. The browser height may expand to preserve the bottom margin."
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "page-export",
+    "src": "/documentation/pt-BR/page-export.png",
+    "sourceCommit": "f87681046f6a25fd156831cbf02d8fbf0c3a8acc",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-09",
+    "workingTreeChanges": true,
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages/cd3ee91e-ad73-423c-bb99-9f81722f8912",
+    "theme": "light",
+    "viewport": [
+      211,
+      128
+    ],
+    "padding": 24,
+    "language": "pt-BR",
+    "submitted": false,
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages/cd3ee91e-ad73-423c-bb99-9f81722f8912",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "route": "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages/cd3ee91e-ad73-423c-bb99-9f81722f8912/watch"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      }
+    ],
+    "navigationWrites": [
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      }
+    ],
+    "reviewed": true,
+    "limitation": "Visible controls only. No completed save, share, restore, import or release outcome is claimed.",
+    "reviewer": "Codex",
+    "reviewDate": "2026-10-09",
+    "initialBrowserViewport": [
+      1440,
+      1080
+    ],
+    "framing": "Complete real control with 24 CSS pixels of transparent margin. The browser height may expand to preserve the bottom margin."
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "new-issue",
+    "src": "/documentation/pt-BR/new-issue.png",
+    "sourceCommit": "f87681046f6a25fd156831cbf02d8fbf0c3a8acc",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-09",
+    "workingTreeChanges": true,
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "viewport": [
+      720,
+      368
+    ],
+    "padding": 24,
+    "language": "pt-BR",
+    "submitted": false,
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      }
+    ],
+    "navigationWrites": [
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs"
+      },
+      {
+        "method": "PATCH",
+        "route": "/api/me/app-tabs/936f8add-b1e2-4d96-b104-64703f1f52a8"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      }
+    ],
+    "reviewed": true,
+    "limitation": "Visible controls only. No completed save, share, restore, import or release outcome is claimed.",
+    "reviewer": "Codex",
+    "reviewDate": "2026-10-09",
+    "initialBrowserViewport": [
+      1440,
+      1080
+    ],
+    "framing": "Complete real control with 24 CSS pixels of transparent margin. The browser height may expand to preserve the bottom margin."
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "page-publish",
+    "src": "/documentation/pt-BR/page-publish.png",
+    "sourceCommit": "f87681046f6a25fd156831cbf02d8fbf0c3a8acc",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-09",
+    "workingTreeChanges": true,
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages/cd3ee91e-ad73-423c-bb99-9f81722f8912",
+    "theme": "light",
+    "viewport": [
+      496,
+      230
+    ],
+    "padding": 24,
+    "language": "pt-BR",
+    "submitted": false,
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages/cd3ee91e-ad73-423c-bb99-9f81722f8912",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "route": "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages/cd3ee91e-ad73-423c-bb99-9f81722f8912/watch"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      }
+    ],
+    "navigationWrites": [
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      }
+    ],
+    "reviewed": true,
+    "limitation": "Visible controls only. No completed save, share, restore, import or release outcome is claimed.",
+    "reviewer": "Codex",
+    "reviewDate": "2026-10-09",
+    "initialBrowserViewport": [
+      1440,
+      1080
+    ],
+    "framing": "Complete real control with 24 CSS pixels of transparent margin. The browser height may expand to preserve the bottom margin."
+  },
+  {
+    "locale": "en",
+    "screen": "issue-date-recurrence",
+    "src": "/documentation/en/issue-date-recurrence.png",
+    "sourceCommit": "f87681046f6a25fd156831cbf02d8fbf0c3a8acc",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-09",
+    "workingTreeChanges": true,
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "viewport": [
+      324,
+      544
+    ],
+    "padding": 24,
+    "language": "en",
+    "submitted": false,
+    "displayAdaptation": [],
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      }
+    ],
+    "navigationWrites": [
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs"
+      },
+      {
+        "method": "PATCH",
+        "route": "/api/me/app-tabs/9df37aae-49a3-4096-9b86-c300d937adea"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      }
+    ],
+    "reviewed": true,
+    "limitation": "Visible controls only. No completed save, share, restore, import or release outcome is claimed.",
+    "reviewer": "Codex",
+    "reviewDate": "2026-10-09",
+    "initialBrowserViewport": [
+      1440,
+      1080
+    ],
+    "framing": "Complete real control with 24 CSS pixels of transparent margin. The browser height may expand to preserve the bottom margin."
+  },
+  {
+    "locale": "fr",
+    "screen": "issue-date-recurrence",
+    "src": "/documentation/fr/issue-date-recurrence.png",
+    "sourceCommit": "f87681046f6a25fd156831cbf02d8fbf0c3a8acc",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-09",
+    "workingTreeChanges": true,
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "viewport": [
+      324,
+      544
+    ],
+    "padding": 24,
+    "language": "fr",
+    "submitted": false,
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      }
+    ],
+    "navigationWrites": [
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs"
+      },
+      {
+        "method": "PATCH",
+        "route": "/api/me/app-tabs/f4676f98-5b23-4a41-a32f-fe1089c3636e"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      }
+    ],
+    "reviewed": true,
+    "limitation": "Visible controls only. No completed save, share, restore, import or release outcome is claimed.",
+    "reviewer": "Codex",
+    "reviewDate": "2026-10-09",
+    "initialBrowserViewport": [
+      1440,
+      1080
+    ],
+    "framing": "Complete real control with 24 CSS pixels of transparent margin. The browser height may expand to preserve the bottom margin."
+  },
+  {
+    "locale": "de",
+    "screen": "issue-date-recurrence",
+    "src": "/documentation/de/issue-date-recurrence.png",
+    "sourceCommit": "f87681046f6a25fd156831cbf02d8fbf0c3a8acc",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-09",
+    "workingTreeChanges": true,
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "viewport": [
+      324,
+      544
+    ],
+    "padding": 24,
+    "language": "de",
+    "submitted": false,
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      }
+    ],
+    "navigationWrites": [
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs"
+      },
+      {
+        "method": "PATCH",
+        "route": "/api/me/app-tabs/275b89e6-87a2-4111-ba86-c6268c7db407"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      }
+    ],
+    "reviewed": true,
+    "limitation": "Visible controls only. No completed save, share, restore, import or release outcome is claimed.",
+    "reviewer": "Codex",
+    "reviewDate": "2026-10-09",
+    "initialBrowserViewport": [
+      1440,
+      1080
+    ],
+    "framing": "Complete real control with 24 CSS pixels of transparent margin. The browser height may expand to preserve the bottom margin."
+  },
+  {
+    "locale": "es",
+    "screen": "issue-date-recurrence",
+    "src": "/documentation/es/issue-date-recurrence.png",
+    "sourceCommit": "f87681046f6a25fd156831cbf02d8fbf0c3a8acc",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-09",
+    "workingTreeChanges": true,
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "viewport": [
+      324,
+      544
+    ],
+    "padding": 24,
+    "language": "es",
+    "submitted": false,
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      }
+    ],
+    "navigationWrites": [
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs"
+      },
+      {
+        "method": "PATCH",
+        "route": "/api/me/app-tabs/8ad05975-31bc-45bc-a41f-b28a20a53d26"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      }
+    ],
+    "reviewed": true,
+    "limitation": "Visible controls only. No completed save, share, restore, import or release outcome is claimed.",
+    "reviewer": "Codex",
+    "reviewDate": "2026-10-09",
+    "initialBrowserViewport": [
+      1440,
+      1080
+    ],
+    "framing": "Complete real control with 24 CSS pixels of transparent margin. The browser height may expand to preserve the bottom margin."
+  },
+  {
+    "locale": "it",
+    "screen": "issue-date-recurrence",
+    "src": "/documentation/it/issue-date-recurrence.png",
+    "sourceCommit": "f87681046f6a25fd156831cbf02d8fbf0c3a8acc",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-09",
+    "workingTreeChanges": true,
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "viewport": [
+      324,
+      544
+    ],
+    "padding": 24,
+    "language": "it",
+    "submitted": false,
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      }
+    ],
+    "navigationWrites": [
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs"
+      },
+      {
+        "method": "PATCH",
+        "route": "/api/me/app-tabs/6b354028-82fb-48bb-af96-905d73483775"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      }
+    ],
+    "reviewed": true,
+    "limitation": "Visible controls only. No completed save, share, restore, import or release outcome is claimed.",
+    "reviewer": "Codex",
+    "reviewDate": "2026-10-09",
+    "initialBrowserViewport": [
+      1440,
+      1080
+    ],
+    "framing": "Complete real control with 24 CSS pixels of transparent margin. The browser height may expand to preserve the bottom margin."
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "issue-date-recurrence",
+    "src": "/documentation/pt-BR/issue-date-recurrence.png",
+    "sourceCommit": "f87681046f6a25fd156831cbf02d8fbf0c3a8acc",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-09",
+    "workingTreeChanges": true,
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "viewport": [
+      337,
+      544
+    ],
+    "padding": 24,
+    "language": "pt-BR",
+    "submitted": false,
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      }
+    ],
+    "navigationWrites": [
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs"
+      },
+      {
+        "method": "PATCH",
+        "route": "/api/me/app-tabs/182ff7a4-1f92-4246-8b0d-3562f1ac68f4"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "PATCH",
+        "route": "/api/me/app-tabs/182ff7a4-1f92-4246-8b0d-3562f1ac68f4"
+      }
+    ],
+    "reviewed": true,
+    "limitation": "Visible controls only. No completed save, share, restore, import or release outcome is claimed.",
+    "reviewer": "Codex",
+    "reviewDate": "2026-10-09",
+    "initialBrowserViewport": [
+      1440,
+      1080
+    ],
+    "framing": "Complete real control with 24 CSS pixels of transparent margin. The browser height may expand to preserve the bottom margin."
+  },
+  {
+    "locale": "en",
+    "screen": "issue-statuses",
+    "src": "/documentation/en/issue-statuses.png",
+    "sourceCommit": "f87681046f6a25fd156831cbf02d8fbf0c3a8acc",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-09",
+    "workingTreeChanges": true,
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "viewport": [
+      288,
+      357
+    ],
+    "padding": 24,
+    "language": "en",
+    "submitted": false,
+    "displayAdaptation": [],
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      }
+    ],
+    "navigationWrites": [
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs"
+      },
+      {
+        "method": "PATCH",
+        "route": "/api/me/app-tabs/b9d89351-8b68-434a-ab85-b2f7606946fb"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      }
+    ],
+    "reviewed": true,
+    "limitation": "Visible controls only. No completed save, share, restore, import or release outcome is claimed.",
+    "reviewer": "Codex",
+    "reviewDate": "2026-10-09",
+    "initialBrowserViewport": [
+      1440,
+      1080
+    ],
+    "framing": "Complete real control with 24 CSS pixels of transparent margin. The browser height may expand to preserve the bottom margin."
+  },
+  {
+    "locale": "fr",
+    "screen": "issue-statuses",
+    "src": "/documentation/fr/issue-statuses.png",
+    "sourceCommit": "f87681046f6a25fd156831cbf02d8fbf0c3a8acc",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-09",
+    "workingTreeChanges": true,
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "viewport": [
+      288,
+      357
+    ],
+    "padding": 24,
+    "language": "fr",
+    "submitted": false,
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      }
+    ],
+    "navigationWrites": [
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs"
+      },
+      {
+        "method": "PATCH",
+        "route": "/api/me/app-tabs/44fcf958-ce32-4527-83ab-cb9adc4df004"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      }
+    ],
+    "reviewed": true,
+    "limitation": "Visible controls only. No completed save, share, restore, import or release outcome is claimed.",
+    "reviewer": "Codex",
+    "reviewDate": "2026-10-09",
+    "initialBrowserViewport": [
+      1440,
+      1080
+    ],
+    "framing": "Complete real control with 24 CSS pixels of transparent margin. The browser height may expand to preserve the bottom margin."
+  },
+  {
+    "locale": "de",
+    "screen": "issue-statuses",
+    "src": "/documentation/de/issue-statuses.png",
+    "sourceCommit": "f87681046f6a25fd156831cbf02d8fbf0c3a8acc",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-09",
+    "workingTreeChanges": true,
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "viewport": [
+      288,
+      357
+    ],
+    "padding": 24,
+    "language": "de",
+    "submitted": false,
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      }
+    ],
+    "navigationWrites": [
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs"
+      },
+      {
+        "method": "PATCH",
+        "route": "/api/me/app-tabs/d385bd77-abb4-4f53-ab10-57d712a31fa6"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      }
+    ],
+    "reviewed": true,
+    "limitation": "Visible controls only. No completed save, share, restore, import or release outcome is claimed.",
+    "reviewer": "Codex",
+    "reviewDate": "2026-10-09",
+    "initialBrowserViewport": [
+      1440,
+      1080
+    ],
+    "framing": "Complete real control with 24 CSS pixels of transparent margin. The browser height may expand to preserve the bottom margin."
+  },
+  {
+    "locale": "es",
+    "screen": "issue-statuses",
+    "src": "/documentation/es/issue-statuses.png",
+    "sourceCommit": "f87681046f6a25fd156831cbf02d8fbf0c3a8acc",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-09",
+    "workingTreeChanges": true,
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "viewport": [
+      288,
+      357
+    ],
+    "padding": 24,
+    "language": "es",
+    "submitted": false,
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      }
+    ],
+    "navigationWrites": [
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs"
+      },
+      {
+        "method": "PATCH",
+        "route": "/api/me/app-tabs/8da2aa95-69da-4a78-8d68-22ccbb327af9"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      }
+    ],
+    "reviewed": true,
+    "limitation": "Visible controls only. No completed save, share, restore, import or release outcome is claimed.",
+    "reviewer": "Codex",
+    "reviewDate": "2026-10-09",
+    "initialBrowserViewport": [
+      1440,
+      1080
+    ],
+    "framing": "Complete real control with 24 CSS pixels of transparent margin. The browser height may expand to preserve the bottom margin."
+  },
+  {
+    "locale": "it",
+    "screen": "issue-statuses",
+    "src": "/documentation/it/issue-statuses.png",
+    "sourceCommit": "f87681046f6a25fd156831cbf02d8fbf0c3a8acc",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-09",
+    "workingTreeChanges": true,
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "viewport": [
+      288,
+      357
+    ],
+    "padding": 24,
+    "language": "it",
+    "submitted": false,
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      }
+    ],
+    "navigationWrites": [
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs"
+      },
+      {
+        "method": "PATCH",
+        "route": "/api/me/app-tabs/3a33416d-8bc9-40f8-aace-fdc41849d3b1"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      }
+    ],
+    "reviewed": true,
+    "limitation": "Visible controls only. No completed save, share, restore, import or release outcome is claimed.",
+    "reviewer": "Codex",
+    "reviewDate": "2026-10-09",
+    "initialBrowserViewport": [
+      1440,
+      1080
+    ],
+    "framing": "Complete real control with 24 CSS pixels of transparent margin. The browser height may expand to preserve the bottom margin."
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "issue-statuses",
+    "src": "/documentation/pt-BR/issue-statuses.png",
+    "sourceCommit": "f87681046f6a25fd156831cbf02d8fbf0c3a8acc",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-09",
+    "workingTreeChanges": true,
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "viewport": [
+      288,
+      357
+    ],
+    "padding": 24,
+    "language": "pt-BR",
+    "submitted": false,
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      }
+    ],
+    "navigationWrites": [
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs"
+      },
+      {
+        "method": "PATCH",
+        "route": "/api/me/app-tabs/25348488-18e3-4f2f-bc3c-f959fd317875"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      }
+    ],
+    "reviewed": true,
+    "limitation": "Visible controls only. No completed save, share, restore, import or release outcome is claimed.",
+    "reviewer": "Codex",
+    "reviewDate": "2026-10-09",
+    "initialBrowserViewport": [
+      1440,
+      1080
+    ],
+    "framing": "Complete real control with 24 CSS pixels of transparent margin. The browser height may expand to preserve the bottom margin."
+  }
+]

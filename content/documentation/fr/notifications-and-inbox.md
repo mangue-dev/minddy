@@ -56,16 +56,17 @@
       "id": "notifications-and-inbox-steps",
       "kind": "screenshot",
       "src": "/documentation/fr/work-inbox.png",
-      "alt": "Onglets de la boîte de réception et liste non lue vide.",
-      "caption": "L’onglet Non lues vide indique l’absence d’éléments non lus dans cette vue ; Toutes permet d’examiner les autres notifications conservées.",
+      "alt": "Boîte de réception avec des mentions, attributions et commentaires de démonstration, lus et non lus.",
+      "caption": "Ces exemples d’activité affichent l’auteur, le ticket et l’état de lecture. L’onglet Toutes regroupe les notifications lues et non lues.",
       "revision": 5,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
-        1440,
-        1080
+        528,
+        648
       ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     }
   ],
   "requiredFigures": [
@@ -80,7 +81,7 @@ Ouvrez la boîte de réception depuis la navigation. Ce volet regroupe les notif
 
 Les invitations de projet en attente y figurent aussi. Acceptez ou refusez après avoir vérifié projet et compte. Les anciens liens Inbox ouvrent l’accès actuel plutôt qu’une page séparée.
 
-![Onglets de la boîte de réception et liste non lue vide.](/documentation/fr/work-inbox.png)
+![Boîte de réception avec des mentions, attributions et commentaires de démonstration, lus et non lus.](/documentation/fr/work-inbox.png)
 
 ## Choisir les canaux {#notification-preferences}
 

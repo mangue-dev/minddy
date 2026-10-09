@@ -99,10 +99,11 @@
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
-        380,
-        474
+        428,
+        522
       ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     },
     {
       "id": "account-access-login",
@@ -114,10 +115,11 @@
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
-        380,
-        540
+        428,
+        588
       ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     },
     {
       "id": "account-security-workflow",
@@ -129,10 +131,11 @@
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
-        1440,
-        1800
+        816,
+        227
       ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     },
     {
       "id": "account-security-enrollment-workflow",
@@ -144,10 +147,11 @@
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
-        1440,
-        1200
+        816,
+        498
       ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     },
     {
       "id": "account-recovery-steps",
@@ -159,10 +163,11 @@
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
-        380,
-        278
+        428,
+        326
       ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     },
     {
       "id": "profile-and-preferences-workflow",
@@ -174,10 +179,11 @@
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
-        1440,
-        1800
+        816,
+        416
       ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     },
     {
       "id": "profile-and-preferences-preferences-workflow",
@@ -189,10 +195,11 @@
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
-        1440,
-        1800
+        816,
+        212
       ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     },
     {
       "id": "privacy-and-account-deletion-workflow",
@@ -204,10 +211,11 @@
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
-        1440,
-        1800
+        816,
+        231
       ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     }
   ],
   "requiredFigures": [

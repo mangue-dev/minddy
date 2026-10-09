@@ -79,7 +79,24 @@
         720,
         640
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "sequence",
+        "items": [
+          {
+            "title": "Tag de código anotado"
+          },
+          {
+            "title": "Archivos y SHA256SUMS"
+          },
+          {
+            "title": "Firma y digest OCI oficiales"
+          },
+          {
+            "title": "Perfil de compatibilidad elegido"
+          }
+        ]
+      }
     },
     {
       "id": "install-a-server-flow",
@@ -94,7 +111,24 @@
         720,
         640
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "sequence",
+        "items": [
+          {
+            "title": "Release verificada y entorno protegido"
+          },
+          {
+            "title": "Instalador: perfil full de referencia"
+          },
+          {
+            "title": "Supabase oficial, app, tareas, runner"
+          },
+          {
+            "title": "Validación de cuenta, archivos y recuperación"
+          }
+        ]
+      }
     },
     {
       "id": "install-a-server-wizard",
@@ -106,10 +140,11 @@
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
-        1280,
-        1100
+        944,
+        1068
       ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     },
     {
       "id": "managed-or-source-installation-flow",
@@ -124,7 +159,24 @@
         720,
         640
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "collection",
+        "items": [
+          {
+            "title": "Su proyecto Supabase gestionado"
+          },
+          {
+            "title": "PostgreSQL, Auth, Storage, Realtime"
+          },
+          {
+            "title": "Perfil OCI O aplicación desde tag"
+          },
+          {
+            "title": "Tareas y copia según el perfil"
+          }
+        ]
+      }
     }
   ],
   "requiredFigures": [

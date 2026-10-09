@@ -102,10 +102,11 @@
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
-        1440,
-        900
+        302,
+        152
       ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     },
     {
       "id": "page-editor-steps",
@@ -117,10 +118,11 @@
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
-        1440,
-        1080
+        1178,
+        922
       ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     },
     {
       "id": "page-comments-and-collaboration-steps",
@@ -132,10 +134,11 @@
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
-        1440,
-        600
+        632,
+        625
       ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     },
     {
       "id": "page-files-steps",
@@ -147,10 +150,11 @@
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
-        1440,
-        900
+        1178,
+        466
       ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     },
     {
       "id": "page-history-steps",
@@ -162,10 +166,11 @@
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
-        1440,
-        900
+        632,
+        538
       ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     },
     {
       "id": "publish-a-page-steps",
@@ -175,12 +180,13 @@
       "caption": "Privée conserve la page dans le projet. Vérifiez le public souhaité avant de modifier la publication.",
       "revision": 5,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
-        1440,
-        1080
+        496,
+        230
       ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     },
     {
       "id": "import-export-and-print-pages-steps",
@@ -190,12 +196,13 @@
       "caption": "Choisissez Markdown pour télécharger le document, ou Imprimer / PDF pour ouvrir la vue imprimable.",
       "revision": 5,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
-        1440,
-        1080
+        211,
+        128
       ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     }
   ],
   "requiredFigures": [

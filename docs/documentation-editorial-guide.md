@@ -151,6 +151,38 @@ Record language-review evidence separately from automated parity checks.
 Machine translation or an English readability score cannot establish that a
 German, Spanish, Italian, French, or Brazilian Portuguese article reads well.
 
+## Choose and frame illustrations
+
+Use a screenshot when the reader needs to recognize a real control, menu,
+dialog, or application state. Explain relationships, responsibilities, data
+boundaries, and workflow stages with a responsive code illustration. For
+example, connecting a Git account and linking a project repository needs a
+workflow diagram; choosing properties in the issue creation dialog benefits
+from a screenshot.
+
+Responsive diagrams use `DocumentationDiagram` and the landing's shared
+`CARD_TONES` palette. Keep labels selectable, allow text to wrap on phones,
+and preserve the reading order and meaning in every language. Use sequence
+arrows only for ordered steps. Keep the SVG Markdown fallback consistent with
+the code illustration. Do not rasterize a diagram or a permissions table.
+
+Capture the complete component, including its footer and rounded corners.
+Isolate it from unrelated page content before capturing a dialog or popover.
+Bake equal transparent margins into the capture with
+`captureDocumentationControl`. The article displays the PNG directly, without
+a colored container or an extra CSS frame. Figure `viewport` values
+are the cropped image's display dimensions in CSS pixels, not the browser
+window dimensions or the pixel dimensions of a capture taken at twice the
+device scale. A small popover must stay at its natural size instead of filling
+the article width. Keep the image viewer available for larger captures.
+
+Use populated, localized demonstration data when it helps readers recognize
+the result. Capture an empty state only when that state is itself being
+explained; omit redundant empty illustrations. Response-only demo fixtures
+must be recorded as examples and must not imply a completed import, delivered
+notification, or other real operation. Inspect representative desktop and
+phone layouts in light and dark mode after changing the shared renderer.
+
 ## Review and publication checklist
 
 The author first checks the brief, factual evidence, and complete reader

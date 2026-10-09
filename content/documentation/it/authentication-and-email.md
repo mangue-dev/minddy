@@ -65,7 +65,24 @@
         720,
         640
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "sequence",
+        "items": [
+          {
+            "title": "Origine Auth e redirect configurati"
+          },
+          {
+            "title": "SMTP proprio e modelli versionati"
+          },
+          {
+            "title": "Conferma e accesso con password"
+          },
+          {
+            "title": "Prove TOTP, recupero e vecchia password"
+          }
+        ]
+      }
     }
   ],
   "requiredFigures": [

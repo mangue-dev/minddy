@@ -56,16 +56,17 @@
       "id": "notifications-and-inbox-steps",
       "kind": "screenshot",
       "src": "/documentation/pt-BR/work-inbox.png",
-      "alt": "Abas da caixa de entrada e lista vazia de itens não lidos.",
-      "caption": "A aba Não lidos vazia indica que essa visualização não tem itens não lidos. Todos mostra outras notificações mantidas.",
+      "alt": "Caixa de entrada com menções, atribuições e comentários de demonstração, lidos e não lidos.",
+      "caption": "A atividade de exemplo mostra o autor, o ticket e o estado de leitura. Todos inclui notificações lidas e não lidas.",
       "revision": 5,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
-        1440,
-        1080
+        528,
+        648
       ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     }
   ],
   "requiredFigures": [
@@ -80,7 +81,7 @@ Abra a caixa de entrada pela navegação. Ela é um popover que agrupa notifica�
 
 Convites pendentes para projetos também aparecem na caixa de entrada. Aceite ou recuse depois de conferir projeto e conta. Links antigos abrem o ponto de acesso atual, não uma página separada.
 
-![Abas da caixa de entrada e lista vazia de itens não lidos.](/documentation/pt-BR/work-inbox.png)
+![Caixa de entrada com menções, atribuições e comentários de demonstração, lidos e não lidos.](/documentation/pt-BR/work-inbox.png)
 
 ## Escolher canais de notificação {#notification-preferences}
 

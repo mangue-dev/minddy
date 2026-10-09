@@ -63,7 +63,24 @@
         720,
         640
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "collection",
+        "items": [
+          {
+            "title": "L’app desktop sélectionne le clone"
+          },
+          {
+            "title": "Application locale : port 6463"
+          },
+          {
+            "title": "Supabase minimal et données durables"
+          },
+          {
+            "title": "Quitter arrête app et backend"
+          }
+        ]
+      }
     },
     {
       "id": "install-locally-wizard",
@@ -75,10 +92,11 @@
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
-        1280,
-        1100
+        944,
+        553
       ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     }
   ],
   "requiredFigures": [

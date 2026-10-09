@@ -86,10 +86,11 @@
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
-        390,
-        844
+        438,
+        892
       ],
-      "theme": "dark"
+      "theme": "dark",
+      "padding": 24
     },
     {
       "id": "install-the-pwa-workflow",
@@ -101,10 +102,11 @@
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
-        1240,
-        940
+        1288,
+        762
       ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     },
     {
       "id": "desktop-app-workflow",
@@ -116,10 +118,11 @@
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
-        1280,
-        860
+        816,
+        287
       ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     },
     {
       "id": "devices-and-notifications-workflow",
@@ -131,10 +134,11 @@
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
-        1440,
-        1800
+        816,
+        196
       ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     },
     {
       "id": "devices-and-notifications-registered-workflow",
@@ -146,10 +150,11 @@
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
-        1240,
-        950
+        816,
+        208
       ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     }
   ],
   "requiredFigures": [

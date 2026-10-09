@@ -66,7 +66,21 @@
         360,
         520
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "collection",
+        "items": [
+          {
+            "title": "minddy Cloud",
+            "detail": "Operated by minddy · Application · Database · Storage · Scheduler"
+          },
+          {
+            "title": "Your own instance",
+            "detail": "Operated by you · Application · Database · Storage · Scheduler"
+          }
+        ],
+        "title": "Operating responsibility"
+      }
     }
   ],
   "requiredFigures": [

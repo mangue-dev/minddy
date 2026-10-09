@@ -64,7 +64,24 @@
         720,
         640
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "sequence",
+        "items": [
+          {
+            "title": "Origine Auth et redirections configurées"
+          },
+          {
+            "title": "SMTP opérateur et modèles versionnés"
+          },
+          {
+            "title": "Geste de confirmation et connexion"
+          },
+          {
+            "title": "Tests TOTP, récupération et ancien mot de passe"
+          }
+        ]
+      }
     }
   ],
   "requiredFigures": [

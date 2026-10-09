@@ -62,7 +62,24 @@
         720,
         640
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "sequence",
+        "items": [
+          {
+            "title": "Fermare scritture e job"
+          },
+          {
+            "title": "Sigillare backup completo precedente"
+          },
+          {
+            "title": "Migrazioni destinazione, poi applicazione"
+          },
+          {
+            "title": "Verificare recupero e riaprire"
+          }
+        ]
+      }
     }
   ],
   "requiredFigures": [

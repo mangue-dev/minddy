@@ -65,10 +65,11 @@
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
-        1892,
-        1996
+        994,
+        1046
       ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     }
   ],
   "requiredFigures": [

@@ -2,9 +2,20 @@ import type { Locale } from "@/i18n/config";
 export { documentationPath, documentationRoots, resolveDocumentationPath, normalizeDocumentationText, searchDocumentation } from "@/lib/documentation-core.mjs";
 
 export type DocumentationAudience = "member" | "owner" | "visitor" | "operator" | "integrator";
+export interface DocumentationDiagram {
+  layout: "sequence" | "collection" | "columns" | "matrix";
+  title?: string;
+  items?: { title: string; detail?: string }[];
+  columns?: { title: string; items: string[] }[];
+  headers?: string[];
+  rows?: string[][];
+  note?: string;
+}
 export interface DocumentationFigure {
   id: string;
   kind?: "screenshot" | "diagram";
+  diagram?: DocumentationDiagram;
+  padding?: number;
   src: string;
   alt: string;
   caption: string;

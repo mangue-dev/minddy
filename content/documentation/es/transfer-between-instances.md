@@ -59,10 +59,11 @@
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
-        1440,
-        1800
+        816,
+        148
       ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     },
     {
       "id": "transfer-between-instances-export-workflow",
@@ -74,31 +75,16 @@
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
-        1440,
-        1800
+        816,
+        148
       ],
-      "theme": "light"
-    },
-    {
-      "id": "transfer-between-instances-result-workflow",
-      "kind": "screenshot",
-      "src": "/documentation/es/transfer-between-instances-result.png",
-      "alt": "Resultado de importación con cero identificadores reasignados y cero membresías omitidas.",
-      "caption": "Esta importación real de datos personales no presenta conflictos de identificadores ni membresías omitidas. Revise los recuentos y pulse Recargar la cuenta o cierre el diálogo para recargarla.",
-      "revision": 4,
-      "reviewed": true,
-      "capturedAt": "2026-10-08",
-      "viewport": [
-        1240,
-        860
-      ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     }
   ],
   "requiredFigures": [
     "transfer-between-instances-workflow",
-    "transfer-between-instances-export-workflow",
-    "transfer-between-instances-result-workflow"
+    "transfer-between-instances-export-workflow"
   ]
 }
 ---
@@ -121,5 +107,3 @@ Conserve la instancia de origen hasta comprobar el trabajo transferido. Si la im
 ![Control de exportación de la cuenta.](/documentation/es/transfer-between-instances-export-workflow.png)
 
 El resultado permanece abierto hasta que pulse Recargar la cuenta o cierre el diálogo. Ambas acciones recargan la cuenta después de que haya revisado los recuentos.
-
-![Resultado de importación con cero identificadores reasignados y cero membresías omitidas.](/documentation/es/transfer-between-instances-result.png)

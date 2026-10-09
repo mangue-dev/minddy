@@ -69,7 +69,24 @@
         720,
         640
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "collection",
+        "items": [
+          {
+            "title": "Permessi account e progetto"
+          },
+          {
+            "title": "Oggetto privato o pubblicazione esplicita"
+          },
+          {
+            "title": "Solo insieme pubblicato e file firmati"
+          },
+          {
+            "title": "Revocare link; file scadono successivamente"
+          }
+        ]
+      }
     }
   ],
   "requiredFigures": [

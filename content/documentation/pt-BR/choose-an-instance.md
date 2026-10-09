@@ -66,7 +66,21 @@
         360,
         520
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "collection",
+        "items": [
+          {
+            "title": "minddy Cloud",
+            "detail": "Operado pelo minddy · Aplicação · Banco de dados · Storage · Agendador"
+          },
+          {
+            "title": "Sua própria instância",
+            "detail": "Operado por você · Aplicação · Banco de dados · Storage · Agendador"
+          }
+        ],
+        "title": "Responsabilidade de operação"
+      }
     }
   ],
   "requiredFigures": [

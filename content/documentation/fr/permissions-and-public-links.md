@@ -69,7 +69,24 @@
         720,
         640
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "collection",
+        "items": [
+          {
+            "title": "Contrôles du compte et du projet"
+          },
+          {
+            "title": "Objet privé ou publication explicite"
+          },
+          {
+            "title": "Ensemble publié uniquement et fichiers signés"
+          },
+          {
+            "title": "Révoquer le lien ; fichiers signés expirent après"
+          }
+        ]
+      }
     }
   ],
   "requiredFigures": [

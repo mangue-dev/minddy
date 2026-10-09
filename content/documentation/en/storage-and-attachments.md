@@ -64,7 +64,24 @@
         720,
         640
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "collection",
+        "items": [
+          {
+            "title": "Authorized application file access"
+          },
+          {
+            "title": "PostgreSQL object metadata"
+          },
+          {
+            "title": "Raw filesystem or S3 backend bytes"
+          },
+          {
+            "title": "Matching configuration and recovery keys"
+          }
+        ]
+      }
     }
   ],
   "requiredFigures": [

@@ -77,10 +77,11 @@
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
-        1440,
-        1800
+        816,
+        252
       ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     },
     {
       "id": "external-minddy-mcp-install-workflow",
@@ -92,31 +93,16 @@
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
-        1440,
-        1800
+        560,
+        364
       ],
-      "theme": "light"
-    },
-    {
-      "id": "external-minddy-mcp-accesses-workflow",
-      "kind": "screenshot",
-      "src": "/documentation/en/external-minddy-mcp-accesses-workflow.png",
-      "alt": "Connected applications list with no active grant.",
-      "caption": "Review authorized applications here. The demonstration account has no active grant; no authorization or revocation was executed.",
-      "revision": 2,
-      "reviewed": true,
-      "capturedAt": "2026-10-08",
-      "viewport": [
-        1440,
-        1800
-      ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     }
   ],
   "requiredFigures": [
     "external-minddy-mcp-workflow",
-    "external-minddy-mcp-install-workflow",
-    "external-minddy-mcp-accesses-workflow"
+    "external-minddy-mcp-install-workflow"
   ]
 }
 ---
@@ -139,7 +125,6 @@ Account settings' minddy MCP section lists external client access and its revoca
 
 ![Codex installation dialog on the local instance.](/documentation/en/external-minddy-mcp-install-workflow.png)
 
-![Connected applications list with no active grant.](/documentation/en/external-minddy-mcp-accesses-workflow.png)
 
 ## Use minddy MCP safely and discover its current tools {#mcp-tool-reference}
 

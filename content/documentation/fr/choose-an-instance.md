@@ -66,7 +66,21 @@
         360,
         520
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "collection",
+        "items": [
+          {
+            "title": "minddy Cloud",
+            "detail": "Exploité par minddy · Application · Base de données · Storage · Planificateur"
+          },
+          {
+            "title": "Votre propre instance",
+            "detail": "Exploité par vous · Application · Base de données · Storage · Planificateur"
+          }
+        ],
+        "title": "Responsabilité d’exploitation"
+      }
     }
   ],
   "requiredFigures": [

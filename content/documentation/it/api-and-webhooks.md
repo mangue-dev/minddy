@@ -77,12 +77,29 @@
         720,
         640
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "sequence",
+        "items": [
+          {
+            "title": "Server conserva chiave integrazione"
+          },
+          {
+            "title": "POST ticket o feedback con tipo corretto"
+          },
+          {
+            "title": "Proprietario sceglie destinazione webhook"
+          },
+          {
+            "title": "Ricevente verifica HMAC grezzo e UUID"
+          }
+        ]
+      }
     },
     {
       "id": "feedback-ingestion-and-sso-workflow",
       "kind": "diagram",
-      "src": "/documentation/it/feedback-ingestion-and-sso-workflow.png",
+      "src": "/documentation/it/feedback-ingestion-and-sso-workflow.svg",
       "alt": "Sequenze distinte di acquisizione backend e SSO browser con segreti diversi.",
       "caption": "La chiave di acquisizione autentica le chiamate server. Il segreto SSO della bacheca firma un token visitatore breve e monouso.",
       "revision": 3,
@@ -92,7 +109,31 @@
         1100,
         760
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "columns",
+        "title": "Due flussi di feedback separati",
+        "columns": [
+          {
+            "title": "Acquisizione dal server",
+            "items": [
+              "Il backend conserva la chiave feedback",
+              "POST /api/v1/feedback con chiave Bearer e identità stabile",
+              "HTTP 201: post salvato nella casella team; la bacheca può essere disattivata"
+            ]
+          },
+          {
+            "title": "SSO del visitatore nel browser",
+            "items": [
+              "Il backend conserva il segreto SSO separato della bacheca",
+              "Firmare JWT HS256: sub, exp, jti unico; validità ≤ 600 s",
+              "Reindirizzare il browser a /f/<board-token>?sso=<jwt>",
+              "Token monouso crea sessione; aprire Il mio feedback"
+            ]
+          }
+        ],
+        "note": "Mai inviare chiave di acquisizione o segreto SSO al browser. Tolleranza orologio: 60 s."
+      }
     }
   ],
   "requiredFigures": [
@@ -151,4 +192,4 @@ Come proprietario, attiva la bacheca e configura il suo segreto SSO distinto. Il
 
 Verifica che il visitatore apra Il mio feedback con l’identità prevista. Un token scaduto richiede un nuovo reindirizzamento. Se il segreto è compromesso, rinnovalo tramite la conferma della bacheca e aggiorna contemporaneamente il backend. Il codice email resta l’alternativa quando il SSO non è disponibile.
 
-![Sequenze distinte di acquisizione backend e SSO browser con segreti diversi.](/documentation/it/feedback-ingestion-and-sso-workflow.png)
+![Sequenze distinte di acquisizione backend e SSO browser con segreti diversi.](/documentation/it/feedback-ingestion-and-sso-workflow.svg)

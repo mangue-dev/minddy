@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { afterEach, test } from "node:test";
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
@@ -56,6 +56,28 @@ test("private links and missing required locale images block release", () => {
   assert.notEqual(result.status, 0);
   assert.match(result.output, /unresolved local link/);
   assert.match(result.output, /unregistered image/);
+});
+
+test("responsive diagrams preserve readable content and complete matrix rows", () => {
+  function diagramFixture(diagram) {
+    const root = fixture(article => ({ ...article, figures: [{ id: "flow", kind: "diagram", diagram,
+      src: `/documentation/${article.locale}/flow.svg`, alt: "A verified workflow.", caption: "The workflow steps.",
+      revision: 1, reviewed: true, capturedAt: "2026-10-09", theme: "neutral", viewport: [720, 640] }] }),
+    "## Start {#start}\n\n![Workflow](/documentation/en/flow.svg)\n");
+    for (const locale of documentationLocales) {
+      const directory = path.join(root, "public/documentation", locale);
+      mkdirSync(directory, { recursive: true });
+      writeFileSync(path.join(directory, "flow.svg"), "<svg xmlns=\"http://www.w3.org/2000/svg\" />");
+      const filename = path.join(root, "content/documentation", locale, "guide.md");
+      // Use the local figure in every translated body.
+      const body = readFileSync(filename, "utf8").replace("![Workflow](/documentation/en/flow.svg)", `![Workflow](/documentation/${locale}/flow.svg)`);
+      writeFileSync(filename, body);
+    }
+    return root;
+  }
+  assert.equal(check(diagramFixture({ layout: "sequence", items: [{ title: "Authorize" }, { title: "Link" }] })).status, 0);
+  assert.match(check(diagramFixture({ layout: "sequence", items: [{ title: "" }] })).output, /invalid responsive diagram/);
+  assert.match(check(diagramFixture({ layout: "matrix", headers: ["Action", "Actor", "Boundary"], rows: [["Link", "Owner"]] })).output, /invalid responsive diagram/);
 });
 
 

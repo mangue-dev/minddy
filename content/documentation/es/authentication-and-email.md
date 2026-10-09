@@ -64,7 +64,24 @@
         720,
         640
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "sequence",
+        "items": [
+          {
+            "title": "Origen Auth y redirecciones configurados"
+          },
+          {
+            "title": "SMTP propio y plantillas versionadas"
+          },
+          {
+            "title": "Confirmación e inicio de sesión"
+          },
+          {
+            "title": "Pruebas TOTP, recuperación y contraseña antigua"
+          }
+        ]
+      }
     }
   ],
   "requiredFigures": [

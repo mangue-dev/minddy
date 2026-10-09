@@ -62,7 +62,24 @@
         720,
         640
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "sequence",
+        "items": [
+          {
+            "title": "Parar escrituras y tareas"
+          },
+          {
+            "title": "Sellar copia completa anterior"
+          },
+          {
+            "title": "Migraciones destino, luego aplicación"
+          },
+          {
+            "title": "Verificar recuperación y reabrir"
+          }
+        ]
+      }
     }
   ],
   "requiredFigures": [

@@ -63,7 +63,24 @@
         720,
         640
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "collection",
+        "items": [
+          {
+            "title": "Aplicación de escritorio: elegir clon"
+          },
+          {
+            "title": "Aplicación loopback: puerto 6463"
+          },
+          {
+            "title": "Supabase mínimo y datos duraderos"
+          },
+          {
+            "title": "Salir detiene aplicación y backend"
+          }
+        ]
+      }
     },
     {
       "id": "install-locally-wizard",
@@ -75,10 +92,11 @@
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
-        1280,
-        1100
+        944,
+        500
       ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     }
   ],
   "requiredFigures": [

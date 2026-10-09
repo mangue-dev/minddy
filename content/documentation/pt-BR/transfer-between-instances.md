@@ -59,10 +59,11 @@
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
-        1440,
-        1800
+        816,
+        148
       ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     },
     {
       "id": "transfer-between-instances-export-workflow",
@@ -74,31 +75,16 @@
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
-        1440,
-        1800
+        816,
+        148
       ],
-      "theme": "light"
-    },
-    {
-      "id": "transfer-between-instances-result-workflow",
-      "kind": "screenshot",
-      "src": "/documentation/pt-BR/transfer-between-instances-result.png",
-      "alt": "Resultado da importação com zero IDs remapeados e zero participações não restauradas.",
-      "caption": "Esta importação real de dados pessoais não apresenta conflitos de IDs nem participações não restauradas. Confira as contagens e selecione Recarregar a conta ou feche a janela para recarregá-la.",
-      "revision": 4,
-      "reviewed": true,
-      "capturedAt": "2026-10-08",
-      "viewport": [
-        1240,
-        860
-      ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     }
   ],
   "requiredFigures": [
     "transfer-between-instances-workflow",
-    "transfer-between-instances-export-workflow",
-    "transfer-between-instances-result-workflow"
+    "transfer-between-instances-export-workflow"
   ]
 }
 ---
@@ -120,5 +106,3 @@ Mantenha a instância de origem até verificar o trabalho transferido. Se a impo
 ![Controle de exportação da conta.](/documentation/pt-BR/transfer-between-instances-export-workflow.png)
 
 O resultado permanece aberto até você selecionar Recarregar a conta ou fechar a janela. Ambas as ações recarregam a conta depois que você conferir as contagens.
-
-![Resultado da importação com zero IDs remapeados e zero participações não restauradas.](/documentation/pt-BR/transfer-between-instances-result.png)

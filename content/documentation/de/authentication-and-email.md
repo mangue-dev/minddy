@@ -64,7 +64,24 @@
         720,
         640
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "sequence",
+        "items": [
+          {
+            "title": "Auth-Origin und Weiterleitungen"
+          },
+          {
+            "title": "Eigenes SMTP und versionierte Vorlagen"
+          },
+          {
+            "title": "Bestätigung und Passwortanmeldung"
+          },
+          {
+            "title": "TOTP, Wiederherstellung, alte Passwortprüfung"
+          }
+        ]
+      }
     }
   ],
   "requiredFigures": [

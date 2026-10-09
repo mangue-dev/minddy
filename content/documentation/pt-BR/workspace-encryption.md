@@ -63,7 +63,24 @@
         720,
         640
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "collection",
+        "items": [
+          {
+            "title": "Raiz dedicada fora de PostgreSQL"
+          },
+          {
+            "title": "Chaves projeto, usuário e sistema empacotadas"
+          },
+          {
+            "title": "Decifragem autorizada no servidor"
+          },
+          {
+            "title": "Restaurar banco + Storage + mesmas chaves"
+          }
+        ]
+      }
     }
   ],
   "requiredFigures": [

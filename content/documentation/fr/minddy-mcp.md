@@ -77,10 +77,11 @@
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
-        1440,
-        1800
+        816,
+        252
       ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     },
     {
       "id": "external-minddy-mcp-install-workflow",
@@ -92,31 +93,16 @@
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
-        1440,
-        1800
+        560,
+        380
       ],
-      "theme": "light"
-    },
-    {
-      "id": "external-minddy-mcp-accesses-workflow",
-      "kind": "screenshot",
-      "src": "/documentation/fr/external-minddy-mcp-accesses-workflow.png",
-      "alt": "Liste des applications connectées sans autorisation active.",
-      "caption": "Consultez ici les applications autorisées. Le compte de démonstration ne possède aucune autorisation active ; aucune autorisation ni révocation n’a été exécutée.",
-      "revision": 2,
-      "reviewed": true,
-      "capturedAt": "2026-10-08",
-      "viewport": [
-        1440,
-        1800
-      ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     }
   ],
   "requiredFigures": [
     "external-minddy-mcp-workflow",
-    "external-minddy-mcp-install-workflow",
-    "external-minddy-mcp-accesses-workflow"
+    "external-minddy-mcp-install-workflow"
   ]
 }
 ---
@@ -139,7 +125,6 @@ La section minddy MCP des paramètres du compte liste les accès externes et leu
 
 ![Dialogue d’installation de Codex sur l’instance locale.](/documentation/fr/external-minddy-mcp-install-workflow.png)
 
-![Liste des applications connectées sans autorisation active.](/documentation/fr/external-minddy-mcp-accesses-workflow.png)
 
 ## Utiliser MCP minddy et découvrir ses outils actuels {#mcp-tool-reference}
 

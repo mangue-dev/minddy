@@ -63,7 +63,24 @@
         720,
         640
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "collection",
+        "items": [
+          {
+            "title": "Dedicated root outside PostgreSQL"
+          },
+          {
+            "title": "Wrapped project, user and system keys"
+          },
+          {
+            "title": "Authorized server decryption"
+          },
+          {
+            "title": "Database + Storage + matching keys restore"
+          }
+        ]
+      }
     }
   ],
   "requiredFigures": [

@@ -93,15 +93,16 @@
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
-        1200,
-        900
+        498,
+        648
       ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     },
     {
       "id": "numo-permissions-and-approvals-workflow",
       "kind": "diagram",
-      "src": "/documentation/it/numo-permissions-and-approvals-workflow.png",
+      "src": "/documentation/it/numo-permissions-and-approvals-workflow.svg",
       "alt": "Matrice dei permessi Numo per azioni del progetto, connessioni personali e routine.",
       "caption": "Accesso al progetto e richieste esplicite limitano le azioni di Numo; i contenuti esterni non concedono permessi.",
       "revision": 2,
@@ -111,7 +112,53 @@
         1100,
         790
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "matrix",
+        "title": "Numo: accesso e autorizzazione",
+        "headers": [
+          "Azione o contesto",
+          "Chi autorizza",
+          "Limite"
+        ],
+        "rows": [
+          [
+            "Lavoro del progetto",
+            "Membro con accesso al progetto",
+            "Restano validi i permessi del progetto"
+          ],
+          [
+            "Impostazioni del proprietario",
+            "Proprietario del progetto",
+            "Membri, repository e impostazioni feedback"
+          ],
+          [
+            "Credenziali e sicurezza",
+            "Titolare dell’account, nelle impostazioni",
+            "Configurare direttamente chiavi, Git e secondo fattore"
+          ],
+          [
+            "Risposta pubblica a un feedback",
+            "Richiesta esplicita dell’utente",
+            "Leggere una richiesta non autorizza una risposta pubblica"
+          ],
+          [
+            "MCP personale",
+            "Autore della conversazione",
+            "Nessuna connessione personale di altri membri"
+          ],
+          [
+            "Routine pianificata",
+            "Proprietario attuale del progetto",
+            "Connessioni e budget IA del proprietario"
+          ],
+          [
+            "Risultato MCP remoto",
+            "Contenuto esterno non affidabile",
+            "Non può autorizzare altre azioni"
+          ]
+        ]
+      }
     },
     {
       "id": "numo-execution-model-flow",
@@ -126,7 +173,24 @@
         720,
         640
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "sequence",
+        "items": [
+          {
+            "title": "Persistire intento, messaggio e UUID"
+          },
+          {
+            "title": "Acquisire turno, salvare tool e risultati"
+          },
+          {
+            "title": "Attendere worker attuale se necessario"
+          },
+          {
+            "title": "Riprodurre eventi e riconciliare scritture incerte"
+          }
+        ]
+      }
     },
     {
       "id": "numo-mcp-connections-workflow",
@@ -138,10 +202,11 @@
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
-        1440,
-        1800
+        816,
+        1314
       ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     },
     {
       "id": "numo-mcp-connections-config-workflow",
@@ -153,10 +218,11 @@
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
-        1440,
-        1800
+        560,
+        920
       ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     },
     {
       "id": "recover-numo-work-workflow",
@@ -168,10 +234,11 @@
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
-        1480,
-        1100
+        912,
+        400
       ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     }
   ],
   "requiredFigures": [
@@ -220,7 +287,7 @@ Una richiesta può raggiungere un fornitore esterno. Disabilitare la connessione
 
 Le conversazioni non usano le connessioni MCP personali di altri membri. Le routine usano connessioni e budget del proprietario. Dopo un cambio di proprietario, avvia una nuova esecuzione con quello corrente: le precedenti non conservano le vecchie credenziali. La sandbox del server non eredita file o sessioni del tuo computer.
 
-![Matrice dei permessi Numo per azioni del progetto, connessioni personali e routine.](/documentation/it/numo-permissions-and-approvals-workflow.png)
+![Matrice dei permessi Numo per azioni del progetto, connessioni personali e routine.](/documentation/it/numo-permissions-and-approvals-workflow.svg)
 
 ## Comprendere i turni persistenti di Numo e il lavoro delegato {#numo-execution-model}
 

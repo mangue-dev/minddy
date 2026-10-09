@@ -79,7 +79,24 @@
         720,
         640
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "collection",
+        "items": [
+          {
+            "title": "Operador elige capacidad opcional"
+          },
+          {
+            "title": "Credenciales completas y condiciones"
+          },
+          {
+            "title": "Destino de datos externo explícito"
+          },
+          {
+            "title": "Verificar conducta y controlar costes"
+          }
+        ]
+      }
     },
     {
       "id": "proxy-network-and-jobs-flow",
@@ -94,7 +111,24 @@
         720,
         640
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "collection",
+        "items": [
+          {
+            "title": "Proxy HTTPS público"
+          },
+          {
+            "title": "Orígenes públicos de la aplicación y Supabase"
+          },
+          {
+            "title": "Runner, base y puertos privados"
+          },
+          {
+            "title": "Tareas autenticadas; paradas en mantenimiento"
+          }
+        ]
+      }
     }
   ],
   "requiredFigures": [

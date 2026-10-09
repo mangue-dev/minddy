@@ -64,7 +64,24 @@
         720,
         640
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "collection",
+        "items": [
+          {
+            "title": "Autorisierter Anwendungsdateizugriff"
+          },
+          {
+            "title": "PostgreSQL-Objektmetadaten"
+          },
+          {
+            "title": "Rohbytes im Dateisystem oder S3"
+          },
+          {
+            "title": "Passende Konfiguration und Schlüssel"
+          }
+        ]
+      }
     }
   ],
   "requiredFigures": [

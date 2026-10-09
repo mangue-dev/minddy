@@ -70,12 +70,13 @@
       "caption": "Filter by issue properties or choose a sort order. The AI field is optional for these manual controls.",
       "revision": 4,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
-        1440,
-        1080
+        288,
+        393
       ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     },
     {
       "id": "share-a-view-steps",
@@ -85,12 +86,13 @@
       "caption": "Private, password-protected and public access are distinct choices. This capture keeps the view private.",
       "revision": 4,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
-        1440,
-        1080
+        496,
+        230
       ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     }
   ],
   "requiredFigures": [

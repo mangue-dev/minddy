@@ -92,10 +92,11 @@
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
-        1440,
-        1150
+        816,
+        378
       ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     },
     {
       "id": "submit-and-follow-feedback-workflow",
@@ -107,10 +108,11 @@
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
-        1365,
-        1000
+        625,
+        394
       ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     },
     {
       "id": "moderate-feedback-workflow",
@@ -122,10 +124,11 @@
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
-        1440,
-        1100
+        816,
+        874
       ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     },
     {
       "id": "feedback-to-issue-workflow",
@@ -137,10 +140,11 @@
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
-        1440,
-        1100
+        816,
+        874
       ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     },
     {
       "id": "feedback-pages-and-views-workflow",
@@ -152,10 +156,11 @@
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
-        1100,
-        650
+        1148,
+        388
       ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     }
   ],
   "requiredFigures": [

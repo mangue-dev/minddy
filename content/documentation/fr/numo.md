@@ -92,15 +92,16 @@
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
-        1200,
-        900
+        498,
+        648
       ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     },
     {
       "id": "numo-permissions-and-approvals-workflow",
       "kind": "diagram",
-      "src": "/documentation/fr/numo-permissions-and-approvals-workflow.png",
+      "src": "/documentation/fr/numo-permissions-and-approvals-workflow.svg",
       "alt": "Matrice des permissions Numo pour les actions du projet, connexions personnelles et routines.",
       "caption": "Les accès du projet et les demandes explicites bornent les actions de Numo ; un contenu externe ne donne pas de permission.",
       "revision": 2,
@@ -110,7 +111,53 @@
         1100,
         790
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "matrix",
+        "title": "Numo : accès et autorisation",
+        "headers": [
+          "Action ou contexte",
+          "Qui autorise",
+          "Limite"
+        ],
+        "rows": [
+          [
+            "Travail du projet",
+            "Membre ayant accès au projet",
+            "Les permissions du projet restent applicables"
+          ],
+          [
+            "Réglages du propriétaire",
+            "Propriétaire du projet",
+            "Membres, repository et réglages des retours"
+          ],
+          [
+            "Identifiants et sécurité",
+            "Titulaire du compte, dans les réglages",
+            "Configurer directement clés, Git et double authentification"
+          ],
+          [
+            "Réponse publique à un retour",
+            "Demande explicite de l’utilisateur",
+            "Lire une demande n’autorise pas une réponse publique"
+          ],
+          [
+            "MCP personnel",
+            "Auteur de la conversation",
+            "Pas de connexions personnelles d’un autre membre"
+          ],
+          [
+            "Routine planifiée",
+            "Propriétaire actuel du projet",
+            "Connexions et budget IA du propriétaire"
+          ],
+          [
+            "Résultat MCP distant",
+            "Contenu externe non fiable",
+            "Ne peut pas autoriser des actions supplémentaires"
+          ]
+        ]
+      }
     },
     {
       "id": "numo-execution-model-flow",
@@ -125,7 +172,24 @@
         720,
         640
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "sequence",
+        "items": [
+          {
+            "title": "Persister intention, message et UUID"
+          },
+          {
+            "title": "Prendre le tour, enregistrer outils et résultats"
+          },
+          {
+            "title": "Attendre le worker courant si nécessaire"
+          },
+          {
+            "title": "Relire les événements ; réconcilier les écritures"
+          }
+        ]
+      }
     },
     {
       "id": "numo-mcp-connections-workflow",
@@ -137,10 +201,11 @@
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
-        1440,
-        1800
+        816,
+        1314
       ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     },
     {
       "id": "numo-mcp-connections-config-workflow",
@@ -152,10 +217,11 @@
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
-        1440,
-        1800
+        560,
+        920
       ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     },
     {
       "id": "recover-numo-work-workflow",
@@ -167,10 +233,11 @@
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
-        1480,
-        1100
+        912,
+        400
       ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     }
   ],
   "requiredFigures": [
@@ -219,7 +286,7 @@ Une requête peut atteindre un fournisseur externe. Désactiver sa connexion blo
 
 Une conversation ne peut pas emprunter les connexions MCP d’un autre membre. Les routines utilisent les connexions et le budget IA du propriétaire. Après un changement de propriétaire, lancez une nouvelle occurrence sous le propriétaire courant. Une ancienne occurrence ne peut pas conserver les identifiants du précédent. Un sandbox serveur n’hérite pas des fichiers ou sessions de votre ordinateur.
 
-![Matrice des permissions Numo pour les actions du projet, connexions personnelles et routines.](/documentation/fr/numo-permissions-and-approvals-workflow.png)
+![Matrice des permissions Numo pour les actions du projet, connexions personnelles et routines.](/documentation/fr/numo-permissions-and-approvals-workflow.svg)
 
 ## Comprendre les tours durables Numo et le travail délégué {#numo-execution-model}
 

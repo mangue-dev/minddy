@@ -63,7 +63,24 @@
         720,
         640
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "collection",
+        "items": [
+          {
+            "title": "Eigener Wurzelschlüssel außerhalb PostgreSQL"
+          },
+          {
+            "title": "Umschlossene Projekt-, Nutzer-, Systemschlüssel"
+          },
+          {
+            "title": "Autorisierte Serverentschlüsselung"
+          },
+          {
+            "title": "Restore: Datenbank + Storage + passende Schlüssel"
+          }
+        ]
+      }
     }
   ],
   "requiredFigures": [

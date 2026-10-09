@@ -72,7 +72,24 @@
         720,
         640
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "sequence",
+        "items": [
+          {
+            "title": "Backup externo completo verificado"
+          },
+          {
+            "title": "Alvo vazio isolado com versões iguais"
+          },
+          {
+            "title": "Restaurar banco, bytes e chaves juntos"
+          },
+          {
+            "title": "Verificar conta, conteúdo e arquivos antes de abrir"
+          }
+        ]
+      }
     }
   ],
   "requiredFigures": [

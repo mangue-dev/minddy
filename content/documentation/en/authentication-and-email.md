@@ -64,7 +64,24 @@
         720,
         640
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "sequence",
+        "items": [
+          {
+            "title": "Configured Auth origin and redirects"
+          },
+          {
+            "title": "Operator SMTP and versioned templates"
+          },
+          {
+            "title": "Confirmation gesture and password login"
+          },
+          {
+            "title": "TOTP, recovery and revoked-password tests"
+          }
+        ]
+      }
     }
   ],
   "requiredFigures": [

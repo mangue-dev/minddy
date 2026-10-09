@@ -72,7 +72,24 @@
         720,
         640
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "sequence",
+        "items": [
+          {
+            "title": "Backup completo esterno verificato"
+          },
+          {
+            "title": "Destinazione vuota isolata e versioni uguali"
+          },
+          {
+            "title": "Ripristinare database, byte e chiavi insieme"
+          },
+          {
+            "title": "Verificare account, contenuti e file prima di aprire"
+          }
+        ]
+      }
     }
   ],
   "requiredFigures": [

@@ -56,16 +56,17 @@
       "id": "notifications-and-inbox-steps",
       "kind": "screenshot",
       "src": "/documentation/de/work-inbox.png",
-      "alt": "Posteingang-Tabs und leere Liste ungelesener Einträge.",
-      "caption": "Ein leerer Tab Ungelesen bedeutet, dass diese Ansicht keine ungelesenen Einträge enthält. Unter Alle findest du weitere gespeicherte Benachrichtigungen.",
+      "alt": "Posteingang mit Beispiel-Erwähnungen, Zuweisungen und Kommentaren sowie gelesenen und ungelesenen Einträgen.",
+      "caption": "Die Beispielaktivität zeigt Autor, Issue und Lesestatus. Alle enthält gelesene und ungelesene Benachrichtigungen.",
       "revision": 5,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
-        1440,
-        1080
+        528,
+        648
       ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     }
   ],
   "requiredFigures": [
@@ -80,7 +81,7 @@
 
 Ausstehende Projekteinladungen erscheinen ebenfalls im Posteingang. Nimm sie an oder lehne sie ab, nachdem du Projekt und Konto geprüft hast. Alte Posteingangslinks öffnen den aktuellen Einstiegspunkt, keine gesonderte Seite.
 
-![Posteingang-Tabs und leere Liste ungelesener Einträge.](/documentation/de/work-inbox.png)
+![Posteingang mit Beispiel-Erwähnungen, Zuweisungen und Kommentaren sowie gelesenen und ungelesenen Einträgen.](/documentation/de/work-inbox.png)
 
 ## Benachrichtigungskanäle wählen {#notification-preferences}
 

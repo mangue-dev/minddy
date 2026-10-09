@@ -79,7 +79,24 @@
         720,
         640
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "sequence",
+        "items": [
+          {
+            "title": "Annotierter Quelltag"
+          },
+          {
+            "title": "Dateien und SHA256SUMS"
+          },
+          {
+            "title": "Offizielle OCI-Signatur und Digest"
+          },
+          {
+            "title": "Gewähltes Kompatibilitätsprofil"
+          }
+        ]
+      }
     },
     {
       "id": "install-a-server-flow",
@@ -94,7 +111,24 @@
         720,
         640
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "sequence",
+        "items": [
+          {
+            "title": "Geprüfte Release und geschützte Umgebung"
+          },
+          {
+            "title": "Installer: full-Referenzprofil"
+          },
+          {
+            "title": "Offizielles Supabase, App, Scheduler, Runner"
+          },
+          {
+            "title": "Konto-, Datei- und Wiederherstellungsprüfung"
+          }
+        ]
+      }
     },
     {
       "id": "install-a-server-wizard",
@@ -106,10 +140,11 @@
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
-        1280,
-        1100
+        944,
+        1044
       ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     },
     {
       "id": "managed-or-source-installation-flow",
@@ -124,7 +159,24 @@
         720,
         640
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "collection",
+        "items": [
+          {
+            "title": "Ihr verwaltetes Supabase-Projekt"
+          },
+          {
+            "title": "PostgreSQL, Auth, Storage, Realtime"
+          },
+          {
+            "title": "OCI-Profil ODER Anwendung aus Quelltag"
+          },
+          {
+            "title": "Jobs und Sicherung passend zum Profil"
+          }
+        ]
+      }
     }
   ],
   "requiredFigures": [

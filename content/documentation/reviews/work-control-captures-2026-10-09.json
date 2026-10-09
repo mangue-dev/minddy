@@ -1,0 +1,1123 @@
+[
+  {
+    "locale": "en",
+    "screen": "dependencies",
+    "src": "/documentation/en/work-dependencies.png",
+    "sourceCommit": "f87681046f6a25fd156831cbf02d8fbf0c3a8acc",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-09",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "viewport": [
+      368,
+      152
+    ],
+    "padding": 24,
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "Codex",
+    "reviewDate": "2026-10-09",
+    "initialBrowserViewport": [
+      1440,
+      1080
+    ],
+    "framing": "Complete real control with 24 CSS pixels of transparent margin. The browser height may expand to preserve the bottom margin."
+  },
+  {
+    "locale": "en",
+    "screen": "resources",
+    "src": "/documentation/en/work-resources.png",
+    "sourceCommit": "f87681046f6a25fd156831cbf02d8fbf0c3a8acc",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-09",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "viewport": [
+      496,
+      212
+    ],
+    "padding": 24,
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "Codex",
+    "reviewDate": "2026-10-09",
+    "initialBrowserViewport": [
+      1440,
+      1080
+    ],
+    "framing": "Complete real control with 24 CSS pixels of transparent margin. The browser height may expand to preserve the bottom margin."
+  },
+  {
+    "locale": "en",
+    "screen": "view-filters",
+    "src": "/documentation/en/work-view-filters.png",
+    "sourceCommit": "f87681046f6a25fd156831cbf02d8fbf0c3a8acc",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-09",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "viewport": [
+      288,
+      393
+    ],
+    "padding": 24,
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "Codex",
+    "reviewDate": "2026-10-09",
+    "initialBrowserViewport": [
+      1440,
+      1080
+    ],
+    "framing": "Complete real control with 24 CSS pixels of transparent margin. The browser height may expand to preserve the bottom margin."
+  },
+  {
+    "locale": "en",
+    "screen": "share-view",
+    "src": "/documentation/en/work-share-view.png",
+    "sourceCommit": "f87681046f6a25fd156831cbf02d8fbf0c3a8acc",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-09",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "viewport": [
+      496,
+      230
+    ],
+    "padding": 24,
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "Codex",
+    "reviewDate": "2026-10-09",
+    "initialBrowserViewport": [
+      1440,
+      1080
+    ],
+    "framing": "Complete real control with 24 CSS pixels of transparent margin. The browser height may expand to preserve the bottom margin."
+  },
+  {
+    "locale": "en",
+    "screen": "inbox",
+    "src": "/documentation/en/work-inbox.png",
+    "sourceCommit": "f87681046f6a25fd156831cbf02d8fbf0c3a8acc",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-09",
+    "route": "/home",
+    "theme": "light",
+    "viewport": [
+      528,
+      648
+    ],
+    "padding": 24,
+    "displayAdaptation": [
+      "Local demonstration notifications; no events or notifications were written.",
+      "Local demonstration notifications; no events or notifications were written."
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "Codex",
+    "reviewDate": "2026-10-09",
+    "initialBrowserViewport": [
+      1440,
+      1080
+    ],
+    "framing": "Complete real control with 24 CSS pixels of transparent margin. The browser height may expand to preserve the bottom margin."
+  },
+  {
+    "locale": "fr",
+    "screen": "dependencies",
+    "src": "/documentation/fr/work-dependencies.png",
+    "sourceCommit": "f87681046f6a25fd156831cbf02d8fbf0c3a8acc",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-09",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "viewport": [
+      368,
+      152
+    ],
+    "padding": 24,
+    "displayAdaptation": [
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "Codex",
+    "reviewDate": "2026-10-09",
+    "initialBrowserViewport": [
+      1440,
+      1080
+    ],
+    "framing": "Complete real control with 24 CSS pixels of transparent margin. The browser height may expand to preserve the bottom margin."
+  },
+  {
+    "locale": "fr",
+    "screen": "resources",
+    "src": "/documentation/fr/work-resources.png",
+    "sourceCommit": "f87681046f6a25fd156831cbf02d8fbf0c3a8acc",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-09",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "viewport": [
+      496,
+      212
+    ],
+    "padding": 24,
+    "displayAdaptation": [
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "Codex",
+    "reviewDate": "2026-10-09",
+    "initialBrowserViewport": [
+      1440,
+      1080
+    ],
+    "framing": "Complete real control with 24 CSS pixels of transparent margin. The browser height may expand to preserve the bottom margin."
+  },
+  {
+    "locale": "fr",
+    "screen": "view-filters",
+    "src": "/documentation/fr/work-view-filters.png",
+    "sourceCommit": "f87681046f6a25fd156831cbf02d8fbf0c3a8acc",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-09",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "viewport": [
+      288,
+      393
+    ],
+    "padding": 24,
+    "displayAdaptation": [
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "Codex",
+    "reviewDate": "2026-10-09",
+    "initialBrowserViewport": [
+      1440,
+      1080
+    ],
+    "framing": "Complete real control with 24 CSS pixels of transparent margin. The browser height may expand to preserve the bottom margin."
+  },
+  {
+    "locale": "fr",
+    "screen": "share-view",
+    "src": "/documentation/fr/work-share-view.png",
+    "sourceCommit": "f87681046f6a25fd156831cbf02d8fbf0c3a8acc",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-09",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "viewport": [
+      496,
+      230
+    ],
+    "padding": 24,
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/me/scratchpad",
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "Codex",
+    "reviewDate": "2026-10-09",
+    "initialBrowserViewport": [
+      1440,
+      1080
+    ],
+    "framing": "Complete real control with 24 CSS pixels of transparent margin. The browser height may expand to preserve the bottom margin."
+  },
+  {
+    "locale": "fr",
+    "screen": "inbox",
+    "src": "/documentation/fr/work-inbox.png",
+    "sourceCommit": "f87681046f6a25fd156831cbf02d8fbf0c3a8acc",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-09",
+    "route": "/home",
+    "theme": "light",
+    "viewport": [
+      528,
+      648
+    ],
+    "padding": 24,
+    "displayAdaptation": [
+      "Local demonstration notifications; no events or notifications were written.",
+      "Local demonstration notifications; no events or notifications were written.",
+      "/api/me/scratchpad"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "Codex",
+    "reviewDate": "2026-10-09",
+    "initialBrowserViewport": [
+      1440,
+      1080
+    ],
+    "framing": "Complete real control with 24 CSS pixels of transparent margin. The browser height may expand to preserve the bottom margin."
+  },
+  {
+    "locale": "de",
+    "screen": "dependencies",
+    "src": "/documentation/de/work-dependencies.png",
+    "sourceCommit": "f87681046f6a25fd156831cbf02d8fbf0c3a8acc",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-09",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "viewport": [
+      368,
+      152
+    ],
+    "padding": 24,
+    "displayAdaptation": [
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "Codex",
+    "reviewDate": "2026-10-09",
+    "initialBrowserViewport": [
+      1440,
+      1080
+    ],
+    "framing": "Complete real control with 24 CSS pixels of transparent margin. The browser height may expand to preserve the bottom margin."
+  },
+  {
+    "locale": "de",
+    "screen": "resources",
+    "src": "/documentation/de/work-resources.png",
+    "sourceCommit": "f87681046f6a25fd156831cbf02d8fbf0c3a8acc",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-09",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "viewport": [
+      496,
+      212
+    ],
+    "padding": 24,
+    "displayAdaptation": [
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "Codex",
+    "reviewDate": "2026-10-09",
+    "initialBrowserViewport": [
+      1440,
+      1080
+    ],
+    "framing": "Complete real control with 24 CSS pixels of transparent margin. The browser height may expand to preserve the bottom margin."
+  },
+  {
+    "locale": "de",
+    "screen": "view-filters",
+    "src": "/documentation/de/work-view-filters.png",
+    "sourceCommit": "f87681046f6a25fd156831cbf02d8fbf0c3a8acc",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-09",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "viewport": [
+      288,
+      413
+    ],
+    "padding": 24,
+    "displayAdaptation": [
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "Codex",
+    "reviewDate": "2026-10-09",
+    "initialBrowserViewport": [
+      1440,
+      1080
+    ],
+    "framing": "Complete real control with 24 CSS pixels of transparent margin. The browser height may expand to preserve the bottom margin."
+  },
+  {
+    "locale": "de",
+    "screen": "share-view",
+    "src": "/documentation/de/work-share-view.png",
+    "sourceCommit": "f87681046f6a25fd156831cbf02d8fbf0c3a8acc",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-09",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "viewport": [
+      496,
+      230
+    ],
+    "padding": 24,
+    "displayAdaptation": [
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "Codex",
+    "reviewDate": "2026-10-09",
+    "initialBrowserViewport": [
+      1440,
+      1080
+    ],
+    "framing": "Complete real control with 24 CSS pixels of transparent margin. The browser height may expand to preserve the bottom margin."
+  },
+  {
+    "locale": "es",
+    "screen": "dependencies",
+    "src": "/documentation/es/work-dependencies.png",
+    "sourceCommit": "f87681046f6a25fd156831cbf02d8fbf0c3a8acc",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-09",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "viewport": [
+      368,
+      152
+    ],
+    "padding": 24,
+    "displayAdaptation": [
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "Codex",
+    "reviewDate": "2026-10-09",
+    "initialBrowserViewport": [
+      1440,
+      1080
+    ],
+    "framing": "Complete real control with 24 CSS pixels of transparent margin. The browser height may expand to preserve the bottom margin."
+  },
+  {
+    "locale": "es",
+    "screen": "resources",
+    "src": "/documentation/es/work-resources.png",
+    "sourceCommit": "f87681046f6a25fd156831cbf02d8fbf0c3a8acc",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-09",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "viewport": [
+      496,
+      212
+    ],
+    "padding": 24,
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "Codex",
+    "reviewDate": "2026-10-09",
+    "initialBrowserViewport": [
+      1440,
+      1080
+    ],
+    "framing": "Complete real control with 24 CSS pixels of transparent margin. The browser height may expand to preserve the bottom margin."
+  },
+  {
+    "locale": "es",
+    "screen": "view-filters",
+    "src": "/documentation/es/work-view-filters.png",
+    "sourceCommit": "f87681046f6a25fd156831cbf02d8fbf0c3a8acc",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-09",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "viewport": [
+      288,
+      433
+    ],
+    "padding": 24,
+    "displayAdaptation": [
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "Codex",
+    "reviewDate": "2026-10-09",
+    "initialBrowserViewport": [
+      1440,
+      1080
+    ],
+    "framing": "Complete real control with 24 CSS pixels of transparent margin. The browser height may expand to preserve the bottom margin."
+  },
+  {
+    "locale": "es",
+    "screen": "share-view",
+    "src": "/documentation/es/work-share-view.png",
+    "sourceCommit": "f87681046f6a25fd156831cbf02d8fbf0c3a8acc",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-09",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "viewport": [
+      496,
+      230
+    ],
+    "padding": 24,
+    "displayAdaptation": [
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "Codex",
+    "reviewDate": "2026-10-09",
+    "initialBrowserViewport": [
+      1440,
+      1080
+    ],
+    "framing": "Complete real control with 24 CSS pixels of transparent margin. The browser height may expand to preserve the bottom margin."
+  },
+  {
+    "locale": "es",
+    "screen": "inbox",
+    "src": "/documentation/es/work-inbox.png",
+    "sourceCommit": "f87681046f6a25fd156831cbf02d8fbf0c3a8acc",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-09",
+    "route": "/home",
+    "theme": "light",
+    "viewport": [
+      528,
+      648
+    ],
+    "padding": 24,
+    "displayAdaptation": [
+      "Local demonstration notifications; no events or notifications were written.",
+      "/api/me/scratchpad",
+      "Local demonstration notifications; no events or notifications were written.",
+      "/api/me/scratchpad"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "Codex",
+    "reviewDate": "2026-10-09",
+    "initialBrowserViewport": [
+      1440,
+      1080
+    ],
+    "framing": "Complete real control with 24 CSS pixels of transparent margin. The browser height may expand to preserve the bottom margin."
+  },
+  {
+    "locale": "it",
+    "screen": "dependencies",
+    "src": "/documentation/it/work-dependencies.png",
+    "sourceCommit": "f87681046f6a25fd156831cbf02d8fbf0c3a8acc",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-09",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "viewport": [
+      368,
+      152
+    ],
+    "padding": 24,
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "Codex",
+    "reviewDate": "2026-10-09",
+    "initialBrowserViewport": [
+      1440,
+      1080
+    ],
+    "framing": "Complete real control with 24 CSS pixels of transparent margin. The browser height may expand to preserve the bottom margin."
+  },
+  {
+    "locale": "it",
+    "screen": "resources",
+    "src": "/documentation/it/work-resources.png",
+    "sourceCommit": "f87681046f6a25fd156831cbf02d8fbf0c3a8acc",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-09",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "viewport": [
+      496,
+      212
+    ],
+    "padding": 24,
+    "displayAdaptation": [
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "Codex",
+    "reviewDate": "2026-10-09",
+    "initialBrowserViewport": [
+      1440,
+      1080
+    ],
+    "framing": "Complete real control with 24 CSS pixels of transparent margin. The browser height may expand to preserve the bottom margin."
+  },
+  {
+    "locale": "it",
+    "screen": "view-filters",
+    "src": "/documentation/it/work-view-filters.png",
+    "sourceCommit": "f87681046f6a25fd156831cbf02d8fbf0c3a8acc",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-09",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "viewport": [
+      288,
+      393
+    ],
+    "padding": 24,
+    "displayAdaptation": [
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "Codex",
+    "reviewDate": "2026-10-09",
+    "initialBrowserViewport": [
+      1440,
+      1080
+    ],
+    "framing": "Complete real control with 24 CSS pixels of transparent margin. The browser height may expand to preserve the bottom margin."
+  },
+  {
+    "locale": "it",
+    "screen": "share-view",
+    "src": "/documentation/it/work-share-view.png",
+    "sourceCommit": "f87681046f6a25fd156831cbf02d8fbf0c3a8acc",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-09",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "viewport": [
+      496,
+      230
+    ],
+    "padding": 24,
+    "displayAdaptation": [
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "Codex",
+    "reviewDate": "2026-10-09",
+    "initialBrowserViewport": [
+      1440,
+      1080
+    ],
+    "framing": "Complete real control with 24 CSS pixels of transparent margin. The browser height may expand to preserve the bottom margin."
+  },
+  {
+    "locale": "it",
+    "screen": "inbox",
+    "src": "/documentation/it/work-inbox.png",
+    "sourceCommit": "f87681046f6a25fd156831cbf02d8fbf0c3a8acc",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-09",
+    "route": "/home",
+    "theme": "light",
+    "viewport": [
+      528,
+      648
+    ],
+    "padding": 24,
+    "displayAdaptation": [
+      "Local demonstration notifications; no events or notifications were written.",
+      "/api/me/scratchpad",
+      "Local demonstration notifications; no events or notifications were written.",
+      "/api/me/scratchpad"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "Codex",
+    "reviewDate": "2026-10-09",
+    "initialBrowserViewport": [
+      1440,
+      1080
+    ],
+    "framing": "Complete real control with 24 CSS pixels of transparent margin. The browser height may expand to preserve the bottom margin."
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "dependencies",
+    "src": "/documentation/pt-BR/work-dependencies.png",
+    "sourceCommit": "f87681046f6a25fd156831cbf02d8fbf0c3a8acc",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-09",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "viewport": [
+      368,
+      152
+    ],
+    "padding": 24,
+    "displayAdaptation": [
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "Codex",
+    "reviewDate": "2026-10-09",
+    "initialBrowserViewport": [
+      1440,
+      1080
+    ],
+    "framing": "Complete real control with 24 CSS pixels of transparent margin. The browser height may expand to preserve the bottom margin."
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "resources",
+    "src": "/documentation/pt-BR/work-resources.png",
+    "sourceCommit": "f87681046f6a25fd156831cbf02d8fbf0c3a8acc",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-09",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "viewport": [
+      496,
+      212
+    ],
+    "padding": 24,
+    "displayAdaptation": [
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "Codex",
+    "reviewDate": "2026-10-09",
+    "initialBrowserViewport": [
+      1440,
+      1080
+    ],
+    "framing": "Complete real control with 24 CSS pixels of transparent margin. The browser height may expand to preserve the bottom margin."
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "view-filters",
+    "src": "/documentation/pt-BR/work-view-filters.png",
+    "sourceCommit": "f87681046f6a25fd156831cbf02d8fbf0c3a8acc",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-09",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "viewport": [
+      288,
+      393
+    ],
+    "padding": 24,
+    "displayAdaptation": [
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "Codex",
+    "reviewDate": "2026-10-09",
+    "initialBrowserViewport": [
+      1440,
+      1080
+    ],
+    "framing": "Complete real control with 24 CSS pixels of transparent margin. The browser height may expand to preserve the bottom margin."
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "share-view",
+    "src": "/documentation/pt-BR/work-share-view.png",
+    "sourceCommit": "f87681046f6a25fd156831cbf02d8fbf0c3a8acc",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-09",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "viewport": [
+      496,
+      230
+    ],
+    "padding": 24,
+    "displayAdaptation": [
+      "/api/me/scratchpad",
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "Codex",
+    "reviewDate": "2026-10-09",
+    "initialBrowserViewport": [
+      1440,
+      1080
+    ],
+    "framing": "Complete real control with 24 CSS pixels of transparent margin. The browser height may expand to preserve the bottom margin."
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "inbox",
+    "src": "/documentation/pt-BR/work-inbox.png",
+    "sourceCommit": "f87681046f6a25fd156831cbf02d8fbf0c3a8acc",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-09",
+    "route": "/home",
+    "theme": "light",
+    "viewport": [
+      528,
+      648
+    ],
+    "padding": 24,
+    "displayAdaptation": [
+      "Local demonstration notifications; no events or notifications were written.",
+      "/api/me/scratchpad",
+      "Local demonstration notifications; no events or notifications were written.",
+      "/api/me/scratchpad"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "Codex",
+    "reviewDate": "2026-10-09",
+    "initialBrowserViewport": [
+      1440,
+      1080
+    ],
+    "framing": "Complete real control with 24 CSS pixels of transparent margin. The browser height may expand to preserve the bottom margin."
+  },
+  {
+    "locale": "de",
+    "screen": "inbox",
+    "src": "/documentation/de/work-inbox.png",
+    "sourceCommit": "f87681046f6a25fd156831cbf02d8fbf0c3a8acc",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-09",
+    "route": "/home",
+    "theme": "light",
+    "viewport": [
+      528,
+      648
+    ],
+    "padding": 24,
+    "displayAdaptation": [
+      "Local demonstration notifications; no events or notifications were written.",
+      "/api/me/scratchpad",
+      "Local demonstration notifications; no events or notifications were written.",
+      "/api/me/scratchpad"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "Codex",
+    "reviewDate": "2026-10-09",
+    "initialBrowserViewport": [
+      1440,
+      1080
+    ],
+    "framing": "Complete real control with 24 CSS pixels of transparent margin. The browser height may expand to preserve the bottom margin."
+  }
+]

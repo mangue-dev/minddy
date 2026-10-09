@@ -67,7 +67,24 @@
         720,
         640
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "collection",
+        "items": [
+          {
+            "title": "Projet : travail et connaissances partagés"
+          },
+          {
+            "title": "Ticket : travail ; objectif : résultat visé"
+          },
+          {
+            "title": "Cycle personnel : travail entre projets"
+          },
+          {
+            "title": "Page : contexte durable ; feedback : besoin"
+          }
+        ]
+      }
     }
   ],
   "requiredFigures": [

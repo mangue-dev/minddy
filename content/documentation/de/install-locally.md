@@ -63,7 +63,24 @@
         720,
         640
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "collection",
+        "items": [
+          {
+            "title": "Desktop-App wählt den Klon"
+          },
+          {
+            "title": "Loopback-Anwendung: Port 6463"
+          },
+          {
+            "title": "Minimales Supabase und dauerhafte Daten"
+          },
+          {
+            "title": "Beenden stoppt App und Backend"
+          }
+        ]
+      }
     },
     {
       "id": "install-locally-wizard",
@@ -75,10 +92,11 @@
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
-        1280,
-        1100
+        944,
+        606
       ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     }
   ],
   "requiredFigures": [

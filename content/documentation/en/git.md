@@ -63,38 +63,41 @@
   "figures": [
     {
       "id": "git-accounts-and-repositories-workflow",
-      "kind": "screenshot",
-      "src": "/documentation/en/git-accounts-and-repositories-workflow.png",
-      "alt": "Disconnected GitHub and GitLab accounts with authorization controls.",
-      "caption": "Authorize your Git account first. The project owner links a repository separately.",
+      "kind": "diagram",
+      "src": "/documentation/en/git-connection-flow.svg",
+      "alt": "A personal account connection and a project repository link are separate steps.",
+      "caption": "Authorize the account first, then link a repository as the project owner.",
       "revision": 2,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
-        1440,
-        1800
+        720,
+        580
       ],
-      "theme": "light"
-    },
-    {
-      "id": "git-accounts-and-repositories-project-workflow",
-      "kind": "screenshot",
-      "src": "/documentation/en/git-accounts-and-repositories-project-workflow.png",
-      "alt": "Git settings of a project with no linked repository.",
-      "caption": "Git settings of a project with no linked repository. Authorize GitHub or GitLab before selecting a repository.",
-      "revision": 2,
-      "reviewed": true,
-      "capturedAt": "2026-10-08",
-      "viewport": [
-        1440,
-        1800
-      ],
-      "theme": "light"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "sequence",
+        "title": "Connect an account, then link a repository",
+        "items": [
+          {
+            "title": "Personal Git account",
+            "detail": "Authorize GitHub or GitLab for the repositories you need."
+          },
+          {
+            "title": "Project owner",
+            "detail": "Choose an available repository in the project’s Git settings."
+          },
+          {
+            "title": "Linked repository",
+            "detail": "Aurora → aurora/web. Issue synchronization is a separate choice."
+          }
+        ]
+      }
     },
     {
       "id": "forge-issue-sync-mapping",
       "kind": "diagram",
-      "src": "/documentation/en/forge-issue-sync-mapping.png",
+      "src": "/documentation/en/forge-issue-sync-mapping.svg",
       "alt": "GitHub sync flow through owner setup, incoming-event checks, import and state mirroring.",
       "caption": "GitHub events preserve newer edits and avoid duplicate deliveries. GitLab field mappings need their own verification.",
       "revision": 2,
@@ -104,7 +107,30 @@
         1100,
         720
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "sequence",
+        "title": "GitHub issue synchronization",
+        "items": [
+          {
+            "title": "Owner setup",
+            "detail": "Link repository, grant Issues read/write and enable issue synchronization."
+          },
+          {
+            "title": "Incoming events",
+            "detail": "Deduplicate delivery IDs; reject payloads older than newer local edits."
+          },
+          {
+            "title": "Import and mapping",
+            "detail": "Imported issues enter triage. Title/body become title/description; labels supply categories and recognized priority/effort."
+          },
+          {
+            "title": "State mirroring",
+            "detail": "Open and closed states mirror in both directions. Compare timestamps when changes compete."
+          }
+        ],
+        "note": "Comments retain remote identity; repeated comments do not duplicate. GitLab field mappings may differ."
+      }
     },
     {
       "id": "forge-issue-sync-workflow",
@@ -116,15 +142,15 @@
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
-        1400,
-        1000
+        816,
+        278
       ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     }
   ],
   "requiredFigures": [
     "git-accounts-and-repositories-workflow",
-    "git-accounts-and-repositories-project-workflow",
     "forge-issue-sync-workflow",
     "forge-issue-sync-mapping"
   ]
@@ -139,7 +165,7 @@ In account Git settings, connect GitHub or GitLab and complete the browser autho
 
 The project owner opens project settings' Git section, chooses an available repository and confirms the link. Check its provider, full repository name and displayed acting account. Members cannot replace the owner-only link. Linking enables repository context and server-side code work; issue synchronization is a separate switch.
 
-![Disconnected GitHub and GitLab accounts with authorization controls.](/documentation/en/git-accounts-and-repositories-workflow.png)
+![A personal account connection and a project repository link are separate steps.](/documentation/en/git-connection-flow.svg)
 
 ### Missing repositories or expired access {#recovery}
 
@@ -147,7 +173,6 @@ If the picker is empty, check provider permissions and that the intended organiz
 
 Self-hosted installations can use a configured managed relay or operator-owned provider apps. A relay connection is started explicitly; it does not make the forge local. Availability depends on instance configuration. Check the operator's provider and relay policy before authorizing access.
 
-![Git settings of a project with no linked repository.](/documentation/en/git-accounts-and-repositories-project-workflow.png)
 
 ## Synchronize linked forge issues {#forge-issue-sync}
 
@@ -161,6 +186,6 @@ GitHub App synchronization needs Issues read/write and Issues, Issue comments an
 
 Older timestamped GitHub payloads cannot overwrite newer local edits. Repeated delivery IDs and remote comment identities prevent duplicate delivery effects. Compare remote and local timestamps when diagnosing conflicts; inspect provider events and operator logs for missed backfills. Turn off synchronization in the same owner-only setting to stop the configured sync; inspect existing imported work separately.
 
-![GitHub sync flow through owner setup, incoming-event checks, import and state mirroring.](/documentation/en/forge-issue-sync-mapping.png)
+![GitHub sync flow through owner setup, incoming-event checks, import and state mirroring.](/documentation/en/forge-issue-sync-mapping.svg)
 
 ![Linked demonstration GitHub repository with issue synchronization disabled.](/documentation/en/forge-issue-sync-workflow.png)

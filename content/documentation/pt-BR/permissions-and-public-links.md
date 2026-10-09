@@ -69,7 +69,24 @@
         720,
         640
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "collection",
+        "items": [
+          {
+            "title": "Permissões de conta e projeto"
+          },
+          {
+            "title": "Objeto privado ou publicação explícita"
+          },
+          {
+            "title": "Só conjunto publicado e arquivos assinados"
+          },
+          {
+            "title": "Revogar link; arquivos expiram depois"
+          }
+        ]
+      }
     }
   ],
   "requiredFigures": [

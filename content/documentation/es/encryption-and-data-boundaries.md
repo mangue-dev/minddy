@@ -68,7 +68,24 @@
         720,
         640
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "collection",
+        "items": [
+          {
+            "title": "Contenido cifrado y claves envueltas"
+          },
+          {
+            "title": "Raíz en configuración protegida del servidor"
+          },
+          {
+            "title": "Runtime autorizado puede descifrar"
+          },
+          {
+            "title": "Exports y proveedores necesitan protección aparte"
+          }
+        ]
+      }
     }
   ],
   "requiredFigures": [

@@ -59,10 +59,11 @@
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
-        1440,
-        1800
+        816,
+        148
       ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     },
     {
       "id": "transfer-between-instances-export-workflow",
@@ -74,31 +75,16 @@
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
-        1440,
-        1800
+        816,
+        148
       ],
-      "theme": "light"
-    },
-    {
-      "id": "transfer-between-instances-result-workflow",
-      "kind": "screenshot",
-      "src": "/documentation/it/transfer-between-instances-result.png",
-      "alt": "Risultato dell’importazione con zero identificativi riassegnati e zero iscrizioni escluse.",
-      "caption": "Questa importazione reale di dati personali non presenta conflitti di identificativi né iscrizioni escluse. Controlla i conteggi, poi scegli Ricarica l’account o chiudi la finestra per ricaricarlo.",
-      "revision": 4,
-      "reviewed": true,
-      "capturedAt": "2026-10-08",
-      "viewport": [
-        1240,
-        860
-      ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     }
   ],
   "requiredFigures": [
     "transfer-between-instances-workflow",
-    "transfer-between-instances-export-workflow",
-    "transfer-between-instances-result-workflow"
+    "transfer-between-instances-export-workflow"
   ]
 }
 ---
@@ -120,5 +106,3 @@ Mantieni l’istanza di origine finché non hai verificato il lavoro trasferito.
 ![Controllo di esportazione dell’account.](/documentation/it/transfer-between-instances-export-workflow.png)
 
 Il risultato rimane aperto finché non scegli Ricarica l’account o chiudi la finestra. Entrambe le azioni ricaricano l’account dopo che hai controllato i conteggi.
-
-![Risultato dell’importazione con zero identificativi riassegnati e zero iscrizioni escluse.](/documentation/it/transfer-between-instances-result.png)

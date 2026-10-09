@@ -59,10 +59,11 @@
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
-        1440,
-        1800
+        816,
+        148
       ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     },
     {
       "id": "transfer-between-instances-export-workflow",
@@ -74,31 +75,16 @@
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
-        1440,
-        1800
+        816,
+        148
       ],
-      "theme": "light"
-    },
-    {
-      "id": "transfer-between-instances-result-workflow",
-      "kind": "screenshot",
-      "src": "/documentation/fr/transfer-between-instances-result.png",
-      "alt": "Résultat d’import avec zéro identifiant réattribué et zéro adhésion ignorée.",
-      "caption": "Cet import réel de données personnelles ne rencontre aucun conflit d’identifiant et aucune adhésion ignorée. Vérifiez les compteurs, puis choisissez Recharger le compte ou fermez la boîte de dialogue.",
-      "revision": 4,
-      "reviewed": true,
-      "capturedAt": "2026-10-08",
-      "viewport": [
-        1240,
-        860
-      ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     }
   ],
   "requiredFigures": [
     "transfer-between-instances-workflow",
-    "transfer-between-instances-export-workflow",
-    "transfer-between-instances-result-workflow"
+    "transfer-between-instances-export-workflow"
   ]
 }
 ---
@@ -120,5 +106,3 @@ Gardez l’instance d’origine jusqu’à la vérification du travail transfér
 ![Commande d’export du compte.](/documentation/fr/transfer-between-instances-export-workflow.png)
 
 Le résultat reste affiché jusqu’à ce que vous choisissiez Recharger le compte ou fermiez la boîte de dialogue. Ces deux actions rechargent le compte après consultation des compteurs.
-
-![Résultat d’import avec zéro identifiant réattribué et zéro adhésion ignorée.](/documentation/fr/transfer-between-instances-result.png)

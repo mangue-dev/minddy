@@ -67,7 +67,24 @@
         720,
         640
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "collection",
+        "items": [
+          {
+            "title": "Navigateur et application authentifiée"
+          },
+          {
+            "title": "Supabase : PostgreSQL, Auth, Storage, Realtime"
+          },
+          {
+            "title": "Planificateur indépendant et runner de confiance"
+          },
+          {
+            "title": "Fournisseurs optionnels : destinations séparées"
+          }
+        ]
+      }
     }
   ],
   "requiredFigures": [

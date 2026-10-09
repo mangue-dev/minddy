@@ -77,12 +77,29 @@
         720,
         640
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "sequence",
+        "items": [
+          {
+            "title": "Servidor mantém chave da integração"
+          },
+          {
+            "title": "POST issues ou feedback com tipo correto"
+          },
+          {
+            "title": "Proprietário escolhe destino do webhook"
+          },
+          {
+            "title": "Receptor verifica HMAC bruto e UUID"
+          }
+        ]
+      }
     },
     {
       "id": "feedback-ingestion-and-sso-workflow",
       "kind": "diagram",
-      "src": "/documentation/pt-BR/feedback-ingestion-and-sso-workflow.png",
+      "src": "/documentation/pt-BR/feedback-ingestion-and-sso-workflow.svg",
       "alt": "Sequências separadas de ingestão pelo backend e SSO do navegador, com segredos distintos.",
       "caption": "A chave de ingestão autentica chamadas do servidor. O segredo SSO do mural assina um token de visitante curto e de uso único.",
       "revision": 3,
@@ -92,7 +109,31 @@
         1100,
         760
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "columns",
+        "title": "Dois fluxos de feedback separados",
+        "columns": [
+          {
+            "title": "Ingestão pelo servidor",
+            "items": [
+              "O backend guarda a chave de feedback",
+              "POST /api/v1/feedback com chave Bearer e identidade estável",
+              "HTTP 201: post salvo na caixa da equipe; o quadro pode estar desativado"
+            ]
+          },
+          {
+            "title": "SSO do visitante no navegador",
+            "items": [
+              "O backend guarda o segredo SSO separado do quadro",
+              "Assinar JWT HS256: sub, exp, jti único; validade ≤ 600 s",
+              "Redirecionar navegador a /f/<board-token>?sso=<jwt>",
+              "Token de uso único cria sessão; abrir Meus comentários"
+            ]
+          }
+        ],
+        "note": "Nunca enviar chave de ingestão ou segredo SSO ao navegador. Tolerância de relógio: 60 s."
+      }
     }
   ],
   "requiredFigures": [
@@ -154,4 +195,4 @@ Como proprietário, ative o mural e configure seu segredo SSO separado. O backen
 
 Verifique se o visitante abre Meus comentários com a identidade esperada. Um token expirado exige um novo redirecionamento. Se o segredo estiver comprometido, use a confirmação para rotacioná-lo no mural e atualize o backend ao mesmo tempo. O código por email continua disponível como alternativa quando o SSO não estiver acessível.
 
-![Sequências separadas de ingestão pelo backend e SSO do navegador, com segredos distintos.](/documentation/pt-BR/feedback-ingestion-and-sso-workflow.png)
+![Sequências separadas de ingestão pelo backend e SSO do navegador, com segredos distintos.](/documentation/pt-BR/feedback-ingestion-and-sso-workflow.svg)

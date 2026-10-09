@@ -67,7 +67,24 @@
         720,
         640
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "collection",
+        "items": [
+          {
+            "title": "Project: shared work and knowledge"
+          },
+          {
+            "title": "Issue: work; objective: intended result"
+          },
+          {
+            "title": "Personal cycle: one user's cross-project work"
+          },
+          {
+            "title": "Page: durable context; feedback: user need"
+          }
+        ]
+      }
     }
   ],
   "requiredFigures": [

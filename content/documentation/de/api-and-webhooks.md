@@ -76,12 +76,29 @@
         720,
         640
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "sequence",
+        "items": [
+          {
+            "title": "Server hält Projektintegrationsschlüssel"
+          },
+          {
+            "title": "POST Tickets oder Feedback mit passender Art"
+          },
+          {
+            "title": "Eigentümer wählt Webhookziel für Tickets"
+          },
+          {
+            "title": "Empfänger prüft Rohkörper-HMAC und Zustell-UUID"
+          }
+        ]
+      }
     },
     {
       "id": "feedback-ingestion-and-sso-workflow",
       "kind": "diagram",
-      "src": "/documentation/de/feedback-ingestion-and-sso-workflow.png",
+      "src": "/documentation/de/feedback-ingestion-and-sso-workflow.svg",
       "alt": "Getrennte Abläufe für Backend-Erfassung und Browser-SSO mit unterschiedlichen Geheimnissen.",
       "caption": "Der Erfassungsschlüssel authentifiziert Serveraufrufe. Das Board-SSO-Geheimnis signiert ein kurzlebiges, einmaliges Besuchertoken.",
       "revision": 3,
@@ -91,7 +108,31 @@
         1100,
         760
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "columns",
+        "title": "Zwei getrennte Feedback-Abläufe",
+        "columns": [
+          {
+            "title": "Serverseitige Erfassung",
+            "items": [
+              "Backend verwahrt den Feedback-Schlüssel",
+              "POST /api/v1/feedback mit Bearer-Schlüssel und stabiler Identität",
+              "HTTP 201: gespeicherter Beitrag im Team-Eingang; Board darf deaktiviert sein"
+            ]
+          },
+          {
+            "title": "SSO für Browserbesucher",
+            "items": [
+              "Backend verwahrt das separate Board-SSO-Geheimnis",
+              "HS256-JWT signieren: sub, exp, eindeutige jti; Gültigkeit ≤ 600 s",
+              "Browser zu /f/<board-token>?sso=<jwt> umleiten",
+              "Einmaliges Token erstellt Besuchersitzung; Mein Feedback öffnen"
+            ]
+          }
+        ],
+        "note": "Erfassungsschlüssel und SSO-Geheimnis niemals an Browsercode senden. Uhrtoleranz: 60 s."
+      }
     }
   ],
   "requiredFigures": [
@@ -151,4 +192,4 @@ Aktivieren Sie als Inhaber das Board und konfigurieren Sie dessen separates SSO-
 
 Prüfen Sie, dass der Besucher Mein Feedback mit der vorgesehenen Identität öffnet. Ein abgelaufener Token erfordert eine neue Weiterleitung. Ist das SSO-Geheimnis kompromittiert, erneuern Sie es über die Bestätigung im Board und aktualisieren Sie das Backend zugleich. Der E-Mail-Code bleibt die Alternative, wenn SSO nicht verfügbar ist.
 
-![Getrennte Abläufe für Backend-Erfassung und Browser-SSO mit unterschiedlichen Geheimnissen.](/documentation/de/feedback-ingestion-and-sso-workflow.png)
+![Getrennte Abläufe für Backend-Erfassung und Browser-SSO mit unterschiedlichen Geheimnissen.](/documentation/de/feedback-ingestion-and-sso-workflow.svg)

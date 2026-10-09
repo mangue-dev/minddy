@@ -68,7 +68,24 @@
         720,
         640
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "collection",
+        "items": [
+          {
+            "title": "Contenu durable chiffré et clés enveloppées"
+          },
+          {
+            "title": "Racine conservée dans le serveur protégé"
+          },
+          {
+            "title": "Le runtime autorisé peut déchiffrer"
+          },
+          {
+            "title": "Exports et fournisseurs : protection distincte"
+          }
+        ]
+      }
     }
   ],
   "requiredFigures": [

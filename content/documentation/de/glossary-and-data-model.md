@@ -67,7 +67,24 @@
         720,
         640
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "collection",
+        "items": [
+          {
+            "title": "Projekt: gemeinsame Arbeit und Wissen"
+          },
+          {
+            "title": "Ticket: Arbeit; Ziel: Ergebnis"
+          },
+          {
+            "title": "Persönlicher Zyklus: projektübergreifende Arbeit"
+          },
+          {
+            "title": "Seite: dauerhafter Kontext; Feedback: Bedarf"
+          }
+        ]
+      }
     }
   ],
   "requiredFigures": [

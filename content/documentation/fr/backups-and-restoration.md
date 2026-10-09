@@ -71,7 +71,24 @@
         720,
         640
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "sequence",
+        "items": [
+          {
+            "title": "Sauvegarde complète hors serveur vérifiée"
+          },
+          {
+            "title": "Cible vierge isolée et versions correspondantes"
+          },
+          {
+            "title": "Restaurer ensemble base, octets et clés"
+          },
+          {
+            "title": "Vérifier compte, contenu et fichiers avant ouverture"
+          }
+        ]
+      }
     }
   ],
   "requiredFigures": [

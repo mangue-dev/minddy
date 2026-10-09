@@ -71,7 +71,24 @@
         720,
         640
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "sequence",
+        "items": [
+          {
+            "title": "Geprüftes vollständiges externes Backup"
+          },
+          {
+            "title": "Leeres isoliertes Ziel mit passenden Versionen"
+          },
+          {
+            "title": "Datenbank, Bytes und Schlüssel gemeinsam"
+          },
+          {
+            "title": "Konto, Inhalte und Bytes vor Öffnung prüfen"
+          }
+        ]
+      }
     }
   ],
   "requiredFigures": [

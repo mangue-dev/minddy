@@ -67,7 +67,24 @@
         720,
         640
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "collection",
+        "items": [
+          {
+            "title": "Browser und authentifizierte Anwendung"
+          },
+          {
+            "title": "Supabase: PostgreSQL, Auth, Storage, Realtime"
+          },
+          {
+            "title": "Unabhängiger Scheduler und vertrauenswürdiger Runner"
+          },
+          {
+            "title": "Optionale Anbieter: getrennte Datenziele"
+          }
+        ]
+      }
     }
   ],
   "requiredFigures": [

@@ -64,38 +64,41 @@
   "figures": [
     {
       "id": "git-accounts-and-repositories-workflow",
-      "kind": "screenshot",
-      "src": "/documentation/pt-BR/git-accounts-and-repositories-workflow.png",
-      "alt": "Contas GitHub e GitLab desconectadas com controles de autorização.",
-      "caption": "Autorize primeiro sua conta Git. O proprietário vincula o repositório ao projeto separadamente.",
+      "kind": "diagram",
+      "src": "/documentation/pt-BR/git-connection-flow.svg",
+      "alt": "Conectar a conta pessoal e vincular um repositório ao projeto são etapas distintas.",
+      "caption": "Autorize primeiro a conta e depois vincule um repositório como proprietário do projeto.",
       "revision": 2,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
-        1440,
-        1800
+        720,
+        580
       ],
-      "theme": "light"
-    },
-    {
-      "id": "git-accounts-and-repositories-project-workflow",
-      "kind": "screenshot",
-      "src": "/documentation/pt-BR/git-accounts-and-repositories-project-workflow.png",
-      "alt": "Configurações Git de um projeto sem repositório vinculado.",
-      "caption": "Configurações Git de um projeto sem repositório vinculado. Autorize o GitHub ou o GitLab antes de escolher um repositório.",
-      "revision": 2,
-      "reviewed": true,
-      "capturedAt": "2026-10-08",
-      "viewport": [
-        1440,
-        1800
-      ],
-      "theme": "light"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "sequence",
+        "title": "Conectar uma conta e vincular um repositório",
+        "items": [
+          {
+            "title": "Conta pessoal do Git",
+            "detail": "Autorize o GitHub ou o GitLab para os repositórios de que você precisa."
+          },
+          {
+            "title": "Proprietário do projeto",
+            "detail": "Escolha um repositório disponível nas configurações de Git do projeto."
+          },
+          {
+            "title": "Repositório vinculado",
+            "detail": "Aurora → aurora/web. A sincronização de tickets é uma escolha separada."
+          }
+        ]
+      }
     },
     {
       "id": "forge-issue-sync-mapping",
       "kind": "diagram",
-      "src": "/documentation/pt-BR/forge-issue-sync-mapping.png",
+      "src": "/documentation/pt-BR/forge-issue-sync-mapping.svg",
       "alt": "Fluxo de sincronização do GitHub com configuração, verificação de eventos, importação e estados.",
       "caption": "Eventos do GitHub preservam alterações recentes e evitam entregas duplicadas. O mapeamento do GitLab exige verificação separada.",
       "revision": 2,
@@ -105,7 +108,30 @@
         1100,
         720
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "sequence",
+        "title": "Sincronização de tickets do GitHub",
+        "items": [
+          {
+            "title": "Configuração do proprietário",
+            "detail": "Vincular repositório, conceder leitura/escrita de Issues e ativar a sincronização."
+          },
+          {
+            "title": "Eventos recebidos",
+            "detail": "Deduplicar IDs de entrega; dados mais antigos não sobrescrevem alterações locais mais recentes."
+          },
+          {
+            "title": "Importação e mapeamento",
+            "detail": "Tickets importados entram na triagem. Título/corpo viram título/descrição; rótulos fornecem categorias, prioridade e esforço reconhecidos."
+          },
+          {
+            "title": "Sincronização de estado",
+            "detail": "Estados aberto/fechado são espelhados nos dois sentidos. Comparar horários quando alterações concorrem."
+          }
+        ],
+        "note": "Comentários mantêm a identidade remota sem duplicação. O mapeamento do GitLab pode ser diferente."
+      }
     },
     {
       "id": "forge-issue-sync-workflow",
@@ -117,15 +143,15 @@
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
-        1400,
-        1000
+        816,
+        278
       ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     }
   ],
   "requiredFigures": [
     "git-accounts-and-repositories-workflow",
-    "git-accounts-and-repositories-project-workflow",
     "forge-issue-sync-workflow",
     "forge-issue-sync-mapping"
   ]
@@ -140,7 +166,7 @@ Conecte GitHub ou GitLab nas configurações Git da conta e conclua a autorizaç
 
 O proprietário abre Git nas configurações do projeto, escolhe um repositório disponível e confirma. Confira provedor, nome completo e conta que atuará. Membros não podem substituir esse vínculo exclusivo. Ele permite contexto e trabalho de código no servidor; a sincronização de tarefas é um botão separado.
 
-![Contas GitHub e GitLab desconectadas com controles de autorização.](/documentation/pt-BR/git-accounts-and-repositories-workflow.png)
+![Conectar a conta pessoal e vincular um repositório ao projeto são etapas distintas.](/documentation/pt-BR/git-connection-flow.svg)
 
 ### Repositório ausente ou acesso expirado {#recovery}
 
@@ -148,7 +174,6 @@ Se a lista estiver vazia, confira permissões e autorização da organização o
 
 Self-hosted pode usar um relay gerenciado configurado ou apps próprios do operador. A conexão com o relay é explícita e não torna a plataforma Git local. Disponibilidade depende da configuração. Confira a política do operador antes de autorizar.
 
-![Configurações Git de um projeto sem repositório vinculado.](/documentation/pt-BR/git-accounts-and-repositories-project-workflow.png)
 
 ## Sincronizar problemas da plataforma Git {#forge-issue-sync}
 
@@ -162,6 +187,6 @@ A GitHub App exige leitura/escrita de Issues e assinaturas Issues, Issue comment
 
 Eventos GitHub antigos com data não substituem alterações locais recentes. Identidades de entrega e comentário evitam duplicações. Compare datas e consulte eventos do provedor e logs do operador se faltar carga inicial. Desative no mesmo controle exclusivo do proprietário; examine o trabalho já importado separadamente.
 
-![Fluxo de sincronização do GitHub com configuração, verificação de eventos, importação e estados.](/documentation/pt-BR/forge-issue-sync-mapping.png)
+![Fluxo de sincronização do GitHub com configuração, verificação de eventos, importação e estados.](/documentation/pt-BR/forge-issue-sync-mapping.svg)
 
 ![Repositório de demonstração do GitHub vinculado, com a sincronização de issues desativada.](/documentation/pt-BR/forge-issue-sync-workflow.png)

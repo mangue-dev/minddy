@@ -68,7 +68,24 @@
         720,
         640
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "collection",
+        "items": [
+          {
+            "title": "Encrypted durable content and wrapped keys"
+          },
+          {
+            "title": "Root key stays in protected server configuration"
+          },
+          {
+            "title": "Authorized runtime can decrypt content"
+          },
+          {
+            "title": "Exports and external providers need separate care"
+          }
+        ]
+      }
     }
   ],
   "requiredFigures": [

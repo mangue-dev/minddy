@@ -69,7 +69,24 @@
         720,
         640
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "collection",
+        "items": [
+          {
+            "title": "Account and project permission checks"
+          },
+          {
+            "title": "Private object or explicit publication"
+          },
+          {
+            "title": "Published set only; signed file access"
+          },
+          {
+            "title": "Revoke link; issued file URLs expire later"
+          }
+        ]
+      }
     }
   ],
   "requiredFigures": [

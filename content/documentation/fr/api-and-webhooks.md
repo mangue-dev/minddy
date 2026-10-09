@@ -76,12 +76,29 @@
         720,
         640
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "sequence",
+        "items": [
+          {
+            "title": "Le serveur garde la clé d’intégration projet"
+          },
+          {
+            "title": "POST tickets ou feedback avec le bon type"
+          },
+          {
+            "title": "Le propriétaire choisit la destination webhook"
+          },
+          {
+            "title": "Réception : HMAC brut et UUID de livraison"
+          }
+        ]
+      }
     },
     {
       "id": "feedback-ingestion-and-sso-workflow",
       "kind": "diagram",
-      "src": "/documentation/fr/feedback-ingestion-and-sso-workflow.png",
+      "src": "/documentation/fr/feedback-ingestion-and-sso-workflow.svg",
       "alt": "Séquences distinctes d’ingestion backend et de SSO navigateur, avec deux secrets.",
       "caption": "La clé d’ingestion authentifie les appels serveur. Le secret SSO du tableau signe un jeton visiteur court, à usage unique.",
       "revision": 3,
@@ -91,7 +108,31 @@
         1100,
         760
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "columns",
+        "title": "Deux parcours de retours distincts",
+        "columns": [
+          {
+            "title": "Ingestion côté serveur",
+            "items": [
+              "Le backend garde la clé de retours",
+              "POST /api/v1/feedback avec clé Bearer et identité stable",
+              "HTTP 201 : retour enregistré dans la boîte équipe ; tableau désactivé possible"
+            ]
+          },
+          {
+            "title": "SSO du visiteur navigateur",
+            "items": [
+              "Le backend garde le secret SSO séparé du tableau",
+              "Signer JWT HS256 : sub, exp, jti unique ; validité ≤ 600 s",
+              "Rediriger le navigateur vers /f/<board-token>?sso=<jwt>",
+              "Le jeton à usage unique crée la session ; ouvrir Mes retours"
+            ]
+          }
+        ],
+        "note": "Ne jamais envoyer clé d’ingestion ou secret SSO au code navigateur. Tolérance d’horloge : 60 s."
+      }
     }
   ],
   "requiredFigures": [
@@ -151,4 +192,4 @@ En tant que propriétaire, activez le board et configurez son secret SSO distinc
 
 Vérifiez que le visiteur ouvre Mes retours avec l’identité prévue. Un token expiré exige une nouvelle redirection. Si le secret est compromis, renouvelez-le avec la confirmation du board et mettez à jour le backend en même temps. Le parcours par code email reste disponible lorsque le SSO ne l’est pas.
 
-![Séquences distinctes d’ingestion backend et de SSO navigateur, avec deux secrets.](/documentation/fr/feedback-ingestion-and-sso-workflow.png)
+![Séquences distinctes d’ingestion backend et de SSO navigateur, avec deux secrets.](/documentation/fr/feedback-ingestion-and-sso-workflow.svg)

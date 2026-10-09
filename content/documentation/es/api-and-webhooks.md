@@ -76,12 +76,29 @@
         720,
         640
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "sequence",
+        "items": [
+          {
+            "title": "Servidor guarda clave de integración"
+          },
+          {
+            "title": "POST incidencias o feedback con tipo correcto"
+          },
+          {
+            "title": "Propietario elige destino webhook issues"
+          },
+          {
+            "title": "Receptor verifica HMAC bruto y UUID"
+          }
+        ]
+      }
     },
     {
       "id": "feedback-ingestion-and-sso-workflow",
       "kind": "diagram",
-      "src": "/documentation/es/feedback-ingestion-and-sso-workflow.png",
+      "src": "/documentation/es/feedback-ingestion-and-sso-workflow.svg",
       "alt": "Secuencias separadas de recogida desde el backend y SSO del navegador con secretos distintos.",
       "caption": "La clave de recogida autentica llamadas del servidor. El secreto SSO del tablero firma un token de visitante breve y de un solo uso.",
       "revision": 3,
@@ -91,7 +108,31 @@
         1100,
         760
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "columns",
+        "title": "Dos flujos de feedback separados",
+        "columns": [
+          {
+            "title": "Recogida desde el servidor",
+            "items": [
+              "El backend guarda la clave de feedback",
+              "POST /api/v1/feedback con clave Bearer e identidad estable",
+              "HTTP 201: post guardado en la bandeja del equipo; el tablero puede estar desactivado"
+            ]
+          },
+          {
+            "title": "SSO del visitante del navegador",
+            "items": [
+              "El backend guarda el secreto SSO separado del tablero",
+              "Firmar JWT HS256: sub, exp, jti único; validez ≤ 600 s",
+              "Redirigir navegador a /f/<board-token>?sso=<jwt>",
+              "Token de un solo uso crea sesión; abrir Mis sugerencias"
+            ]
+          }
+        ],
+        "note": "Nunca enviar la clave de recogida ni el secreto SSO al navegador. Tolerancia de reloj: 60 s."
+      }
     }
   ],
   "requiredFigures": [
@@ -154,4 +195,4 @@ Como propietario, active el tablero y configure su secreto SSO independiente. El
 
 Compruebe que el visitante abra Mis sugerencias con la identidad prevista. Un token caducado exige una nueva redirección. Si el secreto queda comprometido, rótelo mediante la confirmación del tablero y actualice el backend a la vez. El flujo por código de email sigue siendo la alternativa cuando el SSO no está disponible.
 
-![Secuencias separadas de recogida desde el backend y SSO del navegador con secretos distintos.](/documentation/es/feedback-ingestion-and-sso-workflow.png)
+![Secuencias separadas de recogida desde el backend y SSO del navegador con secretos distintos.](/documentation/es/feedback-ingestion-and-sso-workflow.svg)

@@ -79,7 +79,24 @@
         720,
         640
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "collection",
+        "items": [
+          {
+            "title": "Betreiber wählt optionale Funktion"
+          },
+          {
+            "title": "Vollständige Zugangsdaten und Bedingungen"
+          },
+          {
+            "title": "Ausdrückliches externes Datenziel"
+          },
+          {
+            "title": "Verhalten prüfen und Kosten beobachten"
+          }
+        ]
+      }
     },
     {
       "id": "proxy-network-and-jobs-flow",
@@ -94,7 +111,24 @@
         720,
         640
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "collection",
+        "items": [
+          {
+            "title": "Öffentlicher HTTPS-Proxy"
+          },
+          {
+            "title": "App und öffentlicher Supabase-Origin"
+          },
+          {
+            "title": "Private Runner-, Datenbank- und interne Ports"
+          },
+          {
+            "title": "Authentifizierte Jobs; Wartungsstopp"
+          }
+        ]
+      }
     }
   ],
   "requiredFigures": [

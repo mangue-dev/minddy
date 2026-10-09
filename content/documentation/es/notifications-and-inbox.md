@@ -56,16 +56,17 @@
       "id": "notifications-and-inbox-steps",
       "kind": "screenshot",
       "src": "/documentation/es/work-inbox.png",
-      "alt": "Pestañas de la bandeja de entrada y lista sin elementos no leídos.",
-      "caption": "La pestaña Sin leer vacía indica que esta vista no contiene elementos sin leer. Todos muestra otras notificaciones conservadas.",
+      "alt": "Bandeja de entrada con menciones, asignaciones y comentarios de demostración, leídos y no leídos.",
+      "caption": "La actividad de ejemplo muestra el autor, el ticket y el estado de lectura. Todos incluye notificaciones leídas y no leídas.",
       "revision": 5,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
-        1440,
-        1080
+        528,
+        648
       ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     }
   ],
   "requiredFigures": [
@@ -80,7 +81,7 @@ Abre la bandeja de entrada desde la navegación. Es un panel emergente que agrup
 
 Las invitaciones pendientes a proyectos también aparecen allí. Acepta o rechaza después de comprobar proyecto y cuenta. Los enlaces antiguos de la bandeja de entrada abren el acceso actual, no una página independiente.
 
-![Pestañas de la bandeja de entrada y lista sin elementos no leídos.](/documentation/es/work-inbox.png)
+![Bandeja de entrada con menciones, asignaciones y comentarios de demostración, leídos y no leídos.](/documentation/es/work-inbox.png)
 
 ## Elegir canales de notificación {#notification-preferences}
 

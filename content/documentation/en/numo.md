@@ -92,15 +92,16 @@
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
-        1200,
-        900
+        498,
+        648
       ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     },
     {
       "id": "numo-permissions-and-approvals-workflow",
       "kind": "diagram",
-      "src": "/documentation/en/numo-permissions-and-approvals-workflow.png",
+      "src": "/documentation/en/numo-permissions-and-approvals-workflow.svg",
       "alt": "Permission matrix for Numo project actions, personal connections and routines.",
       "caption": "Project access and explicit instructions limit Numo actions; external content cannot grant permission.",
       "revision": 2,
@@ -110,7 +111,53 @@
         1100,
         790
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "matrix",
+        "title": "Numo: access and authorization",
+        "headers": [
+          "Action or context",
+          "Who authorizes it",
+          "Boundary"
+        ],
+        "rows": [
+          [
+            "Project work",
+            "Member with project access",
+            "Existing project permissions still apply"
+          ],
+          [
+            "Owner settings",
+            "Project owner",
+            "Membership, repository and feedback settings"
+          ],
+          [
+            "Credentials and security",
+            "Account holder, in settings",
+            "Configure keys, Git and two-factor authentication directly"
+          ],
+          [
+            "Public feedback reply",
+            "An explicit user request",
+            "Reading a request does not authorize a public reply"
+          ],
+          [
+            "Personal MCP",
+            "The conversation caller",
+            "No other member’s personal connections"
+          ],
+          [
+            "Scheduled routine",
+            "Current project owner",
+            "Owner’s connections and AI budget"
+          ],
+          [
+            "Remote MCP result",
+            "Untrusted service content",
+            "Cannot authorize additional actions"
+          ]
+        ]
+      }
     },
     {
       "id": "numo-execution-model-flow",
@@ -125,7 +172,24 @@
         720,
         640
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "sequence",
+        "items": [
+          {
+            "title": "Persist the intent, message and request UUID"
+          },
+          {
+            "title": "Claim turn, checkpoint tools and their outcomes"
+          },
+          {
+            "title": "Wait for current code worker when needed"
+          },
+          {
+            "title": "Replay durable events; reconcile uncertain writes"
+          }
+        ]
+      }
     },
     {
       "id": "numo-mcp-connections-workflow",
@@ -137,10 +201,11 @@
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
-        1440,
-        1800
+        816,
+        1314
       ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     },
     {
       "id": "numo-mcp-connections-config-workflow",
@@ -152,10 +217,11 @@
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
-        1440,
-        1800
+        560,
+        920
       ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     },
     {
       "id": "recover-numo-work-workflow",
@@ -167,10 +233,11 @@
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
-        1480,
-        1100
+        912,
+        399
       ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     }
   ],
   "requiredFigures": [
@@ -219,7 +286,7 @@ A request may reach an external provider. Disabling its connection stops new cal
 
 Conversations cannot borrow another member's personal MCP connections. Project routines use the project owner's connections and AI budget. After ownership changes, start a new occurrence under the current owner; an old occurrence cannot keep using the former owner's credentials. A server sandbox is not your desktop session and does not inherit local files or personal sessions.
 
-![Permission matrix for Numo project actions, personal connections and routines.](/documentation/en/numo-permissions-and-approvals-workflow.png)
+![Permission matrix for Numo project actions, personal connections and routines.](/documentation/en/numo-permissions-and-approvals-workflow.svg)
 
 ## Understand durable Numo turns and delegated work {#numo-execution-model}
 

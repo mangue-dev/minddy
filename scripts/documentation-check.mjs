@@ -19,6 +19,18 @@ const text = value => typeof value === "string" && value.trim().length > 0;
 const date = value => typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)
   && !Number.isNaN(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value;
 const strings = value => Array.isArray(value) && value.every(text) && new Set(value).size === value.length;
+function validDiagram(diagram) {
+  if (!diagram || typeof diagram !== "object" || (diagram.title !== undefined && !text(diagram.title))
+    || (diagram.note !== undefined && !text(diagram.note))) return false;
+  if (["sequence", "collection"].includes(diagram.layout)) return Array.isArray(diagram.items) && diagram.items.length > 0
+    && diagram.items.every(item => text(item?.title) && (item.detail === undefined || text(item.detail)));
+  if (diagram.layout === "columns") return Array.isArray(diagram.columns) && diagram.columns.length > 0
+    && diagram.columns.every(column => text(column?.title) && Array.isArray(column.items) && column.items.length > 0 && column.items.every(text));
+  if (diagram.layout === "matrix") return Array.isArray(diagram.headers) && diagram.headers.length === 3 && diagram.headers.every(text)
+    && Array.isArray(diagram.rows) && diagram.rows.length > 0
+    && diagram.rows.every(row => Array.isArray(row) && row.length === diagram.headers.length && row.every(text));
+  return false;
+}
 const markdown = new MarkdownIt({ html: false });
 const publicPaths = new Set(["/self-hosting", "/self-hosting/install", "/pricing", "/mcp", "/feedback", "/login", "/signup"]);
 function markdownTargets(content) {
@@ -65,6 +77,8 @@ for (const locale of documentationLocales) {
         if (!figure.src?.startsWith(`/documentation/${locale}/`) || figure.src.includes("..") || !fs.existsSync(path.join(root, "public", figure.src))) fail(`${context}: missing or unsafe locale figure ${figure.src}`);
         if (!article.content.includes(figure.src)) fail(`${context}: unused figure ${figure.id}`);
         if (!figure.viewport?.every(value => Number.isInteger(value) && value > 0)) fail(`${context}: invalid figure viewport`);
+        if (figure.diagram !== undefined && (figure.kind !== "diagram" || !validDiagram(figure.diagram))) fail(`${context}: invalid responsive diagram ${figure.id}`);
+        if (figure.padding !== undefined && (!Number.isInteger(figure.padding) || figure.padding < 0)) fail(`${context}: invalid screenshot padding ${figure.id}`);
       }
       if (new Set(article.figures.map(figure => figure.id)).size !== article.figures.length) fail(`${context}: repeated figure IDs`);
       const prose = article.content.replace(/```[\s\S]*?```/g, "").replace(/`[^`]+`/g, "");

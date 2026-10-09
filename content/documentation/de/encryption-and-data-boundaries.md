@@ -68,7 +68,24 @@
         720,
         640
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "collection",
+        "items": [
+          {
+            "title": "Verschlüsselte Inhalte und umschlossene Schlüssel"
+          },
+          {
+            "title": "Wurzelschlüssel in geschützter Serverkonfiguration"
+          },
+          {
+            "title": "Autorisierte Laufzeit kann entschlüsseln"
+          },
+          {
+            "title": "Exporte und externe Anbieter getrennt schützen"
+          }
+        ]
+      }
     }
   ],
   "requiredFigures": [

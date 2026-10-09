@@ -59,10 +59,11 @@
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
-        1440,
-        1800
+        816,
+        148
       ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     },
     {
       "id": "transfer-between-instances-export-workflow",
@@ -74,31 +75,16 @@
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
-        1440,
-        1800
+        816,
+        148
       ],
-      "theme": "light"
-    },
-    {
-      "id": "transfer-between-instances-result-workflow",
-      "kind": "screenshot",
-      "src": "/documentation/de/transfer-between-instances-result.png",
-      "alt": "Importergebnis mit null neu vergebenen IDs und null ausgelassenen Mitgliedschaften.",
-      "caption": "Dieser echte Import persönlicher Daten enthält keine ID-Konflikte und keine ausgelassenen Mitgliedschaften. Prüfen Sie die Zahlen und laden Sie das Konto über die Schaltfläche oder durch Schließen des Dialogs neu.",
-      "revision": 4,
-      "reviewed": true,
-      "capturedAt": "2026-10-08",
-      "viewport": [
-        1240,
-        860
-      ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     }
   ],
   "requiredFigures": [
     "transfer-between-instances-workflow",
-    "transfer-between-instances-export-workflow",
-    "transfer-between-instances-result-workflow"
+    "transfer-between-instances-export-workflow"
   ]
 }
 ---
@@ -120,5 +106,3 @@ Behalten Sie die Quellinstanz, bis die übertragenen Arbeiten geprüft sind. Sch
 ![Exportfunktion des Kontos.](/documentation/de/transfer-between-instances-export-workflow.png)
 
 Das Ergebnis bleibt geöffnet, bis Sie Konto neu laden wählen oder den Dialog schließen. Beide Aktionen laden das Konto neu, nachdem Sie die Zahlen geprüft haben.
-
-![Importergebnis mit null neu vergebenen IDs und null ausgelassenen Mitgliedschaften.](/documentation/de/transfer-between-instances-result.png)

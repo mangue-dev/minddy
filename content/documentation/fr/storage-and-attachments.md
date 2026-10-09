@@ -64,7 +64,24 @@
         720,
         640
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "collection",
+        "items": [
+          {
+            "title": "Accès fichier autorisé par l’application"
+          },
+          {
+            "title": "Métadonnées d’objets PostgreSQL"
+          },
+          {
+            "title": "Octets bruts sur fichiers ou S3"
+          },
+          {
+            "title": "Configuration et clés correspondantes"
+          }
+        ]
+      }
     }
   ],
   "requiredFigures": [

@@ -76,12 +76,29 @@
         720,
         640
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "sequence",
+        "items": [
+          {
+            "title": "Server keeps the project integration key"
+          },
+          {
+            "title": "POST issues or feedback with correct key kind"
+          },
+          {
+            "title": "Owner selects an issues webhook destination"
+          },
+          {
+            "title": "Receiver verifies raw-body HMAC and delivery UUID"
+          }
+        ]
+      }
     },
     {
       "id": "feedback-ingestion-and-sso-workflow",
       "kind": "diagram",
-      "src": "/documentation/en/feedback-ingestion-and-sso-workflow.png",
+      "src": "/documentation/en/feedback-ingestion-and-sso-workflow.svg",
       "alt": "Separate backend-ingestion and browser-SSO sequences with distinct secrets.",
       "caption": "The ingestion key authenticates server requests. The board SSO secret signs a short-lived, single-use visitor token.",
       "revision": 3,
@@ -91,7 +108,31 @@
         1100,
         760
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "columns",
+        "title": "Two separate feedback flows",
+        "columns": [
+          {
+            "title": "Server-side ingestion",
+            "items": [
+              "Backend keeps the feedback key",
+              "POST /api/v1/feedback with Bearer key and stable user identity",
+              "HTTP 201: saved post in team inbox; board may be disabled"
+            ]
+          },
+          {
+            "title": "Browser visitor SSO",
+            "items": [
+              "Backend keeps the separate board SSO secret",
+              "Sign HS256 JWT with sub, exp and unique jti; lifetime ≤ 600 s",
+              "Redirect browser to /f/<board-token>?sso=<jwt>",
+              "One-time token creates visitor session; open My feedback"
+            ]
+          }
+        ],
+        "note": "Never send the ingestion key or SSO secret to browser code. Clock skew tolerance: 60 s."
+      }
     }
   ],
   "requiredFigures": [
@@ -151,4 +192,4 @@ Enable the board and configure its separate SSO secret as owner. Your backend si
 
 Verify that the visitor opens My feedback under the intended identity. An expired token needs a fresh redirect. Rotate the board SSO secret with its confirmation when compromised and update the backend together. The email-code flow remains the alternative when SSO is unavailable.
 
-![Separate backend-ingestion and browser-SSO sequences with distinct secrets.](/documentation/en/feedback-ingestion-and-sso-workflow.png)
+![Separate backend-ingestion and browser-SSO sequences with distinct secrets.](/documentation/en/feedback-ingestion-and-sso-workflow.svg)

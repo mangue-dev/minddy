@@ -56,16 +56,17 @@
       "id": "notifications-and-inbox-steps",
       "kind": "screenshot",
       "src": "/documentation/it/work-inbox.png",
-      "alt": "Schede della posta in arrivo e lista vuota degli elementi non letti.",
-      "caption": "La scheda Non letto vuota indica che la vista non contiene elementi non letti. Tutti mostra le altre notifiche conservate.",
+      "alt": "Posta in arrivo con menzioni, assegnazioni e commenti dimostrativi, letti e non letti.",
+      "caption": "L’attività dimostrativa mostra l’autore, il ticket e lo stato di lettura. Tutti include le notifiche lette e non lette.",
       "revision": 5,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
-        1440,
-        1080
+        528,
+        648
       ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     }
   ],
   "requiredFigures": [
@@ -80,7 +81,7 @@ Apri la posta in arrivo dalla navigazione. È un pannello a comparsa che raggrup
 
 Gli inviti ai progetti in attesa compaiono anche qui. Accetta o rifiuta dopo aver controllato progetto e account. I vecchi collegamenti alla posta in arrivo aprono il punto di accesso attuale, non una pagina separata.
 
-![Schede della posta in arrivo e lista vuota degli elementi non letti.](/documentation/it/work-inbox.png)
+![Posta in arrivo con menzioni, assegnazioni e commenti dimostrativi, letti e non letti.](/documentation/it/work-inbox.png)
 
 ## Scegliere i canali di notifica {#notification-preferences}
 

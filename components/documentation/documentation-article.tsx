@@ -14,6 +14,7 @@ import { DocumentationShell } from "./documentation-shell";
 import { DocumentationErrorReport } from "./report-error";
 import { DocumentationIcon } from "./documentation-icon";
 import { DocumentationImage } from "./documentation-image";
+import { DocumentationDiagram } from "./documentation-diagram";
 
 const articleNavigationClassName = "group flex min-w-0 flex-col gap-3 rounded-lg border border-current/10 p-4 transition-colors hover:border-current/25 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
 
@@ -46,6 +47,7 @@ export async function DocumentationArticleView({ article, articles }: { article:
             table: ({ children }) => <div className="my-5 max-w-full overflow-x-auto rounded border border-border"><table className="w-full text-left text-sm [&_td]:border-t [&_td]:border-border [&_td]:p-3 [&_th]:bg-muted [&_th]:p-3">{children}</table></div>,
             img: ({ src, alt }) => {
               const figure = article.figures.find(item => item.src === src);
+              if (figure?.kind === "diagram" && figure.diagram) return <DocumentationDiagram figure={{ ...figure, diagram: figure.diagram }} />;
               return typeof src === "string" ? <DocumentationImage src={src} alt={figure?.alt ?? alt ?? ""}
                 width={figure?.viewport[0]} height={figure?.viewport[1]} caption={figure?.caption} openLabel={tPages("imageOpen")} /> : null;
             },

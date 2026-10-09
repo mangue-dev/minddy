@@ -63,38 +63,41 @@
   "figures": [
     {
       "id": "git-accounts-and-repositories-workflow",
-      "kind": "screenshot",
-      "src": "/documentation/de/git-accounts-and-repositories-workflow.png",
-      "alt": "Nicht verbundene GitHub- und GitLab-Konten mit Autorisierungsschaltflächen.",
-      "caption": "Autorisiere zuerst dein Git-Konto. Der Projektinhaber verknüpft das Repository anschließend separat.",
+      "kind": "diagram",
+      "src": "/documentation/de/git-connection-flow.svg",
+      "alt": "Die Verbindung des persönlichen Kontos und die Verknüpfung eines Projekt-Repositories sind getrennte Schritte.",
+      "caption": "Autorisieren Sie zuerst das Konto und verknüpfen Sie dann als Projektinhaber ein Repository.",
       "revision": 2,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
-        1440,
-        1800
+        720,
+        580
       ],
-      "theme": "light"
-    },
-    {
-      "id": "git-accounts-and-repositories-project-workflow",
-      "kind": "screenshot",
-      "src": "/documentation/de/git-accounts-and-repositories-project-workflow.png",
-      "alt": "Git-Einstellungen eines Projekts ohne verknüpftes Repository.",
-      "caption": "Git-Einstellungen eines Projekts ohne verknüpftes Repository. Autorisiere GitHub oder GitLab, bevor du ein Repository auswählst.",
-      "revision": 2,
-      "reviewed": true,
-      "capturedAt": "2026-10-08",
-      "viewport": [
-        1440,
-        1800
-      ],
-      "theme": "light"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "sequence",
+        "title": "Konto verbinden, dann Repository verknüpfen",
+        "items": [
+          {
+            "title": "Persönliches Git-Konto",
+            "detail": "Autorisieren Sie GitHub oder GitLab für die benötigten Repositories."
+          },
+          {
+            "title": "Projektinhaber",
+            "detail": "Wählen Sie in den Git-Einstellungen des Projekts ein verfügbares Repository."
+          },
+          {
+            "title": "Verknüpftes Repository",
+            "detail": "Aurora → aurora/web. Die Synchronisierung von Issues ist eine separate Entscheidung."
+          }
+        ]
+      }
     },
     {
       "id": "forge-issue-sync-mapping",
       "kind": "diagram",
-      "src": "/documentation/de/forge-issue-sync-mapping.png",
+      "src": "/documentation/de/forge-issue-sync-mapping.svg",
       "alt": "GitHub-Synchronisierung mit Einrichtung, Ereignisprüfung, Import und Statusabgleich.",
       "caption": "GitHub-Ereignisse bewahren neuere Änderungen und verhindern doppelte Zustellungen. GitLab-Zuordnungen sind separat zu prüfen.",
       "revision": 2,
@@ -104,7 +107,30 @@
         1100,
         720
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "sequence",
+        "title": "GitHub-Issue-Synchronisierung",
+        "items": [
+          {
+            "title": "Einrichtung durch den Inhaber",
+            "detail": "Repository verknüpfen, Issues lesen/schreiben erlauben und Synchronisierung aktivieren."
+          },
+          {
+            "title": "Eingehende Ereignisse",
+            "detail": "Zustellungs-IDs deduplizieren; ältere Daten überschreiben keine neueren lokalen Änderungen."
+          },
+          {
+            "title": "Import und Zuordnung",
+            "detail": "Importierte Issues landen in der Triage. Titel/Text werden Titel/Beschreibung; Labels liefern Kategorien und erkannte Priorität/Aufwand."
+          },
+          {
+            "title": "Statusabgleich",
+            "detail": "Offen/geschlossen wird in beide Richtungen gespiegelt. Bei konkurrierenden Änderungen Zeitstempel vergleichen."
+          }
+        ],
+        "note": "Kommentare behalten die entfernte Identität und werden nicht doppelt angelegt. GitLab-Zuordnungen können abweichen."
+      }
     },
     {
       "id": "forge-issue-sync-workflow",
@@ -116,15 +142,15 @@
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
-        1400,
-        1000
+        816,
+        278
       ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     }
   ],
   "requiredFigures": [
     "git-accounts-and-repositories-workflow",
-    "git-accounts-and-repositories-project-workflow",
     "forge-issue-sync-workflow",
     "forge-issue-sync-mapping"
   ]
@@ -139,7 +165,7 @@ Verbinden Sie GitHub oder GitLab in den Git-Kontoeinstellungen und schließen Si
 
 Der Eigentümer wählt im Git-Bereich der Projekteinstellungen ein verfügbares Repository und bestätigt. Prüfen Sie Anbieter, vollständigen Repository-Namen und angezeigtes handelndes Konto. Mitglieder können diese Eigentümerverknüpfung nicht ersetzen. Sie ermöglicht Repository-Kontext und serverseitige Codearbeit; Ticketsynchronisierung wird separat aktiviert.
 
-![Nicht verbundene GitHub- und GitLab-Konten mit Autorisierungsschaltflächen.](/documentation/de/git-accounts-and-repositories-workflow.png)
+![Die Verbindung des persönlichen Kontos und die Verknüpfung eines Projekt-Repositories sind getrennte Schritte.](/documentation/de/git-connection-flow.svg)
 
 ### Fehlende Repositories oder abgelaufener Zugriff {#recovery}
 
@@ -147,7 +173,6 @@ Bei leerer Auswahl prüfen Sie Anbieterrechte und Freigabe der Organisation oder
 
 Self-Hosting kann ein konfiguriertes verwaltetes Relay oder betreibereigene Anbieter-Apps nutzen. Relay-Zugriff startet ausdrücklich und macht die Forge nicht lokal. Verfügbarkeit hängt von der Instanzkonfiguration ab. Prüfen Sie Betreiberregeln vor der Freigabe.
 
-![Git-Einstellungen eines Projekts ohne verknüpftes Repository.](/documentation/de/git-accounts-and-repositories-project-workflow.png)
 
 ## Forge-Tickets synchronisieren {#forge-issue-sync}
 
@@ -161,6 +186,6 @@ Die GitHub App braucht Issues-Lese-/Schreibrechte und Abonnements für Issues, I
 
 Ältere GitHub-Ereignisse mit Zeitstempel überschreiben keine neueren lokalen Änderungen. Eindeutige Liefer- und Kommentaridentitäten verhindern Duplikateffekte. Vergleichen Sie Zeitstempel sowie Anbieterereignisse und Betreiberlogs bei fehlendem Nachimport. Deaktivieren Sie im selben Eigentümerbereich; prüfen Sie bereits importierte Arbeit separat.
 
-![GitHub-Synchronisierung mit Einrichtung, Ereignisprüfung, Import und Statusabgleich.](/documentation/de/forge-issue-sync-mapping.png)
+![GitHub-Synchronisierung mit Einrichtung, Ereignisprüfung, Import und Statusabgleich.](/documentation/de/forge-issue-sync-mapping.svg)
 
 ![Verknüpftes GitHub-Demonstrationsrepository mit deaktivierter Issue-Synchronisierung.](/documentation/de/forge-issue-sync-workflow.png)

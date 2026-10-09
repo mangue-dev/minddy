@@ -56,16 +56,17 @@
       "id": "notifications-and-inbox-steps",
       "kind": "screenshot",
       "src": "/documentation/en/work-inbox.png",
-      "alt": "Inbox tabs and the empty unread state.",
-      "caption": "An empty Unread tab means no unread items in this view; use All to inspect other retained notifications.",
+      "alt": "Inbox with demonstration mentions, assignments and comments, including read and unread items.",
+      "caption": "Demonstration activity shows the author, issue and read state. All includes read and unread notifications.",
       "revision": 5,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-09",
       "viewport": [
-        1440,
-        1080
+        528,
+        648
       ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     }
   ],
   "requiredFigures": [
@@ -80,7 +81,7 @@ Open Inbox from navigation. It is a popover that groups notifications by date an
 
 Pending project invitations also appear in Inbox. Accept or decline after checking the project and account. Legacy Inbox links open the current entry point rather than establishing a separate page.
 
-![Inbox tabs and the empty unread state.](/documentation/en/work-inbox.png)
+![Inbox with demonstration mentions, assignments and comments, including read and unread items.](/documentation/en/work-inbox.png)
 
 ## Choose notification channels {#notification-preferences}
 

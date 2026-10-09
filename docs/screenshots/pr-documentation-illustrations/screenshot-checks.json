@@ -1,0 +1,434 @@
+[
+  {
+    "locale": "fr",
+    "article": "views",
+    "mode": "desktop-light",
+    "width": 288,
+    "overflow": false,
+    "renderer": "screenshot"
+  },
+  {
+    "locale": "fr",
+    "article": "issues",
+    "mode": "desktop-light",
+    "width": 720,
+    "overflow": false,
+    "renderer": "screenshot"
+  },
+  {
+    "locale": "fr",
+    "article": "notifications-and-inbox",
+    "mode": "desktop-light",
+    "width": 528,
+    "overflow": false,
+    "renderer": "screenshot"
+  },
+  {
+    "locale": "fr",
+    "article": "views",
+    "mode": "mobile-light",
+    "width": 288,
+    "overflow": false,
+    "renderer": "screenshot"
+  },
+  {
+    "locale": "fr",
+    "article": "issues",
+    "mode": "mobile-light",
+    "width": 342,
+    "overflow": false,
+    "renderer": "screenshot"
+  },
+  {
+    "locale": "fr",
+    "article": "notifications-and-inbox",
+    "mode": "mobile-light",
+    "width": 342,
+    "overflow": false,
+    "renderer": "screenshot"
+  },
+  {
+    "locale": "fr",
+    "article": "views",
+    "mode": "mobile-dark",
+    "width": 288,
+    "overflow": false,
+    "renderer": "screenshot"
+  },
+  {
+    "locale": "fr",
+    "article": "issues",
+    "mode": "mobile-dark",
+    "width": 342,
+    "overflow": false,
+    "renderer": "screenshot"
+  },
+  {
+    "locale": "fr",
+    "article": "notifications-and-inbox",
+    "mode": "mobile-dark",
+    "width": 342,
+    "overflow": false,
+    "renderer": "screenshot"
+  },
+  {
+    "locale": "en",
+    "article": "views",
+    "mode": "desktop-light",
+    "width": 288,
+    "overflow": false,
+    "renderer": "screenshot"
+  },
+  {
+    "locale": "en",
+    "article": "issues",
+    "mode": "desktop-light",
+    "width": 720,
+    "overflow": false,
+    "renderer": "screenshot"
+  },
+  {
+    "locale": "en",
+    "article": "notifications-and-inbox",
+    "mode": "desktop-light",
+    "width": 528,
+    "overflow": false,
+    "renderer": "screenshot"
+  },
+  {
+    "locale": "en",
+    "article": "views",
+    "mode": "mobile-light",
+    "width": 288,
+    "overflow": false,
+    "renderer": "screenshot"
+  },
+  {
+    "locale": "en",
+    "article": "issues",
+    "mode": "mobile-light",
+    "width": 342,
+    "overflow": false,
+    "renderer": "screenshot"
+  },
+  {
+    "locale": "en",
+    "article": "notifications-and-inbox",
+    "mode": "mobile-light",
+    "width": 342,
+    "overflow": false,
+    "renderer": "screenshot"
+  },
+  {
+    "locale": "en",
+    "article": "views",
+    "mode": "mobile-dark",
+    "width": 288,
+    "overflow": false,
+    "renderer": "screenshot"
+  },
+  {
+    "locale": "en",
+    "article": "issues",
+    "mode": "mobile-dark",
+    "width": 342,
+    "overflow": false,
+    "renderer": "screenshot"
+  },
+  {
+    "locale": "en",
+    "article": "notifications-and-inbox",
+    "mode": "mobile-dark",
+    "width": 342,
+    "overflow": false,
+    "renderer": "screenshot"
+  },
+  {
+    "locale": "de",
+    "article": "views",
+    "mode": "desktop-light",
+    "width": 288,
+    "overflow": false,
+    "renderer": "screenshot"
+  },
+  {
+    "locale": "de",
+    "article": "issues",
+    "mode": "desktop-light",
+    "width": 720,
+    "overflow": false,
+    "renderer": "screenshot"
+  },
+  {
+    "locale": "de",
+    "article": "notifications-and-inbox",
+    "mode": "desktop-light",
+    "width": 528,
+    "overflow": false,
+    "renderer": "screenshot"
+  },
+  {
+    "locale": "de",
+    "article": "views",
+    "mode": "mobile-light",
+    "width": 288,
+    "overflow": false,
+    "renderer": "screenshot"
+  },
+  {
+    "locale": "de",
+    "article": "issues",
+    "mode": "mobile-light",
+    "width": 342,
+    "overflow": false,
+    "renderer": "screenshot"
+  },
+  {
+    "locale": "de",
+    "article": "notifications-and-inbox",
+    "mode": "mobile-light",
+    "width": 342,
+    "overflow": false,
+    "renderer": "screenshot"
+  },
+  {
+    "locale": "de",
+    "article": "views",
+    "mode": "mobile-dark",
+    "width": 288,
+    "overflow": false,
+    "renderer": "screenshot"
+  },
+  {
+    "locale": "de",
+    "article": "issues",
+    "mode": "mobile-dark",
+    "width": 342,
+    "overflow": false,
+    "renderer": "screenshot"
+  },
+  {
+    "locale": "de",
+    "article": "notifications-and-inbox",
+    "mode": "mobile-dark",
+    "width": 342,
+    "overflow": false,
+    "renderer": "screenshot"
+  },
+  {
+    "locale": "es",
+    "article": "views",
+    "mode": "desktop-light",
+    "width": 288,
+    "overflow": false,
+    "renderer": "screenshot"
+  },
+  {
+    "locale": "es",
+    "article": "issues",
+    "mode": "desktop-light",
+    "width": 720,
+    "overflow": false,
+    "renderer": "screenshot"
+  },
+  {
+    "locale": "es",
+    "article": "notifications-and-inbox",
+    "mode": "desktop-light",
+    "width": 528,
+    "overflow": false,
+    "renderer": "screenshot"
+  },
+  {
+    "locale": "es",
+    "article": "views",
+    "mode": "mobile-light",
+    "width": 288,
+    "overflow": false,
+    "renderer": "screenshot"
+  },
+  {
+    "locale": "es",
+    "article": "issues",
+    "mode": "mobile-light",
+    "width": 342,
+    "overflow": false,
+    "renderer": "screenshot"
+  },
+  {
+    "locale": "es",
+    "article": "notifications-and-inbox",
+    "mode": "mobile-light",
+    "width": 342,
+    "overflow": false,
+    "renderer": "screenshot"
+  },
+  {
+    "locale": "es",
+    "article": "views",
+    "mode": "mobile-dark",
+    "width": 288,
+    "overflow": false,
+    "renderer": "screenshot"
+  },
+  {
+    "locale": "es",
+    "article": "issues",
+    "mode": "mobile-dark",
+    "width": 342,
+    "overflow": false,
+    "renderer": "screenshot"
+  },
+  {
+    "locale": "es",
+    "article": "notifications-and-inbox",
+    "mode": "mobile-dark",
+    "width": 342,
+    "overflow": false,
+    "renderer": "screenshot"
+  },
+  {
+    "locale": "it",
+    "article": "views",
+    "mode": "desktop-light",
+    "width": 288,
+    "overflow": false,
+    "renderer": "screenshot"
+  },
+  {
+    "locale": "it",
+    "article": "issues",
+    "mode": "desktop-light",
+    "width": 720,
+    "overflow": false,
+    "renderer": "screenshot"
+  },
+  {
+    "locale": "it",
+    "article": "notifications-and-inbox",
+    "mode": "desktop-light",
+    "width": 528,
+    "overflow": false,
+    "renderer": "screenshot"
+  },
+  {
+    "locale": "it",
+    "article": "views",
+    "mode": "mobile-light",
+    "width": 288,
+    "overflow": false,
+    "renderer": "screenshot"
+  },
+  {
+    "locale": "it",
+    "article": "issues",
+    "mode": "mobile-light",
+    "width": 342,
+    "overflow": false,
+    "renderer": "screenshot"
+  },
+  {
+    "locale": "it",
+    "article": "notifications-and-inbox",
+    "mode": "mobile-light",
+    "width": 342,
+    "overflow": false,
+    "renderer": "screenshot"
+  },
+  {
+    "locale": "it",
+    "article": "views",
+    "mode": "mobile-dark",
+    "width": 288,
+    "overflow": false,
+    "renderer": "screenshot"
+  },
+  {
+    "locale": "it",
+    "article": "issues",
+    "mode": "mobile-dark",
+    "width": 342,
+    "overflow": false,
+    "renderer": "screenshot"
+  },
+  {
+    "locale": "it",
+    "article": "notifications-and-inbox",
+    "mode": "mobile-dark",
+    "width": 342,
+    "overflow": false,
+    "renderer": "screenshot"
+  },
+  {
+    "locale": "pt-BR",
+    "article": "views",
+    "mode": "desktop-light",
+    "width": 288,
+    "overflow": false,
+    "renderer": "screenshot"
+  },
+  {
+    "locale": "pt-BR",
+    "article": "issues",
+    "mode": "desktop-light",
+    "width": 720,
+    "overflow": false,
+    "renderer": "screenshot"
+  },
+  {
+    "locale": "pt-BR",
+    "article": "notifications-and-inbox",
+    "mode": "desktop-light",
+    "width": 528,
+    "overflow": false,
+    "renderer": "screenshot"
+  },
+  {
+    "locale": "pt-BR",
+    "article": "views",
+    "mode": "mobile-light",
+    "width": 288,
+    "overflow": false,
+    "renderer": "screenshot"
+  },
+  {
+    "locale": "pt-BR",
+    "article": "issues",
+    "mode": "mobile-light",
+    "width": 342,
+    "overflow": false,
+    "renderer": "screenshot"
+  },
+  {
+    "locale": "pt-BR",
+    "article": "notifications-and-inbox",
+    "mode": "mobile-light",
+    "width": 342,
+    "overflow": false,
+    "renderer": "screenshot"
+  },
+  {
+    "locale": "pt-BR",
+    "article": "views",
+    "mode": "mobile-dark",
+    "width": 288,
+    "overflow": false,
+    "renderer": "screenshot"
+  },
+  {
+    "locale": "pt-BR",
+    "article": "issues",
+    "mode": "mobile-dark",
+    "width": 342,
+    "overflow": false,
+    "renderer": "screenshot"
+  },
+  {
+    "locale": "pt-BR",
+    "article": "notifications-and-inbox",
+    "mode": "mobile-dark",
+    "width": 342,
+    "overflow": false,
+    "renderer": "screenshot"
+  }
+]

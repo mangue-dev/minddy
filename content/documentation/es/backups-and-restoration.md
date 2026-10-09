@@ -71,7 +71,24 @@
         720,
         640
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "sequence",
+        "items": [
+          {
+            "title": "Copia completa externa verificada"
+          },
+          {
+            "title": "Destino vacío aislado y versiones iguales"
+          },
+          {
+            "title": "Restaurar base, bytes y claves juntos"
+          },
+          {
+            "title": "Verificar cuenta, contenido y archivos antes de abrir"
+          }
+        ]
+      }
     }
   ],
   "requiredFigures": [

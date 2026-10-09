@@ -58,10 +58,11 @@
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
-        1447,
-        1085
+        1161,
+        1051
       ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     }
   ],
   "requiredFigures": [

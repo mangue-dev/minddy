@@ -71,7 +71,24 @@
         720,
         640
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "sequence",
+        "items": [
+          {
+            "title": "Verified complete off-host backup"
+          },
+          {
+            "title": "Blank isolated target with matching versions"
+          },
+          {
+            "title": "Restore database, raw bytes and keys together"
+          },
+          {
+            "title": "Verify account/content/file bytes before opening"
+          }
+        ]
+      }
     }
   ],
   "requiredFigures": [

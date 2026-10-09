@@ -63,7 +63,24 @@
         720,
         640
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "collection",
+        "items": [
+          {
+            "title": "Radice dedicata fuori PostgreSQL"
+          },
+          {
+            "title": "Chiavi progetto, utente e sistema avvolte"
+          },
+          {
+            "title": "Decifratura autorizzata sul server"
+          },
+          {
+            "title": "Restore database + Storage + stesse chiavi"
+          }
+        ]
+      }
     }
   ],
   "requiredFigures": [

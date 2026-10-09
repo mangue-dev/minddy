@@ -64,7 +64,24 @@
         720,
         640
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "collection",
+        "items": [
+          {
+            "title": "Acceso a archivo autorizado"
+          },
+          {
+            "title": "Metadatos PostgreSQL del objeto"
+          },
+          {
+            "title": "Bytes brutos en archivos o S3"
+          },
+          {
+            "title": "Configuración y claves correspondientes"
+          }
+        ]
+      }
     }
   ],
   "requiredFigures": [

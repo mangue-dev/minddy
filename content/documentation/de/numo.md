@@ -92,15 +92,16 @@
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
-        1200,
-        900
+        498,
+        648
       ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     },
     {
       "id": "numo-permissions-and-approvals-workflow",
       "kind": "diagram",
-      "src": "/documentation/de/numo-permissions-and-approvals-workflow.png",
+      "src": "/documentation/de/numo-permissions-and-approvals-workflow.svg",
       "alt": "Numo-Berechtigungsmatrix für Projektaktionen, persönliche Verbindungen und Routinen.",
       "caption": "Projektzugriff und ausdrückliche Aufträge begrenzen Numo-Aktionen. Externe Inhalte können keine Berechtigung erteilen.",
       "revision": 2,
@@ -110,7 +111,53 @@
         1100,
         790
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "matrix",
+        "title": "Numo: Zugriff und Autorisierung",
+        "headers": [
+          "Aktion oder Kontext",
+          "Wer autorisiert",
+          "Grenze"
+        ],
+        "rows": [
+          [
+            "Projektarbeit",
+            "Mitglied mit Projektzugriff",
+            "Die bestehenden Projektberechtigungen gelten weiterhin"
+          ],
+          [
+            "Inhabereinstellungen",
+            "Projektinhaber",
+            "Mitglieder, Repository und Feedback-Einstellungen"
+          ],
+          [
+            "Zugangsdaten und Sicherheit",
+            "Kontoinhaber, in den Einstellungen",
+            "Schlüssel, Git und Zwei-Faktor-Authentifizierung direkt einrichten"
+          ],
+          [
+            "Öffentliche Feedback-Antwort",
+            "Ausdrücklicher Benutzerauftrag",
+            "Lesen einer Anfrage erlaubt keine öffentliche Antwort"
+          ],
+          [
+            "Persönliches MCP",
+            "Auftraggeber des Gesprächs",
+            "Keine persönlichen Verbindungen anderer Mitglieder"
+          ],
+          [
+            "Geplante Routine",
+            "Aktueller Projektinhaber",
+            "Verbindungen und KI-Budget des Inhabers"
+          ],
+          [
+            "Entferntes MCP-Ergebnis",
+            "Nicht vertrauenswürdiger Dienstinhalt",
+            "Kann keine weiteren Aktionen autorisieren"
+          ]
+        ]
+      }
     },
     {
       "id": "numo-execution-model-flow",
@@ -125,7 +172,24 @@
         720,
         640
       ],
-      "theme": "neutral"
+      "theme": "neutral",
+      "diagram": {
+        "layout": "sequence",
+        "items": [
+          {
+            "title": "Absicht, Nachricht und UUID speichern"
+          },
+          {
+            "title": "Turn beanspruchen, Werkzeuge und Ergebnisse sichern"
+          },
+          {
+            "title": "Bei Bedarf aktuellen Codeworker abwarten"
+          },
+          {
+            "title": "Ereignisse wiedergeben; unklare Writes klären"
+          }
+        ]
+      }
     },
     {
       "id": "numo-mcp-connections-workflow",
@@ -137,10 +201,11 @@
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
-        1440,
-        1800
+        816,
+        1314
       ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     },
     {
       "id": "numo-mcp-connections-config-workflow",
@@ -152,10 +217,11 @@
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
-        1440,
-        1800
+        560,
+        940
       ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     },
     {
       "id": "recover-numo-work-workflow",
@@ -167,10 +233,11 @@
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
-        1480,
-        1100
+        912,
+        422
       ],
-      "theme": "light"
+      "theme": "light",
+      "padding": 24
     }
   ],
   "requiredFigures": [
@@ -219,7 +286,7 @@ Eine Anfrage kann einen externen Anbieter erreichen. Das Deaktivieren seiner Ver
 
 Gespräche können nicht die persönlichen MCP-Verbindungen anderer Mitglieder nutzen. Projektroutinen verwenden Verbindungen und KI-Budget des Eigentümers. Nach einem Eigentümerwechsel starten Sie einen neuen Durchlauf unter dem aktuellen Eigentümer. Alte Durchläufe dürfen frühere Zugangsdaten nicht weiter nutzen. Eine Server-Sandbox erbt weder lokale Dateien noch persönliche Desktop-Sitzungen.
 
-![Numo-Berechtigungsmatrix für Projektaktionen, persönliche Verbindungen und Routinen.](/documentation/de/numo-permissions-and-approvals-workflow.png)
+![Numo-Berechtigungsmatrix für Projektaktionen, persönliche Verbindungen und Routinen.](/documentation/de/numo-permissions-and-approvals-workflow.svg)
 
 ## Dauerhafte Numo-Turns und delegierte Arbeit verstehen {#numo-execution-model}
 

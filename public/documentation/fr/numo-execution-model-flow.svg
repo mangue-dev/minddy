@@ -1,27 +1,27 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="720" height="640" viewBox="0 0 720 640" role="img" aria-labelledby="title desc">
 <title id="title">Comprendre les tours durables Numo et le travail délégué</title>
 <desc id="desc">Schéma: Persister intention, message et UUID. Prendre le tour, enregistrer outils et résultats. Attendre le worker courant si nécessaire. Relire les événements ; réconcilier les écritures.</desc>
-<rect width="720" height="640" rx="20" fill="#fafaf9"/>
-<rect x="24" y="24" width="672" height="128" rx="16" fill="#ffffff" stroke="#a8a29e" stroke-width="2"/>
-<circle cx="60" cy="88" r="20" fill="#0f766e"/>
+<rect width="720" height="640" rx="20" fill="#fafaf9" />
+<rect x="24" y="24" width="672" height="128" rx="16" fill="#e6edf5" stroke="#293d56" stroke-width="1" stroke-opacity="0.12" />
+<circle cx="60" cy="88" r="20" fill="#60706b" />
 <text x="60" y="98" text-anchor="middle" font-family="Arial, sans-serif" font-size="28" font-weight="700" fill="#ffffff">1</text>
-<text x="98" y="98" font-family="Arial, sans-serif" font-size="29" fill="#1c1917">Persister intention, message et UUID</text>
-<path d="M360 156v16m-7-5 7 7 7-7" fill="none" stroke="#0f766e" stroke-width="3"/>
-<rect x="24" y="178" width="672" height="128" rx="16" fill="#ffffff" stroke="#a8a29e" stroke-width="2"/>
-<circle cx="60" cy="242" r="20" fill="#0f766e"/>
+<text x="98" y="98" font-family="Arial, sans-serif" font-size="29" fill="#293d56">Persister intention, message et UUID</text>
+<path d="M360 156v16m-7-5 7 7 7-7" fill="none" stroke="#60706b" stroke-width="1.5" />
+<rect x="24" y="178" width="672" height="128" rx="16" fill="#e0efe8" stroke="#1e4436" stroke-width="1" stroke-opacity="0.12" />
+<circle cx="60" cy="242" r="20" fill="#60706b" />
 <text x="60" y="252" text-anchor="middle" font-family="Arial, sans-serif" font-size="28" font-weight="700" fill="#ffffff">2</text>
-<text x="98" y="235" font-family="Arial, sans-serif" font-size="29" fill="#1c1917">Prendre le tour, enregistrer outils et</text>
-<text x="98" y="269" font-family="Arial, sans-serif" font-size="29" fill="#1c1917">résultats</text>
-<path d="M360 310v16m-7-5 7 7 7-7" fill="none" stroke="#0f766e" stroke-width="3"/>
-<rect x="24" y="332" width="672" height="128" rx="16" fill="#ffffff" stroke="#a8a29e" stroke-width="2"/>
-<circle cx="60" cy="396" r="20" fill="#0f766e"/>
+<text x="98" y="235" font-family="Arial, sans-serif" font-size="29" fill="#293d56">Prendre le tour, enregistrer outils et</text>
+<text x="98" y="269" font-family="Arial, sans-serif" font-size="29" fill="#293d56">résultats</text>
+<path d="M360 310v16m-7-5 7 7 7-7" fill="none" stroke="#60706b" stroke-width="1.5" />
+<rect x="24" y="332" width="672" height="128" rx="16" fill="#f0ecf6" stroke="#433352" stroke-width="1" stroke-opacity="0.12" />
+<circle cx="60" cy="396" r="20" fill="#60706b" />
 <text x="60" y="406" text-anchor="middle" font-family="Arial, sans-serif" font-size="28" font-weight="700" fill="#ffffff">3</text>
-<text x="98" y="389" font-family="Arial, sans-serif" font-size="29" fill="#1c1917">Attendre le worker courant si</text>
-<text x="98" y="423" font-family="Arial, sans-serif" font-size="29" fill="#1c1917">nécessaire</text>
-<path d="M360 464v16m-7-5 7 7 7-7" fill="none" stroke="#0f766e" stroke-width="3"/>
-<rect x="24" y="486" width="672" height="128" rx="16" fill="#ffffff" stroke="#a8a29e" stroke-width="2"/>
-<circle cx="60" cy="550" r="20" fill="#0f766e"/>
+<text x="98" y="389" font-family="Arial, sans-serif" font-size="29" fill="#293d56">Attendre le worker courant si</text>
+<text x="98" y="423" font-family="Arial, sans-serif" font-size="29" fill="#293d56">nécessaire</text>
+<path d="M360 464v16m-7-5 7 7 7-7" fill="none" stroke="#60706b" stroke-width="1.5" />
+<rect x="24" y="486" width="672" height="128" rx="16" fill="#f7ecdf" stroke="#573e28" stroke-width="1" stroke-opacity="0.12" />
+<circle cx="60" cy="550" r="20" fill="#60706b" />
 <text x="60" y="560" text-anchor="middle" font-family="Arial, sans-serif" font-size="28" font-weight="700" fill="#ffffff">4</text>
-<text x="98" y="543" font-family="Arial, sans-serif" font-size="29" fill="#1c1917">Relire les événements ; réconcilier</text>
-<text x="98" y="577" font-family="Arial, sans-serif" font-size="29" fill="#1c1917">les écritures</text>
+<text x="98" y="543" font-family="Arial, sans-serif" font-size="29" fill="#293d56">Relire les événements ; réconcilier</text>
+<text x="98" y="577" font-family="Arial, sans-serif" font-size="29" fill="#293d56">les écritures</text>
 </svg>
