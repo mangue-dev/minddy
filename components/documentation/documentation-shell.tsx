@@ -49,7 +49,7 @@ export async function DocumentationShell({ articles, locale, currentId, title, t
         <span className="max-w-[45%] shrink-0 truncate text-muted-foreground sm:max-w-none">{topic}</span><span aria-hidden className="text-muted-foreground/50">/</span>
         <span aria-current="page" className="truncate">{title}</span>
       </nav>
-      <div className="ml-auto shrink-0"><DocumentationAccountActions currentId={currentId} locale={locale} /></div>
+      <div className="ml-auto shrink-0"><DocumentationAccountActions currentId={currentId} sections={sections} locale={locale} /></div>
     </header>
     <DocumentationContents key={currentId ?? "welcome"} sections={sections} label={t("contents")} />
     <aside className="fixed bottom-0 left-0 top-16 hidden w-72 overflow-y-auto overscroll-contain border-r border-border lg:block">
@@ -57,7 +57,7 @@ export async function DocumentationShell({ articles, locale, currentId, title, t
     </aside>
     <main data-documentation-main className="min-w-0 pt-36 sm:pt-28 lg:pl-72 xl:pr-64 xl:pt-16">
       <div className="mx-auto max-w-[52rem] px-6 pb-16 pt-10 sm:px-10 sm:pt-12 lg:px-12">
-        <article id="documentation-article" tabIndex={-1} className="min-w-0 scroll-mt-40 outline-none sm:scroll-mt-32 xl:scroll-mt-24">
+        <article id="documentation-article" tabIndex={-1} className="documentation-selectable min-w-0 scroll-mt-40 outline-none sm:scroll-mt-32 xl:scroll-mt-24">
           {children}
         </article>
       </div>

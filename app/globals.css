@@ -1462,6 +1462,13 @@ html[data-app-shell] [data-radix-scroll-area-viewport][style*="overflow-y: scrol
   -webkit-user-select: text !important;
 }
 
+/* Public articles override the design system reset, including nested text. */
+.documentation-selectable,
+.documentation-selectable *:not(button):not(button *):not(input):not(textarea) {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+}
+
 /* Every diff surface is selectable, including PR files, review hunks, commit
    sheets, and agent-side diffs. The renderer receives the same override inside
    its shadow root because the mangue-ui reset otherwise crosses the host. */

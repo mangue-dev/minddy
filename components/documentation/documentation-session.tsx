@@ -17,24 +17,26 @@ import { NumoFace } from "@/components/numo-face";
 import { LazyToaster } from "@/components/lazy-toaster";
 import { documentationPath } from "@/lib/documentation-core.mjs";
 import type { Locale } from "@/i18n/config";
+import type { DocumentationArticle } from "@/lib/documentation";
+
+type ArticleContext = { articleId: string | null; sections: DocumentationArticle["sections"] };
 
 const DocumentationNumo = dynamic(() => import("./documentation-numo").then(m => m.DocumentationNumo), { ssr: false });
 const SessionContext = createContext<{
   open: boolean;
   setOpen: (open: boolean) => void;
-  articleId: string | null;
-  setArticleId: (id: string | null) => void;
+  setArticle: (article: ArticleContext) => void;
 } | null>(null);
 
 function Session({ children, locale }: { children: ReactNode; locale: Locale }) {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [activated, setActivated] = useState(false);
-  const [articleId, setArticleId] = useState<string | null>(null);
+  const [article, setArticle] = useState<ArticleContext>({ articleId: null, sections: [] });
   const changeOpen = (next: boolean) => { setOpen(next); if (next) setActivated(true); };
-  return <SessionContext.Provider value={{ open, setOpen: changeOpen, articleId, setArticleId }}>
+  return <SessionContext.Provider value={{ open, setOpen: changeOpen, setArticle }}>
     <div data-documentation-numo-open={user && open ? "true" : undefined}>{children}</div>
-    {user && activated && <DocumentationNumo key={user.id} open={open} onClose={() => setOpen(false)} articleId={articleId} locale={locale} />}
+    {user && activated && <DocumentationNumo key={user.id} open={open} onClose={() => setOpen(false)} {...article} locale={locale} />}
     <LazyToaster />
   </SessionContext.Provider>;
 }
@@ -46,10 +48,10 @@ export function DocumentationSession({ children, locale }: { children: ReactNode
   return <AuthProvider><AccountQueryProvider><Session locale={locale}>{children}</Session></AccountQueryProvider></AuthProvider>;
 }
 
-export function DocumentationAccountActions({ currentId, locale }: { currentId: string | null; locale: Locale }) {
+export function DocumentationAccountActions({ currentId, sections, locale }: { currentId: string | null; sections: DocumentationArticle["sections"]; locale: Locale }) {
   const auth = useAuthOptional();
   if (!auth) return <DocumentationGuestActions currentId={currentId} locale={locale} />;
-  return <SessionAccountActions currentId={currentId} locale={locale} />;
+  return <SessionAccountActions currentId={currentId} sections={sections} locale={locale} />;
 }
 
 function DocumentationGuestActions({ currentId, locale }: { currentId: string | null; locale: Locale }) {
@@ -67,7 +69,7 @@ function DocumentationGuestActions({ currentId, locale }: { currentId: string | 
   </div>;
 }
 
-function SessionAccountActions({ currentId, locale }: { currentId: string | null; locale: Locale }) {
+function SessionAccountActions({ currentId, sections, locale }: { currentId: string | null; sections: DocumentationArticle["sections"]; locale: Locale }) {
   const session = useContext(SessionContext)!;
   const { user, loading, signOut } = useAuth();
   const [signingOut, setSigningOut] = useState(false);
@@ -82,7 +84,7 @@ function SessionAccountActions({ currentId, locale }: { currentId: string | null
       toast.error(t("signOutFailed"));
     }
   };
-  useEffect(() => session.setArticleId(currentId), [currentId, session.setArticleId]);
+  useEffect(() => session.setArticle({ articleId: currentId, sections }), [currentId, sections, session.setArticle]);
   if (loading) return <div aria-busy="true" className="h-9 w-24 animate-pulse rounded bg-muted" />;
   if (!user) return <DocumentationGuestActions currentId={currentId} locale={locale} />;
   return <div className="flex items-center gap-2">
