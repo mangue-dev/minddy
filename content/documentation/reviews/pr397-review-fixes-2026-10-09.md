@@ -79,9 +79,11 @@ for 252 articles on a busy CI runner.
 
 ## Validation
 
-The five targeted Vitest suites pass 97 tests, including the existing public
-namespace scanner, app-tab provider behavior, all localized Markdown links,
-sharing-card metadata and the new table-escaping regression. The documentation
+The seven targeted Vitest suites pass 114 tests, including the existing public
+namespace scanner, app-tab provider and desktop/mobile navigation behavior, all
+localized Markdown links, sharing-card metadata and the new table-escaping
+regression. The navigation test mocks both the original provider re-export and
+the extracted context consumed by app links. The documentation
 checker tooling passes nine tests. Release validation reports 252 published
 locale guides and 92/92 outcomes. Knowledge, owned-English, lint, typecheck and
 diff checks pass. The retention comparison verifies all 90 original coverage
