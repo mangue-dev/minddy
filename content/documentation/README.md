@@ -102,8 +102,40 @@ rides in a single prompt. Existing model, disablement and cost guards remain.
 ## Release maintenance
 
 `@mangue-dev` is responsible for the manual until another maintainer is named.
-Feature PRs list affected workflow, article and figure IDs. Update the English
-facts, full translations, screenshots, compatibility and glossary together.
+Documentation maintenance is mandatory for every code change, not only feature
+PRs. Review affected public guides, technical references and internal
+instructions in the same PR. Add documentation for new capabilities, correct
+changed behavior, and remove retired procedures, claims and illustrations.
+Reconcile related links, navigation, aliases, coverage mappings and glossary
+entries when their meaning changes; preserve valid legacy URLs. Do not postpone
+required documentation to another task or release.
+
+PRs list affected workflow, article and figure IDs, evidence and checks. If
+documentation remains accurate, record the reviewed scope and reason rather
+than making cosmetic edits. Update English facts and full `fr`, `de`, `es`,
+`it`, and `pt-BR` translations together, including localized labels, examples,
+captions and alternative text. Follow the editorial guide for writing and
+illustrations: refresh screenshots of changed controls, update responsive
+diagrams and their SVG fallback, add visuals where they help the reader, and
+remove obsolete or redundant figures. Internal instructions remain English.
+Keep article revisions, `sourceRevision`, compatibility and actual factual,
+language and figure review evidence coherent; never fabricate approval dates.
+
+Every release that changes the desktop version requires a documentation review
+against the release delta and intended version before freezing the candidate.
+Check all guides' applicability and compatibility, update affected content and
+illustrations, and record verified compatibility or retained evidence for
+unchanged guides. A version bump or changelog entry alone is not a manual
+update. Include the reviewed documentation in the candidate through the normal
+PR workflow. Do not change versioned documentation after freezing it; a
+necessary correction requires a new candidate and rebuilt affected artifacts.
+
+Run `npm run check:documentation`, `npm run check:knowledge`,
+`npm run check:owned-english` and `git diff --check` after documentation edits.
+Require `npm run check:documentation:release` before publishing a release.
+Passing metadata checks does not establish factual, language or visual quality;
+unresolved essential documentation or illustration gaps block completion.
+
 Review source changes against the shipped UI and configuration at release time.
 Operators rehearse installation, backup, update and blank-target restore for
 each supported profile, checking Auth, encrypted content, Storage bytes and
