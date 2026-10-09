@@ -52,7 +52,9 @@
       "content/documentation/reviews/remaining-account-capture-candidates.json",
       "components/assistant/usage-exhausted-card.tsx",
       "components/assistant/ask-user-card.tsx",
-      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json"
+      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json",
+      "content/documentation/reviews/premerge-de-es-2026-10-10.md",
+      "content/documentation/reviews/premerge-light-review-2026-10-10.md"
     ]
   },
   "review": {

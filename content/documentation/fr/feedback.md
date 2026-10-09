@@ -20,10 +20,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-10",
   "compatibility": {
     "version": "0.11.1 candidate (cd1843e12)",
     "editions": [
@@ -55,14 +55,23 @@
       "lib/server/feedback/status-sync.ts",
       "lib/server/feedback/notify.ts",
       "components/feedback/feedback-settings-shared.tsx",
-      "lib/server/feedback/public-nav.ts"
+      "lib/server/feedback/public-nav.ts",
+      "content/documentation/reviews/premerge-en-fr-2026-10-10.md",
+      "content/documentation/reviews/premerge-light-review-2026-10-10.md",
+      "app/f/[token]/voice/route.ts",
+      "app/f/[token]/feedback-board-client.tsx",
+      "lib/server/feedback/voice.ts",
+      "lib/server/feedback/voice-limits.ts",
+      "supabase/migrations/20270106320000_atomic_public_feedback_and_share_limits.sql",
+      "content/documentation/reviews/premerge-de-es-2026-10-10.md",
+      "content/documentation/reviews/premerge-it-pt-BR-2026-10-10.md"
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
-    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review)",
-    "date": "2026-10-09"
+    "revision": 6,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root with agent:/root/review_en_fr (light pre-merge source and retained-claim review; existing operational evidence retained; no operational rerun)",
+    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root/review_en_fr with agent:/root (fr pre-merge wording, correction and retained-meaning review)",
+    "date": "2026-10-10"
   },
   "related": [
     "api-and-webhooks"
@@ -88,7 +97,7 @@
       "src": "/documentation/fr/publish-a-feedback-board-workflow.png",
       "alt": "Board public de retours activé, avec identité SSO locale configurée et URL masquée.",
       "caption": "Le propriétaire active le board et choisit l’identité des visiteurs. Cet exemple utilise une signature SSO locale ; l’URL et le secret de signature sont masqués.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -104,7 +113,7 @@
       "src": "/documentation/fr/submit-and-follow-feedback-workflow.png",
       "alt": "Formulaire visiteur avec titre, description et visibilité publique activée.",
       "caption": "Un visiteur identifié soumet un besoin et choisit sa visibilité. L’exemple a été réellement envoyé avec la revue automatique désactivée.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -120,7 +129,7 @@
       "src": "/documentation/fr/moderate-feedback-workflow.png",
       "alt": "Détail d’un retour avec réponse publique de l’équipe et note interne.",
       "caption": "Le badge Public distingue la réponse visible aux visiteurs ; la note interne reste accessible à l’équipe. Aucun résultat de modération IA n’est présenté.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -136,7 +145,7 @@
       "src": "/documentation/fr/feedback-pages-and-views-workflow.png",
       "alt": "Guide des retours publié, sélectionné dans la navigation du board et lisible sans connexion.",
       "caption": "Publiez une page, activez les onglets de pages et sélectionnez-la pour le board. Cette page de démonstration a été ouverte anonymement ; son URL opaque conserve `noindex`.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -177,6 +186,10 @@ La revue Numo facultative s’applique aux retours soumis et dépend des réglag
 Ouvrez l’URL publique du board. Vous pouvez lire les retours publics sans compte minddy. Pour soumettre, voter ou commenter, identifiez-vous par le code email du board ou le lien SSO du produit. La réception du code dépend du service email de l’instance. Un code reste valable dix minutes et autorise cinq tentatives ; attendez au moins soixante secondes avant d’en demander un autre. Ne partagez jamais ce code.
 
 Recherchez les demandes existantes avant d’en publier une. Donnez un titre précis et décrivez le besoin et son contexte. Le titre accepte 200 caractères et le corps 10 000. L’option publique est cochée par défaut ; décochez-la pour adresser la demande en privé à l’équipe. Vérifiez que le texte ne contient pas de secrets avant l’envoi. Une modération facultative peut maintenir la demande en attente avant son affichage public.
+
+Utilisez le microphone du formulaire pour dicter le titre et la description. Identifiez-vous d’abord sur le tableau, autorisez l’accès au microphone, puis arrêtez l’enregistrement et relisez le texte avant de choisir Envoyer. La dictée remplit le brouillon ; elle ne soumet pas la demande. Sa disponibilité dépend de la configuration vocale de l’instance, de fournisseurs fonctionnels et du budget IA du propriétaire du projet. La consommation est imputée à ce propriétaire selon ses réglages de fournisseurs, plutôt qu’au compte du visiteur.
+
+Les enregistrements du tableau public sont limités à 10 MiB. La transcription autorise 20 requêtes par visiteur identifié et 40 par adresse IP et par heure, pour chaque tableau ; l’interprétation du brouillon a une limite distincte de 40 requêtes par visiteur et par heure. Ces limites sont distinctes de celles de la dictée du compte. En cas de message de limitation, attendez avant de réessayer ; si la voix est indisponible, saisissez la demande au clavier.
 
 ### Voter, commenter et suivre {#follow}
 

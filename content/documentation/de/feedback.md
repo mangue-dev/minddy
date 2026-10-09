@@ -20,10 +20,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-10",
   "compatibility": {
     "version": "0.11.1 candidate (cd1843e12)",
     "editions": [
@@ -55,14 +55,23 @@
       "lib/server/feedback/status-sync.ts",
       "lib/server/feedback/notify.ts",
       "components/feedback/feedback-settings-shared.tsx",
-      "lib/server/feedback/public-nav.ts"
+      "lib/server/feedback/public-nav.ts",
+      "content/documentation/reviews/premerge-en-fr-2026-10-10.md",
+      "content/documentation/reviews/premerge-light-review-2026-10-10.md",
+      "app/f/[token]/voice/route.ts",
+      "app/f/[token]/feedback-board-client.tsx",
+      "lib/server/feedback/voice.ts",
+      "lib/server/feedback/voice-limits.ts",
+      "supabase/migrations/20270106320000_atomic_public_feedback_and_share_limits.sql",
+      "content/documentation/reviews/premerge-de-es-2026-10-10.md",
+      "content/documentation/reviews/premerge-it-pt-BR-2026-10-10.md"
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review)",
-    "date": "2026-10-09"
+    "revision": 6,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root with agent:/root/review_de_es (light pre-merge source and retained-claim review; existing operational evidence retained; no operational rerun)",
+    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root/review_de_es with agent:/root (de pre-merge wording, correction and retained-meaning review)",
+    "date": "2026-10-10"
   },
   "related": [
     "api-and-webhooks"
@@ -88,7 +97,7 @@
       "src": "/documentation/de/publish-a-feedback-board-workflow.png",
       "alt": "Aktiviertes öffentliches Feedback-Board mit lokaler SSO-Identität und ausgeblendeter URL.",
       "caption": "Der Eigentümer aktiviert das Board und wählt die Besucheridentität. Dieses Beispiel verwendet einen lokalen SSO-Signierer; URL und Signaturgeheimnis sind ausgeblendet.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -104,7 +113,7 @@
       "src": "/documentation/de/submit-and-follow-feedback-workflow.png",
       "alt": "Feedback-Formular für Besucher mit Titel, Beschreibung und aktivierter öffentlicher Sichtbarkeit.",
       "caption": "Ein angemeldeter Besucher reicht einen Bedarf ein und bestimmt die Sichtbarkeit. Das Beispiel wurde tatsächlich bei deaktivierter automatischer Prüfung eingereicht.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -120,7 +129,7 @@
       "src": "/documentation/de/moderate-feedback-workflow.png",
       "alt": "Feedback-Detail mit öffentlicher Teamantwort und interner Notiz.",
       "caption": "Das Kennzeichen Öffentlich markiert die für Besucher sichtbare Antwort; die interne Notiz bleibt beim Team. Kein Ergebnis einer KI-Moderation wird gezeigt.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -136,7 +145,7 @@
       "src": "/documentation/de/feedback-pages-and-views-workflow.png",
       "alt": "Veröffentlichter Feedback-Leitfaden als ausgewählter Board-Tab, ohne Anmeldung lesbar.",
       "caption": "Veröffentlichen Sie eine Seite, aktivieren Sie Seitentabs und wählen Sie die Seite für das Board aus. Die Demoseite wurde anonym geöffnet; ihre undurchsichtige URL behält `noindex`.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -177,6 +186,10 @@ Die optionale Numo-Prüfung betrifft eingereichtes Feedback und hängt von Proje
 Öffnen Sie die öffentliche Board-URL. Öffentliche Beiträge können Sie ohne minddy-Konto lesen. Zum Einreichen, Abstimmen oder Kommentieren identifizieren Sie sich über den E-Mail-Code des Boards oder den SSO-Link des Produkts. Die Zustellung des Codes hängt vom E-Mail-Dienst der Instanz ab. Ein Code gilt zehn Minuten und erlaubt fünf Versuche; warten Sie mindestens sechzig Sekunden, bevor Sie einen neuen anfordern. Geben Sie den Code niemals weiter.
 
 Suchen Sie vor einer Einreichung nach vorhandenen Anfragen. Schreiben Sie einen konkreten Titel und beschreiben Sie den Bedarf und seinen Kontext. Titel erlauben 200 Zeichen, der Text 10.000. Die öffentliche Option ist standardmäßig ausgewählt; deaktivieren Sie sie, um die Anfrage privat an das Team zu senden. Prüfen Sie den Text vor dem Absenden auf Geheimnisse. Eine optionale Moderation kann die Anfrage zunächst zurückhalten, bevor sie öffentlich erscheint.
+
+Verwenden Sie das Mikrofon im Einreichungsformular, um Titel und Beschreibung zu diktieren. Identifizieren Sie sich zuerst über das Board, erlauben Sie den Mikrofonzugriff und beenden Sie dann die Aufnahme. Prüfen Sie den Text, bevor Sie Senden wählen. Das Diktat füllt den Entwurf aus; es sendet die Anfrage nicht ab. Die Verfügbarkeit hängt von der Sprachkonfiguration der Instanz, funktionierenden Anbietern und dem KI-Budget des Projektinhabers ab. Der Verbrauch wird diesem Inhaber gemäß seinen Anbietereinstellungen berechnet, nicht dem Konto des Besuchers.
+
+Aufnahmen auf dem öffentlichen Board sind auf 10 MiB begrenzt. Die Transkription erlaubt pro Board und Stunde 20 Anfragen je identifiziertem Besucher und 40 je IP-Adresse; für die Interpretation des Entwurfs gilt eine separate Grenze von 40 Anfragen je Besucher und Stunde. Diese Grenzen sind von den Diktatgrenzen des Kontos getrennt. Warten Sie bei einer Meldung zum Anfragelimit, bevor Sie es erneut versuchen. Ist Spracheingabe nicht verfügbar, tippen Sie die Anfrage stattdessen.
 
 ### Abstimmen, kommentieren und verfolgen {#follow}
 

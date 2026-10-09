@@ -21,10 +21,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 4,
+  "revision": 5,
   "sourceRevision": 4,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-10",
   "compatibility": {
     "version": "0.11.1 candidate (cd1843e12); 0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -52,14 +52,16 @@
       "content/documentation/reviews/remaining-account-capture-candidates.json",
       "components/assistant/usage-exhausted-card.tsx",
       "components/assistant/ask-user-card.tsx",
-      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json"
+      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json",
+      "content/documentation/reviews/premerge-de-es-2026-10-10.md",
+      "content/documentation/reviews/premerge-light-review-2026-10-10.md"
     ]
   },
   "review": {
-    "revision": 4,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review)",
-    "date": "2026-10-09"
+    "revision": 5,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root with agent:/root/review_de_es (light pre-merge source and retained-claim review; existing operational evidence retained; no operational rerun)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root/review_de_es with agent:/root (es pre-merge wording, correction and retained-meaning review)",
+    "date": "2026-10-10"
   },
   "related": [
     "code-work",
@@ -89,7 +91,7 @@
       "src": "/documentation/es/work-with-numo-workflow.png",
       "alt": "Conversación de demostración de Numo con contexto, cambio de prioridad y respuesta guardada.",
       "caption": "Conversación de demostración existente, traducida para mostrarla. La respuesta guardada cita AUR-11 y AUR-7; la captura no acredita una nueva ejecución.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -106,7 +108,7 @@
       "src": "/documentation/es/numo-permissions-and-approvals-workflow.svg",
       "alt": "Matriz de permisos de Numo para acciones del proyecto, conexiones personales y rutinas.",
       "caption": "El acceso al proyecto y las peticiones explícitas limitan las acciones de Numo; el contenido externo no concede permisos.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -165,11 +167,11 @@
       "id": "numo-execution-model-flow",
       "kind": "diagram",
       "src": "/documentation/es/numo-execution-model-flow.svg",
-      "alt": "Diagrama: Persistir intención, mensaje y UUID. Reclamar turno, guardar herramientas y resultados. Esperar worker actual cuando necesario. Releer eventos y conciliar escrituras inciertas.",
-      "caption": "Siga las etapas en este orden. Persistir intención, mensaje y UUID. Reclamar turno, guardar herramientas y resultados. Esperar worker actual cuando necesario. Releer eventos y conciliar escrituras inciertas.",
-      "revision": 4,
+      "alt": "Diagrama: Persistir intención, mensaje y UUID. Reclamar turno, guardar herramientas y resultados. Esperar al worker actual cuando sea necesario. Releer eventos y conciliar escrituras inciertas.",
+      "caption": "Siga las etapas en este orden. Persistir intención, mensaje y UUID. Reclamar turno, guardar herramientas y resultados. Esperar al worker actual cuando sea necesario. Releer eventos y conciliar escrituras inciertas.",
+      "revision": 5,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-10",
       "viewport": [
         720,
         640
@@ -185,7 +187,7 @@
             "title": "Reclamar turno, guardar herramientas y resultados"
           },
           {
-            "title": "Esperar worker actual cuando necesario"
+            "title": "Esperar al worker actual cuando sea necesario"
           },
           {
             "title": "Releer eventos y conciliar escrituras inciertas"
@@ -199,7 +201,7 @@
       "src": "/documentation/es/numo-mcp-connections-workflow.png",
       "alt": "Ajustes MCP personales, lista vacía y botón para añadir otro servidor.",
       "caption": "Las conexiones de Numo son personales; las rutinas usan las del propietario del proyecto.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -216,7 +218,7 @@
       "src": "/documentation/es/numo-mcp-connections-config-workflow.png",
       "alt": "Formulario de servidor MCP personalizado con ajustes avanzados de autenticación, transporte y cabeceras.",
       "caption": "Formulario de servidor MCP personalizado con ajustes avanzados de autenticación, transporte y cabeceras. No se introdujeron credenciales ni se contactó con ningún servidor.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -279,7 +281,7 @@ Las conversaciones no usan conexiones MCP personales de otros miembros. Las ruti
 
 Los mensajes interactivos, las acciones contextuales y las rutinas entran en conversaciones Numo. El modelo y el nivel de razonamiento de la conversación se eligen en el campo de composición; el trabajo delegado usa los valores predeterminados de modelo de código y razonamiento de la cuenta. Las herramientas directas de minddy pueden actuar sin repositorio. El trabajo de código abre una sandbox en el servidor para el repositorio vinculado solo cuando hace falta. Una rutina crea una conversación para esa ejecución con las instrucciones guardadas y el contexto de propietario y proyecto. No es necesario mantener una sesión de escritorio abierta.
 
-![Diagrama: Persistir intención, mensaje y UUID. Reclamar turno, guardar herramientas y resultados. Esperar worker actual cuando necesario. Releer eventos y conciliar escrituras inciertas.](/documentation/es/numo-execution-model-flow.svg)
+![Diagrama: Persistir intención, mensaje y UUID. Reclamar turno, guardar herramientas y resultados. Esperar al worker actual cuando sea necesario. Releer eventos y conciliar escrituras inciertas.](/documentation/es/numo-execution-model-flow.svg)
 
 ### Separar ejecución y visualización {#state}
 

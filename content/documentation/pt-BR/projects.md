@@ -37,7 +37,10 @@
       "components/inbox-content.tsx",
       "components/home/onboarding-join-dialog.tsx",
       "components/project-members.tsx",
-      "lib/server/update-project.ts"
+      "lib/server/update-project.ts",
+      "content/documentation/reviews/premerge-de-es-2026-10-10.md",
+      "content/documentation/reviews/premerge-light-review-2026-10-10.md",
+      "lib/project-key.ts"
     ]
   },
   "review": {

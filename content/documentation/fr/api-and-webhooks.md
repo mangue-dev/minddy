@@ -41,7 +41,9 @@
       "app/api/v1/feedback/[id]/vote/route.ts",
       "lib/feedback/sso-jwt.ts",
       "app/f/[token]/sso/route.ts",
-      "lib/server/feedback/posts.ts"
+      "lib/server/feedback/posts.ts",
+      "content/documentation/reviews/premerge-de-es-2026-10-10.md",
+      "content/documentation/reviews/premerge-light-review-2026-10-10.md"
     ]
   },
   "review": {

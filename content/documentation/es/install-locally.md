@@ -42,7 +42,9 @@
       "lib/server/app-origin.ts",
       "lib/server/oauth/issuer.ts",
       "app/api/oauth/register/route.ts",
-      "lib/server/oauth/metadata.ts"
+      "lib/server/oauth/metadata.ts",
+      "content/documentation/reviews/premerge-it-pt-BR-2026-10-10.md",
+      "content/documentation/reviews/premerge-light-review-2026-10-10.md"
     ]
   },
   "review": {

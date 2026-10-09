@@ -20,10 +20,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-10",
   "compatibility": {
     "version": "0.11.1 candidate (cd1843e12)",
     "editions": [
@@ -55,14 +55,23 @@
       "lib/server/feedback/status-sync.ts",
       "lib/server/feedback/notify.ts",
       "components/feedback/feedback-settings-shared.tsx",
-      "lib/server/feedback/public-nav.ts"
+      "lib/server/feedback/public-nav.ts",
+      "content/documentation/reviews/premerge-en-fr-2026-10-10.md",
+      "content/documentation/reviews/premerge-light-review-2026-10-10.md",
+      "app/f/[token]/voice/route.ts",
+      "app/f/[token]/feedback-board-client.tsx",
+      "lib/server/feedback/voice.ts",
+      "lib/server/feedback/voice-limits.ts",
+      "supabase/migrations/20270106320000_atomic_public_feedback_and_share_limits.sql",
+      "content/documentation/reviews/premerge-de-es-2026-10-10.md",
+      "content/documentation/reviews/premerge-it-pt-BR-2026-10-10.md"
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review)",
-    "date": "2026-10-09"
+    "revision": 6,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root with agent:/root/review_de_es (light pre-merge source and retained-claim review; existing operational evidence retained; no operational rerun)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root/review_de_es with agent:/root (es pre-merge wording, correction and retained-meaning review)",
+    "date": "2026-10-10"
   },
   "related": [
     "api-and-webhooks"
@@ -88,7 +97,7 @@
       "src": "/documentation/es/publish-a-feedback-board-workflow.png",
       "alt": "Tablero público de feedback activado, con identidad SSO local configurada y URL oculta.",
       "caption": "El propietario activa el tablero y elige cómo se identifican los visitantes. Este ejemplo usa un firmante SSO local; la URL y el secreto de firma están ocultos.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -104,7 +113,7 @@
       "src": "/documentation/es/submit-and-follow-feedback-workflow.png",
       "alt": "Formulario de una solicitud de feedback con título, descripción y visibilidad pública activada.",
       "caption": "Un visitante identificado envía una solicitud y elige su visibilidad. El ejemplo se envió realmente con la revisión automática desactivada.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -120,7 +129,7 @@
       "src": "/documentation/es/moderate-feedback-workflow.png",
       "alt": "Detalle de una solicitud de feedback con una respuesta pública del equipo y una nota interna.",
       "caption": "La etiqueta Público identifica la respuesta visible para los visitantes; la nota interna queda en el equipo. No se muestra ningún resultado de moderación con IA.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -136,7 +145,7 @@
       "src": "/documentation/es/feedback-pages-and-views-workflow.png",
       "alt": "Guía de feedback publicada y seleccionada en la navegación del tablero, legible sin iniciar sesión.",
       "caption": "Publique una página, active las pestañas de páginas y selecciónela para el tablero. Esta página de demostración se abrió de forma anónima; su URL opaca conserva `noindex`.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -177,6 +186,10 @@ La revisión opcional de Numo se aplica al feedback enviado y depende de la conf
 Abra la URL pública del tablero. Puede leer solicitudes públicas sin una cuenta minddy. Para enviar, votar o comentar, identifíquese mediante el código por email del tablero o el enlace SSO del producto. La entrega del código depende del servicio de correo de la instancia. El código dura diez minutos y permite cinco intentos; espere al menos sesenta segundos antes de pedir otro. Nunca comparta el código.
 
 Busque solicitudes existentes antes de publicar. Escriba un título concreto y describa la necesidad y su contexto. El título admite 200 caracteres y el cuerpo 10.000. La opción pública está seleccionada por defecto; desmárquela para enviar la solicitud de forma privada al equipo. Revise el texto para eliminar secretos antes del envío. La moderación opcional puede mantener la solicitud pendiente antes de que aparezca públicamente.
+
+Utilice el micrófono del formulario de envío para dictar el título y la descripción. Identifíquese primero a través del tablero, permita el acceso al micrófono y después detenga la grabación. Revise el texto antes de elegir Enviar. El dictado rellena el borrador; no envía la solicitud. La disponibilidad depende de la configuración de voz de la instancia, de proveedores operativos y del presupuesto de IA del propietario del proyecto. El consumo se factura a ese propietario según sus ajustes de proveedores, en lugar de a la cuenta del visitante.
+
+Las grabaciones del tablero público están limitadas a 10 MiB. La transcripción permite, por tablero y hora, 20 solicitudes por visitante identificado y 40 por dirección IP; la interpretación del borrador tiene un límite independiente de 40 solicitudes por visitante y hora. Estos límites son distintos de los del dictado de la cuenta. Ante un mensaje de límite de solicitudes, espere antes de reintentar; si la voz no está disponible, escriba la solicitud.
 
 ### Votar, comentar y seguir {#follow}
 

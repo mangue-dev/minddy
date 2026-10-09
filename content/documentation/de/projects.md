@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
+  "revision": 7,
   "sourceRevision": 6,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-10",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -37,14 +37,17 @@
       "components/inbox-content.tsx",
       "components/home/onboarding-join-dialog.tsx",
       "components/project-members.tsx",
-      "lib/server/update-project.ts"
+      "lib/server/update-project.ts",
+      "content/documentation/reviews/premerge-de-es-2026-10-10.md",
+      "content/documentation/reviews/premerge-light-review-2026-10-10.md",
+      "lib/project-key.ts"
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions)",
-    "date": "2026-10-09"
+    "revision": 7,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root with agent:/root/review_de_es (light pre-merge source and retained-claim review; existing operational evidence retained; no operational rerun)",
+    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root/review_de_es with agent:/root (de pre-merge wording, correction and retained-meaning review)",
+    "date": "2026-10-10"
   },
   "related": [
     "issues",
@@ -68,7 +71,7 @@
       "src": "/documentation/de/project-general.png",
       "alt": "Allgemeine Projekteinstellungen mit Name, Schlüssel, Symbol und eigener Papierkorbaktion.",
       "caption": "Prüfe Namen und Schlüssel vor dem Speichern. Das Verschieben in den Papierkorb ist eine eigene Aktion.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -84,7 +87,7 @@
       "src": "/documentation/de/project-members.png",
       "alt": "E-Mail-Einladung und drei Demomitglieder mit Kennzeichnung des Eigentümers.",
       "caption": "Lade Mitglieder über ihre Konto-E-Mail ein und prüfe den Eigentümer, bevor du einen Zugang entfernst.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -108,7 +111,7 @@ Ein Projekt verbindet Probleme, Ziele, Seiten und Mitglieder. Sein Eigentümer v
 
 Öffne das Projekt und anschließend seine Einstellungen. Administrative Einstellungen unterliegen der Projekteigentümerschaft. Mitglieder können den allgemeinen Bereich ansehen und das Projekt verlassen, erhalten aber nicht die Bearbeitungsfunktionen des Eigentümers.
 
-Gib als Eigentümer einen nicht leeren Namen und einen gültigen Projektschlüssel ein und speichere. Der Schlüssel wird in Großbuchstaben umgewandelt und besteht aus 2 bis 5 Buchstaben oder Ziffern. Prüfe nach einer Änderung die entstandenen Kennungen. Verwende Symbol- und Darstellungsfunktionen, um das Projekt in der Navigation zu unterscheiden; diese visuellen Entscheidungen verändern die Mitgliedschaft nicht.
+Gib als Eigentümer einen nicht leeren Namen und einen gültigen Projektschlüssel ein und speichere. Der Schlüssel wird in Großbuchstaben umgewandelt und besteht aus 2 bis 5 ASCII-Buchstaben. Prüfe nach einer Änderung die entstandenen Kennungen. Verwende Symbol- und Darstellungsfunktionen, um das Projekt in der Navigation zu unterscheiden; diese visuellen Entscheidungen verändern die Mitgliedschaft nicht.
 
 Weitere Bereiche verwalten Mitwirkende, wiederkehrende Probleme, Git, Import, Integrationen, Automatisierung und Feedback. Lies die jeweilige Aufgabenanleitung, bevor du einen Anbieter oder automatische Arbeit aktivierst. Kontoeinstellungen wie deine Oberflächensprache sind von der Projektkonfiguration getrennt.
 

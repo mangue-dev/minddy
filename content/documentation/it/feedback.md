@@ -20,10 +20,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-10",
   "compatibility": {
     "version": "0.11.1 candidate (cd1843e12)",
     "editions": [
@@ -55,14 +55,23 @@
       "lib/server/feedback/status-sync.ts",
       "lib/server/feedback/notify.ts",
       "components/feedback/feedback-settings-shared.tsx",
-      "lib/server/feedback/public-nav.ts"
+      "lib/server/feedback/public-nav.ts",
+      "content/documentation/reviews/premerge-en-fr-2026-10-10.md",
+      "content/documentation/reviews/premerge-light-review-2026-10-10.md",
+      "app/f/[token]/voice/route.ts",
+      "app/f/[token]/feedback-board-client.tsx",
+      "lib/server/feedback/voice.ts",
+      "lib/server/feedback/voice-limits.ts",
+      "supabase/migrations/20270106320000_atomic_public_feedback_and_share_limits.sql",
+      "content/documentation/reviews/premerge-de-es-2026-10-10.md",
+      "content/documentation/reviews/premerge-it-pt-BR-2026-10-10.md"
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review)",
-    "date": "2026-10-09"
+    "revision": 6,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root with agent:/root/review_it_pt (light pre-merge source and retained-claim review; existing operational evidence retained; no operational rerun)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root/review_it_pt with agent:/root (it pre-merge wording, correction and retained-meaning review)",
+    "date": "2026-10-10"
   },
   "related": [
     "api-and-webhooks"
@@ -88,7 +97,7 @@
       "src": "/documentation/it/publish-a-feedback-board-workflow.png",
       "alt": "Bacheca pubblica dei feedback attiva, con identità SSO locale configurata e URL nascosto.",
       "caption": "Il proprietario attiva la bacheca e sceglie l’identità dei visitatori. Questo esempio usa un firmatario SSO locale; l’URL e il segreto di firma sono nascosti.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -104,7 +113,7 @@
       "src": "/documentation/it/submit-and-follow-feedback-workflow.png",
       "alt": "Modulo di feedback del visitatore con titolo, descrizione e visibilità pubblica attivata.",
       "caption": "Un visitatore identificato invia un’esigenza e ne sceglie la visibilità. L’esempio è stato realmente inviato con la revisione automatica disattivata.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -120,7 +129,7 @@
       "src": "/documentation/it/moderate-feedback-workflow.png",
       "alt": "Dettaglio di un feedback con risposta pubblica del team e nota interna.",
       "caption": "L’etichetta Pubblico distingue la risposta visibile ai visitatori; la nota interna resta al team. Non viene mostrato alcun risultato di moderazione IA.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -136,7 +145,7 @@
       "src": "/documentation/it/feedback-pages-and-views-workflow.png",
       "alt": "Guida ai feedback pubblicata e selezionata nella navigazione della bacheca, leggibile senza accesso.",
       "caption": "Pubblica una pagina, attiva le schede delle pagine e selezionala per la bacheca. Questa pagina dimostrativa è stata aperta anonimamente; il suo URL opaco mantiene `noindex`.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -177,6 +186,10 @@ La revisione facoltativa di Numo riguarda il feedback inviato e dipende dalle im
 Apri l’URL pubblico della bacheca. Puoi leggere i feedback pubblici senza un account minddy. Per inviare, votare o commentare, identificati con il codice email della bacheca o il link SSO del prodotto. La consegna del codice dipende dal servizio email dell’istanza. Un codice dura dieci minuti e consente cinque tentativi; attendi almeno sessanta secondi prima di richiederne un altro. Non condividere mai il codice.
 
 Cerca richieste esistenti prima di pubblicare. Scrivi un titolo preciso e descrivi il bisogno e il contesto. Il titolo ammette 200 caratteri e il corpo 10.000. L’opzione pubblica è selezionata per impostazione predefinita; deselezionala per inviare la richiesta privatamente al team. Prima dell’invio, controlla che il testo non contenga segreti. La moderazione facoltativa può mantenere la richiesta in attesa prima che appaia pubblicamente.
+
+Usa il microfono nel modulo di invio per dettare titolo e descrizione. Prima identificati sulla bacheca, consenti l’accesso al microfono, poi interrompi la registrazione e controlla il testo prima di scegliere Invia. La dettatura compila la bozza; non invia la richiesta. La disponibilità dipende dalla configurazione vocale dell’istanza, dal funzionamento dei provider e dal budget IA del proprietario del progetto. L’utilizzo viene addebitato al proprietario secondo le sue impostazioni dei provider, anziché all’account del visitatore.
+
+Le registrazioni sulla bacheca pubblica sono limitate a 10 MiB. La trascrizione consente 20 richieste per visitatore identificato e 40 per indirizzo IP all’ora, per bacheca; l’interpretazione della bozza ha un limite separato di 40 richieste per visitatore all’ora. Questi limiti sono distinti da quelli della dettatura dell’account. Se compare un messaggio di limite raggiunto, attendi prima di riprovare; se la funzione vocale non è disponibile, scrivi la richiesta.
 
 ### Votare, commentare e seguire {#follow}
 

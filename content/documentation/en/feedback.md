@@ -20,10 +20,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-10",
   "compatibility": {
     "version": "0.11.1 candidate (cd1843e12)",
     "editions": [
@@ -55,14 +55,23 @@
       "lib/server/feedback/status-sync.ts",
       "lib/server/feedback/notify.ts",
       "components/feedback/feedback-settings-shared.tsx",
-      "lib/server/feedback/public-nav.ts"
+      "lib/server/feedback/public-nav.ts",
+      "content/documentation/reviews/premerge-en-fr-2026-10-10.md",
+      "content/documentation/reviews/premerge-light-review-2026-10-10.md",
+      "app/f/[token]/voice/route.ts",
+      "app/f/[token]/feedback-board-client.tsx",
+      "lib/server/feedback/voice.ts",
+      "lib/server/feedback/voice-limits.ts",
+      "supabase/migrations/20270106320000_atomic_public_feedback_and_share_limits.sql",
+      "content/documentation/reviews/premerge-de-es-2026-10-10.md",
+      "content/documentation/reviews/premerge-it-pt-BR-2026-10-10.md"
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review)",
-    "date": "2026-10-09"
+    "revision": 6,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root with agent:/root/review_en_fr (light pre-merge source and retained-claim review; existing operational evidence retained; no operational rerun)",
+    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root/review_en_fr with agent:/root (en pre-merge wording, correction and retained-meaning review)",
+    "date": "2026-10-10"
   },
   "related": [
     "api-and-webhooks"
@@ -88,7 +97,7 @@
       "src": "/documentation/en/publish-a-feedback-board-workflow.png",
       "alt": "Enabled public feedback board with local SSO identity configured and its URL concealed.",
       "caption": "The owner enables the board and chooses visitor identity. This demo uses a local SSO signer; the URL and signing secret are concealed.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -104,7 +113,7 @@
       "src": "/documentation/en/submit-and-follow-feedback-workflow.png",
       "alt": "Visitor feedback form with a title, description and public visibility enabled.",
       "caption": "A signed-in visitor submits a need and chooses whether it appears publicly. The example was actually submitted with automatic review disabled.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -120,7 +129,7 @@
       "src": "/documentation/en/moderate-feedback-workflow.png",
       "alt": "Feedback detail showing a public team reply and an internal note.",
       "caption": "The Public badge identifies the reply visible to visitors; the internal note stays with the team. No AI moderation result is shown.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -136,7 +145,7 @@
       "src": "/documentation/en/feedback-pages-and-views-workflow.png",
       "alt": "Published feedback guide selected in the board navigation and readable without sign-in.",
       "caption": "Publish a page, enable page tabs and select it for the board. This demonstration page was opened anonymously; the opaque URL keeps `noindex`.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -177,6 +186,10 @@ Optional Numo review applies to submitted feedback and depends on project/instan
 Open the board's public URL. You can read public posts without a minddy account. To submit, vote or comment, identify through the board's email-code flow or the product's SSO link. Email-code delivery depends on the instance's email service. A code lasts ten minutes and allows five attempts; wait at least sixty seconds before requesting another. Never share the code.
 
 Search existing requests before posting. Write a specific title and describe the need and its context. Titles allow 200 characters and bodies 10,000. The public option is selected by default; clear it to send the request privately to the team. Review the text for secrets before submitting. Optional moderation can keep the request pending before it appears publicly.
+
+Use the microphone in the submission form to dictate the title and description. Identify through the board first, allow microphone access, then stop recording and review the text before choosing Send. Dictation fills the draft; it does not submit the request. Availability depends on the instance’s voice configuration, working providers and the project owner’s AI budget. Usage is charged to that owner under their provider settings, rather than to the visitor’s account.
+
+Public-board recordings are limited to 10 MiB. Transcription allows 20 requests per identified visitor and 40 per IP address per hour, per board; draft interpretation has a separate limit of 40 requests per visitor per hour. These are separate from account dictation limits. For a rate-limit message, wait before retrying; if voice is unavailable, type the request instead.
 
 ### Vote, comment and follow {#follow}
 

@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-10",
   "compatibility": {
     "version": "0.11.1 candidate (cd1843e12); 0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -50,14 +50,20 @@
       "lib/server/app-origin.ts",
       "lib/server/oauth/issuer.ts",
       "app/api/oauth/register/route.ts",
-      "lib/server/oauth/metadata.ts"
+      "lib/server/oauth/metadata.ts",
+      "content/documentation/reviews/premerge-en-fr-2026-10-10.md",
+      "content/documentation/reviews/premerge-light-review-2026-10-10.md",
+      "lib/server/database-tool-schema.ts",
+      "lib/server/page-databases.ts",
+      "content/documentation/reviews/premerge-de-es-2026-10-10.md",
+      "content/documentation/reviews/premerge-it-pt-BR-2026-10-10.md"
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-672 MCP availability and network guidance checked against route, origin, discovery, registration and local launcher source; no operational rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-672 pt-BR network guidance and terminology review)",
-    "date": "2026-10-09"
+    "revision": 6,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-672 MCP availability and network guidance checked against route, origin, discovery, registration and local launcher source; no operational rerun); agent:/root with agent:/root/review_it_pt (light pre-merge source and retained-claim review; existing operational evidence retained; no operational rerun)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-672 pt-BR network guidance and terminology review); agent:/root/review_it_pt with agent:/root (pt-BR pre-merge wording, correction and retained-meaning review)",
+    "date": "2026-10-10"
   },
   "related": [
     "numo",
@@ -79,7 +85,7 @@
       "src": "/documentation/pt-BR/external-minddy-mcp-workflow.png",
       "alt": "Seletor de clientes MCP minddy com Claude, Codex e outros assistentes.",
       "caption": "Selecione seu cliente para exibir o comando ou a configuração de instalação.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -94,9 +100,9 @@
       "id": "external-minddy-mcp-install-workflow",
       "kind": "screenshot",
       "src": "/documentation/pt-BR/external-minddy-mcp-install-workflow.png",
-      "alt": "Diálogo de instalação do Codex na instância local.",
-      "caption": "Diálogo de instalação do Codex. Use a origem da sua instância; o comando exibido não foi executado para esta captura.",
-      "revision": 5,
+      "alt": "Diálogo de instalação do Codex mostrando o endpoint minddy Cloud.",
+      "caption": "Este exemplo se conecta ao minddy Cloud. Para uma instância autogerenciada, use a origem da sua própria instância; o comando exibido não foi executado para esta captura.",
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -143,7 +149,7 @@ Clientes externos usam ferramentas disponíveis para tarefas, planos, comentári
 
 minddy MCP nas configurações da conta lista acessos externos e controles de revogação. Revogue clientes sem uso ou confiança. MCP para Numo é diferente: conecta o Numo a outros serviços. Não cole tokens em tarefas, feedback público nem capturas.
 
-![Diálogo de instalação do Codex na instância local.](/documentation/pt-BR/external-minddy-mcp-install-workflow.png)
+![Diálogo de instalação do Codex mostrando o endpoint minddy Cloud.](/documentation/pt-BR/external-minddy-mcp-install-workflow.png)
 
 
 ## Usar o minddy MCP e descobrir as ferramentas atuais {#mcp-tool-reference}
@@ -156,7 +162,11 @@ minddy MCP nas configurações da conta lista acessos externos e controles de re
 
 ### Respeitar revisões e propriedade {#pages-and-routines}
 
-`minddy_list_pages` mostra a hierarquia, `minddy_search_pages` retorna trechos e `minddy_get_page` retorna Markdown, comentários e valores completos. Prefira edições parciais e use a versão atual ao substituir conteúdo. Preserve as URLs de arquivos e imagens. `minddy_create_page` com `database=true` cria um banco de páginas. `minddy_update_page_database` exige a revisão do esquema, o valor anterior da célula e os tokens `preview`/`apply` para conversões. Somente o proprietário pode criar, pausar, reagendar ou remover suas rotinas. Leia antes de criar para evitar duplicatas. `minddy_add_resource` limita os arquivos a 10 MB; as ferramentas de página não inventam URLs.
+`minddy_list_pages` mostra a hierarquia, `minddy_search_pages` retorna trechos e `minddy_get_page` retorna Markdown, comentários e valores completos. Prefira edições parciais e use a versão atual ao substituir conteúdo. Preserve as URLs de arquivos e imagens. `minddy_create_page` com `database=true` cria um banco de páginas. `minddy_update_page_database` exige a revisão do banco para alterações no esquema e o valor anterior para alterações nas células.
+
+Para converter um tipo, use `operation=convert` com `propertyId`, `targetType`, `revision` e `preview=true`. Confira `incompatibleCount`, depois envie as mesmas configurações com `preview=false` e o `token` retornado. Defina `confirmLoss=true` somente depois de o usuário autorizar explicitamente a remoção dos valores incompatíveis.
+
+Somente o proprietário pode criar, pausar, reagendar ou remover suas rotinas. Leia antes de criar para evitar duplicatas. `minddy_add_resource` limita os arquivos a 10 MB; as ferramentas de página não inventam URLs.
 
 ### Conferir com um exemplo {#example}
 

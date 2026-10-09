@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-10",
   "compatibility": {
     "version": "0.11.1 candidate (cd1843e12); 0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -50,14 +50,20 @@
       "lib/server/app-origin.ts",
       "lib/server/oauth/issuer.ts",
       "app/api/oauth/register/route.ts",
-      "lib/server/oauth/metadata.ts"
+      "lib/server/oauth/metadata.ts",
+      "content/documentation/reviews/premerge-en-fr-2026-10-10.md",
+      "content/documentation/reviews/premerge-light-review-2026-10-10.md",
+      "lib/server/database-tool-schema.ts",
+      "lib/server/page-databases.ts",
+      "content/documentation/reviews/premerge-de-es-2026-10-10.md",
+      "content/documentation/reviews/premerge-it-pt-BR-2026-10-10.md"
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-672 MCP availability and network guidance checked against route, origin, discovery, registration and local launcher source; no operational rerun)",
-    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-672 fr network guidance and terminology review)",
-    "date": "2026-10-09"
+    "revision": 6,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-672 MCP availability and network guidance checked against route, origin, discovery, registration and local launcher source; no operational rerun); agent:/root with agent:/root/review_en_fr (light pre-merge source and retained-claim review; existing operational evidence retained; no operational rerun)",
+    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-672 fr network guidance and terminology review); agent:/root/review_en_fr with agent:/root (fr pre-merge wording, correction and retained-meaning review)",
+    "date": "2026-10-10"
   },
   "related": [
     "numo",
@@ -78,7 +84,7 @@
       "src": "/documentation/fr/external-minddy-mcp-workflow.png",
       "alt": "Choix du client MCP minddy : Claude, Codex et autres assistants.",
       "caption": "Choisissez votre client pour afficher sa commande ou sa configuration d’installation.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -93,9 +99,9 @@
       "id": "external-minddy-mcp-install-workflow",
       "kind": "screenshot",
       "src": "/documentation/fr/external-minddy-mcp-install-workflow.png",
-      "alt": "Dialogue d’installation de Codex sur l’instance locale.",
-      "caption": "Dialogue d’installation de Codex. Utilisez l’origine de votre instance ; la commande affichée n’a pas été exécutée pour cette capture.",
-      "revision": 5,
+      "alt": "Dialogue d’installation de Codex affichant le point d’accès de minddy Cloud.",
+      "caption": "Cet exemple se connecte à minddy Cloud. Pour l’auto-hébergement, utilisez l’origine de votre instance ; la commande affichée n’a pas été exécutée pour cette capture.",
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -142,7 +148,7 @@ Les clients externes utilisent les outils disponibles pour tickets, plans, comme
 
 La section minddy MCP des paramètres du compte liste les accès externes et leur révocation. Révoquez un client devenu inutile ou non fiable. Cette section diffère de MCP pour Numo, qui connecte Numo à d’autres services. Ne collez jamais de jetons dans les tickets, les retours publics ou les captures.
 
-![Dialogue d’installation de Codex sur l’instance locale.](/documentation/fr/external-minddy-mcp-install-workflow.png)
+![Dialogue d’installation de Codex affichant le point d’accès de minddy Cloud.](/documentation/fr/external-minddy-mcp-install-workflow.png)
 
 
 ## Utiliser MCP minddy et découvrir ses outils actuels {#mcp-tool-reference}
@@ -155,7 +161,11 @@ minddy expose `/api/mcp` en Streamable HTTP, avec outils stateless et OAuth 2.1.
 
 ### Respecter versions et propriété {#pages-and-routines}
 
-`minddy_list_pages` décrit la hiérarchie ; `minddy_search_pages` trouve des extraits et `minddy_get_page` lit Markdown complet, commentaires et valeurs de base. Préférez ajout/modification partielle et gardez les contrôles de version pour remplacement complet. Préservez exactement URLs de fichiers/images. `minddy_create_page` avec `database=true` crée une base ; `minddy_update_page_database` exige révision pour schéma, valeur précédente pour cellule et tokens aperçu/application pour conversions. Les outils de routine réservés au propriétaire créent, suspendent, déplacent ou retirent des demandes planifiées. Lisez l’existant avant de créer un doublon. `minddy_add_resource` limite les fichiers à 10 Mo ; les outils pages n’inventent pas d’URLs.
+`minddy_list_pages` décrit la hiérarchie ; `minddy_search_pages` trouve des extraits et `minddy_get_page` lit le Markdown complet, les commentaires et les valeurs des bases de données. Préférez les outils d’ajout ou de modification pour les changements partiels et fournissez la version actuelle pour un remplacement complet. Préservez exactement les URL des fichiers et des images. `minddy_create_page` avec `database=true` crée une base ; `minddy_update_page_database` exige la révision de la base pour modifier le schéma et la valeur précédente pour modifier une cellule.
+
+Pour convertir un type, utilisez `operation=convert` avec `propertyId`, `targetType`, `revision` et `preview=true`. Examinez `incompatibleCount`, puis renvoyez les mêmes paramètres avec `preview=false` et le `token` retourné. Définissez `confirmLoss=true` uniquement après autorisation explicite de l’utilisateur d’effacer les valeurs incompatibles.
+
+Les outils de routine réservés au propriétaire permettent de créer, suspendre, replanifier ou supprimer des demandes planifiées. Lisez les routines existantes avant d’en créer une pour éviter les doublons. `minddy_add_resource` limite les fichiers à 10 Mo ; les outils de pages ne créent pas d’URL de fichiers fictives.
 
 ### Vérifier avec un exemple {#example}
 

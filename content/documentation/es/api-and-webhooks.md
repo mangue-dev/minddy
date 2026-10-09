@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
+  "revision": 6,
   "sourceRevision": 5,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-10",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5); 0.11.1 candidate (cd1843e12)",
     "editions": [
@@ -41,14 +41,16 @@
       "app/api/v1/feedback/[id]/vote/route.ts",
       "lib/feedback/sso-jwt.ts",
       "app/f/[token]/sso/route.ts",
-      "lib/server/feedback/posts.ts"
+      "lib/server/feedback/posts.ts",
+      "content/documentation/reviews/premerge-de-es-2026-10-10.md",
+      "content/documentation/reviews/premerge-light-review-2026-10-10.md"
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review)",
-    "date": "2026-10-09"
+    "revision": 6,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root with agent:/root/review_de_es (light pre-merge source and retained-claim review; existing operational evidence retained; no operational rerun)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root/review_de_es with agent:/root (es pre-merge wording, correction and retained-meaning review)",
+    "date": "2026-10-10"
   },
   "related": [
     "integration-troubleshooting",
@@ -69,7 +71,7 @@
       "src": "/documentation/es/integration-api-and-webhooks-flow.svg",
       "alt": "Diagrama: Servidor guarda clave de integración. POST incidencias o feedback con tipo correcto. Propietario elige destino webhook issues. Receptor verifica HMAC bruto y UUID.",
       "caption": "Siga las etapas en este orden. Servidor guarda clave de integración. `POST` incidencias o feedback con tipo correcto. Propietario elige destino webhook issues. Receptor verifica HMAC bruto y UUID.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -101,7 +103,7 @@
       "src": "/documentation/es/feedback-ingestion-and-sso-workflow.svg",
       "alt": "Secuencias separadas de recogida desde el backend y SSO del navegador con secretos distintos.",
       "caption": "La clave de recogida autentica llamadas del servidor. El secreto SSO del tablero firma un token de visitante breve y de un solo uso.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -177,7 +179,7 @@ Verifique `X-minddy-Signature`: el prefijo `sha256=` seguido de HMAC-SHA256 sobr
 
 ### Tratar fallos y límites {#limits}
 
-La entrega es de mejor esfuerzo: tiene un timeout de cinco segundos y un único reintento inmediato tras un error de red o una respuesta 5xx; después se descarta definitivamente. Puede haber duplicados y cambios de orden. Guarde el contenido verificado, responda 2xx pronto y procéselo después. `issue.updated` agrupa cambios; description y plan identifican el campo sin incluir su valor. Consulte el último estado de entrega en la configuración. Para 429, respete `Retry-After`. Los errores de validación devuelven 422 y una cuota de incidencias alcanzada devuelve 403 `issue_limit_reached`, una negativa definitiva. Una creación con timeout puede haber tenido éxito: compruebe el resultado antes de repetirla. El voto mediante `POST /api/v1/feedback/<post_id>/vote` es idempotente para cada identidad.
+La entrega es de mejor esfuerzo: tiene un timeout de cinco segundos y un único reintento inmediato tras un error de red o una respuesta 5xx; después se descarta definitivamente. Puede haber duplicados y cambios de orden. Guarde el contenido verificado, responda 2xx pronto y procéselo después. `issue.updated` agrupa cambios; `description` y `plan` identifican el campo sin incluir su valor. Consulte el último estado de entrega en la configuración. Para 429, respete `Retry-After`. Los errores de validación devuelven 422 y una cuota de incidencias alcanzada devuelve 403 `issue_limit_reached`, una negativa definitiva. Una creación con timeout puede haber tenido éxito: compruebe el resultado antes de repetirla. El voto mediante `POST /api/v1/feedback/<post_id>/vote` es idempotente para cada identidad.
 
 ## Conectar ingestión de feedback y SSO {#feedback-ingestion-and-sso}
 

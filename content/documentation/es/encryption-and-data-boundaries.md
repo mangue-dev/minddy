@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 4,
+  "revision": 5,
   "sourceRevision": 4,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-10",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -39,14 +39,16 @@
       "docs/editions.md",
       "content/documentation/reviews/editorial-clarity-en-fr-2026-10-09.md",
       "content/documentation/reviews/editorial-clarity-de-es-2026-10-09.md",
-      "content/documentation/reviews/editorial-clarity-it-pt-BR-2026-10-09.md"
+      "content/documentation/reviews/editorial-clarity-it-pt-BR-2026-10-09.md",
+      "content/documentation/reviews/premerge-de-es-2026-10-10.md",
+      "content/documentation/reviews/premerge-light-review-2026-10-10.md"
     ]
   },
   "review": {
-    "revision": 4,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (collection-caption clarity); agent:/root (inline-code syntax and unchanged-text review)",
-    "date": "2026-10-09"
+    "revision": 5,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root with agent:/root/review_de_es (light pre-merge source and retained-claim review; existing operational evidence retained; no operational rerun)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (collection-caption clarity); agent:/root (inline-code syntax and unchanged-text review); agent:/root/review_de_es with agent:/root (es pre-merge wording, correction and retained-meaning review)",
+    "date": "2026-10-10"
   },
   "related": [
     "workspace-encryption",
@@ -62,11 +64,11 @@
       "id": "encryption-and-data-boundaries-flow",
       "kind": "diagram",
       "src": "/documentation/es/encryption-and-data-boundaries-flow.svg",
-      "alt": "Diagrama: Contenido cifrado y claves envueltas. Raíz en configuración protegida del servidor. Runtime autorizado puede descifrar. Exports y proveedores necesitan protección aparte.",
+      "alt": "Diagrama: Contenido cifrado y claves envueltas. Raíz en configuración protegida del servidor. Runtime autorizado puede descifrar. Exportaciones y proveedores necesitan protección aparte.",
       "caption": "El contenido almacenado está protegido, pero la aplicación autorizada puede descifrarlo y los datos que salen de la instancia necesitan protección propia.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-10",
       "viewport": [
         720,
         640
@@ -85,7 +87,7 @@
             "title": "Runtime autorizado puede descifrar"
           },
           {
-            "title": "Exports y proveedores necesitan protección aparte"
+            "title": "Exportaciones y proveedores necesitan protección aparte"
           }
         ]
       }
@@ -101,7 +103,7 @@
 
 Tras la configuración y migración previstas, minddy cifra contenido y archivos antes de las escrituras persistentes mediante cifrado autenticado en el servidor. Las claves de proyecto, usuario y sistema están versionadas y protegidas por una raíz fuera de PostgreSQL. Una copia aislada de la base de datos no permite leer el contenido protegido sin las claves. La aplicación lo descifra para usuarios autorizados, búsqueda y procesamiento de IA autorizado, incluso sin una sesión interactiva. Un entorno de ejecución comprometido o el acceso a datos y claves supera ese límite: el cifrado no excluye al operador mediante una protección de extremo a extremo.
 
-![Diagrama: Contenido cifrado y claves envueltas. Raíz en configuración protegida del servidor. Runtime autorizado puede descifrar. Exports y proveedores necesitan protección aparte.](/documentation/es/encryption-and-data-boundaries-flow.svg)
+![Diagrama: Contenido cifrado y claves envueltas. Raíz en configuración protegida del servidor. Runtime autorizado puede descifrar. Exportaciones y proveedores necesitan protección aparte.](/documentation/es/encryption-and-data-boundaries-flow.svg)
 
 ## Reconocer datos legibles y exportados {#exceptions}
 
