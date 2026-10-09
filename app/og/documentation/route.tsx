@@ -40,7 +40,8 @@ export async function GET(request: NextRequest) {
         <svg width={50} height={50} viewBox={MINDDY_LOGO_VIEWBOX} fill={INK}>
           <path fillRule="evenodd" clipRule="evenodd" d={MINDDY_LOGO_PATH} />
         </svg>
-        <span style={{ fontSize: 40, color: "#657060", letterSpacing: -1 }}>Docs</span>
+        <div style={{ width: 1, height: 38, background: "#bfc8bd", marginLeft: 6, marginRight: 6 }} />
+        <span style={{ fontSize: 40, color: INK, letterSpacing: -1 }}>Docs</span>
       </div>
       <div style={{ display: "flex", fontSize: article.title.length > 56 ? 64 : article.title.length > 36 ? 76 : 88,
         lineHeight: 1.12, letterSpacing: -2.5, maxWidth: 1040 }}>
