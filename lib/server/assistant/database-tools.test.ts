@@ -122,6 +122,12 @@ describe("code-worker launch diagnostics", () => {
 });
 
 describe("Numo database tool dispatch", () => {
+  it("provides canonical production citations for public documentation help", async () => {
+    const result = await executeTool("get_help", { topic: "issues" }, { ...ctx, locale: "fr", documentationHelp: true });
+    expect(result).toMatchObject({ success: true, result: {
+      id: "issues", sourceUrl: "https://minddy.app/fr/documentation/issues",
+    } });
+  });
   it.each(["get_issue", "list_projects", "create_issue", "launch_code_agent", "update_account_settings", "web_search", "call_mcp_tool"])("blocks %s on the public documentation surface before dispatch", async tool => {
     const result = await executeTool(tool, {}, { ...ctx, documentationHelp: true });
     expect(result.success).toBe(false);

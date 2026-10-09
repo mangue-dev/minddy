@@ -1,3 +1,4 @@
+import { DOCUMENTATION_HELP_ORIGIN } from "@/lib/documentation-help-links";
 import { issueStore } from "@/lib/server/issue-store";
 import { abortableReadClient } from "./abortable-read-client";
 import { randomUUID } from "node:crypto";
@@ -885,7 +886,9 @@ export async function executeTool(
       const topic = typeof args.topic === "string" ? args.topic : "";
       const article = getKnowledgeArticle(topic, resolveApplicationLocale(ctx.locale));
       return article
-        ? { result: article, success: true }
+        ? { result: ctx.documentationHelp && article.sourceUrl
+            ? { ...article, sourceUrl: new URL(article.sourceUrl, DOCUMENTATION_HELP_ORIGIN).href }
+            : article, success: true }
         : {
             result: {
               error: `No knowledge article found for "${topic}".`,

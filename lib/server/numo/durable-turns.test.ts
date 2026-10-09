@@ -299,7 +299,7 @@ describe("durable Numo execution", () => {
     await executeNumoTurn({ turnId: h.turn.id as string, readClient: service });
     const [messages, tools, , context] = h.processChat.mock.calls[0];
     expect(messages[0].content).toContain("documentation assistant");
-    expect(messages[0].content).toContain("/fr/documentation/numo");
+    expect(messages[0].content).toContain("https://minddy.app/fr/documentation/numo");
     expect(messages[0].content).toContain("Use idiomatic French");
     expect(tools.map((tool: { function: { name: string } }) => tool.function.name)).toEqual(["get_help"]);
     expect(context).toMatchObject({ documentationHelp: true, userId: h.turn.user_id });

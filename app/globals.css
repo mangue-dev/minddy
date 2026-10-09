@@ -220,6 +220,11 @@ a.markdown-link::before {
   vertical-align: -0.08em;
 }
 
+/* Public guide citations render the matching article icon inside the link. */
+a.markdown-link[data-documentation-citation]::before {
+  display: none;
+}
+
 /* ── Inter arrows, which Google does not serve ──────────────────────────────
    `next/font/google` only loads from Inter the subsets published by
    Google, and NONE covers the arrow block: the Latin range puts “↑” there
@@ -3309,6 +3314,12 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
 }
 
 /* Keep the article readable beside the documentation help conversation. */
+:root[data-app-layout="mobile"] .documentation-numo-sheet[data-slot="sheet-content"] {
+  height: min(85dvh, calc(var(--mobile-viewport-height, 100dvh) - 1rem));
+  overflow: hidden;
+  padding: 0;
+}
+
 @media (min-width: 1024px) {
   html[data-app-layout="desktop"] [data-documentation-numo-open="true"] [data-documentation-main] { padding-right: 24rem; }
   html[data-app-layout="desktop"] [data-documentation-numo-open="true"] [data-documentation-contents] { display: none; }
