@@ -8,6 +8,8 @@ import { rateLimitRefusal } from "@/lib/server/session-rate-limit";
 
 const SIZE = { width: 1200, height: 630 };
 const INK = "#26332c";
+const [, , logoViewBoxWidth, logoViewBoxHeight] = MINDDY_LOGO_VIEWBOX.split(" ").map(Number);
+const LOGO_HEIGHT = 50;
 
 export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams;
@@ -37,7 +39,8 @@ export async function GET(request: NextRequest) {
       justifyContent: "space-between", padding: 80, color: INK,
       background: "linear-gradient(135deg, #faf9f6 0%, #f0f3ec 100%)" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
-        <svg width={50} height={50} viewBox={MINDDY_LOGO_VIEWBOX} fill={INK}>
+        <svg width={LOGO_HEIGHT * logoViewBoxWidth / logoViewBoxHeight} height={LOGO_HEIGHT}
+          viewBox={MINDDY_LOGO_VIEWBOX} preserveAspectRatio="xMidYMid meet" fill={INK} style={{ flexShrink: 0 }}>
           <path fillRule="evenodd" clipRule="evenodd" d={MINDDY_LOGO_PATH} />
         </svg>
         <div style={{ width: 1, height: 38, background: "#bfc8bd", marginLeft: 6, marginRight: 6 }} />
