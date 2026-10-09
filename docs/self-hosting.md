@@ -1,5 +1,10 @@
 # Self-host minddy
 
+Start a new installation with the
+[step-by-step installer](https://www.minddy.app/self-hosting/install), which
+guides you through the local or shared-server choices. Use this document as
+the technical reference for prerequisites, configuration, and verification.
+
 This guide installs a functional minddy instance from a clean clone. It is
 written as an execution contract: an operator or an AI agent can follow it
 without access to Minddy Cloud, a Minddy account, or any Minddy-managed

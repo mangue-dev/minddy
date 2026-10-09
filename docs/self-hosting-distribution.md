@@ -137,6 +137,8 @@ backups, restore drills, monitoring, incident response, data-protection duties,
 and every optional integration account. Minddy Cloud is a separate operated
 service and is never a dependency or fallback for a self-hosted instance.
 
-For installation, use [self-hosting.md](self-hosting.md). For an upgrade,
+For installation, start with the
+[step-by-step installer](https://www.minddy.app/self-hosting/install). Use
+[self-hosting.md](self-hosting.md) for the supporting technical procedures. For an upgrade,
 backup, restore, or rollback, use
 [self-hosting-operations.md](self-hosting-operations.md).

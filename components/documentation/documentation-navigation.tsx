@@ -8,6 +8,7 @@ import { Button, Collapsible, CollapsibleContent, CollapsibleTrigger, Sheet, She
 import type { Locale } from "@/i18n/config";
 import type { DocumentationArticle, DocumentationSearchEntry } from "@/lib/documentation";
 import { documentationPath, searchDocumentation } from "@/lib/documentation-core.mjs";
+import { localizedHref } from "@/lib/locale-href";
 import { CommandPalette, usePaletteStore } from "@/lib/command-palette";
 import { documentationTopicKey, openDocumentationTopic, useDocumentationTopics } from "@/lib/use-documentation-topics";
 import { DocumentationIcon } from "./documentation-icon";
@@ -19,7 +20,7 @@ export function DocumentationSidebar({ articles, locale, currentId, labels, onNa
   articles: DocumentationNavigationEntry[];
   locale: Locale;
   currentId: string | null;
-  labels: { topics: string; welcome: string; close: string };
+  labels: { topics: string; welcome: string; close: string; install: string };
   onNavigate?: () => void;
 }) {
   const startTopic = articles.find(article => article.id === "first-project")?.topic;
@@ -39,6 +40,12 @@ export function DocumentationSidebar({ articles, locale, currentId, labels, onNa
       </CollapsibleTrigger>
       <CollapsibleContent className="motion-reduce:animate-none">
         <ul className="ml-4 space-y-0.5 py-1 pl-2">
+          {articles.some(article => article.topic === topic && article.id === "installation") && <li>
+            <Link href={localizedHref("/self-hosting/install", locale)} prefetch={false} onNavigate={onNavigate}
+              className="flex min-h-11 items-center gap-2 rounded-md px-3 py-2 text-[13px] font-medium leading-5 text-foreground transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring">
+              <DocumentationIcon articleId="installation" className="size-4 shrink-0" /><span>{labels.install}</span>
+            </Link>
+          </li>}
           {articles.filter(article => article.topic === topic).map(article => <li key={article.id}>
             <Link href={documentationPath(article.id, locale)} prefetch={false} onNavigate={onNavigate} aria-current={article.id === currentId ? "page" : undefined}
               className="flex items-start gap-2 rounded-md px-3 py-2 text-[13px] leading-5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground aria-[current=page]:bg-muted aria-[current=page]:font-medium aria-[current=page]:text-foreground focus-visible:outline-2 focus-visible:outline-ring"><DocumentationIcon articleId={article.id} className="mt-0.5 size-4 shrink-0" /><span>{article.title}</span></Link>

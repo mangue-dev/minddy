@@ -24,7 +24,7 @@ export async function DocumentationShell({ articles, locale, currentId, title, t
   const t = await getTranslations({ locale, namespace: "Documentation" });
   const tCommon = await getTranslations({ locale, namespace: "Common" });
   const navigation = { articles: articles.map(({ id, title, topic }) => ({ id, title, topic })), locale, currentId,
-    labels: { topics: t("topics"), welcome: t("welcome"), close: tCommon("close") } };
+    labels: { topics: t("topics"), welcome: t("welcome"), close: tCommon("close"), install: t("installWizardTitle") } };
   const searchArticles = [
     { id: "", locale, title: t("welcome"), topic: t("gettingStarted"), summary: t("welcomeSummary"), tags: [],
       content: [t("welcomeUse"), t("welcomeOperate"), t("welcomeIntegrate")].join("\n\n") },

@@ -85,9 +85,12 @@ commands execute repository code.
 Minddy Cloud is the hosted and operated option from Minddy. **Self-hosted** is
 the same public core on infrastructure you control: no Minddy account, Stripe,
 PostHog, or managed provider is required. The [edition guide](docs/editions.md)
-explains the choice, data flows, responsibilities, and costs in one place. For
-a reproducible local or self-hosted Supabase bootstrap, see
-[docs/self-hosting.md](docs/self-hosting.md). On a fresh local clone, use
+explains the choice, data flows, responsibilities, and costs in one place.
+To install your own instance, start with the
+[step-by-step self-hosting installer](https://www.minddy.app/self-hosting/install)
+for this computer or a shared server. Use
+[docs/self-hosting.md](docs/self-hosting.md) as the technical reference for
+topology, configuration, and reproducible Supabase bootstrap. On a fresh local clone, use
 `pnpm bootstrap:supabase` before `pnpm dev` instead of manually applying SQL in
 the Supabase dashboard. After installation, follow the
 [self-hosted operations runbook](docs/self-hosting-operations.md) for upgrades,

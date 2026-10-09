@@ -889,6 +889,7 @@ export function SelfHostingInstallWizard({
         <div className={cn("space-y-5", HIGHLIGHT_PANEL)}>
           <div className="flex items-start gap-3"><AppIcon icon={CheckIcon} className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden /><p className="text-sm leading-relaxed">{path === "local" ? copy.localTeamAnswer : copy.answerUpdates}</p></div>
           {path === "local" && <Checklist items={[copy.desktopStopInstruction, copy.desktopRestartInstruction]} />}
+          {path === "local" && <ResourceLink href={`${links.guide}?route=team`}>{copy.installServer}</ResourceLink>}
           {path === "team" && <div className="flex flex-wrap gap-2"><ResourceLink href={links.operations}>{copy.openOperationsGuide}</ResourceLink></div>}
         </div>
       ),

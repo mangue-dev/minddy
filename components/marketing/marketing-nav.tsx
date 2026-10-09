@@ -45,7 +45,7 @@ const PRODUCT_ENTRIES: ReadonlyArray<ProductEntry> = [
   { key: "feedback", href: "/#feedback" },
   { key: "more", href: "/#more" },
   { key: "mcp", href: "/mcp" },
-  { key: "selfHosting", href: "/self-hosting" },
+  { key: "selfHosting", href: "/self-hosting/install" },
   // The desktop app is last because it describes where Minddy runs rather than
   // what it does. It remains discoverable without displacing the product story.
   { key: "download", href: "/download" },

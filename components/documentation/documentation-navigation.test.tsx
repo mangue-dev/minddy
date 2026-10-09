@@ -18,7 +18,7 @@ it("keeps one topic open and reveals each destination article across navigation 
     { id: "account-access", title: "Account access", topic: "Get started" },
     { id: "create-an-issue", title: "Create an issue", topic: "Projects" },
   ];
-  const labels = { topics: "Topics", welcome: "Welcome", close: "Close" };
+  const labels = { topics: "Topics", welcome: "Welcome", close: "Close", install: "Install minddy" };
   const host = document.createElement("div");
   document.body.append(host);
   let root = createRoot(host);

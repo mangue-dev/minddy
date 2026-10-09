@@ -67,6 +67,11 @@ optional capabilities instead of selecting a fallback provider.
 
 ## Supported self-hosted operation
 
+To install minddy, start with the
+[step-by-step self-hosting installer](https://www.minddy.app/self-hosting/install).
+Use the [installation reference](self-hosting.md) for technical details and
+additional checks.
+
 The two supported paths, release compatibility, upgrade guarantees, and
 operator responsibilities are in the
 [self-hosted distribution contract](self-hosting-distribution.md). The quick
