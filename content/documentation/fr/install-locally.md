@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 4,
-  "sourceRevision": 4,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -36,13 +36,19 @@
       "content/documentation/reviews/visual-refresh-captures-2026-10-09.json",
       "content/documentation/reviews/editorial-clarity-en-fr-2026-10-09.md",
       "content/documentation/reviews/editorial-clarity-de-es-2026-10-09.md",
-      "content/documentation/reviews/editorial-clarity-it-pt-BR-2026-10-09.md"
+      "content/documentation/reviews/editorial-clarity-it-pt-BR-2026-10-09.md",
+      "app/api/mcp/route.ts",
+      "lib/site.ts",
+      "lib/server/app-origin.ts",
+      "lib/server/oauth/issuer.ts",
+      "app/api/oauth/register/route.ts",
+      "lib/server/oauth/metadata.ts"
     ]
   },
   "review": {
-    "revision": 4,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
-    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (collection-caption clarity); agent:/root (inline-code syntax and unchanged-text review)",
+    "revision": 5,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-672 MCP availability and network guidance checked against route, origin, discovery, registration and local launcher source; no operational rerun)",
+    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (collection-caption clarity); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-672 fr network guidance and terminology review)",
     "date": "2026-10-09"
   },
   "related": [
@@ -60,7 +66,7 @@
       "src": "/documentation/fr/install-locally-flow.svg",
       "alt": "Schéma: L’app desktop sélectionne le clone. Application locale : port 6463. Supabase minimal et données durables. Quitter arrête app et backend.",
       "caption": "L’application desktop gère le démarrage et l’arrêt des services locaux, tout en conservant leurs données.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -92,7 +98,7 @@
       "src": "/documentation/fr/install-locally-wizard.png",
       "alt": "Assistant public d’installation avec le profil sur cet ordinateur sélectionné.",
       "caption": "Choisissez l’installation personnelle lorsque l’application de bureau doit gérer les services locaux.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -132,6 +138,16 @@ pnpm install --frozen-lockfile
 ## Confier les services locaux à l’application {#launch}
 
 Ouvrez le menu natif minddy. Sous Windows et Linux, appuyez sur Alt pour afficher la barre de menus ; macOS utilise la barre globale. Ouvrez le dialogue de connexion à un serveur, choisissez son option d’instance locale et sélectionnez la racine du clone. L’application lance `self-host:local --no-open`, prépare Supabase minimal, applique les migrations et la configuration Storage, construit l’application si nécessaire et attend `/api/health` avant d’ouvrir l’inscription. Elle écoute uniquement sur la boucle locale, au port 6463, mémorise le dossier et gère le démarrage comme l’arrêt.
+
+## Disponibilité du MCP et accès réseau {#mcp-network-access}
+
+Le MCP est inclus dans minddy auto-hébergé et démarre avec l’application. Il fonctionne directement sur `/api/mcp`, à l’origine de l’instance configurée par `MINDDY_PUBLIC_APP_URL`. La découverte OAuth et l’enregistrement dynamique des clients sont inclus : aucun serveur MCP séparé, aucune application OAuth dédiée ni aucun proxy minddy Cloud n’est nécessaire. Connectez votre client MCP au point d’accès de votre instance, puis connectez-vous et accordez l’accès dans le navigateur.
+
+La disponibilité du service ne garantit pas son accessibilité réseau. Le client MCP et le navigateur utilisé pour l’autorisation doivent tous deux pouvoir atteindre les URL MCP et OAuth annoncées. Si vous définissez explicitement `OAUTH_ISSUER`, cette origine doit aussi être accessible. Le client doit prendre en charge la connexion, le parcours OAuth et le chemin réseau choisi ; certains clients exigent HTTPS même sur un réseau privé.
+
+Ce profil géré par l’application desktop écoute uniquement sur l’interface de boucle locale. Un client MCP compatible sur le même ordinateur peut utiliser `http://localhost:6463/api/mcp` ; `localhost` et `127.0.0.1` désignent l’ordinateur qui établit la connexion. Un autre ordinateur ou un agent hébergé dans le cloud ne peut pas accéder directement à ce profil. Pour un accès LAN/VPN, utilisez une installation serveur avec une origine configurée accessible, par exemple `http://192.168.1.50`, et autorisez son port d’application au niveau de l’adresse d’écoute, du pare-feu et du routage. Hors de ce réseau, le client doit disposer d’une origine HTTPS accessible comme `https://tickets.example.com`, ou d’un autre chemin réseau pris en charge. Une installation locale ne fournit pas automatiquement un accès depuis Internet.
+
+[Consultez les explications sur l’accès réseau au MCP avant de connecter un client distant](/docs/minddy-mcp#network-access).
 
 ## Résoudre un échec de démarrage {#recover}
 

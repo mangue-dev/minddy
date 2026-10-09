@@ -33,6 +33,7 @@ interface GuideLinks {
   encryption: string;
   localInstallation: string;
   serverInstallation: string;
+  mcpAccess: string;
 }
 
 interface EmailTemplate {
@@ -141,6 +142,7 @@ function OptionCard({
   title,
   body,
   badge,
+  describedBy,
   tone = CARD_TONES.sage,
 }: {
   selected: boolean;
@@ -149,12 +151,14 @@ function OptionCard({
   title: string;
   body: string;
   badge?: string;
+  describedBy?: string;
   tone?: string;
 }) {
   return (
     <button
       type="button"
       aria-pressed={selected}
+      aria-describedby={describedBy}
       onClick={onSelect}
       className={cn(
         "group min-w-0 rounded-2xl border-2 p-6 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring sm:p-7",
@@ -565,9 +569,15 @@ export function SelfHostingInstallWizard({
       body: copy.routeBody,
       canContinue: path !== null,
       content: (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <OptionCard selected={path === "local"} onSelect={() => selectPath("local")} icon={HardDriveIcon} title={copy.localTitle} body={copy.localBody} badge={copy.recommended} />
-          <OptionCard tone={CARD_TONES.sky} selected={path === "team"} onSelect={() => selectPath("team")} icon={Server} title={copy.teamTitle} body={copy.teamBody} />
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <OptionCard selected={path === "local"} onSelect={() => selectPath("local")} icon={HardDriveIcon} title={copy.localTitle} body={copy.localBody} badge={copy.recommended} describedBy="local-mcp-access-help" />
+            <OptionCard tone={CARD_TONES.sky} selected={path === "team"} onSelect={() => selectPath("team")} icon={Server} title={copy.teamTitle} body={copy.teamBody} />
+          </div>
+          <div id="local-mcp-access-help" className="rounded-xl bg-muted/50 p-4">
+            <p className="mb-3 text-sm leading-relaxed text-muted-foreground">{copy.localMcpAccessHelp}</p>
+            <ResourceLink href={links.mcpAccess}>{copy.mcpAccessGuide}</ResourceLink>
+          </div>
         </div>
       ),
     },
@@ -624,9 +634,15 @@ export function SelfHostingInstallWizard({
         content: (
           <div className={cn("space-y-5", PANEL)}>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <OptionCard selected={serverAccess === "private"} onSelect={() => setServerAccess("private")} icon={ShieldCheck} title={copy.privateAccessTitle} body={copy.privateAccessBody} badge={copy.privateAccessBadge} />
+              <OptionCard selected={serverAccess === "private"} onSelect={() => setServerAccess("private")} icon={ShieldCheck} title={copy.privateAccessTitle} body={copy.privateAccessBody} badge={copy.privateAccessBadge} describedBy={serverAccess === "private" ? "private-mcp-access-help" : undefined} />
               <OptionCard tone={CARD_TONES.sky} selected={serverAccess === "public"} onSelect={() => setServerAccess("public")} icon={Globe2} title={copy.publicAccessTitle} body={copy.publicAccessBody} />
             </div>
+            {serverAccess === "private" && (
+              <div id="private-mcp-access-help" className="rounded-xl bg-background/70 p-4">
+                <p className="mb-3 text-sm leading-relaxed text-muted-foreground">{copy.privateMcpAccessHelp}</p>
+                <ResourceLink href={links.mcpAccess}>{copy.mcpAccessGuide}</ResourceLink>
+              </div>
+            )}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <label className="text-sm font-medium">
                 {serverAccess === "private" ? copy.serverIpLabel : copy.domainLabel}

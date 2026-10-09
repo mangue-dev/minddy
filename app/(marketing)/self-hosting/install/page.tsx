@@ -49,6 +49,7 @@ export default async function SelfHostingInstallPage({
           encryption: documentationPath("workspace-encryption", locale),
           localInstallation: documentationPath("install-locally", locale),
           serverInstallation: documentationPath("install-a-server", locale),
+          mcpAccess: `${documentationPath("minddy-mcp", locale)}#network-access`,
           guide: `${SITE_URL}${localizedHref("/self-hosting/install", locale)}`,
           download: `${SITE_URL}${localizedHref("/download", locale)}`,
           release: `${MINDDY_REPOSITORY_URL}/releases/tag/${releaseTag}`,

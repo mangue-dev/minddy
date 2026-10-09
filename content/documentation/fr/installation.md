@@ -16,8 +16,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 4,
-  "sourceRevision": 4,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -44,13 +44,19 @@
       "content/documentation/reviews/visual-refresh-captures-2026-10-09.json",
       "content/documentation/reviews/editorial-clarity-en-fr-2026-10-09.md",
       "content/documentation/reviews/editorial-clarity-de-es-2026-10-09.md",
-      "content/documentation/reviews/editorial-clarity-it-pt-BR-2026-10-09.md"
+      "content/documentation/reviews/editorial-clarity-it-pt-BR-2026-10-09.md",
+      "app/api/mcp/route.ts",
+      "lib/site.ts",
+      "lib/server/app-origin.ts",
+      "lib/server/oauth/issuer.ts",
+      "app/api/oauth/register/route.ts",
+      "lib/server/oauth/metadata.ts"
     ]
   },
   "review": {
-    "revision": 4,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
-    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (collection-caption clarity); agent:/root (inline-code syntax and unchanged-text review)",
+    "revision": 5,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-672 MCP availability and network guidance checked against route, origin, discovery, registration and local launcher source; no operational rerun)",
+    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (collection-caption clarity); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-672 fr network guidance and terminology review)",
     "date": "2026-10-09"
   },
   "related": [
@@ -76,7 +82,7 @@
       "src": "/documentation/fr/self-hosted-compatibility-flow.svg",
       "alt": "Schéma: Tag source annoté. Assets et SHA256SUMS. Signature et digest OCI officiels. Profil de compatibilité choisi.",
       "caption": "Lisez les étapes dans cet ordre. Tag source annoté. Assets et `SHA256SUMS`. Signature et digest OCI officiels. Profil de compatibilité choisi.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -108,7 +114,7 @@
       "src": "/documentation/fr/install-a-server-flow.svg",
       "alt": "Schéma: Release vérifiée et environnement protégé. Installateur : profil full de référence. Supabase officiel, app, jobs, runner. Validation compte, fichiers et récupération.",
       "caption": "Lisez les étapes dans cet ordre. Release vérifiée et environnement protégé. Installateur : profil full de référence. Supabase officiel, app, jobs, runner. Validation compte, fichiers et récupération.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -140,7 +146,7 @@
       "src": "/documentation/fr/install-a-server-wizard.png",
       "alt": "Assistant public d’installation avec Supabase sur le même serveur sélectionné.",
       "caption": "Le profil full conserve l’application et Supabase sur votre serveur. Dans cet exemple, leur accès par réseau privé est limité au réseau local.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -157,7 +163,7 @@
       "src": "/documentation/fr/managed-or-source-installation-flow.svg",
       "alt": "Schéma: Votre projet Supabase géré. PostgreSQL, Auth, Storage, Realtime. Profil OCI OU application depuis un tag. Jobs et sauvegarde propres au profil.",
       "caption": "Un backend géré peut servir les deux modes de déploiement, avec une planification et des sauvegardes adaptées au profil choisi.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -193,6 +199,16 @@
 ---
 
 Installez une instance auto-hébergée à partir d’une release vérifiée et du profil correspondant : full, Supabase géré ou sources. Vérifiez d’abord la compatibilité et les limites du runner publié, puis suivez la procédure choisie et ses contrôles avant d’accueillir les utilisateurs. Le contournement technique v0.11.0 documenté constitue une variante explicite des outils, pas une release publiée corrigée.
+
+## Disponibilité du MCP et accès réseau {#mcp-network-access}
+
+Le MCP est inclus dans minddy auto-hébergé et démarre avec l’application. Il fonctionne directement sur `/api/mcp`, à l’origine de l’instance configurée par `MINDDY_PUBLIC_APP_URL`. La découverte OAuth et l’enregistrement dynamique des clients sont inclus : aucun serveur MCP séparé, aucune application OAuth dédiée ni aucun proxy minddy Cloud n’est nécessaire. Connectez votre client MCP au point d’accès de votre instance, puis connectez-vous et accordez l’accès dans le navigateur.
+
+La disponibilité du service ne garantit pas son accessibilité réseau. Le client MCP et le navigateur utilisé pour l’autorisation doivent tous deux pouvoir atteindre les URL MCP et OAuth annoncées. Si vous définissez explicitement `OAUTH_ISSUER`, cette origine doit aussi être accessible. Le client doit prendre en charge la connexion, le parcours OAuth et le chemin réseau choisi ; certains clients exigent HTTPS même sur un réseau privé.
+
+Choisissez une origine accessible au client MCP et à son navigateur d’autorisation. Sur le même ordinateur, un client compatible peut utiliser `http://localhost:6463/api/mcp`. Depuis un autre ordinateur du LAN/VPN, utilisez l’adresse configurée du serveur, par exemple `http://192.168.1.50/api/mcp`, avec une adresse d’écoute, un port d’application, un pare-feu et un routage permettant l’accès. `localhost` et `127.0.0.1` désignent toujours l’ordinateur qui établit la connexion : l’URL localhost du serveur n’y fonctionne donc pas. Un processus limité à la boucle locale reste inaccessible directement. Hors du réseau privé, utilisez une URL HTTPS accessible comme `https://tickets.example.com/api/mcp` ou un chemin réseau pris en charge, selon les exigences du client. Un agent hébergé a lui aussi besoin de cet accès ; l’hébergement local n’expose pas automatiquement l’instance à Internet.
+
+[Consultez les explications sur l’accès réseau au MCP avant de connecter un client distant](/docs/minddy-mcp#network-access).
 
 ## Choisir une version et un profil d’installation pris en charge {#self-hosted-compatibility}
 

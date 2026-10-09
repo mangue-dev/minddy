@@ -37,7 +37,7 @@ beforeEach(() => {
   root = createRoot(host);
   act(() => root.render(createElement(SelfHostingInstallWizard, {
     copy,
-    links: { guide: "https://example.test/install", download: "https://example.test/download", release: "https://example.test/release", operations: "https://example.test/operations", encryption: "https://example.test/docs/workspace-encryption", localInstallation: "https://example.test/docs/install-locally", serverInstallation: "https://example.test/docs/install-a-server" },
+    links: { guide: "https://example.test/install", download: "https://example.test/download", release: "https://example.test/release", operations: "https://example.test/operations", encryption: "https://example.test/docs/workspace-encryption", localInstallation: "https://example.test/docs/install-locally", serverInstallation: "https://example.test/docs/install-a-server", mcpAccess: "https://example.test/docs/minddy-mcp#network-access" },
     guidePath: "/self-hosting",
     emailTemplates: { confirmSignup: { subject: "Confirm", body: "Confirm" }, resetPassword: { subject: "Reset", body: "Reset" } },
     repositoryUrl: "https://github.com/mangue-dev/minddy", releaseTag: "v0.11.0", pnpmVersion: "10.28.0",

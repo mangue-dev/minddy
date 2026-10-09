@@ -16,8 +16,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 4,
-  "sourceRevision": 4,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-09",
   "compatibility": {
@@ -46,13 +46,17 @@
       "lib/server/mcp/page-tools.ts",
       "lib/server/mcp/auth.ts",
       "app/llms-full.txt/route.ts",
-      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json"
+      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json",
+      "lib/server/app-origin.ts",
+      "lib/server/oauth/issuer.ts",
+      "app/api/oauth/register/route.ts",
+      "lib/server/oauth/metadata.ts"
     ]
   },
   "review": {
-    "revision": 4,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review)",
+    "revision": 5,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-672 MCP availability and network guidance checked against route, origin, discovery, registration and local launcher source; no operational rerun)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-672 es network guidance and terminology review)",
     "date": "2026-10-09"
   },
   "related": [
@@ -74,7 +78,7 @@
       "src": "/documentation/es/external-minddy-mcp-workflow.png",
       "alt": "Selector de clientes MCP de minddy con Claude, Codex y otros asistentes.",
       "caption": "Selecciona tu cliente para ver su comando o configuración de instalación.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -91,7 +95,7 @@
       "src": "/documentation/es/external-minddy-mcp-install-workflow.png",
       "alt": "Diálogo de instalación de Codex en la instancia local.",
       "caption": "Diálogo de instalación de Codex. Usa el origen de tu instancia; el comando mostrado no se ejecutó para esta captura.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -119,6 +123,18 @@ Abra la página pública de configuración MCP de la instancia y elija las instr
 Inicie sesión en el navegador y revise la autorización antes de aceptarla. La conexión actúa como su cuenta de minddy y no obtiene proyectos a los que no tiene acceso. Empiece leyendo una incidencia ya accesible y compruebe el proyecto devuelto.
 
 ![Selector de clientes MCP de minddy con Claude, Codex y otros asistentes.](/documentation/es/external-minddy-mcp-workflow.png)
+
+### Disponibilidad de MCP y acceso a la red {#network-access}
+
+MCP está incluido en minddy autoalojado y se inicia con la aplicación. Funciona directamente en `/api/mcp`, en el origen de la instancia configurado con `MINDDY_PUBLIC_APP_URL`. Incluye el descubrimiento OAuth y el registro dinámico de clientes: no necesita un servidor MCP separado, una aplicación OAuth dedicada ni un proxy de minddy Cloud. Conecte su cliente MCP al endpoint de su instancia, inicie sesión y conceda acceso mediante el consentimiento en el navegador.
+
+La disponibilidad del servicio no garantiza que sea accesible por la red. Tanto el cliente MCP como el navegador de autorización deben poder acceder a las URL MCP y OAuth anunciadas. Si define explícitamente `OAUTH_ISSUER`, ese origen también debe ser accesible. El cliente debe admitir la conexión, el flujo OAuth y la ruta de red elegida; algunos clientes exigen HTTPS incluso en redes privadas.
+
+- **Mismo ordenador:** `http://localhost:6463/api/mcp` funciona con un cliente compatible que se ejecuta en el ordenador que aloja la instancia local. `localhost` y `127.0.0.1` identifican el ordenador que inicia la conexión. El lanzador de instancias locales de la aplicación de escritorio solo escucha en la interfaz de bucle local; otro ordenador o un agente alojado en la nube no puede acceder directamente. Abrir la URL localhost del servidor en otro ordenador apunta a ese otro ordenador.
+
+- **LAN o VPN:** una instancia configurada como `http://192.168.1.50` anuncia `http://192.168.1.50/api/mcp`. Un cliente de la LAN, o conectado por VPN, puede utilizarla si la dirección de escucha, el origen configurado, el puerto de la aplicación, el cortafuegos y el enrutamiento permiten el acceso. El navegador debe acceder a las mismas URL de autorización anunciadas. Esto requiere una instalación de servidor accesible; cambiar solo la URL del cliente no expone un proceso limitado al bucle local.
+
+- **Fuera de la red privada:** utilice un origen HTTPS accesible, como `https://tickets.example.com/api/mcp`, u otra ruta de red admitida por el cliente. Un agente alojado necesita su propia ruta a la instancia; la VPN del ordenador del navegador no le proporciona esa ruta. Alojar minddy localmente no lo expone automáticamente a Internet.
 
 ### Alcance y revocación {#access}
 
