@@ -50,6 +50,17 @@ test("documentation exceptions detect changed values and values outside their ex
   add("scripts/self-hosted-scheduler.test.mjs", `const secret = "${sentinel}";\nconst other_secret = "${counterexample}";`);
   for (const locale of ["en", "fr", "de", "es", "it", "pt-BR"]) {
     add(`content/documentation/${locale}/install-a-server.md`, `${origin}\n${changedOrigin}`);
+    for (const article of ["install-locally", "installation", "minddy-mcp"]) {
+      add(`content/documentation/${locale}/${article}.md`, [
+        `Example origin: \`${origin}\`.`,
+        `MCP endpoint: \`${origin}/api/mcp\`.`,
+        `Inline endpoint: \`${origin}/api/mcp\``,
+        `Inline endpoint with comma: \`${origin}/api/mcp\`, then continue.`,
+        `Plain endpoint: ${origin}/api/mcp`,
+        `Changed address: ${changedOrigin}/api/mcp`,
+        `Undocumented path: ${origin}/private-records`,
+      ].join("\n"));
+    }
   }
   for (const name of ["public-wizard-published-parser-check", "public-wizard-release-boundary-2026-10-08"]) {
     add(`content/documentation/reviews/${name}.json`, JSON.stringify({
@@ -74,7 +85,7 @@ test("documentation exceptions detect changed values and values outside their ex
   ], { encoding: "utf8" });
   assert.equal(result.status, 1, "The scanner must reject the counterexamples.");
   const findings = JSON.parse(readFileSync(report, "utf8"));
-  assert.equal(findings.length, 15);
+  assert.equal(findings.length, 51);
   const counts = new Map();
   for (const finding of findings) {
     assert.equal(finding.Secret, "REDACTED");
@@ -83,7 +94,8 @@ test("documentation exceptions detect changed values and values outside their ex
     counts.set(path, (counts.get(path) ?? 0) + 1);
   }
   for (const path of fixtures.keys()) {
-    const expected = path.endsWith(".json") ? 2 : path.endsWith(".txt") ? 3 : 1;
+    const networkGuide = /\/(?:install-locally|installation|minddy-mcp)\.md$/.test(path);
+    const expected = path.endsWith(".json") || networkGuide ? 2 : path.endsWith(".txt") ? 3 : 1;
     assert.equal(counts.get(path), expected, path);
   }
 });

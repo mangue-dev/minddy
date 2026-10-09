@@ -25,6 +25,14 @@ regexTarget = "secret"
 regexes = ['''^192\.168\.1\.50$''']
 
 [[allowlists]]
+description = "Exact illustrative LAN origin and MCP endpoint in the six localized installation and MCP network guides, including closing inline-code punctuation."
+targetRules = ["minddy-internal-network-url"]
+condition = "AND"
+paths = ['''(?:^|/)content/documentation/(?:en|fr|de|es|it|pt-BR)/(?:install-locally|installation|minddy-mcp)\.md$''']
+regexTarget = "secret"
+regexes = ['''^192\.168\.1\.50(?:/api/mcp(?:`[,.]?)?)?$''']
+
+[[allowlists]]
 description = "Exact wizard demonstration origin and its two documented callback/health paths, retained in the parser and release-boundary evidence. Punctuation and the escaped next-step delimiter belong to generated prose."
 targetRules = ["minddy-internal-network-url"]
 condition = "AND"
