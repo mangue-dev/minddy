@@ -6451,6 +6451,7 @@
     "error": "The answer could not be generated. Try again in a moment."
   },
   "Documentation": {
+    "help": "Help",
     "account": "Account settings",
     "signUp": "Sign up",
     "numoHelp": "Numo help",

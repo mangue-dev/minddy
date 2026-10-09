@@ -72,7 +72,7 @@ function SessionAccountActions({ currentId, locale }: { currentId: string | null
   if (!user) return <DocumentationGuestActions currentId={currentId} locale={locale} />;
   return <div className="flex items-center gap-2">
     <Button variant="ghost" size="sm" aria-expanded={session.open} aria-controls="documentation-numo" onClick={() => session.setOpen(!session.open)} data-documentation-numo-launcher>
-      <NumoFace className="size-5" />Numo
+      <NumoFace className="size-5" />{t("help")}
     </Button>
     <Link href="/settings?tab=profile" aria-label={t("account")} className="flex size-11 items-center justify-center rounded-full focus-visible:outline-2 focus-visible:outline-ring"><UserAvatar seed={avatar} className="size-8" /></Link>
   </div>;

@@ -6451,6 +6451,7 @@
     "error": "No se pudo generar la respuesta. Inténtalo de nuevo en un momento."
   },
   "Documentation": {
+    "help": "Ayuda",
     "account": "Ajustes de la cuenta",
     "signUp": "Registrarse",
     "numoHelp": "Ayuda de Numo",

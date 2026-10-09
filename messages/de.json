@@ -6451,6 +6451,7 @@
     "error": "Die Antwort konnte nicht erstellt werden. Versuche es gleich noch einmal."
   },
   "Documentation": {
+    "help": "Hilfe",
     "account": "Kontoeinstellungen",
     "signUp": "Registrieren",
     "numoHelp": "Numo-Hilfe",

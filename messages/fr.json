@@ -6451,6 +6451,7 @@
     "error": "La réponse n’a pas pu être générée. Réessayez dans un instant."
   },
   "Documentation": {
+    "help": "Aide",
     "account": "Paramètres du compte",
     "signUp": "S’inscrire",
     "numoHelp": "Aide Numo",
