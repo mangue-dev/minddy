@@ -65,10 +65,12 @@ exhaustion, but did not eliminate the latency risk of optional reasoning.
 - `lib/server/decisions/llm.ts` enables `preferNonReasoning` only for Smart Fill,
   retaining the 2048-token ceiling, low-effort fallback and 20-second deadline.
 - `lib/server/feedback/forced-tool-call.ts` checks the effective OpenRouter
-  runtime model's catalog metadata. It disables reasoning only when a
+  runtime model's cached catalog metadata. It disables reasoning only when a
   reasoning object marks it optional. Mandatory/unknown models and direct
-  BYOK providers retain their existing contract. Catalog refresh shares the
-  generation deadline and cannot cause a late generation after it expires.
+  BYOK providers retain their existing contract. Available metadata, including
+  stale entries, is read immediately; catalog refresh runs in the background
+  without reducing the 20-second generation budget. A cold cache uses the
+  existing low-effort request until metadata becomes available for later calls.
 - `lib/ai-chat.ts` translates the explicit disable request to
   `reasoning: { enabled: false }` on OpenRouter. Existing `off` behavior stays
   unchanged.
@@ -103,7 +105,12 @@ capabilities in its [reasoning reference](https://openrouter.ai/docs/guides/best
 The technical reference `docs/reasoning-levels.md` records the request policy
 and diagnostic codes. Public workflows, controls, screenshots and localized
 labels are unchanged; no public article/workflow/figure IDs are affected.
-Regression coverage checks optional/mandatory/unknown metadata, metadata
-failure and deadline handling, runtime BYOK selection, routing fallback,
+Regression coverage checks optional/mandatory/unknown cached metadata,
+background refresh failure, stalled refresh and cold/stale cache handling,
+runtime BYOK selection, routing fallback,
 response-body deadline classification, usage recording and safe logging.
-Verification results are recorded in the pull request.
+The PR #399 review follow-up verifies that generation starts immediately
+during a 10-second catalog refresh and can take 15 seconds within the original
+20-second deadline. The two focused test files pass 40 tests. TypeScript,
+targeted lint, documentation, knowledge, owned-English and whitespace checks
+also pass. No public article/workflow/figure IDs are affected by this follow-up.

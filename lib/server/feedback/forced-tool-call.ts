@@ -18,7 +18,7 @@ import {
 } from "@/lib/server/ai-runtime";
 import { isManagedAiEnabled } from "@/lib/managed-services";
 import { getServiceClient } from "@/lib/supabase-service";
-import { getOpenRouterModelInfo } from "@/lib/server/agent/openrouter-index";
+import { getCachedOpenRouterModelInfo, loadOpenRouterIndex } from "@/lib/server/agent/openrouter-index";
 
 /**
  * OpenRouter call to forced structured output (tools + tool_choice) — the
@@ -57,21 +57,11 @@ export interface ForcedToolCallRecord {
   routineId?: string | null;
 }
 
-/** The cached catalog may refresh, but must not extend a creation's deadline. */
-async function canDisableReasoning(model: string, signal: AbortSignal): Promise<boolean> {
-  if (signal.aborted) return false;
-  return new Promise(resolve => {
-    const finish = (optional: boolean) => {
-      signal.removeEventListener("abort", aborted);
-      resolve(optional);
-    };
-    const aborted = () => finish(false);
-    signal.addEventListener("abort", aborted, { once: true });
-    void getOpenRouterModelInfo(model).then(
-      info => finish(info?.reasoning?.mandatory === false),
-      () => finish(false),
-    );
-  });
+/** Use available metadata immediately; catalog refresh must not delay generation. */
+function canDisableReasoning(model: string): boolean {
+  const info = getCachedOpenRouterModelInfo(model);
+  void loadOpenRouterIndex().catch(() => {});
+  return info?.reasoning?.mandatory === false;
 }
 
 export async function forcedToolCall(
@@ -164,7 +154,7 @@ export async function forcedToolCall(
 
   try {
     const disableReasoning = options?.preferNonReasoning && provider === "openrouter"
-      ? await canDisableReasoning(resolvedModel, signal)
+      ? canDisableReasoning(resolvedModel)
       : false;
     if (signal.aborted) {
       logRequestFailure();

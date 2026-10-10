@@ -3,8 +3,12 @@ import { recordAiUsage } from "@/lib/server/ai-usage";
 import * as aiRuntime from "@/lib/server/ai-runtime";
 import { getAgentProvider } from "@/lib/agent-providers";
 
-const { modelInfoMock } = vi.hoisted(() => ({ modelInfoMock: vi.fn() }));
-vi.mock("@/lib/server/agent/openrouter-index", () => ({ getOpenRouterModelInfo: modelInfoMock }));
+const { modelInfoMock, refreshIndexMock } = vi.hoisted(() => ({
+  modelInfoMock: vi.fn(), refreshIndexMock: vi.fn(),
+}));
+vi.mock("@/lib/server/agent/openrouter-index", () => ({
+  getCachedOpenRouterModelInfo: modelInfoMock, loadOpenRouterIndex: refreshIndexMock,
+}));
 
 vi.mock("@/lib/server/ai-provider-request", () => ({
   fetchAiProvider: (_provider: string, url: string, init: RequestInit) => fetch(url, init),
@@ -80,6 +84,7 @@ function stubFetch(handler: (model: string) => Response) {
 beforeEach(() => {
   modelsSent.length = 0;
   modelInfoMock.mockReset();
+  refreshIndexMock.mockReset().mockResolvedValue(undefined);
   process.env.MINDDY_EDITION = "cloud";
   process.env.MINDDY_MANAGED_AI = "1";
   process.env.OPENROUTER_API_KEY = "sk-test";
@@ -89,7 +94,7 @@ beforeEach(() => {
 
 describe("forcedToolCall optional reasoning", () => {
   it("disables optional reasoning on both routing attempts", async () => {
-    modelInfoMock.mockResolvedValue({ reasoning: { mandatory: false, efforts: ["high", "xhigh"] } });
+    modelInfoMock.mockReturnValue({ reasoning: { mandatory: false, efforts: ["high", "xhigh"] } });
     const reasoning: unknown[] = [];
     vi.spyOn(globalThis, "fetch").mockImplementation(async (_url, init) => {
       const body = JSON.parse(init!.body as string);
@@ -108,7 +113,7 @@ describe("forcedToolCall optional reasoning", () => {
     { reasoning: null },
     null,
   ])("preserves effort when optional reasoning is unconfirmed: %j", async (info) => {
-    modelInfoMock.mockResolvedValue(info);
+    modelInfoMock.mockReturnValue(info);
     let reasoning: unknown;
     vi.spyOn(globalThis, "fetch").mockImplementation(async (_url, init) => {
       reasoning = JSON.parse(init!.body as string).reasoning;
@@ -126,7 +131,7 @@ describe("forcedToolCall optional reasoning", () => {
       baseUrl: "https://openrouter.ai/api/v1", model: "mandatory-byok-model",
       requestProfile: getAgentProvider("openrouter")!.requestProfile,
     });
-    modelInfoMock.mockResolvedValue({ reasoning: { mandatory: true, efforts: ["low"] } });
+    modelInfoMock.mockReturnValue({ reasoning: { mandatory: true, efforts: ["low"] } });
     stubFetch(() => okResponse("mandatory-byok-model"));
     await forcedToolCall("platform-model", "system", "user", "pick", {}, {
       preferNonReasoning: true, reasoning: "low", modelKey: "smart_fill_model",
@@ -152,32 +157,57 @@ describe("forcedToolCall optional reasoning", () => {
       record: { feature: "smart_fill", billTo: { userId: "user-id" } },
     });
     expect(modelInfoMock).not.toHaveBeenCalled();
+    expect(refreshIndexMock).not.toHaveBeenCalled();
     expect(body.reasoning_effort).toBe("low");
     expect(body).not.toHaveProperty("reasoning");
   });
 
-  it("includes catalog refresh in the deadline and never generates after it expires", async () => {
-    const deadline = new AbortController();
-    vi.spyOn(AbortSignal, "timeout").mockReturnValue(deadline.signal);
-    let loading!: () => void;
-    const started = new Promise<void>(resolve => { loading = resolve; });
-    modelInfoMock.mockImplementation(() => {
-      loading();
-      return new Promise(() => {});
+  it.each([
+    ["cold", null, { effort: "low", exclude: false }],
+    ["stale", { reasoning: { mandatory: false, efforts: ["high"] } }, { enabled: false }],
+  ])("preserves generation time during a slow %s catalog refresh", async (_state, info, reasoning) => {
+    vi.useFakeTimers();
+    modelInfoMock.mockReturnValue(info);
+    const timeout = vi.spyOn(AbortSignal, "timeout").mockImplementation(ms => {
+      const deadline = new AbortController();
+      setTimeout(() => deadline.abort(), ms);
+      return deadline.signal;
     });
-    const fetch = vi.spyOn(globalThis, "fetch");
+    refreshIndexMock.mockImplementation(() => new Promise<void>(resolve => setTimeout(resolve, 10_000)));
+    const fetch = vi.spyOn(globalThis, "fetch").mockImplementation(async (_url, init) => {
+      expect(JSON.parse(init!.body as string).reasoning).toEqual(reasoning);
+      return new Promise<Response>((resolve, reject) => {
+        init!.signal!.addEventListener("abort", () => reject(init!.signal!.reason), { once: true });
+        setTimeout(() => resolve(okResponse("model")), 15_000);
+      });
+    });
     const pending = forcedToolCall("model", "system", "user", "pick", {}, {
-      preferNonReasoning: true, timeoutMs: 20_000,
+      preferNonReasoning: true, reasoning: "low", timeoutMs: 20_000,
     });
-    await started;
-    deadline.abort();
-    expect(await pending).toBeNull();
-    expect(fetch).not.toHaveBeenCalled();
-    expect(console.error).toHaveBeenCalledWith("[feedback-llm] LLM call failed: request_timeout");
+    await vi.advanceTimersByTimeAsync(0);
+    expect(refreshIndexMock).toHaveBeenCalledTimes(1);
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(timeout).toHaveBeenCalledWith(20_000);
+    await vi.advanceTimersByTimeAsync(15_000);
+    expect(await pending).toEqual({ model: "model" });
+    expect(console.error).not.toHaveBeenCalled();
   });
 
-  it("keeps the current effort when catalog refresh fails", async () => {
-    modelInfoMock.mockRejectedValue(new Error("Private catalog detail"));
+  it("uses cached optional reasoning while catalog refresh is stalled", async () => {
+    modelInfoMock.mockReturnValue({ reasoning: { mandatory: false, efforts: ["high"] } });
+    refreshIndexMock.mockImplementation(() => new Promise(() => {}));
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (_url, init) => {
+      expect(JSON.parse(init!.body as string).reasoning).toEqual({ enabled: false });
+      return okResponse("model");
+    });
+    expect(await forcedToolCall("model", "system", "user", "pick", {}, {
+      preferNonReasoning: true, reasoning: "low",
+    })).toEqual({ model: "model" });
+  });
+
+  it("keeps the current effort when no metadata is cached and refresh fails", async () => {
+    modelInfoMock.mockReturnValue(null);
+    refreshIndexMock.mockRejectedValue(new Error("Private catalog detail"));
     vi.spyOn(globalThis, "fetch").mockImplementation(async (_url, init) => {
       expect(JSON.parse(init!.body as string).reasoning).toEqual({ effort: "low", exclude: false });
       return okResponse("model");
@@ -228,6 +258,7 @@ describe("forcedToolCall response failures", () => {
 });
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.restoreAllMocks();
 });
 
