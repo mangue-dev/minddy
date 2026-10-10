@@ -221,6 +221,8 @@ Il proprietario può scegliere un obiettivo facoltativo creando un’integrazion
 
 La conversione crea un ticket con l’obiettivo e le categorie del feedback. Puoi modificarli nel modulo di creazione. Senza un obiettivo scelto, il campo resta vuoto anche con Smart Fill attivo. Modificare in seguito l’obiettivo del feedback non sposta un ticket già collegato. Le fusioni richiedono lo stesso obiettivo per entrambe le richieste, anche quando nessuna ne ha uno. Allinea prima gli obiettivi se il team decide che descrivono lo stesso bisogno.
 
+Un gruppo unito condivide un solo obiettivo. Modificare l’obiettivo della richiesta principale aggiorna anche le richieste assorbite, così il gruppo può essere unito nuovamente.
+
 ![Anteprima dei componenti di selezione dell’obiettivo per un feedback e un’integrazione, entrambi impostati su Docs.](/documentation/it/feedback-objective-selection.png)
 
 ## Unire feedback e collegarlo alla consegna {#feedback-to-issue}

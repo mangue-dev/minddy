@@ -99,6 +99,7 @@ const MIN_CANDIDATE_SIMILARITY = 0.5;
 
 interface ClaimedPost {
   objective_id: string | null;
+  analysis_claimed_at: string | null;
   id: string;
   project_id: string;
   submitted_title: string;
@@ -654,7 +655,17 @@ async function reviewOne(
     .maybeSingle();
   if (!fresh || fresh.merged_into_id !== null) return true;
   // A human changed the objective while review was running; retry from fresh context.
-  if ((fresh.objective_id ?? null) !== (post.objective_id ?? null)) return true;
+  if ((fresh.objective_id ?? null) !== (post.objective_id ?? null)) {
+    if (post.analysis_claimed_at) {
+      const { error } = await service.from("feedback_posts")
+        .update({ analysis_claimed_at: null })
+        .eq("id", post.id).eq("project_id", post.project_id)
+        .eq("analysis_claimed_at", post.analysis_claimed_at)
+        .is("merged_into_id", null).is("deleted_at", null);
+      if (error) return false;
+    }
+    return true;
+  }
   if (fresh.analyzed_at !== null && fresh.classified_at !== null) return true;
 
   const currentReviewState = fresh.review_state as FeedbackReviewState;

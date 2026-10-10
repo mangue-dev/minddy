@@ -120,6 +120,7 @@ const PROJECT_ROW = {
 };
 
 const CLAIMED_POST = {
+  analysis_claimed_at: "2026-10-10T13:40:00.000Z",
   id: "post-new",
   objective_id: "docs-objective",
   project_id: "project-1",
@@ -158,6 +159,7 @@ const CANDIDATES = [
 ];
 
 const updatePayloads: unknown[] = [];
+const eqFilters: [string, unknown][] = [];
 /** The `feedback_posts` reads BEFORE the final write, in call order — the
  * default after the queue exhausts is the unmodified post row. */
 let feedbackPostsReads: (() => { data: unknown; error: unknown })[] = [];
@@ -170,6 +172,7 @@ function fakeQuery(resolve: () => { data: unknown; error: unknown }): unknown {
   for (const method of ["select", "eq", "is", "not", "in", "or", "order", "limit"]) {
     query[method] = () => query;
   }
+  query.eq = (column: string, value: unknown) => { eqFilters.push([column, value]); return query; };
   query.update = (payload: unknown) => {
     updatePayloads.push(payload);
     return query;
@@ -236,6 +239,7 @@ const lowConfidence = (answers: DecisionAnswers): DecisionAnswers =>
 describe("reviewFeedbackPost — Jev first filter (MIN-565)", () => {
   beforeEach(() => {
     updatePayloads.length = 0;
+    eqFilters.length = 0;
     feedbackPostsReads = [
       // First feedback_posts read: the spam-candidate sweep, never spam here.
       () => ({ data: [], error: null }),
@@ -271,7 +275,8 @@ describe("reviewFeedbackPost — Jev first filter (MIN-565)", () => {
 
     const report = await reviewFeedbackPost("post-new", "project-1");
 
-    expect(updatePayloads).toEqual([]);
+    expect(updatePayloads).toEqual([{ analysis_claimed_at: null }]);
+    expect(eqFilters).toContainEqual(["analysis_claimed_at", CLAIMED_POST.analysis_claimed_at]);
     expect(setFeedbackPostCategoriesMock).not.toHaveBeenCalled();
     expect(mergePostsMock).not.toHaveBeenCalled();
     expect(report.posts_reviewed).toBe(0);

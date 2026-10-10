@@ -221,6 +221,8 @@ The project owner can choose an optional objective when creating a feedback inte
 
 Promotion starts the new issue with the feedback objective and categories. You can change them in the creation form. If no objective was chosen, promotion keeps it empty, even with Smart Fill enabled. Changing a feedback objective later does not move an already linked issue. Feedback can merge only when both requests have the same objective, including both having none; align their objectives first if the team decides they describe the same need.
 
+A merged group shares one objective. Changing the main request’s objective also updates the absorbed requests, so the group can still be merged later.
+
 ![Component preview of the feedback objective selector and a feedback integration default, both set to Docs.](/documentation/en/feedback-objective-selection.png)
 
 ## Merge feedback and connect it to delivery {#feedback-to-issue}

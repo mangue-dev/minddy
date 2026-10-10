@@ -3282,6 +3282,13 @@
     "automationActor": "La automatización"
   },
   "ToolCall": {
+    "updatingFeedbackObjective": "Actualizando el objetivo del comentario…",
+    "feedbackObjectiveLinked": "Comentario vinculado al objetivo",
+    "feedbackObjectiveCleared": "Objetivo del comentario eliminado",
+    "updateFeedbackObjectiveFailed": "No se pudo actualizar el objetivo del comentario",
+    "updatingIntegrationObjective": "Actualizando el objetivo de la integración…",
+    "integrationObjectiveUpdated": "Objetivo de la integración actualizado",
+    "updateIntegrationObjectiveFailed": "No se pudo actualizar el objetivo de la integración",
     "listingMcpTools": "Buscando herramientas MCP…",
     "mcpToolsListed": "Herramientas MCP encontradas",
     "listMcpToolsFailed": "No se pudieron encontrar las herramientas MCP",

@@ -9173,6 +9173,21 @@
         "feedback_posts"
       ],
       "functionReferences": []
+    },
+    "sync_feedback_descendant_objectives()": {
+      "sha256": "c88aeb6fff0ff8fcb8302e94b2d82b62c417ca419f9cdbbfa48ffa4d055245e2",
+      "securityDefiner": false,
+      "configuration": [
+        "search_path=public"
+      ],
+      "acl": "{postgres=X/postgres}",
+      "relations": [
+        "feedback_posts"
+      ],
+      "protectedRelations": [
+        "feedback_posts"
+      ],
+      "functionReferences": []
     }
   },
   "triggers": {
@@ -11139,6 +11154,10 @@
     "feedback_posts.feedback_merge_objective_guard": {
       "function": "guard_feedback_merge_objective()",
       "definition": "CREATE TRIGGER feedback_merge_objective_guard BEFORE UPDATE OF merged_into_id ON feedback_posts FOR EACH ROW EXECUTE FUNCTION guard_feedback_merge_objective()"
+    },
+    "feedback_posts.feedback_descendant_objectives_sync": {
+      "function": "sync_feedback_descendant_objectives()",
+      "definition": "CREATE TRIGGER feedback_descendant_objectives_sync AFTER UPDATE OF objective_id ON feedback_posts FOR EACH ROW WHEN (old.objective_id IS DISTINCT FROM new.objective_id) EXECUTE FUNCTION sync_feedback_descendant_objectives()"
     }
   }
 }

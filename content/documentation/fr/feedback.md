@@ -221,6 +221,8 @@ Le propriétaire du projet peut choisir un objectif facultatif lors de la créat
 
 La conversion en ticket reprend l’objectif et les catégories du retour. Vous pouvez les modifier dans le formulaire de création. Sans objectif choisi, la conversion laisse ce champ vide, même si Smart Fill est activé. Modifier ensuite l’objectif du retour ne déplace pas un ticket déjà lié. Une fusion exige que les deux retours aient le même objectif, ou n’en aient aucun ; alignez leurs objectifs si l’équipe décide qu’ils décrivent le même besoin.
 
+Un groupe fusionné partage un seul objectif. Modifier l’objectif du retour principal met aussi à jour les retours absorbés, pour permettre une nouvelle fusion du groupe.
+
 ![Aperçu des composants de sélection d’objectif pour un retour et une intégration, tous deux réglés sur Docs.](/documentation/fr/feedback-objective-selection.png)
 
 ## Fusionner des retours et les relier à la livraison {#feedback-to-issue}

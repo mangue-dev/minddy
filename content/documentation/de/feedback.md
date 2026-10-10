@@ -221,6 +221,8 @@ Der Projekteigentümer kann beim Erstellen einer Feedback-Integration unter **Ei
 
 Bei der Umwandlung übernimmt das neue Ticket Ziel und Kategorien der Rückmeldung. Sie können diese im Erstellungsformular ändern. Ohne gewähltes Ziel bleibt das Feld leer, auch mit aktiviertem Smart Fill. Eine spätere Änderung des Feedback-Ziels verschiebt kein bereits verknüpftes Ticket. Rückmeldungen lassen sich nur mit demselben Ziel zusammenführen, auch wenn beide keines haben. Gleichen Sie die Ziele zuerst ab, wenn das Team denselben Bedarf erkennt.
 
+Eine zusammengeführte Gruppe teilt ein Ziel. Wenn du das Ziel der Hauptanfrage änderst, werden auch die aufgenommenen Anfragen aktualisiert, damit die Gruppe später erneut zusammengeführt werden kann.
+
 ![Komponentenvorschau der Zielauswahl für Feedback und einer Feedback-Integration, beide auf Docs eingestellt.](/documentation/de/feedback-objective-selection.png)
 
 ## Feedback zusammenführen und mit Umsetzung verbinden {#feedback-to-issue}

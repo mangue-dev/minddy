@@ -32,6 +32,22 @@ CREATE TRIGGER feedback_merge_objective_guard BEFORE UPDATE OF merged_into_id
   ON public.feedback_posts FOR EACH ROW EXECUTE FUNCTION public.guard_feedback_merge_objective();
 REVOKE ALL ON FUNCTION public.guard_feedback_merge_objective() FROM PUBLIC;
 
+-- An explicit choice on a merged group applies to its absorbed requests too.
+CREATE FUNCTION public.sync_feedback_descendant_objectives() RETURNS trigger
+LANGUAGE plpgsql SET search_path = public AS $$
+BEGIN
+  UPDATE public.feedback_posts SET objective_id = NEW.objective_id
+    WHERE merged_into_id = NEW.id
+      AND objective_id IS DISTINCT FROM NEW.objective_id;
+  RETURN NEW;
+END;
+$$;
+CREATE TRIGGER feedback_descendant_objectives_sync AFTER UPDATE OF objective_id
+  ON public.feedback_posts FOR EACH ROW
+  WHEN (OLD.objective_id IS DISTINCT FROM NEW.objective_id)
+  EXECUTE FUNCTION public.sync_feedback_descendant_objectives();
+REVOKE ALL ON FUNCTION public.sync_feedback_descendant_objectives() FROM PUBLIC;
+
 -- Mixed content/objective edits must also work with encrypted feedback.
 CREATE OR REPLACE FUNCTION public.save_feedback_post_content(
   p_id uuid, p_project_id uuid, p_revision bigint, p_updates jsonb)

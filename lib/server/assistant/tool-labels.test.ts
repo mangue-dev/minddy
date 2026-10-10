@@ -6,6 +6,10 @@ import { describe, expect, it } from "vitest";
 import { ASSISTANT_TOOLS, GLOBAL_ASSISTANT_TOOLS } from "./tools";
 import en from "@/messages/en.json";
 import fr from "@/messages/fr.json";
+import de from "@/messages/de.json";
+import es from "@/messages/es.json";
+import itMessages from "@/messages/it.json";
+import ptBr from "@/messages/pt-BR.json";
 
 /**
  * The contract between a Numo TOOL and its LINE in the thread.
@@ -60,18 +64,22 @@ const EVERY_TOOL = [
 ];
 
 describe("each Numo tool has its line in the thread", () => {
-  it.each(EVERY_TOOL)("%s a une entrée dans TOOL_META", (name) => {
+  it.each(EVERY_TOOL)("%s has an entry in TOOL_META", (name) => {
     expect(labelled).toContain(name);
   });
 });
 
-describe("tool labels exist in BOTH catalogs", () => {
+describe("tool labels exist in all six catalogs", () => {
   const catalogs: [string, Record<string, unknown>][] = [
     ["en", en.ToolCall as Record<string, unknown>],
     ["fr", fr.ToolCall as Record<string, unknown>],
+    ["de", de.ToolCall as Record<string, unknown>],
+    ["es", es.ToolCall as Record<string, unknown>],
+    ["it", itMessages.ToolCall as Record<string, unknown>],
+    ["pt-BR", ptBr.ToolCall as Record<string, unknown>],
   ];
 
-  it.each(catalogs)("%s porte toutes les clés utilisées", (_locale, catalog) => {
+  it.each(catalogs)("%s contains every requested label key", (_locale, catalog) => {
     const missing = [...usedKeys].filter((k) => !(k in catalog));
     expect(missing).toEqual([]);
   });

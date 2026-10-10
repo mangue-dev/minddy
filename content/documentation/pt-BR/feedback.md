@@ -221,6 +221,8 @@ O proprietário pode escolher um objetivo opcional ao criar uma integração de 
 
 A conversão cria um ticket com o objetivo e as categorias do feedback. Você pode alterá-los no formulário de criação. Sem um objetivo escolhido, o campo fica vazio mesmo com o Smart Fill ativado. Alterar depois o objetivo do feedback não move um ticket já vinculado. Mesclagens exigem que as duas solicitações tenham o mesmo objetivo, inclusive quando ambas não têm nenhum. Alinhe os objetivos primeiro se a equipe decidir que descrevem a mesma necessidade.
 
+Um grupo mesclado compartilha um único objetivo. Alterar o objetivo da solicitação principal também atualiza as solicitações incorporadas, permitindo uma nova mesclagem do grupo.
+
 ![Prévia dos componentes de seleção de objetivo para um feedback e uma integração, ambos definidos como Docs.](/documentation/pt-BR/feedback-objective-selection.png)
 
 ## Unir feedback e conectar à entrega {#feedback-to-issue}

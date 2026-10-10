@@ -3282,6 +3282,13 @@
     "automationActor": "L'automazione"
   },
   "ToolCall": {
+    "updatingFeedbackObjective": "Aggiornamento dell’obiettivo del feedback…",
+    "feedbackObjectiveLinked": "Feedback collegato all’obiettivo",
+    "feedbackObjectiveCleared": "Obiettivo del feedback rimosso",
+    "updateFeedbackObjectiveFailed": "Impossibile aggiornare l’obiettivo del feedback",
+    "updatingIntegrationObjective": "Aggiornamento dell’obiettivo dell’integrazione…",
+    "integrationObjectiveUpdated": "Obiettivo dell’integrazione aggiornato",
+    "updateIntegrationObjectiveFailed": "Impossibile aggiornare l’obiettivo dell’integrazione",
     "listingMcpTools": "Ricerca degli strumenti MCP…",
     "mcpToolsListed": "Strumenti MCP trovati",
     "listMcpToolsFailed": "Impossibile trovare gli strumenti MCP",

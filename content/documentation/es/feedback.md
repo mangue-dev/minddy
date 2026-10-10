@@ -221,6 +221,8 @@ El propietario puede elegir un objetivo opcional al crear una integración de co
 
 Al convertir el comentario, el nuevo ticket hereda su objetivo y categorías. Puedes cambiarlos en el formulario de creación. Si no se eligió objetivo, el campo queda vacío incluso con Smart Fill activado. Cambiar después el objetivo del comentario no mueve un ticket ya vinculado. Las fusiones requieren que ambas solicitudes tengan el mismo objetivo, incluido que ambas no tengan ninguno. Iguala sus objetivos primero si el equipo decide que describen la misma necesidad.
 
+Un grupo fusionado comparte un único objetivo. Cambiar el objetivo de la solicitud principal también actualiza las solicitudes absorbidas, para que el grupo pueda volver a fusionarse.
+
 ![Vista previa de los componentes de selección de objetivo para un comentario y una integración, ambos con Docs.](/documentation/es/feedback-objective-selection.png)
 
 ## Fusionar feedback y vincularlo a entregas {#feedback-to-issue}

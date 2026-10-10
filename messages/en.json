@@ -3282,6 +3282,13 @@
     "automationActor": "The automation"
   },
   "ToolCall": {
+    "updatingFeedbackObjective": "Updating feedback objective…",
+    "feedbackObjectiveLinked": "Feedback linked to objective",
+    "feedbackObjectiveCleared": "Feedback objective cleared",
+    "updateFeedbackObjectiveFailed": "Could not update feedback objective",
+    "updatingIntegrationObjective": "Updating integration objective…",
+    "integrationObjectiveUpdated": "Integration objective updated",
+    "updateIntegrationObjectiveFailed": "Could not update integration objective",
     "listingMcpTools": "Finding MCP tools…",
     "mcpToolsListed": "MCP tools found",
     "listMcpToolsFailed": "Could not find MCP tools",

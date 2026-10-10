@@ -562,6 +562,13 @@ const TOOL_META: Record<string, ToolMeta> = {
       return success ? t("webhookUpdated") : t("updateWebhookFailed");
     },
   },
+  update_integration_objective: {
+    icon: Plug01Icon,
+    getLabel: (_args, _result, success, status, t) => {
+      if (status === "running") return t("updatingIntegrationObjective");
+      return success ? t("integrationObjectiveUpdated") : t("updateIntegrationObjectiveFailed");
+    },
+  },
   revoke_integration: {
     icon: Plug01Icon,
     getLabel: (_args, _result, success, status, t) => {
@@ -634,6 +641,14 @@ const TOOL_META: Record<string, ToolMeta> = {
     getLabel: (_args, _result, success, status, t) => {
       if (status === "running") return t("linkingFeedback");
       return success ? t("feedbackLinked") : t("linkFeedbackFailed");
+    },
+  },
+  link_feedback_to_objective: {
+    icon: Link02Icon,
+    getLabel: (args, _result, success, status, t) => {
+      if (status === "running") return t("updatingFeedbackObjective");
+      if (!success) return t("updateFeedbackObjectiveFailed");
+      return args.objective_id === null ? t("feedbackObjectiveCleared") : t("feedbackObjectiveLinked");
     },
   },
   unlink_feedback: {

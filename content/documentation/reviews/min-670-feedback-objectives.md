@@ -71,7 +71,25 @@ review opt-out, defaults, promotion and Smart Fill, scoped reads and tool contra
 The migration was executed with disposable PGlite PostgreSQL using minimal tables;
 checks exercised cross-project foreign keys, issue-key rejection, conflicting and
 compatible merges, objective deletion preserving project IDs while clearing
-links, and mixed content/objective saves with merged-post rejection. This is
+links, mixed content/objective saves with merged-post rejection, and a canonical
+objective edit followed by the actual subsequent merge RPC. This is
 actual SQL execution, not full hosted Supabase integration testing.
 TypeScript, lint, documentation, knowledge, owned English and whitespace checks
 are recorded in the PR after final verification.
+
+
+## PR review corrections
+
+The six tool-label catalogs now name the explicit feedback link/removal and
+integration default updates; the label contract checks every runtime locale.
+A stale review verdict conditionally clears only its own `analysis_claimed_at`
+lease, leaving a newer claim untouched. The regression verifies the timestamp
+condition and that no categories or moderation result are applied.
+
+An objective change on the canonical request updates its absorbed descendants
+within the same database transaction. The source migration and actual
+`merge_feedback_posts` RPC were executed in disposable PostgreSQL: a canonical
+with a descendant can change objective, merge into another canonical, clear the
+objective for the resulting group and survive objective deletion. The six
+feedback guides describe the group behavior; the selector illustration is
+unchanged and remains accurate.

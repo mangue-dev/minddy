@@ -228,10 +228,10 @@ in [the closure matrix](closure-matrix.md).
   forge mention and provider-operation resource identities
   now use purpose-separated one-way equality digests. This is a target
   policy, not evidence that those columns are encrypted.
-- `consumers.json` records 1,756 TypeScript/JavaScript table, view, RPC and object-store
+- `consumers.json` records 1,757 TypeScript/JavaScript table, view, RPC and object-store
   access candidates. Dynamic table names remain explicit `null` entries requiring
   caller review. Array and Buffer constructors are excluded.
-- `sql-consumers.json` records 567 functions, ten views and 491 application triggers. Function
+- `sql-consumers.json` records 568 functions, ten views and 492 application triggers. Function
   and view hashes pin the observed definitions without copying their bodies.
   Relation references are conservative text matches, not a SQL data-flow proof.
 - `migrations.json` pins migration inputs. CI rejects added or changed migrations
@@ -2471,9 +2471,16 @@ from silently replacing an explicit choice, including no objective.
 
 The migration ran in disposable PGlite PostgreSQL against minimal tables without
 application data. `scripts/encryption-schema-audit.sql` introspected the two new
-columns, composite keys, updated save function and new trigger. Only that metadata
+columns, composite keys, updated save function and both new triggers. Only that metadata
 was reconciled into the retained full inventories; this was not a full Supabase
 replay. New TypeScript access candidates were reviewed: authorized objective
 feedback reads, feedback metadata updates, scoped linked-feedback reads and
 owner-gated integration metadata updates. `check:encrypted-access` and
 `check:encryption-schema` passed after refreshing the inventories.
+
+The PR review added a metadata-only descendant synchronization trigger. An
+explicit objective edit propagates through absorbed feedback inside the same
+transaction, so the existing merge RPC can repoint the group later. Its function
+and trigger were introspected after testing the actual merge RPC. A discarded
+review conditionally releases its own timestamped lease; this additional server
+metadata access was included in the consumer review.
