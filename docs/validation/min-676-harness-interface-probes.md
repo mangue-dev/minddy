@@ -209,3 +209,55 @@ Repository verification for this refinement: `check:documentation`,
 `check:knowledge`, `check:owned-english`, relative documentation links and
 `git diff --check` passed. Only the two internal study/evidence documents changed;
 public manuals and runtime source remain untouched.
+
+## Private prototype implementation and hosted probes (2026-10-10)
+
+The subsequent implementation adds private account connection routes/settings,
+mandatory encrypted native profiles and runtime cleanup descriptors, exclusive
+fenced leases, published native controllers and a fixed two-allocation MCP pilot.
+See [activation and pilot instructions](min-676-private-native-prototype.md).
+The ordinary Numo worker remains unchanged and public enablement is still gated.
+
+Actual authless hosted probes used fresh Vercel `node24`, `iad1`, 2-vCPU,
+nonpersistent allocations, with no native personal profile, login or model turn:
+
+| Probe | Actual result | Boundary |
+| --- | --- | --- |
+| Codex 0.162.1 published installation and controller bootstrap | Passed after correcting Linux capabilities and runtime paths. | npm success alone was insufficient; early native exits failed closed and those allocations were deleted. |
+| Native Codex kernel isolation, completed before 16:28:07 UTC | Passed twice. Native exit 0 only after denied reads of synthetic profile bytes, controller source, transport directory and controller `/proc` environment, file descriptor and memory surfaces. Allocation stopped and deleted. | No paid inference or live profile restored. Same native permission profile is required before a fixture turn. |
+| Claude Code 2.1.296, 16:29:40–16:29:54 UTC | Published binary `--version` exited 0; controller started; native account status returned unauthenticated; allocation stopped and deleted. | No Claude login, paid subscription or model turn. |
+
+Codex's Linux subprocesses clear bounding, inheritable and ambient capabilities
+and set no-new-privileges before native sandbox helpers start. Vercel's inherited
+capabilities otherwise caused bubblewrap to reject startup. Published CLI code
+lives outside the denied private controller/auth root; Node's actual runtime
+directory is explicitly added to the child's allowlisted PATH. `/proc` and
+`/sys` are denied, in addition to the native private PID namespace. Native MCP
+and controller bearer tokens are separate, so the model's MCP connection cannot
+export a profile or operate the controller.
+
+Claude's published main npm launcher is a placeholder replaced by postinstall.
+With lifecycle scripts disabled, bootstrap explicitly links the already
+installed, version-pinned optional Linux platform binary. This deterministic
+packaging correction was verified on the actual hosted allocation.
+
+For the owner pilot, an isolated Docker Supabase project uses API port 55321 and
+PostgreSQL port 55322. All 244 migrations applied and native SQL regressions
+passed against actual PostgreSQL. The account and project are fictional local
+fixtures; no remote Minddy data is copied. Existing Docker volumes and the
+repository's `.env.local` are preserved. The connected remote database has not
+received the native migration; the only migration command against it was a
+dry run, before the user selected the local Docker database.
+
+At this stage, live provider approval, encrypted real-token persistence and the
+two fresh authenticated allocations remain pending the owner's Codex sign-in.
+Do not interpret the successful authless kernel probe or synthetic renewal
+tests as those acceptance results. Live Claude remains unverified because no
+eligible paid account has been supplied.
+
+Repository checks for this private implementation passed: 73 focused Vitest
+tests, actual local PostgreSQL native SQL regressions, full application build,
+typecheck, lint, native VM bundle build, encrypted-column/schema inventories,
+documentation, knowledge, owned-English and whitespace checks. Public impact is
+limited to the six `ai-settings-and-usage` guides and their revision-8 review;
+full Numo engine selection and public native rollout remain pending.

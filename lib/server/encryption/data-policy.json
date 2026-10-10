@@ -4871,5 +4871,34 @@
         "started_at"
       ]
     }
+  },
+  "native_agent_connections": {
+    "scope": {
+      "kind": "user",
+      "column": "user_id"
+    },
+    "encrypted": [
+      "profile_ciphertext",
+      "runtime_ciphertext"
+    ],
+    "clear": {
+      "routing_identity": [
+        "id",
+        "user_id",
+        "engine",
+        "lease_id"
+      ],
+      "bounded_metadata": [
+        "status",
+        "generation",
+        "revision",
+        "lease_kind"
+      ],
+      "timestamp": [
+        "lease_expires_at",
+        "created_at",
+        "updated_at"
+      ]
+    }
   }
 }

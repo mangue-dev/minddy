@@ -4,6 +4,7 @@ import { verifyCronSecret } from "@/lib/server/cron-auth";
 
 import { getServiceClient } from "@/lib/supabase-service";
 import { drainAgentRuns } from "@/lib/server/agent/drain";
+import { reapNativePrototypeConnections } from "@/lib/server/agent/native-prototype/connections";
 import {
   previewKickTargets,
   PREVIEW_STALE_AFTER_MS,
@@ -46,7 +47,7 @@ export const runtime = "nodejs";
  */
 export const maxDuration = 300;
 /** Launch budget, under `maxDuration` above (room for response). */
-const CRON_DRAIN_BUDGET_MS = 270_000;
+const CRON_DRAIN_BUDGET_MS = 210_000;
 
 /**
  * Runs preview due, read in prod for distribution. Wide ceiling in front of
@@ -138,6 +139,10 @@ async function handle(request: NextRequest) {
   }
 
   const service = getServiceClient();
+  // Cleanup continues after the private preview is disabled. Keep errors bounded
+  // and retain unsettled intents; normal queue dispatch must still be available.
+  try { await reapNativePrototypeConnections(); }
+  catch { console.error("[agent-drain] native preview cleanup pending"); }
   let summary: Awaited<ReturnType<typeof drainAgentRuns>>;
   try {
     summary = await drainAgentRuns(service, { budgetMs: CRON_DRAIN_BUDGET_MS });

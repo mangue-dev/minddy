@@ -16,12 +16,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 7,
-  "sourceRevision": 7,
+  "revision": 8,
+  "sourceRevision": 8,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-10",
   "compatibility": {
-    "version": "0.11.1 candidate (cd1843e12)",
+    "version": "0.11.1 candidate with allowlisted private native preview (MIN-676)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -54,14 +54,17 @@
       "components/issue-timeline.tsx",
       "components/assistant/chat-input.tsx",
       "components/routines/routine-prompt-field.tsx",
-      "content/documentation/reviews/pr397-review-fixes-2026-10-09.md"
+      "content/documentation/reviews/pr397-review-fixes-2026-10-09.md",
+      "components/settings/native-agent-connections.tsx",
+      "components/settings/native-agent-connections.test.tsx",
+      "content/documentation/reviews/min-676-private-native-preview-2026-10-10.md"
     ]
   },
   "review": {
-    "revision": 7,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (PR #397 source review of voice/export additions; existing procedures and figures retained, no operational rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (PR #397 localized additions and equivalent meaning review; no independent or human review claimed)",
-    "date": "2026-10-09"
+    "revision": 8,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (PR #397 source review of voice/export additions; existing procedures and figures retained, no operational rerun); agent:/root/native_hosting_terms (private preview controls and limitations source/UI-test review; prior procedures retained, no native operational run)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (PR #397 localized additions and equivalent meaning review; no independent or human review claimed); agent:/root/native_hosting_terms (localized private preview additions and equivalent meaning; agent review, no human acceptance claimed)",
+    "date": "2026-10-10"
   },
   "related": [
     "scheduled-routines"
@@ -83,7 +86,7 @@
       "src": "/documentation/pt-BR/ai-keys-and-models-workflow.png",
       "alt": "Cartão do provedor de IA com minddy Cloud selecionado.",
       "caption": "O provedor Cloud selecionado usa o plano da conta. O seletor permite configurar provedores pessoais.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -100,7 +103,7 @@
       "src": "/documentation/pt-BR/ai-keys-and-models-defaults-workflow.png",
       "alt": "Modelo de código e raciocínio padrão.",
       "caption": "Modelo de código e raciocínio padrão. Novos workers usam esses valores; os que estão em execução mantêm as configurações fixadas.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -117,7 +120,7 @@
       "src": "/documentation/pt-BR/plans-and-ai-usage-workflow.png",
       "alt": "Página de uso de IA da conta de demonstração.",
       "caption": "Página de uso de IA da conta de demonstração. O orçamento, as categorias e o histórico são lidos da conta; nenhuma compra ou execução paga foi iniciada.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -146,6 +149,14 @@ Abra as configurações de IA da conta, adicione um provedor compatível e infor
 Associe as famílias de modelos de texto, transcrição e embeddings a chaves compatíveis ou mantenha-as no minddy. Para cada chave, escolha os usos habilitados: conversas do Numo, trabalho de código, automações, voz e feedback. Um uso ou uma família sem associação utilizável continua consumindo a cota do minddy. O provedor cobra as chamadas feitas com a chave dele. O processamento da sandbox no servidor continua tendo um custo real e é registrado no uso. Esse registro é separado da aplicação de um limite da conta: um worker com BYOK validado não está sujeito à cota do plano nem ao limite de processamento, enquanto o trabalho financiado pelo minddy continua sujeito à franquia incluída.
 
 ![Cartão do provedor de IA com minddy Cloud selecionado.](/documentation/pt-BR/ai-keys-and-models-workflow.png)
+
+### Testar uma assinatura pessoal de programação na prévia privada {#native-agent-preview}
+
+Se sua conta estiver habilitada para a prévia privada, as configurações de IA da conta mostram **Assinaturas pessoais de programação**. Escolha **Conectar Codex** ou **Conectar Claude Code** e autorize o acesso com sua própria conta na página oficial do provedor. Para o Codex, digite o código de login mostrado nessa página. Se o Claude pedir um código de autorização, cole apenas esse código no Minddy e escolha **Concluir conexão**. Você precisa de acesso ao Codex ou de uma assinatura Claude que inclua o Claude Code. **Cancelar conexão** interrompe uma tentativa em andamento.
+
+Após a conexão, **Testar novas sandboxes** verifica o acesso nativo e as ferramentas Minddy em duas novas sandboxes hospedadas. Confira o resultado, incluindo a destruição de cada sandbox. Um teste de acesso bem-sucedido não comprova a renovação da autenticação: uma mensagem separada informa quando essa renovação não foi observada. A conexão é salva para testes posteriores; conecte-se novamente se o acesso expirar ou não puder ser restaurado. **Desconectar** remove a conexão salva pelo Minddy; isso não cancela sua assinatura do provedor.
+
+Esta prévia verifica o login, as ferramentas e a inicialização em novas sandboxes. Ainda não muda o agente iniciado pelo Numo para tickets, planos ou revisões. O Numo mantém suas configurações atuais de provedor e uso; os testes nativos usam sua assinatura pessoal e processamento hospedado temporário.
 
 ### Modelos e local de execução {#models}
 

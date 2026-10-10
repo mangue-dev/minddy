@@ -16,12 +16,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 7,
-  "sourceRevision": 7,
+  "revision": 8,
+  "sourceRevision": 8,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-10",
   "compatibility": {
-    "version": "0.11.1 candidate (cd1843e12)",
+    "version": "0.11.1 candidate with allowlisted private native preview (MIN-676)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -54,14 +54,17 @@
       "components/issue-timeline.tsx",
       "components/assistant/chat-input.tsx",
       "components/routines/routine-prompt-field.tsx",
-      "content/documentation/reviews/pr397-review-fixes-2026-10-09.md"
+      "content/documentation/reviews/pr397-review-fixes-2026-10-09.md",
+      "components/settings/native-agent-connections.tsx",
+      "components/settings/native-agent-connections.test.tsx",
+      "content/documentation/reviews/min-676-private-native-preview-2026-10-10.md"
     ]
   },
   "review": {
-    "revision": 7,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (PR #397 source review of voice/export additions; existing procedures and figures retained, no operational rerun)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (PR #397 localized additions and equivalent meaning review; no independent or human review claimed)",
-    "date": "2026-10-09"
+    "revision": 8,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (PR #397 source review of voice/export additions; existing procedures and figures retained, no operational rerun); agent:/root/native_hosting_terms (private preview controls and limitations source/UI-test review; prior procedures retained, no native operational run)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (PR #397 localized additions and equivalent meaning review; no independent or human review claimed); agent:/root/native_hosting_terms (localized private preview additions and equivalent meaning; agent review, no human acceptance claimed)",
+    "date": "2026-10-10"
   },
   "related": [
     "scheduled-routines"
@@ -82,7 +85,7 @@
       "src": "/documentation/es/ai-keys-and-models-workflow.png",
       "alt": "Tarjeta del proveedor de IA con minddy Cloud seleccionado.",
       "caption": "El proveedor Cloud seleccionado utiliza el plan de la cuenta. El selector permite configurar proveedores personales.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -99,7 +102,7 @@
       "src": "/documentation/es/ai-keys-and-models-defaults-workflow.png",
       "alt": "Modelo de código y razonamiento predeterminados.",
       "caption": "Modelo de código y razonamiento predeterminados. Los nuevos workers usan estos valores; los que están en ejecución conservan sus ajustes fijados.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -116,7 +119,7 @@
       "src": "/documentation/es/plans-and-ai-usage-workflow.png",
       "alt": "Página de uso de IA de la cuenta de demostración.",
       "caption": "Página de uso de IA de la cuenta de demostración. El presupuesto, las categorías y el historial se leen de la cuenta; no se inició ninguna compra ni ejecución de pago.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -146,6 +149,14 @@ Asigne las familias de modelos de texto, transcripción y embeddings a claves co
 
 
 ![Tarjeta del proveedor de IA con minddy Cloud seleccionado.](/documentation/es/ai-keys-and-models-workflow.png)
+
+### Probar una suscripción personal de programación en la vista previa privada {#native-agent-preview}
+
+Si tu cuenta está habilitada para la vista previa privada, los ajustes de IA de la cuenta muestran **Suscripciones personales de programación**. Elige **Conectar Codex** o **Conectar Claude Code** y autoriza el acceso con tu propia cuenta en la página oficial del proveedor. Para Codex, introduce el código de acceso mostrado en esa página. Si Claude pide un código de autorización, pega solo ese código en Minddy y elige **Completar conexión**. Necesitas acceso a Codex o una suscripción de Claude que incluya Claude Code. **Cancelar conexión** detiene un intento en curso.
+
+Una vez conectado, **Probar nuevos sandboxes** comprueba el acceso nativo y las herramientas de Minddy en dos sandboxes alojados nuevos. Revisa el resultado, incluida la eliminación de cada sandbox. Una prueba de acceso correcta no demuestra la renovación de la autenticación: un mensaje separado indica cuando no se observó esa renovación. La conexión se guarda para pruebas posteriores; vuelve a conectarte si el acceso caduca o no puede restaurarse. **Desconectar** elimina la conexión guardada por Minddy; no cancela tu suscripción al proveedor.
+
+Esta vista previa comprueba el inicio de sesión, las herramientas y los arranques en sandboxes nuevos. Aún no cambia el agente que Numo lanza para incidencias, planes o revisiones. Numo conserva sus ajustes de proveedor y uso; las pruebas nativas utilizan tu suscripción personal y cómputo alojado temporal.
 
 ### Modelos y lugar de ejecución {#models}
 

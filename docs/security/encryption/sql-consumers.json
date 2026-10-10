@@ -9188,6 +9188,104 @@
         "feedback_posts"
       ],
       "functionReferences": []
+    },
+    "acquire_native_agent_connection(uuid,text,text)": {
+      "sha256": "c7bb0a28b8bf85caca1bf9e5913f9d1fd0473ee4990ded77a96203c239e8f028",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "relations": [
+        "agent_account_erasure_fences",
+        "native_agent_connections"
+      ],
+      "protectedRelations": [
+        "native_agent_connections"
+      ],
+      "functionReferences": []
+    },
+    "disconnect_native_agent_connection(uuid,text,uuid,bigint)": {
+      "sha256": "63cfb8d80387622a62e70ae88bb7c0a49f6b759ebf0b030c7f0a16e1ab4d0950",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "relations": [
+        "native_agent_connections"
+      ],
+      "protectedRelations": [
+        "native_agent_connections"
+      ],
+      "functionReferences": []
+    },
+    "release_native_agent_connection(uuid,uuid,text,bigint,uuid,bigint)": {
+      "sha256": "54cfa994bc874f23e7a0b95a87bae2491b7ec50b54b99755cc2fe5f6b4dd1a9f",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "relations": [
+        "native_agent_connections"
+      ],
+      "protectedRelations": [
+        "native_agent_connections"
+      ],
+      "functionReferences": [
+        "check_native_agent_lease"
+      ]
+    },
+    "check_native_agent_lease(uuid,uuid,text,bigint,uuid,bigint,boolean)": {
+      "sha256": "afb245669e18e38a1e43fe18ee35c00cbef7ec2598f98c90dab7490d328204ae",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres}",
+      "relations": [
+        "agent_account_erasure_fences",
+        "native_agent_connections"
+      ],
+      "protectedRelations": [
+        "native_agent_connections"
+      ],
+      "functionReferences": []
+    },
+    "write_native_agent_connection(uuid,uuid,text,bigint,uuid,bigint,boolean,text)": {
+      "sha256": "d7de130906b9911e5f64759425b02a0da6981a14066ec6f1c3f3a5a73aa1ca53",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "relations": [
+        "native_agent_connections"
+      ],
+      "protectedRelations": [
+        "native_agent_connections"
+      ],
+      "functionReferences": [
+        "check_native_agent_lease"
+      ]
+    },
+    "read_native_agent_connection(uuid,uuid,text,bigint,uuid,bigint,boolean,boolean)": {
+      "sha256": "cc953896f3760bbb6e7f36002a4ee0639e8114bfb4dfb4a7d6b2735b871c045d",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "relations": [
+        "native_agent_connections"
+      ],
+      "protectedRelations": [
+        "native_agent_connections"
+      ],
+      "functionReferences": [
+        "check_native_agent_lease"
+      ]
     }
   },
   "triggers": {

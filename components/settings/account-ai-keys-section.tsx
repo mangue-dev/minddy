@@ -20,6 +20,7 @@ import {
 import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
 import { ModelCombobox } from "@/components/agent/model-combobox";
 import { AccountSandboxSection } from "./account-sandbox-section";
+import { NativeAgentConnections } from "./native-agent-connections";
 import { ByokConnectPanel } from "@/components/settings/byok-connect-panel";
 import {
   assignAiCapabilityApi,
@@ -106,6 +107,7 @@ export function AccountAiKeysSection() {
 
   return (
     <>
+      <NativeAgentConnections />
       {/* Provider credentials come first. */}
       {/* `ByokConnectPanel` is an assistant shared with onboarding: only its
           surrounding card changes, not its contents. */}

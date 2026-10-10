@@ -60,6 +60,29 @@ ledger and fences together with parents under quiescent writers; independent
 parent restoration must not silently reopen erasure. SQL and synthetic provider
 fixtures cover the current protocol, not a production provider rehearsal.
 
+## Private native account profiles
+
+MIN-676's disabled-by-default private preview is an explicit durable exception:
+allowlisted native authentication JSON is stored in the account-owned encrypted
+`native_agent_connections.profile_ciphertext`, not a sandbox snapshot or journal.
+The mandatory format-3 binding includes the owner, row ID, engine and column.
+The separately encrypted runtime descriptor exists only for allocation cleanup.
+No credential contents are exposed in metadata reads, native output or client
+caches. The native CLI alone owns refresh; fenced write-back precedes each
+destruction and the next allocation restores the updated profile.
+
+Connection generations and exclusive leases prevent late writers from restoring
+a disconnected credential. Stop-only descriptors survive failed cleanup;
+account erasure must stop those allocations before deleting Auth or key material.
+Do not restore an old credential/profile row independently of its tombstone,
+lease and account-erasure fences. Restore backups under quiescent writers and
+require a new provider connection when rotation or revocation is uncertain.
+The native vault uses the normal account data-key wrapping and offline root-key
+rotation procedures; retain old roots only as required for historical encrypted
+backups, never as a reason to replay retired authentication into a new sandbox.
+See [the private pilot contract](../../validation/min-676-private-native-prototype.md)
+for activation, expiry, compute accounting and unresolved creation reconciliation.
+
 ## Historical copies before migration or activation
 
 The code change does not erase snapshots, Docker volumes, logs, exports or

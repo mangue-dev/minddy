@@ -16,12 +16,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 7,
-  "sourceRevision": 7,
+  "revision": 8,
+  "sourceRevision": 8,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-10",
   "compatibility": {
-    "version": "0.11.1 candidate (cd1843e12)",
+    "version": "0.11.1 candidate with allowlisted private native preview (MIN-676)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -54,14 +54,17 @@
       "components/issue-timeline.tsx",
       "components/assistant/chat-input.tsx",
       "components/routines/routine-prompt-field.tsx",
-      "content/documentation/reviews/pr397-review-fixes-2026-10-09.md"
+      "content/documentation/reviews/pr397-review-fixes-2026-10-09.md",
+      "components/settings/native-agent-connections.tsx",
+      "components/settings/native-agent-connections.test.tsx",
+      "content/documentation/reviews/min-676-private-native-preview-2026-10-10.md"
     ]
   },
   "review": {
-    "revision": 7,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (PR #397 source review of voice/export additions; existing procedures and figures retained, no operational rerun)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (PR #397 localized additions and equivalent meaning review; no independent or human review claimed)",
-    "date": "2026-10-09"
+    "revision": 8,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (PR #397 source review of voice/export additions; existing procedures and figures retained, no operational rerun); agent:/root/native_hosting_terms (private preview controls and limitations source/UI-test review; prior procedures retained, no native operational run)",
+    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (PR #397 localized additions and equivalent meaning review; no independent or human review claimed); agent:/root/native_hosting_terms (localized private preview additions and equivalent meaning; agent review, no human acceptance claimed)",
+    "date": "2026-10-10"
   },
   "related": [
     "scheduled-routines"
@@ -82,7 +85,7 @@
       "src": "/documentation/en/ai-keys-and-models-workflow.png",
       "alt": "AI provider card with minddy Cloud selected.",
       "caption": "The selected Cloud provider uses the account plan. Personal providers are configured in this selector.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -99,7 +102,7 @@
       "src": "/documentation/en/ai-keys-and-models-defaults-workflow.png",
       "alt": "Code model and reasoning defaults.",
       "caption": "Code model and reasoning defaults. New code workers use these defaults; running workers retain their frozen settings.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -116,7 +119,7 @@
       "src": "/documentation/en/plans-and-ai-usage-workflow.png",
       "alt": "AI usage page for the demonstration account.",
       "caption": "AI usage page for the demonstration account. The current budget, usage categories and history are read from the account; no purchase or paid run was triggered.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -145,6 +148,14 @@ Open account AI settings, add a compatible provider and enter its key and any re
 Assign text, transcription and embedding model families to compatible keys or keep them on minddy. For each key, choose its enabled surfaces: Numo conversation, code work, automations, voice and feedback. A surface or model family without a usable assignment stays on minddy usage. Your provider bills calls made with its key. Sandbox compute is recorded separately; validated personal keys (BYOK) and minddy-funded work follow the [budget rules below](#consumption).
 
 ![AI provider card with minddy Cloud selected.](/documentation/en/ai-keys-and-models-workflow.png)
+
+### Test a personal coding subscription in the private preview {#native-agent-preview}
+
+If your account has been enabled for the private preview, account AI settings show **Personal coding subscriptions**. Choose **Connect Codex** or **Connect Claude Code** and approve access on the provider's official page with your own account. For Codex, enter the displayed sign-in code on that page. If Claude asks for an authorization code, paste only that code into Minddy and choose **Complete connection**. You need access to Codex or a Claude subscription that includes Claude Code. **Cancel connection** stops a pending attempt.
+
+After connection, **Test new sandboxes** checks native access and Minddy tools in two fresh hosted sandboxes. Inspect the result, including whether each sandbox was destroyed. A successful access test does not prove authentication renewal: a separate message says when renewal was not observed. The connection is saved for later tests; reconnect if access expires or cannot be restored. **Disconnect** removes Minddy's saved connection; this does not cancel your provider subscription.
+
+This preview checks login, tools and cold starts. It does not yet change the agent that Numo launches for tickets, plans or reviews. Numo retains its current provider and usage settings; native tests use your personal subscription and temporary hosted compute.
 
 ### Models and execution location {#models}
 
