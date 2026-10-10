@@ -8,7 +8,7 @@
   gap: 12px;
   height: 56px; /* Fixed height to prevent expansion when tabHint appears */
   padding: 0 18px;
-  background: var(--cp-bg);
+  background: transparent;
 }
 
 :global(html[data-app-layout="mobile"]) .container { height: 44px; padding-inline: 16px 60px; }
