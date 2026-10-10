@@ -2573,6 +2573,7 @@
     "mfaGenericError": "Couldn't verify the code. Try again."
   },
   "Agent": {
+    "engineWorking": "{agent} is working…",
     "nativeHarnessInputHint": "Send images to Numo; {agent} does not receive image attachments in this preview.",
     "engineLegacyLabel": "Code agent",
     "nativeHarnessDefault": "Default model selected by {agent}",

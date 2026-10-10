@@ -2573,6 +2573,7 @@
     "mfaGenericError": "Impossible de vérifier le code. Réessayez."
   },
   "Agent": {
+    "engineWorking": "{agent} travaille…",
     "nativeHarnessInputHint": "Envoyez les images à Numo ; {agent} ne reçoit pas de pièces jointes image dans cet aperçu.",
     "engineLegacyLabel": "Agent de code",
     "nativeHarnessDefault": "Modèle par défaut choisi par {agent}",

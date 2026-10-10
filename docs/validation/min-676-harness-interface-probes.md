@@ -474,7 +474,7 @@ No failure from that accepted head remained to repair.
 The account settings reuse the existing MCP Codex and Claude Code brand marks.
 Run detail, issue-run and session-list responses expose only the frozen engine
 identifier, alongside their existing safe metadata. Worker cards, their detail
-headers, conversation controls and startup activity use that identity rather
+headers, issue activity chips, conversation controls and startup activity use that identity rather
 than an API provider label or the account's current selection. Unknown and
 historical engine identities remain generic. Native workers show CLI-selected
 defaults instead of API model and reasoning controls. Unsupported direct native
@@ -506,7 +506,7 @@ control-plane host permanent, establish long-lived credential renewal or prove
 first-attempt delivery after the preceding retries. Paid Claude execution stays
 explicitly untested.
 
-This follow-up passed 140 focused tests covering worker metadata/privacy,
+This follow-up passed 145 focused tests covering worker metadata/privacy,
 identity rendering, native settings, stop controls, safe account context and
 durable Numo delegation. Typecheck, lint, the VM bundle build, encrypted column
 access, documentation (including release coverage), knowledge, owned-English

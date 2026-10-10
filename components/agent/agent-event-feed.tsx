@@ -1442,7 +1442,7 @@ export function AgentEventFeed({
                   // machine. To say “sandbox” here would be wrong, and that would be the
                   // first thing the user reads from a local run.
                   t(localExec ? "openingLocalTurn" : "openingSandbox")
-                : t("working")}
+                : t("engineWorking", { agent: agentEngineDisplay(engine).name ?? t("engineLegacyLabel") })}
             </span>
           </div>
         ) : emptyAtRest ? (

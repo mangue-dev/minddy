@@ -22,6 +22,8 @@ explicit unvalidated Claude Code execution and renewal conditions.
 
 The review inspected `components/agent/agent-engine-badge.tsx`,
 `components/agent/agent-conversation.tsx`,
+`components/agent/issue-agent-chip.tsx`,
+`components/issue-side-panel.tsx`,
 `components/assistant/delegated-work-card.tsx`,
 `components/settings/native-agent-connections.tsx`,
 `components/settings/account-ai-keys-section.tsx` and
@@ -32,6 +34,8 @@ current account preference. Missing, unknown and legacy engine metadata use a
 generic localized code-agent label. Native conversations hide OpenCode API
 model and reasoning controls and image attachments, and explain CLI-managed
 defaults. OpenCode retains its API controls.
+The issue's working indicator uses the frozen engine's logo and translated name,
+and a host-supplied routine title does not hide the worker identity.
 
 The review also inspected
 `lib/server/assistant/account-worker-context.ts`,

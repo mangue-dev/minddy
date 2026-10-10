@@ -652,7 +652,10 @@ export function AgentConversation({
       <div className="flex h-full flex-col overflow-hidden">
         {/* Host title on the left and session actions on the shared 60 px line. */}
         <AppContentHeader contentClassName="gap-2">
-          {headerTitle ??
+          {headerTitle != null ? <div className="flex min-w-0 flex-1 items-center gap-2">
+            {headerTitle}
+            {liveRun && <AgentEngineBadge engine={liveRun.agent_engine} className="shrink-0" />}
+          </div> :
             (liveRun ? (
               <span className="flex min-w-0 items-center gap-2">
                 <AgentEngineBadge engine={liveRun.agent_engine} />
