@@ -5,12 +5,14 @@
 .container {
   min-height: 0;
   overflow: hidden;
-  /* Inset from the palette edges so the container's corners can nest into
-     the palette's: 8px inset + this radius = the palette's inner radius
-     (outer radius minus its 1px border). Each item highlight nests one level
-     down (see ResultItem.module.css). */
+  /* Keep the top corners square so scrolled results are not clipped.
+     The inset and bottom corners nest into the palette's inner radius.
+     Each item highlight nests one level down (see ResultItem.module.css). */
   margin: 0 8px;
-  border-radius: calc(var(--cp-radius-2xl, var(--cp-radius-xl)) - 1px - 8px);
+  border-radius:
+    0 0
+    calc(var(--cp-radius-2xl, var(--cp-radius-xl)) - 1px - 8px)
+    calc(var(--cp-radius-2xl, var(--cp-radius-xl)) - 1px - 8px);
   /* Animate height changes smoothly */
   transition: height 200ms ease-out;
 }
