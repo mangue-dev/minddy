@@ -3342,42 +3342,49 @@
     "file": "lib/server/agent/vm/native-prototype/controller.ts",
     "operation": "rpc",
     "resource": "account/login/cancel",
-    "line": 95,
+    "line": 110,
     "storage": false
   },
   {
     "file": "lib/server/agent/vm/native-prototype/controller.ts",
     "operation": "rpc",
     "resource": "initialize",
-    "line": 151,
+    "line": 181,
     "storage": false
   },
   {
     "file": "lib/server/agent/vm/native-prototype/controller.ts",
     "operation": "rpc",
     "resource": "account/login/start",
-    "line": 163,
+    "line": 193,
     "storage": false
   },
   {
     "file": "lib/server/agent/vm/native-prototype/controller.ts",
     "operation": "rpc",
     "resource": "account/read",
-    "line": 208,
+    "line": 238,
     "storage": false
   },
   {
     "file": "lib/server/agent/vm/native-prototype/controller.ts",
     "operation": "rpc",
     "resource": "thread/start",
-    "line": 243,
+    "line": 273,
+    "storage": false
+  },
+  {
+    "file": "lib/server/agent/vm/native-prototype/controller.ts",
+    "operation": "rpc",
+    "resource": "mcpServerStatus/list",
+    "line": 276,
     "storage": false
   },
   {
     "file": "lib/server/agent/vm/native-prototype/controller.ts",
     "operation": "rpc",
     "resource": "turn/start",
-    "line": 249,
+    "line": 285,
     "storage": false
   },
   {
