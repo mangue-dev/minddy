@@ -44,6 +44,10 @@ export function buildFeedbackFieldChangeEvents(
       to_value: s(updates.title),
     });
   }
+  if ("objective_id" in updates && updates.objective_id !== before.objective_id) {
+    events.push({ feedback_post_id: postId, actor_id: actorId, type: "updated",
+      field: "objective_id", from_value: s(before.objective_id), to_value: s(updates.objective_id) });
+  }
   // Body: like a description, we only record the fact that it has changed.
   if ("body" in updates && (updates.body ?? "") !== (before.body ?? "")) {
     events.push({

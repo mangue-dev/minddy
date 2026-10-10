@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 7,
-  "sourceRevision": 7,
+  "revision": 8,
+  "sourceRevision": 8,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-10",
   "compatibility": {
@@ -39,13 +39,14 @@
       "lib/relation-constants.ts",
       "lib/server/issue-relations.ts",
       "lib/objective-momentum.ts",
-      "content/documentation/reviews/min-671-objective-momentum-2026-10-10.md"
+      "content/documentation/reviews/min-671-objective-momentum-2026-10-10.md",
+      "content/documentation/reviews/min-670-feedback-objectives.md"
     ]
   },
   "review": {
-    "revision": 7,
-    "fact": "agent:/root (MIN-671 target-date condition and retained calculation claims checked against source and render tests; earlier procedural evidence retained)",
-    "language": "agent:/root (it changed-passage review against English revision 7; earlier unchanged prose reviews retained)",
+    "revision": 8,
+    "fact": "agent:/root (MIN-671 target-date condition and retained calculation claims checked against source and render tests; earlier procedural evidence retained); agent:/root (MIN-670 source, it wording and new-control review; existing procedural evidence retained)",
+    "language": "agent:/root (it changed-passage review against English revision 7; earlier unchanged prose reviews retained); agent:/root (MIN-670 source, it wording and new-control review; existing procedural evidence retained)",
     "date": "2026-10-10"
   },
   "related": [
@@ -67,7 +68,7 @@
       "src": "/documentation/it/reader-objectives.png",
       "alt": "Finestra di creazione obiettivo non inviata con un nome di risultato d’esempio.",
       "caption": "Definisci il risultato prima di scegliere responsabile, data limite e stato. Questa finestra non ha creato un secondo obiettivo.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -117,3 +118,8 @@ La data di fine stimata richiede almeno due completamenti, una settimana intera 
 Con una data obiettivo valida, lo storico va dalla creazione a quella data e il ritmo di consegna usa il tempo osservato dalla creazione, compreso il tempo dopo una scadenza non rispettata. Se è impostata una data obiettivo ma non definisce un periodo valido successivo alla creazione, il calcolo usa uno storico mobile di otto settimane e una finestra di previsione di 28 giorni.
 
 Poco storico o un recente cambio di ambito ne riducono l’utilità. La stima non è una scadenza promessa e non comprende il lavoro invisibile che non hai collegato. Confronta data obiettivo, lavoro rimanente e vincoli reali prima di cambiare gli impegni.
+
+
+## Scegliere un obiettivo per un feedback {#objective-feedback}
+
+Un feedback può essere associato a un obiettivo senza diventare un ticket. Nei feedback del progetto, scegli l’obiettivo nelle proprietà della richiesta. Il dettaglio dell’obiettivo elenca le richieste collegate, i voti e lo stato pubblico; selezionane una per leggere la discussione. Non contribuiscono all’avanzamento o alla dinamica dei ticket. La conversione eredita obiettivo e categorie, salvo le modifiche nel modulo di creazione.

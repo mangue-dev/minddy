@@ -1117,6 +1117,7 @@ export type IntegrationWebhookScope = "integration" | "all";
 export type IntegrationKind = "issues" | "feedback";
 
 export interface Integration {
+  objective_id: string | null;
   id: string;
   name: string;
   kind: IntegrationKind;

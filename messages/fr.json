@@ -2947,6 +2947,7 @@
     "integrationsEmpty": "Aucune intégration pour le moment.",
     "newIntegration": "Nouvelle intégration",
     "integrationNameLabel": "Nom",
+    "feedbackObjectiveHint": "Les nouveaux retours de cette intégration seront liés à cet objectif.",
     "integrationWizardNameTitle": "Nommez cette intégration",
     "integrationWizardNameDesc": "Le nom sous lequel vous la retrouverez dans la liste des clés.",
     "integrationWizardPlacementIssuesTitle": "D’où partent les tickets ?",
@@ -3281,6 +3282,13 @@
     "automationActor": "L'automatisation"
   },
   "ToolCall": {
+    "updatingFeedbackObjective": "Modification de l’objectif du retour…",
+    "feedbackObjectiveLinked": "Retour lié à l’objectif",
+    "feedbackObjectiveCleared": "Objectif du retour retiré",
+    "updateFeedbackObjectiveFailed": "Impossible de modifier l’objectif du retour",
+    "updatingIntegrationObjective": "Modification de l’objectif de l’intégration…",
+    "integrationObjectiveUpdated": "Objectif de l’intégration modifié",
+    "updateIntegrationObjectiveFailed": "Impossible de modifier l’objectif de l’intégration",
     "listingMcpTools": "Recherche des outils MCP…",
     "mcpToolsListed": "Outils MCP trouvés",
     "listMcpToolsFailed": "Impossible de trouver les outils MCP",

@@ -46,13 +46,14 @@ export async function createIntegrationApi(
   projectId: string,
   name: string,
   kind: IntegrationKind,
+  objectiveId?: string | null,
 ): Promise<{ integration: Integration; key: string }> {
   trackEvent("integration_added", { kind });
   return parseJson(
     await fetch(`/api/projects/${projectId}/integrations`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, kind }),
+      body: JSON.stringify({ name, kind, objective_id: objectiveId }),
     }),
   );
 }
@@ -115,4 +116,11 @@ export async function revokeIntegrationApi(
       { method: "DELETE" },
     ),
   );
+}
+
+export async function updateIntegrationObjectiveApi(projectId: string, integrationId: string, objectiveId: string | null) {
+  return parseJson<{ integration: Integration }>(await fetch(`/api/projects/${projectId}/integrations/${integrationId}`, {
+    method: "PATCH", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ objective_id: objectiveId }),
+  }));
 }

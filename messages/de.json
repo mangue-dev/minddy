@@ -2947,6 +2947,7 @@
     "integrationsEmpty": "Noch keine Integrationen.",
     "newIntegration": "Neue Integration",
     "integrationNameLabel": "Name",
+    "feedbackObjectiveHint": "Neue Rückmeldungen aus dieser Integration werden diesem Ziel zugeordnet.",
     "integrationWizardNameTitle": "Nennen Sie diese Integration",
     "integrationWizardNameDesc": "Den Namen, unter dem Sie sie in Ihrer Schlüsselliste finden.",
     "integrationWizardPlacementIssuesTitle": "Woher kommen die Probleme?",
@@ -3281,6 +3282,13 @@
     "automationActor": "Die Automatisierung"
   },
   "ToolCall": {
+    "updatingFeedbackObjective": "Feedback-Ziel wird geändert…",
+    "feedbackObjectiveLinked": "Feedback mit Ziel verknüpft",
+    "feedbackObjectiveCleared": "Feedback-Ziel entfernt",
+    "updateFeedbackObjectiveFailed": "Feedback-Ziel konnte nicht geändert werden",
+    "updatingIntegrationObjective": "Integrationsziel wird geändert…",
+    "integrationObjectiveUpdated": "Integrationsziel geändert",
+    "updateIntegrationObjectiveFailed": "Integrationsziel konnte nicht geändert werden",
     "listingMcpTools": "MCP-Tools werden gesucht…",
     "mcpToolsListed": "MCP-Tools gefunden",
     "listMcpToolsFailed": "MCP-Tools konnten nicht gefunden werden",

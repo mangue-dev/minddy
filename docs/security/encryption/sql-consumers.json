@@ -6620,7 +6620,7 @@
       ]
     },
     "save_feedback_post_content(uuid,uuid,bigint,jsonb)": {
-      "sha256": "3a33af48c2972fea990ea5ad361d5813d3baf9c0a6ef02fe07c30ebe79323f60",
+      "sha256": "a4f5660b2650e3492df9b2f4c476d9eb894b188037a6be76f18c3ed6ee98d85f",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -9158,6 +9158,36 @@
         "numo_assistant_turns"
       ],
       "functionReferences": []
+    },
+    "guard_feedback_merge_objective()": {
+      "sha256": "59bc56b914a22f9f9884e8316d0d007137cfc18eb3f976caf763f2d4d6cd7071",
+      "securityDefiner": false,
+      "configuration": [
+        "search_path=public"
+      ],
+      "acl": "{postgres=X/postgres}",
+      "relations": [
+        "feedback_posts"
+      ],
+      "protectedRelations": [
+        "feedback_posts"
+      ],
+      "functionReferences": []
+    },
+    "sync_feedback_descendant_objectives()": {
+      "sha256": "c88aeb6fff0ff8fcb8302e94b2d82b62c417ca419f9cdbbfa48ffa4d055245e2",
+      "securityDefiner": false,
+      "configuration": [
+        "search_path=public"
+      ],
+      "acl": "{postgres=X/postgres}",
+      "relations": [
+        "feedback_posts"
+      ],
+      "protectedRelations": [
+        "feedback_posts"
+      ],
+      "functionReferences": []
     }
   },
   "triggers": {
@@ -11120,6 +11150,14 @@
     "pull_request_issues.pull_request_issue_link_broadcast": {
       "function": "broadcast_pull_request_issue_link()",
       "definition": "CREATE TRIGGER pull_request_issue_link_broadcast AFTER INSERT OR DELETE ON pull_request_issues FOR EACH ROW EXECUTE FUNCTION broadcast_pull_request_issue_link()"
+    },
+    "feedback_posts.feedback_merge_objective_guard": {
+      "function": "guard_feedback_merge_objective()",
+      "definition": "CREATE TRIGGER feedback_merge_objective_guard BEFORE UPDATE OF merged_into_id ON feedback_posts FOR EACH ROW EXECUTE FUNCTION guard_feedback_merge_objective()"
+    },
+    "feedback_posts.feedback_descendant_objectives_sync": {
+      "function": "sync_feedback_descendant_objectives()",
+      "definition": "CREATE TRIGGER feedback_descendant_objectives_sync AFTER UPDATE OF objective_id ON feedback_posts FOR EACH ROW WHEN (old.objective_id IS DISTINCT FROM new.objective_id) EXECUTE FUNCTION sync_feedback_descendant_objectives()"
     }
   }
 }

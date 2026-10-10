@@ -1,5 +1,8 @@
 "use client";
 
+import { ObjectiveValue, PropertyRow } from "@/components/issue-property-fields";
+import { useObjectivesQuery } from "@/lib/use-objectives-query";
+import { updateIntegrationObjectiveApi } from "@/lib/integrations-api";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, MessageMultiple01Icon, Plug01Icon, WebhookIcon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
@@ -200,6 +203,8 @@ export function ProjectIntegrations({
   const format = useFormatter();
   const queryClient = useQueryClient();
 
+  const tField = useTranslations("Field");
+  const { objectives } = useObjectivesQuery(projectId);
   const { integrations, loading } = useIntegrationsQuery(projectId);
 
   const [createOpen, setCreateOpen] = useState(false);
@@ -314,6 +319,16 @@ export function ProjectIntegrations({
                       {t("integrationRevokedBadge")}
                     </Badge>
                   )}
+                  {integration.kind === "feedback" && (isOwner && !integration.revoked_at ?
+                    <PropertyRow label={tField("objective")}>
+                      <ObjectiveValue value={integration.objective_id} objectives={objectives}
+                        onChange={async (value) => {
+                          try { await updateIntegrationObjectiveApi(projectId, integration.id, value); invalidate(); }
+                          catch (error) { toast.error((error as Error).message); }
+                        }} />
+                    </PropertyRow> : <span className="text-sm text-muted-foreground">
+                      {objectives.find((o) => o.id === integration.objective_id)?.name}
+                    </span>)}
                   <WebhookStatusDot integration={integration} />
                   {isOwner && !integration.revoked_at && (
                     <>

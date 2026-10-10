@@ -26,7 +26,7 @@ export type PromoteResult =
   | {
       ok: false;
       status: number;
-      errorKey: "issueNotFound" | "databaseError" | "titleRequired";
+      errorKey: "issueNotFound" | "databaseError" | "titleRequired" | "objectiveNotFound";
     };
 
 export async function promoteFeedbackPost(params: {
@@ -55,7 +55,7 @@ export async function promoteFeedbackPost(params: {
   }
   const { data: post } = await feedbackPostStore(service, params.actorId)
     .select(
-      "id, project_id, title, body, vote_count, issue_id, merged_into_id, feedback_post_categories(category_id)"
+      "id, project_id, title, body, vote_count, issue_id, objective_id, merged_into_id, feedback_post_categories(category_id)"
     )
     .is("deleted_at", null)
     .eq("id", params.postId)
@@ -91,11 +91,13 @@ export async function promoteFeedbackPost(params: {
     actorId: params.actorId,
     mcpKeyId: params.mcpKeyId ?? null,
     smartFillOwnerTriage: true,
+    inferObjective: false,
     input: {
       title: post.title as string,
       description: sections.join("\n\n"),
       status: "backlog",
       category_ids: categoryIds,
+      objective_id: post.objective_id ?? null,
       ...override,
     },
   });
@@ -103,7 +105,7 @@ export async function promoteFeedbackPost(params: {
     return {
       ok: false,
       status: created.status,
-      errorKey: created.errorKey === "titleRequired" ? "titleRequired" : "databaseError",
+      errorKey: created.errorKey === "titleRequired" || created.errorKey === "objectiveNotFound" ? created.errorKey : "databaseError",
     };
   }
 

@@ -217,7 +217,7 @@ registrations; orphan cleanup then removes the object.
 The current source, copy, writer, reader, migration and proof status is tracked
 in [the closure matrix](closure-matrix.md).
 
-- `schema.json` records 199 application tables and 1,775 columns, their primary
+- `schema.json` records 199 application tables and 1,777 columns, their primary
   keys and foreign keys. It contains schema metadata, not application rows.
 - `../../../lib/server/encryption/data-policy.json` classifies every recorded
   column exactly once. Its 172 encryption targets include the original content,
@@ -228,10 +228,10 @@ in [the closure matrix](closure-matrix.md).
   forge mention and provider-operation resource identities
   now use purpose-separated one-way equality digests. This is a target
   policy, not evidence that those columns are encrypted.
-- `consumers.json` records 1,752 TypeScript/JavaScript table, view, RPC and object-store
+- `consumers.json` records 1,757 TypeScript/JavaScript table, view, RPC and object-store
   access candidates. Dynamic table names remain explicit `null` entries requiring
   caller review. Array and Buffer constructors are excluded.
-- `sql-consumers.json` records 566 functions, ten views and 490 application triggers. Function
+- `sql-consumers.json` records 568 functions, ten views and 492 application triggers. Function
   and view hashes pin the observed definitions without copying their bodies.
   Relation references are conservative text matches, not a SQL data-flow proof.
 - `migrations.json` pins migration inputs. CI rejects added or changed migrations
@@ -2457,3 +2457,30 @@ table/view/trigger metadata and preserved history permissions. Only the two usag
 RPC records were merged into the SQL inventory. The new server consumer was
 reviewed and added without unrelated line-number changes; the migration hash was
 pinned after this review. This is a focused function audit, not a full schema replay.
+
+
+## MIN-670 feedback objective references (2026-10-10)
+
+Feedback posts and feedback integrations gain nullable `objective_id` routing
+references, classified as clear project-scoped identities. Composite foreign keys
+prevent cross-project references. Content encryption targets and grants remain
+unchanged. The mixed-content save RPC retains its revision lock and service-role
+restriction while accepting the routing reference; merged duplicates reject an
+objective edit. The merge trigger reads UUID metadata only and prevents a merge
+from silently replacing an explicit choice, including no objective.
+
+The migration ran in disposable PGlite PostgreSQL against minimal tables without
+application data. `scripts/encryption-schema-audit.sql` introspected the two new
+columns, composite keys, updated save function and both new triggers. Only that metadata
+was reconciled into the retained full inventories; this was not a full Supabase
+replay. New TypeScript access candidates were reviewed: authorized objective
+feedback reads, feedback metadata updates, scoped linked-feedback reads and
+owner-gated integration metadata updates. `check:encrypted-access` and
+`check:encryption-schema` passed after refreshing the inventories.
+
+The PR review added a metadata-only descendant synchronization trigger. An
+explicit objective edit propagates through absorbed feedback inside the same
+transaction, so the existing merge RPC can repoint the group later. Its function
+and trigger were introspected after testing the actual merge RPC. A discarded
+review conditionally releases its own timestamped lease; this additional server
+metadata access was included in the consumer review.

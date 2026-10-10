@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 7,
-  "sourceRevision": 7,
+  "revision": 8,
+  "sourceRevision": 8,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-10",
   "compatibility": {
@@ -39,13 +39,14 @@
       "lib/relation-constants.ts",
       "lib/server/issue-relations.ts",
       "lib/objective-momentum.ts",
-      "content/documentation/reviews/min-671-objective-momentum-2026-10-10.md"
+      "content/documentation/reviews/min-671-objective-momentum-2026-10-10.md",
+      "content/documentation/reviews/min-670-feedback-objectives.md"
     ]
   },
   "review": {
-    "revision": 7,
-    "fact": "agent:/root (MIN-671 target-date condition and retained calculation claims checked against source and render tests; earlier procedural evidence retained)",
-    "language": "agent:/root (fr changed-passage review against English revision 7; earlier unchanged prose reviews retained)",
+    "revision": 8,
+    "fact": "agent:/root (MIN-671 target-date condition and retained calculation claims checked against source and render tests; earlier procedural evidence retained); agent:/root (MIN-670 source, fr wording and new-control review; existing procedural evidence retained)",
+    "language": "agent:/root (fr changed-passage review against English revision 7; earlier unchanged prose reviews retained); agent:/root (MIN-670 source, fr wording and new-control review; existing procedural evidence retained)",
     "date": "2026-10-10"
   },
   "related": [
@@ -67,7 +68,7 @@
       "src": "/documentation/fr/reader-objectives.png",
       "alt": "Dialogue de création d’objectif non envoyé avec un nom de résultat d’exemple.",
       "caption": "Nommez le résultat avant de choisir le responsable, la date cible et l’état. Ce dialogue n’a pas créé un deuxième objectif.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -118,3 +119,8 @@ Une estimation de fin exige au moins deux réalisations, une semaine complète d
 - Si une date cible est renseignée mais ne définit pas une période valide après la création, le calcul utilise huit semaines d’historique glissant et une fenêtre de prévision de 28 jours.
 
 Un historique limité ou un changement récent de périmètre rend l’estimation moins utile. Ce n’est pas une date promise, et elle exclut le travail non associé. Comparez la date cible, les tâches restantes et les contraintes réelles avant de changer vos engagements.
+
+
+## Choisir un objectif pour un retour {#objective-feedback}
+
+Un retour peut aussi être lié à un objectif sans devenir un ticket. Dans les Retours du projet, choisissez l’objectif dans les propriétés de la demande. Le détail de l’objectif affiche les retours liés, leurs votes et leur statut public ; sélectionnez-en un pour lire sa discussion. Ces demandes ne contribuent ni à la progression des tickets ni à leur dynamique. Lors de la conversion, le ticket reprend l’objectif et les catégories du retour, sous réserve des modifications dans le formulaire de création.

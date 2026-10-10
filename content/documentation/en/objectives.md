@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 7,
-  "sourceRevision": 7,
+  "revision": 8,
+  "sourceRevision": 8,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-10",
   "compatibility": {
@@ -39,13 +39,14 @@
       "lib/relation-constants.ts",
       "lib/server/issue-relations.ts",
       "lib/objective-momentum.ts",
-      "content/documentation/reviews/min-671-objective-momentum-2026-10-10.md"
+      "content/documentation/reviews/min-671-objective-momentum-2026-10-10.md",
+      "content/documentation/reviews/min-670-feedback-objectives.md"
     ]
   },
   "review": {
-    "revision": 7,
-    "fact": "agent:/root (MIN-671 target-date condition and retained calculation claims checked against source and render tests; earlier procedural evidence retained)",
-    "language": "agent:/root (en changed-passage review against English revision 7; earlier unchanged prose reviews retained)",
+    "revision": 8,
+    "fact": "agent:/root (MIN-671 target-date condition and retained calculation claims checked against source and render tests; earlier procedural evidence retained); agent:/root (MIN-670 source, en wording and new-control review; existing procedural evidence retained)",
+    "language": "agent:/root (en changed-passage review against English revision 7; earlier unchanged prose reviews retained); agent:/root (MIN-670 source, en wording and new-control review; existing procedural evidence retained)",
     "date": "2026-10-10"
   },
   "related": [
@@ -67,7 +68,7 @@
       "src": "/documentation/en/reader-objectives.png",
       "alt": "Unsubmitted objective-creation dialog with a demonstration result name.",
       "caption": "Name the result before choosing the lead, target date and status. This dialog has not created a second objective.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -118,3 +119,8 @@ An estimated finish date requires at least two completions, a full observed week
 - If a target date is set but does not define a valid period after creation, the calculation uses a rolling eight-week history and a 28-day forecast window.
 
 Sparse history or a recent scope change makes the estimate less useful. It is not a promised deadline and excludes work you have not attached. Compare the target date, remaining work and actual constraints before changing commitments.
+
+
+## Choose an objective for feedback {#objective-feedback}
+
+Feedback can also belong to an objective without becoming an issue. In the project’s Feedback destination, choose the objective in a request’s properties. The objective detail lists linked requests, their votes and public status; select one to read its discussion. These requests do not contribute to issue progress or momentum. When promoted, the new issue inherits the selected objective and feedback categories, subject to changes in the creation form.

@@ -20,8 +20,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
-  "sourceRevision": 6,
+  "revision": 7,
+  "sourceRevision": 7,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-10",
   "compatibility": {
@@ -64,13 +64,14 @@
       "lib/server/feedback/voice-limits.ts",
       "supabase/migrations/20270106320000_atomic_public_feedback_and_share_limits.sql",
       "content/documentation/reviews/premerge-de-es-2026-10-10.md",
-      "content/documentation/reviews/premerge-it-pt-BR-2026-10-10.md"
+      "content/documentation/reviews/premerge-it-pt-BR-2026-10-10.md",
+      "content/documentation/reviews/min-670-feedback-objectives.md"
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root with agent:/root/review_en_fr (light pre-merge source and retained-claim review; existing operational evidence retained; no operational rerun)",
-    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root/review_en_fr with agent:/root (fr pre-merge wording, correction and retained-meaning review)",
+    "revision": 7,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root with agent:/root/review_en_fr (light pre-merge source and retained-claim review; existing operational evidence retained; no operational rerun); agent:/root (MIN-670 source, fr wording and new-control review; existing procedural evidence retained)",
+    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root/review_en_fr with agent:/root (fr pre-merge wording, correction and retained-meaning review); agent:/root (MIN-670 source, fr wording and new-control review; existing procedural evidence retained)",
     "date": "2026-10-10"
   },
   "related": [
@@ -97,7 +98,7 @@
       "src": "/documentation/fr/publish-a-feedback-board-workflow.png",
       "alt": "Board public de retours activé, avec identité SSO locale configurée et URL masquée.",
       "caption": "Le propriétaire active le board et choisit l’identité des visiteurs. Cet exemple utilise une signature SSO locale ; l’URL et le secret de signature sont masqués.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -113,7 +114,7 @@
       "src": "/documentation/fr/submit-and-follow-feedback-workflow.png",
       "alt": "Formulaire visiteur avec titre, description et visibilité publique activée.",
       "caption": "Un visiteur identifié soumet un besoin et choisit sa visibilité. L’exemple a été réellement envoyé avec la revue automatique désactivée.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -124,20 +125,21 @@
       "padding": 24
     },
     {
-      "id": "moderate-feedback-workflow",
+      "id": "feedback-objective-selection",
       "kind": "screenshot",
-      "src": "/documentation/fr/moderate-feedback-workflow.png",
-      "alt": "Détail d’un retour avec réponse publique de l’équipe et note interne.",
-      "caption": "Le badge Public distingue la réponse visible aux visiteurs ; la note interne reste accessible à l’équipe. Aucun résultat de modération IA n’est présenté.",
-      "revision": 6,
+      "src": "/documentation/fr/feedback-objective-selection.png",
+      "alt": "Aperçu des composants de sélection d’objectif pour un retour et une intégration, tous deux réglés sur Docs.",
+      "caption": "Sélecteurs d’objectif avec des données de démonstration. Les nouveaux retours héritent du réglage de l’intégration.",
+      "revision": 7,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-10",
       "viewport": [
-        816,
-        874
+        680,
+        301
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "feedback-pages-and-views-workflow",
@@ -145,7 +147,7 @@
       "src": "/documentation/fr/feedback-pages-and-views-workflow.png",
       "alt": "Guide des retours publié, sélectionné dans la navigation du board et lisible sans connexion.",
       "caption": "Publiez une page, activez les onglets de pages et sélectionnez-la pour le board. Cette page de démonstration a été ouverte anonymement ; son URL opaque conserve `noindex`.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -159,7 +161,7 @@
   "requiredFigures": [
     "publish-a-feedback-board-workflow",
     "submit-and-follow-feedback-workflow",
-    "moderate-feedback-workflow",
+    "feedback-objective-selection",
     "feedback-pages-and-views-workflow"
   ]
 }
@@ -211,7 +213,17 @@ Choisissez la discussion interne pour les notes d’équipe. Les réponses publi
 
 Les membres de l’équipe peuvent supprimer des commentaires publics pour les modérer. Seul l’auteur peut modifier son texte ; l’équipe ne réécrit jamais les propos des visiteurs. Les commentaires internes conservent leurs règles réservant les actions à l’auteur. Après une réponse publique ou une modération, consultez le board déconnecté pour vérifier la visibilité obtenue.
 
-![Détail d’un retour avec réponse publique de l’équipe et note interne.](/documentation/fr/moderate-feedback-workflow.png)
+### Choisir un objectif pour un retour {#feedback-objective}
+
+En tant que membre du projet, choisissez **Objectif** dans les propriétés du retour ou lors de sa création en interne. Choisissez **Aucun** pour retirer le lien. L’objectif doit appartenir à ce projet. Ouvrez l’objectif pour voir ses retours liés, puis sélectionnez un retour pour lire sa discussion. Ce lien reste interne et n’expose pas les objectifs privés sur le tableau public. Il ne contribue pas à la progression des tickets.
+
+Le propriétaire du projet peut choisir un objectif facultatif lors de la création d’une intégration de retours dans **Paramètres → Intégrations**, ou le modifier à côté d’une intégration existante. Les nouveaux retours reçus par l’API héritent de cet objectif, y compris avec `analyze: false` ; modifier ce réglage ne déplace pas les retours existants. Si l’objectif est dans la corbeille, choisissez un objectif actif ou retirez le réglage avant un nouvel envoi. Numo ne choisit jamais d’objectif lors de la revue des retours. Demandez-lui explicitement de lier ou délier un retour si vous souhaitez son aide.
+
+La conversion en ticket reprend l’objectif et les catégories du retour. Vous pouvez les modifier dans le formulaire de création. Sans objectif choisi, la conversion laisse ce champ vide, même si Smart Fill est activé. Modifier ensuite l’objectif du retour ne déplace pas un ticket déjà lié. Une fusion exige que les deux retours aient le même objectif, ou n’en aient aucun ; alignez leurs objectifs si l’équipe décide qu’ils décrivent le même besoin.
+
+Un groupe fusionné partage un seul objectif. Modifier l’objectif du retour principal met aussi à jour les retours absorbés, pour permettre une nouvelle fusion du groupe.
+
+![Aperçu des composants de sélection d’objectif pour un retour et une intégration, tous deux réglés sur Docs.](/documentation/fr/feedback-objective-selection.png)
 
 ## Fusionner des retours et les relier à la livraison {#feedback-to-issue}
 

@@ -78,14 +78,24 @@ export function buildIntegrationPrompt(input: IntegrationPromptInput): string {
   }
   const envVar =
     input.mode === "issues" ? ISSUES_KEY_ENV_VAR : FEEDBACK_KEY_ENV_VAR;
-  const body =
+  let body =
     input.mode === "issues"
       ? builders.issues(input, placement)
         : builders.api(input, placement);
+  if (input.mode === "api") body += `\n\n${FEEDBACK_OBJECTIVE_RULE[input.locale]}`;
   if (!input.webhook) return body;
   return `${body}\n\n${builders.webhook(input.webhook, envVar)
   }`;
 }
+
+const FEEDBACK_OBJECTIVE_RULE: Record<Locale, string> = {
+  "en": "Feedback inherits the optional objective configured on this integration in Settings → Integrations. Do not send objective_id in the API payload. Numo review never chooses an objective; analyze false also preserves the integration default. The 201 response includes objective_id. Promotion inherits the objective and feedback categories. Merges require the same objective. If the API returns 422 objective_not_found, choose an active objective or clear the default in minddy.",
+  "fr": "Les retours héritent de l’objectif facultatif configuré sur cette intégration dans Paramètres → Intégrations. N’envoie pas objective_id dans le corps de la requête API. La revue Numo ne choisit jamais d’objectif ; analyze false conserve aussi ce réglage. La réponse 201 inclut objective_id. La conversion en ticket reprend l’objectif et les catégories du retour. Une fusion exige le même objectif. Si l’API renvoie 422 objective_not_found, choisis un objectif actif ou retire ce réglage dans minddy.",
+  "de": "Feedback übernimmt das optionale Ziel dieser Integration unter Einstellungen → Integrationen. Sende objective_id nicht im API-Payload. Die Numo-Prüfung wählt niemals ein Ziel; analyze false behält diese Vorgabe ebenfalls bei. Die 201-Antwort enthält objective_id. Bei der Umwandlung in ein Ticket werden Ziel und Kategorien übernommen. Zusammenführungen erfordern dasselbe Ziel. Bei 422 objective_not_found wähle ein aktives Ziel oder entferne die Vorgabe in minddy.",
+  "es": "Los comentarios heredan el objetivo opcional configurado para esta integración en Ajustes → Integraciones. No envíes objective_id en el cuerpo de la API. La revisión de Numo nunca elige un objetivo; analyze false también conserva este ajuste. La respuesta 201 incluye objective_id. La conversión en ticket hereda el objetivo y las categorías. Las fusiones requieren el mismo objetivo. Si la API devuelve 422 objective_not_found, elige un objetivo activo o elimina el ajuste en minddy.",
+  "it": "I feedback ereditano l’obiettivo facoltativo configurato per questa integrazione in Impostazioni → Integrazioni. Non inviare objective_id nel payload API. La revisione di Numo non sceglie mai un obiettivo; anche analyze false mantiene questa impostazione. La risposta 201 include objective_id. La conversione in ticket eredita obiettivo e categorie. Le fusioni richiedono lo stesso obiettivo. In caso di 422 objective_not_found, scegli un obiettivo attivo o rimuovi l’impostazione in minddy.",
+  "pt-BR": "Os feedbacks herdam o objetivo opcional configurado nesta integração em Configurações → Integrações. Não envie objective_id no corpo da API. A revisão do Numo nunca escolhe um objetivo; analyze false também mantém essa configuração. A resposta 201 inclui objective_id. A conversão em ticket herda o objetivo e as categorias. Mesclagens exigem o mesmo objetivo. Em caso de 422 objective_not_found, escolha um objetivo ativo ou remova a configuração no minddy."
+};
 
 interface IntegrationPromptBuilders {
   board: (input: IntegrationPromptInput, placement: string) => string;

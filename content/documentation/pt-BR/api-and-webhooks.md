@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-10",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5); 0.11.1 candidate (cd1843e12)",
     "editions": [
@@ -43,14 +43,15 @@
       "app/f/[token]/sso/route.ts",
       "lib/server/feedback/posts.ts",
       "content/documentation/reviews/premerge-de-es-2026-10-10.md",
-      "content/documentation/reviews/premerge-light-review-2026-10-10.md"
+      "content/documentation/reviews/premerge-light-review-2026-10-10.md",
+      "content/documentation/reviews/min-670-feedback-objectives.md"
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review)",
-    "date": "2026-10-09"
+    "revision": 6,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-670 source, pt-BR wording and new-control review; existing procedural evidence retained)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-670 source, pt-BR wording and new-control review; existing procedural evidence retained)",
+    "date": "2026-10-10"
   },
   "related": [
     "integration-troubleshooting",
@@ -72,7 +73,7 @@
       "src": "/documentation/pt-BR/integration-api-and-webhooks-flow.svg",
       "alt": "Diagrama: Servidor mantém chave da integração. POST issues ou feedback com tipo correto. Proprietário escolhe destino do webhook. Receptor verifica HMAC bruto e UUID.",
       "caption": "Siga as etapas nesta ordem. Servidor mantém chave da integração. `POST` issues ou feedback com tipo correto. Proprietário escolhe destino do webhook. Receptor verifica HMAC bruto e UUID.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -104,7 +105,7 @@
       "src": "/documentation/pt-BR/feedback-ingestion-and-sso-workflow.svg",
       "alt": "Sequências separadas de ingestão pelo backend e SSO do navegador, com segredos distintos.",
       "caption": "A chave de ingestão autentica chamadas do servidor. O segredo SSO do mural assina um token de visitante curto e de uso único.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -208,3 +209,8 @@ Como proprietário, ative o mural e configure seu segredo SSO separado. O backen
 Verifique se o visitante abre Meus comentários com a identidade esperada. Um token expirado exige um novo redirecionamento. Se o segredo estiver comprometido, use a confirmação para rotacioná-lo no mural e atualize o backend ao mesmo tempo. O código por email continua disponível como alternativa quando o SSO não estiver acessível.
 
 ![Sequências separadas de ingestão pelo backend e SSO do navegador, com segredos distintos.](/documentation/pt-BR/feedback-ingestion-and-sso-workflow.svg)
+
+
+## Escolher um objetivo para um feedback {#feedback-objective-default}
+
+Para uma integração `feedback`, o proprietário pode escolher **Objetivo** ao criá-la ou ao lado da integração existente em **Configurações → Integrações**. Apenas objetivos ativos do mesmo projeto são aceitos. Cada novo envio `POST /api/v1/feedback` herda essa configuração, inclusive com `analyze: false`; não envie `objective_id` no corpo da API. A resposta 201 inclui o `objective_id` atribuído ou `null`. Alterar ou remover a configuração afeta apenas envios futuros. Um objetivo indisponível retorna 422 `objective_not_found`: escolha um ativo ou remova a configuração antes de tentar novamente. A revisão do Numo não deduz objetivos. A conversão herda o objetivo e as categorias do feedback.

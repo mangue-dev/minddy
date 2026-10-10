@@ -21,6 +21,7 @@ import {
   type FeedbackPostStatus,
   type FeedbackReviewState,
 } from "@/lib/feedback/types";
+import { validateFeedbackObjective } from "./objective";
 import { captureServerEvent } from "@/lib/server/posthog";
 import { lengthBucket } from "@/lib/analytics-sanitize";
 import { decodeFeedbackPost, encodeFeedbackPost, feedbackPostStore, saveFeedbackPostContent } from "@/lib/server/feedback-post-store";
@@ -57,6 +58,7 @@ export interface FeedbackPostRow {
   classified_at: string | null;
   vote_count: number;
   issue_id: string | null;
+  objective_id: string | null;
   merged_into_id: string | null;
   suggested_merge_into_id: string | null;
   suggested_confidence: number | null;
@@ -74,19 +76,20 @@ export interface FeedbackPostRow {
   updated_at: string;
 }
 
-/** Colonnes rendues aux appelants — jamais l'embedding (payload inutile). */
+/** Fields returned to callers; embeddings are deliberately excluded. */
 export const FEEDBACK_POST_SELECT =
-  "id, project_id, author_id, created_by_member, title, body, submitted_title, submitted_body, status, is_public, review_state, sensitivity, moderation_reason, classified_at, vote_count, issue_id, merged_into_id, suggested_merge_into_id, suggested_confidence, source, analyzed_at, analysis_failures, source_language, translated_title, translated_body, translated_language, created_at, updated_at";
+  "id, project_id, author_id, created_by_member, title, body, submitted_title, submitted_body, status, is_public, review_state, sensitivity, moderation_reason, classified_at, vote_count, issue_id, objective_id, merged_into_id, suggested_merge_into_id, suggested_confidence, source, analyzed_at, analysis_failures, source_language, translated_title, translated_body, translated_language, created_at, updated_at";
 
 export type CreateFeedbackPostResult =
   | { ok: true; post: FeedbackPostRow }
-  | { ok: false; status: number; errorKey: "titleRequired" | "databaseError" };
+  | { ok: false; status: number; errorKey: "titleRequired" | "databaseError" | "objectiveNotFound" };
 
 export async function createFeedbackPost(input: {
   projectId: string;
   title: string;
   body?: string | null;
   source: FeedbackPostSource;
+  objectiveId?: unknown;
   /** Author identity (feedback_users.id). Null only for posts
  created by the team itself without an attached author. */
   authorId: string | null;
@@ -113,6 +116,10 @@ export async function createFeedbackPost(input: {
   const title = input.title.trim().slice(0, FEEDBACK_TITLE_MAX);
   const body = (input.body ?? "").trim().slice(0, FEEDBACK_BODY_MAX);
   if (!title) return { ok: false, status: 400, errorKey: "titleRequired" };
+
+  if (!await validateFeedbackObjective(service, input.projectId, input.objectiveId)) {
+    return { ok: false, status: 400, errorKey: "objectiveNotFound" };
+  }
 
   // Imputation to the project owner, REQUESTED (MIN-131): `authorId` is a
   // `feedback_users.id` (un visiteur du board), pas un compte auth — il n'y a
@@ -146,6 +153,7 @@ export async function createFeedbackPost(input: {
   try {
     stored = await encodeFeedbackPost({
       project_id: input.projectId,
+      objective_id: input.objectiveId ?? null,
       author_id: input.authorId,
       created_by_member: input.createdByMember ?? null,
       title, body, submitted_title: title, submitted_body: body,
@@ -251,6 +259,7 @@ export type UpdateFeedbackFieldsResult =
         | "invalidStatus"
         | "invalidRequest"
         | "noFieldsToUpdate"
+        | "objectiveNotFound"
         | "databaseError";
     };
 
@@ -280,6 +289,15 @@ export async function updateFeedbackPostFields(params: {
 
   const input = params.input;
   const updates: Record<string, unknown> = {};
+  if ("objective_id" in input) {
+    if (input.objective_id === undefined || !await validateFeedbackObjective(service, before.project_id, input.objective_id)) {
+      return { ok: false, status: 400, errorKey: "objectiveNotFound" };
+    }
+    if (before.merged_into_id != null) return { ok: false, status: 400, errorKey: "invalidRequest" };
+    updates.objective_id = input.objective_id;
+    updates.suggested_merge_into_id = null;
+    updates.suggested_confidence = null;
+  }
   if ("title" in input) {
     const title = typeof input.title === "string" ? input.title.trim() : "";
     if (!title) return { ok: false, status: 400, errorKey: "titleRequired" };
@@ -324,11 +342,12 @@ export async function updateFeedbackPostFields(params: {
     return { ok: false, status: 400, errorKey: "noFieldsToUpdate" };
   }
 
+  let metadataQuery = service.from("feedback_posts").update(updates)
+    .is("deleted_at", null).eq("id", params.postId);
+  if ("objective_id" in updates) metadataQuery = metadataQuery.is("merged_into_id", null);
   const { data: storedPost, error } = "title" in updates || "body" in updates
     ? await saveFeedbackPostContent(service, params.postId, before.project_id, updates)
-    : await service.from("feedback_posts").update(updates)
-      .is("deleted_at", null).eq("id", params.postId)
-      .select("*").maybeSingle();
+    : await metadataQuery.select("*").maybeSingle();
   if (error || !storedPost) {
     console.error("[feedback-posts] update_failed");
     return { ok: false, status: 500, errorKey: "databaseError" };

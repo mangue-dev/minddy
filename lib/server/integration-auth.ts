@@ -21,6 +21,7 @@ export interface AuthedIntegration {
   id: string;
   project_id: string;
   name: string;
+  objective_id: string | null;
   /** Dedicated use of the key — each /api/v1 endpoint verifies its own. */
   kind: "issues" | "feedback";
 }
@@ -68,7 +69,7 @@ export async function authenticateIntegrationKey(
   const service = getServiceClient();
   const { data: integration } = await service
     .from("integrations")
-    .select("id, project_id, name, kind")
+    .select("id, project_id, name, kind, objective_id")
     .eq("key_hash", hashIntegrationKey(key))
     .is("revoked_at", null)
     .maybeSingle();

@@ -368,6 +368,9 @@ export function describeFeedbackEvent(
 ): string {
   const { t } = tr;
   const fbStatus = (v: string) => tr.tFeedbackStatus?.(v) ?? v;
+  if (e.type === "updated" && e.field === "objective_id") return t("objectiveChanged", {
+    from: objectiveName(ctx, tr, e.from_value), to: objectiveName(ctx, tr, e.to_value),
+  });
 
   // Entry into the system: the channel is carried by `field`.
   if (e.type === "created") return t(`feedbackCreated_${e.field ?? "board"}`);

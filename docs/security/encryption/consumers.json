@@ -7672,6 +7672,13 @@
     "storage": false
   },
   {
+    "file": "lib/server/feedback/review.ts",
+    "operation": "from",
+    "resource": "feedback_posts",
+    "line": 762,
+    "storage": false
+  },
+  {
     "file": "lib/server/feedback/set-post-categories.ts",
     "operation": "from",
     "resource": "categories",
@@ -8845,6 +8852,13 @@
     "operation": "from",
     "resource": "integrations",
     "line": 269,
+    "storage": false
+  },
+  {
+    "file": "lib/server/integrations.ts",
+    "operation": "from",
+    "resource": "integrations",
+    "line": 304,
     "storage": false
   },
   {

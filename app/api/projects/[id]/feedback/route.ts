@@ -77,6 +77,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     source: "internal",
     authorId: feedbackUser.id,
     createdByMember: guard.userId,
+    objectiveId: body.objective_id,
     // Same choice as the public board composer: publish or keep for
     // the team. Omitted (agents, historical calls) → public, as before.
     isPublic: typeof body.is_public === "boolean" ? body.is_public : undefined,

@@ -2978,6 +2978,11 @@
         "type": "timestamp with time zone",
         "nullable": true,
         "generated": false
+      },
+      "objective_id": {
+        "type": "uuid",
+        "nullable": true,
+        "generated": false
       }
     },
     "primaryKey": [
@@ -2988,6 +2993,16 @@
         "table": "users",
         "column": "created_by",
         "targetColumn": "id"
+      },
+      {
+        "table": "objectives",
+        "column": "objective_id",
+        "targetColumn": "id"
+      },
+      {
+        "table": "objectives",
+        "column": "project_id",
+        "targetColumn": "project_id"
       },
       {
         "table": "projects",
@@ -4684,6 +4699,11 @@
         "type": "uuid",
         "nullable": true,
         "generated": false
+      },
+      "objective_id": {
+        "type": "uuid",
+        "nullable": true,
+        "generated": false
       }
     },
     "primaryKey": [
@@ -4714,6 +4734,16 @@
         "table": "feedback_posts",
         "column": "merged_into_id",
         "targetColumn": "id"
+      },
+      {
+        "table": "objectives",
+        "column": "objective_id",
+        "targetColumn": "id"
+      },
+      {
+        "table": "objectives",
+        "column": "project_id",
+        "targetColumn": "project_id"
       },
       {
         "table": "projects",

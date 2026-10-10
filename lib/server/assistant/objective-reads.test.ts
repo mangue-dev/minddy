@@ -6,6 +6,7 @@ import { CONVERSATION_ASSISTANT_TOOLS } from "./tools";
 
 const { getProjectAccess } = vi.hoisted(() => ({ getProjectAccess: vi.fn() }));
 vi.mock("@/lib/server/project-access", () => ({ getProjectAccess }));
+vi.mock("@/lib/supabase-service", () => ({ getServiceClient: () => database() }));
 
 const objectiveId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const otherObjectiveId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
@@ -94,6 +95,7 @@ describe("Numo get_objective", () => {
     expect(result).toEqual({
       success: true,
       result: {
+        linked_feedback: [],
         objective: { id: objectiveId, name: "Release", description: "Ship it", status: "planned", lead_user_id: "user-1", target_date: null },
         relations: [
           { relation: "blocked_by", objective_id: otherObjectiveId, name: "Foundation", status: "in_progress", lead_user_id: null },

@@ -20,8 +20,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
-  "sourceRevision": 6,
+  "revision": 7,
+  "sourceRevision": 7,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-10",
   "compatibility": {
@@ -64,13 +64,14 @@
       "lib/server/feedback/voice-limits.ts",
       "supabase/migrations/20270106320000_atomic_public_feedback_and_share_limits.sql",
       "content/documentation/reviews/premerge-de-es-2026-10-10.md",
-      "content/documentation/reviews/premerge-it-pt-BR-2026-10-10.md"
+      "content/documentation/reviews/premerge-it-pt-BR-2026-10-10.md",
+      "content/documentation/reviews/min-670-feedback-objectives.md"
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root with agent:/root/review_it_pt (light pre-merge source and retained-claim review; existing operational evidence retained; no operational rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root/review_it_pt with agent:/root (it pre-merge wording, correction and retained-meaning review)",
+    "revision": 7,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root with agent:/root/review_it_pt (light pre-merge source and retained-claim review; existing operational evidence retained; no operational rerun); agent:/root (MIN-670 source, it wording and new-control review; existing procedural evidence retained)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root/review_it_pt with agent:/root (it pre-merge wording, correction and retained-meaning review); agent:/root (MIN-670 source, it wording and new-control review; existing procedural evidence retained)",
     "date": "2026-10-10"
   },
   "related": [
@@ -97,7 +98,7 @@
       "src": "/documentation/it/publish-a-feedback-board-workflow.png",
       "alt": "Bacheca pubblica dei feedback attiva, con identità SSO locale configurata e URL nascosto.",
       "caption": "Il proprietario attiva la bacheca e sceglie l’identità dei visitatori. Questo esempio usa un firmatario SSO locale; l’URL e il segreto di firma sono nascosti.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -113,7 +114,7 @@
       "src": "/documentation/it/submit-and-follow-feedback-workflow.png",
       "alt": "Modulo di feedback del visitatore con titolo, descrizione e visibilità pubblica attivata.",
       "caption": "Un visitatore identificato invia un’esigenza e ne sceglie la visibilità. L’esempio è stato realmente inviato con la revisione automatica disattivata.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -124,20 +125,21 @@
       "padding": 24
     },
     {
-      "id": "moderate-feedback-workflow",
+      "id": "feedback-objective-selection",
       "kind": "screenshot",
-      "src": "/documentation/it/moderate-feedback-workflow.png",
-      "alt": "Dettaglio di un feedback con risposta pubblica del team e nota interna.",
-      "caption": "L’etichetta Pubblico distingue la risposta visibile ai visitatori; la nota interna resta al team. Non viene mostrato alcun risultato di moderazione IA.",
-      "revision": 6,
+      "src": "/documentation/it/feedback-objective-selection.png",
+      "alt": "Anteprima dei componenti di selezione dell’obiettivo per un feedback e un’integrazione, entrambi impostati su Docs.",
+      "caption": "Selettori dell’obiettivo con dati dimostrativi. I nuovi feedback ereditano l’impostazione dell’integrazione.",
+      "revision": 7,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-10",
       "viewport": [
-        816,
-        874
+        680,
+        301
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "feedback-pages-and-views-workflow",
@@ -145,7 +147,7 @@
       "src": "/documentation/it/feedback-pages-and-views-workflow.png",
       "alt": "Guida ai feedback pubblicata e selezionata nella navigazione della bacheca, leggibile senza accesso.",
       "caption": "Pubblica una pagina, attiva le schede delle pagine e selezionala per la bacheca. Questa pagina dimostrativa è stata aperta anonimamente; il suo URL opaco mantiene `noindex`.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -159,7 +161,7 @@
   "requiredFigures": [
     "publish-a-feedback-board-workflow",
     "submit-and-follow-feedback-workflow",
-    "moderate-feedback-workflow",
+    "feedback-objective-selection",
     "feedback-pages-and-views-workflow"
   ]
 }
@@ -211,7 +213,17 @@ Scegli la discussione interna per le note del team. Le risposte pubbliche sono v
 
 I membri possono eliminare commenti pubblici per moderarli. Solo l’autore può modificarli e il team non riscrive mai le parole dei visitatori. I commenti interni mantengono le regole che riservano queste azioni all’autore. Dopo una risposta pubblica o un intervento di moderazione, verifica la bacheca senza sessione per confermare la visibilità prevista.
 
-![Dettaglio di un feedback con risposta pubblica del team e nota interna.](/documentation/it/moderate-feedback-workflow.png)
+### Scegliere un obiettivo per un feedback {#feedback-objective}
+
+Come membro del progetto, scegli **Obiettivo** nelle proprietà del feedback o quando lo crei internamente. Scegli **Nessuna** per rimuovere il collegamento. L’obiettivo deve appartenere allo stesso progetto. Apri l’obiettivo per vedere i feedback collegati e selezionane uno per leggere la discussione. L’associazione è interna, non espone obiettivi privati sulla bacheca pubblica e non contribuisce all’avanzamento dei ticket.
+
+Il proprietario può scegliere un obiettivo facoltativo creando un’integrazione di feedback in **Impostazioni → Integrazioni**, oppure modificarlo accanto a un’integrazione esistente. I nuovi invii API ereditano l’obiettivo, anche con `analyze: false`. Cambiare l’impostazione non sposta i feedback esistenti. Se l’obiettivo è nel cestino, scegline uno attivo o rimuovi l’impostazione prima di un nuovo invio. Numo non sceglie mai un obiettivo durante la revisione dei feedback. Chiedigli esplicitamente di collegare una richiesta o rimuoverne il collegamento.
+
+La conversione crea un ticket con l’obiettivo e le categorie del feedback. Puoi modificarli nel modulo di creazione. Senza un obiettivo scelto, il campo resta vuoto anche con Smart Fill attivo. Modificare in seguito l’obiettivo del feedback non sposta un ticket già collegato. Le fusioni richiedono lo stesso obiettivo per entrambe le richieste, anche quando nessuna ne ha uno. Allinea prima gli obiettivi se il team decide che descrivono lo stesso bisogno.
+
+Un gruppo unito condivide un solo obiettivo. Modificare l’obiettivo della richiesta principale aggiorna anche le richieste assorbite, così il gruppo può essere unito nuovamente.
+
+![Anteprima dei componenti di selezione dell’obiettivo per un feedback e un’integrazione, entrambi impostati su Docs.](/documentation/it/feedback-objective-selection.png)
 
 ## Unire feedback e collegarlo alla consegna {#feedback-to-issue}
 

@@ -1719,6 +1719,7 @@
         "id",
         "issue_id",
         "merged_into_id",
+        "objective_id",
         "project_id",
         "suggested_merge_into_id"
       ],
@@ -2509,6 +2510,7 @@
       "routing_identity": [
         "created_by",
         "id",
+        "objective_id",
         "project_id"
       ],
       "timestamp": [
