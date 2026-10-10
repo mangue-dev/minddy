@@ -1,6 +1,10 @@
 // @vitest-environment jsdom
 import { focusManager, QueryClient, QueryObserver } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("./supabase", () => ({ getSupabase: () => ({ auth: {
+  getSession: async () => ({ data: { session: { user: { id: "owner" } } }, error: null }),
+} }) }));
 import { assertPullRequestReadBudget, pullRequestQueryOptions, pullRequestReadState, pullRequestReadRetry, pullRequestReadRetryAt } from "./pull-request-query";
 import { ApiError } from "./agent-api";
 import { nextReadActivationSequence, readActivationSession } from "./read-activation-sequence";
@@ -69,7 +73,7 @@ describe("pull request activation authority", () => {
     const activationSequence = nextReadActivationSequence();
     const observer = new QueryObserver(client, options);
     const stop = observer.subscribe(() => {});
-    expect(fetch).toHaveBeenCalledOnce();
+    await vi.waitFor(() => expect(fetch).toHaveBeenCalledOnce());
     release(Response.json({ pr: { headSha: "prepared-head" }, files: [] })); await pending;
     expect(pullRequestReadState(observer.getCurrentResult(), activationSequence)).toBe("refreshing");
     stop(); client.clear();

@@ -405,8 +405,8 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
  * Resume after an absence — the tab returns to the foreground, the machine
  * wakes up.
  *
- * This is the only path that brings the page up to date in this case: the refetch at
- * focus is disabled, and the `online` event that `refetchOnReconnect`
+ * This brings healthy caches up to date after an absence: focus only retries
+ * failed reads, and the `online` event that `refetchOnReconnect`
  * is watching for does not start from a day before. There remained the socket, which is precisely what has just
  * died and which takes tens of seconds to notice - the details
  * are in lib/realtime-resume.ts. We therefore catch the caches WITHOUT waiting for it
@@ -420,6 +420,12 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
     let probe: ReturnType<typeof setTimeout> | null = null;
 
     const resume = (hiddenForMs: number) => {
+      // Include failures outside realtime scopes (notably usage). Short focus
+      // switches must recover errors too, without refreshing healthy boards.
+      void queryClient.refetchQueries({
+        type: "active",
+        predicate: (query) => query.state.status === "error" && query.state.fetchStatus === "idle",
+      });
       if (!shouldCatchUpOnResume({ hiddenForMs })) return;
       const realtime = getSupabase().realtime;
       catchUp([...USER_SCOPE_KEYS, ...topicIds.flatMap(projectScopeKeys)]);

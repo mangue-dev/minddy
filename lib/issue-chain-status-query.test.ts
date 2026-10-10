@@ -4,6 +4,10 @@ import { fetchIssueAutomationApi, fetchIssueChainStatusApi } from "./agent-api";
 import { issueChainQueryKey, issueChainStatusQueryKey } from "./use-agent-runs";
 import { keysForProjectEvent } from "./realtime-keys";
 
+vi.mock("./supabase", () => ({ getSupabase: () => ({ auth: {
+  getSession: async () => ({ data: { session: { user: { id: "owner" } } }, error: null }),
+} }) }));
+
 afterEach(() => vi.unstubAllGlobals());
 describe("issue chain status query", () => {
   it("keeps full simulation consumers on their existing endpoint", async () => {

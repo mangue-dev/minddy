@@ -1,5 +1,7 @@
 "use client";
 
+import { fetchClientRead } from "./client-read";
+
 import { applyPendingRelations } from "./optimistic/relation-writes";
 import { applyPendingBoard } from "./optimistic/issue-writes";
 import { fresherGlobalIssueSnapshot, mergeIssueSnapshot } from "./global-issues-api";
@@ -21,7 +23,7 @@ export function browserTimeZone(): string {
 export async function fetchGlobalBoardApi(
   signal?: AbortSignal
 ): Promise<GlobalBoardResponse> {
-  const response = await fetch(
+  const response = await fetchClientRead(
     `/api/me/board?tz=${encodeURIComponent(browserTimeZone())}`,
     { signal }
   );

@@ -1,5 +1,7 @@
 "use client";
 
+import { fetchClientRead } from "./client-read";
+
 import type { UserStats } from "./types";
 
 async function parseJson<T>(response: Response): Promise<T> {
@@ -19,5 +21,5 @@ async function parseJson<T>(response: Response): Promise<T> {
 }
 
 export async function fetchStatsApi(tz: string): Promise<UserStats> {
-  return parseJson<UserStats>(await fetch(`/api/stats?tz=${encodeURIComponent(tz)}`));
+  return parseJson<UserStats>(await fetchClientRead(`/api/stats?tz=${encodeURIComponent(tz)}`));
 }

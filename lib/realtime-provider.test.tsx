@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, QueryObserver } from "@tanstack/react-query";
 import type { AuthChangeEvent } from "@supabase/supabase-js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { RealtimeProvider } from "./realtime-provider";
@@ -84,6 +84,33 @@ afterEach(async () => {
 });
 
 describe("Realtime authorization recovery", () => {
+  it("recovers active usage after a brief focus switch and leaves healthy and inactive reads alone", async () => {
+    await mount();
+    await advance(400);
+    const usageRead = vi.fn(async () => ({ remainingPercent: 90 }));
+    const healthyRead = vi.fn(async () => "healthy");
+    const inactiveRead = vi.fn(async () => "inactive");
+    client.setQueryData(["billing", "usage"], { remainingPercent: 95 });
+    client.setQueryData(["page", "page-1"], "healthy");
+    client.setQueryDefaults(["inactive"], { queryFn: inactiveRead });
+    client.setQueryData(["inactive"], "inactive");
+    const usage = new QueryObserver(client, { queryKey: ["billing", "usage"], queryFn: usageRead, staleTime: Infinity });
+    const healthy = new QueryObserver(client, { queryKey: ["page", "page-1"], queryFn: healthyRead, staleTime: Infinity });
+    const stopUsage = usage.subscribe(() => {});
+    const stopHealthy = healthy.subscribe(() => {});
+    client.getQueryCache().find({ queryKey: ["billing", "usage"] })!.setState({ status: "error", error: new Error("Network unavailable") });
+    client.getQueryCache().find({ queryKey: ["inactive"] })!.setState({ status: "error", error: new Error("Network unavailable") });
+    try {
+      await act(async () => window.dispatchEvent(new Event("blur")));
+      await advance(100);
+      await act(async () => window.dispatchEvent(new Event("focus")));
+      expect(usageRead).toHaveBeenCalledTimes(1);
+      expect(usage.getCurrentResult().data).toEqual({ remainingPercent: 90 });
+      expect(healthyRead).not.toHaveBeenCalled();
+      expect(inactiveRead).not.toHaveBeenCalled();
+    } finally { stopUsage(); stopHealthy(); }
+  });
+
   it("stops denied project retries and repeated cache refreshes while the user channel stays live", async () => {
     resolve(denied);
     const invalidate = vi.spyOn(client, "invalidateQueries");

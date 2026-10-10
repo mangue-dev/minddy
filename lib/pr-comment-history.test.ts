@@ -8,6 +8,10 @@ import messages from "@/messages/en.json";
 import { ThreadComment } from "@/components/pull-requests/pr-detail";
 import { updatePullRequestCommentApi } from "./agent-api";
 
+vi.mock("./supabase", () => ({ getSupabase: () => ({ auth: {
+  getSession: async () => ({ data: { session: { user: { id: "owner" } } }, error: null }),
+} }) }));
+
 vi.mock("mangue-ui", async () => {
   const { createElement: h } = await import("react");
   const wrapper = ({ children }: { children: import("react").ReactNode }) => h("div", null, children);

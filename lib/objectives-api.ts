@@ -1,5 +1,7 @@
 "use client";
 
+import { fetchClientRead } from "./client-read";
+
 import { saveCreationRelations } from "./creation-relations";
 
 import type {
@@ -31,7 +33,7 @@ export async function fetchObjectivesApi(
   signal?: AbortSignal
 ): Promise<Objective[]> {
   return parseJson<Objective[]>(
-    await fetch(`/api/projects/${projectId}/objectives`, { signal })
+    await fetchClientRead(`/api/projects/${projectId}/objectives`, { signal })
   );
 }
 

@@ -1,5 +1,7 @@
 "use client";
 
+import { fetchClientRead } from "./client-read";
+
 import { createUuid } from "@/lib/create-uuid";
 
 import type { RepoProviderId } from "@/lib/repo-providers";
@@ -228,7 +230,7 @@ export function isPrWorthShowing(pr: IssuePr | null): boolean {
 export async function fetchIssueAgentRunsApi(
   issueId: string,
 ): Promise<{ runs: AgentRunSummary[]; pullRequest: IssuePr | null }> {
-  return parseJson(await fetch(`/api/issues/${issueId}/agent`));
+  return parseJson(await fetchClientRead(`/api/issues/${issueId}/agent`));
 }
 
 /** Status of the automation chain of a ticket (MIN-147), customer view.
@@ -265,14 +267,14 @@ export interface IssueAutomationState {
 export async function fetchIssueAutomationApi(
   issueId: string,
 ): Promise<IssueAutomationState> {
-  return parseJson(await fetch(`/api/issues/${issueId}/automation`));
+  return parseJson(await fetchClientRead(`/api/issues/${issueId}/automation`));
 }
 
 /** Fetch the live chain without calculating an unused launch estimate. */
 export async function fetchIssueChainStatusApi(
   issueId: string,
 ): Promise<Pick<IssueAutomationState, "chain">> {
-  return parseJson(await fetch(`/api/issues/${issueId}/automation?view=chain`));
+  return parseJson(await fetchClientRead(`/api/issues/${issueId}/automation?view=chain`));
 }
 
 /**
@@ -311,7 +313,7 @@ export async function postIssueAutomationApi(
 export async function fetchAgentRunApi(
   runId: string,
 ): Promise<{ run: AgentRunSummary }> {
-  return parseJson(await fetch(`/api/agent-runs/${runId}`));
+  return parseJson(await fetchClientRead(`/api/agent-runs/${runId}`));
 }
 
 /**
@@ -450,7 +452,7 @@ export async function fetchAgentRunEventsApi(
   signal?: AbortSignal,
 ): Promise<{ events: AgentRunEvent[] }> {
   const q = after != null ? `?after=${after}` : "";
-  return parseJson(await fetch(`/api/agent-runs/${runId}/events${q}`, { signal }));
+  return parseJson(await fetchClientRead(`/api/agent-runs/${runId}/events${q}`, { signal }));
 }
 
 /**
@@ -658,7 +660,7 @@ export async function fetchPullRequestApi(
   prId: string,
   signal?: AbortSignal,
 ): Promise<AgentRunPrResponse> {
-  return parseJson(await fetch(`/api/pull-requests/${prId}`, { signal, cache: "no-store" }));
+  return parseJson(await fetchClientRead(`/api/pull-requests/${prId}`, { signal, cache: "no-store" }));
 }
 
 export interface PullRequestReadinessResponse {
@@ -674,7 +676,7 @@ export interface PullRequestReadinessBatchResponse {
 export async function fetchPullRequestReadinessApi(
   prId: string,
 ): Promise<PullRequestReadinessResponse> {
-  return parseJson(await fetch(`/api/pull-requests/${prId}/readiness`));
+  return parseJson(await fetchClientRead(`/api/pull-requests/${prId}/readiness`));
 }
 
 export async function fetchPullRequestReadinessBatchApi(
@@ -682,7 +684,7 @@ export async function fetchPullRequestReadinessBatchApi(
 ): Promise<PullRequestReadinessBatchResponse> {
   const params = new URLSearchParams();
   for (const prId of prIds) params.append("pr", prId);
-  return parseJson(await fetch(`/api/pull-requests/readiness?${params}`));
+  return parseJson(await fetchClientRead(`/api/pull-requests/readiness?${params}`));
 }
 
 /**
@@ -710,7 +712,7 @@ export async function fetchAgentRunDiffApi(
   live?: boolean;
 }> {
   const query = opts?.stat ? "?stat=1" : "";
-  return parseJson(await fetch(`/api/agent-runs/${runId}/diff${query}`));
+  return parseJson(await fetchClientRead(`/api/agent-runs/${runId}/diff${query}`));
 }
 
 /**
@@ -739,7 +741,7 @@ export async function fetchPrFileSourceApi(
   path: string,
 ): Promise<{ content: string }> {
   return parseJson(
-    await fetch(`${endpoint}/file?path=${encodeURIComponent(path)}`),
+    await fetchClientRead(`${endpoint}/file?path=${encodeURIComponent(path)}`),
   );
 }
 
@@ -934,7 +936,7 @@ export type { PrReviewRunSummary, PrReviewSession };
 export async function fetchPullRequestAiReviewApi(
   prId: string,
 ): Promise<PrReviewSession> {
-  return parseJson(await fetch(`${prEndpoint(prId)}/ai-review`));
+  return parseJson(await fetchClientRead(`${prEndpoint(prId)}/ai-review`));
 }
 
 // ── Global Pull Requests page (MIN-66, expanded by MIN-143) ─────────────────
@@ -1032,12 +1034,12 @@ export async function fetchAllPullRequestsApi(input: {
   if (input.offset != null) params.set("offset", String(input.offset));
   if (input.pin?.pr) params.set("pr", input.pin.pr);
   if (input.pin?.run) params.set("run", input.pin.run);
-  return parseJson(await fetch(`/api/pull-requests?${params}`));
+  return parseJson(await fetchClientRead(`/api/pull-requests?${params}`));
 }
 
 /** Lightweight open-PR count used by the persistent app shell. */
 export async function fetchOpenPullRequestCountApi(): Promise<{ count: number }> {
-  return parseJson(await fetch("/api/pull-requests/count"));
+  return parseJson(await fetchClientRead("/api/pull-requests/count"));
 }
 
 /**
@@ -1056,7 +1058,7 @@ export async function fetchPullRequestCommentsApi(prId: string): Promise<{
   timeline: PrTimelineEvent[];
   reactions: ReviewCommentReaction[];
 }> {
-  return parseJson(await fetch(`${prEndpoint(prId)}/comments`));
+  return parseJson(await fetchClientRead(`${prEndpoint(prId)}/comments`));
 }
 
 /**
@@ -1106,7 +1108,7 @@ export interface PullRequestCommit {
 export async function fetchPullRequestCommitsApi(
   prId: string,
 ): Promise<{ commits: PullRequestCommit[]; truncated: boolean }> {
-  return parseJson(await fetch(`${prEndpoint(prId)}/commits`));
+  return parseJson(await fetchClientRead(`${prEndpoint(prId)}/commits`));
 }
 
 /** An account of the forge, as the commentary composer suggests. */
@@ -1124,7 +1126,7 @@ export interface RepoMember {
 export async function fetchPullRequestMembersApi(
   endpoint: PrEndpoint,
 ): Promise<{ members: RepoMember[] }> {
-  return parseJson(await fetch(`${endpoint}/members`));
+  return parseJson(await fetchClientRead(`${endpoint}/members`));
 }
 
 /** Base of ONE commit routes: its diff, and — like a PR — its files. */
@@ -1155,7 +1157,7 @@ export async function fetchPrCommitDiffApi(
   prId: string,
   sha: string,
 ): Promise<PrCommitDiff> {
-  return parseJson(await fetch(prCommitEndpoint(prId, sha)));
+  return parseJson(await fetchClientRead(prCommitEndpoint(prId, sha)));
 }
 
 /**
@@ -1225,7 +1227,7 @@ export async function fetchPrReviewCommentsApi(endpoint: PrEndpoint): Promise<{
   threads: ReviewThreadState[];
   reactions: ReviewCommentReaction[];
 }> {
-  return parseJson(await fetch(`${endpoint}/review-comments`));
+  return parseJson(await fetchClientRead(`${endpoint}/review-comments`));
 }
 
 /**
@@ -1371,7 +1373,7 @@ export interface AgentSessionListItem {
 export async function fetchAgentSessionsApi(): Promise<{
   sessions: AgentSessionListItem[];
 }> {
-  return parseJson(await fetch(`/api/agent-runs`));
+  return parseJson(await fetchClientRead(`/api/agent-runs`));
 }
 
 // ── “Read” status of agent sessions (blue “completed, unread” bubble) ────────
@@ -1384,7 +1386,7 @@ export async function fetchAgentSessionsApi(): Promise<{
 export async function fetchAgentReadsApi(): Promise<{
   reads: Record<string, string>;
 }> {
-  return parseJson(await fetch(`/api/agent-reads`));
+  return parseJson(await fetchClientRead(`/api/agent-reads`));
 }
 
 /** Mark a conversation as read NOW. */
@@ -1512,6 +1514,6 @@ export async function fetchPullRequestCommentEditsApi(
   signal?: AbortSignal,
 ): Promise<{ edits: PullRequestCommentEdit[] }> {
   return parseJson(
-    await fetch(`${endpoint}/comment-edits?commentId=${commentId}`, { signal }),
+    await fetchClientRead(`${endpoint}/comment-edits?commentId=${commentId}`, { signal }),
   );
 }

@@ -4,6 +4,10 @@ import { createPrTabPreparation } from "./pr-tab-preparation";
 import { pullRequestQueryOptions } from "./pull-request-query";
 import { ApiError } from "./agent-api";
 
+vi.mock("./supabase", () => ({ getSupabase: () => ({ auth: {
+  getSession: async () => ({ data: { session: { user: { id: "owner" } } }, error: null }),
+} }) }));
+
 afterEach(() => vi.unstubAllGlobals());
 
 function setup() {
@@ -51,6 +55,7 @@ describe("account-owned PR preparation", () => {
       signal = init!.signal!; signal.addEventListener("abort", () => reject(new Error("Aborted")), { once: true });
     }));
     preparation.visit("/home", ["/home", "/pull-requests?pr=late"]); flush();
+    await vi.waitFor(() => expect(signal).toBeDefined());
     expect(signal.aborted).toBe(false);
     await client.fetchQuery({ queryKey: ["foreground"], queryFn: async () => "done" });
     expect(signal.aborted).toBe(true);
@@ -68,6 +73,7 @@ describe("account-owned PR preparation", () => {
     const observer = new QueryObserver(client, pullRequestQueryOptions("late"));
     const stop = observer.subscribe(() => {});
     await client.fetchQuery({ queryKey: ["foreground"], queryFn: async () => "done" });
+    await vi.waitFor(() => expect(signal).toBeDefined());
     expect(signal.aborted).toBe(false); preparation.dispose(); expect(signal.aborted).toBe(false);
     stop(); await client.cancelQueries(); expect(signal.aborted).toBe(true); client.clear();
   });

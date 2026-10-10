@@ -1,3 +1,6 @@
+import { withClientRequestDeadline } from "./client-request-deadline";
+import { prepareClientSession } from "./client-read";
+
 type Slot = "query-cache" | "issue-drafts" | "objective-drafts" | "search-history" | "page-list-settings" | "window-tabs";
 type Snapshot = { format: "minddy-local-v1"; owner: string; expiresAt: number; ciphertext: string };
 let generation = 0;
@@ -5,11 +8,19 @@ const revisions = new Map<string, number>();
 const pendingOpens = new WeakMap<Storage, Map<string, { raw: string; generation: number; value: Promise<unknown> }>>();
 
 async function request(body: Record<string, unknown>) {
-  const response = await fetch("/api/me/local-snapshots", {
-    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), cache: "no-store",
-  });
-  if (!response.ok) throw new Error("Unable to save or restore local data");
-  return await response.json();
+  const started = generation;
+  return withClientRequestDeadline(async (signal) => {
+    await prepareClientSession();
+    signal.throwIfAborted();
+    if (started !== generation) throw new Error("Local account changed");
+    const response = await fetch("/api/me/local-snapshots", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), cache: "no-store", signal,
+    });
+    if (!response.ok) throw new Error("Unable to save or restore local data");
+    const value = await response.json();
+    signal.throwIfAborted();
+    return value;
+  }, 8_000);
 }
 
 export function invalidateLocalSnapshotWrites(): void { generation += 1; }
@@ -53,7 +64,12 @@ export async function restoreLocalSnapshot(storage: Storage, key: string, slot: 
     }).catch(() => {});
     pending = entry;
   }
-  const value = await pending.value;
+  let value: unknown;
+  try { value = await pending.value; }
+  catch (error) {
+    if (started !== generation) return undefined;
+    throw error;
+  }
   if (started !== generation || revisions.get(key) !== revision || storage.getItem(key) !== raw) return undefined;
   return value;
 }

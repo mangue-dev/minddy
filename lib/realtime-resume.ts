@@ -4,8 +4,8 @@
  *
  * The problem is that NO ONE does it for us:
  *
- * - `refetchOnWindowFocus` is false (lib/query-provider.tsx) — freshness
- * is supposed to come from the real-time bridge, not the clock;
+ * - `refetchOnWindowFocus` only retries failed reads (lib/query-provider.tsx);
+ * healthy caches get their freshness from the realtime bridge;
  * - `refetchOnReconnect` only listens for the browser's `online` event, a
  * sleeps or a frozen tab never emits;
  * - the socket remained… that is to say precisely what had just died.

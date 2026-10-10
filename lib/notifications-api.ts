@@ -1,5 +1,7 @@
 "use client";
 
+import { fetchClientRead } from "./client-read";
+
 import type { MyNotification } from "./types";
 import { trackEvent } from "./analytics";
 
@@ -20,7 +22,7 @@ async function parseJson<T>(response: Response): Promise<T> {
 }
 
 export async function fetchNotificationsApi(): Promise<MyNotification[]> {
-  return parseJson<MyNotification[]>(await fetch("/api/notifications"));
+  return parseJson<MyNotification[]>(await fetchClientRead("/api/notifications"));
 }
 
 const patch = async (body: unknown): Promise<void> => {

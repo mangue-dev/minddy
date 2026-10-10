@@ -2,6 +2,10 @@
 import { QueryClient } from "@tanstack/react-query";
 import { persistQueryClientSave } from "@tanstack/react-query-persist-client";
 import { afterEach, expect, it, vi } from "vitest";
+
+vi.mock("./supabase", () => ({ getSupabase: () => ({ auth: {
+  getSession: async () => ({ data: { session: { user: { id: "owner" } } }, error: null }),
+} }) }));
 import { createQueryStorage } from "./query-persistence";
 import { invalidateLocalSnapshotWrites, removeLocalSnapshot, restoreLocalSnapshot, saveLocalSnapshot } from "./local-snapshots";
 
@@ -23,6 +27,7 @@ it("does not recreate local data after logout while a seal is in flight", async 
   let release!: (value: Response) => void;
   vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>((resolve) => { release = resolve; })));
   const pending = saveLocalSnapshot(window.localStorage, "late", "issue-drafts", ["private"]);
+  await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
   invalidateLocalSnapshotWrites();
   release(new Response(JSON.stringify({ snapshot: { format: "minddy-local-v1", ciphertext: "sealed" } })));
   await expect(pending).rejects.toThrow("account changed");
@@ -41,6 +46,7 @@ it("does not restore a snapshot removed while its open request is in flight", as
   vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>((resolve) => { release = resolve; })));
   window.localStorage.setItem("cleared", JSON.stringify({ format: "minddy-local-v1", expiresAt: Date.now() + 1000, ciphertext: "sealed" }));
   const pending = restoreLocalSnapshot(window.localStorage, "cleared", "issue-drafts");
+  await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
   removeLocalSnapshot(window.localStorage, "cleared");
   release(new Response(JSON.stringify({ value: ["old private draft"] })));
   expect(await pending).toBeUndefined();
@@ -55,12 +61,12 @@ it("shares identical in-flight opens but reauthorizes every later read", async (
   window.localStorage.setItem("shared", envelope);
   const first = restoreLocalSnapshot(window.localStorage, "shared", "window-tabs");
   const second = restoreLocalSnapshot(window.localStorage, "shared", "window-tabs");
-  expect(fetch).toHaveBeenCalledTimes(1);
+  await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
   release(new Response(JSON.stringify({ value: { id: "tab" } })));
   expect(await first).toEqual({ id: "tab" });
   expect(await second).toEqual({ id: "tab" });
   const later = restoreLocalSnapshot(window.localStorage, "shared", "window-tabs");
-  expect(fetch).toHaveBeenCalledTimes(2);
+  await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
   release(new Response(JSON.stringify({ value: { id: "later" } })));
   expect(await later).toEqual({ id: "later" });
 });
@@ -76,9 +82,10 @@ it("never shares open results across changed ciphertext, storage or account gene
   const changed = restoreLocalSnapshot(window.localStorage, "isolated", "window-tabs");
   window.sessionStorage.setItem("isolated", envelope("two"));
   const otherStorage = restoreLocalSnapshot(window.sessionStorage, "isolated", "window-tabs");
+  await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(3));
   invalidateLocalSnapshotWrites();
   const otherAccount = restoreLocalSnapshot(window.localStorage, "isolated", "window-tabs");
-  expect(fetch).toHaveBeenCalledTimes(4);
+  await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(4));
   releases.forEach((release) => release(new Response(JSON.stringify({ value: "private" }))));
   expect(await old).toBeUndefined();
   expect(await changed).toBeUndefined();

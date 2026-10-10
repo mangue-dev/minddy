@@ -181,7 +181,9 @@ export function AppQueryProvider({ children }: { children: ReactNode }) {
             // MIN-89 it covers ALL my projects, plus aggregated caches.
             staleTime: 5 * 60_000,
             gcTime: GC_TIME_MS,
-            refetchOnWindowFocus: false,
+            // Healthy caches are kept fresh by realtime. Failed reads need a
+            // recovery opportunity even after a brief window or tab switch.
+            refetchOnWindowFocus: (query) => query.state.status === "error",
             retry: 1,
           },
         },

@@ -1,5 +1,7 @@
 "use client";
 
+import { fetchClientRead } from "./client-read";
+
 import type { QueryClient } from "@tanstack/react-query";
 import {
   applyPendingIssues,
@@ -20,7 +22,7 @@ export interface GlobalIssueSnapshot {
 }
 
 export async function fetchGlobalIssuesApi(signal?: AbortSignal): Promise<Issue[]> {
-  const response = await fetch("/api/me/issues", { signal });
+  const response = await fetchClientRead("/api/me/issues", { signal });
   const text = await response.text();
   let data: unknown = null;
   try {
