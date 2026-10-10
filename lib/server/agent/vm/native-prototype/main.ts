@@ -27,11 +27,13 @@ export function startNativeController(options: { root: string; token: string; po
     const supplied = Buffer.from(request.headers.authorization ?? "");
     const expected = Buffer.from(`Bearer ${request.url === "/mcp" ? mcpToken : options.token}`);
     if (supplied.length !== expected.length || !timingSafeEqual(supplied, expected)) { response.writeHead(401).end('{"error":"Unauthorized"}'); return; }
+    // A stateless Streamable HTTP server does not expose an SSE stream.
+    if (request.url === "/mcp" && request.method !== "POST") { response.setHeader("Allow", "POST"); response.writeHead(405).end('{"error":"Method not allowed"}'); return; }
     try {
       let result: unknown;
       if (request.method === "GET" && request.url === "/status") {
         const status = controller.status();
-        result = { ...status, ...(status.toolObserved === undefined ? {} : { toolObserved: status.toolObserved && relay.hasSuccessfulCall() }), pendingTools: relay.status() };
+        result = { ...status, ...(status.toolObserved === undefined ? {} : { toolObserved: status.toolObserved && relay.hasSuccessfulCall() }), pendingTools: relay.status(), mcpDiagnostics: relay.diagnosticStatus() };
       }
       else if (request.method === "POST") {
         const input = await body(request);

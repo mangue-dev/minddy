@@ -69,7 +69,7 @@ beforeEach(() => {
     fence(lease); h.runtime = clone(value); lease.revision++; h.current!.revision = lease.revision;
     h.events.push(value ? `runtime:${value.phase}` : "runtime:cleared");
   });
-  h.load.mockImplementation(async (lease) => { fence(lease); return clone(h.profile); });
+  h.load.mockImplementation(async (lease) => { fence(lease); h.events.push("profile:loaded"); return clone(h.profile); });
   h.save.mockImplementation(async (lease, value) => {
     fence(lease); h.profile = clone(value); lease.revision++; h.current!.revision = lease.revision;
     h.events.push("profile:saved");
@@ -133,6 +133,9 @@ describe("private native subscription orchestration", () => {
     expect(result.allocations.every((item) => item.authenticated && item.mcpVerified && item.destroyed)).toBe(true);
     expect(result.allocations[0].id).not.toBe(result.allocations[1].id);
     expect(h.imports).toEqual([profile("initial"), profile("renewed-1")]);
+    expect(h.load).toHaveBeenCalledTimes(2);
+    expect(h.events.lastIndexOf("profile:loaded")).toBeGreaterThan(h.events.indexOf("destroy:1"));
+    expect(h.events.lastIndexOf("profile:loaded")).toBeLessThan(h.events.indexOf("create:2"));
     expect(h.events.indexOf("destroy:1")).toBeLessThan(h.events.indexOf("create:2"));
     expect(h.executeTool).toHaveBeenCalledWith({}, USER);
     expect(h.release).toHaveBeenCalledTimes(1);

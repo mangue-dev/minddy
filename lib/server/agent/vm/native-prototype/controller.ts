@@ -5,11 +5,25 @@ import { randomBytes, randomUUID } from "node:crypto";
 import { exportProfile, importProfile, parseEngine, prepareProfileRoot, type NativeEngine } from "./profile";
 
 type Json = Record<string, unknown>;
-export type NativeStatus = { engine?: NativeEngine; phase: "idle" | "starting" | "awaiting_user" | "authenticated" | "running" | "completed" | "cancelled" | "failed"; authenticated: boolean; verificationUrl?: string; userCode?: string; toolObserved?: boolean; markerObserved?: boolean; error?: string };
+export type NativeDiagnostics = { rpcMethod?: string; rpcErrorCode?: number; notification?: string; itemType?: string; itemStatus?: string; turnStatus?: string; errorCode?: string; httpStatus?: number; mcpStartupStatus?: string; callbackMethod?: string; registeredTools?: number; mcpToolRegistered?: boolean; receivedEvents: number };
+export type NativeStatus = { engine?: NativeEngine; phase: "idle" | "starting" | "awaiting_user" | "authenticated" | "running" | "completed" | "cancelled" | "failed"; authenticated: boolean; verificationUrl?: string; userCode?: string; toolObserved?: boolean; markerObserved?: boolean; error?: string; diagnostics?: NativeDiagnostics };
 export type SmokeInput = { engine: NativeEngine; mcp: { url: string; authorization: string }; requiredTool: string; marker: string };
 export type NativeSpawn = (engine: NativeEngine, args: string[], environment: NodeJS.ProcessEnv, tty?: boolean) => ChildProcessWithoutNullStreams;
 const AUTH_HOSTS = new Set(["auth.openai.com", "chatgpt.com", "claude.ai", "console.anthropic.com", "platform.claude.com", "auth.anthropic.com"]);
 export const CODEX_CAPABILITY_DROP_ARGS = ["--bounding-set=-all", "--inh-caps=-all", "--ambient-caps=-all", "--no-new-privs", "--"] as const;
+const NOTIFICATIONS = new Set(["error", "thread/started", "turn/started", "turn/completed", "item/started", "item/completed", "mcpServer/startupStatus/updated", "mcpServer/event/stream/notification", "item/mcpToolCall/progress", "account/login/completed"]);
+const ITEM_TYPES = new Set(["mcpToolCall", "agentMessage", "userMessage", "reasoning", "commandExecution", "fileChange", "webSearch", "plan", "dynamicToolCall"]);
+const ERROR_CODES = new Set(["contextWindowExceeded", "sessionBudgetExceeded", "usageLimitExceeded", "rateLimitExceeded", "flexUnavailable", "serverOverloaded", "cyberPolicy", "misalignmentPolicyViolation", "tooManyDenials", "internalServerError", "unauthorized", "badRequest", "threadRollbackFailed", "sandboxError", "other", "httpConnectionFailed", "responseStreamConnectionFailed", "responseStreamDisconnected", "responseTooManyFailedAttempts", "activeTurnNotSteerable"]);
+export function safeNativeError(value: unknown): Pick<NativeDiagnostics, "errorCode" | "httpStatus"> {
+  if (typeof value === "string") return ERROR_CODES.has(value) ? { errorCode: value } : {};
+  if (!value || typeof value !== "object") return {};
+  for (const key of ERROR_CODES) {
+    if (!Object.prototype.hasOwnProperty.call(value, key)) continue;
+    const httpStatus = (value as Record<string, { httpStatusCode?: unknown }>)[key]?.httpStatusCode;
+    return { errorCode: key, ...(Number.isInteger(httpStatus) && Number(httpStatus) >= 100 && Number(httpStatus) <= 599 ? { httpStatus: Number(httpStatus) } : {}) };
+  }
+  return {};
+}
 
 export function safeAuthorizationUrl(value: unknown): string | undefined {
   if (typeof value !== "string" || value.length > 4096) return;
@@ -59,6 +73,7 @@ export class NativeController {
   private codexInitialized = false;
   private smokeFixture?: SmokeInput;
   private codexIsolationVerified = false;
+  private diagnostics: NativeDiagnostics = { receivedEvents: 0 };
   constructor(readonly root: string, private launch: NativeSpawn = (engine, args, env, tty) => {
     const command = engine === "codex" ? "codex" : "claude";
     if (tty) return spawn("script", ["-q", "-c", "claude auth login --claudeai", "/dev/null"], { env, stdio: "pipe", detached: true });
@@ -67,7 +82,7 @@ export class NativeController {
     return spawn(command, args, { env, stdio: "pipe", detached: true });
   }) {}
 
-  status(): NativeStatus { return { ...this.state }; }
+  status(): NativeStatus { return { ...this.state, diagnostics: { ...this.diagnostics } }; }
   private environment(engine: NativeEngine): NodeJS.ProcessEnv {
     const home = join(this.root, engine);
     // Only bootstrap variables survive; ambient provider credentials never enter a child.
@@ -100,6 +115,8 @@ export class NativeController {
     return this.status();
   }
   private rpc(method: string, params: Json): Promise<Json> {
+    this.diagnostics.rpcMethod = method;
+    delete this.diagnostics.rpcErrorCode;
     const child = this.child;
     if (!child) return Promise.reject(new Error("Native CLI unavailable"));
     const id = ++this.nextId;
@@ -124,23 +141,36 @@ export class NativeController {
       while ((newline = buffer.indexOf("\n")) >= 0) {
         const line = buffer.slice(0, newline); buffer = buffer.slice(newline + 1);
         let data: Json; try { data = JSON.parse(line); } catch { continue; }
+        this.diagnostics.receivedEvents = Math.min(65535, this.diagnostics.receivedEvents + 1);
+        if (typeof data.method === "string" && NOTIFICATIONS.has(data.method)) this.diagnostics.notification = data.method;
         if (typeof data.id === "number" && this.pending.has(data.id)) {
           const pending = this.pending.get(data.id)!; this.pending.delete(data.id); clearTimeout(pending.timer);
-          if (data.error) pending.reject(new Error("Native CLI rejected request")); else pending.resolve((data.result ?? {}) as Json);
+          if (data.error) { const code = (data.error as Json).code; if (Number.isInteger(code) && Math.abs(Number(code)) <= 1_000_000) this.diagnostics.rpcErrorCode = Number(code); pending.reject(new Error("Native CLI rejected request")); } else pending.resolve((data.result ?? {}) as Json);
         } else if (data.id !== undefined && typeof data.method === "string") {
+          this.diagnostics.callbackMethod = ["item/commandExecution/requestApproval", "item/fileChange/requestApproval", "item/tool/requestUserInput", "mcpServer/elicitation/request", "item/tool/call"].includes(data.method) ? data.method : "unsupported";
           // Unknown server callbacks, including tool approvals, are denied.
           child.stdin.write(`${JSON.stringify({ id: data.id, error: { code: -32601, message: "Unsupported private prototype request" } })}\n`);
         } else if (data.method === "account/login/completed" && generation === this.operation) {
           const params = data.params as Json;
           if (params?.loginId !== this.loginId) continue;
           if (params.success === true) { this.clearTimer(); this.state = { engine: "codex", phase: "authenticated", authenticated: true }; } else this.fail("Native authorization was not completed");
-        } else if (data.method === "item/completed" && this.state.phase === "running" && this.smokeFixture) {
+        } else if (data.method === "mcpServer/startupStatus/updated") {
+          const status = (data.params as Json)?.status;
+          if (["starting", "ready", "failed", "cancelled"].includes(String(status))) this.diagnostics.mcpStartupStatus = String(status);
+        } else if (data.method === "error") {
+          Object.assign(this.diagnostics, safeNativeError(((data.params as Json)?.error as Json)?.codexErrorInfo));
+        } else if ((data.method === "item/completed" || data.method === "item/started") && this.state.phase === "running" && this.smokeFixture) {
           const item = (data.params as { item?: Json })?.item;
+          if (typeof item?.type === "string" && ITEM_TYPES.has(item.type)) this.diagnostics.itemType = item.type;
+          if (typeof item?.status === "string" && ["inProgress", "completed", "failed"].includes(item.status)) this.diagnostics.itemStatus = item.status;
+          if (data.method !== "item/completed") continue;
           if (item?.type === "mcpToolCall" && item.server === "minddy" && item.tool === this.smokeFixture.requiredTool && item.status === "completed" && !item.error) this.state.toolObserved = true;
           if (item?.type === "agentMessage" && typeof item.text === "string" && item.text.trim() === this.smokeFixture.marker) this.state.markerObserved = true;
         } else if (data.method === "turn/completed" && this.state.phase === "running") {
           this.clearTimer();
           const turn = (data.params as { turn?: Json })?.turn;
+          if (typeof turn?.status === "string" && ["completed", "interrupted", "failed", "inProgress"].includes(turn.status)) this.diagnostics.turnStatus = turn.status;
+          Object.assign(this.diagnostics, safeNativeError((turn?.error as Json)?.codexErrorInfo));
           if (turn?.status === "completed" && this.state.toolObserved && this.state.markerObserved) this.state.phase = "completed";
           else this.fail("Native MCP smoke did not complete");
         }
@@ -243,6 +273,12 @@ export class NativeController {
       const thread = await this.rpc("thread/start", { cwd, approvalPolicy: "never", ephemeral: true, config });
       const threadId = (thread.thread as Json)?.id;
       if (typeof threadId !== "string") throw new Error("Native thread did not start");
+      const catalog = await this.rpc("mcpServerStatus/list", { threadId, serverName: "minddy", detail: "toolsAndAuthOnly" });
+      const server = Array.isArray(catalog.data) ? catalog.data.find((entry: Json) => entry.name === "minddy") as Json | undefined : undefined;
+      const tools = server?.tools && typeof server.tools === "object" ? Object.values(server.tools) as Json[] : [];
+      this.diagnostics.registeredTools = Math.min(65535, tools.length);
+      this.diagnostics.mcpToolRegistered = tools.some((tool) => tool.name === input.requiredTool);
+      if (!this.diagnostics.mcpToolRegistered) throw new Error("Native MCP fixture tool is unavailable");
       this.smokeFixture = input;
       this.state = { engine: input.engine, phase: "running", authenticated: true, toolObserved: false, markerObserved: false };
       this.armDeadline(2 * 60 * 1000);

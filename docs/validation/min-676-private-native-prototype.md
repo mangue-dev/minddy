@@ -52,8 +52,8 @@ No Supabase service key, user session or public Minddy API token enters the VM.
 The fixed turn must successfully call that tool and emit a unique marker. Native
 output alone cannot establish success. The server writes the latest native
 profile back under its exclusive revision/lease/generation fence, deletes the
-allocation completely, then repeats with a different name and the newly saved
-profile. Success requires two distinct allocations, authentication and a real
+allocation completely, decrypts the saved profile from the account vault, then
+repeats with a different name. Success requires two distinct allocations, authentication and a real
 MCP acknowledgement in both, with both allocations destroyed. A rotation signal
 requires changed native token objects; unchanged tokens remain renewal
 unverified. Fixtures that change synthetic tokens do not establish real renewal.
@@ -105,8 +105,8 @@ must be handled through that provider's normal account controls.
 Focused tests cover native transports, strict profiles, encrypted owner/engine
 binding, exclusive leases, stale writers, account erasure, actual registered MCP
 handler scoping, private route responses and settings controls. SQL regressions
-run against an isolated local PostgreSQL-compatible fixture, not the connected
-development database. Synthetic subprocess and allocation tests are not a live
+run against actual PostgreSQL in the isolated Docker Supabase project, not the
+connected remote development database. Synthetic subprocess and allocation tests are not a live
 subscription acceptance test.
 
 Record the actual hosted kernel result, paid account login, login-allocation

@@ -249,15 +249,52 @@ repository's `.env.local` are preserved. The connected remote database has not
 received the native migration; the only migration command against it was a
 dry run, before the user selected the local Docker database.
 
-At this stage, live provider approval, encrypted real-token persistence and the
-two fresh authenticated allocations remain pending the owner's Codex sign-in.
-Do not interpret the successful authless kernel probe or synthetic renewal
-tests as those acceptance results. Live Claude remains unverified because no
-eligible paid account has been supplied.
+The owner then completed the native Codex device approval with a paid Pro
+account. The login profile was stored in mandatory format-3 account ciphertext,
+and its login allocation was stopped and deleted before Connected appeared.
+No developer workstation profile was imported.
 
-Repository checks for this private implementation passed: 73 focused Vitest
+The first real cold attempt authenticated but failed its MCP completion proof;
+its allocation was deleted and the connection remained recoverable. The MCP
+relay was corrected to negotiate Streamable HTTP versions, advertise the tool's
+read-only annotations, reject unsupported optional methods with JSON-RPC errors
+and return HTTP 405 for unsupported SSE. A native catalogue preflight now checks
+that the expected tool is registered before inference. Those combined changes
+passed the next real pilot; their individual contribution to the initial failure
+was not isolated.
+
+The successful paid Codex pilot completed two distinct fresh hosted allocations:
+both authenticated from the saved profile, called the actual owner-scoped
+`minddy_list_projects` handler through MCP, emitted the required marker, and
+were stopped and deleted. Native token objects changed and were written back to
+the encrypted vault. Local database metadata confirmed format 3, connected
+status, no runtime descriptor and no remaining lease. Its usage ledger records
+separate compute sequences 1 and 2, without API inference billing.
+
+A second successful real pilot strengthened the proof: after deleting the first
+allocation, the control plane decrypted the just-saved profile from the database
+before creating and authenticating the second allocation. Both MCP calls and
+both deletions passed again, with native token-state changes observed. Final
+metadata showed revision 38, format 3 and cleared runtime/lease fields. The
+successful requests completed in 84 and 87 seconds respectively.
+
+![Private account settings showing both authenticated Codex sandboxes, successful Minddy tools and confirmed destruction](assets/min-676-codex-cold-success.png)
+
+This proves the observed native auth-file update and encrypted persistence path;
+it does not establish expiration or revocation behavior after days. Live Claude
+remains unverified because no eligible paid account has been supplied. The
+private pilot does not settle authorization for a public multi-user credential
+custody service or implement ordinary Numo worker selection.
+
+Repository checks for this private implementation passed: 81 focused Vitest
 tests, actual local PostgreSQL native SQL regressions, full application build,
 typecheck, lint, native VM bundle build, encrypted-column/schema inventories,
 documentation, knowledge, owned-English and whitespace checks. Public impact is
 limited to the six `ai-settings-and-usage` guides and their revision-8 review;
 full Numo engine selection and public native rollout remain pending.
+
+The follow-up also fixes the existing scheduler test's native-cleanup mock and
+tests that queue draining continues after cleanup failure. The publication scan
+uses an exact fixture-path/address exception for the non-routable synthetic
+account; no real identity or credential is exempted. The PR commit range passed
+the redacted secret/data-marker scan.

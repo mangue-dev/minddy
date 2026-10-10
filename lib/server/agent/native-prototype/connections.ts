@@ -283,34 +283,48 @@ export async function testNativeConnection(userId: string, engine: NativeHarness
   let active: Runtime | null = null;
   let allocation: NativeAllocation | undefined;
   let imported = false;
+  let stage = "profile_load";
   try {
     profile = await loadNativeProfile(lease);
     if (!profile) throw new NativePrototypeError("reconnect_required");
     for (const seq of [1, 2]) {
       if (Date.now() >= deadline) throw new NativePrototypeError("test_failed");
+      if (seq === 2) {
+        stage = "profile_load";
+        // Prove durable write-back by decrypting the saved profile after the
+        // first allocation is destroyed, rather than reusing its memory copy.
+        profile = await loadNativeProfile(lease);
+        if (!profile) throw new NativePrototypeError("reconnect_required");
+      }
+      stage = "allocation";
       ({ descriptor: active, allocation } = await allocate(lease, randomUUID(), seq));
       const item = { id: allocation.name, authenticated: false, mcpVerified: false, destroyed: false };
       result.allocations.push(item);
       await getNativeRuntime(lease, { execution: true });
+      stage = "profile_import";
       await allocation.request("/profile/import", { profile });
       imported = true;
       await getNativeRuntime(lease, { execution: true });
+      stage = "auth_check";
       const auth = await allocation.request("/auth/check", { engine });
       if (!auth.authenticated) throw new NativePrototypeError("reconnect_required");
       item.authenticated = true;
       const marker = `MINDDY_NATIVE_${randomUUID().replaceAll("-", "").toUpperCase()}`;
       const nativePrototypeTool = nativePrototypeMcpTool();
       await getNativeRuntime(lease, { execution: true });
+      stage = "smoke_start";
       await allocation.request("/smoke", { engine, tools: [nativePrototypeTool], requiredTool: nativePrototypeTool.name, marker });
       let acknowledged = false;
       let calls = 0;
       while (Date.now() < deadline) {
+        stage = "smoke_poll";
         const state = await allocation.request("/status");
         for (const call of state.pendingTools ?? []) {
           if (++calls > 8 || call.name !== nativePrototypeTool.name) throw new NativePrototypeError("test_failed");
           // Re-read the fenced runtime before each owner-scoped tool execution.
           await getNativeRuntime(lease, { execution: true });
           assertNativePrototypeAccess(userId);
+          stage = "minddy_tool";
           const toolResult = await executeNativePrototypeMcp(call.args, userId);
           await allocation.request("/tool-result", { id: call.id, result: toolResult });
           acknowledged ||= toolResult.isError !== true;
@@ -323,11 +337,13 @@ export async function testNativeConnection(userId: string, engine: NativeHarness
         await new Promise((resolve) => setTimeout(resolve, 1_000));
       }
       if (!item.mcpVerified) throw new NativePrototypeError("test_failed");
+      stage = "profile_export";
       const updated = await allocation.request<NativeCredentialProfile>("/profile/export", { engine });
       result.refreshObserved ||= !!renewalChanged(profile, updated);
       await saveNativeProfile(lease, updated);
       profile = updated;
       imported = false;
+      stage = "allocation_stop";
       await stop(lease, active, allocation);
       item.destroyed = true;
       allocation = undefined;
@@ -338,6 +354,22 @@ export async function testNativeConnection(userId: string, engine: NativeHarness
     result.passed = result.allocations.length === 2 && result.allocations[0].id !== result.allocations[1].id && result.allocations.every((item) => item.authenticated && item.mcpVerified && item.destroyed);
     return result;
   } catch {
+    // Fixed stage labels locate integration failures without logging native
+    // output, auth material, tool results or account identifiers.
+    console.error("[native-prototype] test failed", { engine, stage });
+    if (allocation) {
+      try {
+        const state = await allocation.request<{ diagnostics?: Record<string, unknown>; mcpDiagnostics?: Record<string, unknown> }>("/status");
+        const counters = Object.fromEntries(Object.entries({ ...state.diagnostics, ...state.mcpDiagnostics })
+          .filter(([key, value]) => ["rpcErrorCode", "httpStatus", "receivedEvents", "initialized", "listed", "calls", "completed", "unsupportedMethods", "registeredTools", "mcpToolRegistered"].includes(key)
+            && (typeof value === "boolean" || (typeof value === "number" && Number.isFinite(value) && Math.abs(value) <= 1_000_000))));
+        console.error("[native-prototype] native counters", counters);
+        const labels = Object.fromEntries(Object.entries(state.diagnostics ?? {}).filter(([key, value]) =>
+          ["rpcMethod", "notification", "mcpStartupStatus", "turnStatus", "itemType", "itemStatus", "errorCode", "callbackMethod"].includes(key)
+          && typeof value === "string" && ["initialize", "account/read", "thread/start", "turn/start", "mcpServerStatus/list", "error", "thread/started", "turn/started", "turn/completed", "item/started", "item/completed", "mcpServer/startupStatus/updated", "mcpServer/event/stream/notification", "item/mcpToolCall/progress", "account/login/completed", "starting", "ready", "failed", "cancelled", "completed", "interrupted", "inProgress", "mcpToolCall", "agentMessage", "userMessage", "reasoning", "commandExecution", "fileChange", "webSearch", "plan", "dynamicToolCall", "contextWindowExceeded", "sessionBudgetExceeded", "usageLimitExceeded", "rateLimitExceeded", "flexUnavailable", "serverOverloaded", "cyberPolicy", "misalignmentPolicyViolation", "tooManyDenials", "internalServerError", "unauthorized", "badRequest", "threadRollbackFailed", "sandboxError", "other", "httpConnectionFailed", "responseStreamConnectionFailed", "responseStreamDisconnected", "responseTooManyFailedAttempts", "activeTurnNotSteerable", "item/commandExecution/requestApproval", "item/fileChange/requestApproval", "item/tool/requestUserInput", "mcpServer/elicitation/request", "item/tool/call", "unsupported"].includes(value)));
+        console.error("[native-prototype] native labels", labels);
+      } catch { /* Cleanup remains mandatory when diagnostics are unavailable. */ }
+    }
     // Always stop our own allocation, including when a concurrent disconnect
     // changed the lease. Never release the newer stop-only generation.
     if (allocation && active) {

@@ -3,7 +3,7 @@ import { mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { boundedCode, claudeSmokeArguments, CODEX_CAPABILITY_DROP_ARGS, codexFixtureConfig, codexIsolationArguments, NativeController, safeAuthorizationUrl, type NativeSpawn } from "./controller";
+import { boundedCode, claudeSmokeArguments, CODEX_CAPABILITY_DROP_ARGS, codexFixtureConfig, codexIsolationArguments, NativeController, safeAuthorizationUrl, safeNativeError, type NativeSpawn } from "./controller";
 import { exportProfile, importProfile, prepareProfileRoot, validateProfile } from "./profile";
 import { NativeToolRelay } from "./relay";
 import { startNativeController } from "./main";
@@ -75,6 +75,13 @@ describe("private native credential lifecycle", () => {
     expect(await controller.isolation("codex")).toMatchObject({ supported: false, isolated: false });
     await expect(controller.smoke({ engine: "codex", ...smoke })).rejects.toThrow("kernel isolation");
   });
+  it("refuses an inference turn when the native MCP catalog lacks the fixture tool", async () => {
+    const { root } = await setup();
+    const controller = new NativeController(root, (engine, args, env) => spawn(process.execPath, [fixture, engine, JSON.stringify(args), "empty-mcp-catalog"], { env, detached: true, stdio: "pipe" })); controllers.push(controller);
+    expect(await controller.isolation("codex")).toMatchObject({ isolated: true });
+    await expect(controller.smoke({ engine: "codex", ...smoke })).rejects.toThrow("fixture tool is unavailable");
+    expect(controller.status().diagnostics).toMatchObject({ rpcMethod: "mcpServerStatus/list", registeredTools: 0, mcpToolRegistered: false });
+  });
   it("runs Claude MCP fixture with native builtin tools disabled", async () => {
     const { controller } = await setup();
     await controller.smoke({ engine: "claude_code", ...smoke });
@@ -115,6 +122,20 @@ describe("native prototype input boundaries", () => {
     for (const url of ["https://evil.invalid/auth", "https://auth.openai.com/auth?access_token=fake", "https://auth.openai.com/auth#token", "https://auth.openai.com:444/auth", "http://claude.ai/auth"]) expect(safeAuthorizationUrl(url)).toBeUndefined();
     expect(safeAuthorizationUrl("https://auth.openai.com/codex/device")).toBeDefined();
     expect(() => boundedCode("fake\rcommand")).toThrow();
+  });
+  it("retains only native error enums and bounded HTTP status without provider text", () => {
+    expect(safeNativeError({ responseStreamConnectionFailed: { httpStatusCode: 401, message: "private fixture" } })).toEqual({ errorCode: "responseStreamConnectionFailed", httpStatus: 401 });
+    expect(safeNativeError("private fixture")).toEqual({});
+    expect(safeNativeError({ privateFixture: { httpStatusCode: 401 } })).toEqual({});
+    expect(safeNativeError({ httpConnectionFailed: { httpStatusCode: 9000 } })).toEqual({ errorCode: "httpConnectionFailed" });
+  });
+  it("negotiates supported streamable MCP versions and advertises the read-only fixture", async () => {
+    const relay = new NativeToolRelay();
+    relay.configure([{ name: "minddy_list_projects", description: "List projects", inputSchema: { type: "object" } }], "minddy_list_projects");
+    expect(await relay.request({ id: 1, method: "initialize", params: { protocolVersion: "2025-03-26" } })).toMatchObject({ result: { protocolVersion: "2025-03-26" } });
+    expect(await relay.request({ id: 2, method: "tools/list" })).toMatchObject({ result: { tools: [{ annotations: { readOnlyHint: true, destructiveHint: false } }] } });
+    expect(await relay.request({ id: 3, method: "resources/list" })).toMatchObject({ error: { code: -32601 } });
+    expect(relay.diagnosticStatus()).toEqual({ initialized: 1, listed: 1, calls: 0, completed: 0, unsupportedMethods: 1 });
   });
   it("protects all native profile files including newly written files", () => {
     expect(codexFixtureConfig("/private/profiles")).toMatchObject({ default_permissions: "minddy_native_fixture", permissions: { minddy_native_fixture: { filesystem: { "/private/profiles": "deny", "/proc": "deny", "/sys": "deny" } } }, features: { shell_tool: false, code_mode: false, view_image: false } });
