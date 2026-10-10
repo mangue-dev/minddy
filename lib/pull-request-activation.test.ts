@@ -9,6 +9,10 @@ import { pullRequestQueryOptions } from "./pull-request-query";
 import { nextReadActivationSequence } from "./read-activation-sequence";
 import { QueryReadBoundary } from "@/components/query-read-boundary";
 
+vi.mock("./supabase", () => ({ getSupabase: () => ({
+  auth: { getSession: async () => ({ data: { session: { user: { id: "owner" } } }, error: null }) },
+}) }));
+
 it.each(["later millisecond", "same millisecond", "clock rollback"])("requires authority after a retained activation with %s even if hidden rendering was deferred", async (timing) => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   let now = 10;
@@ -39,6 +43,7 @@ it.each(["later millisecond", "same millisecond", "clock rollback"])("requires a
     await render(false, initialActivation);
     now = 20;
     const preparation = client.fetchQuery(pullRequestQueryOptions("pr"));
+    await vi.waitFor(() => expect(pending).toHaveLength(1));
     now = timing === "later millisecond" ? 30 : timing === "same millisecond" ? 20 : 5;
     const start = states.length;
     await render(true, nextReadActivationSequence());
