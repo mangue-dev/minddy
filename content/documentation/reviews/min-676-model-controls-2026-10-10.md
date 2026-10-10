@@ -57,7 +57,7 @@ typecheck, documentation, knowledge, English and whitespace results after the
 combined changes. Metadata checks alone do not establish provider authorization,
 real expired-token recovery, remote revocation or paid Claude acceptance.
 
-Actual combined checks passed: 319 focused tests across 27 files, five native SQL
+Actual combined checks passed: 330 focused tests across 28 files, five native SQL
 suites in Docker with rollback, typecheck, repository lint, both VM builds,
 encrypted-access/schema checks, documentation including release mode, knowledge,
 owned-English and whitespace checks. No platform release was performed.
@@ -77,3 +77,9 @@ was not tested: the authentic token was still valid and no expired snapshot was
 available. These precise boundaries supersede earlier public wording that no
 real renewal had been observed; provider permission and natural expiry recovery
 remain separate acceptance conditions.
+
+CI initially found an incomplete route-test mock after model catalog dependency
+imports changed. The route suite now isolates catalog discovery and additionally
+checks authenticated-owner validation, safe mismatch errors and cross-engine
+effort rejection. All 11 route tests passed locally. This is test isolation and
+coverage only; no public control or documented behavior changed in the repair.
