@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
-  "sourceRevision": 6,
+  "revision": 7,
+  "sourceRevision": 7,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-10",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5)",
+    "version": "0.11.1 development (MIN-671)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -38,14 +38,15 @@
       "components/objective-momentum.tsx",
       "lib/relation-constants.ts",
       "lib/server/issue-relations.ts",
-      "lib/objective-momentum.ts"
+      "lib/objective-momentum.ts",
+      "content/documentation/reviews/min-671-objective-momentum-2026-10-10.md"
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions)",
-    "date": "2026-10-09"
+    "revision": 7,
+    "fact": "agent:/root (MIN-671 target-date condition and retained calculation claims checked against source and render tests; earlier procedural evidence retained)",
+    "language": "agent:/root (es changed-passage review against English revision 7; earlier unchanged prose reviews retained)",
+    "date": "2026-10-10"
   },
   "related": [
     "issues",
@@ -66,7 +67,7 @@
       "src": "/documentation/es/reader-objectives.png",
       "alt": "Diálogo de creación de objetivo sin enviar con un nombre de resultado de ejemplo.",
       "caption": "Nombra el resultado antes de elegir responsable, fecha objetivo y estado. Este diálogo no ha creado un segundo objetivo.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -75,27 +76,10 @@
       ],
       "theme": "light",
       "padding": 24
-    },
-    {
-      "id": "objective-dependencies-and-momentum-steps",
-      "kind": "screenshot",
-      "src": "/documentation/es/reader-objective-momentum.png",
-      "alt": "Ritmo del objetivo tras completar realmente una incidencia de demostración.",
-      "caption": "Lee el ritmo junto al trabajo vinculado. El historial disponible aún no permite mostrar una fecha estimada de finalización.",
-      "revision": 6,
-      "reviewed": true,
-      "capturedAt": "2026-10-08",
-      "viewport": [
-        994,
-        1046
-      ],
-      "theme": "light",
-      "padding": 24
     }
   ],
   "requiredFigures": [
-    "objectives-steps",
-    "objective-dependencies-and-momentum-steps"
+    "objectives-steps"
   ]
 }
 ---
@@ -124,8 +108,8 @@ Una relación de bloqueo puede conectar una incidencia u otro objetivo con este 
 
 ### Interpretar la señal de ritmo {#momentum}
 
+El panel Ritmo solo aparece cuando el objetivo tiene una fecha objetivo. Al eliminar esa fecha, se oculta el panel, incluidos el historial, las estadísticas de ritmo y la fecha estimada de finalización. Añade una fecha objetivo para volver a mostrarlo; el indicador de progreso general sigue disponible sin ella.
+
 El ritmo resume el trabajo completado recientemente. Puede estar acelerándose, estable, ralentizándose o detenido, con estados separados para objetivos no iniciados, completados y cancelados. Úsalo para identificar un resultado que necesite atención y después lee las incidencias y la actividad subyacentes.
 
-La fecha estimada requiere al menos dos finalizaciones, una semana completa observada, esfuerzo entregado positivo y trabajo pendiente. Solo contribuyen las incidencias vinculadas actualmente; una finalización anterior a la creación del objetivo no genera un ritmo reciente artificial. Con una fecha objetivo válida, el historial abarca desde la creación hasta esa fecha y el rendimiento utiliza el tiempo observado desde la creación, incluido el transcurrido después de una fecha incumplida. Sin una fecha objetivo válida, el cálculo utiliza un historial móvil de ocho semanas y una ventana de previsión de 28 días. Un historial escaso o un cambio reciente de alcance reducen su utilidad. La estimación no es una fecha prometida y no incluye trabajo invisible que no hayas vinculado. Compara la fecha objetivo, el trabajo pendiente y las restricciones reales antes de cambiar compromisos.
-
-![Ritmo del objetivo tras completar realmente una incidencia de demostración.](/documentation/es/reader-objective-momentum.png)
+La fecha estimada requiere al menos dos finalizaciones, una semana completa observada, esfuerzo entregado positivo y trabajo pendiente. Solo contribuyen las incidencias vinculadas actualmente; una finalización anterior a la creación del objetivo no genera un ritmo reciente artificial. Con una fecha objetivo válida, el historial abarca desde la creación hasta esa fecha y el rendimiento utiliza el tiempo observado desde la creación, incluido el transcurrido después de una fecha incumplida. Si hay una fecha objetivo pero no define un periodo válido posterior a la creación, el cálculo utiliza un historial móvil de ocho semanas y una ventana de previsión de 28 días. Un historial escaso o un cambio reciente de alcance reducen su utilidad. La estimación no es una fecha prometida y no incluye trabajo invisible que no hayas vinculado. Compara la fecha objetivo, el trabajo pendiente y las restricciones reales antes de cambiar compromisos.

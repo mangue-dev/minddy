@@ -78,18 +78,26 @@ const PACE_META: Record<
   },
 };
 
-/**
- * Show the objective's rhythm and finish estimate over its target period,
- * with a rolling history when no valid period is available. Deadline progress
- * uses the same effort weighting and status credit as the objective page.
- */
+interface ObjectiveMomentumProps {
+  objective: Objective;
+  issues: Issue[];
+}
+
+/** Show momentum statistics only for objectives with a target date. */
 export function ObjectiveMomentum({
   objective,
   issues,
-}: {
-  objective: Objective;
-  issues: Issue[];
-}) {
+}: ObjectiveMomentumProps) {
+  if (!objective.target_date) return null;
+  return <ObjectiveMomentumCard objective={objective} issues={issues} />;
+}
+
+/**
+ * Show rhythm and finish estimates over the target period, with rolling
+ * history when the date cannot define a valid period. Deadline progress uses
+ * the same effort weighting and status credit as the objective page.
+ */
+function ObjectiveMomentumCard({ objective, issues }: ObjectiveMomentumProps) {
   const t = useTranslations("Objectives");
   const format = useFormatter();
   const now = useNow({ updateInterval: 60_000 });

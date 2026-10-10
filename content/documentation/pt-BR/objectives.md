@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
-  "sourceRevision": 6,
+  "revision": 7,
+  "sourceRevision": 7,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-10",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5)",
+    "version": "0.11.1 development (MIN-671)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -38,14 +38,15 @@
       "components/objective-momentum.tsx",
       "lib/relation-constants.ts",
       "lib/server/issue-relations.ts",
-      "lib/objective-momentum.ts"
+      "lib/objective-momentum.ts",
+      "content/documentation/reviews/min-671-objective-momentum-2026-10-10.md"
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions)",
-    "date": "2026-10-09"
+    "revision": 7,
+    "fact": "agent:/root (MIN-671 target-date condition and retained calculation claims checked against source and render tests; earlier procedural evidence retained)",
+    "language": "agent:/root (pt-BR changed-passage review against English revision 7; earlier unchanged prose reviews retained)",
+    "date": "2026-10-10"
   },
   "related": [
     "issues",
@@ -66,7 +67,7 @@
       "src": "/documentation/pt-BR/reader-objectives.png",
       "alt": "Janela de criação de objetivo não enviada com um nome de resultado de exemplo.",
       "caption": "Defina o resultado antes de escolher responsável, data prevista e status. Essa janela não criou um segundo objetivo.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -75,27 +76,10 @@
       ],
       "theme": "light",
       "padding": 24
-    },
-    {
-      "id": "objective-dependencies-and-momentum-steps",
-      "kind": "screenshot",
-      "src": "/documentation/pt-BR/reader-objective-momentum.png",
-      "alt": "Ritmo do objetivo após a conclusão real de um ticket de demonstração.",
-      "caption": "Leia o ritmo junto ao trabalho vinculado. O histórico disponível ainda não é suficiente para mostrar uma data estimada de conclusão.",
-      "revision": 6,
-      "reviewed": true,
-      "capturedAt": "2026-10-08",
-      "viewport": [
-        994,
-        1046
-      ],
-      "theme": "light",
-      "padding": 24
     }
   ],
   "requiredFigures": [
-    "objectives-steps",
-    "objective-dependencies-and-momentum-steps"
+    "objectives-steps"
   ]
 }
 ---
@@ -124,12 +108,12 @@ Uma relação de bloqueio pode conectar um problema ou outro objetivo a este obj
 
 ### Interpretar o sinal de ritmo {#momentum}
 
+O painel Ritmo aparece apenas quando o objetivo tem uma data-alvo. Ao remover essa data, o painel fica oculto, incluindo o histórico, as estatísticas de ritmo e a data estimada de conclusão. Adicione uma data-alvo para exibi-lo novamente; o indicador de progresso geral continua disponível sem ela.
+
 O ritmo resume trabalho concluído recentemente. Ele pode estar acelerando, estável, desacelerando ou parado, com estados separados para objetivos não iniciados, concluídos e cancelados. Use-o para identificar um resultado que precisa de atenção, depois leia os problemas e a atividade subjacentes.
 
 A data estimada de conclusão exige pelo menos duas conclusões, uma semana inteira observada, esforço entregue positivo e trabalho restante. Apenas os problemas atualmente vinculados contribuem; uma conclusão anterior à criação do objetivo não produz um ritmo recente artificial.
 
-Com uma data-alvo válida, o histórico vai da criação até essa data e o ritmo de entrega usa o tempo observado desde a criação, incluindo o período depois de um prazo não cumprido. Sem uma data-alvo válida, o cálculo usa um histórico móvel de oito semanas e uma janela de previsão de 28 dias.
+Com uma data-alvo válida, o histórico vai da criação até essa data e o ritmo de entrega usa o tempo observado desde a criação, incluindo o período depois de um prazo não cumprido. Se uma data-alvo estiver definida, mas não determinar um período válido após a criação, o cálculo usa um histórico móvel de oito semanas e uma janela de previsão de 28 dias.
 
 Histórico escasso ou mudança recente de escopo reduzem sua utilidade. A estimativa não é um prazo prometido e não inclui trabalho invisível que você não vinculou. Compare a data-alvo, o trabalho restante e as restrições reais antes de mudar compromissos.
-
-![Ritmo do objetivo após a conclusão real de um ticket de demonstração.](/documentation/pt-BR/reader-objective-momentum.png)

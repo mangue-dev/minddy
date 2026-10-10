@@ -10,14 +10,12 @@ const auth=JSON.parse(await readFile('/tmp/min664-reader-auth-owner.json','utf8'
 const sourceCommit=execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim();
 const recordPath='content/documentation/reviews/reader-fixture-captures-2026-10-08.json';let records=[];try{records=JSON.parse(await readFile(recordPath,'utf8'));}catch(e){if(e.code!=='ENOENT')throw e;}
 const requested=process.env.DOC_CAPTURE_SCREENS?.split(',');
-const objective='291500d1-2f9d-4725-a972-f38ce57570fd';
 function translate(v,m){if(typeof v==='string')return m[v]??v;if(Array.isArray(v))return v.map(x=>translate(x,m));if(v&&typeof v==='object')return Object.fromEntries(Object.entries(v).map(([k,x])=>[k,translate(x,m)]));return v;}
 const root=`/projects/${projectId}`;
 const screens=[
  ['statistics','/statistics',async(p,m)=>{await p.getByRole('region',{name:m.Stats.yearStory,exact:true}).first().waitFor();},p=>p.locator('main')],
  ['first-project',root,async(p,_m)=>{await p.getByText('DOC-1',{exact:true}).first().click();await p.getByRole('dialog').first().getByRole('tab').first().click();},p=>p.getByRole('dialog').first()],
  ['objectives',`${root}/objectives`,async(p,m,fixture)=>{await p.getByRole('button',{name:m.Objectives.newObjective,exact:true}).first().click();await p.getByPlaceholder(m.Objectives.namePlaceholder,{exact:true}).fill(fixture.mapping['Make the website usable without a mouse']);},p=>p.getByRole('dialog')],
- ['objective-momentum',`${root}/objectives?open=${objective}`,async(p,m)=>{await p.getByText(m.Objectives.momentumTitle,{exact:true}).waitFor();},p=>p.locator('main')],
  ['cycle','/all?view=cycle',async p=>{await p.getByText('DOC-2',{exact:true}).first().waitFor();},p=>p.locator('main')],
  ['trash','/trash',async(p,m,fixture)=>{await p.getByText(fixture.mapping['Check the mobile navigation'],{exact:true}).waitFor();},p=>p.locator('main')],
 ];

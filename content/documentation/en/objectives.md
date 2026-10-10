@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
-  "sourceRevision": 6,
+  "revision": 7,
+  "sourceRevision": 7,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-10",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5)",
+    "version": "0.11.1 development (MIN-671)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -38,14 +38,15 @@
       "components/objective-momentum.tsx",
       "lib/relation-constants.ts",
       "lib/server/issue-relations.ts",
-      "lib/objective-momentum.ts"
+      "lib/objective-momentum.ts",
+      "content/documentation/reviews/min-671-objective-momentum-2026-10-10.md"
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions)",
-    "date": "2026-10-09"
+    "revision": 7,
+    "fact": "agent:/root (MIN-671 target-date condition and retained calculation claims checked against source and render tests; earlier procedural evidence retained)",
+    "language": "agent:/root (en changed-passage review against English revision 7; earlier unchanged prose reviews retained)",
+    "date": "2026-10-10"
   },
   "related": [
     "issues",
@@ -66,7 +67,7 @@
       "src": "/documentation/en/reader-objectives.png",
       "alt": "Unsubmitted objective-creation dialog with a demonstration result name.",
       "caption": "Name the result before choosing the lead, target date and status. This dialog has not created a second objective.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -75,27 +76,10 @@
       ],
       "theme": "light",
       "padding": 24
-    },
-    {
-      "id": "objective-dependencies-and-momentum-steps",
-      "kind": "screenshot",
-      "src": "/documentation/en/reader-objective-momentum.png",
-      "alt": "Objective momentum after an actual demonstration completion.",
-      "caption": "Read momentum alongside the linked work. This history is insufficient to show an estimated finish date.",
-      "revision": 6,
-      "reviewed": true,
-      "capturedAt": "2026-10-08",
-      "viewport": [
-        994,
-        1046
-      ],
-      "theme": "light",
-      "padding": 24
     }
   ],
   "requiredFigures": [
-    "objectives-steps",
-    "objective-dependencies-and-momentum-steps"
+    "objectives-steps"
   ]
 }
 ---
@@ -124,13 +108,13 @@ A blocking relation may connect an issue or another objective to this objective,
 
 ### Interpret the momentum signal {#momentum}
 
+The Momentum panel appears only when the objective has a target date. Removing that date hides the panel, including its history, pace statistics and estimated finish date. Add a target date to show it again; the overall progress indicator remains available without one.
+
 Momentum summarizes recently completed work. It can be accelerating, steady, slowing or stalled, with separate states for not-started, complete and canceled objectives. Use it to identify an outcome needing attention, then read the underlying issues and activity.
 
 An estimated finish date requires at least two completions, a full observed week, positive delivered effort and remaining work. Only currently linked issues contribute; completions before objective creation do not count as recent momentum.
 
 - With a valid target, history spans creation to that date. Throughput uses observed time since creation, including time after a missed target.
-- Without a valid target, the calculation uses a rolling eight-week history and a 28-day forecast window.
+- If a target date is set but does not define a valid period after creation, the calculation uses a rolling eight-week history and a 28-day forecast window.
 
 Sparse history or a recent scope change makes the estimate less useful. It is not a promised deadline and excludes work you have not attached. Compare the target date, remaining work and actual constraints before changing commitments.
-
-![Objective momentum after an actual demonstration completion.](/documentation/en/reader-objective-momentum.png)
