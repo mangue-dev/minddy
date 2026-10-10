@@ -8,6 +8,7 @@ import { describeAgentHarnessCapabilities } from "@/lib/agent-harness-capabiliti
 import type { NativeConnectionLease } from "./native-agent-credentials";
 import { claimNativeWorkerConnection, bindNativeWorkerAllocation, restoreNativeWorkerProfile, abortNativeWorkerConnection } from "./native-worker-connections";
 import { resolveWorkerHarness } from "./native-worker-selection";
+import { nativeWorkerHistory } from "./native-worker-history";
 import { resolveAgentExecutionBackend } from "@/lib/capabilities";
 import { workerModelSurfaceForAgentRun } from "@/lib/ai-surfaces";
 import { getUserSandboxPreferences } from "./sandbox-preferences";
@@ -1599,7 +1600,7 @@ export async function executeAgentRun(
         privateRoot: nativeWorkerPaths(cloudLayout()).privateRoot,
         profileRoot: nativeWorkerPaths(cloudLayout()).profileRoot,
         profileExportPath: nativeWorkerPaths(cloudLayout()).profileExportPath,
-        history: run.checkpoint?.native?.engine === run.agent_engine ? run.checkpoint.native.history : [],
+        history: await nativeWorkerHistory(run),
       } } : {}),
       /**
        * WHERE THIS TURN WORKS (MIN-354). A microVM is created for one run and that

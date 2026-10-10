@@ -30,9 +30,11 @@ type NativeErrorMessage = "error" | `error_${NativeRequestErrorCode}`;
 
 function EngineLabel({ engine }: { engine: AccountAgentEngine }) {
   const identity = agentEngineDisplay(engine);
+  const t = useTranslations("NativeAgentConnections");
   return <span className="inline-flex items-center gap-2">
     <McpAgentLogo agent={identity.logo} size={16} />
     <span>{identity.name}</span>
+    {engine === "claude_code" && <span className="rounded border px-1.5 py-0.5 text-xs text-muted-foreground">{t("experimental")}</span>}
   </span>;
 }
 
@@ -144,6 +146,7 @@ export function NativeAgentConnections({
           && <p className="py-2 text-sm text-muted-foreground" role="status">{t("engineReconnect")}</p>}
         {engineError && <p className="py-2 text-sm text-destructive" role="alert">{t(engineError)}</p>}
       </SettingsRow>}
+      {defaultEngine === "claude_code" && <p className="py-2 text-sm text-muted-foreground" role="note">{t("claudeExperimentalHint")}</p>}
       {eligible && defaultEngine !== "opencode" && (
         <NativeConnectionRow
           key={defaultEngine}

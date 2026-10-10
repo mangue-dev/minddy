@@ -638,15 +638,35 @@ describe("native subscription worker admission", () => {
     noApiCalls();
   });
 
-  it("refuses a reconnected generation for an older frozen worker without changing engine", async () => {
+  it("creates an explicit cold continuation after reconnecting without mutating the old worker", async () => {
     h.nativeConnections = [connected("codex")];
-    h.continuedRun = { agent_engine: "codex", native_connection_id: connectionId, native_connection_generation: 6,
+    h.continuedRun = { agent_engine: "codex", model: "codex/gpt-test-codex", native_reasoning_effort: "ultra", native_connection_id: connectionId, native_connection_generation: 6,
       id: "previous-native", conversation_id: "native-conversation", created_by: USER_ID,
       project_id: PROJECT_ID, repo_link_id: "link-1", repo_provider: "github", repo_external_id: "repo-1",
-      status: "completed" };
+      status: "completed", branch_name: "minddy/agent/native-work", base_branch: "main",
+      pr_number: 71, pr_url: `https://github.com/${REPO}/pull/71`, pr_state: "open",
+      checkpoint: { native: { engine: "codex", history: [{ role: "assistant", text: "Previous implementation context" }] } } };
+    const previous = structuredClone(h.continuedRun);
     expect(await launchAgentRun({ projectId: PROJECT_ID, userId: USER_ID, triggeredBy: "chat",
-      continueRunId: "previous-native", prompt: "Continue" })).toMatchObject({ ok: false, error: "nativeConnectionRequired" });
-    expect(h.created).toEqual([]);
+      continueRunId: "previous-native", prompt: "Continue" })).toMatchObject({ ok: true });
+    expect(h.created[0]).toMatchObject({ engine: "codex", nativeConnectionId: connectionId,
+      nativeConnectionGeneration: 7, conversationId: "native-conversation", continuedFromRunId: "previous-native",
+      model: "codex/gpt-test-codex", nativeReasoningEffort: "ultra", branchName: "minddy/agent/native-work",
+      baseBranch: "main", prNumber: 71 });
+    expect(h.created[0].prompt).toBe("Continue");
+    expect(h.continuedRun).toEqual(previous);
     noApiCalls();
+  });
+  it.each(["different_owner", "different_repo", "running", "merged"])("refuses unsafe reconnect continuation: %s", async (kind) => {
+    h.nativeConnections = [connected("codex")];
+    h.continuedRun = { agent_engine: "codex", native_connection_id: connectionId, native_connection_generation: 6,
+      id: "previous-native", conversation_id: "native-conversation", created_by: kind === "different_owner" ? "other-owner" : USER_ID,
+      project_id: PROJECT_ID, repo_link_id: kind === "different_repo" ? "other-link" : "link-1",
+      repo_provider: "github", repo_external_id: "repo-1", status: kind === "running" ? "running" : "completed",
+      pr_state: kind === "merged" ? "merged" : "open" };
+    expect(await launchAgentRun({ projectId: PROJECT_ID, userId: USER_ID, triggeredBy: "chat",
+      continueRunId: "previous-native", prompt: "Continue" })).toMatchObject({ ok: false,
+      error: kind === "running" ? "alreadyRunning" : kind === "merged" ? "prNoBranch" : "continuationNotFound" });
+    expect(h.created).toEqual([]); noApiCalls();
   });
 });

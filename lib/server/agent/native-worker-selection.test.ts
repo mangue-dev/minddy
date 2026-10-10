@@ -92,6 +92,26 @@ describe("native code-worker account selection", () => {
     expect(h.list).not.toHaveBeenCalled();
   });
 
+  it("admits a newer generation only for explicit cold continuation on the same connection", async () => {
+    const frozen = { agent_engine: "codex", model: "codex/gpt-test-codex", native_reasoning_effort: "high",
+      native_connection_id: "connection", native_connection_generation: 6 };
+    await expect(resolveWorkerHarness("owner", frozen)).rejects.toMatchObject({ code: "reconnect_required" });
+    await expect(resolveWorkerHarness("owner", frozen, { allowReconnectedContinuation: true })).resolves.toMatchObject({
+      engine: "codex", nativeConnectionId: "connection", nativeConnectionGeneration: 7,
+      nativeModel: "gpt-test-codex", nativeReasoningEffort: "high" });
+    expect(h.from).not.toHaveBeenCalled();
+    for (const row of [{ ...connected, id: "replacement" }, { ...connected, generation: 5 },
+      { ...connected, status: "disconnected" }, { ...connected, stopRequired: true }]) {
+      h.list.mockResolvedValue([row]);
+      await expect(resolveWorkerHarness("owner", frozen, { allowReconnectedContinuation: true })).rejects.toMatchObject({ code: "reconnect_required" });
+    }
+    h.list.mockResolvedValue([connected]);
+    for (const generation of [null, 0, -1]) {
+      await expect(resolveWorkerHarness("owner", { ...frozen, native_connection_generation: generation },
+        { allowReconnectedContinuation: true })).rejects.toMatchObject({ code: "reconnect_required" });
+    }
+  });
+
   it("fails closed on preference or vault metadata database errors", async () => {
     h.maybeSingle.mockResolvedValue({ data: null, error: { message: "database unavailable" } });
     await expect(resolveWorkerHarness("owner")).rejects.toThrow("Unable to read account worker harness");

@@ -483,6 +483,7 @@ export async function launchAgentRun(
   if (continuedRun && (continuedRun.status === "queued" || continuedRun.status === "running")) {
     return { ok: false, error: "alreadyRunning", run: continuedRun };
   }
+  if (continuedRun?.pr_state === "merged") return { ok: false, error: "prNoBranch" };
 
   // After the resolution of the project, these readings no longer depend on each other.
   // others. Throwing them together shortens the time before the drain kicks — and
@@ -507,7 +508,8 @@ export async function launchAgentRun(
   // but cannot replace the worker provider or its quota mode.
   let harness: Awaited<ReturnType<typeof resolveWorkerHarness>>;
   try {
-    harness = await resolveWorkerHarness(input.userId, continuedRun ?? undefined);
+    harness = await resolveWorkerHarness(input.userId, continuedRun ?? undefined,
+      { allowReconnectedContinuation: !!continuedRun });
   } catch (error) {
     if (error instanceof NativeWorkerUnavailableError) return { ok: false, error: error.code === "reconnect_required" ? "nativeConnectionRequired" : "nativeAgentUnavailable" };
     throw error;

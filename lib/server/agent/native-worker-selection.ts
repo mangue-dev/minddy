@@ -17,7 +17,7 @@ export class NativeWorkerUnavailableError extends Error {
 /** Only metadata is read here; busy connections remain selectable and queue at execution. */
 export async function resolveWorkerHarness(userId: string, frozen?: {
   agent_engine: string; model?: string | null; native_reasoning_effort?: string | null; native_connection_id?: string | null; native_connection_generation?: number | null;
-}) {
+}, options: { allowReconnectedContinuation?: boolean } = {}) {
   let engine: LiveAgentEngine;
   let nativePreferences: unknown;
   if (frozen) {
@@ -35,8 +35,13 @@ export async function resolveWorkerHarness(userId: string, frozen?: {
   if (!isNativeAgentEngine(engine)) return { engine: "opencode" as const };
   if (!nativePrototypeEnabledFor(userId)) throw new NativeWorkerUnavailableError("private_prototype_unavailable");
   const row = (await listNativeConnections(userId)).find((item) => item.engine === engine);
+  // Only explicit cold continuation may create a new run on a newer generation.
+  // Execution of an existing run retains its original immutable credential fence.
+  const reconnected = options.allowReconnectedContinuation === true && frozen && row &&
+    row.id === frozen.native_connection_id && Number.isSafeInteger(frozen.native_connection_generation) &&
+    Number(frozen.native_connection_generation) > 0 && row.generation > Number(frozen.native_connection_generation);
   if (!row || row.status !== "connected" || row.stopRequired ||
-      (frozen && (row.id !== frozen.native_connection_id || row.generation !== frozen.native_connection_generation))) {
+      (frozen && !reconnected && (row.id !== frozen.native_connection_id || row.generation !== frozen.native_connection_generation))) {
     throw new NativeWorkerUnavailableError("reconnect_required");
   }
   if (!frozen && nativePreferences != null) {

@@ -145,6 +145,51 @@ describe("native worker MCP", () => {
 });
 
 describe("native supervisor lifecycle", () => {
+  async function claudeContext() {
+    const context = await setup();
+    context.job.engine = "claude_code"; context.job.model = "claude_code/default";
+    context.job.nativeAgent!.engine = "claude_code";
+    const profile = { version: 1, engine: "claude_code", files: [{ path: ".credentials.json",
+      content: JSON.stringify({ claudeAiOauth: { accessToken: "fixture-claude-access", refreshToken: "fixture-claude-refresh" } }) }] };
+    await writeFile(nativeWorkerPaths(context.job.layout).profileImportPath, JSON.stringify(profile), { mode: 0o600 });
+    return context;
+  }
+  it("runs a simulated Claude stream through real guarded MCP and exports only after shutdown", async () => {
+    const context = await claudeContext();
+    const runtime = createNativeRuntime("claude_code", { spawn: (_engine, args, env, cwd) => {
+      expect(env).not.toHaveProperty("ANTHROPIC_API_KEY");
+      const server = JSON.parse(args[args.indexOf("--mcp-config") + 1]).mcpServers.minddy;
+      const tools = args.slice(args.indexOf("--allowedTools") + 1, args.indexOf("--append-system-prompt"));
+      const script = `
+        const {createInterface}=require('node:readline');
+        const send=x=>process.stdout.write(JSON.stringify(x)+'\\n');
+        createInterface({input:process.stdin}).once('line',async()=>{
+          send({type:'system',subtype:'init',tools:${JSON.stringify(tools)},mcp_servers:[{name:'minddy',status:'connected'}]});
+          const response=await fetch(${JSON.stringify(server.url)},{method:'POST',headers:{Authorization:process.env.MINDDY_NATIVE_MCP_AUTHORIZATION,'Content-Type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method:'tools/call',params:{name:'read_issue',arguments:{identifier:'MIN-676'}}})});
+          const value=await response.json();
+          send({type:'result',subtype:'success',is_error:value.result?.isError===true || !response.ok,result:'Simulated Claude MCP completed'});
+        });`;
+      return spawn(process.execPath, ["-e", script], { env, cwd, detached: true, stdio: "pipe" });
+    } });
+    const report = await runNativeTurn(context.job, { prompt: "Inspect the fixture", anchorInstructions: "anchor" }, context.cp,
+      { host: context.host, runtime, installCli: async () => "/fixture" });
+    expect(report.status).toBe("completed"); expect(report.nativeAuthExportReady).toBe(true);
+    expect(context.cp.callTool).toHaveBeenCalledWith("read_issue", expect.objectContaining({ args: { identifier: "MIN-676" } }));
+    expect(JSON.parse(await readFile(context.job.nativeAgent!.profileExportPath, "utf8")).engine).toBe("claude_code");
+    expect(report.checkpoint?.native?.engine).toBe("claude_code"); expect(context.host.close).toHaveBeenCalled();
+  });
+  it.each(["assistant", "result"])("does not save rejected Claude authentication from a %s frame", async (frame) => {
+    const context = await claudeContext();
+    const event = frame === "assistant" ? { type: "assistant", error: "authentication_failed", message: { content: [{ type: "text", text: "private provider transcript" }] } }
+      : { type: "result", subtype: "error_during_execution", is_error: true, api_error_status: 401, errors: ["private provider transcript"] };
+    const script = `require('node:readline').createInterface({input:process.stdin}).once('line',()=>process.stdout.write(${JSON.stringify(JSON.stringify(event) + "\n")}));`;
+    const runtime = createNativeRuntime("claude_code", { spawn: (_engine, _args, env, cwd) => spawn(process.execPath, ["-e", script], { env, cwd, detached: true, stdio: "pipe" }) });
+    const report = await runNativeTurn(context.job, { prompt: "Inspect", anchorInstructions: "anchor" }, context.cp,
+      { host: context.host, runtime, installCli: async () => "/fixture" });
+    expect(report.status).toBe("error"); expect(report.nativeAuthExportReady).toBe(false);
+    await expect(readFile(context.job.nativeAgent!.profileExportPath)).rejects.toMatchObject({ code: "ENOENT" });
+    expect(JSON.stringify(vi.mocked(context.cp.emit).mock.calls)).not.toContain("private provider transcript");
+  });
   it.each(["account_missing", "unauthorized"] as const)("retires reusable authentication after permanent native rejection: %s", async (reason) => {
     const context = await setup();
     // The stale export must also be removed if an earlier attempt left one.
@@ -262,6 +307,15 @@ describe("native supervisor lifecycle", () => {
 });
 
 describe("native CLI protocol", () => {
+  it.each(["missing_init", "error_subtype", "missing_error_flag"])("refuses an unverified Claude success: %s", async (kind) => {
+    const { job } = await setup();
+    const events = kind === "missing_init" ? [] : [{ type: "system", subtype: "init", tools: ["mcp__minddy__read_issue"], mcp_servers: [{ name: "minddy", status: "connected" }] }];
+    const result = { type: "result", subtype: kind === "error_subtype" ? "error_during_execution" : "success", ...(kind === "missing_error_flag" ? {} : { is_error: false }), result: "Unverified reply" };
+    const script = `require('node:readline').createInterface({input:process.stdin}).once('line',()=>{for(const event of ${JSON.stringify([...events, result])})process.stdout.write(JSON.stringify(event)+'\\n')});`;
+    const runtime = createNativeRuntime("claude_code", { spawn: (_engine, _args, env, cwd) => spawn(process.execPath, ["-e", script], { env, cwd, detached: true, stdio: "pipe" }) });
+    disposers.push(runtime.close); await runtime.start(runtimeInput(job.layout.repoDir));
+    for await (const event of runtime.events()) if (event.type === "failed" || event.type === "completed") { expect(event.type).toBe("failed"); break; }
+  });
   function stoppedChildFixture() {
     const child = Object.assign(new EventEmitter(), {
       stdin: new PassThrough(), stdout: new PassThrough(), stderr: new PassThrough(),
@@ -314,6 +368,28 @@ describe("native CLI protocol", () => {
     } finally { vi.useRealTimers(); }
   });
   const fixture = `const {createInterface}=require('node:readline');const send=x=>process.stdout.write(JSON.stringify(x)+'\\n');createInterface({input:process.stdin}).on('line',line=>{const r=JSON.parse(line);if(r.id===undefined)return;let result={};if(r.method==='account/read')result={account:{type:'chatgpt'}};if(r.method==='thread/start')result={thread:{id:'thread'}};if(r.method==='mcpServerStatus/list')result={data:[{name:'minddy',tools:{read_issue:{name:'read_issue'}}}]};if(r.method==='turn/start'){result={turn:{id:'turn'}};setTimeout(()=>{send({method:'item/agentMessage/delta',params:{delta:'Native reply'}});send({method:'turn/completed',params:{turn:{status:'completed'}}})},40)}send({id:r.id,result})});`;
+  it.each(["success", "terminal"])("waits through retryable Codex errors until %s", async (outcome) => {
+    const { job } = await setup();
+    const notification = "send({method:'error',params:{willRetry:true,error:{codexErrorInfo:'serverOverloaded',message:'private provider transcript'}}});";
+    const terminal = outcome === "success" ? "send({method:'turn/completed',params:{turn:{status:'completed'}}})"
+      : "send({method:'turn/completed',params:{turn:{status:'failed',error:{codexErrorInfo:'serverOverloaded'}}}})";
+    const script = fixture.replace("send({method:'item/agentMessage/delta'", notification + "send({method:'item/agentMessage/delta'")
+      .replace("send({method:'turn/completed',params:{turn:{status:'completed'}}})", terminal);
+    const runtime = createNativeRuntime("codex", { spawn: (_engine, _args, env, cwd) => spawn(process.execPath, ["-e", script], { env, cwd, detached: true, stdio: "pipe" }) });
+    disposers.push(runtime.close); await runtime.start(runtimeInput(job.layout.repoDir));
+    const events = [];
+    for await (const event of runtime.events()) { events.push(event); if (event.type === "failed" || event.type === "completed") break; }
+    expect(events).toContainEqual({ type: "status", phase: "retrying" });
+    expect(events.at(-1)).toMatchObject(outcome === "success" ? { type: "completed", reply: "Native reply" } : { type: "failed", nativeCode: "serverOverloaded" });
+    expect(JSON.stringify(events)).not.toContain("private provider transcript");
+  });
+  it("preserves terminal unauthorized Codex notifications for vault invalidation", async () => {
+    const { job } = await setup();
+    const script = fixture.replace("send({method:'item/agentMessage/delta'", "send({method:'error',params:{willRetry:false,error:{codexErrorInfo:'unauthorized'}}});send({method:'item/agentMessage/delta'");
+    const runtime = createNativeRuntime("codex", { spawn: (_engine, _args, env, cwd) => spawn(process.execPath, ["-e", script], { env, cwd, detached: true, stdio: "pipe" }) });
+    disposers.push(runtime.close); await runtime.start(runtimeInput(job.layout.repoDir));
+    for await (const event of runtime.events()) if (event.type === "failed") { expect(event.nativeCode).toBe("unauthorized"); break; }
+  });
   it("reports permanent authentication loss without starting a native thread", async () => {
     const { job } = await setup(); let calledThread = false;
     const child = stoppedChildFixture();

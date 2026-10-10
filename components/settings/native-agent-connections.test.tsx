@@ -105,9 +105,13 @@ it("shows only the selected connection and removes diagnostic and preview contro
   expect([...host.querySelectorAll("button")].map((button) => button.textContent)).toEqual(["Disconnect"]);
   expect(host.textContent).not.toContain("Private preview");
   expect(host.textContent).not.toContain("Test new sandboxes");
+  expect(host.textContent).not.toContain(messages.NativeAgentConnections.claudeExperimentalHint);
   expect(api.testNativeConnection).not.toHaveBeenCalled();
   await render({ defaultEngine: "claude_code", onEngineChange: vi.fn() });
-  expect(host.querySelector("article:last-of-type h3")?.textContent).toBe("Claude Code");
+  expect(host.querySelector("article:last-of-type h3")?.textContent).toContain("Claude Code");
+  expect(host.textContent).toContain(messages.NativeAgentConnections.experimental);
+  expect(host.textContent).toContain(messages.NativeAgentConnections.claudeExperimentalHint);
+  expect(api.startNativeLogin).not.toHaveBeenCalled();
 });
 
 it("permits eligible native selection before connection without automatically authenticating", async () => {

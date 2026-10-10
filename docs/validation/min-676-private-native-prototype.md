@@ -481,3 +481,44 @@ report, including the fixed stream-cleanup classification regression and pilot
 reauthorization that preceded this final pair. The final connection is connected
 and idle at generation 4. Actual provider 401 recovery is now observed;
 authentic signed-token expiry remains pending and Claude remains untested.
+
+
+## Experimental Claude and review fixes (2026-10-11)
+
+Claude Code is explicitly marked Experimental in the account engine picker,
+selected connection label, shared worker badges and six localized messages. It remains
+available to the existing allowlisted pilot, with no public gate expansion.
+A Free account does not establish Claude Code subscription entitlement. This
+change performs no real Claude login, inference, refresh or provider revocation.
+Provider permission for centralized Claude session custody remains unresolved;
+an experimental label does not authorize public distribution.
+
+The Claude stream adapter requires successful guarded Minddy MCP initialization
+and an explicit successful terminal result. Assistant authentication rejection
+and terminal HTTP 401 results invalidate reusable auth export; other provider
+failures do not silently switch provider or payer. Local child-process fixtures
+exercise a real Minddy MCP call, normal completion, physical child shutdown,
+profile export, rejected auth and malformed success. These tests replace the
+CLI with a protocol fixture: they do not validate paid inference or OAuth renewal.
+
+Codex retryable error notifications are nonterminal. The native CLI retains
+control of retries and authentication refresh; Minddy waits for the terminal
+turn outcome, process failure, cancellation or existing wall deadline. Tests
+cover retry followed by success, retry followed by terminal failure and a
+permanent unauthorized notification, without retaining provider transcripts.
+
+After a successful reconnection, an explicit owned cold continuation may bind
+the same connection's strictly newer generation on a new run. Existing runs
+and execution admission keep their immutable generation fences. Engine, model,
+effort, conversation, repository branch and PR lineage remain fixed, and
+available portable history is decrypted from the original checkpoint only after
+rechecking owner, repository, conversation and frozen model identity. It is
+bounded when replayed privately into the native job; the visible launch prompt
+remains the user's new request. No native session ID or old auth file is copied.
+The standalone composer follows the new run; Numo's warm relaunch refuses stale
+auth and falls through to the existing explicit cold-continuation launcher.
+Missing/disconnected connections, cleanup fences, replacement identities,
+older generations, different owners and merged work remain refused.
+
+The database remains local Docker. No live provider run, remote migration,
+public enrollment or production deployment is performed by this follow-up.

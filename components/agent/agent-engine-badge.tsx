@@ -14,12 +14,14 @@ export function AgentEngineBadge({ engine, className, size = 14 }: {
   size?: number;
 }) {
   const t = useTranslations("Agent");
+  const tNative = useTranslations("NativeAgentConnections");
   const identity = agentEngineDisplay(engine);
   const label = identity.name ?? t("engineLegacyLabel");
   const badge = (
     <span className={cn("inline-flex min-w-0 items-center gap-1.5 text-xs font-medium", className)}>
       <McpAgentLogo agent={identity.logo} size={size} />
       <span className="truncate">{label}</span>
+      {engine === "claude_code" && <span className="rounded border px-1 py-0.5 text-[10px] text-muted-foreground">{tNative("experimental")}</span>}
     </span>
   );
   if (!isNativeAgentEngine(engine)) return badge;

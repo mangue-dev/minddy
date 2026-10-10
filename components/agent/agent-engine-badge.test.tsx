@@ -45,6 +45,7 @@ it.each([
   await render(engine);
   expect(host.textContent).toContain(name);
   expect(host.querySelector("[data-agent-logo]")?.getAttribute("data-agent-logo")).toBe(logo);
+  expect(host.textContent?.includes(messages.NativeAgentConnections.experimental)).toBe(engine === "claude_code");
   const tooltip = host.querySelector('[role="tooltip"]');
   if (engine === "opencode") expect(tooltip).toBeNull();
   else expect(tooltip?.textContent).toBe(`The model and reasoning are managed by ${name}.`);

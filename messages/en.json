@@ -6552,6 +6552,8 @@
     "description": "Choose the agent for repository work. Codex and Claude Code use their connected subscription; Numo and sandbox compute remain separate.",
     "codexHint": "Use a ChatGPT account with Codex access.",
     "claudeHint": "Use a Claude subscription that includes Claude Code. Paid execution has not yet been validated.",
+    "experimental": "Experimental",
+    "claudeExperimentalHint": "Claude Code is experimental. You need a plan that includes Claude Code; a Free account is not enough. Real execution and session renewal still need validation.",
     "connect": "Connect {agent}",
     "resume": "Continue connection",
     "test": "Test new sandboxes",

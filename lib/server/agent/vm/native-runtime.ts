@@ -4,11 +4,13 @@ import { mkdir } from "node:fs/promises";
 import { nativeWorkerModelId, assertNativeWorkerEffort } from "@/lib/native-worker-model";
 import type { NativeHarness } from "@/lib/native-agent-prototype";
 import type { NativeWorkerMessage } from "@/lib/native-agent-worker";
+import { nativeReplayPrompt } from "@/lib/native-agent-worker";
+export { nativeReplayPrompt } from "@/lib/native-agent-worker";
 import { CODEX_CAPABILITY_DROP_ARGS, safeNativeError } from "./native-prototype/controller";
 
 export type NativeEvent =
   | { type: "text"; text: string; delta: boolean }
-  | { type: "status"; phase: "starting" | "running" | "reasoning" | "tool" }
+  | { type: "status"; phase: "starting" | "running" | "reasoning" | "tool" | "retrying" }
   | { type: "completed"; reply: string }
   | { type: "failed"; code: "providerUnavailable"; nativeCode?: string }
   | { type: "usage"; input?: number; output?: number; cached?: number };
@@ -27,13 +29,6 @@ export class NativeAuthenticationRequired extends Error {
   constructor() { super("Native subscription requires reconnection"); }
 }
 
-/** Fresh sandboxes reconstruct bounded context; opaque native session IDs never travel. */
-export function nativeReplayPrompt(prompt: string, history: NativeWorkerMessage[]): string {
-  if (!history.length) return prompt;
-  const replay = history.slice(-24).map((message) => `${message.role === "user" ? "User" : "Assistant"}: ${message.text.slice(0, 8000)}`).join("\n\n").slice(-48_000);
-  return `This is a fresh native CLI session. The previous Minddy worker conversation is reconstructed below as context. Recheck current repository and ticket state before acting.\n\n${replay}\n\nCurrent request:\n${prompt}`;
-}
-
 export function nativeClaudeArguments(input: NativeRuntimeInput): string[] {
   return [...(input.model ? ["--model", input.model] : []), ...(input.reasoningEffort ? ["--effort", input.reasoningEffort] : []), "--print", "--verbose", "--restricted", "--disable-slash-commands", "--input-format", "stream-json", "--output-format", "stream-json", "--include-partial-messages", "--tools", "", "--setting-sources", "", "--strict-mcp-config", "--permission-mode", "dontAsk", ...(input.toolNames?.length ? ["--allowedTools", ...input.toolNames.map((name) => `mcp__minddy__${name}`)] : []), "--append-system-prompt", input.anchor, "--mcp-config", JSON.stringify({ mcpServers: { minddy: { type: "http", url: input.mcpUrl, headers: { Authorization: "${MINDDY_NATIVE_MCP_AUTHORIZATION}" } } } })];
 }
@@ -47,6 +42,7 @@ export function createNativeRuntime(engine: NativeHarness, options: { spawn?: Na
   let child: ChildProcessWithoutNullStreams | undefined;
   let stopping: Promise<void> | undefined;
   let expectedClaudeTools: string[] = [];
+  let claudeInitialized = false;
   let nextId = 0; let threadId = ""; let turnId = ""; let reply = ""; let closed = false;
   const pending = new Map<number, { resolve(value: Record<string, unknown>): void; reject(error: Error): void; timer: ReturnType<typeof setTimeout> }>();
   const queue: NativeEvent[] = [];
@@ -102,18 +98,32 @@ export function createNativeRuntime(engine: NativeHarness, options: { spawn?: Na
           if (event.method === "item/started" && params.item?.type === "mcpToolCall") push({ type: "status", phase: "tool" });
           if (event.method === "item/completed" && params.item?.type === "agentMessage" && typeof params.item.text === "string") { reply = params.item.text.slice(-64_000); push({ type: "text", text: reply, delta: false }); }
           if (event.method === "turn/completed") { turnId = ""; if (params.turn?.status === "completed") push({ type: "completed", reply }); else fail(safeNativeError(params.turn?.error?.codexErrorInfo).errorCode); }
-          if (event.method === "error") fail(safeNativeError(params.error?.codexErrorInfo).errorCode);
+          if (event.method === "error") {
+            // The CLI owns transport/auth retries; only its terminal outcome ends the turn.
+            if (params.willRetry === true) push({ type: "status", phase: "retrying" });
+            else fail(safeNativeError(params.error?.codexErrorInfo).errorCode);
+          }
         } else {
           if (event.type === "system" && event.subtype === "init") {
             const tools = Array.isArray(event.tools) ? event.tools : [];
             const servers = Array.isArray(event.mcp_servers) ? event.mcp_servers : [];
             const permitted = new Set([...expectedClaudeTools, "EndConversation"]);
-            if (tools.some((tool: unknown) => typeof tool !== "string" || !permitted.has(tool)) || expectedClaudeTools.some((tool) => !tools.includes(tool)) || event.plugins?.length || event.plugin_errors?.length || event.mcp_server_errors?.length || !servers.some((server: { name?: unknown; status?: unknown }) => server.name === "minddy" && server.status === "connected")) { fail("nativeMcpUnavailable"); void stop().catch(() => {}); }
+            if (tools.some((tool: unknown) => typeof tool !== "string" || !permitted.has(tool)) || expectedClaudeTools.some((tool) => !tools.includes(tool)) || event.plugins?.length || event.plugin_errors?.length || event.mcp_server_errors?.length || !servers.some((server: { name?: unknown; status?: unknown } | null) => server?.name === "minddy" && server.status === "connected")) { fail("nativeMcpUnavailable"); void stop().catch(() => {}); }
+            else claudeInitialized = true;
           }
           const delta = event.event?.delta;
           if (event.type === "stream_event" && delta?.type === "text_delta" && typeof delta.text === "string") { reply = (reply + delta.text).slice(-64_000); push({ type: "text", text: delta.text, delta: true }); }
-          if (event.type === "assistant") { const text = (event.message?.content ?? []).filter((block: any) => block.type === "text" && typeof block.text === "string").map((block: any) => block.text).join("\n"); if (text) { reply = text.slice(-64_000); push({ type: "text", text: reply, delta: false }); } }
-          if (event.type === "result") { if (event.is_error === true) fail(); else { if (typeof event.result === "string") reply = event.result.slice(-64_000); push({ type: "completed", reply }); } }
+          if (event.type === "assistant") {
+            if (event.error) { fail(event.error === "authentication_failed" ? "unauthorized" : undefined); continue; }
+            const text = (Array.isArray(event.message?.content) ? event.message.content : []).filter((block: any) => block?.type === "text" && typeof block.text === "string").map((block: any) => block.text).join("\n");
+            if (text) { reply = text.slice(-64_000); push({ type: "text", text: reply, delta: false }); }
+          }
+          if (event.type === "result") {
+            if (event.is_error === true && event.api_error_status === 401) fail("unauthorized");
+            else if (!claudeInitialized) fail("nativeMcpUnavailable");
+            else if (event.is_error !== false || event.subtype !== "success") fail();
+            else { if (typeof event.result === "string") reply = event.result.slice(-64_000); push({ type: "completed", reply }); }
+          }
         }
       }
     });

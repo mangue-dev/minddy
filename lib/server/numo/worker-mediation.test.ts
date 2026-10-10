@@ -3,13 +3,16 @@ import type { AgentRun } from "@/lib/server/agent/runs";
 
 const h = vi.hoisted(() => ({
   getRun: vi.fn(), quota: vi.fn(), resume: vi.fn(), latest: vi.fn(),
-  rpc: vi.fn(), kick: vi.fn(), update: vi.fn(), eq: vi.fn(),
+  rpc: vi.fn(), kick: vi.fn(), update: vi.fn(), eq: vi.fn(), harness: vi.fn(),
 }));
 vi.mock("@/lib/server/agent/quota", () => ({ checkAgentQuota: h.quota }));
 vi.mock("@/lib/server/agent/runs", () => ({
   getRun: h.getRun, resumeLatestRunWithMessage: h.resume, runIsLatestOnAnchor: h.latest,
 }));
 vi.mock("@/lib/server/agent/launch", () => ({ kickAgentDrain: h.kick }));
+vi.mock("@/lib/server/agent/native-worker-selection", async (importOriginal) => ({
+  ...await importOriginal<typeof import("@/lib/server/agent/native-worker-selection")>(), resolveWorkerHarness: h.harness,
+}));
 vi.mock("@/lib/supabase-service", () => ({
   getServiceClient: () => ({
     rpc: h.rpc,
@@ -27,6 +30,7 @@ vi.mock("@/lib/server/agent/run-input-answer-content", () => ({ encodeAgentInput
 vi.mock("@/lib/server/agent/worker-parent-content", () => ({ encodeWorkerParentMessage: vi.fn() }));
 
 const { answerNumoWorkerInput, relaunchNumoWorkerRun } = await import("./worker-mediation");
+const { NativeWorkerUnavailableError } = await import("@/lib/server/agent/native-worker-selection");
 const OWNER = "11111111-1111-4111-8111-111111111111";
 const RUN = "22222222-2222-4222-8222-222222222222";
 const CONVERSATION = "33333333-3333-4333-8333-333333333333";
@@ -57,6 +61,7 @@ beforeEach(() => {
   } as unknown as AgentRun;
   h.getRun.mockImplementation(async () => run);
   h.latest.mockResolvedValue(true);
+  h.harness.mockResolvedValue({ engine: "codex", nativeConnectionGeneration: 7 });
   h.quota.mockResolvedValue({ allowed: true, unlimited: false, mode: "subscription", cap: 10, periodStart: PERIOD });
   h.rpc.mockResolvedValue({ data: "queued", error: null });
   h.resume.mockResolvedValue("queued");
@@ -98,6 +103,11 @@ describe("native worker question resume", () => {
 });
 
 describe("native worker relaunch", () => {
+  it("falls through to cold lineage launch instead of re-queuing revoked credentials", async () => {
+    h.harness.mockRejectedValue(new NativeWorkerUnavailableError("reconnect_required"));
+    expect(await relaunchNumoWorkerRun(relaunchInput)).toEqual({ ok: false, code: "native_reconnect_required" });
+    expect(h.resume).not.toHaveBeenCalled(); expect(h.update).not.toHaveBeenCalled(); expect(h.kick).not.toHaveBeenCalled();
+  });
   it("retains the frozen harness, connection generation and portable history", async () => {
     const frozenCheckpoint = run.checkpoint;
     await expect(relaunchNumoWorkerRun(relaunchInput)).resolves.toEqual({ ok: true, run });

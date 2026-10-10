@@ -11,6 +11,8 @@ import {
 } from "@/lib/server/agent/runs";
 import { requestedRunReservationUsd } from "@/lib/server/agent/run-key";
 import { kickAgentDrain } from "@/lib/server/agent/launch";
+import { isNativeAgentEngine } from "@/lib/agent-engines";
+import { resolveWorkerHarness, NativeWorkerUnavailableError } from "@/lib/server/agent/native-worker-selection";
 import { getServiceClient } from "@/lib/supabase-service";
 import { shouldEncryptAgentLaunch } from "@/lib/server/agent/run-launch-content";
 import { encodeQueueMessage } from "@/lib/server/agent/run-queue-content";
@@ -271,6 +273,14 @@ export async function relaunchNumoWorkerRun(input: {
   if (run.local_exec) return { ok: false, code: "local_execution_retired" };
   if (!(await runIsLatestOnAnchor(run))) {
     return { ok: false, code: "superseded" };
+  }
+
+  if (isNativeAgentEngine(run.agent_engine)) {
+    try { await resolveWorkerHarness(input.userId, run); }
+    catch (error) {
+      if (error instanceof NativeWorkerUnavailableError) return { ok: false, code: "native_reconnect_required" };
+      throw error;
+    }
   }
 
   // The caller's agents right is checked at the turn level already; the resume

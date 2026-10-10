@@ -170,6 +170,7 @@ export function AgentConversation({
   // Explicitly open run: `initialRunId`, a run chosen from the history,
   // or the one we just launched. `null` → we fall back on the ACTIVE run of the outcome.
   const [selectedId, setSelectedId] = useState<string | null>(initialRunId);
+  const [continuedNoteRunId, setContinuedNoteRunId] = useState<string | null>(null);
   // Messages sent for which the server echo has not yet arrived (optimistic bubbles).
   const [pendingMessages, setPendingMessages] = useState<
     Array<{ id: string; text: string; mentions: AssistantMention[] }>
@@ -190,14 +191,15 @@ export function AgentConversation({
   // chooses from the LIST, and the host passes it to us as prop.
   useEffect(() => {
     setSelectedId(initialRunId);
-  }, [initialRunId]);
+    setContinuedNoteRunId(null);
+  }, [initialRunId, noteRunId]);
 
   const { runs: issueRuns, loading: issueLoading } = useIssueAgentRunsQuery(
     active && issueId ? issueId : null,
   );
   // NOTEBOOK session: a single run, queried directly (it IS the session).
   const { run: noteRun, loading: noteLoading } = useAgentRunQuery(
-    active && noteRunId ? noteRunId : null,
+    active && noteRunId ? continuedNoteRunId ?? noteRunId : null,
   );
   const runs = noteRunId ? (noteRun ? [noteRun] : []) : issueRuns;
   const loading = noteRunId ? noteLoading : issueLoading;
@@ -518,13 +520,18 @@ export function AgentConversation({
     // echo arrives. If this fails, we remove it ourselves (the message does not exist).
     setPendingMessages((p) => [...p, { id: messageId, text, mentions }]);
     try {
-      await steerAgentRunApi(
+      const result = await steerAgentRunApi(
         liveRun.id,
         text,
         mentions,
         attachments,
         messageId,
       );
+      if (result.runId && result.runId !== liveRun.id) {
+        setSelectedId(result.runId);
+        if (noteRunId) setContinuedNoteRunId(result.runId);
+        setPendingMessages((messages) => messages.filter((message) => message.id !== messageId));
+      }
       await Promise.all([
         refreshRuns(),
         queryClient.invalidateQueries({
