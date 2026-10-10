@@ -79,6 +79,33 @@ the adapter sends `reasoning_effort: "none"`, regardless of the level chosen.
 OpenAI rejects this combination with active effort and recommends Responses
 to maintain both reasoning, tools and multi-turn.
 
+### Smart Fill structured output
+
+Smart Fill has a 2048-token output budget and a 20-second LLM deadline.
+Its forced tool call opts into `preferNonReasoning`: the cached OpenRouter
+metadata must report a reasoning object with `mandatory: false` before the
+request explicitly sends `reasoning: { enabled: false }`. This differs from
+`effort: "off"`, which still omits reasoning fields and keeps model defaults.
+The shared chat contract exposes this explicit setting as
+`AiChatRequest.reasoning.enabled: false` for OpenRouter only.
+
+Metadata is checked against the resolved runtime model, including an account's
+BYOK override and routing suffix. Available metadata, including stale entries,
+is read synchronously; the existing catalog loader refreshes in the background
+without delaying generation or consuming its 20-second budget. A cold cache
+or mandatory/unknown reasoning retains the existing low-effort request for
+that call. A failed refresh leaves cached metadata usable. Direct BYOK
+providers keep their provider-specific effort translation. Smart Assign and
+Feedback Review do not opt into this policy.
+
+The forced tool helper reports `request_timeout` when its deadline interrupts
+the request or response body. Invalid response JSON remains
+`response_json_invalid`; missing expected tools report `output_truncated` for
+a `length` finish reason or `expected_tool_missing` otherwise. These are fixed
+codes without response content or exception messages. A deadline never
+triggers a retry, and an unsuccessful fill still permits issue creation.
+See the [MIN-674 incident review](audits/min-674-smart-fill.md).
+
 **The default is `medium`** (“Standard” in the UI): Numo's code worker gains at
 think a little before acting. `off` was the default on the day of delivery of
 MIN-122, to not change anything in the existing behavior while observing the
