@@ -1,5 +1,6 @@
 import { type Query } from "@tanstack/react-query";
 import { localSnapshotGeneration, restoreLocalSnapshot, saveLocalSnapshot } from "./local-snapshots";
+import { fitsQuerySnapshotBudget } from "./query-snapshot-budget";
 import {
   persistQueryClientSave,
   type Persister,
@@ -135,6 +136,13 @@ export function createQueryStorage(storage: Storage | undefined, key: string): P
   let queued: Write | undefined;
   let running: Write | undefined;
   let saved: { content: string; generation: number } | undefined;
+  const remove = () => {
+    revision += 1;
+    queued?.resolve();
+    queued = undefined;
+    saved = undefined;
+    storage?.removeItem(key);
+  };
   const drain = async () => {
     while (queued) {
       const write = queued;
@@ -162,6 +170,12 @@ export function createQueryStorage(storage: Storage | undefined, key: string): P
   return {
     persistClient: (client) => {
       if (!storage) return Promise.resolve();
+      if (!fitsQuerySnapshotBudget(client)) {
+        // The cache remains live in memory. Retire the previous disk snapshot
+        // and pending writes so a later reload cannot resurrect obsolete state.
+        remove();
+        return Promise.resolve();
+      }
       const generation = localSnapshotGeneration();
       // The save timestamp changes even for an identical cache. Keep query
       // freshness metadata in the comparison, but ignore that outer timestamp.
@@ -170,14 +184,17 @@ export function createQueryStorage(storage: Storage | undefined, key: string): P
         return Promise.resolve();
       }
       const existing = queued ?? running;
-      if (existing?.generation === generation && existing.content === content) return existing.promise;
+      if (existing?.generation === generation && existing.revision === revision && existing.content === content) return existing.promise;
       let resolve!: () => void;
       let reject!: (error: unknown) => void;
       const promise = new Promise<void>((done, fail) => { resolve = done; reject = fail; });
+      // Copy the already bounded JSON. A queued seal may run after an auth await;
+      // mutable cache references must not grow past the checked budget meanwhile.
+      const snapshotClient: PersistedClient = { timestamp: client.timestamp, ...JSON.parse(content) };
       // Only the latest waiting snapshot matters. The current request remains
       // fenced by its revision and is never allowed to overwrite newer state.
       queued?.resolve();
-      queued = { client, content, generation, revision: ++revision, promise, resolve, reject };
+      queued = { client: snapshotClient, content, generation, revision: ++revision, promise, resolve, reject };
       if (!running) void drain();
       return promise;
     },
@@ -187,12 +204,6 @@ export function createQueryStorage(storage: Storage | undefined, key: string): P
       if (value && JSON.parse(value)?.format !== "minddy-local-v1") storage.removeItem(key);
       return await restoreLocalSnapshot(storage, key, "query-cache") as Awaited<ReturnType<Persister["restoreClient"]>>;
     },
-    removeClient: () => {
-      revision += 1;
-      queued?.resolve();
-      queued = undefined;
-      saved = undefined;
-      storage?.removeItem(key);
-    },
+    removeClient: remove,
   };
 }

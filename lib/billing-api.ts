@@ -1,5 +1,7 @@
 "use client";
 
+import { fetchClientRead } from "./client-read";
+
 import type {
   BillingStatusResponse,
   UsageHistoryResponse,
@@ -35,16 +37,16 @@ async function parseJson<T>(response: Response): Promise<T> {
 }
 
 export async function fetchBillingStatusApi(): Promise<BillingStatusResponse> {
-  return parseJson(await fetch("/api/billing", { cache: "no-store" }));
+  return parseJson(await fetchClientRead("/api/billing", { cache: "no-store" }));
 }
 
 export async function fetchBillingUsageApi(): Promise<UsageSummaryResponse> {
-  return parseJson(await fetch("/api/billing/usage", { cache: "no-store" }));
+  return parseJson(await fetchClientRead("/api/billing/usage", { cache: "no-store" }));
 }
 
 export async function fetchUsageAnalyticsApi(): Promise<UsageAnalyticsResponse> {
   return parseJson(
-    await fetch("/api/billing/usage-analytics", { cache: "no-store" }),
+    await fetchClientRead("/api/billing/usage-analytics", { cache: "no-store" }),
   );
 }
 
@@ -57,7 +59,7 @@ export async function fetchUsageHistoryApi(params: {
   if (params.offset) search.set("offset", String(params.offset));
   const qs = search.toString();
   return parseJson(
-    await fetch(`/api/billing/usage-history${qs ? `?${qs}` : ""}`, {
+    await fetchClientRead(`/api/billing/usage-history${qs ? `?${qs}` : ""}`, {
       cache: "no-store",
     }),
   );

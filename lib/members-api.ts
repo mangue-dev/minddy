@@ -1,5 +1,7 @@
 "use client";
 
+import { fetchClientRead } from "./client-read";
+
 import type { MembersResponse } from "./types";
 import { trackEvent } from "./analytics";
 
@@ -20,7 +22,7 @@ async function parseJson<T>(response: Response): Promise<T> {
 }
 
 export async function fetchMembersApi(projectId: string): Promise<MembersResponse> {
-  return parseJson<MembersResponse>(await fetch(`/api/projects/${projectId}/members`));
+  return parseJson<MembersResponse>(await fetchClientRead(`/api/projects/${projectId}/members`));
 }
 
 export async function inviteMemberApi(projectId: string, email: string): Promise<void> {

@@ -1,5 +1,7 @@
 "use client";
 
+import { fetchClientRead } from "./client-read";
+
 import type { Comment, IssueEvent, ResourceInput } from "./types";
 import type { CommentVisibility } from "./feedback/types";
 import { trackEvent } from "./analytics";
@@ -22,11 +24,11 @@ async function parseJson<T>(response: Response): Promise<T> {
 }
 
 export async function fetchCommentsApi(issueId: string, signal?: AbortSignal): Promise<Comment[]> {
-  return parseJson<Comment[]>(await fetch(`/api/issues/${issueId}/comments`, { signal }));
+  return parseJson<Comment[]>(await fetchClientRead(`/api/issues/${issueId}/comments`, { signal }));
 }
 
 export async function fetchEventsApi(issueId: string, signal?: AbortSignal): Promise<IssueEvent[]> {
-  return parseJson<IssueEvent[]>(await fetch(`/api/issues/${issueId}/events`, { signal }));
+  return parseJson<IssueEvent[]>(await fetchClientRead(`/api/issues/${issueId}/events`, { signal }));
 }
 
 export async function addCommentApi(
@@ -63,11 +65,11 @@ export async function addCommentApi(
 }
 
 export async function fetchObjectiveCommentsApi(objectiveId: string): Promise<Comment[]> {
-  return parseJson<Comment[]>(await fetch(`/api/objectives/${objectiveId}/comments`));
+  return parseJson<Comment[]>(await fetchClientRead(`/api/objectives/${objectiveId}/comments`));
 }
 
 export async function fetchObjectiveEventsApi(objectiveId: string): Promise<IssueEvent[]> {
-  return parseJson<IssueEvent[]>(await fetch(`/api/objectives/${objectiveId}/events`));
+  return parseJson<IssueEvent[]>(await fetchClientRead(`/api/objectives/${objectiveId}/events`));
 }
 
 export async function fetchFeedbackEventsApi(
@@ -75,7 +77,7 @@ export async function fetchFeedbackEventsApi(
   postId: string
 ): Promise<IssueEvent[]> {
   return parseJson<IssueEvent[]>(
-    await fetch(`/api/projects/${projectId}/feedback/${postId}/events`)
+    await fetchClientRead(`/api/projects/${projectId}/feedback/${postId}/events`)
   );
 }
 
@@ -85,7 +87,7 @@ export async function fetchFeedbackCommentsApi(
   postId: string
 ): Promise<Comment[]> {
   return parseJson<Comment[]>(
-    await fetch(`/api/projects/${projectId}/feedback/${postId}/comments`)
+    await fetchClientRead(`/api/projects/${projectId}/feedback/${postId}/comments`)
   );
 }
 

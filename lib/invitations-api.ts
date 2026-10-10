@@ -1,5 +1,7 @@
 "use client";
 
+import { fetchClientRead } from "./client-read";
+
 import type { MyInvitation } from "./types";
 import { trackEvent } from "./analytics";
 
@@ -20,7 +22,7 @@ async function parseJson<T>(response: Response): Promise<T> {
 }
 
 export async function fetchMyInvitationsApi(): Promise<MyInvitation[]> {
-  return parseJson<MyInvitation[]>(await fetch("/api/projects/invitations"));
+  return parseJson<MyInvitation[]>(await fetchClientRead("/api/projects/invitations"));
 }
 
 export async function respondInvitationApi(

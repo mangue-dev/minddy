@@ -37,12 +37,36 @@ beforeEach(() => {
 afterEach(async () => {
   await act(() => root.unmount());
   client.clear();
+  vi.useRealTimers();
   container.remove();
   vi.unstubAllGlobals();
 });
 const settle = async () => { await act(async () => { await new Promise((resolve) => setTimeout(resolve, 10)); }); };
 
 describe("tab label cache subscriptions", () => {
+  it("releases full PR patches while keeping a live compact label through GC", async () => {
+    vi.useFakeTimers();
+    client.setQueryDefaults(["pull-request"], { gcTime: 60_000 });
+    client.setQueryData(["pull-request", pr], { pr: { number: 42, title: "Cached PR" }, files: [{ patch: "x".repeat(1024 * 1024) }] });
+    await act(async () => root.render(createElement(QueryClientProvider, { client }, createElement(Labels))));
+    await act(async () => { await vi.advanceTimersByTimeAsync(10); });
+    expect(container.textContent).toBe("Stored page/Cached PR");
+    expect(client.getQueryCache().find({ queryKey: ["pull-request", pr] })?.getObserversCount()).toBe(0);
+    await act(async () => { await vi.advanceTimersByTimeAsync(60_001); });
+    expect(client.getQueryData(["pull-request", pr])).toBeUndefined();
+    expect(container.textContent).toBe("Stored page/Cached PR");
+    await vi.advanceTimersByTimeAsync(1);
+    fetchMock.mockResolvedValueOnce(Response.json({ pages: [{ id: page, project_id: project, title: "Stored page", icon: null }],
+      objectives: [], pullRequests: [{ id: pr, number: 42, title: "Fresh metadata" }], routines: [], issues: [] }));
+    await act(async () => { await client.invalidateQueries({ queryKey: ["app-tab-metadata"] }); await vi.advanceTimersByTimeAsync(10); });
+    expect(container.textContent).toBe("Stored page/Fresh metadata");
+    await act(async () => client.setQueryData(["pull-request", pr], { pr: { number: 42, title: "New title" }, files: [] }));
+    expect(container.textContent).toBe("Stored page/New title");
+    await act(async () => client.setQueryData(["pull-request", pr], { pr: null }));
+    expect(container.textContent).toBe("Stored page/missing");
+    expect(fullRead).not.toHaveBeenCalled();
+  });
+
   it("keeps cached labels during an outage and adopts fresh metadata after recovery", async () => {
     await act(() => root.render(createElement(QueryClientProvider, { client }, createElement(Labels))));
     await settle();

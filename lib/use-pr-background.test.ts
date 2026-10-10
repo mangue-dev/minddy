@@ -6,6 +6,10 @@ import { afterEach, expect, it, vi } from "vitest";
 import { PrBackgroundSync } from "./use-pr-background";
 import { ApiError } from "./agent-api";
 import { allPullRequestsQueryKey } from "./use-agent-runs";
+
+vi.mock("./supabase", () => ({ getSupabase: () => ({ auth: {
+  getSession: async () => ({ data: { session: { user: { id: "owner" } } }, error: null }),
+} }) }));
 const live = vi.hoisted(() => vi.fn());
 vi.mock("./use-pr-live", () => ({ usePrLive: live }));
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); live.mockClear(); focusManager.setFocused(undefined); });

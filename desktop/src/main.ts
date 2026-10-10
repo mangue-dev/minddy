@@ -65,6 +65,9 @@ import {
   desktopServerUnavailableHtml,
   isDesktopServerUnavailable,
 } from "@/lib/desktop/server-unavailable";
+import { createRendererRecovery, desktopRendererRecoveryHtml } from "@/lib/desktop/renderer-recovery";
+import { createWindowStallRecovery } from "@/lib/desktop/window-stall-recovery";
+import { loadLocalRecoveryDocument } from "@/lib/desktop/local-recovery-load";
 import {
   carrySessionCookies,
   staleSessionCookies,
@@ -138,6 +141,7 @@ const documentChrome = new Map<number, boolean>();
 const localNotifications = new DesktopLocalNotificationRegistry();
 /** Electron closes windows before `before-quit` during an updater relaunch. */
 let quittingForUpdate = false;
+let quitting = false;
 /** Only one APNs registration at a time, shared between site mounts. */
 let apnsRegistration: Promise<string> | null = null;
 /** One WNS channel request at a time; each new process still obtains a fresh URI. */
@@ -756,6 +760,66 @@ function createWindow(
   integratedFrames.set(window, integrated);
 
   guardNavigation(window);
+  const rendererRecovery = createRendererRecovery({
+    origin: () => origin,
+    unavailable: () => quitting || quittingForUpdate || window.isDestroyed() || window.webContents.isDestroyed(),
+    defer: (work) => { setImmediate(work); },
+    load: (activeOrigin, url) => {
+      const html = desktopRendererRecoveryHtml(activeOrigin, url, desktopShellFontDataUrl(), process.platform);
+      return loadLocalRecoveryDocument(window.webContents, `data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
+    },
+    failed: () => {
+      console.error("[desktop] renderer_recovery_failed");
+      void dialog.showMessageBox(window, {
+        type: "error",
+        message: "This window could not restart",
+        detail: "Quit and reopen minddy to continue. Unsaved changes may be lost.",
+        buttons: ["Close"],
+      }).catch(() => {});
+    },
+  });
+  const stallRecovery = createWindowStallRecovery({
+    origin: () => origin,
+    unavailable: () => quitting || quittingForUpdate || window.isDestroyed() || window.webContents.isDestroyed(),
+    prompt: async (reason, signal) => {
+      const { response } = await dialog.showMessageBox(window, {
+        type: "warning", title: "Recover minddy",
+        message: reason === "loading" ? "This page is taking longer to load" : "This window is not responding",
+        detail: "You can keep waiting or recover this window. Recovering may lose unsaved changes.",
+        buttons: ["Wait", "Recover window"], defaultId: 0, cancelId: 0, signal,
+      });
+      return response === 1;
+    },
+    recover: (reason) => {
+      if (reason === "unresponsive") {
+        // A stuck JavaScript thread cannot process reload. The existing crash
+        // handler recreates the renderer and loads the local recovery document.
+        window.webContents.forcefullyCrashRenderer();
+      } else {
+        // Loading the local document cancels the pending request. Calling stop
+        // first can deliver a late ERR_ABORTED to the replacement load promise.
+        rendererRecovery.rendererGone("stalled-load");
+      }
+    },
+  });
+  window.webContents.on("did-start-navigation", (details) => {
+    if (details.isMainFrame) {
+      rendererRecovery.navigationStarted(details.url, details.isSameDocument);
+      stallRecovery.navigationStarted(details.url, details.isSameDocument);
+    }
+  });
+  window.webContents.on("did-stop-loading", () => stallRecovery.loadingStopped());
+  window.on("unresponsive", () => stallRecovery.unresponsive());
+  window.on("responsive", () => stallRecovery.responsive());
+  window.on("closed", () => stallRecovery.stop());
+  window.webContents.on("render-process-gone", (_event, details) => {
+    stallRecovery.stop();
+    if (details.reason !== "clean-exit" && !quitting && !quittingForUpdate) {
+      // Never include document URLs, account data or page content in diagnostics.
+      console.error("[desktop] renderer_process_gone", { reason: details.reason, exitCode: details.exitCode });
+    }
+    rendererRecovery.rendererGone(details.reason);
+  });
   window.webContents.on(
     "did-fail-load",
     (_event, errorCode, errorDescription, validatedUrl, isMainFrame) => {
@@ -1547,6 +1611,7 @@ if (!app.requestSingleInstanceLock()) {
 
   /** Close the shell and any desktop-managed self-hosted web process. */
   app.on("before-quit", () => {
+    quitting = true;
     stopLocalRuntime();
     const window = mainWindow;
     mainWindow = null;

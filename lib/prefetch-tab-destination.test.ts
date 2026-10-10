@@ -3,7 +3,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { prefetchAppTabDestination } from "./prefetch-tab-destination";
 import { GLOBAL_BOARD_KEY } from "./optimistic/issue-writes";
 
-const response = (data: unknown = {}) => ({ ok: true, text: async () => JSON.stringify(data) });
+vi.mock("./supabase", () => ({ getSupabase: () => ({ auth: {
+  getSession: async () => ({ data: { session: { user: { id: "owner" } } }, error: null }),
+} }) }));
+
+const response = (data: unknown = {}) => Response.json(data);
 
 let client: QueryClient;
 let fetchMock: ReturnType<typeof vi.fn>;
@@ -23,11 +27,11 @@ const requested = () => fetchMock.mock.calls.map(([url]) => String(url).split("?
 
 describe("tab destination prefetch", () => {
   it("prepares Pages and Feedback through their actual consumer keys without board reads", async () => {
-    fetchMock.mockImplementation(async () => ({ ...response({ posts: [], board_enabled: false }), json: async () => ({ posts: [], board_enabled: false }) }));
+    fetchMock.mockImplementation(async () => response({ posts: [], board_enabled: false }));
     prefetchAppTabDestination(client, "/projects/p/pages", new Set());
     prefetchAppTabDestination(client, "/projects/p/feedback", new Set());
     await vi.waitFor(() => expect(client.isFetching()).toBe(0));
-    expect(requested()).toEqual(["/api/projects/p/pages", "/api/projects/p/feedback"]);
+    expect(requested().sort()).toEqual(["/api/projects/p/feedback", "/api/projects/p/pages"]);
     expect(client.getQueryData(["feedback", "p"])).toEqual({ posts: [], board_enabled: false });
     prefetchAppTabDestination(client, "/projects/p/settings", new Set());
     expect(requested()).toHaveLength(2);
@@ -75,6 +79,7 @@ describe("tab destination prefetch", () => {
     prefetchAppTabDestination(client, "/pull-requests?pr=pr2", attempted);
     expect(requested()).not.toContain("/api/pull-requests/pr2");
     expect(attempted.has("/pull-requests?pr=pr2")).toBe(false);
+    await vi.waitFor(() => expect(release).toBeTypeOf("function"));
     release(response());
     await vi.waitFor(() => expect(client.isFetching()).toBe(0));
     prefetchAppTabDestination(client, "/pull-requests?pr=pr2", attempted);
@@ -90,6 +95,7 @@ describe("tab destination prefetch", () => {
       signal!.addEventListener("abort", () => reject(new Error("Cancelled")), { once: true });
     }));
     prefetchAppTabDestination(client, "/pull-requests?pr=pr1", new Set());
+    await vi.waitFor(() => expect(signal).toBeDefined());
     await client.cancelQueries({ queryKey: ["pull-request", "pr1"] });
     expect(signal?.aborted).toBe(true);
     await vi.waitFor(() => expect(client.isFetching()).toBe(0));

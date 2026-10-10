@@ -1,0 +1,66 @@
+{
+  "date": "2026-10-10",
+  "reviewer": "agent:/root",
+  "article": "applications",
+  "articleRevisions": {
+    "en": 7,
+    "fr": 7,
+    "de": 7,
+    "es": 7,
+    "it": 7,
+    "pt-BR": 7
+  },
+  "locales": [
+    "en",
+    "fr",
+    "de",
+    "es",
+    "it",
+    "pt-BR"
+  ],
+  "workflows": [
+    "A10",
+    "A11",
+    "A12",
+    "A03"
+  ],
+  "changedSection": "desktop-renderer-recovery",
+  "figure": "desktop-renderer-recovery",
+  "method": "Source and regression review plus an actual macOS development-shell forced renderer crash using an isolated temporary profile and synthetic loopback content. Agent factual and language delta review; prior unrelated operational evidence retained. No human reader acceptance or production-account replay claimed.",
+  "nativeProbe": {
+    "fixture": "Synthetic loopback document; no account",
+    "checks": [
+      "Forced native renderer crash displays the local recovery document",
+      "No automatic remote reload",
+      "Retry preserves the latest SPA route",
+      "Explicit Reload window returns to the synthetic app document",
+      "A recovery-document crash stops with a native error message"
+    ],
+    "electron": "43.7.5",
+    "appVersion": "0.11.1"
+  },
+  "capture": {
+    "source": "output/playwright/min-651/renderer-recovery-light.png",
+    "kind": "Native BrowserWindow.capturePage of the actual post-crash local document, unmodified",
+    "viewport": [
+      1280,
+      860
+    ],
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "review": "Inspected: complete heading, explanatory text, current demo origin, Reload window and Check server settings visible without clipping. Native controls intentionally use English in every locale; alt text and captions translated."
+  },
+  "cacheEvidence": [
+    "lib/query-snapshot-budget.test.ts",
+    "lib/query-storage-writes.test.ts",
+    "lib/local-snapshot-security.test.ts"
+  ],
+  "limits": [
+    "The original account-specific allocation pressure was not reproduced.",
+    "No Linux/Windows native process was exercised; controller and HTML tests cover platform-independent recovery behavior.",
+    "Other renderer/GPU failure causes can remain.",
+    "The cache is optional; unsaved changes may be lost in a native renderer crash."
+  ],
+  "checks": "Relevant automated verification recorded in the PR; this record is not a release-publication approval.",
+  "retainedFigures": "Existing applications figures and their localized text are unchanged and remain applicable: mobile issue panel, PWA installation illustration, desktop settings and device-notification settings. Their article-relative revisions advance to 7; original capture dates and prior operational evidence are retained. The new recovery control has a fresh actual native capture."
+}

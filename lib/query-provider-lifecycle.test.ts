@@ -52,6 +52,19 @@ async function mount() {
 }
 
 describe("query provider persistence lifecycle", () => {
+  it("releases inactive full payloads after one minute while preserving board persistence", async () => {
+    await mount();
+    const keys = [["pull-request", "pr"], ["pr-commit-diff", "pr", "sha"], ["desktop-agent-run-diff", "run", "live"]];
+    keys.forEach(key => client.setQueryData(key, { files: [{ patch: "x".repeat(1024 * 1024) }] }));
+    client.setQueryData(["issues", "project"], [{ id: "retained" }]);
+    window.dispatchEvent(new Event("pagehide"));
+    const snapshot = JSON.parse(window.localStorage.getItem(QUERY_CACHE_STORAGE_KEY)!).value;
+    expect(snapshot.clientState.queries.map((query: { queryKey: string[] }) => query.queryKey)).toEqual([["issues", "project"]]);
+    await act(async () => { await vi.advanceTimersByTimeAsync(60_001); });
+    keys.forEach(key => expect(client.getQueryData(key)).toBeUndefined());
+    expect(client.getQueryData(["issues", "project"])).toEqual([{ id: "retained" }]);
+  });
+
   it("restarts persistence with an empty client after a direct account switch", async () => {
     const render = () => root.render(createElement(AccountQueryProvider, null, createElement(Consumer)));
     await act(async () => render());

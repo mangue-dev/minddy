@@ -3,16 +3,21 @@ import { act, createElement, useEffect } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { IsRestoringProvider, QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { fetchClientRead } from "./client-read";
 import { useColdBoardPrefetch } from "./use-cold-board-prefetch";
 import { globalBoardQueryFn } from "./global-board-api";
 import { GLOBAL_BOARD_KEY } from "./optimistic/issue-writes";
 import { useViewsQuery } from "./use-views-query";
 import type { GlobalBoardResponse } from "./types";
 
+vi.mock("./supabase", () => ({ getSupabase: () => ({ auth: {
+  getSession: async () => ({ data: { session: { user: { id: "owner" } } }, error: null }),
+} }) }));
+
 const board: GlobalBoardResponse = { issues: [], members: {}, categories: {}, objectives: {},
   integrations: {}, relations: [], cycles: { enabled: false, current: null, upcoming: [], past: [] } };
 const viewsKey = ["views", "global"];
-const response = (data: unknown = board) => ({ ok: true, text: async () => JSON.stringify(data) });
+const response = (data: unknown = board) => Response.json(data);
 const responseFor = (url: string) => response(url.split("?")[0] === "/api/me/views" ? [] : board);
 let root: Root;
 let container: HTMLDivElement;
@@ -30,7 +35,7 @@ function Host({ active, consume }: { active: boolean; consume: boolean }) {
   return consume ? createElement(Consumer) : null;
 }
 function Shell({ active, consume }: { active: boolean; consume: boolean }) {
-  useEffect(() => { void fetch("/api/shell-fixture"); }, []);
+  useEffect(() => { void fetchClientRead("/api/shell-fixture"); }, []);
   return createElement(Host, { active, consume });
 }
 async function render({ active = true, restoring = false, consume = false, shell = false } = {}) {

@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { SESSION_COOKIE_OPTIONS } from "@/lib/session-cookies";
 import { browserRuntimeConfig } from "@/lib/runtime-config-provider";
+import { backendFetchWithTimeout } from "./backend-availability";
 
 let _supabase: SupabaseClient | null = null;
 
@@ -17,6 +18,7 @@ export function getSupabase(): SupabaseClient {
     // `cookieOptions`: THIS client writes session cookies to
     // time of connection, and the packet does not put `Secure` (MIN-351).
     _supabase = createBrowserClient(url, key, {
+      global: { fetch: backendFetchWithTimeout },
       cookieOptions: SESSION_COOKIE_OPTIONS,
     });
   }

@@ -1,5 +1,7 @@
 "use client";
 
+import { fetchClientRead } from "./client-read";
+
 import type { CreateViewInput, View, ViewShare, ViewUpdateInput } from "./types";
 import { trackEvent } from "./analytics";
 
@@ -26,7 +28,7 @@ const viewsUrl = (scope: ViewScope) =>
   scope.kind === "project" ? `/api/projects/${scope.projectId}/views` : "/api/me/views";
 
 export async function fetchViewsApi(scope: ViewScope, signal?: AbortSignal): Promise<View[]> {
-  return parseJson<View[]>(await fetch(viewsUrl(scope), { signal }));
+  return parseJson<View[]>(await fetchClientRead(viewsUrl(scope), { signal }));
 }
 
 export async function createViewApi(
@@ -73,7 +75,7 @@ export async function deleteViewApi(viewId: string): Promise<void> {
 
 export async function fetchViewShareApi(viewId: string): Promise<ViewShare | null> {
   const data = await parseJson<{ share: ViewShare | null }>(
-    await fetch(`/api/views/${viewId}/share`)
+    await fetchClientRead(`/api/views/${viewId}/share`)
   );
   return data.share;
 }

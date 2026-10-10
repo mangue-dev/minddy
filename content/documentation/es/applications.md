@@ -18,12 +18,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
-  "sourceRevision": 6,
+  "revision": 8,
+  "sourceRevision": 8,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-10",
   "compatibility": {
-    "version": "0.11.1 candidate (cd1843e12)",
+    "version": "0.11.1 candidate (MIN-651 memory/stall recovery delta; prior evidence retained)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -51,14 +51,25 @@
       "components/settings/account-push-devices-section.tsx",
       "lib/desktop/notification-capabilities.ts",
       "content/documentation/reviews/push-registration-capture-candidates.json",
-      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json"
+      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json",
+      "lib/query-snapshot-budget.ts",
+      "lib/query-persistence.ts",
+      "lib/desktop/renderer-recovery.ts",
+      "desktop/src/main.ts",
+      "content/documentation/reviews/min-651-renderer-recovery-2026-10-10.json",
+      "lib/query-retention.ts",
+      "lib/pull-request-tab-labels.ts",
+      "lib/desktop/window-stall-recovery.ts",
+      "content/documentation/reviews/min-651-stall-recovery-2026-10-10.json",
+      "lib/desktop/local-recovery-load.ts",
+      "scripts/desktop-renderer-hang.integration.mjs"
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review)",
-    "date": "2026-10-09"
+    "revision": 8,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-651 recovery/cache delta; isolated macOS Electron forced-crash probe; prior procedural evidence retained); agent:/root (MIN-651 live-memory and native stall/hang recovery delta; isolated automated probes; prior procedural evidence retained)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-651 recovery/cache additions and localized figure text); agent:/root (stall recovery and memory-retention additions)",
+    "date": "2026-10-10"
   },
   "related": [
     "issues"
@@ -83,7 +94,7 @@
       "src": "/documentation/es/web-and-mobile-workflow.png",
       "alt": "Panel móvil de una incidencia con título, descripción, propiedades y campo de comentario.",
       "caption": "En una pantalla estrecha, los detalles de la incidencia ocupan un panel adaptable. Use el botón de cierre para volver al proyecto; Numo sigue disponible mediante su botón flotante.",
-      "revision": 6,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -100,7 +111,7 @@
       "src": "/documentation/es/install-the-pwa-workflow.png",
       "alt": "Guía ilustrada de instalación en Safari de minddy: Compartir, Añadir a pantalla de inicio y confirmar.",
       "caption": "La guía pública ilustra los tres pasos de Safari y la opción Abrir como app web que debe permanecer activada. Son ilustraciones didácticas mostradas por minddy, no capturas de una instalación de iOS realizada.",
-      "revision": 6,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -117,7 +128,7 @@
       "src": "/documentation/es/desktop-app-workflow.png",
       "alt": "Ajustes de escritorio en la aplicación real de desarrollo Electron para macOS, versión 0.11.1, conectada al servidor local con un perfil aislado.",
       "caption": "Ajustes de escritorio en la aplicación real de desarrollo Electron para macOS, versión 0.11.1, conectada al servidor local con un perfil aislado. Esta captura no valida las versiones firmadas ni otros sistemas.",
-      "revision": 6,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -133,7 +144,7 @@
       "src": "/documentation/es/devices-and-notifications-workflow.png",
       "alt": "Ajustes push con permiso bloqueado en el navegador y ningún dispositivo registrado.",
       "caption": "Este navegador bloquea las notificaciones. Restablezca el permiso del sitio antes de registrar este dispositivo.",
-      "revision": 6,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -150,7 +161,7 @@
       "src": "/documentation/es/devices-and-notifications-registered.png",
       "alt": "Dispositivo de navegador registrado y activo en la cuenta, con la fecha real del último envío.",
       "caption": "La cuenta tiene un dispositivo de navegador registrado y activo. La lista muestra las fechas de registro y del último envío. La aparición de una notificación sigue dependiendo del permiso del navegador y de los ajustes del sistema operativo.",
-      "revision": 6,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -159,6 +170,23 @@
       ],
       "theme": "light",
       "padding": 24
+    },
+    {
+      "id": "desktop-renderer-recovery",
+      "kind": "screenshot",
+      "src": "/documentation/es/desktop-renderer-recovery.png",
+      "alt": "Página local de recuperación tras un fallo forzado del proceso de renderizado, con los controles Reload window y Check server settings.",
+      "caption": "Página de recuperación en la aplicación de desarrollo para macOS, con un perfil aislado y un servidor de demostración. La interfaz nativa utiliza etiquetas en inglés en todos los idiomas.",
+      "revision": 8,
+      "reviewed": true,
+      "capturedAt": "2026-10-10",
+      "viewport": [
+        1280,
+        860
+      ],
+      "theme": "light",
+      "padding": 0,
+      "deviceScaleFactor": 2
     }
   ],
   "requiredFigures": [
@@ -166,7 +194,8 @@
     "install-the-pwa-workflow",
     "desktop-app-workflow",
     "devices-and-notifications-workflow",
-    "devices-and-notifications-registered-workflow"
+    "devices-and-notifications-registered-workflow",
+    "desktop-renderer-recovery"
   ]
 }
 ---
@@ -214,6 +243,18 @@ Utilice los controles de pestañas y la paleta de comandos para desplazarse entr
 macOS y las AppImage portátiles ofrecen actualizaciones dentro de la aplicación. Windows las instala desde Microsoft Store. Para `deb`/`rpm`, instale el siguiente paquete verificado. Los ajustes de escritorio de la cuenta muestran el servidor conectado y los controles disponibles de actualización o asistencia. Tras actualizar, compruebe la versión de escritorio indicada y que siga abriéndose la instancia deseada.
 
 ![Ajustes de escritorio en la aplicación real de desarrollo Electron para macOS, versión 0.11.1, conectada al servidor local con un perfil aislado.](/documentation/es/desktop-app-workflow.png)
+
+### Recuperar una ventana bloqueada {#desktop-renderer-recovery}
+
+Si una ventana de escritorio falla, una página local de recuperación ofrece **Reload window**. Utilice este botón para volver a abrir la última pantalla en el servidor seleccionado actualmente. Los cambios sin guardar pueden perderse. La aplicación espera su acción en lugar de volver a cargar repetidamente la página que falla. Si la página de recuperación también falla, el mensaje nativo le pide que cierre y vuelva a abrir minddy. Estos controles nativos de recuperación utilizan actualmente etiquetas en inglés.
+
+Si una página sigue cargando después de 30 segundos, o una ventana no responde durante cinco segundos desde que la aplicación de escritorio lo detecta, un diálogo nativo ofrece **Wait** y **Recover window**. **Wait** es la opción predeterminada y mantiene tu trabajo y la solicitud en curso. El diálogo se cierra cuando termina la carga o la ventana vuelve a responder. La recuperación puede perder cambios sin guardar: elige **Recover window** para abrir la página local de recuperación y después **Reload window** para volver a la última pantalla.
+
+La caché de consultas guardada, que es opcional, está limitada a 2 MiB. Si supera el límite, se elimina su instantánea local anterior; los datos actuales permanecen en memoria y se vuelven a consultar tras reiniciar. Los borradores guardados por separado no se ven afectados. Esta caché no es una copia de seguridad de su trabajo.
+
+Para reducir el uso de memoria en sesiones largas, los detalles de PR, los diffs de commits y agentes, los flujos de eventos de agentes y los contenidos de páginas inactivos se liberan después de un minuto y se vuelven a cargar cuando hacen falta. Las consultas activas se conservan. Las etiquetas de las pestañas solo guardan información ligera de las PR, por lo que mantener una pestaña abierta no retiene sus patches.
+
+![Página local de recuperación tras un fallo forzado del proceso de renderizado, con los controles Reload window y Check server settings.](/documentation/es/desktop-renderer-recovery.png)
 
 ## Activar notificaciones de un dispositivo {#devices-and-notifications}
 

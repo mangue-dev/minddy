@@ -49,6 +49,7 @@ export function desktopServerUnavailableHtml(
   attemptedUrl: string,
   interFontDataUrl?: string,
   platform: NodeJS.Platform = process.platform,
+  notice?: { title: string; heading: string; explanation: string; retryLabel: string },
 ): string {
   const server = new URL(activeOrigin);
   const displayOrigin = server.origin;
@@ -62,7 +63,7 @@ export function desktopServerUnavailableHtml(
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta http-equiv="Content-Security-Policy" content="${DESKTOP_SHELL_CSP}">
     <meta name="color-scheme" content="light dark">
-    <title>minddy server unavailable</title>
+    <title>${escapeHtml(notice?.title ?? "minddy server unavailable")}</title>
     <style>
       ${desktopShellStyles(interFontDataUrl)}
       body { min-height: 100vh; display: grid; place-items: center; }
@@ -85,11 +86,11 @@ export function desktopServerUnavailableHtml(
       <div class="status shell-icon-well" aria-hidden="true">
         <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="6" rx="2"></rect><rect x="3" y="14" width="18" height="6" rx="2"></rect><path d="M7 7h.01M7 17h.01M4 4l16 16"></path></svg>
       </div>
-      <h1>minddy can’t reach ${escapeHtml(serverName)}</h1>
-      <p class="explanation">The configured minddy server may be stopped, or its address may be incorrect. Check that the server is running and reachable from this computer.</p>
+      <h1>${escapeHtml(notice?.heading ?? `minddy can’t reach ${serverName}`)}</h1>
+      <p class="explanation">${escapeHtml(notice?.explanation ?? "The configured minddy server may be stopped, or its address may be incorrect. Check that the server is running and reachable from this computer.")}</p>
       <div class="origin" aria-label="Configured server: ${escapeHtml(displayOrigin)}">${escapeHtml(displayOrigin)}</div>
       <div class="actions">
-        <a class="shell-button shell-button-primary" href="${escapeHtml(retryUrl)}">Try again</a>
+        <a class="shell-button shell-button-primary" href="${escapeHtml(retryUrl)}">${escapeHtml(notice?.retryLabel ?? "Try again")}</a>
         <button class="shell-button shell-button-outline" id="server-settings" type="button">Check server settings</button>
       </div>
     </main>

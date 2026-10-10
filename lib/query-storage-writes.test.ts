@@ -1,6 +1,8 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import type { PersistedClient } from "@tanstack/react-query-persist-client";
+import { QueryClient, dehydrate } from "@tanstack/react-query";
 import { createQueryStorage } from "./query-persistence";
+import { MAX_QUERY_SNAPSHOT_BYTES } from "./query-snapshot-budget";
 
 const state = vi.hoisted(() => ({ generation: 0, save: vi.fn() }));
 vi.mock("./local-snapshots", () => ({
@@ -82,4 +84,43 @@ it("fences removal and retries after a failed seal without dropping newer queued
   writes[1].finish();
   await retry;
   expect(storage.setItem).toHaveBeenCalledExactlyOnceWith("cache", "encrypted-retry");
+});
+
+it("skips an oversized snapshot before stringify and fences older writes while allowing smaller retries", async () => {
+  const { writes, storage, persister } = setup();
+  const first = persister.persistClient(snapshot("small"));
+  const queued = persister.persistClient(snapshot("waiting"));
+  const huge = snapshot("x".repeat(MAX_QUERY_SNAPSHOT_BYTES));
+  const stringify = vi.spyOn(JSON, "stringify");
+  await persister.persistClient(huge);
+  expect(stringify).not.toHaveBeenCalled();
+  stringify.mockRestore();
+  expect(storage.removeItem).toHaveBeenCalledWith("cache");
+  expect(writes).toHaveLength(1);
+  // This equals the retired in-flight write, but must enqueue a fresh revision.
+  const retry = persister.persistClient(snapshot("small"));
+  writes[0].finish();
+  await Promise.all([first, queued]);
+  expect(storage.setItem).not.toHaveBeenCalled();
+  expect(writes).toHaveLength(2);
+  writes[1].finish();
+  await retry;
+  expect(storage.setItem).toHaveBeenCalledExactlyOnceWith("cache", "encrypted-small");
+});
+
+it("keeps queued snapshot size stable when referenced cache data grows before the seal", async () => {
+  const { writes, persister } = setup();
+  const client = new QueryClient();
+  const data = { title: "small" };
+  client.setQueryData(["issues", "demo"], data);
+  try {
+    const first = persister.persistClient(snapshot("first"));
+    const queued = persister.persistClient({ buster: "queued", timestamp: 1, clientState: dehydrate(client) });
+    data.title = "x".repeat(MAX_QUERY_SNAPSHOT_BYTES);
+    writes[0].finish();
+    await first;
+    expect(writes[1].client.clientState.queries[0].state.data).toEqual({ title: "small" });
+    writes[1].finish();
+    await queued;
+  } finally { client.clear(); }
 });

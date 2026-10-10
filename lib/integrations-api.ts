@@ -1,5 +1,7 @@
 "use client";
 
+import { fetchClientRead } from "./client-read";
+
 import type {
   Integration,
   IntegrationKind,
@@ -35,7 +37,7 @@ export async function fetchIntegrationsApi(
   projectId: string,
 ): Promise<IntegrationsResponse> {
   return parseJson<IntegrationsResponse>(
-    await fetch(`/api/projects/${projectId}/integrations`),
+    await fetchClientRead(`/api/projects/${projectId}/integrations`),
   );
 }
 

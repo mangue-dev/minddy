@@ -1,5 +1,7 @@
 "use client";
 
+import { fetchClientRead } from "./client-read";
+
 import type { Page, PageVersion } from "./pages";
 import type { IssueEvent, PageBacklink, PageShare } from "./types";
 import type { PageComment } from "./page-comments";
@@ -84,7 +86,7 @@ async function json<T>(response: Response, fallback: string): Promise<T> {
 /** All living pages of the project, flat (`buildPageTree` makes the tree). */
 export async function fetchPagesApi(projectId: string, signal?: AbortSignal): Promise<PageSummary[]> {
   return json(
-    await fetch(`/api/projects/${projectId}/pages`, { signal }),
+    await fetchClientRead(`/api/projects/${projectId}/pages`, { signal }),
     "Request failed"
   );
 }
@@ -96,7 +98,7 @@ export async function fetchPageApi(
   signal?: AbortSignal,
 ): Promise<Page> {
   return json(
-    await fetch(`/api/projects/${projectId}/pages/${pageId}`, { signal }),
+    await fetchClientRead(`/api/projects/${projectId}/pages/${pageId}`, { signal }),
     "Request failed"
   );
 }
@@ -323,7 +325,7 @@ export async function fetchPageVersionsApi(
   pageId: string
 ): Promise<PageVersion[]> {
   const data = await json<{ versions: PageVersion[] }>(
-    await fetch(`/api/projects/${projectId}/pages/${pageId}/versions`),
+    await fetchClientRead(`/api/projects/${projectId}/pages/${pageId}/versions`),
     "Request failed"
   );
   return data.versions;
@@ -336,7 +338,7 @@ export async function fetchPageVersionApi(
   versionId: string
 ): Promise<PageVersion> {
   return json(
-    await fetch(
+    await fetchClientRead(
       `/api/projects/${projectId}/pages/${pageId}/versions/${versionId}`
     ),
     "Request failed"
@@ -380,7 +382,7 @@ export async function fetchPageBacklinksApi(
   pageId: string
 ): Promise<PageBacklink[]> {
   return json(
-    await fetch(`/api/projects/${projectId}/pages/${pageId}/backlinks`),
+    await fetchClientRead(`/api/projects/${projectId}/pages/${pageId}/backlinks`),
     "Request failed"
   );
 }
@@ -390,7 +392,7 @@ export async function fetchPageEventsApi(
   pageId: string
 ): Promise<IssueEvent[]> {
   return json(
-    await fetch(`/api/projects/${projectId}/pages/${pageId}/events`),
+    await fetchClientRead(`/api/projects/${projectId}/pages/${pageId}/events`),
     "Request failed"
   );
 }
@@ -404,7 +406,7 @@ export async function fetchPageCommentsApi(
   pageId: string
 ): Promise<PageComment[]> {
   return json(
-    await fetch(`/api/projects/${projectId}/pages/${pageId}/comments`),
+    await fetchClientRead(`/api/projects/${projectId}/pages/${pageId}/comments`),
     "Request failed"
   );
 }
@@ -491,7 +493,7 @@ export async function fetchPageShareApi(
   pageId: string
 ): Promise<PageShare | null> {
   const data = await json<{ share: PageShare | null }>(
-    await fetch(`/api/projects/${projectId}/pages/${pageId}/share`),
+    await fetchClientRead(`/api/projects/${projectId}/pages/${pageId}/share`),
     "Request failed"
   );
   return data.share;
@@ -549,8 +551,11 @@ export async function downloadPageExportApi(
   { branch = false }: { branch?: boolean } = {}
 ): Promise<void> {
   trackEvent("page_exported", { format: branch ? "zip" : "md" });
-  const response = await fetch(
-    `/api/projects/${projectId}/pages/${pageId}/export${branch ? "?scope=branch" : ""}`
+  const response = await fetchClientRead(
+    `/api/projects/${projectId}/pages/${pageId}/export${branch ? "?scope=branch" : ""}`,
+    undefined,
+    // Complete archive generation and attachment transfer can exceed normal reads.
+    { timeoutMs: null },
   );
   await ok(response, "Request failed");
   const blob = await response.blob();

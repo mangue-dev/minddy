@@ -1,5 +1,7 @@
 "use client";
 
+import { fetchClientRead } from "./client-read";
+
 import type { SavedView } from "./types";
 import { trackEvent } from "./analytics";
 
@@ -26,7 +28,7 @@ async function parseJson<T>(response: Response): Promise<T> {
 }
 
 export async function fetchSavedViewsApi(): Promise<SavedView[]> {
-  return parseJson<SavedView[]>(await fetch("/api/me/saved-views"));
+  return parseJson<SavedView[]>(await fetchClientRead("/api/me/saved-views"));
 }
 
 export async function createSavedViewApi(input: {

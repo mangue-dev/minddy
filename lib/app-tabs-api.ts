@@ -1,13 +1,15 @@
 "use client";
 
 import type { AppTab, AppTabPatch } from "./app-tabs";
+import { fetchClientRead } from "./client-read";
 
 export class AppTabRequestError extends Error {
   constructor(public code: string, public tab?: AppTab) { super(code); }
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`/api/me/app-tabs${path}`, { ...init, headers: { "Content-Type": "application/json" } });
+  const requestFetch = init?.method ? fetch : fetchClientRead;
+  const response = await requestFetch(`/api/me/app-tabs${path}`, { ...init, headers: { "Content-Type": "application/json" } });
   const data = await response.json();
   if (!response.ok) throw new AppTabRequestError(data.code ?? "database", data.tab);
   return data as T;

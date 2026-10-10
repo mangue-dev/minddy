@@ -1,5 +1,7 @@
 "use client";
 
+import { fetchClientRead } from "./client-read";
+
 import type { Category, CategoryUpdateInput, CreateCategoryInput } from "./types";
 import { trackEvent } from "./analytics";
 
@@ -20,7 +22,7 @@ async function parseJson<T>(response: Response): Promise<T> {
 }
 
 export async function fetchCategoriesApi(projectId: string): Promise<Category[]> {
-  return parseJson<Category[]>(await fetch(`/api/projects/${projectId}/categories`));
+  return parseJson<Category[]>(await fetchClientRead(`/api/projects/${projectId}/categories`));
 }
 
 export async function createCategoryApi(

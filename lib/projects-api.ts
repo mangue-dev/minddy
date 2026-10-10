@@ -1,5 +1,7 @@
 "use client";
 
+import { fetchClientRead } from "./client-read";
+
 import type { CreateProjectInput, Project, ProjectUpdateInput } from "./types";
 import { trackEvent } from "./analytics";
 import { HttpResponseError } from "./backend-availability";
@@ -24,7 +26,7 @@ async function parseJson<T>(response: Response): Promise<T> {
 }
 
 export async function fetchProjectsApi(): Promise<Project[]> {
-  return parseJson<Project[]>(await fetch("/api/projects"));
+  return parseJson<Project[]>(await fetchClientRead("/api/projects"));
 }
 
 export async function createProjectApi(input: CreateProjectInput): Promise<Project> {

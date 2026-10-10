@@ -1,0 +1,110 @@
+{
+  "date": "2026-10-10",
+  "reviewer": "agent:/root",
+  "article": "applications",
+  "articleRevisions": {
+    "en": 8,
+    "fr": 8,
+    "de": 8,
+    "es": 8,
+    "it": 8,
+    "pt-BR": 8
+  },
+  "locales": [
+    "en",
+    "fr",
+    "de",
+    "es",
+    "it",
+    "pt-BR"
+  ],
+  "workflows": [
+    "A10",
+    "A11",
+    "A12",
+    "A03"
+  ],
+  "changedSection": "desktop-renderer-recovery",
+  "audience": "Desktop users recovering a slow or unresponsive window, including long sessions with multiple PR tabs.",
+  "outcome": "Choose Wait without interrupting work, or explicitly open local recovery; understand inactive payload eviction and saved-cache limits.",
+  "method": "Agent source, factual and six-locale language delta review. Actual macOS built-main-process probes with synthetic loopback content and temporary profiles; native message-box arguments/actions automated. Prior unrelated procedural and visual evidence retained. No human reader acceptance or production-account replay claimed.",
+  "memoryEvidence": [
+    "lib/use-app-tab-metadata.test.ts",
+    "lib/query-retention.test.ts",
+    "lib/query-provider-lifecycle.test.ts",
+    "lib/query-persist.test.ts"
+  ],
+  "nativeEvidence": [
+    "lib/desktop/window-stall-recovery.test.ts",
+    "lib/desktop/local-recovery-load.test.ts",
+    "scripts/desktop-renderer-recovery.integration.mjs",
+    "scripts/desktop-renderer-hang.integration.mjs"
+  ],
+  "hangProbe": {
+    "electron": "43.7.5",
+    "appVersion": "0.11.1",
+    "debuggerAttached": false,
+    "detected": true,
+    "gone": true,
+    "heading": "This window stopped working",
+    "prompts": [
+      {
+        "message": "This window is not responding",
+        "buttons": [
+          "Wait",
+          "Recover window"
+        ],
+        "defaultId": 0,
+        "cancelId": 0
+      }
+    ]
+  },
+  "limits": [
+    "Original account-specific allocation pressure and a multi-hour production session were not reproduced.",
+    "Native Windows/Linux processes were not exercised; unit coverage checks the shared controllers.",
+    "Operating-system dialog appearance was not captured; native dialog arguments and actions were verified.",
+    "Diff parsing remains synchronous; native recovery handles hangs independently of the blocked JavaScript thread.",
+    "Active data and separately saved drafts are not evicted by the inactive-payload policy; explicit native recovery can lose unsaved changes."
+  ],
+  "retainedFigures": "All six applications figures remain visually applicable. The desktop-renderer-recovery page and its controls are unchanged; the new native dialog is documented by its exact labels, default choice and consequences. Original capture dates and unrelated operational evidence remain intact at article revision 8.",
+  "checks": "Focused automated results and complete isolated native probe recorded in PR #400; not a release-publication approval.",
+  "nativeProbe": {
+    "fixture": "Synthetic loopback document; no account",
+    "checks": [
+      "Forced native renderer crash displays the local recovery document",
+      "No automatic remote reload",
+      "Retry preserves the latest SPA route",
+      "Explicit Reload window returns to the synthetic app document",
+      "An unfinished HTTP stream offers native recovery after 30 seconds; Wait preserves the load without repeated prompts",
+      "Explicit Recover window stops a stalled load and displays the local recovery document",
+      "A recovery-document crash stops with a native error message",
+      "A real blocked renderer without DevTools triggers unresponsive detection and the native Wait/Recover window prompt",
+      "Explicit Recover window terminates the blocked renderer and displays the local recovery document"
+    ],
+    "electron": "43.7.5",
+    "appVersion": "0.11.1",
+    "hangProbe": {
+      "debuggerAttached": false,
+      "detected": true,
+      "gone": true,
+      "prompts": [
+        {
+          "message": "This window is not responding",
+          "buttons": [
+            "Wait",
+            "Recover window"
+          ],
+          "defaultId": 0,
+          "cancelId": 0
+        }
+      ],
+      "electron": "43.7.5",
+      "appVersion": "0.11.1",
+      "heading": "This window stopped working",
+      "checks": [
+        "A real blocked renderer without DevTools triggers unresponsive detection and the native Wait/Recover window prompt",
+        "Explicit Recover window terminates the blocked renderer and displays the local recovery document"
+      ]
+    }
+  }
+}

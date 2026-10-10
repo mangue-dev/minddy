@@ -1,5 +1,7 @@
 "use client";
 
+import { fetchClientRead } from "./client-read";
+
 import type { QueryClient } from "@tanstack/react-query";
 import { trackEvent } from "./analytics";
 import { lengthBucket } from "./analytics-sanitize";
@@ -40,7 +42,7 @@ export async function fetchIssuesApi(
   signal?: AbortSignal
 ): Promise<Issue[]> {
   return parseJson<Issue[]>(
-    await fetch(`/api/projects/${projectId}/issues`, { signal })
+    await fetchClientRead(`/api/projects/${projectId}/issues`, { signal })
   );
 }
 
@@ -77,7 +79,7 @@ export async function fetchRecurrencesApi(
   projectId: string
 ): Promise<RecurringIssue[]> {
   return parseJson<RecurringIssue[]>(
-    await fetch(`/api/projects/${projectId}/recurrences`)
+    await fetchClientRead(`/api/projects/${projectId}/recurrences`)
   );
 }
 
@@ -85,7 +87,7 @@ export async function fetchRecurrencesApi(
  palette's cross-project index (MIN-91) carries no description or plan, which
  “copy prompt” needs, so it fetches the ticket on demand. */
 export async function fetchIssueApi(issueId: string): Promise<Issue> {
-  return parseJson<Issue>(await fetch(`/api/issues/${issueId}`));
+  return parseJson<Issue>(await fetchClientRead(`/api/issues/${issueId}`));
 }
 
 export async function createIssueApi(

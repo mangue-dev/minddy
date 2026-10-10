@@ -1,5 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("./supabase", () => ({ getSupabase: () => ({ auth: {
+  getSession: async () => ({ data: { session: { user: { id: "owner" } } }, error: null }),
+} }) }));
+
 import {
   PageApiError,
   PageConflictError,
@@ -27,11 +31,7 @@ function mockFetch(response: {
 }): void {
   vi.stubGlobal(
     "fetch",
-    vi.fn(async () => ({
-      ok: response.ok,
-      status: response.status,
-      json: async () => response.body,
-    }))
+    vi.fn(async () => Response.json(response.body, { status: response.status }))
   );
 }
 
