@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
-  "sourceRevision": 6,
+  "revision": 7,
+  "sourceRevision": 7,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-10",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -52,14 +52,15 @@
       "app/api/oauth/register/route.ts",
       "lib/server/oauth/metadata.ts",
       "components/documentation/documentation-navigation.tsx",
-      "components/documentation/documentation-article.tsx"
+      "components/documentation/documentation-article.tsx",
+      "content/documentation/reviews/premerge-second-operations-2026-10-10.md"
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-672 MCP availability and network guidance checked against route, origin, discovery, registration and local launcher source; no operational rerun); agent:/root (installation article labeled as supporting reference; primary wizard entry points verified; existing figures and procedural evidence retained)",
-    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (collection-caption clarity); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-672 fr network guidance and terminology review); agent:/root (fr installation-reference title review)",
-    "date": "2026-10-09"
+    "revision": 7,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-672 MCP availability and network guidance checked against route, origin, discovery, registration and local launcher source; no operational rerun); agent:/root (installation article labeled as supporting reference; primary wizard entry points verified; existing figures and procedural evidence retained); agent:/root/second_operations (managed runner blocker and key-volume recovery source review; existing helper evidence retained; no operational rerun)",
+    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (collection-caption clarity); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-672 fr network guidance and terminology review); agent:/root (fr installation-reference title review); agent:/root/second_operations (fr added installation and recovery safeguards, full retained meaning)",
+    "date": "2026-10-10"
   },
   "related": [
     "authentication-and-email",
@@ -84,7 +85,7 @@
       "src": "/documentation/fr/self-hosted-compatibility-flow.svg",
       "alt": "Schéma: Tag source annoté. Assets et SHA256SUMS. Signature et digest OCI officiels. Profil de compatibilité choisi.",
       "caption": "Lisez les étapes dans cet ordre. Tag source annoté. Assets et `SHA256SUMS`. Signature et digest OCI officiels. Profil de compatibilité choisi.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -116,7 +117,7 @@
       "src": "/documentation/fr/install-a-server-flow.svg",
       "alt": "Schéma: Release vérifiée et environnement protégé. Installateur : profil full de référence. Supabase officiel, app, jobs, runner. Validation compte, fichiers et récupération.",
       "caption": "Lisez les étapes dans cet ordre. Release vérifiée et environnement protégé. Installateur : profil full de référence. Supabase officiel, app, jobs, runner. Validation compte, fichiers et récupération.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -148,7 +149,7 @@
       "src": "/documentation/fr/install-a-server-wizard.png",
       "alt": "Assistant public d’installation avec Supabase sur le même serveur sélectionné.",
       "caption": "Le profil full conserve l’application et Supabase sur votre serveur. Dans cet exemple, leur accès par réseau privé est limité au réseau local.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -165,7 +166,7 @@
       "src": "/documentation/fr/managed-or-source-installation-flow.svg",
       "alt": "Schéma: Votre projet Supabase géré. PostgreSQL, Auth, Storage, Realtime. Profil OCI OU application depuis un tag. Jobs et sauvegarde propres au profil.",
       "caption": "Un backend géré peut servir les deux modes de déploiement, avec une planification et des sauvegardes adaptées au profil choisi.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -450,12 +451,14 @@ Supabase géré décrit l’exploitation du backend. Il peut accompagner le prof
 
 Depuis le répertoire de la release vérifiée, lancez la commande ci-dessous. `IMAGE` est le digest [contrôlé dans la section de compatibilité](#verify-release). Les valeurs contenant ... sont des exemples inutilisables. Récupérez les vraies valeurs en privé et évitez les secrets dans l’historique ou les journaux partagés. L’installateur conserve l’environnement protégé existant, inclut son planificateur et son runner et laisse les services optionnels inactifs tant qu’ils ne sont pas configurés. Configurez séparément SMTP Auth et les redirections exactes dans votre projet Supabase.
 
+Le fichier auxiliaire du runner manque aussi dans l’image du profil OCI `managed` publié en v0.11.0. Son installateur inchangé ne peut donc pas terminer le démarrage. La commande ci-dessous prépare uniquement la configuration avec `--skip-start`. Définissez `MINDDY_RELEASE=0.11.0` dans ce fichier protégé en conservant l’image vérifiée et les secrets générés. Obtenez une combinaison correspondante et corrigée de version publiée et d’outillage, puis vérifiez le profil `managed` avant de le démarrer ou d’accueillir des utilisateurs. L’essai technique `full` ne valide pas Supabase géré ; n’exécutez pas ses commandes de backend local sur un projet fournisseur.
+
 ```bash
 pnpm self-host:install -- --non-interactive --mode managed \
   --app-url https://tickets.example.com --admin-email ops@example.com \
   --supabase-url https://project.supabase.co --anon-key '...' \
   --service-role-key '...' --db-url 'postgresql://postgres:...@db.example.com:5432/postgres' \
-  --image "$IMAGE"
+  --image "$IMAGE" --skip-start
 ```
 
 ### Déployer depuis les sources {#source}

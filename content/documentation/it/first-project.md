@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
+  "revision": 7,
   "sourceRevision": 6,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-10",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -38,14 +38,15 @@
       "lib/project-key.ts",
       "components/create-issue-dialog.tsx",
       "components/issue-compact-fields.tsx",
-      "lib/smart-fill.ts"
+      "lib/smart-fill.ts",
+      "content/documentation/reviews/second-pass-workflows-2026-10-10.md"
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
-    "date": "2026-10-09"
+    "revision": 7,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root/second_workflows (second lightweight source and figure review; prior operational evidence retained; no operational rerun)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/second_workflows (it complete-body second pass and corrected wording review)",
+    "date": "2026-10-10"
   },
   "related": [
     "accounts",
@@ -65,7 +66,7 @@
       "src": "/documentation/it/reader-first-project.png",
       "alt": "Ticket dimostrativo completato con descrizione e commento salvato.",
       "caption": "Lo stato completato documenta la verifica del percorso nell’applicazione. Non afferma che sia stato provato il link email del sito d’esempio.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -86,7 +87,9 @@
 
 Usa un account dell’istanza prevista. In questo esempio, crea un progetto dimostrativo per un sito web e un ticket per controllarne il collegamento di contatto. Puoi seguire la stessa sequenza in Cloud o su un’istanza autonoma configurata; non serve l’IA.
 
-1. Apri Home dopo l'accesso. Per iniziare un nuovo lavoro, scegli l'azione per creare un progetto nella navigazione. Seleziona un progetto completamente nuovo nella procedura guidata, inserisci un nome e una chiave di due-cinque lettere e prosegui nei passaggi dell'icona e del repository. Per questo esempio manuale, mantieni l'icona predefinita e non scegliere un repository. Puoi lasciare vuota la descrizione iniziale. Nel passaggio finale, controlla Smart Assign e l'assegnazione automatica; lascia quest'ultima disattivata se vuoi assegnare personalmente il ticket dimostrativo. Scegli l'azione per concludere, attendi la creazione e apri il progetto. Se il tuo team ha già un progetto, comunica al proprietario l'email del tuo account e accetta l'invito nella posta in arrivo invece di creare un duplicato.
+Se il tuo team ha già un progetto, comunica al proprietario l'email del tuo account e accetta l'invito nella posta in arrivo invece di creare un duplicato.
+
+1. Apri Home dopo l'accesso. Per iniziare un nuovo lavoro, scegli l'azione per creare un progetto nella navigazione. Seleziona un progetto completamente nuovo nella procedura guidata, inserisci un nome e una chiave di due-cinque lettere e prosegui nei passaggi dell'icona e del repository. Per questo esempio manuale, mantieni l'icona predefinita e non scegliere un repository. Puoi lasciare vuota la descrizione iniziale. Nel passaggio finale, controlla Smart Assign e l'assegnazione automatica; lascia quest'ultima disattivata se vuoi assegnare personalmente il ticket dimostrativo. Scegli l'azione per concludere, attendi la creazione e apri il progetto.
 2. Apri il progetto e crea un ticket. Assegna un titolo concreto, come «Controllare il collegamento di contatto del sito». Descrivi la pagina, la destinazione prevista e come verificherai il risultato. Se il pulsante Riempimento intelligente è visibile e attivo, disattivalo per questo esempio manuale prima di creare il ticket. Questo pulsante controlla la compilazione di questo ticket ed è indipendente dagli interruttori di automazione e Smart Assign del progetto.
 3. Scegli un assegnatario, una priorità e un impegno se aiutano a pianificare l’attività. Conferma la creazione, apri il ticket ottenuto e controlla progetto e identificativo.
 4. Imposta lo stato «In corso» quando inizi il lavoro. Esegui il controllo e registra il risultato in un commento. Usa «In revisione» se qualcuno deve ancora esaminarlo.

@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 4,
-  "sourceRevision": 4,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-10",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -34,14 +34,15 @@
     "evidence": [
       "docs/self-hosting-operations.md",
       "docs/self-hosting-logical-operations.md",
-      "content/knowledge/self-hosting-operations.md"
+      "content/knowledge/self-hosting-operations.md",
+      "content/documentation/reviews/premerge-second-operations-2026-10-10.md"
     ]
   },
   "review": {
-    "revision": 4,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review)",
-    "date": "2026-10-09"
+    "revision": 5,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root/second_operations (managed runner blocker and key-volume recovery source review; existing helper evidence retained; no operational rerun)",
+    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root/second_operations (de added installation and recovery safeguards, full retained meaning)",
+    "date": "2026-10-10"
   },
   "related": [
     "update-an-instance"
@@ -64,7 +65,7 @@
       "src": "/documentation/de/restore-and-roll-back-flow.svg",
       "alt": "Diagramm: Geprüftes vollständiges externes Backup. Leeres isoliertes Ziel mit passenden Versionen. Datenbank, Bytes und Schlüssel gemeinsam. Konto, Inhalte und Bytes vor Öffnung prüfen.",
       "caption": "Lesen Sie die Schritte in dieser Reihenfolge. Geprüftes vollständiges externes Backup. Leeres isoliertes Ziel mit passenden Versionen. Datenbank, Bytes und Schlüssel gemeinsam. Konto, Inhalte und Bytes vor Öffnung prüfen.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -222,6 +223,7 @@ install -d -m 0700 "$BACKUP_DIR/database" "$BACKUP_DIR/config"
 git -C "$MINDDY_CURRENT_DIR" rev-parse HEAD > "$BACKUP_DIR/minddy-commit.txt"
 git -C "$MINDDY_CURRENT_DIR" describe --tags --always --dirty > "$BACKUP_DIR/minddy-version.txt"
 cd "$SUPABASE_COMPOSE_DIR"
+git -C "$SUPABASE_COMPOSE_DIR" rev-parse HEAD > "$BACKUP_DIR/supabase-commit.txt"
 docker compose images > "$BACKUP_DIR/supabase-images.txt"
 docker compose ps > "$BACKUP_DIR/supabase-services.txt"
 ```
@@ -259,6 +261,8 @@ psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -Atc "
 
 Stoppen Sie bei eigenem Dateisystem-Storage storage und `imgproxy` nach dem SQL-Export und archivieren Sie das Backend mit numerischen Eigentümern, ACLs und erweiterten Attributen. S3 benötigt einen unveränderlichen Rohsnapshot beziehungsweise eine Version. Restaurieren Sie nie über `/storage/v1/s3`, das widersprüchliche Metadaten erzeugt. Managed-Anbieter kontrollieren Plattformrollen und Dateizugriff; nutzen Sie deren unterstütztes Verfahren und erfassen Sie dessen Umfang. Kopieren Sie Anwendung/Supabase, Proxy, Jobs, Auth-Vorlagen, SMTP und eventuellen `pgsodium`-Wurzelschlüssel privat. `MINDDY_DATA_ROOT_KEY` und erhaltene Geheimnisse gehören dazu. SQL allein enthält keine Anhangbytes.
 
+Sichern Sie beim festgelegten betreiberkontrollierten Backend das vollständige `db-config`-Volume statt nur `pgsodium_root.key`. Das folgende Hilfsprogramm erhält numerische Eigentümer, Berechtigungen, ACLs und erweiterte Attribute. Bewahren Sie sein exaktes PostgreSQL-Image zur Wiederherstellung auf. Ein anderer Schlüssel-Mount erfordert ein geprüftes Verfahren für dieses Backend. Lassen Sie Schlüssel nicht aus und nehmen Sie nicht an, ein neu erzeugter Wurzelschlüssel könne wiederhergestellte Vault-Daten lesen.
+
 ```bash
 install -m 0600 "$MINDDY_ENV_FILE" "$BACKUP_DIR/config/minddy.env"
 install -m 0600 "$SUPABASE_COMPOSE_DIR/.env" "$BACKUP_DIR/config/supabase.env"
@@ -266,11 +270,19 @@ tar --exclude='./volumes' --exclude='./.git' \
   -C "$SUPABASE_COMPOSE_DIR" \
   -czf "$BACKUP_DIR/config/supabase-compose.tar.gz" .
 cd "$SUPABASE_COMPOSE_DIR"
-if docker compose exec -T db test -f /etc/postgresql-custom/pgsodium_root.key; then
-  docker compose exec -T db cat /etc/postgresql-custom/pgsodium_root.key \
-    > "$BACKUP_DIR/config/pgsodium_root.key"
-  chmod 0600 "$BACKUP_DIR/config/pgsodium_root.key"
+DB_CONTAINER="$(docker compose ps -q db)"
+test -n "$DB_CONTAINER"
+DB_CONFIG_VOLUME="$(docker inspect "$DB_CONTAINER" --format '{{range .Mounts}}{{if eq .Destination "/etc/postgresql-custom"}}{{.Name}}{{end}}{{end}}')"
+BACKUP_HELPER_IMAGE="$(docker inspect "$DB_CONTAINER" --format '{{.Image}}')"
+printf '%s\n' "$BACKUP_HELPER_IMAGE" > "$BACKUP_DIR/config/postgres-image-id.txt"
+if [ -z "$DB_CONFIG_VOLUME" ]; then
+  echo "This key mount needs a verified backend-specific backup and restore procedure." >&2
+  exit 1
 fi
+docker run --rm --network none --user 0:0 --entrypoint tar \
+  --mount "type=volume,src=$DB_CONFIG_VOLUME,dst=/keys,readonly" \
+  "$BACKUP_HELPER_IMAGE" --numeric-owner --acls --xattrs -czf - -C /keys . \
+  > "$BACKUP_DIR/config/db-config.tar.gz"
 ```
 
 ```bash
@@ -422,18 +434,61 @@ Provisionieren Sie für logisches Restore einen leeren Stack mit aufgezeichneten
 
 Die folgenden Befehle für logische Extraktion, `run.sh` und Dateisystem-Storage gelten nur für ein vom Betreiber kontrolliertes Backend. Stellen Sie bei verwaltetem Supabase Datenbank und rohe Objektbytes mit dem unterstützten Anbieterprozess in einem leeren Ziel wieder her. Konfigurieren und starten Sie minddy anschließend nach [der Quellinstallation](/de/dokumentation/installation#source). Führen Sie für ein Projekt auf supabase.com keine lokalen Compose-Befehle aus.
 
+Vor dem ersten Datenbankstart stellt die folgende Sequenz das Schlüsselarchiv in einem neuen Volume wieder her und ergänzt die installierte Compose-Dateiliste um eine eindeutige Datei `docker-compose.restore-keys.*.yml`. Behalten Sie diesen Override bei jedem späteren Aufruf bei. Ältere Backups mit nur `pgsodium_root.key` benötigen ein geprüftes Verfahren, das ursprüngliche Eigentümer, Berechtigungen und Mount vor dem Start wiederherstellt. Die Sequenz bricht ab, statt Ersatzschlüssel zu erzeugen.
+
+Bereiten Sie zuerst den gesicherten Supabase-Upstream-Checkout mit seinen ursprünglichen statischen Dateien unter `volumes/` vor. Setzen Sie `RESTORE_SUPABASE_DIR` auf dessen Verzeichnis `docker`. Das Konfigurationsarchiv schließt `volumes/` bewusst aus und kann diesen Checkout nicht selbst bereitstellen. Die folgenden Prüfungen verlangen den gespeicherten Commit und die Initialisierungsdateien und lehnen vorhandene Datenbank- oder Storage-Daten ab. Halten Sie den öffentlichen Zugang gesperrt und führen Sie die Bash-Sequenz mit `set -euo pipefail` aus, damit eine gescheiterte Prüfung oder Extraktion vor dem Start abbricht.
+
 ```bash
+set -euo pipefail
 export RESTORE_DB_URL='postgresql://postgres:...@restore-db:5432/postgres'
 export RESTORE_SUPABASE_URL='https://restore-supabase.example.test'
 export RESTORE_APP_URL='https://restore-tickets.example.test'
 export RESTORE_ANON_KEY='...'
 export RESTORE_SERVICE_ROLE_KEY='...'
 export RESTORE_SUPABASE_DIR=/srv/restore/supabase/docker
-install -d -m 0700 "$RESTORE_SUPABASE_DIR"
+test "$(git -C "$RESTORE_SUPABASE_DIR" rev-parse HEAD)" = \
+  "$(cat "$BACKUP_DIR/supabase-commit.txt")"
+for file in volumes/db/realtime.sql volumes/db/webhooks.sql volumes/db/roles.sql \
+  volumes/db/jwt.sql volumes/db/_supabase.sql volumes/db/logs.sql \
+  volumes/db/pooler.sql volumes/api/kong.yml volumes/api/kong-entrypoint.sh \
+  volumes/pooler/pooler.exs; do
+  test -f "$RESTORE_SUPABASE_DIR/$file"
+done
+test ! -d "$RESTORE_SUPABASE_DIR/volumes/db/data"
+if [ -e "$RESTORE_SUPABASE_DIR/volumes/storage" ]; then
+  STORAGE_FIRST_OBJECT="$(find "$RESTORE_SUPABASE_DIR/volumes/storage" -type f -print -quit)"
+  test -z "$STORAGE_FIRST_OBJECT"
+fi
 tar -C "$RESTORE_SUPABASE_DIR" \
   -xzf "$BACKUP_DIR/config/supabase-compose.tar.gz"
 install -m 0600 "$BACKUP_DIR/config/supabase.env" "$RESTORE_SUPABASE_DIR/.env"
 cd "$RESTORE_SUPABASE_DIR"
+if [ -f "$BACKUP_DIR/config/pgsodium_root.key" ] && \
+   [ ! -f "$BACKUP_DIR/config/db-config.tar.gz" ]; then
+  echo "Legacy standalone key backup: restore its original ownership and mount before startup." >&2
+  exit 1
+fi
+test -f "$BACKUP_DIR/config/db-config.tar.gz"
+test -f "$BACKUP_DIR/config/postgres-image-id.txt"
+export RESTORE_DB_CONFIG=minddy-logical-restored-db-config
+if docker volume inspect "$RESTORE_DB_CONFIG" >/dev/null 2>&1; then
+  echo "Refusing to overwrite an existing key restore volume." >&2
+  exit 1
+fi
+RESTORE_KEYS_OVERRIDE="$(mktemp docker-compose.restore-keys.XXXXXX.yml)"
+BACKUP_HELPER_IMAGE="$(cat "$BACKUP_DIR/config/postgres-image-id.txt")"
+docker image inspect "$BACKUP_HELPER_IMAGE" >/dev/null
+docker volume create "$RESTORE_DB_CONFIG"
+docker run --rm -i --network none --user 0:0 --entrypoint tar \
+  --mount "type=volume,src=$RESTORE_DB_CONFIG,dst=/keys" \
+  "$BACKUP_HELPER_IMAGE" --numeric-owner --acls --xattrs -xzf - -C /keys \
+  < "$BACKUP_DIR/config/db-config.tar.gz"
+cat > "$RESTORE_KEYS_OVERRIDE" <<EOF
+volumes:
+  db-config:
+    name: $RESTORE_DB_CONFIG
+EOF
+sh run.sh config add "$RESTORE_KEYS_OVERRIDE"
 sh run.sh start
 psql "$RESTORE_DB_URL" -X -v ON_ERROR_STOP=1 -Atc \
   'select current_database(), inet_server_addr(), version()'

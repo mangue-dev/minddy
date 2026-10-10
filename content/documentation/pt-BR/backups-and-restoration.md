@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 4,
-  "sourceRevision": 4,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-10",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -34,14 +34,15 @@
     "evidence": [
       "docs/self-hosting-operations.md",
       "docs/self-hosting-logical-operations.md",
-      "content/knowledge/self-hosting-operations.md"
+      "content/knowledge/self-hosting-operations.md",
+      "content/documentation/reviews/premerge-second-operations-2026-10-10.md"
     ]
   },
   "review": {
-    "revision": 4,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root (inline-code syntax and unchanged-text review)",
-    "date": "2026-10-09"
+    "revision": 5,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root/second_operations (managed runner blocker and key-volume recovery source review; existing helper evidence retained; no operational rerun)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root (inline-code syntax and unchanged-text review); agent:/root/second_operations (pt-BR added installation and recovery safeguards, full retained meaning)",
+    "date": "2026-10-10"
   },
   "related": [
     "update-an-instance"
@@ -65,7 +66,7 @@
       "src": "/documentation/pt-BR/restore-and-roll-back-flow.svg",
       "alt": "Diagrama: Backup externo completo verificado. Alvo vazio isolado com versões iguais. Restaurar banco, bytes e chaves juntos. Verificar conta, conteúdo e arquivos antes de abrir.",
       "caption": "Siga as etapas nesta ordem. Backup externo completo verificado. Alvo vazio isolado com versões iguais. Restaurar banco, bytes e chaves juntos. Verificar conta, conteúdo e arquivos antes de abrir.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -224,6 +225,7 @@ install -d -m 0700 "$BACKUP_DIR/database" "$BACKUP_DIR/config"
 git -C "$MINDDY_CURRENT_DIR" rev-parse HEAD > "$BACKUP_DIR/minddy-commit.txt"
 git -C "$MINDDY_CURRENT_DIR" describe --tags --always --dirty > "$BACKUP_DIR/minddy-version.txt"
 cd "$SUPABASE_COMPOSE_DIR"
+git -C "$SUPABASE_COMPOSE_DIR" rev-parse HEAD > "$BACKUP_DIR/supabase-commit.txt"
 docker compose images > "$BACKUP_DIR/supabase-images.txt"
 docker compose ps > "$BACKUP_DIR/supabase-services.txt"
 ```
@@ -261,6 +263,8 @@ psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -Atc "
 
 Se você administra um Storage em filesystem, pare storage e `imgproxy` após exportar SQL e arquive o diretório preservando proprietários numéricos, ACLs e atributos estendidos. Em S3, crie um snapshot ou uma versão imutável dos bytes brutos. Não restaure por `/storage/v1/s3`, pois isso cria metadados que conflitam com os restaurados. O provedor controla papéis e arquivos da plataforma: use seu procedimento suportado e registre o alcance. Copie em privado configurações do minddy e do Supabase, proxy, jobs, templates Auth, SMTP e eventual chave raiz `pgsodium`. Inclua `MINDDY_DATA_ROOT_KEY` e os demais segredos preservados. O SQL não contém os bytes dos anexos.
 
+Para o backend fixado sob controle do operador, preserve todo o volume `db-config` em vez de copiar apenas `pgsodium_root.key`. O helper abaixo mantém proprietários numéricos, permissões, ACLs e atributos estendidos; guarde sua imagem PostgreSQL exata para recuperação. Outro volume ou montagem de chaves exige um procedimento verificado específico do backend. Não omita as chaves nem suponha que uma nova raiz pode ler os dados Vault restaurados.
+
 ```bash
 install -m 0600 "$MINDDY_ENV_FILE" "$BACKUP_DIR/config/minddy.env"
 install -m 0600 "$SUPABASE_COMPOSE_DIR/.env" "$BACKUP_DIR/config/supabase.env"
@@ -268,11 +272,19 @@ tar --exclude='./volumes' --exclude='./.git' \
   -C "$SUPABASE_COMPOSE_DIR" \
   -czf "$BACKUP_DIR/config/supabase-compose.tar.gz" .
 cd "$SUPABASE_COMPOSE_DIR"
-if docker compose exec -T db test -f /etc/postgresql-custom/pgsodium_root.key; then
-  docker compose exec -T db cat /etc/postgresql-custom/pgsodium_root.key \
-    > "$BACKUP_DIR/config/pgsodium_root.key"
-  chmod 0600 "$BACKUP_DIR/config/pgsodium_root.key"
+DB_CONTAINER="$(docker compose ps -q db)"
+test -n "$DB_CONTAINER"
+DB_CONFIG_VOLUME="$(docker inspect "$DB_CONTAINER" --format '{{range .Mounts}}{{if eq .Destination "/etc/postgresql-custom"}}{{.Name}}{{end}}{{end}}')"
+BACKUP_HELPER_IMAGE="$(docker inspect "$DB_CONTAINER" --format '{{.Image}}')"
+printf '%s\n' "$BACKUP_HELPER_IMAGE" > "$BACKUP_DIR/config/postgres-image-id.txt"
+if [ -z "$DB_CONFIG_VOLUME" ]; then
+  echo "This key mount needs a verified backend-specific backup and restore procedure." >&2
+  exit 1
 fi
+docker run --rm --network none --user 0:0 --entrypoint tar \
+  --mount "type=volume,src=$DB_CONFIG_VOLUME,dst=/keys,readonly" \
+  "$BACKUP_HELPER_IMAGE" --numeric-owner --acls --xattrs -czf - -C /keys . \
+  > "$BACKUP_DIR/config/db-config.tar.gz"
 ```
 
 ```bash
@@ -423,18 +435,61 @@ Para uma restauração lógica, prepare uma stack vazia com versões, configura�
 
 Os comandos abaixo de extração lógica, `run.sh` e Storage filesystem servem apenas para backend controlado pelo operador. Com Supabase gerenciado, restaure banco e bytes brutos em um destino vazio do provedor usando seu processo suportado; depois configure e inicie minddy pelo [procedimento de código](/pt-br/documentacao/installation#source). Não execute Compose local para um projeto supabase.com.
 
+Antes da primeira inicialização do banco, a sequência abaixo restaura o arquivo de chaves em um novo volume e adiciona um arquivo exclusivo `docker-compose.restore-keys.*.yml` à lista Compose instalada. Mantenha esse override em todas as operações posteriores. Backups antigos contendo apenas `pgsodium_root.key` exigem um procedimento verificado que restaure proprietários, permissões e montagem originais antes da inicialização; a sequência para em vez de gerar chaves substitutas.
+
+Prepare primeiro o checkout Supabase original salvo, com seus arquivos estáticos em `volumes/`, e defina `RESTORE_SUPABASE_DIR` como seu diretório `docker`. O arquivo de configuração exclui deliberadamente `volumes/` e não consegue preparar esse checkout sozinho. As verificações abaixo exigem o commit salvo e os arquivos de inicialização e recusam dados já existentes no banco ou Storage. Mantenha fechado o acesso público e execute a sequência Bash com `set -euo pipefail` para parar antes da inicialização se uma verificação ou extração falhar.
+
 ```bash
+set -euo pipefail
 export RESTORE_DB_URL='postgresql://postgres:...@restore-db:5432/postgres'
 export RESTORE_SUPABASE_URL='https://restore-supabase.example.test'
 export RESTORE_APP_URL='https://restore-tickets.example.test'
 export RESTORE_ANON_KEY='...'
 export RESTORE_SERVICE_ROLE_KEY='...'
 export RESTORE_SUPABASE_DIR=/srv/restore/supabase/docker
-install -d -m 0700 "$RESTORE_SUPABASE_DIR"
+test "$(git -C "$RESTORE_SUPABASE_DIR" rev-parse HEAD)" = \
+  "$(cat "$BACKUP_DIR/supabase-commit.txt")"
+for file in volumes/db/realtime.sql volumes/db/webhooks.sql volumes/db/roles.sql \
+  volumes/db/jwt.sql volumes/db/_supabase.sql volumes/db/logs.sql \
+  volumes/db/pooler.sql volumes/api/kong.yml volumes/api/kong-entrypoint.sh \
+  volumes/pooler/pooler.exs; do
+  test -f "$RESTORE_SUPABASE_DIR/$file"
+done
+test ! -d "$RESTORE_SUPABASE_DIR/volumes/db/data"
+if [ -e "$RESTORE_SUPABASE_DIR/volumes/storage" ]; then
+  STORAGE_FIRST_OBJECT="$(find "$RESTORE_SUPABASE_DIR/volumes/storage" -type f -print -quit)"
+  test -z "$STORAGE_FIRST_OBJECT"
+fi
 tar -C "$RESTORE_SUPABASE_DIR" \
   -xzf "$BACKUP_DIR/config/supabase-compose.tar.gz"
 install -m 0600 "$BACKUP_DIR/config/supabase.env" "$RESTORE_SUPABASE_DIR/.env"
 cd "$RESTORE_SUPABASE_DIR"
+if [ -f "$BACKUP_DIR/config/pgsodium_root.key" ] && \
+   [ ! -f "$BACKUP_DIR/config/db-config.tar.gz" ]; then
+  echo "Legacy standalone key backup: restore its original ownership and mount before startup." >&2
+  exit 1
+fi
+test -f "$BACKUP_DIR/config/db-config.tar.gz"
+test -f "$BACKUP_DIR/config/postgres-image-id.txt"
+export RESTORE_DB_CONFIG=minddy-logical-restored-db-config
+if docker volume inspect "$RESTORE_DB_CONFIG" >/dev/null 2>&1; then
+  echo "Refusing to overwrite an existing key restore volume." >&2
+  exit 1
+fi
+RESTORE_KEYS_OVERRIDE="$(mktemp docker-compose.restore-keys.XXXXXX.yml)"
+BACKUP_HELPER_IMAGE="$(cat "$BACKUP_DIR/config/postgres-image-id.txt")"
+docker image inspect "$BACKUP_HELPER_IMAGE" >/dev/null
+docker volume create "$RESTORE_DB_CONFIG"
+docker run --rm -i --network none --user 0:0 --entrypoint tar \
+  --mount "type=volume,src=$RESTORE_DB_CONFIG,dst=/keys" \
+  "$BACKUP_HELPER_IMAGE" --numeric-owner --acls --xattrs -xzf - -C /keys \
+  < "$BACKUP_DIR/config/db-config.tar.gz"
+cat > "$RESTORE_KEYS_OVERRIDE" <<EOF
+volumes:
+  db-config:
+    name: $RESTORE_DB_CONFIG
+EOF
+sh run.sh config add "$RESTORE_KEYS_OVERRIDE"
 sh run.sh start
 psql "$RESTORE_DB_URL" -X -v ON_ERROR_STOP=1 -Atc \
   'select current_database(), inet_server_addr(), version()'

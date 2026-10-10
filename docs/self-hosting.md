@@ -207,6 +207,13 @@ procedure for a running instance.
 
 ### Guided reference-profile installation
 
+For the published v0.11.0 OCI image, both `managed` and `full` profiles have a
+missing runner helper. Generate configuration with `--skip-start` and follow the
+[known distribution checks](#known-v0110-distribution-checks) before attempting
+startup. The examples below require a corrected, matching release/tooling
+combination for a complete installation; the retained full-profile engineering
+rehearsal does not establish acceptance of the managed profile.
+
 For either versioned Compose profile, use the guided installer from the release
 directory. It asks for the deployment mode, app address, administrator, and
 only the optional capabilities that should be enabled. It generates distinct

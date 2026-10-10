@@ -17,10 +17,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
-  "sourceRevision": 6,
+  "revision": 7,
+  "sourceRevision": 7,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-10",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -41,14 +41,17 @@
       "components/pages/database-cell-editor.tsx",
       "components/pages/database-column-name.tsx",
       "components/pages/database-import-dialog.tsx",
-      "lib/server/database-import.ts"
+      "lib/server/database-import.ts",
+      "content/documentation/reviews/second-pass-workflows-2026-10-10.md",
+      "lib/database-import/types.ts",
+      "lib/database-import/archive.ts"
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions)",
-    "date": "2026-10-09"
+    "revision": 7,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root/second_workflows (second lightweight source and figure review; prior operational evidence retained; no operational rerun)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root/second_workflows (it complete-body second pass and corrected wording review)",
+    "date": "2026-10-10"
   },
   "related": [
     "pages"
@@ -72,7 +75,7 @@
       "src": "/documentation/it/database-property-types.png",
       "alt": "Selettore del tipo di colonna con testo, numero, selezioni, date, persone e casella di controllo.",
       "caption": "Scegli un tipo adatto ai valori da conservare.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -88,7 +91,7 @@
       "src": "/documentation/it/database-entry.png",
       "alt": "Voce dimostrativa con descrizione, durata 2.5, casella selezionata e selezione vuota.",
       "caption": "Apri una voce per leggere il testo completo e modificare i valori in base al tipo.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -104,7 +107,7 @@
       "src": "/documentation/it/database-conversion-warning.png",
       "alt": "Avviso di conversione: il passaggio da Testo a Numero svuota una cella incompatibile, con pulsanti per annullare o confermare.",
       "caption": "Controlla il numero effettivo di celle incompatibili prima di confermare. Annulla conserva i valori attuali.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -120,7 +123,7 @@
       "src": "/documentation/it/database-import-review.png",
       "alt": "Verifica di un CSV locale: due pagine di voci e due colonne, con il pulsante Importa database.",
       "caption": "Controlla le voci analizzate e il numero di colonne prima di importare nel database vuoto.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -205,7 +208,7 @@ Prima di confermare, controlla i nomi e i tipi di colonna suggeriti e poi il num
 
 L’importazione include i contenuti delle voci, i documenti annidati e i file locali presenti nell’archivio. Un archivio minddy mantiene anche lo schema esatto e i colori delle opzioni e rimappa i collegamenti interni a pagine e file. Le persone possono essere associate ai membri del progetto di destinazione. Un’esportazione di Notion non contiene lo schema originale, i colori delle opzioni o le definizioni delle formule: queste informazioni mancanti non possono essere recuperate.
 
-Gli archivi possono contenere al massimo 20 MB compressi, 50 MB estratti e 1.000 pagine. Ogni allegato mantiene il limite di 10 MB previsto per i file delle pagine. La scrittura nel database è transazionale. Riprovare lo stesso tentativo nella finestra ancora aperta mantiene il suo identificativo di richiesta, quindi un tentativo già completato viene restituito senza duplicare le righe. Caricare un altro file o aprire una nuova finestra può creare un tentativo diverso. Se il risultato della rete è incerto, esamina la destinazione prima di ricominciare; un database già popolato non soddisfa più il requisito di una destinazione vuota.
+Gli archivi possono contenere al massimo 20 MB compressi, 50 MB estratti, 1.000 pagine e 100 allegati. Ogni allegato mantiene il limite di 10 MB previsto per i file delle pagine. La scrittura nel database è transazionale. Riprovare lo stesso tentativo nella finestra ancora aperta mantiene il suo identificativo di richiesta, quindi un tentativo già completato viene restituito senza duplicare le righe. Caricare un altro file o aprire una nuova finestra può creare un tentativo diverso. Se il risultato della rete è incerto, esamina la destinazione prima di ricominciare; un database già popolato non soddisfa più il requisito di una destinazione vuota.
 
 Dopo il completamento, controlla alcune voci, i valori, le pagine annidate e gli allegati. Conserva l’archivio originale finché la verifica non è conclusa. Se l’importazione fallisce, leggi il primo errore e correggi il formato o la corrispondenza prima di riprovare. Non compilare manualmente il database di destinazione presumendo che continui a soddisfare il requisito di essere vuoto.
 

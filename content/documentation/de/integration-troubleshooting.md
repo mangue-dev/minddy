@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 4,
-  "sourceRevision": 4,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-10",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -35,14 +35,19 @@
       "content/knowledge/agents-and-mcp.md",
       "docs/github-issue-sync.md",
       "lib/server/integration-auth.ts",
-      "lib/mcp-authorization.ts"
+      "lib/mcp-authorization.ts",
+      "lib/server/mcp-http.ts",
+      "lib/server/mcp-client.ts",
+      "lib/server/safe-fetch.ts",
+      "app/api/mcp/route.ts",
+      "content/documentation/reviews/second-pass-ai-integrations-2026-10-10.md"
     ]
   },
   "review": {
-    "revision": 4,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review)",
-    "date": "2026-10-09"
+    "revision": 5,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root/second_ai_integrations (second lightweight pre-merge source review; personal outbound MCP policy distinguished from incoming minddy MCP; no operational rerun)",
+    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root/second_ai_integrations (localized MCP scope and network-access cross-link review)",
+    "date": "2026-10-10"
   },
   "related": [
     "api-and-webhooks",
@@ -64,11 +69,11 @@ minddy MCP verbindet externe Assistenten mit minddy; persönliche MCP-Verbindung
 
 ## Mit passenden Rechten neu verbinden {#oauth}
 
-Registrieren Sie den exakt angezeigten Callback in der Anbieter-App, wenn bestehende Clientzugänge erforderlich sind. Desktop-OAuth öffnet den Systembrowser und kehrt zurück. Entfernte Verbindungen benötigen öffentliches HTTPS; lokale Befehle und private Netzserver sind ausgeschlossen. Bearertokens und Geheimnisse gehören in Auth/Header, nicht in URLs. URL-Wechsel löscht gespeicherte Zugangsdaten und Header. Deaktivieren/Entfernen stoppt neue Aufrufe, gesendete können noch enden. Routinen nutzen den aktuellen Projekteigentümer; Eigentümerwechsel leiht keine bisherigen persönlichen Zugänge.
+Registrieren Sie den exakt angezeigten Callback in der Anbieter-App, wenn bestehende Clientzugänge erforderlich sind. Desktop-OAuth öffnet den Systembrowser und kehrt zurück. Persönliche MCP-Verbindungen von Numo benötigen öffentliches HTTPS; lokale Befehle und private Netzserver sind ausgeschlossen. Für externe Assistenten, die sich mit minddy MCP verbinden, siehe [Netzwerkzugriff auf Ihre Instanz](/docs/minddy-mcp#network-access). Bearertokens und Geheimnisse gehören in Auth/Header, nicht in URLs. URL-Wechsel löscht gespeicherte Zugangsdaten und Header. Deaktivieren/Entfernen stoppt neue Aufrufe, gesendete können noch enden. Routinen nutzen den aktuellen Projekteigentümer; Eigentümerwechsel leiht keine bisherigen persönlichen Zugänge.
 
 ## Vor Wiederholung das Ergebnis prüfen {#webhooks}
 
-Entfernte MCP-Aufrufe haben 30 Sekunden Deadline, 1 MiB Transport- und 64 KB Ergebnisgrenze. Timeout beweist keinen Mutationsfehler. Prüfen Sie das Ziel vor Wiederholung. Bei API-401 prüfen Sie Instanz, Art und Widerruf ohne Schlüsselausgabe; falsche Art ergibt 403. Bei Webhooks prüfen Sie letzten Status, öffentliches Ziel, Rohkörper-HMAC und `delivery_id`-Deduplizierung. Verworfene Zustellungen haben keine dauerhafte Wiederholungswarteschlange. Erhalten Sie kontrollierte Codes und Zeiten ohne private Inhalte oder Zugangsdaten.
+Aufrufe von Numo an persönliche MCP-Server haben 30 Sekunden Deadline, 1 MiB Transport- und 64 KB Ergebnisgrenze. Timeout beweist keinen Mutationsfehler. Prüfen Sie das Ziel vor Wiederholung. Bei API-401 prüfen Sie Instanz, Art und Widerruf ohne Schlüsselausgabe; falsche Art ergibt 403. Bei Webhooks prüfen Sie letzten Status, öffentliches Ziel, Rohkörper-HMAC und `delivery_id`-Deduplizierung. Verworfene Zustellungen haben keine dauerhafte Wiederholungswarteschlange. Erhalten Sie kontrollierte Codes und Zeiten ohne private Inhalte oder Zugangsdaten.
 
 ## Rechte und Synchronisierung prüfen {#git}
 

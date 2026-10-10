@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
+  "revision": 7,
   "sourceRevision": 6,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-10",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -38,14 +38,15 @@
       "lib/project-key.ts",
       "components/create-issue-dialog.tsx",
       "components/issue-compact-fields.tsx",
-      "lib/smart-fill.ts"
+      "lib/smart-fill.ts",
+      "content/documentation/reviews/second-pass-workflows-2026-10-10.md"
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
-    "date": "2026-10-09"
+    "revision": 7,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root/second_workflows (second lightweight source and figure review; prior operational evidence retained; no operational rerun)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/second_workflows (pt-BR complete-body second pass and corrected wording review)",
+    "date": "2026-10-10"
   },
   "related": [
     "accounts",
@@ -65,7 +66,7 @@
       "src": "/documentation/pt-BR/reader-first-project.png",
       "alt": "Ticket de demonstração concluído com descrição e comentário salvo.",
       "caption": "O status concluído registra a verificação do percurso no aplicativo. Não afirma que o link de e-mail do site de exemplo foi testado.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -86,7 +87,9 @@
 
 Use uma conta da instância desejada. Neste exemplo, crie um projeto de demonstração para um site e uma tarefa para verificar o link de contato. Você pode seguir a mesma sequência no Cloud ou em uma instância auto-hospedada configurada; a IA não é necessária.
 
-1. Abra a página inicial depois de entrar. Para começar um trabalho novo, escolha a ação de novo projeto na navegação. Selecione um projeto totalmente novo no assistente, informe um nome e uma chave de duas a cinco letras e avance pelas etapas de ícone e repositório. Para este exemplo manual, mantenha o ícone padrão e não escolha um repositório. Você pode deixar a descrição inicial vazia. Na etapa final, confira o Smart Assign e a atribuição automática; deixe esta última desativada se quiser atribuir pessoalmente o ticket de demonstração. Escolha a ação para finalizar, aguarde a criação e abra o projeto. Se a equipe já tiver um projeto, informe ao proprietário o email da sua conta e aceite o convite na caixa de entrada em vez de criar um projeto duplicado.
+Se a equipe já tiver um projeto, informe ao proprietário o email da sua conta e aceite o convite na caixa de entrada em vez de criar um projeto duplicado.
+
+1. Abra a página inicial depois de entrar. Para começar um trabalho novo, escolha a ação de novo projeto na navegação. Selecione um projeto totalmente novo no assistente, informe um nome e uma chave de duas a cinco letras e avance pelas etapas de ícone e repositório. Para este exemplo manual, mantenha o ícone padrão e não escolha um repositório. Você pode deixar a descrição inicial vazia. Na etapa final, confira o Smart Assign e a atribuição automática; deixe esta última desativada se quiser atribuir pessoalmente o ticket de demonstração. Escolha a ação para finalizar, aguarde a criação e abra o projeto.
 2. Abra o projeto e crie uma tarefa. Dê um título concreto, como “Verificar o link de contato do site”. Descreva a página, o destino esperado e como verificará o resultado. Se o botão Preenchimento inteligente estiver visível e ativado, desative-o para este exemplo manual antes de criar a tarefa. Ele controla o preenchimento dessa tarefa e é independente dos controles de automação e Smart Assign do projeto.
 3. Escolha um responsável, uma prioridade e um esforço se essas informações ajudarem a planejar a tarefa. Confirme a criação, abra a tarefa criada e confira seu projeto e identificador.
 4. Mude o estado para “Em andamento” quando começar o trabalho. Faça a verificação e registre o resultado em um comentário. Use “Em revisão” se alguém ainda precisar analisar o resultado.

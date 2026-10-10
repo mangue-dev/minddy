@@ -17,10 +17,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
-  "sourceRevision": 6,
+  "revision": 7,
+  "sourceRevision": 7,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-10",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -41,14 +41,17 @@
       "components/pages/database-cell-editor.tsx",
       "components/pages/database-column-name.tsx",
       "components/pages/database-import-dialog.tsx",
-      "lib/server/database-import.ts"
+      "lib/server/database-import.ts",
+      "content/documentation/reviews/second-pass-workflows-2026-10-10.md",
+      "lib/database-import/types.ts",
+      "lib/database-import/archive.ts"
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review)",
-    "date": "2026-10-09"
+    "revision": 7,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root/second_workflows (second lightweight source and figure review; prior operational evidence retained; no operational rerun)",
+    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root/second_workflows (fr complete-body second pass and corrected wording review)",
+    "date": "2026-10-10"
   },
   "related": [
     "pages"
@@ -72,7 +75,7 @@
       "src": "/documentation/fr/database-property-types.png",
       "alt": "Sélecteur de type de colonne : texte, nombre, sélections, dates, personnes et case à cocher.",
       "caption": "Choisissez un type adapté aux valeurs à conserver.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -88,7 +91,7 @@
       "src": "/documentation/fr/database-entry.png",
       "alt": "Entrée de démonstration avec description, durée 2.5, case cochée et sélection vide.",
       "caption": "Ouvrez une entrée pour lire son texte complet et modifier les valeurs typées.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -104,7 +107,7 @@
       "src": "/documentation/fr/database-conversion-warning.png",
       "alt": "Avertissement de conversion : passer de Texte à Nombre efface une cellule incompatible, avec boutons Annuler et confirmation.",
       "caption": "Vérifiez le nombre réel de cellules incompatibles avant de confirmer. Annuler conserve les valeurs actuelles.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -120,7 +123,7 @@
       "src": "/documentation/fr/database-import-review.png",
       "alt": "Vérification d’un CSV local : deux pages d’entrées et deux colonnes, avec le bouton Importer la base.",
       "caption": "Vérifiez les entrées analysées et le nombre de colonnes avant l’import dans la base vide.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -205,7 +208,7 @@ Vérifiez noms et types suggérés, puis le nombre de pages avant confirmation. 
 
 L’import comprend corps des entrées, documents imbriqués et fichiers locaux présents dans l’archive. Une archive minddy conserve aussi schéma exact et couleurs et réassocie les liens internes de pages et fichiers. Les personnes peuvent être associées aux membres du projet cible. L’export Notion ne contient ni schéma original, ni couleurs d’options, ni définitions de formules ; l’import ne récupère pas une information absente.
 
-Les limites sont 20 Mo compressés, 50 Mo décompressés et 1 000 pages. Chaque fichier garde la limite de 10 Mo. L’écriture en base est transactionnelle. Réessayer la même tentative dans le dialogue ouvert conserve son identifiant de requête : une tentative déjà terminée est retournée sans dupliquer les lignes. Charger un autre fichier ou rouvrir un dialogue peut créer une nouvelle tentative. Après un résultat réseau incertain, inspectez la destination avant de recommencer ; une base déjà remplie ne répond plus au prérequis de destination vide.
+Les limites sont 20 Mo compressés, 50 Mo décompressés, 1 000 pages et 100 fichiers joints. Chaque fichier garde la limite de 10 Mo. L’écriture en base est transactionnelle. Réessayer la même tentative dans le dialogue ouvert conserve son identifiant de requête : une tentative déjà terminée est retournée sans dupliquer les lignes. Charger un autre fichier ou rouvrir un dialogue peut créer une nouvelle tentative. Après un résultat réseau incertain, inspectez la destination avant de recommencer ; une base déjà remplie ne répond plus au prérequis de destination vide.
 
 Après succès, inspectez entrées, valeurs, sous-pages et fichiers. Gardez l’archive originale jusque-là. En cas d’échec, lisez la première erreur et corrigez format ou correspondance. Ne remplissez pas manuellement la destination en supposant qu’elle répond encore à l’exigence de base vide.
 
