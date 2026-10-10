@@ -21,6 +21,8 @@ export interface AiChatRequest {
   stream?: boolean;
   maxOutputTokens?: number;
   reasoning?: {
+    /** Explicitly disable optional reasoning on OpenRouter; omission keeps model defaults. */
+    enabled?: false;
     effort?: ReasoningLevel;
     /** Fixed budget when the provider knows how to express it. */
     maxTokens?: number;
@@ -153,6 +155,9 @@ function providerReasoningFields(
   // that this transport remains Chat Completions, `none` is the documented contract.
   if (provider === "openai" && hasFunctionTools && isGpt56(model)) {
     return { reasoning_effort: "none" };
+  }
+  if (provider === "openrouter" && reasoning?.enabled === false) {
+    return { reasoning: { enabled: false } };
   }
   if (
     reasoning === undefined ||

@@ -126,14 +126,14 @@ describe("mapLlmAnswers — smart_fill", () => {
 });
 
 describe("runLlmDecision — Smart Fill generation", () => {
-  it("leaves room for reasoning and the tool output within the creation timeout", async () => {
+  it("prefers a direct tool output within the existing creation budget", async () => {
     forcedToolCallMock.mockResolvedValue({ priority: "high", effort: "m", category_ids: ["cat-a"] });
     const context = { runId: "fill-run", seq: 1, billTo: { userId: "creator" }, projectId: "project" };
     const answers = await runLlmDecision(SPEC, context);
     expect(forcedToolCallMock).toHaveBeenCalledWith(
       "reasoning-model", "s", "u", "fill_issue", {},
       expect.objectContaining({
-        maxTokens: 2_048, reasoning: "low", timeoutMs: 20_000,
+        maxTokens: 2_048, reasoning: "low", preferNonReasoning: true, timeoutMs: 20_000,
         record: expect.objectContaining({ feature: "smart_fill", ...context }),
       }),
     );

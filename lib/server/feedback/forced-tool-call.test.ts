@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { recordAiUsage } from "@/lib/server/ai-usage";
+import * as aiRuntime from "@/lib/server/ai-runtime";
+import { getAgentProvider } from "@/lib/agent-providers";
+
+const { modelInfoMock } = vi.hoisted(() => ({ modelInfoMock: vi.fn() }));
+vi.mock("@/lib/server/agent/openrouter-index", () => ({ getOpenRouterModelInfo: modelInfoMock }));
 
 vi.mock("@/lib/server/ai-provider-request", () => ({
   fetchAiProvider: (_provider: string, url: string, init: RequestInit) => fetch(url, init),
@@ -74,11 +79,152 @@ function stubFetch(handler: (model: string) => Response) {
 
 beforeEach(() => {
   modelsSent.length = 0;
+  modelInfoMock.mockReset();
   process.env.MINDDY_EDITION = "cloud";
   process.env.MINDDY_MANAGED_AI = "1";
   process.env.OPENROUTER_API_KEY = "sk-test";
   vi.spyOn(console, "warn").mockImplementation(() => {});
   vi.spyOn(console, "error").mockImplementation(() => {});
+});
+
+describe("forcedToolCall optional reasoning", () => {
+  it("disables optional reasoning on both routing attempts", async () => {
+    modelInfoMock.mockResolvedValue({ reasoning: { mandatory: false, efforts: ["high", "xhigh"] } });
+    const reasoning: unknown[] = [];
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (_url, init) => {
+      const body = JSON.parse(init!.body as string);
+      reasoning.push(body.reasoning);
+      return body.model.includes(":") ? refusal() : okResponse(body.model);
+    });
+    expect(await forcedToolCall("deepseek/deepseek-v4-flash:nitro", "system", "user", "pick", {}, {
+      preferNonReasoning: true, reasoning: "low",
+    })).toEqual({ model: "deepseek/deepseek-v4-flash" });
+    expect(modelInfoMock).toHaveBeenCalledWith("deepseek/deepseek-v4-flash:nitro");
+    expect(reasoning).toEqual([{ enabled: false }, { enabled: false }]);
+  });
+
+  it.each([
+    { reasoning: { mandatory: true, efforts: ["low"] } },
+    { reasoning: null },
+    null,
+  ])("preserves effort when optional reasoning is unconfirmed: %j", async (info) => {
+    modelInfoMock.mockResolvedValue(info);
+    let reasoning: unknown;
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (_url, init) => {
+      reasoning = JSON.parse(init!.body as string).reasoning;
+      return okResponse("configured-model");
+    });
+    await forcedToolCall("configured-model", "system", "user", "pick", {}, {
+      preferNonReasoning: true, reasoning: "low",
+    });
+    expect(reasoning).toEqual({ effort: "low", exclude: false });
+  });
+
+  it("uses the effective BYOK model rather than platform model metadata", async () => {
+    vi.spyOn(aiRuntime, "resolveAiRuntime").mockResolvedValue({
+      apiKey: "byok-key", mode: "byok", provider: "openrouter",
+      baseUrl: "https://openrouter.ai/api/v1", model: "mandatory-byok-model",
+      requestProfile: getAgentProvider("openrouter")!.requestProfile,
+    });
+    modelInfoMock.mockResolvedValue({ reasoning: { mandatory: true, efforts: ["low"] } });
+    stubFetch(() => okResponse("mandatory-byok-model"));
+    await forcedToolCall("platform-model", "system", "user", "pick", {}, {
+      preferNonReasoning: true, reasoning: "low", modelKey: "smart_fill_model",
+      record: { feature: "smart_fill", billTo: { userId: "user-id" } },
+    });
+    expect(modelInfoMock).toHaveBeenCalledWith("mandatory-byok-model");
+    expect(modelsSent).toEqual(["mandatory-byok-model"]);
+  });
+
+  it("leaves direct BYOK providers on their existing effort contract", async () => {
+    vi.spyOn(aiRuntime, "resolveAiRuntime").mockResolvedValue({
+      apiKey: "byok-key", mode: "byok", provider: "openai",
+      baseUrl: "https://api.openai.com/v1", model: "gpt-5.1",
+      requestProfile: getAgentProvider("openai")!.requestProfile,
+    });
+    let body: Record<string, unknown> = {};
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (_url, init) => {
+      body = JSON.parse(init!.body as string);
+      return okResponse("gpt-5.1");
+    });
+    await forcedToolCall("platform-model", "system", "user", "pick", {}, {
+      preferNonReasoning: true, reasoning: "low", modelKey: "smart_fill_model",
+      record: { feature: "smart_fill", billTo: { userId: "user-id" } },
+    });
+    expect(modelInfoMock).not.toHaveBeenCalled();
+    expect(body.reasoning_effort).toBe("low");
+    expect(body).not.toHaveProperty("reasoning");
+  });
+
+  it("includes catalog refresh in the deadline and never generates after it expires", async () => {
+    const deadline = new AbortController();
+    vi.spyOn(AbortSignal, "timeout").mockReturnValue(deadline.signal);
+    let loading!: () => void;
+    const started = new Promise<void>(resolve => { loading = resolve; });
+    modelInfoMock.mockImplementation(() => {
+      loading();
+      return new Promise(() => {});
+    });
+    const fetch = vi.spyOn(globalThis, "fetch");
+    const pending = forcedToolCall("model", "system", "user", "pick", {}, {
+      preferNonReasoning: true, timeoutMs: 20_000,
+    });
+    await started;
+    deadline.abort();
+    expect(await pending).toBeNull();
+    expect(fetch).not.toHaveBeenCalled();
+    expect(console.error).toHaveBeenCalledWith("[feedback-llm] LLM call failed: request_timeout");
+  });
+
+  it("keeps the current effort when catalog refresh fails", async () => {
+    modelInfoMock.mockRejectedValue(new Error("Private catalog detail"));
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (_url, init) => {
+      expect(JSON.parse(init!.body as string).reasoning).toEqual({ effort: "low", exclude: false });
+      return okResponse("model");
+    });
+    expect(await forcedToolCall("model", "system", "user", "pick", {}, {
+      preferNonReasoning: true, reasoning: "low",
+    })).toEqual({ model: "model" });
+    expect(console.error).not.toHaveBeenCalled();
+  });
+});
+
+describe("forcedToolCall response failures", () => {
+  it("recognizes a deadline during body reading and never retries it", async () => {
+    const deadline = new AbortController();
+    vi.spyOn(AbortSignal, "timeout").mockReturnValue(deadline.signal);
+    let reading!: () => void;
+    const started = new Promise<void>(resolve => { reading = resolve; });
+    const fetch = vi.spyOn(globalThis, "fetch").mockImplementation(async (_url, init) => ({
+      ok: true,
+      json: () => new Promise((_resolve, reject) => {
+        init!.signal!.addEventListener("abort", () => reject(init!.signal!.reason), { once: true });
+        reading();
+      }),
+    }) as unknown as Response);
+    const pending = forcedToolCall("model:nitro", "system", "user", "pick", {}, { timeoutMs: 20_000 });
+    await started;
+    deadline.abort(new DOMException("Private provider detail", "TimeoutError"));
+    expect(await pending).toBeNull();
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(console.error).toHaveBeenCalledWith("[feedback-llm] LLM call failed: request_timeout");
+    expect(JSON.stringify(vi.mocked(console.error).mock.calls)).not.toContain("Private provider detail");
+  });
+
+  it.each([
+    ["length", "output_truncated"],
+    ["stop", "expected_tool_missing"],
+  ])("reports missing output with finish reason %s and still records usage", async (finishReason, code) => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true, json: async () => ({ choices: [{ finish_reason: finishReason, message: {} }] }),
+    } as unknown as Response);
+    const usage = vi.mocked(recordAiUsage).mockClear();
+    expect(await forcedToolCall("model", "system", "user", "pick", {}, {
+      record: { feature: "smart_fill", billTo: { userId: "user-id" } },
+    })).toBeNull();
+    expect(usage).toHaveBeenCalledTimes(1);
+    expect(console.error).toHaveBeenCalledWith(`[feedback-llm] LLM call failed: ${code}`);
+  });
 });
 
 afterEach(() => {

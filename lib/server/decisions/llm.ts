@@ -32,6 +32,7 @@ interface LlmPassProfile {
   maxTokens?: number;
   timeoutMs?: number;
   reasoning?: ReasoningLevel;
+  preferNonReasoning?: boolean;
 }
 
 /** The existing pass of each use case, unchanged (model, tool, billing feature). */
@@ -42,9 +43,10 @@ const LLM_PASSES: Record<DecisionSpec["useCase"], LlmPassProfile> = {
     xTitle: "minddy Smart-fill",
     logPrefix: "smart-fill",
     // Reasoning tokens share the output budget with the four-field tool call.
-    // Keep the model's reasoning bounded and leave room for both outputs.
+    // Disable optional reasoning when supported; otherwise request low effort.
     maxTokens: 2_048,
     reasoning: "low",
+    preferNonReasoning: true,
     // Someone is waiting in front of their screen: the same ceiling as the pass.
     timeoutMs: 20_000,
   },
@@ -185,6 +187,7 @@ export async function runLlmDecision(
       ...(profile.maxTokens !== undefined ? { maxTokens: profile.maxTokens } : {}),
       ...(profile.timeoutMs !== undefined ? { timeoutMs: profile.timeoutMs } : {}),
       ...(profile.reasoning !== undefined ? { reasoning: profile.reasoning } : {}),
+      ...(profile.preferNonReasoning ? { preferNonReasoning: true } : {}),
       record: {
         // The shadow replay (MIN-567) overrides the feature so the sampling
         // delta does not read as a real pass of the use case.

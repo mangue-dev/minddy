@@ -233,6 +233,17 @@ describe("translateAiChatRequest", () => {
     });
     expect(translateAiChatRequest(request, "openai")).not.toHaveProperty("reasoning");
   });
+
+  it("explicitly disables optional OpenRouter reasoning without changing off semantics", () => {
+    expect(translateAiChatRequest({ ...base, reasoning: { enabled: false, effort: "low" } }, "openrouter"))
+      .toMatchObject({ reasoning: { enabled: false } });
+    expect(translateAiChatRequest({ ...base, reasoning: { effort: "off" } }, "openrouter"))
+      .not.toHaveProperty("reasoning");
+    for (const provider of ["generic", "openai", "google", "anthropic"] as const) {
+      expect(translateAiChatRequest({ ...base, reasoning: { enabled: false } }, provider))
+        .not.toHaveProperty("reasoning");
+    }
+  });
 });
 
 describe("translateLegacyAiChatBody", () => {

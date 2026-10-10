@@ -18,6 +18,7 @@ import {
 } from "@/lib/server/ai-runtime";
 import { isManagedAiEnabled } from "@/lib/managed-services";
 import { getServiceClient } from "@/lib/supabase-service";
+import { getOpenRouterModelInfo } from "@/lib/server/agent/openrouter-index";
 
 /**
  * OpenRouter call to forced structured output (tools + tool_choice) — the
@@ -56,6 +57,23 @@ export interface ForcedToolCallRecord {
   routineId?: string | null;
 }
 
+/** The cached catalog may refresh, but must not extend a creation's deadline. */
+async function canDisableReasoning(model: string, signal: AbortSignal): Promise<boolean> {
+  if (signal.aborted) return false;
+  return new Promise(resolve => {
+    const finish = (optional: boolean) => {
+      signal.removeEventListener("abort", aborted);
+      resolve(optional);
+    };
+    const aborted = () => finish(false);
+    signal.addEventListener("abort", aborted, { once: true });
+    void getOpenRouterModelInfo(model).then(
+      info => finish(info?.reasoning?.mandatory === false),
+      () => finish(false),
+    );
+  });
+}
+
 export async function forcedToolCall(
   model: string,
   systemPrompt: string,
@@ -92,6 +110,8 @@ export async function forcedToolCall(
  * is emitted (MIN-594).
  */
     reasoning?: ReasoningLevel;
+    /** Disable reasoning only when OpenRouter metadata explicitly marks it optional. */
+    preferNonReasoning?: boolean;
   }
 ): Promise<Record<string, unknown> | null> {
   if (options?.signal?.aborted) return null;
@@ -134,8 +154,22 @@ export async function forcedToolCall(
       requestProfile: getAgentProvider("openrouter")!.requestProfile,
     };
 
+  const signal = options?.signal
+    ? AbortSignal.any([options.signal, AbortSignal.timeout(options?.timeoutMs ?? 45_000)])
+    : AbortSignal.timeout(options?.timeoutMs ?? 45_000);
+  const logRequestFailure = () => {
+    if (options?.signal?.aborted) return;
+    console.error(`${logPrefix} LLM call failed: ${signal.aborted ? "request_timeout" : "request_failed"}`);
+  };
+
   try {
-    if (options?.signal?.aborted) return null;
+    const disableReasoning = options?.preferNonReasoning && provider === "openrouter"
+      ? await canDisableReasoning(resolvedModel, signal)
+      : false;
+    if (signal.aborted) {
+      logRequestFailure();
+      return null;
+    }
     const call = await fetchAiChat(
       effectiveRuntime,
       resolvedModel,
@@ -157,13 +191,13 @@ export async function forcedToolCall(
         ],
         toolChoice: { type: "function", function: { name: toolName } },
         maxOutputTokens: options?.maxTokens ?? 1024,
-        ...(options?.reasoning ? { reasoning: { effort: options.reasoning } } : {}),
+        ...(disableReasoning
+          ? { reasoning: { enabled: false as const } }
+          : options?.reasoning ? { reasoning: { effort: options.reasoning } } : {}),
       }),
       options?.xTitle ?? "Feedback (minddy)",
       logPrefix,
-      { signal: options?.signal
-        ? AbortSignal.any([options.signal, AbortSignal.timeout(options?.timeoutMs ?? 45_000)])
-        : AbortSignal.timeout(options?.timeoutMs ?? 45_000) },
+      { signal },
     );
     const response = call.response;
     if (!response.ok) {
@@ -172,6 +206,7 @@ export async function forcedToolCall(
     }
     let data: {
       choices?: {
+        finish_reason?: string;
         message?: {
           tool_calls?: { function?: { name?: string; arguments?: string } }[];
         };
@@ -184,7 +219,8 @@ export async function forcedToolCall(
       data = await response.json();
     } catch {
       if (options?.signal?.aborted) return null;
-      console.error(`${logPrefix} LLM call failed: response_json_invalid`);
+      if (signal.aborted) logRequestFailure();
+      else console.error(`${logPrefix} LLM call failed: response_json_invalid`);
       return null;
     }
     if (options?.record) {
@@ -209,7 +245,11 @@ export async function forcedToolCall(
       });
     }
     const toolCall = data.choices?.[0]?.message?.tool_calls?.[0]?.function;
-    if (toolCall?.name !== toolName) return null;
+    if (toolCall?.name !== toolName) {
+      console.error(`${logPrefix} LLM call failed: ${data.choices?.[0]?.finish_reason === "length"
+        ? "output_truncated" : "expected_tool_missing"}`);
+      return null;
+    }
     try {
       return JSON.parse(toolCall.arguments || "{}") as Record<string, unknown>;
     } catch {
@@ -217,8 +257,7 @@ export async function forcedToolCall(
       return null;
     }
   } catch {
-    if (options?.signal?.aborted) return null;
-    console.error(`${logPrefix} LLM call failed: request_failed`);
+    logRequestFailure();
     return null;
   }
 }
